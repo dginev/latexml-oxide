@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_delimiters.rs`."><title>latex_delimiters.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_delimiters.rs`."><title>latex_delimiters.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -243,92 +245,92 @@
 </span><span class="doccomment">/// A shorthand data structure for delimiter metadata
 </span><span class="kw">pub struct </span>DelimeterMeta {
   char: char,
-  left_role: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-  right_role: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-  name: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
+  left_role: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+  right_role: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+  name: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
 
 }
 <span class="doccomment">/// This duplicates in slightly different way what DefMath has put together.
-</span><span class="kw">pub static </span>DELIMITER_MAP : Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, DelimeterMeta&gt;&gt; = Lazy::new(|| <span class="macro">raw_map!</span>(
-  <span class="string">&quot;(&quot; </span>=&gt; DelimeterMeta{char: <span class="string">&#39;(&#39;</span>, left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">&quot;)&quot; </span>=&gt; DelimeterMeta{char: <span class="string">&#39;)&#39;</span>, left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">&quot;[&quot; </span>=&gt; DelimeterMeta{char: <span class="string">&#39;[&#39;</span>, left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">&quot;]&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;]&#39;</span>, left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">&quot;\\{&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;{&#39;</span>, left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">&quot;\\}&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;}&#39;</span>, left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">&quot;\\lfloor&quot;</span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{230A}&#39;</span>,
-                left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;lfloor&quot;</span>) },
-  <span class="string">&quot;\\rfloor&quot;</span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{230B}&#39;</span>,
-                left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;rfloor&quot;</span>) },
-  <span class="string">&quot;\\lceil&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{2308}&#39;</span>,
-                left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;lceil&quot;</span>) },
-  <span class="string">&quot;\\rceil&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{2309}&#39;</span>,
-                left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;rceil&quot;</span>) },
-  <span class="string">&quot;\\langle&quot;</span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{27E8}&#39;</span>,
-                left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;langle&quot;</span>) },
-  <span class="string">&quot;\\rangle&quot;</span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{27E9}&#39;</span>,
-                left_role: <span class="string">&quot;OPEN&quot;</span>,  right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;rangle&quot;</span>) },
-  <span class="string">&quot;&lt;&quot;      </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{27E8}&#39;</span>,
-                left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;langle&quot;</span>) },
-  <span class="string">&quot;&gt;&quot;      </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{27E9}&#39;</span>,
-                left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;rangle&quot;</span>) },
-  <span class="string">&quot;/&quot;      </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;/&#39;</span>, left_role: <span class="string">&quot;MULOP&quot;</span>,   right_role: <span class="string">&quot;MULOP&quot;</span>, name: <span class="prelude-val">None </span>},
-  <span class="string">&quot;\\backslash&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{005C}&#39;</span>,
-                left_role: <span class="string">&quot;MULOP&quot;</span>,   right_role: <span class="string">&quot;MULOP&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;backslash&quot;</span>) },
-  <span class="string">&quot;|&quot;      </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;|&#39;</span>,
-                left_role: <span class="string">&quot;VERTBAR&quot;</span>, right_role: <span class="string">&quot;VERTBAR&quot;</span>, name: <span class="prelude-val">None </span>},
-  <span class="string">&quot;\\|&quot;     </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{2225}&#39;</span>,
-                left_role: <span class="string">&quot;VERTBAR&quot;</span>, right_role: <span class="string">&quot;VERTBAR&quot;</span>, name: <span class="prelude-val">None </span>},
-  <span class="string">&quot;\\uparrow&quot;   </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{2191}&#39;</span>,
-                    left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;uparrow&quot;</span>) },
-  <span class="string">&quot;\\Uparrow&quot;   </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{21D1}&#39;</span>,
-                    left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;Uparrow&quot;</span>) },
-  <span class="string">&quot;\\downarrow&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{2193}&#39;</span>,
-                    left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;downarrow&quot;</span>) },
-  <span class="string">&quot;\\Downarrow&quot; </span>=&gt;  DelimeterMeta{ char: <span class="string">&#39;\u{21D3}&#39;</span>,
-                    left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;Downarrow&quot;</span>) },
-  <span class="string">&quot;\\updownarrow&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{2195}&#39;</span>,
-                    left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;updownarrow&quot;</span>) },
-  <span class="string">&quot;\\Updownarrow&quot; </span>=&gt; DelimeterMeta{ char: <span class="string">&#39;\u{21D5}&#39;</span>,
-                    left_role: <span class="string">&quot;OPEN&quot;</span>, right_role: <span class="string">&quot;CLOSE&quot;</span>, name: <span class="prelude-val">Some</span>(<span class="string">&quot;Updownarrow&quot;</span>) }
+</span><span class="kw">pub static </span>DELIMITER_MAP : Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, DelimeterMeta&gt;&gt; = Lazy::new(|| <span class="macro">raw_map!</span>(
+  <span class="string">"(" </span>=&gt; DelimeterMeta{char: <span class="string">'('</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+  <span class="string">")" </span>=&gt; DelimeterMeta{char: <span class="string">')'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+  <span class="string">"[" </span>=&gt; DelimeterMeta{char: <span class="string">'['</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+  <span class="string">"]" </span>=&gt; DelimeterMeta{ char: <span class="string">']'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+  <span class="string">"\\{" </span>=&gt; DelimeterMeta{ char: <span class="string">'{'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+  <span class="string">"\\}" </span>=&gt; DelimeterMeta{ char: <span class="string">'}'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+  <span class="string">"\\lfloor"</span>=&gt; DelimeterMeta{ char: <span class="string">'\u{230A}'</span>,
+                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"lfloor"</span>) },
+  <span class="string">"\\rfloor"</span>=&gt; DelimeterMeta{ char: <span class="string">'\u{230B}'</span>,
+                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rfloor"</span>) },
+  <span class="string">"\\lceil" </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{2308}'</span>,
+                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"lceil"</span>) },
+  <span class="string">"\\rceil" </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{2309}'</span>,
+                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rceil"</span>) },
+  <span class="string">"\\langle"</span>=&gt; DelimeterMeta{ char: <span class="string">'\u{27E8}'</span>,
+                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"langle"</span>) },
+  <span class="string">"\\rangle"</span>=&gt; DelimeterMeta{ char: <span class="string">'\u{27E9}'</span>,
+                left_role: <span class="string">"OPEN"</span>,  right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rangle"</span>) },
+  <span class="string">"&lt;"      </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{27E8}'</span>,
+                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"langle"</span>) },
+  <span class="string">"&gt;"      </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{27E9}'</span>,
+                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rangle"</span>) },
+  <span class="string">"/"      </span>=&gt; DelimeterMeta{ char: <span class="string">'/'</span>, left_role: <span class="string">"MULOP"</span>,   right_role: <span class="string">"MULOP"</span>, name: <span class="prelude-val">None </span>},
+  <span class="string">"\\backslash" </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{005C}'</span>,
+                left_role: <span class="string">"MULOP"</span>,   right_role: <span class="string">"MULOP"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"backslash"</span>) },
+  <span class="string">"|"      </span>=&gt; DelimeterMeta{ char: <span class="string">'|'</span>,
+                left_role: <span class="string">"VERTBAR"</span>, right_role: <span class="string">"VERTBAR"</span>, name: <span class="prelude-val">None </span>},
+  <span class="string">"\\|"     </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{2225}'</span>,
+                left_role: <span class="string">"VERTBAR"</span>, right_role: <span class="string">"VERTBAR"</span>, name: <span class="prelude-val">None </span>},
+  <span class="string">"\\uparrow"   </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{2191}'</span>,
+                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"uparrow"</span>) },
+  <span class="string">"\\Uparrow"   </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{21D1}'</span>,
+                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Uparrow"</span>) },
+  <span class="string">"\\downarrow" </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{2193}'</span>,
+                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"downarrow"</span>) },
+  <span class="string">"\\Downarrow" </span>=&gt;  DelimeterMeta{ char: <span class="string">'\u{21D3}'</span>,
+                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Downarrow"</span>) },
+  <span class="string">"\\updownarrow" </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{2195}'</span>,
+                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"updownarrow"</span>) },
+  <span class="string">"\\Updownarrow" </span>=&gt; DelimeterMeta{ char: <span class="string">'\u{21D5}'</span>,
+                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Updownarrow"</span>) }
 ));
 
 
 <span class="macro">LoadDefinitions!</span>({
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\{&quot;</span>, <span class="string">r&quot;\ifmmode\lx@math@lbrace\else\lx@text@lbrace\fi&quot;</span>, protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\}&quot;</span>, <span class="string">r&quot;\ifmmode\lx@math@rbrace\else\lx@text@rbrace\fi&quot;</span>, protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@lbrace&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;{&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">&quot;\\{&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@rbrace&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">&quot;\\}&quot;</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@text@lbrace&quot;</span>, <span class="string">&quot;{&quot;</span>, alias =&gt; <span class="string">&quot;\\{&quot;</span>,
-  font =&gt; { shape =&gt; <span class="string">&quot;upright&quot; </span>}, bounded =&gt; <span class="bool-val">true</span>); <span class="comment">// Since not DefMath!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@text@rbrace&quot;</span>, <span class="string">&quot;}&quot;</span>, alias =&gt; <span class="string">&quot;\\}&quot;</span>,
-  font =&gt; { shape =&gt; <span class="string">&quot;upright&quot; </span>}, bounded =&gt; <span class="bool-val">true</span>); <span class="comment">// Since not DefMath!
-  </span><span class="macro">Let!</span>(<span class="string">&quot;\\lbrace&quot;</span>, <span class="string">&quot;\\{&quot;</span>);
-  <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\lbrack&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>));
-  <span class="macro">Let!</span>(<span class="string">&quot;\\rbrace&quot;</span>, <span class="string">&quot;\\}&quot;</span>);
-  <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\rbrack&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>));
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lceil&quot;</span>,  <span class="prelude-val">None</span>, <span class="string">&quot;\u{2308}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT CEILING
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rceil&quot;</span>,  <span class="prelude-val">None</span>, <span class="string">&quot;\u{2309}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT CEILING
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lfloor&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{230A}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT FLOOR
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rfloor&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{230B}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT FLOOR
+  <span class="macro">DefMacro!</span>(<span class="string">"\\{"</span>, <span class="string">r"\ifmmode\lx@math@lbrace\else\lx@text@lbrace\fi"</span>, protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\}"</span>, <span class="string">r"\ifmmode\lx@math@rbrace\else\lx@text@rbrace\fi"</span>, protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@lbrace"</span>, <span class="prelude-val">None</span>, <span class="string">"{"</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">"\\{"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@rbrace"</span>, <span class="prelude-val">None</span>, <span class="string">"}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">"\\}"</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@text@lbrace"</span>, <span class="string">"{"</span>, alias =&gt; <span class="string">"\\{"</span>,
+  font =&gt; { shape =&gt; <span class="string">"upright" </span>}, bounded =&gt; <span class="bool-val">true</span>); <span class="comment">// Since not DefMath!
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@text@rbrace"</span>, <span class="string">"}"</span>, alias =&gt; <span class="string">"\\}"</span>,
+  font =&gt; { shape =&gt; <span class="string">"upright" </span>}, bounded =&gt; <span class="bool-val">true</span>); <span class="comment">// Since not DefMath!
+  </span><span class="macro">Let!</span>(<span class="string">"\\lbrace"</span>, <span class="string">"\\{"</span>);
+  <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lbrack"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"["</span>));
+  <span class="macro">Let!</span>(<span class="string">"\\rbrace"</span>, <span class="string">"\\}"</span>);
+  <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\rbrack"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
+  <span class="macro">DefMath!</span>(<span class="string">"\\lceil"</span>,  <span class="prelude-val">None</span>, <span class="string">"\u{2308}"</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT CEILING
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\rceil"</span>,  <span class="prelude-val">None</span>, <span class="string">"\u{2309}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT CEILING
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\lfloor"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{230A}"</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT FLOOR
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\rfloor"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{230B}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT FLOOR
 
-  // Note: We should be using 27E8,27E9, which are &quot;mathematical&quot;, not 2329,232A
+  // Note: We should be using 27E8,27E9, which are "mathematical", not 2329,232A
 
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\langle&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{27E8}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT-POINTING ANGLE BRACKET
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rangle&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{27E9}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT-POINTING ANGLE BRACKET
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\langle"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27E8}"</span>, role =&gt; <span class="string">"OPEN"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT-POINTING ANGLE BRACKET
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\rangle"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27E9}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT-POINTING ANGLE BRACKET
 
   // Not sure these should be defined here, or latex, or even latex compat mode.
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lgroup&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;(&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\rgroup&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;)&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\bracevert&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;|&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;VERTBAR&quot;</span>);
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\lgroup"</span>, <span class="prelude-val">None</span>, <span class="string">"("</span>, font =&gt; { series =&gt; <span class="string">"bold" </span>}, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\rgroup"</span>, <span class="prelude-val">None</span>, <span class="string">")"</span>, font =&gt; { series =&gt; <span class="string">"bold" </span>}, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\bracevert"</span>, <span class="prelude-val">None</span>, <span class="string">"|"</span>, font =&gt; { series =&gt; <span class="string">"bold" </span>}, role =&gt; <span class="string">"VERTBAR"</span>);
 
   <span class="comment">// TeX marks some symbols as delimiters which can be used with \left,\right,
   // but many of which have different grammatical roles otherwise, eg. arrows, &lt;, &gt;.
-  // Short of setting up TeX&#39;s complicated encoding machinery, I need an explicit
-  // mapping.  Unfortunately, this doesn&#39;t (yet) support people declaring thier own delimiters!
+  // Short of setting up TeX's complicated encoding machinery, I need an explicit
+  // mapping.  Unfortunately, this doesn't (yet) support people declaring thier own delimiters!
 
-  // With new treatment of Simple Symbols as just Box&#39;s with assigned attributes,
-  // we&#39;re not getting whatsits, and so we&#39;re not looking them up the same way!!!
+  // With new treatment of Simple Symbols as just Box's with assigned attributes,
+  // we're not getting whatsits, and so we're not looking them up the same way!!!
   // TEMPORARILY (?) hack the Delimiter map
   // foreach my $entry (values %DELIMITER_MAP) {
   //   $DELIMITER_MAP{ $$entry{char} } = $entry; }
@@ -337,7 +339,7 @@
   //   my ($delim) = @_;
   //   return $DELIMITER_MAP{$delim}; }
 
-  // This is a little messier than you&#39;d think.
+  // This is a little messier than you'd think.
   // These effectively create a group between the \left,\right.
   // And this also gives us a single list of things to parse separately.
   // Since \left,\right are TeX, primitives and must be paired up,
@@ -345,125 +347,125 @@
   // [The \@hidden@bgroup/egroup keep from putting a {} into the UnTeX]
   // HOWEVER, an additional complication is that it is a common mistake to omit the balancing
   // \right! Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\left XToken&quot;</span>, <span class="string">r&quot;\@left #1\@hidden@bgroup&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\left XToken"</span>, <span class="string">r"\@left #1\@hidden@bgroup"</span>);
   <span class="comment">// Like \@hidden@egroup, but softer about missing \left
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\right@hidden@egroup&quot;</span>, <span class="string">&quot;&quot;</span>,
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\right@hidden@egroup"</span>, <span class="string">""</span>,
     after_digest =&gt; {
-      <span class="kw">if </span>is_value_bound(<span class="string">&quot;MODE&quot;</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>)) <span class="comment">// Last stack frame was a mode switch!?!?!
-        </span>|| lookup_bool(<span class="string">&quot;groupNonBoxing&quot;</span>) { <span class="comment">// or group was opened with \begingroup
-        </span><span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;\\right&quot;</span>, <span class="string">&quot;Unbalanced \\right, no balancing \\left.&quot;</span>); }
+      <span class="kw">if </span>is_value_bound(<span class="string">"MODE"</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>)) <span class="comment">// Last stack frame was a mode switch!?!?!
+        </span>|| lookup_bool(<span class="string">"groupNonBoxing"</span>) { <span class="comment">// or group was opened with \begingroup
+        </span><span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\right"</span>, <span class="string">"Unbalanced \\right, no balancing \\left."</span>); }
       <span class="kw">else </span>{
         egroup()<span class="question-mark">?</span>;
       }
     },
     reversion =&gt; <span class="prelude-val">None</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\right XToken&quot;</span>, <span class="string">r&quot;\right@hidden@egroup\@right #1&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\right XToken"</span>, <span class="string">r"\right@hidden@egroup\@right #1"</span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@left Token&quot;</span>,
-    <span class="string">&quot;?#char(&lt;ltx:XMTok role=&#39;#role&#39; name=&#39;#name&#39; stretchy=&#39;#stretchy&#39;&gt;#char&lt;/ltx:XMTok&gt;)\
-      (?#hint(&lt;ltx:XMHint/&gt;)(#1))&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@left Token"</span>,
+    <span class="string">"?#char(&lt;ltx:XMTok role='#role' name='#name' stretchy='#stretchy'&gt;#char&lt;/ltx:XMTok&gt;)\
+      (?#hint(&lt;ltx:XMHint/&gt;)(#1))"</span>,
     after_digest =&gt; sub[whatsit] {
       <span class="kw">let </span>delim = whatsit.get_arg(<span class="number">1</span>).map(ToString::to_string).unwrap_or_default();
-      <span class="kw">if </span>delim == <span class="string">&quot;.&quot; </span>{
-        whatsit.set_property(<span class="string">&quot;hint&quot;</span>, <span class="bool-val">true</span>); }
+      <span class="kw">if </span>delim == <span class="string">"." </span>{
+        whatsit.set_property(<span class="string">"hint"</span>, <span class="bool-val">true</span>); }
       <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = DELIMITER_MAP.get(delim.as_str()) {
-        whatsit.set_property(<span class="string">&quot;role&quot;</span>, entry.left_role);
-        whatsit.set_property(<span class="string">&quot;char&quot;</span>, entry.char);
-        whatsit.set_property(<span class="string">&quot;name&quot;</span>, entry.name);
-        whatsit.set_property(<span class="string">&quot;stretchy&quot;</span>, <span class="bool-val">true</span>);
+        whatsit.set_property(<span class="string">"role"</span>, entry.left_role);
+        whatsit.set_property(<span class="string">"char"</span>, entry.char);
+        whatsit.set_property(<span class="string">"name"</span>, entry.name);
+        whatsit.set_property(<span class="string">"stretchy"</span>, <span class="bool-val">true</span>);
         <span class="comment">// TODO: Should we have more Rc&lt;&gt; wrappers over Font?
         </span>whatsit.set_font(Rc::new(
           whatsit.get_arg(<span class="number">1</span>).unwrap().get_font()<span class="question-mark">?</span>.unwrap().into_owned()
         ));
       }
-      <span class="kw">else if </span>whatsit.get_arg(<span class="number">1</span>).unwrap().get_property_string(<span class="string">&quot;role&quot;</span>) == <span class="string">&quot;OPEN&quot; </span>{
-        whatsit.get_arg_mut(<span class="number">1</span>).unwrap().set_property(<span class="string">&quot;stretchy&quot;</span>, <span class="bool-val">true</span>);
+      <span class="kw">else if </span>whatsit.get_arg(<span class="number">1</span>).unwrap().get_property_string(<span class="string">"role"</span>) == <span class="string">"OPEN" </span>{
+        whatsit.get_arg_mut(<span class="number">1</span>).unwrap().set_property(<span class="string">"stretchy"</span>, <span class="bool-val">true</span>);
       } <span class="kw">else </span>{
-        <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, delim,
-          <span class="string">&quot;Missing delimiter; &#39;.&#39; inserted&quot;</span>);
+        <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, delim,
+          <span class="string">"Missing delimiter; '.' inserted"</span>);
       }
       <span class="prelude-val">Ok</span>(Vec::new())
     },
-    alias =&gt; <span class="string">&quot;\\left&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@right Token&quot;</span>,
-    <span class="string">&quot;?#char(&lt;ltx:XMTok role=&#39;#role&#39; name=&#39;#name&#39; stretchy=&#39;#stretchy&#39;&gt;#char&lt;/ltx:XMTok&gt;)\
-      (?#hint(&lt;ltx:XMHint/&gt;)(#1))&quot;</span>,
+    alias =&gt; <span class="string">"\\left"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@right Token"</span>,
+    <span class="string">"?#char(&lt;ltx:XMTok role='#role' name='#name' stretchy='#stretchy'&gt;#char&lt;/ltx:XMTok&gt;)\
+      (?#hint(&lt;ltx:XMHint/&gt;)(#1))"</span>,
     after_digest =&gt; sub[whatsit] {
       <span class="kw">let </span>delim = whatsit.get_arg(<span class="number">1</span>).map(ToString::to_string).unwrap_or_default();
-      <span class="kw">if </span>delim == <span class="string">&quot;.&quot; </span>{
-        whatsit.set_property(<span class="string">&quot;hint&quot;</span>, <span class="bool-val">true</span>); }
+      <span class="kw">if </span>delim == <span class="string">"." </span>{
+        whatsit.set_property(<span class="string">"hint"</span>, <span class="bool-val">true</span>); }
       <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = DELIMITER_MAP.get(delim.as_str()) {
-        whatsit.set_property(<span class="string">&quot;role&quot;</span>, entry.right_role);
-        whatsit.set_property(<span class="string">&quot;char&quot;</span>, entry.char);
-        whatsit.set_property(<span class="string">&quot;name&quot;</span>, entry.name);
-        whatsit.set_property(<span class="string">&quot;stretchy&quot;</span>, <span class="bool-val">true</span>);
+        whatsit.set_property(<span class="string">"role"</span>, entry.right_role);
+        whatsit.set_property(<span class="string">"char"</span>, entry.char);
+        whatsit.set_property(<span class="string">"name"</span>, entry.name);
+        whatsit.set_property(<span class="string">"stretchy"</span>, <span class="bool-val">true</span>);
         <span class="comment">// TODO: Should we have more Rc&lt;&gt; wrappers over Font?
         </span>whatsit.set_font(Rc::new(
           whatsit.get_arg(<span class="number">1</span>).unwrap().get_font()<span class="question-mark">?</span>.unwrap().into_owned()
         ));
       }
-      <span class="kw">else if </span>whatsit.get_arg(<span class="number">1</span>).unwrap().get_property_string(<span class="string">&quot;role&quot;</span>) == <span class="string">&quot;CLOSE&quot; </span>{
-        whatsit.get_arg_mut(<span class="number">1</span>).unwrap().set_property(<span class="string">&quot;stretchy&quot;</span>, <span class="bool-val">true</span>);
+      <span class="kw">else if </span>whatsit.get_arg(<span class="number">1</span>).unwrap().get_property_string(<span class="string">"role"</span>) == <span class="string">"CLOSE" </span>{
+        whatsit.get_arg_mut(<span class="number">1</span>).unwrap().set_property(<span class="string">"stretchy"</span>, <span class="bool-val">true</span>);
       } <span class="kw">else </span>{
-        <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, delim,
-          <span class="string">&quot;Missing delimiter; &#39;.&#39; inserted&quot;</span>);
+        <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, delim,
+          <span class="string">"Missing delimiter; '.' inserted"</span>);
       }
       <span class="prelude-val">Ok</span>(Vec::new())
     },
-    alias =&gt; <span class="string">&quot;\\right&quot;</span>);
+    alias =&gt; <span class="string">"\\right"</span>);
 
   <span class="comment">// These originally had Token as parameter, rather than {}..... Why?
   // Note that in TeX, \big{((} will only enlarge the 1st paren!!!
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\big {}&quot;</span>,  <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">1.2 </span>});
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\Big {}&quot;</span>,  <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">1.6 </span>});
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\bigg {}&quot;</span>, <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">2.1 </span>});
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\Bigg {}&quot;</span>, <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">2.6 </span>});
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\big {}"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">1.2 </span>});
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\Big {}"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">1.6 </span>});
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\bigg {}"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">2.1 </span>});
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigg {}"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">2.6 </span>});
 
   <span class="comment">// sub addDelimiterRole {
   //   my ($document, $role) = @_;
   //   my $current = $document-&gt;getNode;
   //   my $delim   = $document-&gt;getLastChildElement($current) || $current;
   //   my $delim_role = (($delim &amp;&amp; ($delim-&gt;nodeType == XML_ELEMENT_NODE) &amp;&amp;
-  // $delim-&gt;getAttribute(&#39;role&#39;)) || &#39;&lt;none&gt;&#39;);   # if there is some delimiter-like role on the
-  // &quot;delimiter&quot;, switch it, otherwise, leave it alone!   if ($delim &amp;&amp; ($delim_role =~
-  // /^(OPEN|MIDDLE|CLOSE|VERTBAR|&lt;none&gt;)$/)) {     ## Maybe we shouldn&#39;t switch VERTBAR ?
+  // $delim-&gt;getAttribute('role')) || '&lt;none&gt;');   # if there is some delimiter-like role on the
+  // "delimiter", switch it, otherwise, leave it alone!   if ($delim &amp;&amp; ($delim_role =~
+  // /^(OPEN|MIDDLE|CLOSE|VERTBAR|&lt;none&gt;)$/)) {     ## Maybe we shouldn't switch VERTBAR ?
   //     ## The catch is that occasionally people use a single \Bigl (or whatever)
   //     ## where they should have used a \Big
   //     $document-&gt;setAttribute($delim, role =&gt; $role); }
   //   return; }
 
   // TODO:
-  // The &quot;m&quot; versions are defined in e-Tex and other places.
-  // DefConstructor(&#39;\bigl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
-  // DefConstructor(&#39;\bigm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
-  // DefConstructor(&#39;\bigr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+  // The "m" versions are defined in e-Tex and other places.
+  // DefConstructor('\bigl {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'big' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'OPEN'); });
+  // DefConstructor('\bigm {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'big' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'MIDDLE'); });
+  // DefConstructor('\bigr {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'big' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'CLOSE'); });
 
-  // DefConstructor(&#39;\Bigl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
-  // DefConstructor(&#39;\Bigm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
-  // DefConstructor(&#39;\Bigr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+  // DefConstructor('\Bigl {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'Big' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'OPEN'); });
+  // DefConstructor('\Bigm {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'Big' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'MIDDLE'); });
+  // DefConstructor('\Bigr {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'Big' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'CLOSE'); });
 
-  // DefConstructor(&#39;\biggl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
-  // DefConstructor(&#39;\biggm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
-  // DefConstructor(&#39;\biggr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+  // DefConstructor('\biggl {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'bigg' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'OPEN'); });
+  // DefConstructor('\biggm {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'bigg' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'MIDDLE'); });
+  // DefConstructor('\biggr {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'bigg' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'CLOSE'); });
 
-  // DefConstructor(&#39;\Biggl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
-  // DefConstructor(&#39;\Biggm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
-  // DefConstructor(&#39;\Biggr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
-  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+  // DefConstructor('\Biggl {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'Bigg' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'OPEN'); });
+  // DefConstructor('\Biggm {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'Bigg' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'MIDDLE'); });
+  // DefConstructor('\Biggr {}', '#1', bounded =&gt; true, font =&gt; { size =&gt; 'Bigg' },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], 'CLOSE'); });
 
-  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\vert&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;|&quot;</span>));
-  <span class="macro">Let!</span>(<span class="string">&quot;\\Vert&quot;</span>, <span class="string">&quot;\\|&quot;</span>);
+  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\vert"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"|"</span>));
+  <span class="macro">Let!</span>(<span class="string">"\\Vert"</span>, <span class="string">"\\|"</span>);
 });
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_codegen/src/constructable.rs`."><title>constructable.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_codegen" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_codegen/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_codegen/src/constructable.rs`."><title>constructable.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_codegen" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_codegen/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -590,6 +592,21 @@
 <a href="#590" id="590">590</a>
 <a href="#591" id="591">591</a>
 <a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::{Captures, Regex};
 
@@ -608,34 +625,34 @@
 // Each of these can be used literally, if DOUBLED (ie. ## )
 // (except ^ ??? ^^ means something special!)
 </span><span class="attr">#[rustfmt::skip]
-</span><span class="macro">macro_rules! </span>QNAME_RE_STR(() =&gt; (<span class="string">r&quot;((?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:)(?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:|\p{M}|\p{Lm}|\p{Nd}|\.|-)*)&quot;</span>));
-<span class="macro">macro_rules! </span>PI_RE_STR(() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^\s*&lt;\?&quot;</span>,<span class="macro">QNAME_RE_STR!</span>())));
-<span class="macro">macro_rules! </span>KEY_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^&quot;</span>,<span class="macro">QNAME_RE_STR!</span>(),<span class="string">r&quot;\s*=\s*&quot;</span>)));
-<span class="macro">macro_rules! </span>VALUE_RE_STR (() =&gt; (<span class="string">r&quot;(#[\w]+|&amp;[\w:]*\()&quot;</span>));
-<span class="macro">macro_rules! </span>LEAD_VALUE_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^&quot;</span>,<span class="macro">VALUE_RE_STR!</span>())));
-<span class="macro">macro_rules! </span>COND_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;[?]&quot;</span>, <span class="macro">VALUE_RE_STR!</span>())));
-<span class="macro">macro_rules! </span>LEAD_COND_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^&quot;</span>,<span class="macro">COND_RE_STR!</span>())));
-<span class="macro">macro_rules! </span>OPEN_TAG_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;\s*&lt;&quot;</span>, <span class="macro">QNAME_RE_STR!</span>())));
-<span class="macro">macro_rules! </span>CLOSE_TAG_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;&lt;/&quot;</span>, <span class="macro">QNAME_RE_STR!</span>(),<span class="string">r&quot;\s*&gt;\s*&quot;</span>)));
-<span class="macro">macro_rules! </span>QNAME_KEY_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^&quot;</span>, <span class="macro">QNAME_RE_STR!</span>(),<span class="string">r&quot;\s*=\s*&quot;</span>)));
-<span class="macro">macro_rules! </span>LEAD_OPEN_TAG_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^&quot;</span>, <span class="macro">OPEN_TAG_RE_STR!</span>())));
-<span class="macro">macro_rules! </span>LEAD_CLOSE_TAG_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^&quot;</span>, <span class="macro">CLOSE_TAG_RE_STR!</span>())));
+</span><span class="macro">macro_rules!</span> QNAME_RE_STR(() =&gt; (<span class="string">r"((?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:)(?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:|\p{M}|\p{Lm}|\p{Nd}|\.|-)*)"</span>));
+<span class="macro">macro_rules!</span> PI_RE_STR(() =&gt; (<span class="macro">concat!</span>(<span class="string">r"^\s*&lt;\?"</span>,<span class="macro">QNAME_RE_STR!</span>())));
+<span class="macro">macro_rules!</span> KEY_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"^"</span>,<span class="macro">QNAME_RE_STR!</span>(),<span class="string">r"\s*=\s*"</span>)));
+<span class="macro">macro_rules!</span> VALUE_RE_STR (() =&gt; (<span class="string">r"(#[\w]+|&amp;[\w:]*\()"</span>));
+<span class="macro">macro_rules!</span> LEAD_VALUE_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"^"</span>,<span class="macro">VALUE_RE_STR!</span>())));
+<span class="macro">macro_rules!</span> COND_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"[?]"</span>, <span class="macro">VALUE_RE_STR!</span>())));
+<span class="macro">macro_rules!</span> LEAD_COND_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"^"</span>,<span class="macro">COND_RE_STR!</span>())));
+<span class="macro">macro_rules!</span> OPEN_TAG_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"\s*&lt;"</span>, <span class="macro">QNAME_RE_STR!</span>())));
+<span class="macro">macro_rules!</span> CLOSE_TAG_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"&lt;/"</span>, <span class="macro">QNAME_RE_STR!</span>(),<span class="string">r"\s*&gt;\s*"</span>)));
+<span class="macro">macro_rules!</span> QNAME_KEY_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"^"</span>, <span class="macro">QNAME_RE_STR!</span>(),<span class="string">r"\s*=\s*"</span>)));
+<span class="macro">macro_rules!</span> LEAD_OPEN_TAG_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"^"</span>, <span class="macro">OPEN_TAG_RE_STR!</span>())));
+<span class="macro">macro_rules!</span> LEAD_CLOSE_TAG_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r"^"</span>, <span class="macro">CLOSE_TAG_RE_STR!</span>())));
 
-<span class="macro">macro_rules! </span>SPECIALS (() =&gt; (<span class="string">r&quot;\#\?&amp;\\&quot;</span>));
+<span class="macro">macro_rules!</span> SPECIALS (() =&gt; (<span class="string">r"\#\?&amp;\\"</span>));
 <span class="comment">// Quoted special characters (or semi-special)
-</span><span class="macro">macro_rules! </span>QUOTED_SPECIALS (
-    () =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;\\\\\\[&quot;</span>,<span class="macro">SPECIALS!</span>(),
-                   <span class="string">r&quot;]|\\#\\#|\\&amp;amp;&quot;</span>))); <span class="comment">// or special cases: doubled #, &amp;amp;
-</span><span class="macro">macro_rules! </span>LEAD_QUOTED_RE_STR (() =&gt; (
-  <span class="macro">concat!</span>(<span class="string">r&quot;^((&quot;</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r&quot;|[^&quot;</span>,<span class="macro">SPECIALS!</span>(),<span class="string">&quot;&#39;\&quot;])+)&quot;</span>)));
-<span class="macro">macro_rules! </span>LEAD_RANDOM_TEXT_RE_STR (() =&gt; (
-  <span class="macro">concat!</span>(<span class="string">r&quot;^((&quot;</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r&quot;|[^&quot;</span>,<span class="macro">SPECIALS!</span>(),<span class="string">r&quot;&lt;])+)&quot;</span>)));
+</span><span class="macro">macro_rules!</span> QUOTED_SPECIALS (
+    () =&gt; (<span class="macro">concat!</span>(<span class="string">r"\\\\\\["</span>,<span class="macro">SPECIALS!</span>(),
+                   <span class="string">r"]|\\#\\#|\\&amp;amp;"</span>))); <span class="comment">// or special cases: doubled #, &amp;amp;
+</span><span class="macro">macro_rules!</span> LEAD_QUOTED_RE_STR (() =&gt; (
+  <span class="macro">concat!</span>(<span class="string">r"^(("</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r"|[^"</span>,<span class="macro">SPECIALS!</span>(),<span class="string">"'\"])+)"</span>)));
+<span class="macro">macro_rules!</span> LEAD_RANDOM_TEXT_RE_STR (() =&gt; (
+  <span class="macro">concat!</span>(<span class="string">r"^(("</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r"|[^"</span>,<span class="macro">SPECIALS!</span>(),<span class="string">r"&lt;])+)"</span>)));
 
 <span class="comment">// These recognize the beginnings of value expressions, conditionals, ..
 // Attempt to follow XML Spec, Appendix B
 </span><span class="kw">static </span>LEAD_VALUE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_VALUE_RE_STR!</span>()).unwrap());
 <span class="kw">static </span>LEAD_COND_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_COND_RE_STR!</span>()).unwrap());
-<span class="kw">static </span>LEAD_QMARK: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^[?]&quot;</span>).unwrap());
+<span class="kw">static </span>LEAD_QMARK: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^[?]"</span>).unwrap());
 <span class="kw">static </span>LEAD_OPEN_TAG_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_OPEN_TAG_RE_STR!</span>()).unwrap());
 <span class="kw">static </span>LEAD_CLOSE_TAG_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_CLOSE_TAG_RE_STR!</span>()).unwrap());
 <span class="kw">static </span>LEAD_QUOTED_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_QUOTED_RE_STR!</span>()).unwrap());
@@ -643,58 +660,59 @@
   Lazy::new(|| Regex::new(<span class="macro">LEAD_RANDOM_TEXT_RE_STR!</span>()).unwrap());
 <span class="comment">// QName (element tags, attribute names);  Could this also allow expressions?
 </span><span class="kw">static </span>QNAME_KEY_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">QNAME_KEY_RE_STR!</span>()).unwrap());
-<span class="kw">static </span>FLOAT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\^+)\s*&quot;</span>).unwrap());
+<span class="kw">static </span>FLOAT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^(\^+)\s*"</span>).unwrap());
 <span class="kw">static </span>PI_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">PI_RE_STR!</span>()).unwrap());
-<span class="kw">static </span>PI_CLOSE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s*\?&gt;&quot;</span>).unwrap());
+<span class="kw">static </span>PI_CLOSE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\s*\?&gt;"</span>).unwrap());
 <span class="kw">static </span>KEY_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">KEY_RE_STR!</span>()).unwrap());
-<span class="kw">static </span>FN_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^&amp;([\w:]*)\(&quot;</span>).unwrap());
-<span class="kw">static </span>LEAD_CPAREN_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s*\)&quot;</span>).unwrap());
-<span class="kw">static </span>LEAD_KV_SEP: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s*,\s*&quot;</span>).unwrap());
-<span class="kw">static </span>ARG_HOLE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^#(\d+)&quot;</span>).unwrap());
-<span class="kw">static </span>PROP_HOLE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\#([\w_-]+)&quot;</span>).unwrap());
-<span class="kw">static </span>ESCAPED_OP: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\\[#\?(&amp;,&lt;&gt;\\%]&quot;</span>).unwrap());
+<span class="kw">static </span>FN_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^&amp;([\w:]*)\("</span>).unwrap());
+<span class="kw">static </span>LEAD_CPAREN_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\s*\)"</span>).unwrap());
+<span class="kw">static </span>LEAD_KV_SEP: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\s*,\s*"</span>).unwrap());
+<span class="kw">static </span>ARG_HOLE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^#(\d+)"</span>).unwrap());
+<span class="kw">static </span>PROP_HOLE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\#([\w_-]+)"</span>).unwrap());
+<span class="kw">static </span>ESCAPED_OP: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\\[#\?(&amp;,&lt;&gt;\\%]"</span>).unwrap());
 
 <span class="kw">pub fn </span>compile_replacement(input: DeriveInput) -&gt; TokenStream {
   <span class="kw">let </span>replacement: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
       <span class="kw">_ </span>=&gt; {
-        <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[replacement = \&quot;value\&quot;] attribute, mandatory double-quotes (Lit)&quot;</span>)
+        <span class="macro">panic!</span>(<span class="string">"only accepts #[replacement = \"value\"] attribute, mandatory double-quotes (Lit)"</span>)
       },
     },
     <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
-      <span class="string">&quot;only accepts #[replacement = \&quot;value\&quot;] attribute, mandatory double-quotes (parse_meta)&quot;
+      <span class="string">"only accepts #[replacement = \"value\"] attribute, mandatory double-quotes (parse_meta)"
     </span>),
   };
 
   <span class="kw">let </span>compiled_replacement_closure: proc_macro2::TokenStream = <span class="kw">if </span>replacement.is_empty() {
     <span class="macro">quote!</span>(<span class="prelude-val">None</span>)
   } <span class="kw">else </span>{
-    <span class="comment">// Following the original LaTeXML Compiler, we&#39;ll mutate this string in place,
-    // cloning for safety. since this is all happening in Rust&#39;s compilation
+    <span class="comment">// Following the original LaTeXML Compiler, we'll mutate this string in place,
+    // cloning for safety. since this is all happening in Rust's compilation
     // step, the clone causes no major overhead. If we refactor away the
     // mutable borrows we do for in-place modification, we can avoid a lot of the
-    // cloning, and stay conservative in memory. For now it shouldn&#39;t matter.
+    // cloning, and stay conservative in memory. For now it shouldn't matter.
 
-    // println!(&quot;Compiling: \n{:?}&quot;, &amp;replacement);
+    // println!("Compiling: \n{:?}", &amp;replacement);
     </span><span class="kw">let </span><span class="kw-2">mut </span>operations = Vec::new();
 
     operations.extend(compile_replacement_tokens(replacement));
 
     <span class="comment">// println!(
-    //   &quot;Into: \n{}&quot;,
+    //   "Into: \n{}",
     //   operations
     //     .iter()
     //     .map(|x| x.to_string())
     //     .collect::&lt;Vec&lt;_&gt;&gt;()
-    //     .join(&quot;\n&quot;)
+    //     .join("\n")
     // );
 
     </span><span class="macro">quote!</span>(
     <span class="prelude-val">Some</span>(Rc::new(
-    |document: <span class="kw-2">&amp;mut </span>Document, args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
-      props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;| {
-      <span class="attr">#[allow(unused_assignments)]
+    |document: <span class="kw-2">&amp;mut </span>Document,
+      <span class="attr">#[allow(unused_variables)]</span>args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
+      <span class="attr">#[allow(unused_variables)]</span>props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;| {
+      <span class="attr">#[allow(unused_assignments,unused_mut)]
       </span><span class="kw">let </span><span class="kw-2">mut </span>savenode : <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
 
       #(#operations)*
@@ -709,7 +727,7 @@
   // mechanism. Once the new procedural macro scheme lands, this begs to be
   // refactored.
   </span><span class="macro">quote!</span>(
-    <span class="macro">macro_rules! </span>this_replacement {
+    <span class="macro">macro_rules!</span> this_replacement {
       () =&gt; {#compiled_replacement_closure}
     }
   )
@@ -718,7 +736,7 @@
 
 <span class="kw">fn </span>compile_replacement_tokens(<span class="kw-2">mut </span>replacement: String) -&gt; Vec&lt;proc_macro2::TokenStream&gt; {
   <span class="comment">// NO TRIM!
-  // one replacement has &quot;&lt;ltx:break/&gt;\n&quot; with the &quot;\n&quot; being tested for.
+  // one replacement has "&lt;ltx:break/&gt;\n" with the "\n" being tested for.
   // let trimmed = replacement.trim();
   // if trimmed != replacement {
   //   replacement = trimmed.to_string();
@@ -726,7 +744,7 @@
   </span><span class="kw">let </span><span class="kw-2">mut </span>floats: String = String::new();
   <span class="kw">let </span><span class="kw-2">mut </span>has_floats: bool = <span class="bool-val">false</span>;
   <span class="kw">let </span>float_res = FLOAT_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-    floats = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).trim().to_string();
+    floats = refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).trim().to_string();
     has_floats = <span class="bool-val">true</span>;
     String::new()
   });
@@ -757,23 +775,29 @@
     <span class="comment">// Processing instruction: &lt;?name a=v ...?&gt;
     </span><span class="kw">let </span><span class="kw-2">mut </span>is_match = <span class="bool-val">false</span>;
     <span class="kw">let </span>pi_result = PI_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-      current_tag = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
+      current_tag = refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
       is_match = <span class="bool-val">true</span>;
       String::new()
     });
 
     <span class="kw">if </span>is_match {
       replacement = pi_result.to_string();
-      <span class="comment">// println!(&quot;-- matched a PI &quot;);
+      <span class="comment">// println!("-- matched a PI ");
       // this is annoying since we want translate_avpairs to mutate the replacement
       // string in place, but also want it to run after the replacement...
       // makes `current_tag` in particular look very misplaced
       </span><span class="kw">let </span>av = translate_avpairs(<span class="kw-2">&amp;mut </span>replacement);
-      operations.push(<span class="macro">quote!</span>(
-        <span class="kw">let </span><span class="kw-2">mut </span>av_props : HashMap&lt;String, String&gt; = HashMap::default();
-        #(#av)*
-        document.insert_pi(#current_tag, <span class="prelude-val">Some</span>(av_props))<span class="question-mark">?</span>;
-      ));
+      <span class="kw">if </span>av.is_empty() {
+        operations.push(<span class="macro">quote!</span>(
+          document.insert_pi(#current_tag, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+        ));
+      } <span class="kw">else </span>{
+        operations.push(<span class="macro">quote!</span>(
+          <span class="kw">let </span><span class="kw-2">mut </span>av_props : HashMap&lt;String, String&gt; = HashMap::default();
+          #(#av)*
+          document.insert_pi(#current_tag, <span class="prelude-val">Some</span>(av_props))<span class="question-mark">?</span>;
+        ));
+      }
 
       <span class="kw">let </span><span class="kw-2">mut </span>pi_closed = <span class="bool-val">false</span>;
       replacement = PI_CLOSE_RE
@@ -784,7 +808,7 @@
         .to_string();
 
       <span class="kw">if </span>!pi_closed {
-        <span class="macro">panic!</span>(<span class="string">&quot;Missing &#39;?&gt;&#39; at &#39;{replacement:?}&#39;\n&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"Missing '?&gt;' at '{replacement:?}'\n"</span>);
       }
       <span class="kw">continue</span>;
     }
@@ -793,8 +817,8 @@
     </span>replacement = LEAD_OPEN_TAG_RE
       .replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
         is_match = <span class="bool-val">true</span>;
-        current_tag = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
-        <span class="comment">// println!(&quot;-- open tag {:?}&quot;, current_tag);
+        current_tag = refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
+        <span class="comment">// println!("-- open tag {:?}", current_tag);
         </span>String::new()
       })
       .to_string();
@@ -814,31 +838,38 @@
       }
       <span class="comment">// Fonts require a bit too much boilerplate at the moment, due to having
       // different directives (code vs asset) and trying to avoid deep cloning.
-      </span>operations.push(<span class="macro">quote!</span>(
-        <span class="kw">let </span><span class="kw-2">mut </span>av_props : HashMap&lt;String, String&gt; = HashMap::default();
-        #(#av)*
-        <span class="kw">let </span>this_font_opt = <span class="kw">match </span>props.get(<span class="string">&quot;font&quot;</span>) {
-          <span class="prelude-val">Some</span>(Stored::Font(f)) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>f)),
-          <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Asset(fa))) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>fa)),
-          <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Closure(code))) =&gt;
-            <span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">None</span>)<span class="question-mark">?</span>)),
-          <span class="kw">_ </span>=&gt; <span class="prelude-val">None
-        </span>};
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(this_font) = this_font_opt {
-          document.open_element(#current_tag, <span class="prelude-val">Some</span>(av_props), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>this_font))<span class="question-mark">?</span>;
-        } <span class="kw">else </span>{
-          document.open_element(#current_tag, <span class="prelude-val">Some</span>(av_props), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-        }
-      ));
-      <span class="comment">// Empty element?
-      </span><span class="kw">if </span>replacement.starts_with(<span class="string">&#39;/&#39;</span>) {
-        operations.push(<span class="macro">quote!</span>(document.close_element(#current_tag)<span class="question-mark">?</span>;));
-        replacement = replacement[<span class="number">1</span>..].to_owned();
-      }
-      <span class="kw">if </span>replacement.starts_with(<span class="string">&#39;&gt;&#39;</span>) {
-        replacement = replacement[<span class="number">1</span>..].to_owned();
+      </span><span class="kw">if </span>av.is_empty() {
+        operations.push(<span class="macro">quote!</span>(
+          document.open_element(#current_tag, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+        ));
       } <span class="kw">else </span>{
-        <span class="macro">panic!</span>(<span class="string">&quot;Missing &#39;&gt;&#39; at &#39;{replacement:?}&#39;&quot;</span>);
+        operations.push(<span class="macro">quote!</span>(
+          <span class="attr">#[allow(unused_mut)]
+          </span><span class="kw">let </span><span class="kw-2">mut </span>av_props : HashMap&lt;String, String&gt; = HashMap::default();
+          #(#av)*
+          <span class="kw">let </span>this_font_opt = <span class="kw">match </span>props.get(<span class="string">"font"</span>) {
+            <span class="prelude-val">Some</span>(Stored::Font(f)) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>f)),
+            <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Asset(fa))) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>fa)),
+            <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Closure(code))) =&gt;
+              <span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">None</span>)<span class="question-mark">?</span>)),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">None
+          </span>};
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(this_font) = this_font_opt {
+            document.open_element(#current_tag, <span class="prelude-val">Some</span>(av_props), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>this_font))<span class="question-mark">?</span>;
+          } <span class="kw">else </span>{
+            document.open_element(#current_tag, <span class="prelude-val">Some</span>(av_props), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+          }
+        ));
+      }
+      <span class="comment">// Empty element?
+      </span><span class="kw">if </span>replacement.starts_with(<span class="string">'/'</span>) {
+        operations.push(<span class="macro">quote!</span>(document.close_element(#current_tag)<span class="question-mark">?</span>;));
+        replacement.remove(<span class="number">0</span>);
+      }
+      <span class="kw">if </span>replacement.starts_with(<span class="string">'&gt;'</span>) {
+        replacement.remove(<span class="number">0</span>);
+      } <span class="kw">else </span>{
+        <span class="macro">panic!</span>(<span class="string">"Missing '&gt;' at '{replacement:?}'"</span>);
       }
       <span class="kw">continue</span>;
     }
@@ -847,8 +878,8 @@
     </span><span class="kw">let </span>lead_close_tag_result =
       LEAD_CLOSE_TAG_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
         is_match = <span class="bool-val">true</span>;
-        current_tag = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
-        <span class="comment">// println!(&quot;-- close tag {:?}&quot;, current_tag);
+        current_tag = refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
+        <span class="comment">// println!("-- close tag {:?}", current_tag);
         // handle close tag
         </span>operations.push(<span class="macro">quote!</span>(document.close_element(#current_tag)<span class="question-mark">?</span>;));
         String::new()
@@ -860,13 +891,13 @@
 
     <span class="comment">// Substitutable value: argument, property...
     </span><span class="kw">if </span>LEAD_VALUE_RE.is_match(<span class="kw-2">&amp;</span>replacement) {
-      <span class="kw">let </span>to_absorb = translate_value(<span class="string">&quot;&quot;</span>, <span class="bool-val">false</span>, <span class="kw-2">&amp;mut </span>replacement);
+      <span class="kw">let </span>to_absorb = translate_value(<span class="string">""</span>, <span class="bool-val">false</span>, <span class="kw-2">&amp;mut </span>replacement);
       <span class="comment">// TODO: What is the cleanest interface for dealing with Alignment?
-      // when Stored, we wrap with Rc&lt;RefCell&lt;_&gt;&gt; which we can&#39;t unwrap without cloning
+      // when Stored, we wrap with Rc&lt;RefCell&lt;_&gt;&gt; which we can't unwrap without cloning
       // for the Digested variant.
       // (which is Digested(Rc&lt;DigestedData&lt;RefCell&lt;Alignment&gt;&gt;&gt;))
       // We could *either* use the Stored::Digested form *always*, or instead
-      // try to store a RefCell without &quot;Rc&quot; and use it without ever cloning out...
+      // try to store a RefCell without "Rc" and use it without ever cloning out...
       // for now, handle as a special case:
 
       // CONTINUE: Actually yes
@@ -887,9 +918,9 @@
     <span class="comment">// Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
     </span><span class="kw">let </span>_qname_key_result = QNAME_KEY_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
       is_match = <span class="bool-val">true</span>;
-      <span class="kw">let </span>_key = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
+      <span class="kw">let </span>_key = refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
       <span class="comment">// TODO: We need a test to flesh this out - is there any?
-      </span><span class="macro">unimplemented!</span>();
+      </span><span class="macro">todo!</span>();
       <span class="comment">// String::new()
     </span>});
 
@@ -922,17 +953,17 @@
 // The DOM holds the font objects, rather than strings,
 // to resolve relative fonts on output.
 </span><span class="kw">fn </span>translate_string(text: <span class="kw-2">&amp;mut </span>String) -&gt; proc_macro2::TokenStream {
-  <span class="comment">// println!(&quot;-- ts before: {:?}&quot;, text);
+  <span class="comment">// println!("-- ts before: {:?}", text);
   </span><span class="kw">let </span><span class="kw-2">mut </span>values: Vec&lt;proc_macro2::TokenStream&gt; = Vec::new();
-  <span class="kw-2">*</span>text = text.trim_start().to_owned();
-  <span class="kw">if </span>text.starts_with(<span class="string">&#39;\&#39;&#39;</span>) || text.starts_with(<span class="string">&#39;&quot;&#39;</span>) {
+  trim_start_in_place(<span class="kw-2">&amp;mut *</span>text);
+  <span class="kw">if </span>text.starts_with(<span class="string">'\''</span>) || text.starts_with(<span class="string">'"'</span>) {
     <span class="kw">let </span>quote = text.remove(<span class="number">0</span>);
     <span class="kw">while </span>!text.is_empty() &amp;&amp; !text.starts_with(quote) {
       <span class="kw">if </span>LEAD_COND_RE.is_match(text) {
         <span class="comment">// inline conditional; branches should be values
         </span><span class="kw">let </span>(bool_branch, <span class="kw-2">mut </span>if_branch, <span class="kw-2">mut </span>else_branch) = parse_conditional(text);
-        <span class="kw">let </span>if_branch_translated = translate_value(<span class="string">&quot;&quot;</span>, <span class="bool-val">false</span>, <span class="kw-2">&amp;mut </span>if_branch);
-        <span class="kw">let </span>else_branch_translated = translate_value(<span class="string">&quot;&quot;</span>, <span class="bool-val">false</span>, <span class="kw-2">&amp;mut </span>else_branch);
+        <span class="kw">let </span>if_branch_translated = translate_value(<span class="string">""</span>, <span class="bool-val">false</span>, <span class="kw-2">&amp;mut </span>if_branch);
+        <span class="kw">let </span>else_branch_translated = translate_value(<span class="string">""</span>, <span class="bool-val">false</span>, <span class="kw-2">&amp;mut </span>else_branch);
         <span class="kw">let </span>op = <span class="macro">quote!</span>(
           <span class="kw">if </span>#bool_branch {
             #if_branch_translated
@@ -948,7 +979,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>quoted_match = String::new();
         <span class="kw-2">*</span>text = LEAD_QUOTED_RE
           .replace(text, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-            quoted_match = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
+            quoted_match = refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
             is_quoted_match = <span class="bool-val">true</span>;
             String::new()
           })
@@ -957,7 +988,7 @@
           <span class="kw">let </span>escaped_match = <span class="kw-2">&amp;</span>slashify(<span class="kw-2">&amp;</span>unquote(<span class="kw-2">&amp;</span>quoted_match));
           values.push(<span class="macro">quote!</span>(#escaped_match));
         } <span class="kw">else </span>{
-          <span class="macro">panic!</span>(<span class="string">&quot;Unrecognized at &#39;{text:?}&#39;\n&quot;</span>);
+          <span class="macro">panic!</span>(<span class="string">"Unrecognized at '{text:?}'\n"</span>);
         }
       }
     }
@@ -971,9 +1002,9 @@
     .iter()
     .map(|v| {
       <span class="kw">let </span>v_str = v.to_string();
-      <span class="kw">if </span>v_str.starts_with(<span class="string">&#39;\&#39;&#39;</span>) || v_str.starts_with(<span class="string">&#39;&quot;&#39;</span>) {
+      <span class="kw">if </span>v_str.starts_with(<span class="string">'\''</span>) || v_str.starts_with(<span class="string">'"'</span>) {
         <span class="macro">quote!</span>(#v.to_string())
-      } <span class="kw">else if </span>v_str.ends_with(<span class="string">&quot;. to_string ( ) &quot;</span>) {
+      } <span class="kw">else if </span>v_str.ends_with(<span class="string">". to_string ( ) "</span>) {
         <span class="macro">quote!</span>(#v)
       } <span class="kw">else </span>{
         <span class="macro">quote!</span>(<span class="kw">match </span>#v {
@@ -983,14 +1014,14 @@
       }
     })
     .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-  <span class="macro">quote!</span>(<span class="macro">vec!</span>[#(#token_values),<span class="kw-2">*</span>].join(<span class="string">&quot;&quot;</span>))
+  <span class="macro">quote!</span>([#(#token_values),<span class="kw-2">*</span>].join(<span class="string">""</span>))
 }
 
 <span class="kw">fn </span>translate_avpairs(text: <span class="kw-2">&amp;mut </span>String) -&gt; Vec&lt;proc_macro2::TokenStream&gt; {
   <span class="comment">// Parse a set of attribute value pairs from a constructor pattern,
   // substituting argument and property values from the whatsit.
   </span><span class="kw">let </span><span class="kw-2">mut </span>avs: Vec&lt;proc_macro2::TokenStream&gt; = Vec::new();
-  <span class="kw-2">*</span>text = text.trim_start().to_owned();
+  trim_start_in_place(<span class="kw-2">&amp;mut *</span>text);
   <span class="kw">while </span>!text.is_empty() {
     <span class="kw">let </span><span class="kw-2">mut </span>is_match = <span class="bool-val">false</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>key = String::new();
@@ -1008,29 +1039,31 @@
       );
       avs.push(op);
       <span class="comment">// elsif (/^%$VALUE_RE/) {    # Hash?  Assume the value can be turned into
-      // a hash!       s/^%//;                  # Eat the &quot;%&quot;
-      //       push(@avs, &#39;%{&#39; . translate_value() . &#39;}&#39;); }
+      // a hash!       s/^%//;                  # Eat the "%"
+      //       push(@avs, '%{' . translate_value() . '}'); }
     </span>}
     <span class="kw">if </span>!is_match {
       <span class="kw-2">*</span>text = KEY_RE
         .replace(text, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-          key = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
+          key = refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
           is_match = <span class="bool-val">true</span>;
           String::new()
         })
         .to_string();
       <span class="kw">if </span>is_match {
         <span class="kw">let </span>val = translate_string(text);
-        <span class="kw">if </span>key != <span class="string">&quot;font&quot; </span>{
+        <span class="kw">if </span>key == <span class="string">"font" </span>{
           <span class="comment">// we handle font in a special case
-          </span>avs.push(<span class="macro">quote!</span>(av_props.insert(#key.to_string(), #val);))
+          </span>avs.push(<span class="macro">quote!</span>(();));
+        } <span class="kw">else </span>{
+          avs.push(<span class="macro">quote!</span>(av_props.insert(#key.to_string(), #val);))
         };
       }
     }
     <span class="kw">if </span>!is_match {
       <span class="kw">break</span>;
     }
-    <span class="kw-2">*</span>text = text.trim_start().to_owned();
+    trim_start_in_place(<span class="kw-2">&amp;mut *</span>text);
   }
   avs
 }
@@ -1043,13 +1076,13 @@
   for_test: bool,
   text: <span class="kw-2">&amp;mut </span>String,
 ) -&gt; proc_macro2::TokenStream {
-  <span class="kw">let </span><span class="kw-2">mut </span>val = <span class="macro">quote!</span>(<span class="string">&quot;&quot;</span>);
+  <span class="kw">let </span><span class="kw-2">mut </span>val = <span class="macro">quote!</span>(<span class="string">""</span>);
   <span class="kw">let </span><span class="kw-2">mut </span>is_match = <span class="bool-val">false</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>fcn = String::new();
   <span class="comment">// Recognize a function call, w/args
   </span><span class="kw-2">*</span>text = FN_RE
     .replace(text, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-      fcn = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_owned();
+      refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).clone_into(<span class="kw-2">&amp;mut </span>fcn);
       is_match = <span class="bool-val">true</span>;
       String::new()
     })
@@ -1058,12 +1091,12 @@
     <span class="kw">let </span><span class="kw-2">mut </span>args = Vec::new();
     <span class="kw">while </span>!LEAD_CPAREN_RE.is_match(text) {
       <span class="kw">let </span>ttl = text.trim_start();
-      <span class="kw">let </span>quoted_follows = ttl.starts_with(<span class="string">&#39;\&#39;&#39;</span>) || ttl.starts_with(<span class="string">&#39;\&quot;&#39;</span>);
+      <span class="kw">let </span>quoted_follows = ttl.starts_with(<span class="string">'\''</span>) || ttl.starts_with(<span class="string">'\"'</span>);
 
       <span class="kw">let </span>arg = <span class="kw">if </span>quoted_follows {
         translate_string(text)
       } <span class="kw">else </span>{
-        translate_value(<span class="string">&quot;,)&quot;</span>, for_test, text)
+        translate_value(<span class="string">",)"</span>, for_test, text)
       };
       args.push(arg);
       <span class="kw">let </span><span class="kw-2">mut </span>intermediate_kv = <span class="bool-val">false</span>;
@@ -1077,13 +1110,13 @@
         <span class="kw">break</span>;
       }
     }
-    <span class="kw-2">*</span>text = text.trim_start().to_owned();
-    <span class="kw">if </span>text.starts_with(<span class="string">&#39;)&#39;</span>) {
+    trim_start_in_place(<span class="kw-2">&amp;mut *</span>text);
+    <span class="kw">if </span>text.starts_with(<span class="string">')'</span>) {
       text.remove(<span class="number">0</span>);
     } <span class="kw">else </span>{
-      <span class="macro">panic!</span>(<span class="string">&quot;Missing &#39;)&#39; in &amp;$fcn(...) at &#39;{text:?}&#39;\n&quot;</span>);
+      <span class="macro">panic!</span>(<span class="string">"Missing ')' in &amp;$fcn(...) at '{text:?}'\n"</span>);
     }
-    <span class="comment">// println!(&quot;text after translate_value: {:?}&quot;, text);
+    <span class="comment">// println!("text after translate_value: {:?}", text);
     </span>val = <span class="macro">quote!</span>(#fcn( #(#args),* ));
   }
 
@@ -1092,11 +1125,10 @@
     </span><span class="kw-2">*</span>text = ARG_HOLE_RE
       .replace(text, |arg_refs: <span class="kw-2">&amp;</span>Captures| {
         is_match = <span class="bool-val">true</span>;
-        <span class="kw">let </span>n = arg_refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
+        <span class="kw">let </span>n = arg_refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
         <span class="kw">let </span>n_int = n.parse::&lt;i32&gt;().unwrap_or(-<span class="number">1</span>);
-        <span class="kw">if </span>n_int &lt; <span class="number">1 </span>{
-          <span class="comment">//|| (n_int &gt; *NARGS) {
-          </span><span class="macro">panic!</span>(<span class="string">&quot;Illegal argument number {n_int:?} at &#39;{text:?}&#39;\n&quot;</span>);
+        <span class="kw">if </span>!(<span class="number">1</span>..=<span class="number">9</span>).contains(<span class="kw-2">&amp;</span>n_int) {
+          <span class="macro">panic!</span>(<span class="string">"Illegal argument number {n_int:?} at '{text:?}'\n"</span>);
         } <span class="kw">else </span>{
           <span class="comment">// index starts at 0
           // if we need the argument for a test such as `?#1(yes)(no)`
@@ -1116,7 +1148,7 @@
   <span class="kw">if </span>!is_match {
     <span class="kw-2">*</span>text = PROP_HOLE_RE
       .replace(text, |prop_refs: <span class="kw-2">&amp;</span>Captures| {
-        <span class="kw">let </span>prop_name = prop_refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_owned();
+        <span class="kw">let </span>prop_name = prop_refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_owned();
         is_match = <span class="bool-val">true</span>;
         <span class="comment">// Recognize #prop for whatsit properties
         </span>val = <span class="macro">quote!</span>(props.get(#prop_name));
@@ -1128,14 +1160,14 @@
   <span class="kw">if </span>!is_match {
     <span class="comment">// Build the exclusion regex
     </span><span class="kw">let </span><span class="kw-2">mut </span>exclusion_str: String =
-      <span class="macro">concat!</span>(<span class="string">r&quot;^((?:&quot;</span>, <span class="macro">QUOTED_SPECIALS!</span>(), <span class="string">r&quot;|[^&quot;</span>, <span class="macro">SPECIALS!</span>()).to_owned();
-    exclusion_str = exclusion_str + exclude_chars + <span class="string">r&quot;])+)&quot;</span>;
+      <span class="macro">concat!</span>(<span class="string">r"^((?:"</span>, <span class="macro">QUOTED_SPECIALS!</span>(), <span class="string">r"|[^"</span>, <span class="macro">SPECIALS!</span>()).to_owned();
+    exclusion_str = exclusion_str + exclude_chars + <span class="string">r"])+)"</span>;
     <span class="kw">let </span>exclusion_re: Regex = Regex::new(<span class="kw-2">&amp;</span>exclusion_str).unwrap();
 
     exclusion_re
       .replace(text, |quoted_refs: <span class="kw-2">&amp;</span>Captures| {
         is_match = <span class="bool-val">true</span>;
-        <span class="kw">let </span>quoted = quoted_refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_owned();
+        <span class="kw">let </span>quoted = quoted_refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_owned();
         <span class="kw">let </span>normalized_val = <span class="kw-2">&amp;</span>slashify(<span class="kw-2">&amp;</span>unquote(<span class="kw-2">&amp;</span>quoted));
         val = <span class="macro">quote!</span>(#normalized_val);
         String::new()
@@ -1143,43 +1175,43 @@
       .to_string();
   }
   <span class="kw">if </span>!is_match {
-    <span class="macro">panic!</span>(<span class="string">&quot;Missing value at &#39;{text:?}&#39;\n&quot;</span>);
+    <span class="macro">panic!</span>(<span class="string">"Missing value at '{text:?}'\n"</span>);
   }
   val
 }
 
 <span class="kw">fn </span>parse_conditional(text: <span class="kw-2">&amp;mut </span>String) -&gt; (proc_macro2::TokenStream, String, String) {
-  <span class="comment">// Remove leading &quot;?&quot;
+  <span class="comment">// Remove leading "?"
   </span><span class="kw-2">*</span>text = LEAD_QMARK
     .replace(text, |<span class="kw">_</span>: <span class="kw-2">&amp;</span>Captures| String::new())
     .to_string();
-  <span class="kw">let </span>translated_bool = translate_value(<span class="string">&quot;(&quot;</span>, <span class="bool-val">true</span>, text);
-  <span class="comment">// Note/TODO: This is a direct redo of latexml&#39;s &quot;ToString(v) ? () : ()&quot; approach
+  <span class="kw">let </span>translated_bool = translate_value(<span class="string">"("</span>, <span class="bool-val">true</span>, text);
+  <span class="comment">// Note/TODO: This is a direct redo of latexml's "ToString(v) ? () : ()" approach
   //   for testing the boolean branch
   //   we could make it more performant by defining a simple trait `.to_bool`
   //   and implementing it for all Core objects that may be passed in as arguments
-  //   currently Stored::Bool(false) will serialize to &quot;false&quot; so we need an extra check...
+  //   currently Stored::Bool(false) will serialize to "false" so we need an extra check...
   </span><span class="kw">let </span>bool_branch = <span class="macro">quote!</span>(  <span class="kw">match </span>#translated_bool { <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>v) =&gt; {
     <span class="kw">let </span>v_str = v.to_string();
-    !v_str.is_empty() &amp;&amp; v_str != <span class="string">&quot;false&quot; </span>}});
+    !v_str.is_empty() &amp;&amp; v_str != <span class="string">"false" </span>}});
   <span class="kw">let </span>if_branch_opt = extract_bracketed(text, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Delimiter::Parenthesis));
   <span class="kw">if let </span><span class="prelude-val">Some</span>(if_branch) = if_branch_opt {
     <span class="kw">let </span>else_branch = extract_bracketed(text, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Delimiter::Parenthesis)).unwrap_or_default();
-    <span class="comment">// println!(&quot;-- cond after with else: {:?}&quot;, text);
+    <span class="comment">// println!("-- cond after with else: {:?}", text);
     </span>(bool_branch, if_branch, else_branch)
   } <span class="kw">else </span>{
-    <span class="comment">// println!(&quot;-- cond after malformed: {:?}&quot;, text);
+    <span class="comment">// println!("-- cond after malformed: {:?}", text);
     </span>(bool_branch, String::new(), String::new())
   }
 }
 
-<span class="kw">fn </span>slashify(text: <span class="kw-2">&amp;</span>str) -&gt; String { text.replace(<span class="string">&#39;\\&#39;</span>, <span class="string">&quot;\\\\&quot;</span>) }
+<span class="kw">fn </span>slashify(text: <span class="kw-2">&amp;</span>str) -&gt; String { text.replace(<span class="string">'\\'</span>, <span class="string">"\\\\"</span>) }
 <span class="kw">fn </span>unquote(text: <span class="kw-2">&amp;</span>str) -&gt; String {
   ESCAPED_OP
     .replace_all(text, |escaped_refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-      escaped_refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string()
+      escaped_refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string()
     })
-    .replace(<span class="string">&quot;##&quot;</span>, <span class="string">&quot;#&quot;</span>)
-    .replace(<span class="string">&quot;&amp;amp;&quot;</span>, <span class="string">&quot;&amp;&quot;</span>)
+    .replace(<span class="string">"##"</span>, <span class="string">"#"</span>)
+    .replace(<span class="string">"&amp;amp;"</span>, <span class="string">"&amp;"</span>)
 }
 </code></pre></div></section></main></body></html>

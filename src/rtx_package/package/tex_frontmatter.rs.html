@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_frontmatter.rs`."><title>tex_frontmatter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_frontmatter.rs`."><title>tex_frontmatter.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -395,8 +397,6 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
 </pre></div><pre class="rust"><code><span class="comment">//----------------------------------------------------------------------
 // General support for Front Matter.
 // Not (yet) used by TeX (finish plain?)
@@ -406,31 +406,31 @@
 // rather than directly drop it into the digested stream.
 // When we begin constructing the document, all accumulated material is output.
 // See LaTeX.ltxml for usage.
-// Note: could be circumstances where you&#39;d want modular frontmatter?
+// Note: could be circumstances where you'd want modular frontmatter?
 // (ie. frontmatter for each sectional unit)
 
 </span><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
 <span class="kw">const </span>FRONTMATTER_ELEMENTS: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
-  <span class="string">&quot;ltx:title&quot;</span>,
-  <span class="string">&quot;ltx:toctitle&quot;</span>,
-  <span class="string">&quot;ltx:subtitle&quot;</span>,
-  <span class="string">&quot;ltx:creator&quot;</span>,
-  <span class="string">&quot;ltx:date&quot;</span>,
-  <span class="string">&quot;ltx:abstract&quot;</span>,
-  <span class="string">&quot;ltx:keywords&quot;</span>,
-  <span class="string">&quot;ltx:classification&quot;</span>,
-  <span class="string">&quot;ltx:acknowledgements&quot;</span>,
+  <span class="string">"ltx:title"</span>,
+  <span class="string">"ltx:toctitle"</span>,
+  <span class="string">"ltx:subtitle"</span>,
+  <span class="string">"ltx:creator"</span>,
+  <span class="string">"ltx:date"</span>,
+  <span class="string">"ltx:abstract"</span>,
+  <span class="string">"ltx:keywords"</span>,
+  <span class="string">"ltx:classification"</span>,
+  <span class="string">"ltx:acknowledgements"</span>,
 ];
 <span class="attr">#[rustfmt::skip]
 </span><span class="macro">LoadDefinitions!</span>({
   <span class="macro">AssignValue!</span>(
-    <span class="string">&quot;frontmatter&quot;</span>,
+    <span class="string">"frontmatter"</span>,
     Stored::HashTagData(HashMap::default()),
     <span class="prelude-val">Some</span>(Scope::Global)
   );
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\if@in@preamble&quot;</span>, { lookup_bool(<span class="string">&quot;inPreamble&quot;</span>) });
+  <span class="macro">DefConditional!</span>(<span class="string">"\\if@in@preamble"</span>, { lookup_bool(<span class="string">"inPreamble"</span>) });
 
   <span class="comment">// Add a new frontmatter item that will be enclosed in &lt;$tag %attr&gt;...&lt;/$tag&gt;
   // The content is the result of digesting $tokens.
@@ -439,11 +439,11 @@
   //   replace (to replace the current entry, if any)
   //   ifnew   (only add if no previous entry)//
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}&quot;</span>,
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}"</span>,
     sub[(_keys_tks,tag,attrs_opt,tokens)] {
-    <span class="comment">// Digest this as if we&#39;re already in the document body!
-    </span><span class="kw">let </span>inpreamble = <span class="macro">LookupBool!</span>(<span class="string">&quot;inPreamble&quot;</span>);
-    <span class="macro">AssignValue!</span>(<span class="string">&quot;inPreamble&quot;</span>, <span class="bool-val">false</span>);
+    <span class="comment">// Digest this as if we're already in the document body!
+    </span><span class="kw">let </span>inpreamble = <span class="macro">LookupBool!</span>(<span class="string">"inPreamble"</span>);
+    <span class="macro">AssignValue!</span>(<span class="string">"inPreamble"</span>, <span class="bool-val">false</span>);
 
     <span class="comment">// Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
@@ -465,17 +465,17 @@
     wrapped_tokens.push(<span class="macro">T_END!</span>());
     <span class="kw">let </span>digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))<span class="question-mark">?</span>;
     <span class="kw">let </span>entry = (tag.to_string(), attrs_digested, digested_tokens);
-    with_value_mut(<span class="string">&quot;frontmatter&quot;</span>, |val_opt| {
+    with_value_mut(<span class="string">"frontmatter"</span>, |val_opt| {
       <span class="kw">let </span>frontmatter = <span class="kw">match </span>val_opt {
         <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::HashTagData(<span class="kw-2">ref mut </span>frnt)) =&gt; frnt,
-        <span class="kw">_ </span>=&gt; <span class="macro">fatal!</span>(TexPool, Expected, <span class="string">&quot;Global TeX Frontmatter hash was not available, should never happen&quot;</span>),
+        <span class="kw">_ </span>=&gt; <span class="macro">fatal!</span>(TexPool, Expected, <span class="string">"Global TeX Frontmatter hash was not available, should never happen"</span>),
       };
       <span class="kw">let </span>f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
       f_entry.push(entry);
       <span class="prelude-val">Ok</span>(())
     })<span class="question-mark">?</span>;
 
-    <span class="macro">AssignValue!</span>(<span class="string">&quot;inPreamble&quot;</span>, inpreamble);
+    <span class="macro">AssignValue!</span>(<span class="string">"inPreamble"</span>, inpreamble);
   });
 
   <span class="comment">// Append a piece of data to an existing frontmatter item that is contained in &lt;$tag&gt;
@@ -483,12 +483,12 @@
   // otherwise, just append to the last item in $tag.
 
   // \@add@to@frontmatter{tag}[label]{content}
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@add@to@frontmatter {} [] {}&quot;</span>, sub[(tag,label,tokens)] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@add@to@frontmatter {} [] {}"</span>, sub[(_tag,_label,_tokens)] {
   <span class="comment">//     $tag = ToString($tag);
   //     $label = ToString($label) if $label;
-  //     my $frontmatter = LookupValue(&#39;frontmatter&#39;);
+  //     my $frontmatter = LookupValue('frontmatter');
 
-  //     my $inpreamble = LookupValue(&#39;inPreamble&#39;);
+  //     my $inpreamble = LookupValue('inPreamble');
   //     AssignValue(inPreamble =&gt; 0);
   //     my $datum = Digest(Tokens(T_BEGIN, $tokens, T_END));
   //     AssignValue(inPreamble =&gt; $inpreamble);
@@ -496,29 +496,28 @@
   //       my $entry;
   //       foreach my $item (@{ $$frontmatter{$tag} || [] }) {
   //         my ($itag, $iattr, @stuff) = @$item;
-  //         if ($label eq ($$iattr{label} || &#39;&#39;)) {
+  //         if ($label eq ($$iattr{label} || '')) {
   //           push(@$item, $datum);
   //           return; } } }
   //     elsif (my $list = $$frontmatter{$tag}) {
   //       push(@{ $$list[-1] }, $datum);
   //       return; }
   //     push(@{ $$frontmatter{$tag} }, [$tag, ($label ? { label =&gt; $label } : undef), $datum]);
-    </span><span class="macro">unimplemented!</span>();
-    <span class="prelude-val">Ok</span>(())
+    </span><span class="macro">unported!</span>()
   });
 
   <span class="comment">// This is called by afterOpen (by default on &lt;ltx:document&gt;) to
   // output any frontmatter that was accumulated.
 
-  </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, after_open_late =&gt; sub[document, _node] {
+  </span><span class="macro">Tag!</span>(<span class="string">"ltx:document"</span>, after_open_late =&gt; sub[document, _node] {
     <span class="comment">// this happens only once per conversion, so not a big deal to keep it in the closure
     </span><span class="kw">let </span>frontmatter_elements_set: HashSet&lt;String&gt; = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
-    <span class="kw">let </span><span class="kw-2">mut </span>frontmatter = <span class="kw">match </span>state::remove_value(<span class="string">&quot;frontmatter&quot;</span>) {
+    <span class="kw">let </span><span class="kw-2">mut </span>frontmatter = <span class="kw">match </span>state::remove_value(<span class="string">"frontmatter"</span>) {
       <span class="prelude-val">Some</span>(Stored::HashTagData(frnt)) =&gt; frnt,
-      <span class="kw">_ </span>=&gt; <span class="macro">fatal!</span>(TexPool, Expected, <span class="string">&quot;Global TeX Frontmatter hash was not available, should never happen&quot;</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">fatal!</span>(TexPool, Expected, <span class="string">"Global TeX Frontmatter hash was not available, should never happen"</span>),
     };
-    state::assign_value(<span class="string">&quot;frontmatter&quot;</span>, Stored::HashTagData(HashMap::default()), <span class="prelude-val">Some</span>(Scope::Global));
+    state::assign_value(<span class="string">"frontmatter"</span>, Stored::HashTagData(HashMap::default()), <span class="prelude-val">Some</span>(Scope::Global));
 
     <span class="comment">// order is important here, first go through frontmatter_elements, then any leftover keys.
     </span><span class="kw">let </span>custom_keys: Vec&lt;String&gt; = frontmatter
@@ -532,11 +531,11 @@
     <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>all_keys {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(list) = frontmatter.remove(key) {
         <span class="comment">// Dubious, but assures that frontmatter appears in text mode...
-        </span>document.set_box_to_absorb(Tbox::new(arena::pin_static(<span class="string">&quot;&quot;</span>), lookup_font(), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_SPACE!</span>()), HashMap::default()).into());
+        </span>document.set_box_to_absorb(Tbox::new(arena::pin_static(<span class="string">""</span>), lookup_font(), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_SPACE!</span>()), HashMap::default()).into());
         <span class="kw">for </span>(tag, attr, stuff) <span class="kw">in </span>list {
           document.open_element(<span class="kw-2">&amp;</span>tag, attr, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-          <span class="comment">// TODO:  (scalar(@stuff) &amp;&amp; $document-&gt;canHaveAttribute($tag, &#39;font&#39;)
-          //        ? (font =&gt; $stuff[0]-&gt;getFont, _force_font =&gt; &#39;true&#39;) : ()));
+          <span class="comment">// TODO:  (scalar(@stuff) &amp;&amp; $document-&gt;canHaveAttribute($tag, 'font')
+          //        ? (font =&gt; $stuff[0]-&gt;getFont, _force_font =&gt; 'true') : ()));
           </span>document.absorb(<span class="kw-2">&amp;</span>stuff, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 
           document.close_element(<span class="kw-2">&amp;</span>tag)<span class="question-mark">?</span>;
@@ -548,14 +547,14 @@
 
   <span class="comment">// Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@frontmatterhere&quot;</span>, sub[doc,_args] { insert_frontmatter(doc)<span class="question-mark">? </span>},
-    after_digest =&gt; { state::assign_value(<span class="string">&quot;frontmatter_deferred&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global)); });
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@frontmatterhere"</span>, sub[doc,_args] { insert_frontmatter(doc)<span class="question-mark">? </span>},
+    after_digest =&gt; { state::assign_value(<span class="string">"frontmatter_deferred"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global)); });
 
   <span class="comment">// TeX.pool.ltxml, line 5421
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
-  </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, after_open_late =&gt; sub[document, root] {
-    <span class="kw">let </span>classes = with_mapping_keys(<span class="string">&quot;DOCUMENT_CLASSES&quot;</span>, |keys| keys.join(<span class="string">&quot; &quot;</span>));
+  </span><span class="macro">Tag!</span>(<span class="string">"ltx:document"</span>, after_open_late =&gt; sub[document, root] {
+    <span class="kw">let </span>classes = with_mapping_keys(<span class="string">"DOCUMENT_CLASSES"</span>, |keys| keys.join(<span class="string">" "</span>));
     <span class="kw">if </span>!classes.is_empty()  {
       document.add_class(root, <span class="kw-2">&amp;</span>classes)<span class="question-mark">?</span>;
     }
@@ -563,35 +562,35 @@
 
   <span class="comment">// If folks start using plain TeX macros, and never load LaTeX.pool,
   // they might benefit from a ltx-plain.css?
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\beginsection Until:\\par&quot;</span>, <span class="string">r&quot;\@beginsection{{\bf #1}}&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@beginsection {}&quot;</span>,
-    <span class="string">&quot;&lt;ltx:section&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\beginsection Until:\\par"</span>, <span class="string">r"\@beginsection{{\bf #1}}"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@beginsection {}"</span>,
+    <span class="string">"&lt;ltx:section&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;"</span>);
 
 
   <span class="comment">// POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   //  If so, how do know when the theorem ends?
   // TODO:
-  // DefMacro!(&quot;\\proclaim&quot;, parse_def_parameters(&quot;\\proclaim&quot;, Tokenize!(&quot;#1. #2\\par&quot;)),
-  //   r&quot;\@proclaim{{\bf #1}}{{\sl #2}}&quot;);
-  // DefConstructor!(&quot;\\@proclaim{}{}&quot;,
-  //   &quot;&lt;ltx:theorem&gt;&lt;ltx:title font=&#39;#titlefont&#39; _force_font=&#39;true&#39; &gt;#title&lt;/ltx:title&gt;\
-  //     #2&quot;,
-  //   after_construct =&gt; sub[doc,_args] { doc.maybe_close_element(&quot;ltx:theorem&quot;)?; },
+  // DefMacro!("\\proclaim", parse_def_parameters("\\proclaim", Tokenize!("#1. #2\\par")),
+  //   r"\@proclaim{{\bf #1}}{{\sl #2}}");
+  // DefConstructor!("\\@proclaim{}{}",
+  //   "&lt;ltx:theorem&gt;&lt;ltx:title font='#titlefont' _force_font='true' &gt;#title&lt;/ltx:title&gt;\
+  //     #2",
+  //   after_construct =&gt; sub[doc,_args] { doc.maybe_close_element("ltx:theorem")?; },
   //   properties     =&gt; sub[title] {
-  //     stored_map!(&quot;title&quot; =&gt; title, &quot;titlefont&quot; =&gt; title.get_font()) });
+  //     stored_map!("title" =&gt; title, "titlefont" =&gt; title.get_font()) });
 
   //======================================================================
   // Tags &amp; Titles
   // The reference numbers, titles, captions etc, for various objects have
   // different styling conventions, and the styling various depending on context.
-  // We&#39;ll use ltx:tags as a container for the various forms of ltx:tag with different @role&#39;s.
+  // We'll use ltx:tags as a container for the various forms of ltx:tag with different @role's.
   // The role=refnum form is simply formatted by \the&lt;counter&gt; and used by \ref;
   // An ltx:tag w/o @role are for the numbers, often formatted differently, which
   // appear alongside the object; Such a tag also may be embedded within the title or caption.
   // Cross-references automatically generated by LaTeXML benefit from a bit more context:
   // these are the role=typerefnum forms.
-  // Additional forms are needed for bibliographies, hyperref&#39;s autoref, etc.
-  // An additional complication is that while the &quot;type&quot; determines the formatting
+  // Additional forms are needed for bibliographies, hyperref's autoref, etc.
+  // An additional complication is that while the "type" determines the formatting
   // of the various forms, some types (eg. theorems) share the same counter.
   // LaTeX defines this handling on an adhoc basis; defines \fnum@table, \fnum@figure for some types
   // but \labelenumi, etc for others.
@@ -601,10 +600,10 @@
   // It allows you to customize each of the forms for each type encountered.
   // The design reflects LaTeX needs, more than TeX, but support starts here!
 
-  // This collects up the various declared ltx:tag&#39;s into an ltx:tags
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@make@tags {}&quot;</span>, sub[(ttype)] {
+  // This collects up the various declared ltx:tag's into an ltx:tags
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@make@tags {}"</span>, sub[(ttype)] {
     <span class="kw">let </span>formatters = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(formatters)) =
-      lookup_value(<span class="string">&quot;type_tag_formatter&quot;</span>) {
+      lookup_value(<span class="string">"type_tag_formatter"</span>) {
         <span class="prelude-val">Some</span>(formatters)
       } <span class="kw">else </span>{
         <span class="prelude-val">None
@@ -616,7 +615,7 @@
       sorted_keys.sort();
       <span class="kw">for </span>role <span class="kw">in </span>sorted_keys.iter() {
         <span class="kw">let </span>formatter = <span class="kw-2">&amp;</span>formatters[<span class="kw-2">*</span>role];
-        tags.push(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@tag@intags&quot;</span>),
+        tags.push(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@tag@intags"</span>),
           <span class="macro">vec!</span>[
             <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(role)),
             build_invocation(formatter, <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(ttype.clone())])<span class="question-mark">?
@@ -625,7 +624,7 @@
       }
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>lx_tags = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@tags&quot;</span>), <span class="macro">T_BEGIN!</span>()];
+    <span class="kw">let </span><span class="kw-2">mut </span>lx_tags = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@tags"</span>), <span class="macro">T_BEGIN!</span>()];
     <span class="kw">for </span>invoked_tag <span class="kw">in </span>tags {
       lx_tags.append(<span class="kw-2">&amp;mut </span>invoked_tag.unlist());
     }
@@ -633,7 +632,7 @@
     <span class="prelude-val">Ok</span>(Tokens::new(lx_tags))
   });
 
-  <span class="comment">// Remove the last closed node, if it&#39;s empty.
+  <span class="comment">// Remove the last closed node, if it's empty.
   </span><span class="kw">let </span>remove_empty_element: Vec&lt;ConstructionClosure&gt; = <span class="macro">construct!</span>(document, _whatsit,{
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = document.get_node().get_last_child() {
       <span class="comment">// This should be the wrapper just added.
@@ -645,28 +644,28 @@
 
   <span class="comment">// \lx@tag[open][close]{stuff}
   </span><span class="kw">let </span>remove_empty_element_1 = remove_empty_element.clone();
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@tag[][][]{}&quot;</span>, <span class="string">&quot;&lt;ltx:tag open=&#39;#1&#39; close=&#39;#2&#39;&gt;#4&lt;/ltx:tag&gt;&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@tag[][][]{}"</span>, <span class="string">"&lt;ltx:tag open='#1' close='#2'&gt;#4&lt;/ltx:tag&gt;"</span>,
     bounded =&gt; <span class="bool-val">true</span>,
-    mode =&gt; <span class="string">&quot;text&quot;</span>,
+    mode =&gt; <span class="string">"text"</span>,
     after_construct =&gt; remove_empty_element_1
   );
 
   <span class="comment">// \lx@tag@intags{role}{stuff}
   </span><span class="kw">let </span>remove_empty_element_2 = remove_empty_element.clone();
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@tag@intags[]{}&quot;</span>, <span class="string">&quot;&lt;ltx:tag role=&#39;#1&#39;&gt;#2&lt;/ltx:tag&gt;&quot;</span>,
-    bounded =&gt; <span class="bool-val">true</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@tag@intags[]{}"</span>, <span class="string">"&lt;ltx:tag role='#1'&gt;#2&lt;/ltx:tag&gt;"</span>,
+    bounded =&gt; <span class="bool-val">true</span>, mode =&gt; <span class="string">"text"</span>,
     after_construct =&gt; remove_empty_element_2
   );
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@tags{}&quot;</span>,<span class="string">&quot;&lt;ltx:tags&gt;#1&lt;/ltx:tags&gt;&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@tags{}"</span>,<span class="string">"&lt;ltx:tags&gt;#1&lt;/ltx:tags&gt;"</span>,
     after_construct =&gt; remove_empty_element
   );
 
   <span class="comment">//----------------------------------------------------------------------
-  // &quot;refnum&quot; is the lowest level reference number for an object is typically \the&lt;counter&gt;
+  // "refnum" is the lowest level reference number for an object is typically \the&lt;counter&gt;
   // but be sure to use the right counter!  This is how \ref will show the number.
-  // You&#39;ll typically customize this by defining \the&lt;counter&gt; (and \p@&lt;counter) as in LaTeX.
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@counterfor{}&quot;</span>, sub[(ctr_type)] {
-    with_mapping(<span class="string">&quot;counter_for_type&quot;</span>, <span class="kw-2">&amp;</span>ctr_type.to_string(), |ctr_opt|
+  // You'll typically customize this by defining \the&lt;counter&gt; (and \p@&lt;counter) as in LaTeX.
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@counterfor{}"</span>, sub[(ctr_type)] {
+    with_mapping(<span class="string">"counter_for_type"</span>, <span class="kw-2">&amp;</span>ctr_type.to_string(), |ctr_opt|
     <span class="kw">if let </span><span class="prelude-val">Some</span>(ctr) = ctr_opt {
       <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(ctr.to_string()))
     } <span class="kw">else </span>{
@@ -674,73 +673,73 @@
     })
   });
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@the@@{}&quot;</span>,
-    <span class="string">&quot;\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}&quot;
+    <span class="string">"\\lx@the@@{}"</span>,
+    <span class="string">"\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}"
   </span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@@the@@{}&quot;</span>, <span class="string">&quot;\\csname the#1\\endcsname&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@@the@@{}"</span>, <span class="string">"\\csname the#1\\endcsname"</span>);
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@therefnum@@{}&quot;</span>,
-    <span class="string">&quot;\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}&quot;
+    <span class="string">"\\lx@therefnum@@{}"</span>,
+    <span class="string">"\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@@therefnum@@{}&quot;</span>,
-    <span class="string">&quot;{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}&quot;
+    <span class="string">"\\lx@@therefnum@@{}"</span>,
+    <span class="string">"{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}"
   </span>);
 
-  <span class="macro">AssignMapping!</span>(<span class="string">&quot;type_tag_formatter&quot;</span>, <span class="string">&quot;refnum&quot; </span>=&gt; <span class="string">&quot;\\lx@therefnum@@&quot;</span>);
+  <span class="macro">AssignMapping!</span>(<span class="string">"type_tag_formatter"</span>, <span class="string">"refnum" </span>=&gt; <span class="string">"\\lx@therefnum@@"</span>);
 
   <span class="comment">//----------------------------------------------------------------------
   // \lx@fnum@@{type}  Gets the formatted form of the refnum, as part of the object, (no @role).
   // Customize by defining \fnum@&lt;type&gt; or \&lt;type&gt;name and \fnum@font@&lt;type&gt;
   // Default uses \fnum@font@&lt;type&gt; \&lt;type&gt;name prefix + space (if any) and \the&lt;counter&gt;.
-  // When using the &quot;name&quot;, uses \&lt;type&gt;name in preference to fallback \lx@name@&lt;type&gt;
+  // When using the "name", uses \&lt;type&gt;name in preference to fallback \lx@name@&lt;type&gt;
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\lx@refnum@compose{}{}&quot;</span>,
-    <span class="string">r&quot;\expandafter\lx@refnum@compose@\expandafter{#2}{#1}&quot;
+    <span class="string">r"\lx@refnum@compose{}{}"</span>,
+    <span class="string">r"\expandafter\lx@refnum@compose@\expandafter{#2}{#1}"
   </span>);
-  <span class="macro">DefMacro!</span>(<span class="string">r&quot;\lx@refnum@compose@{}{}&quot;</span>, <span class="string">r&quot;\if.#1.#2\else#2\space#1\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">r"\lx@refnum@compose@{}{}"</span>, <span class="string">r"\if.#1.#2\else#2\space#1\fi"</span>);
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\lx@fnum@@{}&quot;</span>,
-    <span class="string">r&quot;{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname}}&quot;
+    <span class="string">r"\lx@fnum@@{}"</span>,
+    <span class="string">r"{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname}}"
   </span>);
 
   <span class="comment">// Really seems like &lt;type&gt;name should take precedence over \lx@name@&lt;type&gt;,
   // since users might define it.
   // BUT amsthm defines \thmname{}!
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@@fnum@@ {}&quot;</span>,
-    <span class="string">r&quot;\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}&quot;
+    <span class="string">"\\lx@@fnum@@ {}"</span>,
+    <span class="string">r"\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}"
   </span>);
 
-  <span class="macro">AssignMapping!</span>(<span class="string">&quot;type_tag_formatter&quot;</span>, <span class="string">&quot;&quot; </span>=&gt; <span class="string">&quot;\\lx@fnum@@&quot;</span>); <span class="comment">// Default!
+  <span class="macro">AssignMapping!</span>(<span class="string">"type_tag_formatter"</span>, <span class="string">"" </span>=&gt; <span class="string">"\\lx@fnum@@"</span>); <span class="comment">// Default!
 
   //----------------------------------------------------------------------
   // \\lx@fnum@toc@{type} is similar, but formats the number for use within \\toctitle
   // Customize by defining \\fnum@toc@&lt;type&gt; or \\fnum@tocfont@&lt;type&gt;
   // Default uses just \\the&lt;counter&gt;, else composes using \\lx@@fnum@@{type}
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\lx@fnum@toc@@{}&quot;</span>,
-    <span class="string">r&quot;{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}&quot;
+    <span class="string">r"\lx@fnum@toc@@{}"</span>,
+    <span class="string">r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}"
   </span>);
 
   <span class="comment">//----------------------------------------------------------------------
-  // &quot;typerefnum&quot; form is used by automatic cross-references, typically &quot;type number&quot; or similar.
+  // "typerefnum" form is used by automatic cross-references, typically "type number" or similar.
   // Customize by defining \typerefnum@&lt;type&gt; or \typerefnum@font@&lt;type&gt;
   // Default uses either \&lt;type&gt;typerefname or \&lt;type&gt;name (if any, followed by space, then
   // \\the&lt;counter&gt;
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@typerefnum@@{}&quot;</span>,
-    <span class="string">r&quot;{\normalfont\@ifundefined{typerefnum@font@#1}{}{\csname typerefnum@font@#1\endcsname}\@ifundefined{typerefnum@#1}{\lx@@typerefnum@@{#1}}{\csname typerefnum@#1\endcsname}}&quot;
+    <span class="string">"\\lx@typerefnum@@{}"</span>,
+    <span class="string">r"{\normalfont\@ifundefined{typerefnum@font@#1}{}{\csname typerefnum@font@#1\endcsname}\@ifundefined{typerefnum@#1}{\lx@@typerefnum@@{#1}}{\csname typerefnum@#1\endcsname}}"
   </span>);
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@@typerefnum@@{}&quot;</span>,
-    <span class="string">r&quot;\@ifundefined{#1typerefname}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\lx@the@@{#1}}}&quot;
+    <span class="string">"\\lx@@typerefnum@@{}"</span>,
+    <span class="string">r"\@ifundefined{#1typerefname}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\lx@the@@{#1}}}"
   </span>);
 
-  <span class="macro">AssignMapping!</span>(<span class="string">&quot;type_tag_formatter&quot;</span>, <span class="string">&quot;typerefnum&quot; </span>=&gt; <span class="string">&quot;\\lx@typerefnum@@&quot;</span>);
+  <span class="macro">AssignMapping!</span>(<span class="string">"type_tag_formatter"</span>, <span class="string">"typerefnum" </span>=&gt; <span class="string">"\\lx@typerefnum@@"</span>);
 
   <span class="comment">//----------------------------------------------------------------------
   // The following macros provide similar customization for titles &amp; toctitles
@@ -753,12 +752,12 @@
   // Customize by defining \format@title@type{title}
   // Default composes \lx@fnum@@{type} space title.
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@format@title@@{}{}&quot;</span>,
-    <span class="string">r&quot;\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}&quot;
+    <span class="string">"\\lx@format@title@@{}{}"</span>,
+    <span class="string">r"\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@@format@title@@{}{}&quot;</span>,
-    <span class="string">r&quot;{\@ifundefined{format@title@#1}{\lx@@compose@title{\lx@fnum@@{#1}}{#2}}{\csname format@title@#1\endcsname{#2}}}&quot;
+    <span class="string">"\\lx@@format@title@@{}{}"</span>,
+    <span class="string">r"{\@ifundefined{format@title@#1}{\lx@@compose@title{\lx@fnum@@{#1}}{#2}}{\csname format@title@#1\endcsname{#2}}}"
   </span>);
 
   <span class="comment">// \\lx@format@toctitle@@{type}{toctitle}
@@ -766,24 +765,24 @@
   // Customize by defining \\format@toctitle@type{title}
   // Default composes \\lx@fnum@toc@@{type} space title.
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@format@toctitle@@{}{}&quot;</span>,
-    <span class="string">r&quot;\lx@@format@toctitle@@{#1}{{\lx@format@toctitle@font@@{#1}#2}}&quot;
+    <span class="string">"\\lx@format@toctitle@@{}{}"</span>,
+    <span class="string">r"\lx@@format@toctitle@@{#1}{{\lx@format@toctitle@font@@{#1}#2}}"
   </span>);
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@@format@toctitle@@{}{}&quot;</span>,
-    <span class="string">r&quot;{\@ifundefined{format@toctitle@#1}{\lx@@compose@title{\lx@fnum@toc@@{#1}}{#2}}{\csname format@toctitle@#1\endcsname{#2}}}&quot;
+    <span class="string">"\\lx@@format@toctitle@@{}{}"</span>,
+    <span class="string">r"{\@ifundefined{format@toctitle@#1}{\lx@@compose@title{\lx@fnum@toc@@{#1}}{#2}}{\csname format@toctitle@#1\endcsname{#2}}}"
   </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@@compose@title{}{}&quot;</span>, <span class="string">r&quot;\lx@tag[][ ]{#1}#2&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@@compose@title{}{}"</span>, <span class="string">r"\lx@tag[][ ]{#1}#2"</span>);
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\lx@format@title@font@@{}&quot;</span>,
-    <span class="string">r&quot;\@ifundefined{format@title@font@#1}{}{\csname format@title@font@#1\endcsname}&quot;
+    <span class="string">r"\lx@format@title@font@@{}"</span>,
+    <span class="string">r"\@ifundefined{format@title@font@#1}{}{\csname format@title@font@#1\endcsname}"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\lx@format@toctitle@font@@{}&quot;</span>,
-    <span class="string">r&quot;\@ifundefined{format@toctitle@font@#1}{}{\csname format@toctitle@font@#1\endcsname}&quot;
+    <span class="string">r"\lx@format@toctitle@font@@{}"</span>,
+    <span class="string">r"\@ifundefined{format@toctitle@font@#1}{}{\csname format@toctitle@font@#1\endcsname}"
   </span>);
 
   <span class="comment">// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
@@ -793,6 +792,5 @@
 
 <span class="kw">pub fn </span>insert_frontmatter(_document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// TODO: update and port over
-  </span><span class="macro">unimplemented!</span>();
-  <span class="prelude-val">Ok</span>(())
+  </span><span class="macro">todo!</span>();
 }</code></pre></div></section></main></body></html>

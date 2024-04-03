@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/mouth.rs`."><title>mouth.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/mouth.rs`."><title>mouth.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -823,15 +825,17 @@
 <a href="#823" id="823">823</a>
 <a href="#824" id="824">824</a>
 <a href="#825" id="825">825</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::VecDeque;
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::io;
 <span class="kw">use </span>std::io::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::io::BufReader;
 <span class="kw">use </span>std::str;
-<span class="kw">use </span>std::sync::Mutex;
 
 <span class="kw">use </span>core::ops::RangeBounds;
 <span class="comment">// TODO:
@@ -844,15 +848,15 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use crate</span>::{state};
+<span class="kw">use </span><span class="kw">crate</span>::state;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::{Tokens, NO_TOKENS};
 <span class="kw">use </span><span class="kw">crate</span>::util::pathname;
+<span class="kw">use </span><span class="kw">crate</span>::util::text::trim_end_in_place;
 
-<span class="kw">static </span>CS_ENDLINECHAR: Lazy&lt;Token&gt; = Lazy::new(|| <span class="macro">T_CS!</span>(<span class="string">&quot;\\endlinechar&quot;</span>));
-<span class="kw">static </span>TRAILING_SPACE_CHARS: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;(?s) +$&quot;</span>).unwrap());
+<span class="kw">static </span>CS_ENDLINECHAR: Lazy&lt;Token&gt; = Lazy::new(|| <span class="macro">T_CS!</span>(<span class="string">"\\endlinechar"</span>));
+<span class="kw">static </span>TRAILING_SPACE_CHARS: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">"(?s) +$"</span>).unwrap());
 
 <span class="kw">const </span>READLINE_PROGRESS_QUANTUM: usize = <span class="number">25</span>;
 
@@ -871,22 +875,22 @@
   </span><span class="kw">pub fn </span>opt_from_str(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;FoodType&gt; {
     <span class="kw">use </span><span class="self">self</span>::FoodType::<span class="kw-2">*</span>;
     <span class="kw">match </span>text.to_lowercase().as_str() {
-      <span class="string">&quot;file&quot; </span>=&gt; <span class="prelude-val">Some</span>(File),
-      <span class="comment">// &quot;binding&quot; =&gt; Some(Binding),
-      </span><span class="string">&quot;http&quot; </span>=&gt; <span class="prelude-val">Some</span>(HTTP),
-      <span class="string">&quot;https&quot; </span>=&gt; <span class="prelude-val">Some</span>(HTTPS),
-      <span class="string">&quot;literal&quot; </span>=&gt; <span class="prelude-val">Some</span>(Literal),
+      <span class="string">"file" </span>=&gt; <span class="prelude-val">Some</span>(File),
+      <span class="comment">// "binding" =&gt; Some(Binding),
+      </span><span class="string">"http" </span>=&gt; <span class="prelude-val">Some</span>(HTTP),
+      <span class="string">"https" </span>=&gt; <span class="prelude-val">Some</span>(HTTPS),
+      <span class="string">"literal" </span>=&gt; <span class="prelude-val">Some</span>(Literal),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
 }
 
-<span class="macro">thread_local! </span>{
-  <span class="kw">static </span>LASTID: Mutex&lt;u32&gt; = Mutex::new(<span class="number">0</span>);
-}
-<span class="kw">static </span>LINEBREAK_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;(?s:\r\n?)|(?s:\n)&quot;</span>).unwrap());
-<span class="kw">static </span>LOWERHEX_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^[0-9a-f]$&quot;</span>).unwrap());
-<span class="kw">static </span>_SANITIZE_LINE_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;((\\ )*)\s*$&quot;</span>).unwrap());
+<span class="attr">#[thread_local]
+</span><span class="kw">static </span><span class="kw-2">mut </span>LASTID: u32 = <span class="number">0</span>;
+
+<span class="kw">static </span>LINEBREAK_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"(?s:\r\n?)|(?s:\n)"</span>).unwrap());
+<span class="kw">static </span>LOWERHEX_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^[0-9a-f]$"</span>).unwrap());
+<span class="kw">static </span>_SANITIZE_LINE_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"((\\ )*)\s*$"</span>).unwrap());
 
 <span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>MouthOptions {
@@ -935,8 +939,8 @@
       colno: <span class="number">0</span>,
       chars: VecDeque::new(),
       nchars: <span class="number">0</span>,
-      source: <span class="macro">s!</span>(<span class="string">&quot;Anonymous String {}&quot;</span>, <span class="kw-2">&amp;</span>Mouth::gid()),
-      shortsource: <span class="macro">s!</span>(<span class="string">&quot;String&quot;</span>),
+      source: <span class="macro">s!</span>(<span class="string">"Anonymous String {}"</span>, <span class="kw-2">&amp;</span>Mouth::gid()),
+      shortsource: <span class="macro">s!</span>(<span class="string">"String"</span>),
       <span class="comment">// handle : None,
       </span>foodtype: FoodType::File,
       saved_at_cc: <span class="prelude-val">None</span>,
@@ -948,11 +952,11 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Mouth {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;Mouth[{}]&quot;</span>, <span class="self">self</span>.source) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">"Mouth[{}]"</span>, <span class="self">self</span>.source) }
 }
 <span class="kw">impl </span>Object <span class="kw">for </span>Mouth {
-  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">s!</span>(<span class="string">&quot;Mouth[&lt;string&gt;{}x{}]&quot;</span>, <span class="self">self</span>.lineno, <span class="self">self</span>.colno) }
-  <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; {
+  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">s!</span>(<span class="string">"Mouth[&lt;string&gt;{}x{}]"</span>, <span class="self">self</span>.lineno, <span class="self">self</span>.colno) }
+  <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Locator {
     <span class="kw">let </span>(to_line, to_column) = (<span class="self">self</span>.lineno, <span class="self">self</span>.colno);
     <span class="kw">let </span>max_col = <span class="kw">if </span><span class="self">self</span>.nchars &gt; <span class="number">0 </span>{
       <span class="self">self</span>.nchars - <span class="number">1
@@ -964,13 +968,13 @@
     } <span class="kw">else </span>{
       (to_line, to_column)
     };
-    <span class="prelude-val">Some</span>(Cow::Owned(Locator::new(
-      <span class="self">self</span>.source.clone(),
-      from_line,
-      from_column,
-      to_line,
-      to_column,
-    )))
+    Locator::new(
+      <span class="kw-2">&amp;</span><span class="self">self</span>.source,
+      from_line <span class="kw">as </span>u32,
+      from_column <span class="kw">as </span>u32,
+      to_line <span class="kw">as </span>u32,
+      to_column <span class="kw">as </span>u32,
+    )
   }
 }
 
@@ -983,23 +987,23 @@
   //  content
   //
   // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more
-  // compact in this particular application     we&#39;re really looking at a unified Mouth
+  // compact in this particular application     we're really looking at a unified Mouth
   // application logic, with a capacity of reading different kinds of sources
   </span><span class="kw">pub fn </span>create(source: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: MouthOptions) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = options.content.take() {
-      <span class="comment">// we&#39;ve cached the content of this source
+      <span class="comment">// we've cached the content of this source
       </span><span class="kw">let </span>(_dir, name, ext) = pathname::split(source);
       options.source = <span class="prelude-val">Some</span>(source.to_string());
-      options.shortsource = <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">&quot;{}.{}&quot;</span>, name, ext));
+      options.shortsource = <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"{}.{}"</span>, name, ext));
       Mouth::new(<span class="kw-2">&amp;</span>content, <span class="prelude-val">Some</span>(options))
-    } <span class="kw">else if </span>source.starts_with(<span class="string">&quot;literal:&quot;</span>) {
-      <span class="kw">let </span>source = source.replacen(<span class="string">&quot;literal:&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="number">1</span>);
-      <span class="comment">// we&#39;ve supplied literal data
+    } <span class="kw">else if </span>source.starts_with(<span class="string">"literal:"</span>) {
+      <span class="kw">let </span>source = source.replacen(<span class="string">"literal:"</span>, <span class="string">""</span>, <span class="number">1</span>);
+      <span class="comment">// we've supplied literal data
       </span>options.source = <span class="prelude-val">None</span>; <span class="comment">// the source does not have a corresponding file name
-      </span>options.foodtype = FoodType::opt_from_str(<span class="string">&quot;literal&quot;</span>);
+      </span>options.foodtype = FoodType::opt_from_str(<span class="string">"literal"</span>);
       Mouth::new(<span class="kw-2">&amp;</span>source, <span class="prelude-val">Some</span>(options))
     } <span class="kw">else if </span>source.is_empty() {
-      Mouth::new(<span class="string">&quot;&quot;</span>, <span class="prelude-val">Some</span>(options))
+      Mouth::new(<span class="string">""</span>, <span class="prelude-val">Some</span>(options))
     } <span class="kw">else </span>{
       options.foodtype = FoodType::opt_from_str(<span class="kw-2">&amp;</span>pathname::protocol(source));
       options.source = <span class="prelude-val">Some</span>(source.to_string());
@@ -1041,16 +1045,16 @@
   <span class="kw">fn </span>open_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pathname: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span><span class="self">self</span>.foodtype == FoodType::File {
       <span class="comment">// TODO: Handle errors
-      //   Fatal(&#39;I/O&#39;, $pathname, $self, &quot;File $pathname is not readable.&quot;); }
+      //   Fatal('I/O', $pathname, $self, "File $pathname is not readable."); }
       // elsif ((!-z $pathname) &amp;&amp; (-B $pathname)) {
-      //   Fatal(&#39;I/O&#39;, $pathname, $self, &quot;Input file $pathname appears to be binary.&quot;); }
-      // open($IN, &#39;&lt;&#39;, $pathname)
-      //   || Fatal(&#39;I/O&#39;, $pathname, $self, &quot;Can&#39;t open $pathname for reading&quot;, $!);
+      //   Fatal('I/O', $pathname, $self, "Input file $pathname appears to be binary."); }
+      // open($IN, '&lt;', $pathname)
+      //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
       </span><span class="kw">let </span>f = <span class="kw">match </span>File::open(pathname) {
         <span class="prelude-val">Ok</span>(handle) =&gt; handle,
         <span class="prelude-val">Err</span>(e) =&gt; {
           <span class="kw">if </span>e.kind() == io::ErrorKind::NotFound {
-            <span class="macro">fatal!</span>(Mouth, MissingFile, <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t find file {}&quot;</span>, pathname));
+            <span class="macro">fatal!</span>(Mouth, MissingFile, <span class="macro">s!</span>(<span class="string">"Can't find file {}"</span>, pathname));
           } <span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(e.into());
           }
@@ -1065,31 +1069,31 @@
   }
   <span class="kw">fn </span>open_literal(<span class="kw-2">&amp;mut </span><span class="self">self</span>, content: <span class="kw-2">&amp;</span>str) { <span class="self">self</span>.buffer = Mouth::split_lines(content); }
   <span class="kw">fn </span>open_http(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _content: <span class="kw-2">&amp;</span>str) {
-    <span class="macro">unimplemented!</span>();
+    <span class="macro">todo!</span>();
   }
   <span class="kw">fn </span>open_https(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _content: <span class="kw-2">&amp;</span>str) {
-    <span class="macro">unimplemented!</span>();
+    <span class="macro">todo!</span>();
   }
   <span class="comment">// fn open_binding(&amp;mut self, _content: &amp;str) {}
 
   </span><span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
     <span class="self">self</span>.note_message = <span class="kw">if </span><span class="self">self</span>.notes {
       <span class="kw">if </span><span class="self">self</span>.fordefinitions {
-        <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">&quot;Processing definitions&quot;</span>))
+        <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"Processing definitions"</span>))
       } <span class="kw">else </span>{
-        <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">&quot;Processing content&quot;</span>))
+        <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"Processing content"</span>))
       }
     } <span class="kw">else </span>{
       <span class="prelude-val">None
     </span>};
     <span class="kw">if </span><span class="self">self</span>.fordefinitions {
-      <span class="self">self</span>.saved_at_cc = lookup_catcode(<span class="string">&#39;@&#39;</span>);
-      <span class="self">self</span>.saved_include_comments = <span class="kw">match </span>lookup_value(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>) {
+      <span class="self">self</span>.saved_at_cc = lookup_catcode(<span class="string">'@'</span>);
+      <span class="self">self</span>.saved_include_comments = <span class="kw">match </span>lookup_value(<span class="string">"INCLUDE_COMMENTS"</span>) {
         <span class="prelude-val">Some</span>(Stored::Bool(x)) =&gt; <span class="prelude-val">Some</span>(x),
         <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
       };
-      assign_catcode(<span class="string">&#39;@&#39;</span>, Catcode::LETTER, <span class="prelude-val">None</span>);
-      assign_value(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+      assign_catcode(<span class="string">'@'</span>, Catcode::LETTER, <span class="prelude-val">None</span>);
+      assign_value(<span class="string">"INCLUDE_COMMENTS"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
     }
   }
   <span class="kw">pub fn </span>finish(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
@@ -1100,10 +1104,10 @@
     <span class="self">self</span>.nchars = <span class="number">0</span>;
     <span class="kw">if </span><span class="self">self</span>.fordefinitions {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(cc) = <span class="self">self</span>.saved_at_cc {
-        assign_catcode(<span class="string">&#39;@&#39;</span>, cc, <span class="prelude-val">None</span>);
+        assign_catcode(<span class="string">'@'</span>, cc, <span class="prelude-val">None</span>);
       }
       <span class="kw">if let </span><span class="prelude-val">Some</span>(sic) = <span class="self">self</span>.saved_include_comments {
-        assign_value(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>, sic, <span class="prelude-val">Some</span>(Scope::Local))
+        assign_value(<span class="string">"INCLUDE_COMMENTS"</span>, sic, <span class="prelude-val">Some</span>(Scope::Local))
       }
     }
     <span class="kw">if </span><span class="self">self</span>.notes {
@@ -1117,7 +1121,7 @@
   <span class="comment">// Auxiliaries
 
   </span><span class="doccomment">/// This is (hopefully) a platform independent way of splitting a string
-  /// into &quot;lines&quot; ending with CRLF, CR or LF (DOS, Mac or Unix).
+  /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   </span><span class="kw">fn </span>split_lines(lines: <span class="kw-2">&amp;</span>str) -&gt; VecDeque&lt;String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>lines: VecDeque&lt;String&gt; = LINEBREAK_REGEX.split(lines).map(str::to_owned).collect();
@@ -1130,11 +1134,11 @@
   }
 
   <span class="doccomment">/// Original LaTeXML:
-  /// This is (hopefully) a correct way to split a line into &quot;chars&quot;,
-  /// or what is probably more desired is &quot;Grapheme clusters&quot; (even &quot;extended&quot;)
+  /// This is (hopefully) a correct way to split a line into "chars",
+  /// or what is probably more desired is "Grapheme clusters" (even "extended")
   /// These are unicode characters that include any following combining chars, accents &amp; such.
   /// I am thinking that when we deal with unicode this may be the most correct way?
-  /// If it&#39;s not the way XeTeX does it, perhaps, it must be that ALL combining chars
+  /// If it's not the way XeTeX does it, perhaps, it must be that ALL combining chars
   /// have to be converted to the proper accent control sequences!
 
   </span><span class="kw">fn </span>get_next_line(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
@@ -1145,8 +1149,8 @@
         <span class="kw">let </span>_num_bytes = <span class="kw">match </span>reader.read_to_end(<span class="kw-2">&amp;mut </span>file_bytes) {
           <span class="prelude-val">Ok</span>(count) =&gt; count,
           <span class="prelude-val">Err</span>(e) =&gt; {
-            <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;BufReader::read_to_end returned an error: {:?}&quot;</span>, e);
-            <span class="macro">Warn!</span>(<span class="string">&quot;mouth&quot;</span>, <span class="string">&quot;io&quot;</span>, message);
+            <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"BufReader::read_to_end returned an error: {:?}"</span>, e);
+            <span class="macro">Warn!</span>(<span class="string">"mouth"</span>, <span class="string">"io"</span>, message);
             <span class="number">0
           </span>},
         };
@@ -1159,19 +1163,19 @@
         // as such, decoding is the first action taken on bytes read in from a file.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_encoding) = get_input_encoding() {
           <span class="comment">// TODO: What are characters that fail to decode replaced by in Rust?
-          // Bruce suggested that for TeX&#39;s behaviour we actually should turn such un-decodeable
+          // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable
           // chars to space(?).
-          </span><span class="macro">unimplemented!</span>();
-          <span class="comment">//let message = s!(&quot;input isn&#39;t valid under encoding {}&quot;, encoding);
-          //Info!(&quot;misdefined&quot;, encoding, message);
+          </span><span class="macro">todo!</span>();
+          <span class="comment">//let message = s!("input isn't valid under encoding {}", encoding);
+          //Info!("misdefined", encoding, message);
           //unsafe { str::from_utf8_unchecked(&amp;line_bytes).to_owned() }
         </span>} <span class="kw">else </span>{
           <span class="comment">// no encoding, interpret as unicode!
           </span><span class="kw">let </span>file_str = <span class="kw">match </span>str::from_utf8(<span class="kw-2">&amp;</span>file_bytes) {
             <span class="prelude-val">Ok</span>(fstr) =&gt; fstr,
             <span class="prelude-val">Err</span>(e) =&gt; {
-              <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;input isn&#39;t valid under encoding utf8: {:?}&quot;</span>, e);
-              <span class="macro">Info!</span>(<span class="string">&quot;misdefined&quot;</span>, <span class="string">&quot;utf8&quot;</span>, message);
+              <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"input isn't valid under encoding utf8: {:?}"</span>, e);
+              <span class="macro">Info!</span>(<span class="string">"misdefined"</span>, <span class="string">"utf8"</span>, message);
               <span class="kw">unsafe </span>{ str::from_utf8_unchecked(<span class="kw-2">&amp;</span>file_bytes) }
             },
           };
@@ -1182,10 +1186,10 @@
     <span class="self">self</span>.buffer.pop_front()
   }
 
-  <span class="doccomment">/// Get the next character &amp; it&#39;s catcode from the input,
-  /// handling TeX&#39;s &quot;^^&quot; encoding.
+  <span class="doccomment">/// Get the next character &amp; it's catcode from the input,
+  /// handling TeX's "^^" encoding.
   /// Note that this is the only place where catcode lookup is done,
-  /// and that it is somewhat `inlined&#39;.
+  /// and that it is somewhat `inlined'.
   </span><span class="kw">fn </span>get_next_char(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(char, Catcode)&gt; {
     <span class="kw">if </span><span class="self">self</span>.colno &gt;= <span class="self">self</span>.nchars {
       <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -1208,7 +1212,7 @@
               &amp;&amp; LOWERHEX_REGEX.is_match(<span class="kw-2">&amp;</span>c2.to_string())
             {
               <span class="comment">// TODO: Maybe Result type warranted here?
-              </span><span class="kw">let </span>hex = u8::from_str_radix(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}{}&quot;</span>, c1, c2), <span class="number">16</span>).unwrap();
+              </span><span class="kw">let </span>hex = u8::from_str_radix(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}{}"</span>, c1, c2), <span class="number">16</span>).unwrap();
               ch = hex <span class="kw">as </span>char;
               <span class="self">self</span>.splice(<span class="self">self</span>.colno - <span class="number">1</span>..<span class="self">self</span>.colno + <span class="number">3</span>, <span class="kw-2">&amp;</span>[ch]);
               <span class="self">self</span>.nchars -= <span class="number">3</span>;
@@ -1232,10 +1236,16 @@
       <span class="prelude-val">None
     </span>}
   }
-  <span class="kw">pub fn </span>has_more_input(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
-    <span class="self">self</span>.colno &lt; <span class="self">self</span>.nchars
-      || !<span class="self">self</span>.buffer.is_empty()
-      || (<span class="self">self</span>.reader.is_some() &amp;&amp; !<span class="self">self</span>.reader.as_mut().unwrap().fill_buf().unwrap().is_empty())
+
+  <span class="doccomment">/// Checks if there is more input to process.
+  ///
+  /// Note: we need mutability, as we may refill the internal BufReader
+  /// when performing the check.
+  </span><span class="kw">pub fn </span>has_more_input(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
+    !<span class="self">self</span>.is_eol()
+    || !<span class="self">self</span>.buffer.is_empty()
+    || (<span class="self">self</span>.reader.is_some() &amp;&amp; !<span class="self">self</span>.reader.as_mut().unwrap().fill_buf()
+           .expect(<span class="string">"fill_buf should have no reason to fail."</span>).is_empty())
   }
 
   <span class="doccomment">/// Read the next token, or undef if exhausted.
@@ -1251,7 +1261,7 @@
         <span class="self">self</span>.colno = <span class="number">0</span>;
         <span class="kw">let </span>line_opt = <span class="self">self</span>.get_next_line();
         <span class="comment">// For \read, we have to return something for EOL, and handle implicit final newline
-        </span><span class="kw">let </span>read_mode = lookup_int(<span class="string">&quot;PRESERVE_NEWLINES&quot;</span>) &gt; <span class="number">1</span>;
+        </span><span class="kw">let </span>read_mode = lookup_int(<span class="string">"PRESERVE_NEWLINES"</span>) &gt; <span class="number">1</span>;
         <span class="kw">let </span>eolch = <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>CS_ENDLINECHAR).unwrap() {
           <span class="kw">if </span>defn.is_register() {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(eol) = defn.value_of(Vec::new()) {
@@ -1269,7 +1279,7 @@
             <span class="prelude-val">None
           </span>}
         } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(<span class="string">&#39;\r&#39;</span>)
+          <span class="prelude-val">Some</span>(<span class="string">'\r'</span>)
         };
         <span class="kw">if </span>line_opt.is_none() {
           <span class="comment">// Exhausted the input.
@@ -1281,7 +1291,7 @@
           <span class="kw">let </span>eoftoken = <span class="kw">if let </span><span class="prelude-val">Some</span>(eolch_content) = eolch {
             <span class="kw">if </span>read_mode &amp;&amp; !<span class="self">self</span>.at_eof &amp;&amp; !<span class="self">self</span>.source.is_empty() {
               <span class="kw">if </span>eolcc == Catcode::EOL {
-                <span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>))
+                <span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>))
               } <span class="kw">else </span>{
                 <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(eolch_content, eolcc))
               }
@@ -1298,10 +1308,10 @@
         }
         <span class="comment">// Remove trailing spaces from external sources
         </span><span class="kw">let </span><span class="kw-2">mut </span>line = line_opt.unwrap();
-        <span class="kw">if </span>!<span class="self">self</span>.source.is_empty() &amp;&amp; line.ends_with(<span class="string">&#39; &#39;</span>) {
-          line = TRAILING_SPACE_CHARS.replace(<span class="kw-2">&amp;</span>line, <span class="string">&quot;&quot;</span>).to_string();
+        <span class="kw">if </span>!<span class="self">self</span>.source.is_empty() &amp;&amp; line.ends_with(<span class="string">' '</span>) {
+          line = TRAILING_SPACE_CHARS.replace(<span class="kw-2">&amp;</span>line, <span class="string">""</span>).to_string();
         }
-        <span class="comment">// Then append the appropriate \endlinechar, or &quot;\r&quot;;
+        <span class="comment">// Then append the appropriate \endlinechar, or "\r";
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ch) = eolch {
           line.push(ch);
         }
@@ -1324,13 +1334,13 @@
           }
         }
         <span class="comment">// If upcoming line is empty, and there is no recognizable EOL, fake one
-        </span><span class="kw">if </span>read_mode &amp;&amp; (<span class="self">self</span>.colno &gt;= <span class="self">self</span>.nchars) &amp;&amp; (eolch.is_none() || eolch != <span class="prelude-val">Some</span>(<span class="string">&#39;\r&#39;</span>)) {
-          <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">T_MARKER!</span>(<span class="string">&quot;EOL&quot;</span>));
+        </span><span class="kw">if </span>read_mode &amp;&amp; (<span class="self">self</span>.colno &gt;= <span class="self">self</span>.nchars) &amp;&amp; (eolch.is_none() || eolch != <span class="prelude-val">Some</span>(<span class="string">'\r'</span>)) {
+          <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">T_MARKER!</span>(<span class="string">"EOL"</span>));
         }
         <span class="comment">// Sneak a comment out, every so often.
-        </span><span class="kw">if </span>(<span class="self">self</span>.lineno % READLINE_PROGRESS_QUANTUM) == <span class="number">0 </span>&amp;&amp; lookup_bool(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>) {
+        </span><span class="kw">if </span>(<span class="self">self</span>.lineno % READLINE_PROGRESS_QUANTUM) == <span class="number">0 </span>&amp;&amp; lookup_bool(<span class="string">"INCLUDE_COMMENTS"</span>) {
           <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">T_COMMENT!</span>(<span class="macro">s!</span>(
-            <span class="string">&quot;**** {} Line {} ****&quot;</span>,
+            <span class="string">"**** {} Line {} ****"</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.shortsource,
             <span class="kw-2">&amp;</span><span class="self">self</span>.lineno.to_string()
           )));
@@ -1354,7 +1364,7 @@
           <span class="self">self</span>.colno -= <span class="number">1</span>;
         }
         <span class="kw">if </span>cc == <span class="prelude-val">Some</span>(Catcode::EOL) {
-          <span class="comment">// If we&#39;ve got an EOL
+          <span class="comment">// If we've got an EOL
           </span><span class="self">self</span>.get_next_char();
           <span class="kw">if </span><span class="self">self</span>.colno &lt; <span class="self">self</span>.nchars {
             <span class="self">self</span>.colno -= <span class="number">1</span>;
@@ -1399,7 +1409,7 @@
   </span><span class="kw">pub fn </span>read_raw_line(<span class="kw-2">&amp;mut </span><span class="self">self</span>, noread: bool) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>line = String::new();
     <span class="kw">if </span><span class="self">self</span>.colno &lt; <span class="self">self</span>.nchars {
-      <span class="comment">// DG: Can&#39;t slice a VecDeque really? Oh well...
+      <span class="comment">// DG: Can't slice a VecDeque really? Oh well...
       // Please refactor if you know a better way!
       </span><span class="kw">for </span>(index, c) <span class="kw">in </span><span class="self">self</span>.chars.iter().enumerate() {
         <span class="kw">if </span><span class="self">self</span>.colno &lt;= index &amp;&amp; index &lt; <span class="self">self</span>.nchars {
@@ -1413,7 +1423,7 @@
     } <span class="kw">else </span>{
       <span class="kw">match </span><span class="self">self</span>.get_next_line() {
         <span class="prelude-val">None </span>=&gt; {
-          <span class="comment">// We&#39;ve exhausted this mouth
+          <span class="comment">// We've exhausted this mouth
           </span><span class="self">self</span>.at_eof = <span class="bool-val">true</span>;
           <span class="self">self</span>.chars = VecDeque::new();
           <span class="self">self</span>.nchars = <span class="number">0</span>;
@@ -1421,7 +1431,7 @@
           <span class="kw">return </span><span class="prelude-val">None</span>;
         },
         <span class="prelude-val">Some</span>(next_line) =&gt; {
-          line = next_line.trim_end().to_owned();
+          next_line.trim_end().clone_into(<span class="kw-2">&amp;mut </span>line);
           <span class="self">self</span>.lineno += <span class="number">1</span>;
           <span class="self">self</span>.chars = line.chars().collect();
           <span class="self">self</span>.nchars = <span class="self">self</span>.chars.len();
@@ -1429,7 +1439,7 @@
         },
       }
     }
-    line = line.trim_end().to_owned(); <span class="comment">// Even empty lines are valid here
+    trim_end_in_place(<span class="kw-2">&amp;mut </span>line); <span class="comment">// Even empty lines are valid here
     </span><span class="prelude-val">Some</span>(line)
   }
 
@@ -1440,28 +1450,28 @@
     <span class="kw">match </span>cc {
       ESCAPE =&gt; <span class="self">self</span>.handle_escape(), <span class="comment">// T_ESCAPE
       </span>BEGIN =&gt; {
-        <span class="kw">if </span>ch == <span class="string">&#39;{&#39; </span>{
+        <span class="kw">if </span>ch == <span class="string">'{' </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_BEGIN!</span>())
         } <span class="kw">else </span>{
           <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, BEGIN))
         }
       },
       END =&gt; {
-        <span class="kw">if </span>ch == <span class="string">&#39;}&#39; </span>{
+        <span class="kw">if </span>ch == <span class="string">'}' </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_END!</span>())
         } <span class="kw">else </span>{
           <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, END))
         }
       },
       MATH =&gt; {
-        <span class="kw">if </span>ch == <span class="string">&#39;$&#39; </span>{
+        <span class="kw">if </span>ch == <span class="string">'$' </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_MATH!</span>())
         } <span class="kw">else </span>{
           <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, MATH))
         }
       },
       ALIGN =&gt; {
-        <span class="kw">if </span>ch == <span class="string">&#39;&amp;&#39; </span>{
+        <span class="kw">if </span>ch == <span class="string">'&amp;' </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_ALIGN!</span>())
         } <span class="kw">else </span>{
           <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, ALIGN))
@@ -1469,21 +1479,21 @@
       },
       EOL =&gt; <span class="self">self</span>.handle_end_of_line(),
       PARAM =&gt; {
-        <span class="kw">if </span>ch == <span class="string">&#39;#&#39; </span>{
+        <span class="kw">if </span>ch == <span class="string">'#' </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_PARAM!</span>())
         } <span class="kw">else </span>{
           <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, PARAM))
         }
       }, <span class="comment">// T_PARAM
       </span>SUPER =&gt; {
-        <span class="kw">if </span>ch == <span class="string">&#39;^&#39; </span>{
+        <span class="kw">if </span>ch == <span class="string">'^' </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_SUPER!</span>())
         } <span class="kw">else </span>{
           <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, SUPER))
         }
       }, <span class="comment">// T_SUPER
       </span>SUB =&gt; {
-        <span class="kw">if </span>ch == <span class="string">&#39;_&#39; </span>{
+        <span class="kw">if </span>ch == <span class="string">'_' </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_SUB!</span>())
         } <span class="kw">else </span>{
           <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, SUB))
@@ -1500,12 +1510,12 @@
   }
 
   <span class="kw">fn </span>handle_end_of_line(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
-    <span class="comment">// Note that newines should be converted to space (with &quot; &quot; for content)
+    <span class="comment">// Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     </span><span class="kw">let </span>token = <span class="kw">if </span><span class="self">self</span>.colno == <span class="number">1 </span>{
-      <span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>)
-    } <span class="kw">else if </span>lookup_int(<span class="string">&quot;PRESERVE_NEWLINES&quot;</span>) &gt; <span class="number">0 </span>{
-      <span class="macro">Token!</span>(<span class="string">&quot;\n&quot;</span>, Catcode::SPACE)
+      <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>)
+    } <span class="kw">else if </span>lookup_int(<span class="string">"PRESERVE_NEWLINES"</span>) &gt; <span class="number">0 </span>{
+      <span class="macro">Token!</span>(<span class="string">"\n"</span>, Catcode::SPACE)
     } <span class="kw">else </span>{
       <span class="macro">T_SPACE!</span>()
     };
@@ -1535,10 +1545,10 @@
       comment.push(<span class="kw-2">*</span>c);
     }
     <span class="kw">let </span>trimmed_comment = comment.trim();
-    <span class="kw">if </span>!trimmed_comment.is_empty() &amp;&amp; lookup_bool(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>) {
+    <span class="kw">if </span>!trimmed_comment.is_empty() &amp;&amp; lookup_bool(<span class="string">"INCLUDE_COMMENTS"</span>) {
       <span class="prelude-val">Some</span>(<span class="macro">T_COMMENT!</span>(trimmed_comment))
-    } <span class="kw">else if </span>lookup_int(<span class="string">&quot;PRESERVE_NEWLINES&quot;</span>) &gt; <span class="number">1 </span>{
-      <span class="prelude-val">Some</span>(<span class="macro">T_MARKER!</span>(<span class="string">&quot;EOL&quot;</span>)) <span class="comment">// Required EOL during \read
+    } <span class="kw">else if </span>lookup_int(<span class="string">"PRESERVE_NEWLINES"</span>) &gt; <span class="number">1 </span>{
+      <span class="prelude-val">Some</span>(<span class="macro">T_MARKER!</span>(<span class="string">"EOL"</span>)) <span class="comment">// Required EOL during \read
     </span>} <span class="kw">else </span>{
       <span class="prelude-val">None
     </span>}
@@ -1550,11 +1560,11 @@
 
   </span><span class="doccomment">/// Read control sequence
   </span><span class="kw">fn </span>handle_escape(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
-    <span class="comment">// NOTE: We&#39;re using control sequences WITH the \ prepended!!!
+    <span class="comment">// NOTE: We're using control sequences WITH the \ prepended!!!
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>((ch, <span class="kw-2">mut </span>cc)) = <span class="self">self</span>.get_next_char() {
       <span class="comment">// Knuth, p.46 says that Newlines are converted to spaces,
       // Bit I believe that he does NOT mean within control sequences
-      </span><span class="kw">let </span><span class="kw-2">mut </span>cs = <span class="macro">s!</span>(<span class="string">&quot;\\{}&quot;</span>, ch);
+      </span><span class="kw">let </span><span class="kw-2">mut </span>cs = <span class="macro">s!</span>(<span class="string">"\\{}"</span>, ch);
       <span class="kw">if </span>cc == Catcode::LETTER {
         <span class="comment">// For letter, read more letters for csname.
         </span><span class="kw">while let </span><span class="prelude-val">Some</span>((nch, ncc)) = <span class="self">self</span>.get_next_char() {
@@ -1586,16 +1596,18 @@
   }
 
   <span class="kw">fn </span>gid() -&gt; String {
-    LASTID.with(|lid| {
-      <span class="kw">let </span><span class="kw-2">mut </span>lastid = lid.lock().unwrap();
-      <span class="kw-2">*</span>lastid += <span class="number">1</span>;
-      lastid.to_string()
-    })
+    <span class="kw">unsafe </span>{
+      LASTID += <span class="number">1</span>;
+      LASTID.to_string()
+    }
   }
 
-  <span class="comment">// Be Careful!
-  // used BOTH for flushing input for \endinput
-  // and for detecting line end for \read
+  <span class="doccomment">/// Checks if Mouth read is at the end of a line.
+  ///
+  /// Careful:
+  /// used BOTH for flushing input for `\endinput`
+  /// and for detecting line end for `\read`
+  ///
   </span><span class="kw">pub fn </span>is_eol(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
     <span class="kw">let </span>savecolno = <span class="self">self</span>.colno;
     <span class="comment">// We have to peek past any ignored tokens &amp; also spaces, if skipping
@@ -1604,8 +1616,6 @@
       <span class="kw">if </span>ncc != Catcode::IGNORE &amp;&amp; (!<span class="self">self</span>.skipping_spaces || ncc != Catcode::SPACE) {
         cc = <span class="prelude-val">Some</span>(ncc);
         <span class="kw">break</span>;
-      } <span class="kw">else </span>{
-        cc = <span class="prelude-val">None</span>;
       }
     }
     <span class="kw">if </span><span class="self">self</span>.colno &lt;= <span class="self">self</span>.nchars &amp;&amp; cc.is_some() {
@@ -1613,7 +1623,7 @@
       </span><span class="self">self</span>.colno -= <span class="number">1</span>;
     }
     <span class="kw">if </span><span class="self">self</span>.skipping_spaces &amp;&amp; (cc == <span class="prelude-val">Some</span>(Catcode::EOL) || cc == <span class="prelude-val">Some</span>(Catcode::COMMENT)) {
-      <span class="comment">// If we&#39;ve got an EOL | COMMENT
+      <span class="comment">// If we've got an EOL | COMMENT
       </span><span class="self">self</span>.colno = <span class="self">self</span>.nchars
     }
     <span class="kw">let </span>eol = <span class="self">self</span>.colno &gt;= <span class="self">self</span>.nchars;

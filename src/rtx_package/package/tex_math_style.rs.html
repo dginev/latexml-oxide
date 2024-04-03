@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_math_style.rs`."><title>tex_math_style.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_math_style.rs`."><title>tex_math_style.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -199,8 +201,8 @@
   // # \displaystyle, constructors that set their own specific style,...
   // # And, any collateral adjustments that had been done in digestion depending on mathstyle
   // # WONT be adjusted!
-  // # We don&#39;t have a clear API to find the displayable Boxes within;
-  // # and we don&#39;t have a good handle on grouping...
+  // # We don't have a clear API to find the displayable Boxes within;
+  // # and we don't have a good handle on grouping...
 
   // # ARGH!!!!!!!!! RETHINK!!!!!!
   // sub adjustMathstyle {
@@ -211,14 +213,14 @@
   //     $$adjusted{$box} = 1;
   //     my $r = ref $box;
   //     next unless $r &amp;&amp; ($r !~ /(?:SCALAR|HASH|ARRAY|CODE|REF|GLOB|LVALUE)/) &amp;&amp; $r-&gt;isaBox;
-  //     return if $box-&gt;getProperty(&#39;explicit_mathstyle&#39;);
-  //     next   if $box-&gt;getProperty(&#39;own_mathstyle&#39;);
+  //     return if $box-&gt;getProperty('explicit_mathstyle');
+  //     next   if $box-&gt;getProperty('own_mathstyle');
 
-  //     if ($r eq &#39;LaTeXML::Core::Box&#39;) {
+  //     if ($r eq 'LaTeXML::Core::Box') {
   //       adjustMathStyle_internal($outerstyle, $box); }
-  //     elsif ($r eq &#39;LaTeXML::Core::List&#39;) {
+  //     elsif ($r eq 'LaTeXML::Core::List') {
   //       adjustMathstyle($outerstyle, $adjusted, $box-&gt;unlist); }
-  //     elsif ($r eq &#39;LaTeXML::Core::Whatsit&#39;) {
+  //     elsif ($r eq 'LaTeXML::Core::Whatsit') {
   //       my $style = adjustMathStyle_internal($outerstyle, $box) || $outerstyle;
   //       # now recurse on contained boxes (args AND properties!)
   //       adjustMathstyle($style, $adjusted, $box-&gt;getArgs);
@@ -226,23 +228,23 @@
   //   return; }
 
   // # Heursitic;
-  // # we&#39;re wanting to adjust the style AS IF the numerator had been already in the next mathstyle
-  // # This isn&#39;t the same as just shifting the mathstyle!
-  // # we&#39;re sorta trying to infer WHY the box has a given style...?
+  // # we're wanting to adjust the style AS IF the numerator had been already in the next mathstyle
+  // # This isn't the same as just shifting the mathstyle!
+  // # we're sorta trying to infer WHY the box has a given style...?
   // our %mathstyle_adjust_map = (
-  //   display =&gt; { display =&gt; &#39;text&#39;, text =&gt; &#39;script&#39;, script =&gt; &#39;script&#39;, scriptscript =&gt; &#39;scriptscript&#39; },
-  //   text =&gt; { display =&gt; &#39;text&#39;, text =&gt; &#39;script&#39;, script =&gt; &#39;scriptscript&#39;, scriptscript =&gt; &#39;scriptscript&#39; },
-  //   script =&gt; { display =&gt; &#39;display&#39;, text =&gt; &#39;text&#39;, script =&gt; &#39;scriptscript&#39;, scriptscript =&gt; &#39;scriptscript&#39; },
-  //   scriptscript =&gt; { display =&gt; &#39;display&#39;, text =&gt; &#39;text&#39;, script =&gt; &#39;scriptscript&#39;, scriptscript =&gt; &#39;scriptscript&#39; });
+  //   display =&gt; { display =&gt; 'text', text =&gt; 'script', script =&gt; 'script', scriptscript =&gt; 'scriptscript' },
+  //   text =&gt; { display =&gt; 'text', text =&gt; 'script', script =&gt; 'scriptscript', scriptscript =&gt; 'scriptscript' },
+  //   script =&gt; { display =&gt; 'display', text =&gt; 'text', script =&gt; 'scriptscript', scriptscript =&gt; 'scriptscript' },
+  //   scriptscript =&gt; { display =&gt; 'display', text =&gt; 'text', script =&gt; 'scriptscript', scriptscript =&gt; 'scriptscript' });
 
   // sub adjustMathStyle_internal {
   //   my ($outerstyle, $box) = @_;
-  //   $outerstyle = &#39;display&#39; unless $outerstyle;
+  //   $outerstyle = 'display' unless $outerstyle;
   //   if (my $font = $box-&gt;getFont) {
-  //     my $origstyle = $font-&gt;getMathstyle || &#39;display&#39;;
+  //     my $origstyle = $font-&gt;getMathstyle || 'display';
   //     my $newstyle  = $mathstyle_adjust_map{$outerstyle}{$origstyle};
   //     $box-&gt;setFont($font-&gt;merge(mathstyle =&gt; $newstyle));
-  //     if (my $recstyle = $box-&gt;getProperty(&#39;mathstyle&#39;)) {    # And adjust here, if recorded.
+  //     if (my $recstyle = $box-&gt;getProperty('mathstyle')) {    # And adjust here, if recorded.
   //       $box-&gt;setProperty(mathstyle =&gt; $newstyle);
   //       return $newstyle; } }
   //   return; }
@@ -256,95 +258,95 @@
 
   // # \lx@generalized@over{reversion}{keyvals}{top}{bottom}
   // # keyvals: role,meaning, left,right, thickness
-  // DefConstructor(&#39;\lx@generalized@over Undigested RequiredKeyVals&#39;,
-  //   &quot;?#needXMDual(&quot;
-  //     . &quot;&lt;ltx:XMDual&gt;&quot;
-  //     . &quot;&lt;ltx:XMApp&gt;&quot;
-  //     . &quot;&lt;ltx:XMRef _xmkey=&#39;#xmkey0&#39;/&gt;&quot;
-  //     . &quot;&lt;ltx:XMRef _xmkey=&#39;#xmkey1&#39;/&gt;&quot;
-  //     . &quot;&lt;ltx:XMRef _xmkey=&#39;#xmkey2&#39;/&gt;&quot;
-  //     . &quot;&lt;/ltx:XMApp&gt;&quot;
-  //     . &quot;&lt;ltx:XMWrap&gt;&quot;
-  //     . &quot;#left)()&quot;
-  //     . &quot;&lt;ltx:XMApp&gt;&quot;
-  //     . &quot;&lt;ltx:XMTok _xmkey=&#39;#xmkey0&#39; role=&#39;#role&#39; meaning=&#39;#meaning&#39; mathstyle=&#39;#mathstyle&#39; thickness=&#39;#thickness&#39;/&gt;&quot;
-  //     . &quot;&lt;ltx:XMArg _xmkey=&#39;#xmkey1&#39;&gt;#top&lt;/ltx:XMArg&gt;&quot;
-  //     . &quot;&lt;ltx:XMArg _xmkey=&#39;#xmkey2&#39;&gt;#bottom&lt;/ltx:XMArg&gt;&quot;
-  //     . &quot;&lt;/ltx:XMApp&gt;&quot;
-  //     . &quot;?#needXMDual(#right&quot;
-  //     . &quot;&lt;/ltx:XMWrap&gt;&quot;
-  //     . &quot;&lt;/ltx:XMDual&gt;)()&quot;,
+  // DefConstructor('\lx@generalized@over Undigested RequiredKeyVals',
+  //   "?#needXMDual("
+  //     . "&lt;ltx:XMDual&gt;"
+  //     . "&lt;ltx:XMApp&gt;"
+  //     . "&lt;ltx:XMRef _xmkey='#xmkey0'/&gt;"
+  //     . "&lt;ltx:XMRef _xmkey='#xmkey1'/&gt;"
+  //     . "&lt;ltx:XMRef _xmkey='#xmkey2'/&gt;"
+  //     . "&lt;/ltx:XMApp&gt;"
+  //     . "&lt;ltx:XMWrap&gt;"
+  //     . "#left)()"
+  //     . "&lt;ltx:XMApp&gt;"
+  //     . "&lt;ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/&gt;"
+  //     . "&lt;ltx:XMArg _xmkey='#xmkey1'&gt;#top&lt;/ltx:XMArg&gt;"
+  //     . "&lt;ltx:XMArg _xmkey='#xmkey2'&gt;#bottom&lt;/ltx:XMArg&gt;"
+  //     . "&lt;/ltx:XMApp&gt;"
+  //     . "?#needXMDual(#right"
+  //     . "&lt;/ltx:XMWrap&gt;"
+  //     . "&lt;/ltx:XMDual&gt;)()",
   //   afterDigest =&gt; sub {
   //     my ($stomach, $whatsit) = @_;
   //     my $kv = $whatsit-&gt;getArg(2);
   //     # Really, we want the mathstyle that was in effect BEFORE the group starting the numerator!
-  //     # (there could be a \displaystyle INSIDE the numerator, but that&#39;s not the one we want)
+  //     # (there could be a \displaystyle INSIDE the numerator, but that's not the one we want)
   //     # Of course the group that started the numerator may be the start of the Math, itself!
-  //     # AND, the numerator, which was already digested, needs it&#39;s mathstyle ADJUSTED
-  //     my $font = ($state-&gt;isValueBound(&#39;MODE&#39;, 0)    # Last stack frame was a mode switch!?!?!
-  //       ? $state-&gt;lookupValue(&#39;font&#39;)                # then just use whatever font we&#39;ve got
-  //       : ($state-&gt;isValueBound(&#39;font&#39;, 0)           # else if font was set in numerator
-  //           &amp;&amp; $state-&gt;valueInFrame(&#39;font&#39;, 1))
-  //         || $state-&gt;lookupValue(&#39;font&#39;)             # then just use whatever font we&#39;ve got
+  //     # AND, the numerator, which was already digested, needs it's mathstyle ADJUSTED
+  //     my $font = ($state-&gt;isValueBound('MODE', 0)    # Last stack frame was a mode switch!?!?!
+  //       ? $state-&gt;lookupValue('font')                # then just use whatever font we've got
+  //       : ($state-&gt;isValueBound('font', 0)           # else if font was set in numerator
+  //           &amp;&amp; $state-&gt;valueInFrame('font', 1))
+  //         || $state-&gt;lookupValue('font')             # then just use whatever font we've got
   //     );
   //     my $style     = $font-&gt;getMathstyle;
-  //     my $role      = ToString($kv-&gt;getValue(&#39;role&#39;));
-  //     my $meaning   = ToString($kv-&gt;getValue(&#39;meaning&#39;));
-  //     my $thickness = ToString($kv-&gt;getValue(&#39;thickness&#39;));
-  //     $role    = &#39;FRACOP&#39; unless $role;
-  //     $meaning = &#39;divide&#39; if (!$meaning) &amp;&amp; ($thickness ne &#39;0pt&#39;);
-  //     # Unfortunately, the numerator&#39;s already digested! We have to adjust it&#39;s mathstyle
+  //     my $role      = ToString($kv-&gt;getValue('role'));
+  //     my $meaning   = ToString($kv-&gt;getValue('meaning'));
+  //     my $thickness = ToString($kv-&gt;getValue('thickness'));
+  //     $role    = 'FRACOP' unless $role;
+  //     $meaning = 'divide' if (!$meaning) &amp;&amp; ($thickness ne '0pt');
+  //     # Unfortunately, the numerator's already digested! We have to adjust it's mathstyle
   //     my @top = $stomach-&gt;regurgitate;
   //     # really have to pass +/-1, +/-2 etc..!
   //     adjustMathstyle($style, {}, @top);
   //     MergeFont(fraction =&gt; 1);
   //     my @bot     = $stomach-&gt;digestNextBody();
-  //     my $closing = pop(@bot);    # We&#39;ll leave whatever closed the list (endmath, endgroup...)
+  //     my $closing = pop(@bot);    # We'll leave whatever closed the list (endmath, endgroup...)
   //     $whatsit-&gt;setProperties(
-  //       top       =&gt; List(@top, mode =&gt; &#39;math&#39;),
-  //       bottom    =&gt; List(@bot, mode =&gt; &#39;math&#39;),
+  //       top       =&gt; List(@top, mode =&gt; 'math'),
+  //       bottom    =&gt; List(@bot, mode =&gt; 'math'),
   //       role      =&gt; $role,
   //       meaning   =&gt; $meaning,
   //       thickness =&gt; $thickness,
   //       mathstyle =&gt; $style);
-  //     if ($kv-&gt;getValue(&#39;left&#39;) || $kv-&gt;getValue(&#39;right&#39;)) {
+  //     if ($kv-&gt;getValue('left') || $kv-&gt;getValue('right')) {
   //       $whatsit-&gt;setProperties(needXMDual =&gt; 1,
   //         xmkey0 =&gt; LaTeXML::Package::getXMArgID(),
   //         xmkey1 =&gt; LaTeXML::Package::getXMArgID(),
   //         xmkey2 =&gt; LaTeXML::Package::getXMArgID()); }
   //     return $closing; },    # and leave the closing bit, whatever it is.
   //   properties =&gt; sub { %{ $_[2]-&gt;getKeyVals }; },
-  //   sizer      =&gt; sub { fracSizer($_[0]-&gt;getProperty(&#39;top&#39;), $_[0]-&gt;getProperty(&#39;bottom&#39;)); },
+  //   sizer      =&gt; sub { fracSizer($_[0]-&gt;getProperty('top'), $_[0]-&gt;getProperty('bottom')); },
   //   reversion  =&gt; sub {
   //     my ($whatsit) = @_;
-  //     (Revert($whatsit-&gt;getProperty(&#39;top&#39;)),
+  //     (Revert($whatsit-&gt;getProperty('top')),
   //       $whatsit-&gt;getArg(1)-&gt;unlist,
-  //       Revert($whatsit-&gt;getProperty(&#39;bottom&#39;))); });
+  //       Revert($whatsit-&gt;getProperty('bottom'))); });
 
-  // DefMacro(&#39;\choose&#39;,
-  //   &#39;\lx@generalized@over{\choose}{meaning=binomial,thickness=0pt,left=\@left(,right=\@right)}&#39;);
-  // DefMacro(&#39;\brace&#39;,
-  //   &#39;\lx@generalized@over{\brace}{thickness=0pt,left=\@left\{,right=\@right\}}&#39;);
-  // DefMacro(&#39;\brack&#39;,
-  //   &#39;\lx@generalized@over{\brack}{thickness=0pt,left=\@left[,right=\@right]}&#39;);
-  // DefMacro(&#39;\atop&#39;,
-  //   &#39;\lx@generalized@over{\atop}{thickness=0pt}&#39;);
-  // DefMacro(&#39;\atopwithdelims Token Token&#39;,
-  //   &#39;\lx@generalized@over{\atopwithdelims #1 #2}{thickness=0pt,left={\@left#1},right={\@right#2}}&#39;);
-  // DefMacro(&#39;\over&#39;,
-  //   &#39;\lx@generalized@over{\over}{meaning=divide}&#39;);
-  // DefMacro(&#39;\overwithdelims Token Token&#39;,
-  //   &#39;\lx@generalized@over{\overwithdelims #1 #2}{left={\@left#1},right={\@right#2},meaning=divide}&#39;);
-  // # My thinking was that this is a &quot;fraction&quot; providing the dimension is &gt; 0!
-  // DefMacro(&#39;\above Dimension&#39;,
-  //   &#39;\lx@generalized@over{\above #1}{meaning=divide,thickness=#1}&#39;);
-  // DefMacro(&#39;\abovewithdelims Token Token Dimension&#39;,
-  // &#39;\lx@generalized@over{\abovewithdelims #1 #2 #3}{left={\@left#1},right={\@right#2},meaning=divide,thickness=#3}&#39;);
+  // DefMacro('\choose',
+  //   '\lx@generalized@over{\choose}{meaning=binomial,thickness=0pt,left=\@left(,right=\@right)}');
+  // DefMacro('\brace',
+  //   '\lx@generalized@over{\brace}{thickness=0pt,left=\@left\{,right=\@right\}}');
+  // DefMacro('\brack',
+  //   '\lx@generalized@over{\brack}{thickness=0pt,left=\@left[,right=\@right]}');
+  // DefMacro('\atop',
+  //   '\lx@generalized@over{\atop}{thickness=0pt}');
+  // DefMacro('\atopwithdelims Token Token',
+  //   '\lx@generalized@over{\atopwithdelims #1 #2}{thickness=0pt,left={\@left#1},right={\@right#2}}');
+  // DefMacro('\over',
+  //   '\lx@generalized@over{\over}{meaning=divide}');
+  // DefMacro('\overwithdelims Token Token',
+  //   '\lx@generalized@over{\overwithdelims #1 #2}{left={\@left#1},right={\@right#2},meaning=divide}');
+  // # My thinking was that this is a "fraction" providing the dimension is &gt; 0!
+  // DefMacro('\above Dimension',
+  //   '\lx@generalized@over{\above #1}{meaning=divide,thickness=#1}');
+  // DefMacro('\abovewithdelims Token Token Dimension',
+  // '\lx@generalized@over{\abovewithdelims #1 #2 #3}{left={\@left#1},right={\@right#2},meaning=divide,thickness=#3}');
 
 
   //======================================================================
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\cal&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="comment">// TODO:  font =&gt; { family =&gt; &#39;caligraphic&#39;, series =&gt; &#39;medium&#39;, shape =&gt; &#39;upright&#39; });
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\cal"</span>, <span class="prelude-val">None</span>);
+  <span class="comment">// TODO:  font =&gt; { family =&gt; 'caligraphic', series =&gt; 'medium', shape =&gt; 'upright' });
 
   // In principle, &lt;ltx:emph&gt; is a nice markup for emphasized.
   // Unfortunately, TeX really just treats it as a font switch.
@@ -353,21 +355,21 @@
   // the &lt;ltx:emph&gt; stays open!  Ugh!
   // This could still be made to work, but merge font would
   // need to look at any open &lt;ltx:emph&gt;, and then somehow close it!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\em&quot;</span>, <span class="prelude-val">None</span>,
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\em"</span>, <span class="prelude-val">None</span>,
   before_digest =&gt; {
     <span class="kw">let </span>font = <span class="macro">LookupFont!</span>().unwrap();
-    <span class="kw">let </span>shape = font.get_shape().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>));
-    <span class="kw">let </span>shapevariant = <span class="kw">if </span>shape == <span class="string">&quot;italic&quot; </span>{ <span class="string">&quot;normal&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;italic&quot; </span>};
-    <span class="macro">AssignValue!</span>(<span class="string">&quot;font&quot;</span>, font.merge(<span class="macro">fontmap!</span>(shape =&gt; shapevariant)), <span class="prelude-val">Some</span>(Scope::Local));
+    <span class="kw">let </span>shape = font.get_shape().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>));
+    <span class="kw">let </span>shapevariant = <span class="kw">if </span>shape == <span class="string">"italic" </span>{ <span class="string">"normal" </span>} <span class="kw">else </span>{ <span class="string">"italic" </span>};
+    <span class="macro">AssignValue!</span>(<span class="string">"font"</span>, font.merge(<span class="macro">fontmap!</span>(shape =&gt; shapevariant)), <span class="prelude-val">Some</span>(Scope::Local));
   });
 
   <span class="comment">// Change math font while still in text!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\boldmath&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="comment">//  beforeDigest =&gt; sub { AssignValue(mathfont =&gt; LookupValue(&#39;mathfont&#39;)-&gt;merge(forcebold =&gt; 1),
-  // &#39;local&#39;); }, forbidMath =&gt; 1);
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\unboldmath&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\boldmath"</span>, <span class="prelude-val">None</span>);
+  <span class="comment">//  beforeDigest =&gt; sub { AssignValue(mathfont =&gt; LookupValue('mathfont')-&gt;merge(forcebold =&gt; 1),
+  // 'local'); }, forbidMath =&gt; 1);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\unboldmath"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// TODO:
-  // beforeDigest =&gt; sub { AssignValue(mathfont =&gt; LookupValue(&#39;mathfont&#39;)-&gt;merge(forcebold =&gt; 0),
-  // &#39;local&#39;); }, forbidMath =&gt; 1);
+  // beforeDigest =&gt; sub { AssignValue(mathfont =&gt; LookupValue('mathfont')-&gt;merge(forcebold =&gt; 0),
+  // 'local'); }, forbidMath =&gt; 1);
 </span>});
 </code></pre></div></section></main></body></html>

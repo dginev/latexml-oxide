@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch9_figures_and_tables.rs`."><title>latex_ch9_figures_and_tables.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch9_figures_and_tables.rs`."><title>latex_ch9_figures_and_tables.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -155,137 +157,137 @@
   // Whatever reason, that causes complications: We can only increment
   // counters with the caption, but then have to arrange for the counters,
   // refnums, ids, get passed on to the figure, table when needed.
-  // AND, as soon as possible, since other items may base their id&#39;s on the id of the table!
+  // AND, as soon as possible, since other items may base their id's on the id of the table!
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\figurename&quot;</span>, <span class="string">&quot;Figure&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\figuresname&quot;</span>, <span class="string">&quot;Figures&quot;</span>); <span class="comment">// Never used?
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\tablename&quot;</span>, <span class="string">&quot;Table&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\tablesname&quot;</span>, <span class="string">&quot;Tables&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\figurename"</span>, <span class="string">"Figure"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\figuresname"</span>, <span class="string">"Figures"</span>); <span class="comment">// Never used?
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablename"</span>, <span class="string">"Table"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\tablesname"</span>, <span class="string">"Tables"</span>);
 
   <span class="comment">// Let the fonts for float be the default for all floats, figures, tables, etc.
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\fnum@font@float&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\format@title@font@float&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fnum@font@float"</span>, <span class="string">"\\@empty"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@font@float"</span>, <span class="string">"\\@empty"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\fnum@font@figure&quot;</span>, <span class="string">&quot;\\fnum@font@float&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\fnum@font@table&quot;</span>, <span class="string">&quot;\\fnum@font@float&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\format@title@font@figure&quot;</span>, <span class="string">&quot;\\format@title@font@float&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\format@title@font@table&quot;</span>, <span class="string">&quot;\\format@title@font@float&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\fnum@font@figure"</span>, <span class="string">"\\fnum@font@float"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\fnum@font@table"</span>, <span class="string">"\\fnum@font@float"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@font@figure"</span>, <span class="string">"\\format@title@font@float"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@font@table"</span>, <span class="string">"\\format@title@font@float"</span>);
 
   <span class="comment">// Could perhaps parameterize further with a separator?
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\format@title@figure{}&quot;</span>,
-    <span class="string">&quot;\\lx@tag[][: ]{\\lx@fnum@@{figure}}#1&quot;
+    <span class="string">"\\format@title@figure{}"</span>,
+    <span class="string">"\\lx@tag[][: ]{\\lx@fnum@@{figure}}#1"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\format@title@table{}&quot;</span>,
-    <span class="string">&quot;\\lx@tag[][: ]{\\lx@fnum@@{table}}#1&quot;
+    <span class="string">"\\format@title@table{}"</span>,
+    <span class="string">"\\lx@tag[][: ]{\\lx@fnum@@{table}}#1"
   </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\ext@figure&quot;</span>, <span class="string">&quot;lof&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\ext@table&quot;</span>, <span class="string">&quot;lot&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\ext@figure"</span>, <span class="string">"lof"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\ext@table"</span>, <span class="string">"lot"</span>);
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\iflx@donecaption&quot;</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\iflx@donecaption"</span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\caption&quot;</span>,
-    <span class="string">r&quot;\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}{\expandafter\@caption\expandafter{\@captype}}&quot;
+    <span class="string">"\\caption"</span>,
+    <span class="string">r"\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}{\expandafter\@caption\expandafter{\@captype}}"
   </span>);
   <span class="comment">// First, check for trailing \label, move it into the caption as a standard position
   // NOTE: If one day we want to unlock \@caption, make sure to test against arXiv:cond-mat/0001395
   // for a passing build.
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\@caption{}[]{}&quot;</span>,
-    <span class="string">r&quot;\@ifnext\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}&quot;</span>,
+    <span class="string">"\\@caption{}[]{}"</span>,
+    <span class="string">r"\@ifnext\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}"</span>,
     locked=&gt;<span class="bool-val">true
   </span>);
   <span class="comment">// Check for trailing \label, move it into the caption
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\@caption@postlabel{}{}{} SkipMatch:\label Semiverbatim&quot;</span>,
-    <span class="string">r&quot;\@caption@{#1}{#2}{#3\label{#4}}&quot;
+    <span class="string">r"\@caption@postlabel{}{}{} SkipMatch:\label Semiverbatim"</span>,
+    <span class="string">r"\@caption@{#1}{#2}{#3\label{#4}}"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\@caption@{}{}{}&quot;</span>,
-    <span class="string">r&quot;\@hack@caption@{#1}{#2}{}#3\label\endcaption&quot;
+    <span class="string">r"\@caption@{}{}{}"</span>,
+    <span class="string">r"\@hack@caption@{#1}{#2}{}#3\label\endcaption"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\@hack@caption@{}{}{} Until:\label Until:\endcaption&quot;</span>,
-    <span class="string">r&quot;\ifx.#5.\@caption@@@{#1}{#2}{#3#4}\else\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption\fi&quot;
+    <span class="string">r"\@hack@caption@{}{}{} Until:\label Until:\endcaption"</span>,
+    <span class="string">r"\ifx.#5.\@caption@@@{#1}{#2}{#3#4}\else\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption\fi"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">r&quot;\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption&quot;</span>,
-    <span class="string">r&quot;\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption&quot;
+    <span class="string">r"\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption"</span>,
+    <span class="string">r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption"
   </span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@note@caption@label{}&quot;</span>, sub[(label)] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@note@caption@label{}"</span>, sub[(label)] {
     <span class="kw">let </span>label = label.to_string();
     maybe_note_label(<span class="kw-2">&amp;</span>label); });
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\@caption@@@{}{}{}&quot;</span>,
-    <span class="string">r&quot;\@@add@caption@counters\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}&quot;
+    <span class="string">"\\@caption@@@{}{}{}"</span>,
+    <span class="string">r"\@@add@caption@counters\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}"
   </span>);
 
   <span class="comment">// Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@@add@caption@counters&quot;</span>, {
-    <span class="kw">let </span>captype = stomach::digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@captype&quot;</span>))<span class="question-mark">?</span>.to_string();
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@@add@caption@counters"</span>, {
+    <span class="kw">let </span>captype = stomach::digest(<span class="macro">T_CS!</span>(<span class="string">"\\@captype"</span>))<span class="question-mark">?</span>.to_string();
     <span class="kw">let </span>props   = ref_step_counter(<span class="kw-2">&amp;</span>captype, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>inlist  = stomach::digest(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\ext@{}&quot;</span>, captype)))<span class="question-mark">?</span>.to_string();
-    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_tags&quot;</span>, captype), props.get(<span class="string">&quot;tags&quot;</span>), <span class="prelude-val">Some</span>(Scope::Global));
-    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_id&quot;</span>, captype), props.get(<span class="string">&quot;id&quot;</span>),   <span class="prelude-val">Some</span>(Scope::Global));
-    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_inlist&quot;</span>, captype), inlist,      <span class="prelude-val">Some</span>(Scope::Global));
+    <span class="kw">let </span>inlist  = stomach::digest(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ext@{}"</span>, captype)))<span class="question-mark">?</span>.to_string();
+    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_tags"</span>, captype), props.get(<span class="string">"tags"</span>), <span class="prelude-val">Some</span>(Scope::Global));
+    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_id"</span>, captype), props.get(<span class="string">"id"</span>),   <span class="prelude-val">Some</span>(Scope::Global));
+    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_inlist"</span>, captype), inlist,      <span class="prelude-val">Some</span>(Scope::Global));
   });
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@generic@caption[]{}&quot;</span>, <span class="string">&quot;&lt;ltx:text class=&#39;ltx_caption&#39;&gt;#2&lt;/ltx:text&gt;&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@generic@caption[]{}"</span>, <span class="string">"&lt;ltx:text class='ltx_caption'&gt;#2&lt;/ltx:text&gt;"</span>,
   before_digest =&gt; {
-    <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;\\caption&quot;</span>, <span class="string">&quot;Use of \\caption outside any known float&quot;</span>); });
+    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\caption"</span>, <span class="string">"Use of \\caption outside any known float"</span>); });
 
-  <span class="comment">// Note that even without \caption, we&#39;d probably like to have xml:id.
-  </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:figure&quot;</span>, after_close =&gt; sub[document, node] { document.generate_id(node, <span class="string">&quot;fig&quot;</span>)<span class="question-mark">?</span>; });
-  <span class="macro">Tag!</span>(<span class="string">&quot;ltx:table&quot;</span>,  after_close =&gt; sub[document, node] { document.generate_id(node, <span class="string">&quot;tab&quot;</span>)<span class="question-mark">?</span>; });
-  <span class="macro">Tag!</span>(<span class="string">&quot;ltx:float&quot;</span>,  after_close =&gt; sub[document, node] { document.generate_id(node, <span class="string">&quot;tab&quot;</span>)<span class="question-mark">?</span>; });
+  <span class="comment">// Note that even without \caption, we'd probably like to have xml:id.
+  </span><span class="macro">Tag!</span>(<span class="string">"ltx:figure"</span>, after_close =&gt; sub[document, node] { document.generate_id(node, <span class="string">"fig"</span>)<span class="question-mark">?</span>; });
+  <span class="macro">Tag!</span>(<span class="string">"ltx:table"</span>,  after_close =&gt; sub[document, node] { document.generate_id(node, <span class="string">"tab"</span>)<span class="question-mark">?</span>; });
+  <span class="macro">Tag!</span>(<span class="string">"ltx:float"</span>,  after_close =&gt; sub[document, node] { document.generate_id(node, <span class="string">"tab"</span>)<span class="question-mark">?</span>; });
 
-  <span class="comment">// # These may need to float up to where they&#39;re allowed,
+  <span class="comment">// # These may need to float up to where they're allowed,
   // # or they may need to close &lt;p&gt; or similar.
   // TODO: prefix both replacements with ^^ when we can compile them.
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@caption{}&quot;</span>, <span class="string">&quot;&lt;ltx:caption&gt;#1&lt;/ltx:caption&gt;&quot;</span>);
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@caption{}"</span>, <span class="string">"&lt;ltx:caption&gt;#1&lt;/ltx:caption&gt;"</span>);
   <span class="macro">DefConstructor!</span>(
-    <span class="string">&quot;\\@@toccaption{}&quot;</span>,
-    <span class="string">&quot;&lt;ltx:toccaption&gt;#1&lt;/ltx:toccaption&gt;&quot; </span><span class="comment">//sizer =&gt; 0
+    <span class="string">"\\@@toccaption{}"</span>,
+    <span class="string">"&lt;ltx:toccaption&gt;#1&lt;/ltx:toccaption&gt;" </span><span class="comment">//sizer =&gt; 0
   </span>);
 
   <span class="comment">// TODO: implement optional argument {figure}[]
-  </span><span class="macro">DefEnvironment!</span>(<span class="string">&quot;{figure}&quot;</span>,<span class="string">r###&quot;
-  &lt;ltx:figure xml:id=&#39;#id&#39; inlist=&#39;#inlist&#39;&gt;
+  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{figure}"</span>,<span class="string">r###"
+  &lt;ltx:figure xml:id='#id' inlist='#inlist'&gt;
     #tags
     #body
   &lt;/ltx:figure&gt;
-  &quot;###</span>,
-    properties   =&gt; { <span class="macro">map!</span>(<span class="string">&quot;layout&quot; </span>=&gt; <span class="string">&quot;vertical&quot;</span>.into()) },
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@captype&quot;</span>, <span class="string">&quot;figure&quot;</span>); },
+  "###</span>,
+    properties   =&gt; { <span class="macro">map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>.into()) },
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\@captype"</span>, <span class="string">"figure"</span>); },
     after_digest  =&gt; sub[tag] {
-      rescue_caption_counters(<span class="string">&quot;figure&quot;</span>, tag);
+      rescue_caption_counters(<span class="string">"figure"</span>, tag);
     }
   );
-  <span class="comment">// DefEnvironment(&#39;{figure*}[]&#39;,
-  //   &quot;&lt;ltx:figure xml:id=&#39;#id&#39; inlist=&#39;#inlist&#39; ?#1(placement=&#39;#1&#39;)&gt;&quot;
-  //     . &quot;#tags&quot;
-  //     . &quot;#body&quot;
-  //     . &quot;&lt;/ltx:figure&gt;&quot;,
-  //   properties   =&gt; { layout =&gt; &#39;vertical&#39; },
-  //   beforeDigest =&gt; sub { DefMacroI(&#39;\@captype&#39;, undef, &#39;figure&#39;); },
-  //   afterDigest  =&gt; sub { RescueCaptionCounters(&#39;figure&#39;, $_[1]); });
-  </span><span class="macro">DefEnvironment!</span>(<span class="string">&quot;{table}[]&quot;</span>,
-    <span class="string">&quot;&lt;ltx:table xml:id=&#39;#id&#39; inlist=&#39;#inlist&#39; ?#1(placement=&#39;#1&#39;)&gt;#tags#body&lt;/ltx:table&gt;&quot;</span>,
+  <span class="comment">// DefEnvironment('{figure*}[]',
+  //   "&lt;ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')&gt;"
+  //     . "#tags"
+  //     . "#body"
+  //     . "&lt;/ltx:figure&gt;",
+  //   properties   =&gt; { layout =&gt; 'vertical' },
+  //   beforeDigest =&gt; sub { DefMacroI('\@captype', undef, 'figure'); },
+  //   afterDigest  =&gt; sub { RescueCaptionCounters('figure', $_[1]); });
+  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{table}[]"</span>,
+    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:table&gt;"</span>,
     <span class="comment">// TODO:
-    // properties   =&gt; { layout =&gt; &#39;vertical&#39; },
-    </span>before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@captype&quot;</span>, <span class="string">&quot;table&quot;</span>); },
-    after_digest  =&gt; sub[whatsit] { rescue_caption_counters(<span class="string">&quot;table&quot;</span>, whatsit); });
-  <span class="comment">// DefEnvironment(&#39;{table*}[]&#39;,
-  //   &quot;&lt;ltx:table xml:id=&#39;#id&#39; inlist=&#39;#inlist&#39; ?#1(placement=&#39;#1&#39;)&gt;&quot;
-  //     . &quot;#tags&quot;
-  //     . &quot;#body&quot;
-  //     . &quot;&lt;/ltx:table&gt;&quot;,
-  //   properties   =&gt; { layout =&gt; &#39;vertical&#39; },
-  //   beforeDigest =&gt; sub { DefMacroI(&#39;\@captype&#39;, undef, &#39;table&#39;); },
-  //   afterDigest  =&gt; sub { RescueCaptionCounters(&#39;table&#39;, $_[1]); });
+    // properties   =&gt; { layout =&gt; 'vertical' },
+    </span>before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\@captype"</span>, <span class="string">"table"</span>); },
+    after_digest  =&gt; sub[whatsit] { rescue_caption_counters(<span class="string">"table"</span>, whatsit); });
+  <span class="comment">// DefEnvironment('{table*}[]',
+  //   "&lt;ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')&gt;"
+  //     . "#tags"
+  //     . "#body"
+  //     . "&lt;/ltx:table&gt;",
+  //   properties   =&gt; { layout =&gt; 'vertical' },
+  //   beforeDigest =&gt; sub { DefMacroI('\@captype', undef, 'table'); },
+  //   afterDigest  =&gt; sub { RescueCaptionCounters('table', $_[1]); });
 </span>});
 </code></pre></div></section></main></body></html>

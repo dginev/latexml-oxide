@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/etex.rs`."><title>etex.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/etex.rs`."><title>etex.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -284,14 +286,14 @@
   //======================================================================
   // 3.1 Additional control over expansion
   // \protected associates with the next defn
-  // (note that it isn&#39;t actually used anywhere).
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\protected&quot;</span>, {
-    set_prefix(<span class="string">&quot;protected&quot;</span>);
+  // (note that it isn't actually used anywhere).
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\protected"</span>, {
+    set_prefix(<span class="string">"protected"</span>);
   },
   is_prefix =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// \detokenize
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\detokenize GeneralText&quot;</span>, sub[(text)] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\detokenize GeneralText"</span>, sub[(text)] {
     <span class="macro">Explode!</span>(writable_tokens(<span class="kw-2">&amp;</span>text))
   });
 
@@ -299,34 +301,34 @@
   // of \unexpanded are not expanded further (this is the same behaviour as is
   // exhibited by the tokens resulting from the expansion of
   // \the〈token variable〉in both TEX and ε-TEX).
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\unexpanded GeneralText&quot;</span>, <span class="string">&quot;#1&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\unexpanded GeneralText"</span>, <span class="string">"#1"</span>);
 
   <span class="comment">// ======================================================================
   // 3.2. Provision for re-scanning already read text
 
   // \readline; like \read, but only spaces &amp; other
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\readline Number SkipKeyword:to SkipSpaces Token&quot;</span>, sub[(port, token)] {
-    <span class="kw">let </span>file_key = <span class="macro">format!</span>(<span class="string">&quot;input_file:{port}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\readline Number SkipKeyword:to SkipSpaces Token"</span>, sub[(port, token)] {
+    <span class="kw">let </span>file_key = <span class="macro">format!</span>(<span class="string">"input_file:{port}"</span>);
     <span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = lookup_value(<span class="kw-2">&amp;</span>file_key) {
       <span class="prelude-val">Some</span>(mouth) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
     <span class="kw">if let </span><span class="prelude-val">Some</span>(mouth) = mouth_opt {
       <span class="kw">let </span><span class="kw-2">mut </span>raw_line = mouth.borrow_mut().read_raw_line(<span class="bool-val">false</span>).unwrap_or_default();
-      <span class="comment">// DG: Can&#39;t we do this \endlinechar check in readRawLine ?!
-      // DG:  and can&#39;t we make it *faster* ?
-      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(eol) = lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\endlinechar&quot;</span>))<span class="question-mark">? </span>{
+      <span class="comment">// DG: Can't we do this \endlinechar check in readRawLine ?!
+      // DG:  and can't we make it *faster* ?
+      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(eol) = lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\endlinechar"</span>))<span class="question-mark">? </span>{
         <span class="kw">let </span>eolv   = eol.value_of(Vec::new()).unwrap_or_default().value_of();
         <span class="kw">if </span>(eolv &gt; <span class="number">0</span>) &amp;&amp; (eolv &lt;= <span class="number">255</span>) {
           raw_line.push(eolv <span class="kw">as </span>u8 <span class="kw">as </span>char);
         }
       } <span class="kw">else </span>{
-        raw_line.push(<span class="string">&#39;\r&#39;</span>);
+        raw_line.push(<span class="string">'\r'</span>);
       }
 
       <span class="macro">DefMacro!</span>(token, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(raw_line)));
     }
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\scantokens GeneralText&quot;</span>, sub[(tokens)] {
+  <span class="macro">DefMacro!</span>(<span class="string">"\\scantokens GeneralText"</span>, sub[(tokens)] {
     gullet::open_mouth(
       Mouth::new(<span class="kw-2">&amp;</span>writable_tokens(<span class="kw-2">&amp;</span>tokens), <span class="prelude-val">None</span>)<span class="question-mark">?</span>, <span class="bool-val">true</span>);
     <span class="macro">Tokens!</span>()
@@ -335,39 +337,39 @@
   <span class="comment">//======================================================================
   // 3.3 Environmental enquiries
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\eTeXrevision&quot;</span>, { <span class="macro">Explode!</span>(<span class="string">&quot;.2&quot;</span>) });
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\eTeXversion&quot; </span>=&gt; Number::new(<span class="number">2</span>));
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eTeXrevision"</span>, { <span class="macro">Explode!</span>(<span class="string">".2"</span>) });
+  <span class="macro">DefRegister!</span>(<span class="string">"\\eTeXversion" </span>=&gt; Number::new(<span class="number">2</span>));
 
   <span class="comment">// \currentgrouplevel
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\currentgrouplevel&quot;</span>, <span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>,
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\currentgrouplevel"</span>, <span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>,
     getter =&gt; { get_frame_depth() });
 
-  <span class="comment">// \currentgrouptype returns group types from 0..16 ; but what IS a &quot;group type&quot;?
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\currentgrouptype&quot;</span>, <span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
+  <span class="comment">// \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\currentgrouptype"</span>, <span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// \ifcsname stuff \endcsname
-  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcsname CSName&quot;</span>, sub[(t)] {
+  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifcsname CSName"</span>, sub[(t)] {
     lookup_meaning(<span class="kw-2">&amp;</span>t).is_some()
   });
 
   <span class="comment">// \ifdefined &lt;token&gt;
-  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifdefined Token&quot;</span>, sub[(t)] {
+  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifdefined Token"</span>, sub[(t)] {
     lookup_meaning(<span class="kw-2">&amp;</span>t).is_some()
   });
 
   <span class="comment">// # ???
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\lastnodetype&quot;</span>, Number::new(<span class="number">0</span>));
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\lastnodetype"</span>, Number::new(<span class="number">0</span>));
 
   <span class="comment">// #======================================================================
   // # 3.4 Generalization of the \mark concept: a class of \marks
-  // # but since we don&#39;t manage Pages...
+  // # but since we don't manage Pages...
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\marks Number GeneralText&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\topmarks Number&quot;</span>, sub[(num)] {});
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\firstmarks Number&quot;</span>, sub[(num)] {});
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\botmarks Number&quot;</span>, sub[(num)] {});
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\splitfirstmarks Number&quot;</span>, sub[(num)] {});
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\splitbotmarks Number&quot;</span>, sub[(num)] {});
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\marks Number GeneralText"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\topmarks Number"</span>, {});
+  <span class="macro">DefMacro!</span>(<span class="string">"\\firstmarks Number"</span>, {});
+  <span class="macro">DefMacro!</span>(<span class="string">"\\botmarks Number"</span>, {});
+  <span class="macro">DefMacro!</span>(<span class="string">"\\splitfirstmarks Number"</span>, {});
+  <span class="macro">DefMacro!</span>(<span class="string">"\\splitbotmarks Number"</span>, {});
 
   <span class="comment">// #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives
@@ -382,76 +384,76 @@
   // # ]
   // # or do we need to do some more intelligent tracking of modes
   // # and directionality?
-  // # Presumably we can&#39;t rely on the material itself being directional.
+  // # Presumably we can't rely on the material itself being directional.
 
-  // By leaving this 0, we&#39;re saying &quot;Don&#39;t use these features&quot;!
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\TeXXeTstate&quot; </span>=&gt; Number::new(<span class="number">0</span>));
+  // By leaving this 0, we're saying "Don't use these features"!
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\TeXXeTstate" </span>=&gt; Number::new(<span class="number">0</span>));
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\beginL&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\beginR&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endL&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endR&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\beginL"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\beginR"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\endL"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\endR"</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\predisplaydirection&quot; </span>=&gt; Number::new(<span class="number">0</span>)); <span class="comment">// ???
+  <span class="macro">DefRegister!</span>(<span class="string">"\\predisplaydirection" </span>=&gt; Number::new(<span class="number">0</span>)); <span class="comment">// ???
 
   // #======================================================================
   // # 3.6 Additional debugging features
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\interactionmode&quot; </span>=&gt; Number::new(<span class="number">0</span>));
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\interactionmode" </span>=&gt; Number::new(<span class="number">0</span>));
 
   <span class="comment">// # Should show all open groups &amp; their type.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\showgroups&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\showgroups"</span>, <span class="prelude-val">None</span>);
 
   <span class="comment">// # \showtokens &lt;generaltext&gt;
-  // DefPrimitive!(&quot;\\showtokens GeneralText&quot;,  sub {
-  //   Note(&quot;&gt; &quot; . writableTokens($_[1]));
+  // DefPrimitive!("\\showtokens GeneralText",  sub {
+  //   Note("&gt; " . writableTokens($_[1]));
   //   Note($_[0]-&gt;getLocator-&gt;toString());
   //   return; });
 
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\tracingassigns&quot;    </span>=&gt; Number::new(<span class="number">0</span>)); <span class="comment">// ???
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\tracinggroups&quot;     </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\tracingifs&quot;        </span>=&gt; Number::new(<span class="number">0</span>)); <span class="comment">// ???
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\tracingscantokens&quot; </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\tracingnesting&quot;    </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\savingvdiscards&quot;   </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\savinghyphcodes&quot;   </span>=&gt; Number::new(<span class="number">0</span>));
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\tracingassigns"    </span>=&gt; Number::new(<span class="number">0</span>)); <span class="comment">// ???
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\tracinggroups"     </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingifs"        </span>=&gt; Number::new(<span class="number">0</span>)); <span class="comment">// ???
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\tracingscantokens" </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingnesting"    </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\savingvdiscards"   </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\savinghyphcodes"   </span>=&gt; Number::new(<span class="number">0</span>));
 
   <span class="comment">// #======================================================================
   // # 3.7 Miscellaneous primitives
 
   // # \everyeof
   // # NOTE: These tokens are NOT used anywhere (yet?)
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\everyeof&quot;</span>, <span class="macro">Tokens!</span>());
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\everyeof"</span>, <span class="macro">Tokens!</span>());
 
   <span class="comment">// TODO:
-  // DefConstructor(&#39;\middle Token&#39;, &#39;#1&#39;,
+  // DefConstructor('\middle Token', '#1',
   //   afterConstruct =&gt; sub {
   //     my ($document) = @_;
   //     my $current = $document-&gt;getNode;
   //     my $delim = $document-&gt;getLastChildElement($current) || $current;
-  //     $document-&gt;setAttribute($delim, role     =&gt; &#39;MIDDLE&#39;);
-  //     $document-&gt;setAttribute($delim, stretchy =&gt; &#39;true&#39;);
+  //     $document-&gt;setAttribute($delim, role     =&gt; 'MIDDLE');
+  //     $document-&gt;setAttribute($delim, stretchy =&gt; 'true');
   //     return; });
 
   // \unless someif
-  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\unless Token&quot;</span>, sub[(if_token)] {
+  </span><span class="macro">DefConditional!</span>(<span class="string">"\\unless Token"</span>, sub[(if_token)] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Conditional(defn)) = lookup_definition_stored(<span class="kw-2">&amp;</span>if_token)<span class="question-mark">? </span>{
       <span class="kw">if </span>defn.conditional_type == ConditionalType::If {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>test) = defn.test {
-          <span class="comment">// Invert the if&#39;s test!
+          <span class="comment">// Invert the if's test!
           </span><span class="kw">let </span>args = defn.read_arguments()<span class="question-mark">?</span>;
           <span class="kw">return </span><span class="prelude-val">Ok</span>(!(test( args)<span class="question-mark">?</span>));
         }
       }
     }
-    <span class="kw">let </span>msg = <span class="macro">s!</span>(<span class="string">&quot;\\unless should not be followed by {}&quot;</span>,if_token.stringify());
-    <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, if_token, msg);
+    <span class="kw">let </span>msg = <span class="macro">s!</span>(<span class="string">"\\unless should not be followed by {}"</span>,if_token.stringify());
+    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, if_token, msg);
     <span class="bool-val">false
   </span>});
 
   <span class="comment">// #======================================================================
   // # \numexpr, \dimexpr, \gluexpr, \muexpr
   // # These read tokens doing simple parsing until \relax or the parse fails.
-  // # since we don&#39;t know where it ends, we can&#39;t easily use Parse::RecDescent.
+  // # since we don't know where it ends, we can't easily use Parse::RecDescent.
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
   </span><span class="kw">fn </span>etex_readexpr(
@@ -476,14 +478,14 @@
       <span class="prelude-val">Some</span>(t) =&gt; t,
       <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(RegisterValue::default()),
     };
-    <span class="kw">let </span><span class="kw-2">mut </span>value = <span class="kw">if </span>token == <span class="macro">T_OTHER!</span>(<span class="string">&quot;(&quot;</span>) {
+    <span class="kw">let </span><span class="kw-2">mut </span>value = <span class="kw">if </span>token == <span class="macro">T_OTHER!</span>(<span class="string">"("</span>) {
       <span class="kw">let </span>i_value = etex_readexpr_i( rtype, <span class="number">0</span>)<span class="question-mark">?</span>;
       <span class="kw">let </span>close = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
       <span class="comment">// close parenthesis should have terminated recursive call
-      </span><span class="kw">if </span>close.is_none() || !(close == <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;)&quot;</span>))) {
-        <span class="macro">unimplemented!</span>();
-        <span class="comment">//       Error(&#39;expected&#39;, &#39;)&#39;, $gullet,
-        //         &quot;Missing close parenthesis in $type expr.&quot;, &quot;Got &quot; . ToString($close));
+      </span><span class="kw">if </span>close.is_none() || close != <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">")"</span>)) {
+        <span class="macro">todo!</span>();
+        <span class="comment">//       Error('expected', ')', $gullet,
+        //         "Missing close parenthesis in $type expr.", "Got " . ToString($close));
       </span>}
       i_value
     } <span class="kw">else </span>{
@@ -497,18 +499,18 @@
       <span class="kw">if </span>next == <span class="kw-2">*</span>TOKEN_RELAX {
         gullet::unread_one(next); <span class="comment">// leave the \relax for top-level to strip off.
         </span><span class="kw">break</span>;
-      } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;+&quot;</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{
+      } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">"+"</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{
         value = value.add(etex_readexpr_i( rtype, <span class="number">1</span>)<span class="question-mark">?</span>);
-      } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;-&quot;</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{
+      } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">"-"</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{
         value = value.subtract(etex_readexpr_i( rtype, <span class="number">1</span>)<span class="question-mark">?</span>);
-      } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;*&quot;</span>) &amp;&amp; prec &lt; <span class="number">2 </span>{
+      } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">"*"</span>) &amp;&amp; prec &lt; <span class="number">2 </span>{
         <span class="comment">// multiplier should be pure number
         </span>value = value.multiply(etex_readexpr_i( RegisterType::Number, <span class="number">2</span>)<span class="question-mark">?</span>);
-      } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;/&quot;</span>) &amp;&amp; prec &lt; <span class="number">2 </span>{
+      } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">"/"</span>) &amp;&amp; prec &lt; <span class="number">2 </span>{
         <span class="comment">// denominator should be pure number
         </span>value = value.divideround(etex_readexpr_i( RegisterType::Number, <span class="number">2</span>)<span class="question-mark">?</span>);
       } <span class="kw">else </span>{
-        <span class="comment">// anything else, we&#39;re done.
+        <span class="comment">// anything else, we're done.
         </span>gullet::unread_one(next);
         <span class="kw">break</span>;
       }
@@ -529,23 +531,23 @@
     etex_readexpr( RegisterType::MuGlue)<span class="question-mark">?
   </span>});
 
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\numexpr NumExpr&quot;</span>, Number::new(<span class="number">0</span>), getter =&gt; sub[args] {
+  <span class="macro">DefRegister!</span>(<span class="string">"\\numexpr NumExpr"</span>, Number::new(<span class="number">0</span>), getter =&gt; sub[args] {
     args.remove(<span class="number">0</span>).expect_number()
   });
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\dimexpr DimExpr&quot;</span>, Dimension::new(<span class="number">0</span>), getter =&gt; sub[args] {
+  <span class="macro">DefRegister!</span>(<span class="string">"\\dimexpr DimExpr"</span>, Dimension::new(<span class="number">0</span>), getter =&gt; sub[args] {
     args.remove(<span class="number">0</span>).expect_dimension()
   });
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\glueexpr GlueExpr&quot;</span>, Glue::new(<span class="number">0</span>), getter =&gt; sub[args] {
+  <span class="macro">DefRegister!</span>(<span class="string">"\\glueexpr GlueExpr"</span>, Glue::new(<span class="number">0</span>), getter =&gt; sub[args] {
     args.remove(<span class="number">0</span>).expect_glue()
   });
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\muexpr MuExpr&quot;</span>, MuGlue::new(<span class="number">0</span>), getter =&gt; sub[args] {
+  <span class="macro">DefRegister!</span>(<span class="string">"\\muexpr MuExpr"</span>, MuGlue::new(<span class="number">0</span>), getter =&gt; sub[args] {
     args.remove(<span class="number">0</span>).expect_mu_glue()
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\pdftexcmds@directlua{}&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pdftexcmds@directlua{}"</span>, <span class="prelude-val">None</span>);
 
   <span class="comment">// Not really sure where this comes from; pdftex?
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\synctex&quot;</span>, Number::new(<span class="number">0</span>));
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\synctex"</span>, Number::new(<span class="number">0</span>));
   <span class="comment">// #======================================================================
 </span>});
 </code></pre></div></section></main></body></html>

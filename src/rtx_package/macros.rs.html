@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/macros.rs`."><title>macros.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_package/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/macros.rs`."><title>macros.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -162,69 +164,87 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="doccomment">/// Macro for compiling string construction replacements into closures
 /// that execute the needed ops in libxml.
 /// Approach borrowed from diesel-codegen
-</span><span class="macro">macro_rules! </span>compile_replacement {
+</span><span class="macro">macro_rules!</span> compile_replacement {
   (<span class="macro-nonterminal">$var</span>:ident, <span class="macro-nonterminal">$replacement</span>:literal) =&gt; {{
     <span class="kw">use </span>rtx_core::definition::ReplacementClosure;
     <span class="attr">#[derive(CompileReplacement)]
     #[replacement=<span class="macro-nonterminal">$replacement</span>]
     </span><span class="kw">struct </span>_Dummy;
-    <span class="attr">#[allow(unused_mut, unused_variables)]
-    </span><span class="kw">let </span>tmp: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="macro">this_replacement!</span>();
+    <span class="kw">let </span>tmp: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="macro">this_replacement!</span>();
     <span class="macro-nonterminal">$var </span>= tmp;
   }};
 }
 
 <span class="attr">#[macro_export]
-#[allow(unused_variables)]
 </span><span class="doccomment">/// Macro for compiling string binding prototypes into Expandable closures
 /// Approach borrowed from diesel-codegen
-</span><span class="macro">macro_rules! </span>compile_prototype_for_typed_macro {
+</span><span class="macro">macro_rules!</span> compile_prototype_for_typed_macro {
   (<span class="macro-nonterminal">$prototype</span>:literal, sub [ ( $(<span class="macro-nonterminal">$var</span>:ident),* )] <span class="macro-nonterminal">$body</span>:block
     $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
     <span class="attr">#[derive(CompilePrototypeFor)]
     #[prototype=<span class="macro-nonterminal">$prototype</span>]
-    #[inner=<span class="string">&quot;TypedMacro&quot;</span>]
+    #[inner=<span class="string">"TypedMacro"</span>]
     </span><span class="kw">struct </span>_DummyP;
     <span class="macro">this_prototype!</span>(sub [ ( $(<span class="macro-nonterminal">$var</span>),* ) ] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>);
   }};
 }
 
 <span class="attr">#[macro_export]
-#[allow(unused_variables)]
 </span><span class="doccomment">/// Macro for compiling string binding prototypes into Primitive closures
-</span><span class="macro">macro_rules! </span>compile_prototype_for_typed_primitive {
+</span><span class="macro">macro_rules!</span> compile_prototype_for_typed_primitive {
   (<span class="macro-nonterminal">$prototype</span>:literal, sub [( $(<span class="macro-nonterminal">$var</span>:ident),* )] <span class="macro-nonterminal">$body</span>:block
     $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
     <span class="attr">#[derive(CompilePrototypeFor)]
     #[prototype=<span class="macro-nonterminal">$prototype</span>]
-    #[inner=<span class="string">&quot;TypedPrimitive&quot;</span>]
+    #[inner=<span class="string">"TypedPrimitive"</span>]
     </span><span class="kw">struct </span>_DummyP;
     <span class="macro">this_prototype!</span>(sub [ ( $(<span class="macro-nonterminal">$var</span>),* )] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>);
   }};
 }
 
 <span class="attr">#[macro_export]
-#[allow(unused_variables)]
 </span><span class="doccomment">/// Macro for compiling string binding prototypes into Conditional closures
-</span><span class="macro">macro_rules! </span>compile_prototype_for_typed_conditional {
+</span><span class="macro">macro_rules!</span> compile_prototype_for_typed_conditional {
   (<span class="macro-nonterminal">$prototype</span>:literal, sub [( $(<span class="macro-nonterminal">$var</span>:ident),* )] <span class="macro-nonterminal">$body</span>:block
     $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
     <span class="attr">#[derive(CompilePrototypeFor)]
     #[prototype=<span class="macro-nonterminal">$prototype</span>]
-    #[inner=<span class="string">&quot;TypedConditional&quot;</span>]
+    #[inner=<span class="string">"TypedConditional"</span>]
     </span><span class="kw">struct </span>_DummyP;
     <span class="macro">this_prototype!</span>(sub [( $(<span class="macro-nonterminal">$var</span>),* )] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>);
   }};
 }
 
 <span class="attr">#[macro_export]
-#[allow(unused_variables)]
+</span><span class="doccomment">/// Macro for compiling string binding prototypes into ColumnType closures
+/// Approach borrowed from diesel-codegen
+</span><span class="macro">macro_rules!</span> compile_prototype_for_typed_columntype {
+  (<span class="macro-nonterminal">$prototype</span>:literal, sub [ ( $(<span class="macro-nonterminal">$var</span>:ident),* )] <span class="macro-nonterminal">$body</span>:block
+    $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
+    <span class="attr">#[derive(CompilePrototypeFor)]
+    #[prototype=<span class="macro-nonterminal">$prototype</span>]
+    #[inner=<span class="string">"TypedColumntype"</span>]
+    </span><span class="kw">struct </span>_DummyP;
+    <span class="macro">this_prototype!</span>(sub [ ( $(<span class="macro-nonterminal">$var</span>),* ) ] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>);
+  }};
+}
+
+<span class="attr">#[macro_export]
 </span><span class="doccomment">/// Macro for compiling string literal prototypes into a Token and Parameters structs
-</span><span class="macro">macro_rules! </span>compile_prototype {
+</span><span class="macro">macro_rules!</span> compile_prototype {
   (<span class="macro-nonterminal">$prototype</span>:literal) =&gt; {{
     <span class="attr">#[derive(CompilePrototype)]
     #[prototype=<span class="macro-nonterminal">$prototype</span>]
@@ -236,7 +256,7 @@
 <span class="attr">#[macro_export]
 </span><span class="doccomment">/// Macro for compiling string macro expansions into closures
 /// Approach borrowed from diesel-codegen
-</span><span class="macro">macro_rules! </span>compile_expansion {
+</span><span class="macro">macro_rules!</span> compile_expansion {
   (<span class="macro-nonterminal">$var</span>:ident, <span class="macro-nonterminal">$expansion</span>:literal) =&gt; {{
     <span class="kw">use </span>rtx_core::definition::ExpansionBody;
     <span class="attr">#[derive(CompileExpansion)]
@@ -248,7 +268,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>load_model {
+</span><span class="macro">macro_rules!</span> load_model {
   (<span class="macro-nonterminal">$name</span>:literal) =&gt; {{
     <span class="kw">use </span>rtx_core::common::model;
     <span class="kw">use </span>rtx_core::common::relaxng::Relaxng;
@@ -277,7 +297,7 @@
 
 <span class="attr">#[macro_export]
 </span><span class="doccomment">/// Macro for compiling string literal tokens into their usual Tokens representation
-</span><span class="macro">macro_rules! </span>compile_tokenize {
+</span><span class="macro">macro_rules!</span> compile_tokenize {
   (<span class="macro-nonterminal">$var</span>:ident, <span class="macro-nonterminal">$literal</span>:expr) =&gt; {{
     <span class="attr">#[derive(CompileTokens)]
     #[literal=<span class="macro-nonterminal">$literal</span>]
@@ -289,7 +309,7 @@
 
 <span class="attr">#[macro_export]
 </span><span class="doccomment">/// Macro for compiling string literal tokens into their preamble Tokens representation
-</span><span class="macro">macro_rules! </span>compile_tokenize_internal {
+</span><span class="macro">macro_rules!</span> compile_tokenize_internal {
   (<span class="macro-nonterminal">$var</span>:ident, <span class="macro-nonterminal">$literal</span>:expr) =&gt; {{
     <span class="attr">#[derive(CompileTokensInternal)]
     #[literal=<span class="macro-nonterminal">$literal</span>]
@@ -302,7 +322,7 @@
 <span class="comment">// TODO: ideally we can auto-infer this based on DefParameterType declarations but the **timing** is
 // tricky? what to do? For now, hardcode.
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>parameter_rust_type {
+</span><span class="macro">macro_rules!</span> parameter_rust_type {
   (GeneralText) =&gt; {Tokens};
   (Semiverbatim) =&gt; {Tokens};
   (UntilBrace) =&gt; {Tokens};
@@ -321,7 +341,7 @@
   (CSName) =&gt; {Token};
   (Variable) =&gt; {ArgWrap};
   <span class="comment">// For now return the raw Tokens for KeyVals, until we figure out how to
-  // do TryInto with access to the current &quot;state&quot; object.
+  // do TryInto with access to the current "state" object.
   </span>(OptionalKeyVals) =&gt; {<span class="prelude-ty">Option</span>&lt;KeyVals&gt;};
   (KeyVals) =&gt; {KeyVals};
   (<span class="macro-nonterminal">$other</span>:ident) =&gt; {<span class="macro-nonterminal">$other</span>};

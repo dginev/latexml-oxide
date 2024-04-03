@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/parameter.rs`."><title>parameter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/parameter.rs`."><title>parameter.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -586,13 +588,6 @@
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
 <a href="#588" id="588">588</a>
-<a href="#589" id="589">589</a>
-<a href="#590" id="590">590</a>
-<a href="#591" id="591">591</a>
-<a href="#592" id="592">592</a>
-<a href="#593" id="593">593</a>
-<a href="#594" id="594">594</a>
-<a href="#595" id="595">595</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>proc_macro2::TokenStream;
 <span class="kw">use </span>quote::{quote, ToTokens};
@@ -603,17 +598,16 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 <span class="kw">use </span><span class="kw">crate</span>::mouth::Mouth;
-<span class="kw">use crate</span>::{gullet};
+<span class="kw">use </span><span class="kw">crate</span>::gullet;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<span class="kw">use crate</span>::{Digested, Locator};
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="kw">pub type </span>ReaderFn =
   <span class="kw">dyn </span>Fn(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens]) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt;;
@@ -622,7 +616,7 @@
 <span class="kw">pub type </span>ReaderClosure = Rc&lt;ReaderFn&gt;;
 
 <span class="comment">// Rust Note:
-// the reversion functions initially had &quot;&amp;mut Gullet&quot; as a parameter.
+// the reversion functions initially had "&amp;mut Gullet" as a parameter.
 // This turned out to be infeasible if we are to maintain the latexml code flow
 // as we have calls into reversions from arbitrary binding closures, at ALL phases.
 // Compromise: use the gated Stomach in state::whenever you need gullet in reversion, as in
@@ -632,17 +626,16 @@
 </span><span class="kw">pub type </span>ReversionClosure =
   Rc&lt;<span class="kw">dyn </span>Fn(Vec&lt;Token&gt;, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens]) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
 
-<span class="kw">static </span>LAST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\w$&quot;</span>).unwrap());
-<span class="kw">static </span>FIRST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\w&quot;</span>).unwrap());
+<span class="kw">static </span>LAST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\w$"</span>).unwrap());
+<span class="kw">static </span>FIRST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\w"</span>).unwrap());
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Parameter {
   <span class="kw">pub </span>novalue: bool,
   <span class="kw">pub </span>semiverbatim: <span class="prelude-ty">Option</span>&lt;Vec&lt;char&gt;&gt;,
   <span class="kw">pub </span>optional: bool,
-  <span class="kw">pub </span>pack_parameters: bool,
-  <span class="kw">pub </span>name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;,
-  <span class="kw">pub </span>spec: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;,
+  <span class="kw">pub </span>name: Cow&lt;<span class="lifetime">'static</span>, str&gt;,
+  <span class="kw">pub </span>spec: Cow&lt;<span class="lifetime">'static</span>, str&gt;,
   <span class="kw">pub </span>extra: Vec&lt;Tokens&gt;,
   <span class="kw">pub </span>inner: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
   <span class="kw">pub </span>reader: ReaderClosure,
@@ -657,16 +650,15 @@
       novalue: <span class="bool-val">false</span>,
       semiverbatim: <span class="prelude-val">None</span>,
       optional: <span class="bool-val">false</span>,
-      pack_parameters: <span class="bool-val">false</span>,
-      name: Cow::Borrowed(<span class="string">&quot;parameter_default&quot;</span>),
-      spec: Cow::Borrowed(<span class="string">&quot;&quot;</span>),
+      name: Cow::Borrowed(<span class="string">"parameter_default"</span>),
+      spec: Cow::Borrowed(<span class="string">""</span>),
       extra: Vec::new(),
       inner: <span class="prelude-val">None</span>,
       reader: Rc::new(|_args, _extra| {
         <span class="macro">Warn!</span>(
-          <span class="string">&quot;Parameter&quot;</span>,
-          <span class="string">&quot;mock_reader&quot;</span>,
-          <span class="string">&quot;Please define a real reader, this is a mock fallback!&quot;
+          <span class="string">"Parameter"</span>,
+          <span class="string">"mock_reader"</span>,
+          <span class="string">"Please define a real reader, this is a mock fallback!"
         </span>);
         <span class="prelude-val">Ok</span>(ArgWrap::None)
       }),
@@ -681,14 +673,14 @@
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="macro">writeln!</span>(
       f,
-      <span class="string">&quot;Parameter(\n\t name:{:?}, novalue:{:?}, semiverbatim:{:?},&quot;</span>,
+      <span class="string">"Parameter(\n\t name:{:?}, novalue:{:?}, semiverbatim:{:?},"</span>,
       <span class="self">self</span>.name, <span class="self">self</span>.novalue, <span class="self">self</span>.semiverbatim,
     )<span class="question-mark">?</span>;
-    <span class="macro">writeln!</span>(f, <span class="string">&quot;\t optional:{:?}, spec:{:?}&quot;</span>, <span class="self">self</span>.optional, <span class="self">self</span>.spec)<span class="question-mark">?</span>;
-    <span class="macro">writeln!</span>(f, <span class="string">&quot;\t inner: {:?}&quot;</span>, <span class="self">self</span>.inner)<span class="question-mark">?</span>;
+    <span class="macro">writeln!</span>(f, <span class="string">"\t optional:{:?}, spec:{:?}"</span>, <span class="self">self</span>.optional, <span class="self">self</span>.spec)<span class="question-mark">?</span>;
+    <span class="macro">writeln!</span>(f, <span class="string">"\t inner: {:?}"</span>, <span class="self">self</span>.inner)<span class="question-mark">?</span>;
     <span class="macro">writeln!</span>(
       f,
-      <span class="string">&quot;\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )&quot;</span>,
+      <span class="string">"\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )"</span>,
       <span class="self">self</span>.extra,
       <span class="self">self</span>.reversion.is_some(),
       <span class="self">self</span>.before_digest.len(),
@@ -697,7 +689,7 @@
   }
 }
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Parameter {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.name) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.name) }
 }
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>Parameter {
@@ -705,14 +697,14 @@
 }
 <span class="kw">impl </span>Object <span class="kw">for </span>Parameter {
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="self">self</span>.spec.to_string() }
-  <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="macro">unimplemented!</span>() }
+
 }
 
-<span class="kw">static </span>OPTIONAL_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^Optional(.+)$&quot;</span>).unwrap());
-<span class="kw">static </span>SKIP_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^Skip(.+)$&quot;</span>).unwrap());
+<span class="kw">static </span>OPTIONAL_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^Optional(.+)$"</span>).unwrap());
+<span class="kw">static </span>SKIP_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^Skip(.+)$"</span>).unwrap());
 
 <span class="kw">impl </span>Parameter {
-  <span class="kw">pub fn </span>new(name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;, spec: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+  <span class="kw">pub fn </span>new(name: Cow&lt;<span class="lifetime">'static</span>, str&gt;, spec: Cow&lt;<span class="lifetime">'static</span>, str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     Parameter {
       name,
       spec,
@@ -724,7 +716,7 @@
     <span class="comment">// Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read&lt;Type&gt; accessible from LaTeXML::Package::Pool
     // is defined.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>descriptor: <span class="prelude-ty">Option</span>&lt;Rc&lt;Parameter&gt;&gt; = with_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name, |looked_up_mapping|
+    </span><span class="kw">let </span><span class="kw-2">mut </span>descriptor: <span class="prelude-ty">Option</span>&lt;Rc&lt;Parameter&gt;&gt; = with_mapping(<span class="string">"PARAMETER_TYPES"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name, |looked_up_mapping|
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) = looked_up_mapping {
         <span class="prelude-val">Some</span>(Rc::clone(d_lookup))
       } <span class="kw">else </span>{
@@ -732,17 +724,17 @@
       </span>});
     <span class="kw">if </span>descriptor.is_none() {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(captures) = OPTIONAL_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
-        <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-        descriptor = with_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, basetype, |basetype_param_opt|
+        <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
+        descriptor = with_mapping(<span class="string">"PARAMETER_TYPES"</span>, basetype, |basetype_param_opt|
         <span class="kw">match </span>basetype_param_opt {
           <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(d_lookup.clone())),
-          <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)) {
+          <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Read{}"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)) {
             <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Rc::new(Parameter {
               reader,
               optional: <span class="bool-val">true</span>,
               ..Parameter::default()
             }))),
-            <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, basetype)) {
+            <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Read{}"</span>, basetype)) {
               <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Rc::new(Parameter {
                 reader,
                 optional: <span class="bool-val">true</span>,
@@ -752,15 +744,15 @@
               <span class="prelude-val">None </span>=&gt; <span class="macro">fatal!</span>(
                 Parameter,
                 Init,
-                <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t initialize parameter {:?}, unknown?&quot;</span>, <span class="self">self</span>.name)
+                <span class="macro">s!</span>(<span class="string">"Can't initialize parameter {:?}, unknown?"</span>, <span class="self">self</span>.name)
               ),
             },
           },
         })<span class="question-mark">?</span>;
         <span class="self">self</span>.optional = <span class="bool-val">true</span>;
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = SKIP_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
-        <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-        descriptor = with_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, basetype, |basetype_param_opt|
+        <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
+        descriptor = with_mapping(<span class="string">"PARAMETER_TYPES"</span>, basetype, |basetype_param_opt|
         <span class="kw">match </span>basetype_param_opt {
           <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Some</span>(d_lookup.clone()),
           <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
@@ -770,7 +762,7 @@
               novalue: <span class="bool-val">true</span>,
               ..Parameter::default()
             })),
-            <span class="prelude-val">None </span>=&gt; Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, basetype)).map(|reader| {
+            <span class="prelude-val">None </span>=&gt; Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Read{}"</span>, basetype)).map(|reader| {
               Rc::new(Parameter {
                 reader,
                 optional: <span class="bool-val">true</span>,
@@ -786,7 +778,7 @@
         }
       } <span class="kw">else </span>{
         descriptor =
-          Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)).map(|reader| {
+          Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Read{}"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)).map(|reader| {
             Rc::new(Parameter {
               reader,
               ..Parameter::default()
@@ -802,43 +794,42 @@
         </span><span class="kw">if </span>descriptor.novalue {
           <span class="self">self</span>.novalue = <span class="bool-val">true</span>;
         }
-        <span class="self">self</span>.semiverbatim = descriptor.semiverbatim.clone();
-        <span class="comment">// Also doing optional setting on the fly, so don&#39;t override unless true
+        <span class="self">self</span>.semiverbatim.clone_from(<span class="kw-2">&amp;</span>descriptor.semiverbatim);
+        <span class="comment">// Also doing optional setting on the fly, so don't override unless true
         // self.optional = descriptor.optional;
         </span><span class="kw">if </span>descriptor.optional {
           <span class="self">self</span>.optional = <span class="bool-val">true</span>;
         }
-        <span class="self">self</span>.reversion = descriptor.reversion.clone();
-        <span class="self">self</span>.before_digest = descriptor.before_digest.clone();
-        <span class="self">self</span>.after_digest = descriptor.after_digest.clone();
-        <span class="self">self</span>.predigest = descriptor.predigest.clone();
-        <span class="self">self</span>.pack_parameters = descriptor.pack_parameters;
+        <span class="self">self</span>.reversion.clone_from(<span class="kw-2">&amp;</span>descriptor.reversion);
+        <span class="self">self</span>.before_digest.clone_from(<span class="kw-2">&amp;</span>descriptor.before_digest);
+        <span class="self">self</span>.after_digest.clone_from(<span class="kw-2">&amp;</span>descriptor.after_digest);
+        <span class="self">self</span>.predigest.clone_from(<span class="kw-2">&amp;</span>descriptor.predigest);
       },
       <span class="prelude-val">None </span>=&gt; <span class="macro">fatal!</span>(
         Parameter,
         Unknown,
         <span class="macro">s!</span>(
-          <span class="string">&quot;Unrecognized parameter type with name {:?}, spec {:?}&quot;</span>,
+          <span class="string">"Unrecognized parameter type with name {:?}, spec {:?}"</span>,
           <span class="self">self</span>.name,
           <span class="self">self</span>.spec
         )
       ),
     }
-    <span class="comment">// Last but not least, initialize any &quot;inner&quot; parameters
+    <span class="comment">// Last but not least, initialize any "inner" parameters
     </span><span class="self">self</span>.inner = <span class="self">self</span>.inner.map(|inner_ps| {
       inner_ps
         .init()
-        .expect(<span class="string">&quot;inner param init shouldn&#39;t fail?&quot;</span>)
+        .expect(<span class="string">"inner param init shouldn't fail?"</span>)
     });
     <span class="prelude-val">Ok</span>(<span class="self">self</span>)
   }
 
   <span class="doccomment">/// Obtain the reader of a given parameter name, if available
   </span><span class="kw">pub fn </span>check_reader_function(name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;ReaderClosure&gt; {
-    <span class="comment">// TODO: This function doesn&#39;t have a direct Rust equivalent, since the metaprogramming isn&#39;t
-    // possible But what is the exact purpose of seeking through the pool namespace? Wouldn&#39;t
+    <span class="comment">// TODO: This function doesn't have a direct Rust equivalent, since the metaprogramming isn't
+    // possible But what is the exact purpose of seeking through the pool namespace? Wouldn't
     // any parameter be already assigned in the state::
-    </span>with_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, name, |param_opt|
+    </span>with_mapping(<span class="string">"PARAMETER_TYPES"</span>, name, |param_opt|
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(param)) = param_opt {
         <span class="prelude-val">Some</span>(param.reader.clone())
       } <span class="kw">else </span>{
@@ -879,9 +870,6 @@
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>semi_chars) = <span class="self">self</span>.semiverbatim {
             value = value.neutralize(semi_chars);
           }
-          <span class="kw">if </span><span class="self">self</span>.pack_parameters {
-            value = value.pack_parameters()<span class="question-mark">?</span>;
-          }
           <span class="kw">if </span>wants_option {
             <span class="kw">if </span>value.is_empty() {
               ArgWrap::None
@@ -912,14 +900,14 @@
       <span class="comment">// Deyan: Special exception, which may motivate switching the reader type to Option&lt;Tokens&gt; in
       // the long-run        Until *may* have a value, but it also may *not*, both OK. So...
       // except it from the error message here
-      </span><span class="kw">if </span>!<span class="self">self</span>.name.starts_with(<span class="string">&quot;Until&quot;</span>) {
+      </span><span class="kw">if </span>!<span class="self">self</span>.name.starts_with(<span class="string">"Until"</span>) {
         <span class="kw">let </span>fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
         <span class="macro">Error!</span>(
-          <span class="string">&quot;expected&quot;</span>,
+          <span class="string">"expected"</span>,
           <span class="self">self</span>,
-          <span class="macro">s!</span>(<span class="string">&quot;Missing argument {} for {}&quot;</span>, <span class="self">self</span>.stringify(), fordefn_str)
+          <span class="macro">s!</span>(<span class="string">"Missing argument {} for {}"</span>, <span class="self">self</span>.stringify(), fordefn_str)
         );
-        ArgWrap::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;missing&quot;</span>)))
+        ArgWrap::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"missing"</span>)))
       } <span class="kw">else </span>{
         value_arg
       }
@@ -944,19 +932,21 @@
               gullet::unread(value);
               <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
               <span class="kw">loop </span>{
-                <span class="kw">match </span>gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>) {
-                  <span class="prelude-val">Ok</span>(token_opt) =&gt; <span class="kw">match </span>token_opt {
-                    <span class="prelude-val">Some</span>(token) =&gt; tokens.push(token),
-                    <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
-                  },
-                  <span class="prelude-val">Err</span>(x) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(x),
+                <span class="kw">match </span>gullet::get_pending_comment() {
+                  <span class="prelude-val">Some</span>(token) =&gt; tokens.push(token),
+                  <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>) {
+                    <span class="prelude-val">Ok</span>(token_opt) =&gt; <span class="kw">match </span>token_opt {
+                      <span class="prelude-val">Some</span>(token) =&gt; tokens.push(token),
+                      <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
+                    },
+                    <span class="prelude-val">Err</span>(x) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(x),
+                  }
                 }
               }
-              <span class="kw">let </span>evec = Vec::new();
-              <span class="prelude-val">Ok</span>(Tokens::new(tokens).neutralize(<span class="kw-2">&amp;</span>evec).unlist())
+              <span class="prelude-val">Ok</span>(Tokens::new(tokens).neutralize(<span class="kw-2">&amp;</span>[]))
             },
           )<span class="question-mark">?</span>;
-          value_arg = ArgWrap::Tokens(Tokens::new(neutralized));
+          value_arg = ArgWrap::Tokens(neutralized);
         } <span class="kw">else </span>{
           value_arg = ArgWrap::default();
         }
@@ -971,14 +961,14 @@
       closure(value_arg)<span class="question-mark">?
     </span>} <span class="kw">else </span>{
       <span class="comment">// Note: we have an open question for the type interface.
-      //  What happens when a wrapped &quot;None&quot; value,
+      //  What happens when a wrapped "None" value,
       // (such as the missing value of an Optional [] argument)
       // gets digested?
       //
       // currently a `Digested::default` gets returned, which has an empty TBox and also gets
       // returned for e.g. empty mandatory Plain arguments {}.
-      // But we need *different* values, as the explicit &quot;\foo[]&quot; is an override to empty, while
-      // &quot;\foo&quot; will use the default value for the Optional.
+      // But we need *different* values, as the explicit "\foo[]" is an override to empty, while
+      // "\foo" will use the default value for the Optional.
       </span><span class="kw">if </span><span class="self">self</span>.optional &amp;&amp; value_arg.is_none() {
         <span class="prelude-val">None
       </span>} <span class="kw">else </span>{
@@ -1019,7 +1009,7 @@
   /// (and the parameter types for the keys) had a chance to properly parse.
   </span><span class="comment">// Yuck!
   </span><span class="kw">pub fn </span>reparse(<span class="kw-2">&amp;</span><span class="self">self</span>, _value: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="macro">unimplemented!</span>()
+    <span class="macro">todo!</span>()
   }
 }
 
@@ -1043,13 +1033,13 @@
         <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
       };
       <span class="kw">if </span>lead_letter &amp;&amp; trail_letter {
-        result.push(<span class="string">&#39; &#39;</span>);
+        result.push(<span class="string">' '</span>);
       }
       result.push_str(<span class="kw-2">&amp;</span>s);
     }
     result
   }
-  <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="macro">unimplemented!</span>() }
+
 }
 
 <span class="kw">impl </span>Parameters {
@@ -1059,7 +1049,7 @@
   <span class="kw">pub fn </span>take_parameters(<span class="self">self</span>) -&gt; Vec&lt;Parameter&gt; { <span class="self">self</span>.<span class="number">0 </span>}
   <span class="kw">pub fn </span>revert_arguments(<span class="kw-2">&amp;</span><span class="self">self</span>, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
-    <span class="kw">for </span>(parameter, arg) <span class="kw">in </span><span class="self">self</span>.<span class="number">0</span>.iter().zip(args.into_iter()) {
+    <span class="kw">for </span>(parameter, arg) <span class="kw">in </span><span class="self">self</span>.<span class="number">0</span>.iter().zip(args) {
       <span class="kw">if </span>!parameter.novalue {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(reverted_tks) = parameter.revert(arg)<span class="question-mark">? </span>{
           tokens.extend(reverted_tks.unlist());
@@ -1083,16 +1073,15 @@
     fordefn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>Definition&gt;,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArgWrap&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = Vec::new();
-    gullet::setup_scan();
     <span class="kw">for </span>parameter <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0 </span>{
       <span class="kw">let </span>values = parameter.read(fordefn)<span class="question-mark">?</span>;
       <span class="kw">if </span>parameter.predigest.is_some() {
         <span class="comment">// TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest
-        // closure... so this shouldn&#39;t be an error, not even an info -- but leaving it here
+        // closure... so this shouldn't be an error, not even an info -- but leaving it here
         // if something changes in the future. error!(
-        //   target: &amp;s!(&quot;parameter:{}&quot;, parameter.name),
-        //   &quot;parameter with predigest closure was invoked in an expandable context. Parameter
-        // digestion won&#39;t execute.&quot; );
+        //   target: &amp;s!("parameter:{}", parameter.name),
+        //   "parameter with predigest closure was invoked in an expandable context. Parameter
+        // digestion won't execute." );
       </span>}
       <span class="kw">if </span>!parameter.novalue {
         args.push(values);
@@ -1106,7 +1095,6 @@
     fordefn: <span class="kw-2">&amp;</span>Constructor,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = Vec::new();
-    gullet::setup_scan();
     <span class="kw">for </span>parameter <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0 </span>{
       <span class="kw">let </span>value = parameter.read(<span class="prelude-val">Some</span>(fordefn))<span class="question-mark">?</span>;
       <span class="kw">if </span>!parameter.novalue {
@@ -1126,7 +1114,7 @@
     }
     <span class="kw">let </span>value_tokens = value.revert()<span class="question-mark">?</span>;
     <span class="comment">// start with empty mouth
-    </span><span class="kw">let </span>reader_mouth = Mouth::new(<span class="string">&quot;&quot;</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>reader_mouth = Mouth::new(<span class="string">""</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     gullet::reading_from_mouth(reader_mouth, || {
       gullet::unread(value_tokens); <span class="comment">// but put back tokens to be read
       </span><span class="kw">let </span>values = <span class="self">self</span>.read_arguments(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
@@ -1141,11 +1129,11 @@
     <span class="kw">for </span>parameter <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0 </span>{
       <span class="kw">let </span>param_content = parameter.to_string();
       <span class="kw">if </span>LAST_WCHAR_RE.is_match(<span class="kw-2">&amp;</span>content) &amp;&amp; FIRST_WCHAR_RE.is_match(<span class="kw-2">&amp;</span>param_content) {
-        content.push(<span class="string">&#39; &#39;</span>);
+        content.push(<span class="string">' '</span>);
       }
       content.push_str(<span class="kw-2">&amp;</span>param_content);
     }
-    <span class="macro">write!</span>(f, <span class="string">&quot;{content}&quot;</span>)
+    <span class="macro">write!</span>(f, <span class="string">"{content}"</span>)
   }
 }
 
@@ -1156,7 +1144,7 @@
 <span class="kw">impl </span>ToTokens <span class="kw">for </span>Parameters {
   <span class="kw">fn </span>to_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>, stream: <span class="kw-2">&amp;mut </span>TokenStream) {
     <span class="kw">let </span>params = <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>;
-    stream.extend(<span class="macro">quote! </span>{
+    stream.extend(<span class="macro">quote!</span> {
         Parameters::new(&lt;[Parameter]&gt;::into_vec(Box::new([ #(#params),* ])))
     });
   }
@@ -1177,7 +1165,7 @@
       <span class="prelude-val">None </span>=&gt; <span class="macro">quote!</span>(<span class="prelude-val">None</span>),
       <span class="prelude-val">Some</span>(inner_ps) =&gt; <span class="macro">quote!</span>(<span class="prelude-val">Some</span>(#inner_ps)),
     };
-    stream.extend(<span class="macro">quote! </span>{
+    stream.extend(<span class="macro">quote!</span> {
       Parameter {
         name: #name,
         spec: #spec,

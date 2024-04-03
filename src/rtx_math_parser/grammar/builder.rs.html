@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_math_parser/src/grammar/builder.rs`."><title>builder.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_math_parser/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_math_parser/src/grammar/builder.rs`."><title>builder.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_math_parser/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -162,63 +164,63 @@
   <span class="comment">// We create a declarative macro language of our own, in the spirit of the Marpa SLIF
   </span><span class="macro">default_registry!</span>();
   <span class="comment">// Tokens, to be used in rules directly
-  </span><span class="macro">token!</span>(atom ~ <span class="string">&quot;ATOM&quot;</span>);
-  <span class="macro">token!</span>(unknown ~ <span class="string">&quot;UNKNOWN&quot;</span>);
-  <span class="macro">token!</span>(id ~ <span class="string">&quot;ID&quot;</span>);
-  <span class="macro">token!</span>(array ~ <span class="string">&quot;ARRAY&quot;</span>);
-  <span class="macro">token!</span>(number ~ <span class="string">&quot;NUMBER&quot;</span>);
-  <span class="macro">token!</span>(punct ~ <span class="string">&quot;PUNCT&quot;</span>);
-  <span class="macro">token!</span>(period ~ <span class="string">&quot;PERIOD&quot;</span>);
-  <span class="macro">token!</span>(addop ~ <span class="string">&quot;ADDOP&quot;</span>);
-  <span class="macro">token!</span>(mulop ~ <span class="string">&quot;MULOP&quot;</span>);
-  <span class="macro">token!</span>(relop ~ <span class="string">&quot;RELOP&quot;</span>);
-  <span class="macro">token!</span>(elideop ~ <span class="string">&quot;ELIDEOP&quot;</span>);
-  <span class="macro">token!</span>(langle_rel = <span class="string">&quot;RELOP:less-than&quot;</span>);
-  <span class="macro">token!</span>(langle_open = <span class="string">&quot;OPEN:langle&quot;</span>);
+  </span><span class="macro">token!</span>(atom ~ <span class="string">"ATOM"</span>);
+  <span class="macro">token!</span>(unknown ~ <span class="string">"UNKNOWN"</span>);
+  <span class="macro">token!</span>(id ~ <span class="string">"ID"</span>);
+  <span class="macro">token!</span>(array ~ <span class="string">"ARRAY"</span>);
+  <span class="macro">token!</span>(number ~ <span class="string">"NUMBER"</span>);
+  <span class="macro">token!</span>(punct ~ <span class="string">"PUNCT"</span>);
+  <span class="macro">token!</span>(period ~ <span class="string">"PERIOD"</span>);
+  <span class="macro">token!</span>(addop ~ <span class="string">"ADDOP"</span>);
+  <span class="macro">token!</span>(mulop ~ <span class="string">"MULOP"</span>);
+  <span class="macro">token!</span>(relop ~ <span class="string">"RELOP"</span>);
+  <span class="macro">token!</span>(elideop ~ <span class="string">"ELIDEOP"</span>);
+  <span class="macro">token!</span>(langle_rel = <span class="string">"RELOP:less-than"</span>);
+  <span class="macro">token!</span>(langle_open = <span class="string">"OPEN:langle"</span>);
   <span class="macro">token!</span>(langle = [langle_rel langle_open]);
-  <span class="macro">token!</span>(rangle_rel = <span class="string">&quot;RELOP:greater-than&quot;</span>);
-  <span class="macro">token!</span>(rangle_close = <span class="string">&quot;CLOSE:rangle&quot;</span>);
+  <span class="macro">token!</span>(rangle_rel = <span class="string">"RELOP:greater-than"</span>);
+  <span class="macro">token!</span>(rangle_close = <span class="string">"CLOSE:rangle"</span>);
   <span class="macro">token!</span>(rangle =[rangle_rel rangle_close]);
-  <span class="macro">token!</span>(vertbar ~ <span class="string">&quot;VERTBAR&quot;</span>);
-  <span class="macro">token!</span>(singlevertbar = <span class="string">&quot;VERTBAR:|&quot;</span>);
-  <span class="macro">token!</span>(middle_bar = <span class="string">&quot;MIDDLE:|&quot;</span>);
-  <span class="macro">token!</span>(middle_parallel = <span class="string">&quot;MIDDLE:parallel-to&quot;</span>);
+  <span class="macro">token!</span>(vertbar ~ <span class="string">"VERTBAR"</span>);
+  <span class="macro">token!</span>(singlevertbar = <span class="string">"VERTBAR:|"</span>);
+  <span class="macro">token!</span>(middle_bar = <span class="string">"MIDDLE:|"</span>);
+  <span class="macro">token!</span>(middle_parallel = <span class="string">"MIDDLE:parallel-to"</span>);
   <span class="macro">token!</span>(midbar = [vertbar middle_bar middle_parallel]);
-  <span class="macro">token!</span>(lbrace = <span class="string">&quot;OPEN:{&quot;</span>);
-  <span class="macro">token!</span>(rbrace = <span class="string">&quot;CLOSE:}&quot;</span>);
-  <span class="macro">token!</span>(lparen = <span class="string">&quot;OPEN:(&quot;</span>);
-  <span class="macro">token!</span>(rparen = <span class="string">&quot;CLOSE:)&quot;</span>);
-  <span class="macro">token!</span>(lbracket = <span class="string">&quot;OPEN:[&quot;</span>);
-  <span class="macro">token!</span>(rbracket = <span class="string">&quot;CLOSE:]&quot;</span>);
-  <span class="macro">token!</span>(metarelop ~ <span class="string">&quot;METARELOP&quot;</span>);
-  <span class="macro">token!</span>(modifierop ~ <span class="string">&quot;MODIFIEROP&quot;</span>);
-  <span class="macro">token!</span>(modifier ~ <span class="string">&quot;MODIFIER&quot;</span>);
-  <span class="macro">token!</span>(arrow ~ <span class="string">&quot;ARROW&quot;</span>);
-  <span class="macro">token!</span>(binop ~ <span class="string">&quot;BINOP&quot;</span>);
-  <span class="macro">token!</span>(postfix ~ <span class="string">&quot;POSTFIX&quot;</span>);
-  <span class="macro">token!</span>(function ~ <span class="string">&quot;FUNCTION&quot;</span>);
-  <span class="macro">token!</span>(opfunction ~ <span class="string">&quot;OPFUNCTION&quot;</span>);
-  <span class="macro">token!</span>(trigfunction ~ <span class="string">&quot;TRIGFUNCTION&quot;</span>);
-  <span class="macro">token!</span>(applyop ~ <span class="string">&quot;APPLYOP&quot;</span>);
-  <span class="macro">token!</span>(composeop ~ <span class="string">&quot;COMPOSEOP&quot;</span>);
-  <span class="macro">token!</span>(supop ~ <span class="string">&quot;SUPOP&quot;</span>);
-  <span class="macro">token!</span>(open ~ <span class="string">&quot;OPEN&quot;</span>);
-  <span class="macro">token!</span>(close ~ <span class="string">&quot;CLOSE&quot;</span>);
-  <span class="macro">token!</span>(middle ~ <span class="string">&quot;MIDDLE&quot;</span>);
-  <span class="macro">token!</span>(bigop ~ <span class="string">&quot;BIGOP&quot;</span>);
-  <span class="macro">token!</span>(sumop ~ <span class="string">&quot;SUMOP&quot;</span>);
-  <span class="macro">token!</span>(intop ~ <span class="string">&quot;INTOP&quot;</span>);
-  <span class="macro">token!</span>(limitop ~ <span class="string">&quot;LIMITOP&quot;</span>);
-  <span class="macro">token!</span>(diffop ~ <span class="string">&quot;DIFFOP&quot;</span>);
-  <span class="macro">token!</span>(operator ~ <span class="string">&quot;OPERATOR&quot;</span>);
-  <span class="macro">token!</span>(start_postsubscript ~ <span class="string">&quot;start_POSTSUBSCRIPT&quot;</span>);
-  <span class="macro">token!</span>(end_postsubscript ~ <span class="string">&quot;end_POSTSUBSCRIPT&quot;</span>);
-  <span class="macro">token!</span>(start_postsuperscript ~ <span class="string">&quot;start_POSTSUPERSCRIPT&quot;</span>);
-  <span class="macro">token!</span>(end_postsuperscript ~ <span class="string">&quot;end_POSTSUPERSCRIPT&quot;</span>);
-  <span class="macro">token!</span>(start_floatsuperscript ~ <span class="string">&quot;start_FLOATSUPERSCRIPT&quot;</span>);
-  <span class="macro">token!</span>(end_floatsuperscript ~ <span class="string">&quot;end_FLOATSUPERSCRIPT&quot;</span>);
-  <span class="macro">token!</span>(start_floatsubscript ~ <span class="string">&quot;start_FLOATSUBSCRIPT&quot;</span>);
-  <span class="macro">token!</span>(end_floatsubscript ~ <span class="string">&quot;end_FLOATSUBSCRIPT&quot;</span>);
+  <span class="macro">token!</span>(lbrace = <span class="string">"OPEN:{"</span>);
+  <span class="macro">token!</span>(rbrace = <span class="string">"CLOSE:}"</span>);
+  <span class="macro">token!</span>(lparen = <span class="string">"OPEN:("</span>);
+  <span class="macro">token!</span>(rparen = <span class="string">"CLOSE:)"</span>);
+  <span class="macro">token!</span>(lbracket = <span class="string">"OPEN:["</span>);
+  <span class="macro">token!</span>(rbracket = <span class="string">"CLOSE:]"</span>);
+  <span class="macro">token!</span>(metarelop ~ <span class="string">"METARELOP"</span>);
+  <span class="macro">token!</span>(modifierop ~ <span class="string">"MODIFIEROP"</span>);
+  <span class="macro">token!</span>(modifier ~ <span class="string">"MODIFIER"</span>);
+  <span class="macro">token!</span>(arrow ~ <span class="string">"ARROW"</span>);
+  <span class="macro">token!</span>(binop ~ <span class="string">"BINOP"</span>);
+  <span class="macro">token!</span>(postfix ~ <span class="string">"POSTFIX"</span>);
+  <span class="macro">token!</span>(function ~ <span class="string">"FUNCTION"</span>);
+  <span class="macro">token!</span>(opfunction ~ <span class="string">"OPFUNCTION"</span>);
+  <span class="macro">token!</span>(trigfunction ~ <span class="string">"TRIGFUNCTION"</span>);
+  <span class="macro">token!</span>(applyop ~ <span class="string">"APPLYOP"</span>);
+  <span class="macro">token!</span>(composeop ~ <span class="string">"COMPOSEOP"</span>);
+  <span class="macro">token!</span>(supop ~ <span class="string">"SUPOP"</span>);
+  <span class="macro">token!</span>(open ~ <span class="string">"OPEN"</span>);
+  <span class="macro">token!</span>(close ~ <span class="string">"CLOSE"</span>);
+  <span class="macro">token!</span>(middle ~ <span class="string">"MIDDLE"</span>);
+  <span class="macro">token!</span>(bigop ~ <span class="string">"BIGOP"</span>);
+  <span class="macro">token!</span>(sumop ~ <span class="string">"SUMOP"</span>);
+  <span class="macro">token!</span>(intop ~ <span class="string">"INTOP"</span>);
+  <span class="macro">token!</span>(limitop ~ <span class="string">"LIMITOP"</span>);
+  <span class="macro">token!</span>(diffop ~ <span class="string">"DIFFOP"</span>);
+  <span class="macro">token!</span>(operator ~ <span class="string">"OPERATOR"</span>);
+  <span class="macro">token!</span>(start_postsubscript ~ <span class="string">"start_POSTSUBSCRIPT"</span>);
+  <span class="macro">token!</span>(end_postsubscript ~ <span class="string">"end_POSTSUBSCRIPT"</span>);
+  <span class="macro">token!</span>(start_postsuperscript ~ <span class="string">"start_POSTSUPERSCRIPT"</span>);
+  <span class="macro">token!</span>(end_postsuperscript ~ <span class="string">"end_POSTSUPERSCRIPT"</span>);
+  <span class="macro">token!</span>(start_floatsuperscript ~ <span class="string">"start_FLOATSUPERSCRIPT"</span>);
+  <span class="macro">token!</span>(end_floatsuperscript ~ <span class="string">"end_FLOATSUPERSCRIPT"</span>);
+  <span class="macro">token!</span>(start_floatsubscript ~ <span class="string">"start_FLOATSUBSCRIPT"</span>);
+  <span class="macro">token!</span>(end_floatsubscript ~ <span class="string">"end_FLOATSUBSCRIPT"</span>);
 
   <span class="macro">rules!</span>(
     <span class="comment">// Factors
@@ -264,7 +266,7 @@
     <span class="comment">// Script content
     </span>postsubarg = start_postsubscript expression end_postsubscript =&gt; faux_wrap;
     postsuperarg = start_postsuperscript expression end_postsuperscript =&gt; faux_wrap
-      <span class="comment">// TODO: what other kinds of arguments are accepted in scripts? Should we do &quot;anything&quot;?
+      <span class="comment">// TODO: what other kinds of arguments are accepted in scripts? Should we do "anything"?
       </span>| start_postsuperscript supop end_postsuperscript =&gt; faux_wrap;
     floatsubarg = start_floatsubscript expression end_floatsubscript =&gt; faux_wrap;
     floatsuperarg = start_floatsuperscript expression end_floatsuperscript =&gt; faux_wrap;

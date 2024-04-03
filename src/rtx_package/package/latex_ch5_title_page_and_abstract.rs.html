@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch5_title_page_and_abstract.rs`."><title>latex_ch5_title_page_and_abstract.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch5_title_page_and_abstract.rs`."><title>latex_ch5_title_page_and_abstract.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -242,11 +244,7 @@
 <a href="#242" id="242">242</a>
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="kw">use </span>libxml::tree::NodeType;
 
 <span class="attr">#[rustfmt::skip]
 </span><span class="macro">LoadDefinitions!</span>({
@@ -255,32 +253,30 @@
   //======================================================================
   // See frontmatter support in TeX.ltxml
 
-  </span><span class="macro">Let!</span>(<span class="string">&quot;\\@title&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\title{}&quot;</span>, <span class="string">&quot;\\def\\@title{#1}\\@add@frontmatter{ltx:title}{#1}&quot;</span>, locked =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@date&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
+  </span><span class="macro">Let!</span>(<span class="string">"\\@title"</span>, <span class="string">"\\@empty"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\title{}"</span>, <span class="string">"\\def\\@title{#1}\\@add@frontmatter{ltx:title}{#1}"</span>, locked =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@date"</span>, <span class="string">"\\@empty"</span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\date{}&quot;</span>,
-    <span class="string">r&quot;\def\@date{#1}\
-\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}&quot;
+    <span class="string">"\\date{}"</span>,
+    <span class="string">r"\def\@date{#1}\
+\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   </span>);
-
-  <span class="comment">// TODO: ^
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\person@thanks{}&quot;</span>, <span class="string">&quot;^ &lt;ltx:contact role=&#39;thanks&#39;&gt;#1&lt;/ltx:contact&gt;&quot;</span>,
-    alias =&gt; <span class="string">&quot;\\thanks&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@personname{}&quot;</span>, <span class="string">&quot;&lt;ltx:personname&gt;#1&lt;/ltx:personname&gt;&quot;</span>,
-    before_digest =&gt; { <span class="macro">Let!</span>(<span class="string">&quot;\\thanks&quot;</span>, <span class="string">&quot;\\person@thanks&quot;</span>); },
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\person@thanks{}"</span>, <span class="string">"^ &lt;ltx:contact role='thanks'&gt;#1&lt;/ltx:contact&gt;"</span>,
+    alias =&gt; <span class="string">"\\thanks"</span>, mode =&gt; <span class="string">"text"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@personname{}"</span>, <span class="string">"&lt;ltx:personname&gt;#1&lt;/ltx:personname&gt;"</span>,
+    before_digest =&gt; { <span class="macro">Let!</span>(<span class="string">"\\thanks"</span>, <span class="string">"\\person@thanks"</span>); },
     bounded =&gt; <span class="bool-val">true</span>,
-    mode =&gt; <span class="string">&quot;text&quot;
+    mode =&gt; <span class="string">"text"
   </span>);
 
   <span class="comment">// Sanitize person names for (obvious) punctuation abuse at start+end
-  </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:personname&quot;</span>, after_close =&gt; sub[_document, node] {
+  </span><span class="macro">Tag!</span>(<span class="string">"ltx:personname"</span>, after_close =&gt; sub[_document, node] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>first) = node.get_first_child() {
       <span class="kw">if </span>first.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
         <span class="kw">let </span>first_text = first.get_content();
         <span class="kw">let </span><span class="kw-2">mut </span>first_text_iter = first_text.chars().peekable();
         <span class="kw">while let </span><span class="prelude-val">Some</span>(peeked) = first_text_iter.peek() {
-          <span class="kw">if </span>peeked.is_whitespace() || <span class="macro">matches!</span>(peeked, <span class="string">&#39;,&#39; </span>| <span class="string">&#39;!&#39; </span>| <span class="string">&#39;;&#39; </span>| <span class="string">&#39;.&#39; </span>| <span class="string">&#39;:&#39; </span>| <span class="string">&#39;?&#39;</span>) {
+          <span class="kw">if </span>peeked.is_whitespace() || <span class="macro">matches!</span>(peeked, <span class="string">',' </span>| <span class="string">'!' </span>| <span class="string">';' </span>| <span class="string">'.' </span>| <span class="string">':' </span>| <span class="string">'?'</span>) {
             first_text_iter.next();
           } <span class="kw">else </span>{
             <span class="kw">break</span>;
@@ -296,7 +292,7 @@
           <span class="kw">let </span>last_text = last.get_content();
           <span class="kw">let </span><span class="kw-2">mut </span>last_text_iter  = last_text.chars().rev().peekable();
           <span class="kw">while let </span><span class="prelude-val">Some</span>(peeked) = last_text_iter.peek() {
-            <span class="kw">if </span>peeked.is_whitespace() || <span class="macro">matches!</span>(peeked, <span class="string">&#39;,&#39; </span>| <span class="string">&#39;!&#39; </span>| <span class="string">&#39;;&#39; </span>| <span class="string">&#39;.&#39; </span>| <span class="string">&#39;:&#39; </span>| <span class="string">&#39;?&#39;</span>) {
+            <span class="kw">if </span>peeked.is_whitespace() || <span class="macro">matches!</span>(peeked, <span class="string">',' </span>| <span class="string">'!' </span>| <span class="string">';' </span>| <span class="string">'.' </span>| <span class="string">':' </span>| <span class="string">'?'</span>) {
               last_text_iter.next();
             } <span class="kw">else </span>{
               <span class="kw">break</span>;
@@ -310,186 +306,186 @@
         }
       }
     }
-    <span class="kw">return </span><span class="prelude-val">Ok</span>(()); });
+  });
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\and&quot;</span>, <span class="string">&quot; and &quot;</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\and"</span>, <span class="string">" and "</span>);
 
-  <span class="macro">AssignValue!</span>(<span class="string">&quot;NUMBER_OF_AUTHORS&quot; </span>=&gt; <span class="number">0</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@count@author&quot;</span>, {
-    <span class="kw">let </span>current = lookup_int(<span class="string">&quot;NUMBER_OF_AUTHORS&quot;</span>);
-    <span class="macro">AssignValue!</span>(<span class="string">&quot;NUMBER_OF_AUTHORS&quot; </span>=&gt; current + <span class="number">1</span>, <span class="prelude-val">Some</span>(Scope::Global));
+  <span class="macro">AssignValue!</span>(<span class="string">"NUMBER_OF_AUTHORS" </span>=&gt; <span class="number">0</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@count@author"</span>, {
+    <span class="kw">let </span>current = lookup_int(<span class="string">"NUMBER_OF_AUTHORS"</span>);
+    <span class="macro">AssignValue!</span>(<span class="string">"NUMBER_OF_AUTHORS" </span>=&gt; current + <span class="number">1</span>, <span class="prelude-val">Some</span>(Scope::Global));
   });
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\lx@author{}&quot;</span>,
-    <span class="string">r&quot;\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\lx@author@prefix\@personname{#1}}&quot;
+    <span class="string">"\\lx@author{}"</span>,
+    <span class="string">r"\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\lx@author@prefix\@personname{#1}}"
   </span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@@@contact{}{}&quot;</span>, <span class="string">&quot;^ &lt;ltx:contact role=&#39;#1&#39;&gt;#2&lt;/ltx:contact&gt;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@contact{}{}&quot;</span>,
-  <span class="string">r&quot;\@add@to@frontmatter{ltx:creator}{\lx@@@contact{#1}{#2}}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@author@sep&quot;</span>, <span class="string">&quot;\\qquad&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@author@conj&quot;</span>, <span class="string">&quot;\\qquad&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@author@prefix&quot;</span>, sub[document, _args, _props] {
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@@@contact{}{}"</span>, <span class="string">"^ &lt;ltx:contact role='#1'&gt;#2&lt;/ltx:contact&gt;"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@contact{}{}"</span>,
+  <span class="string">r"\@add@to@frontmatter{ltx:creator}{\lx@@@contact{#1}{#2}}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@author@sep"</span>, <span class="string">"\\qquad"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@author@conj"</span>, <span class="string">"\\qquad"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@author@prefix"</span>, sub[document, _args, _props] {
     <span class="kw">let </span><span class="kw-2">mut </span>node   = document.get_element().unwrap();
-    <span class="kw">let </span>nauthors   = lookup_int(<span class="string">&quot;NUMBER_OF_AUTHORS&quot;</span>);
-    <span class="kw">let </span>i          = document.findnodes(<span class="string">&quot;//ltx:creator[@role=&#39;author&#39;]&quot;</span>, <span class="prelude-val">None</span>).len() <span class="kw">as </span>i64;
+    <span class="kw">let </span>nauthors   = lookup_int(<span class="string">"NUMBER_OF_AUTHORS"</span>);
+    <span class="kw">let </span>i          = document.findnodes(<span class="string">"//ltx:creator[@role='author']"</span>, <span class="prelude-val">None</span>).len() <span class="kw">as </span>i64;
     <span class="kw">if </span>i &lt;= <span class="number">1 </span>{ }
     <span class="kw">else if </span>i == nauthors {
-      <span class="kw">let </span>author_conj = <span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@author@conj&quot;</span>))<span class="question-mark">?</span>;
-      document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">&quot;before&quot;</span>, <span class="kw-2">&amp;</span>author_conj.to_string())<span class="question-mark">?</span>;
+      <span class="kw">let </span>author_conj = <span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@author@conj"</span>))<span class="question-mark">?</span>;
+      document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"before"</span>, <span class="kw-2">&amp;</span>author_conj.to_string())<span class="question-mark">?</span>;
 
     } <span class="kw">else </span>{
-      <span class="kw">let </span>author_sep = <span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@author@sep&quot;</span>))<span class="question-mark">?</span>;
-      document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">&quot;before&quot;</span>, <span class="kw-2">&amp;</span>author_sep.to_string())<span class="question-mark">?</span>;
+      <span class="kw">let </span>author_sep = <span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@author@sep"</span>))<span class="question-mark">?</span>;
+      document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"before"</span>, <span class="kw-2">&amp;</span>author_sep.to_string())<span class="question-mark">?</span>;
     }
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@author&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\author{}&quot;</span>, <span class="string">&quot;\\def\\@author{#1}\\lx@make@authors@anded{#1}&quot;</span>, locked =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@make@authors@anded{}&quot;</span>, sub[(authors)] {
-    and_split(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@author&quot;</span>), authors)
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@author"</span>, <span class="string">"\\@empty"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"\\def\\@author{#1}\\lx@make@authors@anded{#1}"</span>, locked =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@make@authors@anded{}"</span>, sub[(authors)] {
+    and_split(<span class="macro">T_CS!</span>(<span class="string">"\\lx@author"</span>), authors)
   });
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ltx@authors@oneline&quot;</span>, {
-    <span class="macro">AssignMapping!</span>(<span class="string">&quot;DOCUMENT_CLASSES&quot;</span>, <span class="string">&quot;ltx_authors_1line&quot; </span>=&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\ltx@authors@oneline"</span>, {
+    <span class="macro">AssignMapping!</span>(<span class="string">"DOCUMENT_CLASSES"</span>, <span class="string">"ltx_authors_1line" </span>=&gt; <span class="bool-val">true</span>);
   });
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ltx@authors@multiline&quot;</span>, {
-    <span class="macro">AssignMapping!</span>(<span class="string">&quot;DOCUMENT_CLASSES&quot;</span>, <span class="string">&quot;ltx_authors_multiline&quot; </span>=&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\ltx@authors@multiline"</span>, {
+    <span class="macro">AssignMapping!</span>(<span class="string">"DOCUMENT_CLASSES"</span>, <span class="string">"ltx_authors_multiline" </span>=&gt; <span class="bool-val">true</span>);
   });
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\@add@conversion@date&quot;</span>,
-    <span class="string">&quot;\\@add@frontmatter{ltx:date}[role=creation]{\\today}&quot;
+    <span class="string">"\\@add@conversion@date"</span>,
+    <span class="string">"\\@add@frontmatter{ltx:date}[role=creation]{\\today}"
   </span>);
 
-  <span class="comment">// Doesn&quot;t produce anything (we&#39;re already inserting frontmatter),
+  <span class="comment">// Doesn"t produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\maketitle&quot;</span>,
-    <span class="string">r&quot;\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
+    <span class="string">"\\maketitle"</span>,
+    <span class="string">r"\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
 \global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
 \global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
-\global\let\author\relax\global\let\date\relax\global\let\and\relax&quot;
+\global\let\author\relax\global\let\date\relax\global\let\and\relax"
   </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@thanks&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thanks{}&quot;</span>, <span class="string">r&quot;\def\@thanks{#1}\lx@make@thanks{#1}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@thanks"</span>, <span class="string">"\\@empty"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thanks{}"</span>, <span class="string">r"\def\@thanks{#1}\lx@make@thanks{#1}"</span>);
   <span class="macro">DefConstructor!</span>(
-    <span class="string">&quot;\\lx@make@thanks{}&quot;</span>,
-    <span class="string">&quot;&lt;ltx:note role=&#39;thanks&#39;&gt;#1&lt;/ltx:note&gt;&quot;
+    <span class="string">"\\lx@make@thanks{}"</span>,
+    <span class="string">"&lt;ltx:note role='thanks'&gt;#1&lt;/ltx:note&gt;"
   </span>);
 
   <span class="comment">// Abstract SHOULD have been so simple, but seems to be a magnet for abuse.
-  // For one thing, we&#39;d like to just write
-  //   DefEnvironment(&#39;{abstract}&#39;,&#39;&lt;ltx:abstract&gt;//body&lt;/ltx:abstract&gt;&#39;);
-  // However, we don&#39;t want to place the &lt;ltx:abstract&gt; environment directly where
+  // For one thing, we'd like to just write
+  //   DefEnvironment('{abstract}','&lt;ltx:abstract&gt;//body&lt;/ltx:abstract&gt;');
+  // However, we don't want to place the &lt;ltx:abstract&gt; environment directly where
   // we found it, but we want to add it to frontmatter. This requires capturing the
   // recently digested list and storing it in the frontmatter structure.
 
   // The really messy stuff comes from the way authors -- and style designers -- misuse it.
   // Basic LaTeX wants it to be an environment WITHIN the document environment,
   // and AFTER the \maketitle.
-  // However, since all it really does is typeset &quot;Abstract&quot; in bold, it allows:
+  // However, since all it really does is typeset "Abstract" in bold, it allows:
   //   \abstract stuff...
-  // without even an \endabstract!  We MUST know when the abstract ends, so we&#39;ve got
-  // to recognize when we&#39;ve moved on to other stuff... \sections at the VERY LEAST.
+  // without even an \endabstract!  We MUST know when the abstract ends, so we've got
+  // to recognize when we've moved on to other stuff... \sections at the VERY LEAST.
 
   // Additional complications come from certain other classes and styles that
   // redefine abstract to take the text as an argument. And some treat it
   // like \title, \author, and such, that are expected to appear in the preamble!!
   // The treatment below allows an abstract environment in the preamble,
-  // (even though straight latex doesn&#39;t) but does not cover the 1-arg case in preamble!
+  // (even though straight latex doesn't) but does not cover the 1-arg case in preamble!
   //
   // Probably there are other places (eg in titlepage?) that should force the close??
 
-  </span><span class="macro">DefEnvironment!</span>(<span class="string">&quot;{abstract}&quot;</span>, <span class="string">&quot;&quot;</span>,
+  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract}"</span>, <span class="string">""</span>,
     after_digest_begin =&gt; {
-      <span class="macro">AssignValue!</span>(<span class="string">&quot;inPreamble&quot; </span>=&gt; <span class="bool-val">false</span>);
-      <span class="macro">AddToMacro!</span>(<span class="string">&quot;\\@startsection@hook&quot;</span>, <span class="string">&quot;\\maybe@end@abstract&quot;</span>);
+      <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>);
+      <span class="macro">AddToMacro!</span>(<span class="string">"\\@startsection@hook"</span>, <span class="string">"\\maybe@end@abstract"</span>);
     },
     after_digest =&gt; {
-      <span class="kw">let </span>abstract_title = stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\format@title@abstract&quot;</span>),
-        <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\abstractname&quot;</span>), <span class="macro">T_END!</span>()))<span class="question-mark">?</span>;
+      <span class="kw">let </span>abstract_title = stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\format@title@abstract"</span>),
+        <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\abstractname"</span>), <span class="macro">T_END!</span>()))<span class="question-mark">?</span>;
       <span class="kw">let </span>regurgitated = List::new(clone_box_list());
 
-      with_value_mut(<span class="string">&quot;frontmatter&quot;</span>,|frontmatter_opt| {
+      with_value_mut(<span class="string">"frontmatter"</span>,|frontmatter_opt| {
         <span class="kw">let </span>frontmatter = <span class="kw">match </span>frontmatter_opt {
           <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::HashTagData(<span class="kw-2">ref mut </span>frnt)) =&gt; frnt,
           <span class="kw">_ </span>=&gt; <span class="macro">Fatal!</span>(TexPool, Expected,
-              <span class="string">&quot;Global TeX Frontmatter hash was not available, should never happen&quot;</span>),
+              <span class="string">"Global TeX Frontmatter hash was not available, should never happen"</span>),
         };
-        <span class="kw">let </span>abstr = frontmatter.entry(<span class="string">&quot;ltx:abstract&quot;</span>.to_string()).or_insert_with(Vec::new);
-        abstr.push((<span class="string">&quot;ltx:abstract&quot;</span>.to_string(),
-          <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;name&quot; </span>=&gt; abstract_title)), regurgitated.into()));
+        <span class="kw">let </span>abstr = frontmatter.entry(<span class="string">"ltx:abstract"</span>.to_string()).or_insert_with(Vec::new);
+        abstr.push((<span class="string">"ltx:abstract"</span>.to_string(),
+          <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"name" </span>=&gt; abstract_title)), regurgitated.into()));
         <span class="prelude-val">Ok</span>(())
       })<span class="question-mark">?</span>;
-      <span class="macro">DefMacro!</span>(<span class="string">&quot;\\maybe@end@abstract&quot;</span>, <span class="string">&quot;&quot;</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
+      <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@end@abstract"</span>, <span class="string">""</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
     },
     locked =&gt; <span class="bool-val">true</span>,
-    mode =&gt; <span class="string">&quot;text&quot;
+    mode =&gt; <span class="string">"text"
   </span>);
   <span class="comment">// If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
-  </span><span class="macro">AssignValue!</span>(<span class="string">&quot;\\abstract:locked&quot; </span>=&gt; <span class="bool-val">false</span>); <span class="comment">// REDEFINE the above locked definition!
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\abstract&quot;</span>, {
+  </span><span class="macro">AssignValue!</span>(<span class="string">"\\abstract:locked" </span>=&gt; <span class="bool-val">false</span>); <span class="comment">// REDEFINE the above locked definition!
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\abstract"</span>, {
     <span class="kw">if </span>gullet::if_next(<span class="kw-2">&amp;</span>TOKEN_BEGIN)<span class="question-mark">? </span>{
-      <span class="macro">T_CS!</span>(<span class="string">&quot;\\abstract@onearg&quot;</span>)
+      <span class="macro">T_CS!</span>(<span class="string">"\\abstract@onearg"</span>)
     } <span class="kw">else </span>{
-      <span class="macro">T_CS!</span>(<span class="string">&quot;\\begin{abstract}&quot;</span>)
+      <span class="macro">T_CS!</span>(<span class="string">"\\begin{abstract}"</span>)
     }
   },
   locked =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\abstract@onearg{}&quot;</span>, <span class="string">&quot;\\begin{abstract}#1\\end{abstract}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\maybe@end@abstract&quot;</span>, <span class="string">&quot;\\endabstract&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\abstractname&quot;</span>, <span class="string">&quot;Abstract&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\format@title@abstract{}&quot;</span>, <span class="string">&quot;#1&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract@onearg{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@end@abstract"</span>, <span class="string">"\\endabstract"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\abstractname"</span>, <span class="string">"Abstract"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@abstract{}"</span>, <span class="string">"#1"</span>);
 
   <span class="comment">// Hmm, titlepage is likely to be hairy, low-level markup,
   // without even title, author, etc, specified as such!
   // Hmm, should this even redefine author, title, etc so that they
   // are simply output?
   // This is horrible hackery; What we really need, I think, is the
-  // ability to bind some sort of &quot;Do &lt;this&gt; when we create a text box&quot;...
+  // ability to bind some sort of "Do &lt;this&gt; when we create a text box"...
   // ON Second Thought...
   // For the time being, ignore titlepage!
   // Maybe we could do some of this if there is no title/author
   // otherwise defined? Ugh!
 
-  //DefEnvironment(&#39;{titlepage}&#39;,&#39;&#39;);
-  // Or perhaps it&#39;s better just to ignore the markers?
-  //DefMacro(&#39;\titlepage&#39;,&#39;&#39;);
-  //DefMacro(&#39;\endtitlepage&#39;,&#39;&#39;);
+  //DefEnvironment('{titlepage}','');
+  // Or perhaps it's better just to ignore the markers?
+  //DefMacro('\titlepage','');
+  //DefMacro('\endtitlepage','');
 
   // Or perhaps not....
-  // There&#39;s a title and other stuff in here, but how could we guess?
-  // Well, there&#39;s likely to be a sequence of &lt;p&gt;&lt;text font=&quot;xx&quot; fontsize=&quot;yy&quot;&gt;...&lt;/text&gt;&lt;/p&gt;
+  // There's a title and other stuff in here, but how could we guess?
+  // Well, there's likely to be a sequence of &lt;p&gt;&lt;text font="xx" fontsize="yy"&gt;...&lt;/text&gt;&lt;/p&gt;
   // Presumably the earlier, larger one is title, rest are authors/affiliations...
-  // Particularly, if they start with a pseudo superscript or other &quot;marker&quot;, they&#39;re probably
+  // Particularly, if they start with a pseudo superscript or other "marker", they're probably
   // affil! For now, we just give an info message
-  </span><span class="macro">DefEnvironment!</span>(<span class="string">&quot;{titlepage}&quot;</span>, <span class="string">&quot;&lt;ltx:titlepage&gt;#body&quot;</span>,
+  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{titlepage}"</span>, <span class="string">"&lt;ltx:titlepage&gt;#body"</span>,
     <span class="comment">// TODO
-    // before_digest =&gt; sub { Let(&#39;\centering&#39;, &#39;\relax&#39;);
-    //   DefEnvironment(&#39;{abstract}&#39;,
-    //     &#39;&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;&#39;);
-    //   Info(&#39;unexpected&#39;, &#39;titlepage&#39;, $_[0],
-    //     &quot;When using titlepage, Frontmatter will not be well-structured&quot;);
+    // before_digest =&gt; sub { Let('\centering', '\relax');
+    //   DefEnvironment('{abstract}',
+    //     '&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;');
+    //   Info('unexpected', 'titlepage', $_[0],
+    //     "When using titlepage, Frontmatter will not be well-structured");
     //   return; },
-    // beforeDigestEnd =&gt; sub { Digest(T_CS(&#39;\maybe@end@title&#39;)); },
+    // beforeDigestEnd =&gt; sub { Digest(T_CS('\maybe@end@title')); },
     </span>locked =&gt; <span class="bool-val">true</span>,
-    mode =&gt; <span class="string">&quot;text&quot;
+    mode =&gt; <span class="string">"text"
   </span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\maybe@end@title&quot;</span>, sub[document,_args,_props] {
-    <span class="kw">if </span>document.is_closeable(<span class="string">&quot;ltx:titlepage&quot;</span>).is_some() {
-      document.close_element(<span class="string">&quot;ltx:titlepage&quot;</span>)<span class="question-mark">?</span>;
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\maybe@end@title"</span>, sub[document,_args,_props] {
+    <span class="kw">if </span>document.is_closeable(<span class="string">"ltx:titlepage"</span>).is_some() {
+      document.close_element(<span class="string">"ltx:titlepage"</span>)<span class="question-mark">?</span>;
     }
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\sectionmark{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\subsectionmark{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\subsubsectionmark{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\paragraphmark{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\subparagraphmark{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@oddfoot&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@oddhed&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@evenfoot&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@evenfoot&quot;</span>, <span class="string">&quot;&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\sectionmark{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\subsectionmark{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\subsubsectionmark{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\paragraphmark{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\subparagraphmark{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@oddfoot"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@oddhed"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@evenfoot"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@evenfoot"</span>, <span class="string">""</span>);
 });
 </code></pre></div></section></main></body></html>

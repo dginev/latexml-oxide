@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch13_boxes.rs`."><title>latex_ch13_boxes.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch13_boxes.rs`."><title>latex_ch13_boxes.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -303,7 +305,7 @@
 
 //////////
 //  Complete to here
-//  [except for NOTE&#39;d entries, of course]
+//  [except for NOTE'd entries, of course]
 //////////
 
 // TODO:
@@ -320,42 +322,42 @@
   // C.13.1 Length
   //======================================================================
   // \fill
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\stretch{}&quot;</span>, <span class="string">&quot;0pt plus #1fill\\relax&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\stretch{}"</span>, <span class="string">"0pt plus #1fill\\relax"</span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@check@length DefToken&quot;</span>, sub[(cs)] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@check@length DefToken"</span>, sub[(cs)] {
     <span class="kw">match </span>lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">? </span>{
       <span class="prelude-val">None </span>=&gt; {
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;&#39;{}&#39; is not a length; defining it now&quot;</span>, cs.stringify());
-        <span class="macro">Warn!</span>(<span class="string">&quot;undefined&quot;</span>, cs, message);
+        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"'{}' is not a length; defining it now"</span>, cs.stringify());
+        <span class="macro">Warn!</span>(<span class="string">"undefined"</span>, cs, message);
         <span class="macro">DefRegister!</span>(cs, <span class="prelude-val">None</span>, Dimension::new(<span class="number">0</span>));
       },
       <span class="prelude-val">Some</span>(defn) =&gt; <span class="kw">if </span>!defn.is_register() {
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;&#39;{}&#39; length was expected, got {:?} instead of register.&quot;</span>,
+        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"'{}' length was expected, got {:?} instead of register."</span>,
           cs.to_string(), defn.register_type());
-        <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, cs, message);
+        <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, cs, message);
       }
     };
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\newlength DefToken&quot;</span>, sub[(cs)] {
-    <span class="macro">DefRegister!</span>(cs, <span class="prelude-val">None</span>, Glue::new(<span class="number">0</span>), allocate =&gt; <span class="string">&quot;\\skip&quot;</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\newlength DefToken"</span>, sub[(cs)] {
+    <span class="macro">DefRegister!</span>(cs, <span class="prelude-val">None</span>, Glue::new(<span class="number">0</span>), allocate =&gt; <span class="string">"\\skip"</span>);
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\setlength {Variable}{Dimension}&quot;</span>, sub[(variable,length)] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\setlength {Variable}{Dimension}"</span>, sub[(variable,length)] {
     <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = variable {
       <span class="kw">let </span>(rtoken, params) = <span class="kw-2">*</span>dbox;
       <span class="kw">let </span>defn = rtoken.to_register()
-        .expect(<span class="string">&quot;if a Variable parameter provides a token, it must have a Register definition.&quot;</span>);
+        .expect(<span class="string">"if a Variable parameter provides a token, it must have a Register definition."</span>);
       defn.set_value(length.into(), <span class="prelude-val">None</span>, params);
     }
     <span class="prelude-val">Ok</span>(Vec::new())
   });
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\addtolength {Variable}{Dimension}&quot;</span>, sub[(variable,length)] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\addtolength {Variable}{Dimension}"</span>, sub[(variable,length)] {
     <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = variable {
       <span class="kw">let </span>(rtoken, params) = <span class="kw-2">*</span>dbox;
       <span class="kw">let </span>defn = rtoken.to_register()
-        .expect(<span class="string">&quot;if a Variable parameter provides a token, it must have a Register definition.&quot;</span>);
+        .expect(<span class="string">"if a Variable parameter provides a token, it must have a Register definition."</span>);
       <span class="comment">// TODO: can we avoid cloning the params?
       </span><span class="kw">let </span>oldlength = defn.value_of(params.clone()).unwrap_or_default();
       defn.set_value(oldlength.add(length), <span class="prelude-val">None</span>, params);
@@ -364,58 +366,58 @@
   });
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\@settodim{}{}{}&quot;</span>,
-    <span class="string">&quot;\\setbox\\@tempboxa\\hbox{{#3}}#2#1\\@tempboxa\\setbox\\@tempboxa\\box\\voidb@x&quot;
+    <span class="string">"\\@settodim{}{}{}"</span>,
+    <span class="string">"\\setbox\\@tempboxa\\hbox{{#3}}#2#1\\@tempboxa\\setbox\\@tempboxa\\box\\voidb@x"
   </span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\settoheight&quot;</span>, <span class="string">&quot;\\@settodim\\ht&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\settodepth&quot;</span>, <span class="string">&quot;\\@settodim\\dp&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\settowidth&quot;</span>, <span class="string">&quot;\\@settodim\\wd&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">r&quot;\@settopoint{}&quot;</span>, <span class="string">r&quot;\divide#1\p@\multiply#1\p@&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\settoheight"</span>, <span class="string">"\\@settodim\\ht"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\settodepth"</span>, <span class="string">"\\@settodim\\dp"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\settowidth"</span>, <span class="string">"\\@settodim\\wd"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">r"\@settopoint{}"</span>, <span class="string">r"\divide#1\p@\multiply#1\p@"</span>);
 
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\fill&quot;</span>, <span class="macro">Glue!</span>(<span class="string">&quot;0pt plus 1fill&quot;</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\fill"</span>, <span class="macro">Glue!</span>(<span class="string">"0pt plus 1fill"</span>));
 
   <span class="comment">//======================================================================
   // C.13.2 Space
   //======================================================================
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\hspace OptionalMatch:* {Dimension}&quot;</span>, sub[(star,length)] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\hspace OptionalMatch:* {Dimension}"</span>, sub[(_star,length)] {
     <span class="kw">let </span>s = dimension_to_spaces(<span class="kw-2">&amp;</span>length);
     <span class="kw">if </span>!s.is_empty() {
       <span class="kw">let </span>length_tokens = length.revert()<span class="question-mark">?</span>;
 
-      <span class="kw">let </span>tokens = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\hskip&quot;</span>), <span class="macro">vec!</span>[length_tokens]);
+      <span class="kw">let </span>tokens = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hskip"</span>), <span class="macro">vec!</span>[length_tokens]);
       Tbox::new(arena::pin(<span class="kw-2">&amp;</span>s), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, tokens,
-        <span class="macro">stored_map!</span>(<span class="string">&quot;width&quot; </span>=&gt; length, <span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>));
+        <span class="macro">stored_map!</span>(<span class="string">"width" </span>=&gt; length, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>));
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\vspace OptionalMatch:* {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\addvspace {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\addpenalty {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@endparenv&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\vspace OptionalMatch:* {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\addvspace {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\addpenalty {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@endparenv"</span>, <span class="prelude-val">None</span>);
 
   <span class="comment">//======================================================================
   // C.13.3 Boxes
   //======================================================================
-  // Can&#39;t really get these?
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\height&quot;</span>, <span class="string">&quot;0pt&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\totalheight&quot;</span>, <span class="string">&quot;0pt&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\depth&quot;</span>, <span class="string">&quot;0pt&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\width&quot;</span>, <span class="string">&quot;0pt&quot;</span>);
+  // Can't really get these?
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\height"</span>, <span class="string">"0pt"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\totalheight"</span>, <span class="string">"0pt"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\depth"</span>, <span class="string">"0pt"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\width"</span>, <span class="string">"0pt"</span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mbox {}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>,
-    mode =&gt; <span class="string">&quot;text&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\mbox {}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>,
+    mode =&gt; <span class="string">"text"</span>,
     bounded =&gt; <span class="bool-val">true</span>,
-    sizer =&gt; <span class="string">&quot;#1&quot;</span>,
+    sizer =&gt; <span class="string">"#1"</span>,
     before_digest =&gt; {
       reenter_text_mode(<span class="bool-val">false</span>); }
   );
 
-  <span class="comment">// our %makebox_alignment = (l =&gt; &#39;left&#39;, r =&gt; &#39;right&#39;, s =&gt; &#39;justified&#39;);
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\makebox&quot;</span>, <span class="string">&quot;\\@ifnextchar(\\pic@makebox\\@makebox&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@makebox[Dimension][]{}&quot;</span>,
-    <span class="string">&quot;&lt;ltx:text ?#width(width=&#39;#width&#39;) ?#align(align=&#39;#align&#39;) _noautoclose=&#39;1&#39;&gt;#3&lt;/ltx:text&gt;&quot;</span>,
-    mode         =&gt; <span class="string">&quot;text&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, alias =&gt; <span class="string">&quot;\\makebox&quot;</span>, sizer =&gt; <span class="string">&quot;#3&quot;</span>,
+  <span class="comment">// our %makebox_alignment = (l =&gt; 'left', r =&gt; 'right', s =&gt; 'justified');
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\makebox"</span>, <span class="string">"\\@ifnextchar(\\pic@makebox\\@makebox"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@makebox[Dimension][]{}"</span>,
+    <span class="string">"&lt;ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'&gt;#3&lt;/ltx:text&gt;"</span>,
+    mode         =&gt; <span class="string">"text"</span>, bounded =&gt; <span class="bool-val">true</span>, alias =&gt; <span class="string">"\\makebox"</span>, sizer =&gt; <span class="string">"#3"</span>,
     before_digest =&gt; {
       reenter_text_mode(<span class="bool-val">false</span>); }
     <span class="comment">// properties   =&gt; sub[args] {
@@ -425,8 +427,8 @@
     //     ($_[1] ? (width =&gt; $_[1]) : ())) }
   </span>);
 
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\fboxrule&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;.4pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\fboxsep&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;3pt&quot;</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\fboxrule"</span>, <span class="macro">Dimension!</span>(<span class="string">".4pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\fboxsep"</span>, <span class="macro">Dimension!</span>(<span class="string">"3pt"</span>));
 
   <span class="comment">// Peculiar special case!
   //  These are nominally text mode macros. However, there is a somewhat common idiom:
@@ -434,37 +436,37 @@
   // in which case the operator gets boxed and really should be treated as a math object.
   // (and ultimately converted to mml:menclose)
   // So, we need to switch to text mode, as usual, but FIRST note whether we started in math mode!
-  // Afterwards, if we were in math mode, and the content is math, we&#39;ll convert the whole thing
+  // Afterwards, if we were in math mode, and the content is math, we'll convert the whole thing
   // to a framed math object.
   // Second special issue:
-  //   Although framebox doesn&#39;t allow flowed content inside, it is also somewhat common
+  //   Although framebox doesn't allow flowed content inside, it is also somewhat common
   // to put a vbox or some other block construct inside.
   // Seemingly, the ultimate html gets somewhat tangled (browser bugs?)
-  // At any rate, since we&#39;re wrapping with an ltx:text, we&#39;ll try to unwrap it,
+  // At any rate, since we're wrapping with an ltx:text, we'll try to unwrap it,
   // if the contents are a single child that can handle the framing.
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\fbox{}&quot;</span>, <span class="string">&quot;\\@framebox{#1}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\framebox&quot;</span>, <span class="string">&quot;\\@ifnextchar(\\pic@framebox\\@framebox&quot;</span>);
-  <span class="comment">// DefConstructor(&quot;\\@framebox[Dimension][]{}&quot;,
-  //   &quot;?#mathframe(&lt;ltx:XMArg enclose=&#39;box&#39;&gt;#inner&lt;/ltx:XMArg&gt;)&quot;
-  //     . &quot;(&lt;ltx:text ?#width(width=&#39;#width&#39;) ?#align(align=&#39;#align&#39;)&quot;
-  //     . &quot; framed=&#39;rectangle&#39; framecolor=&#39;#framecolor&#39;&quot;
-  //     . &quot; _noautoclose=&#39;1&#39;&gt;#3&lt;/ltx:text&gt;)&quot;,
-  //   alias =&gt; &#39;\framebox&#39;, sizer =&gt; &#39;#3&#39;,
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fbox{}"</span>, <span class="string">"\\@framebox{#1}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\framebox"</span>, <span class="string">"\\@ifnextchar(\\pic@framebox\\@framebox"</span>);
+  <span class="comment">// DefConstructor("\\@framebox[Dimension][]{}",
+  //   "?#mathframe(&lt;ltx:XMArg enclose='box'&gt;#inner&lt;/ltx:XMArg&gt;)"
+  //     . "(&lt;ltx:text ?#width(width='#width') ?#align(align='#align')"
+  //     . " framed='rectangle' framecolor='#framecolor'"
+  //     . " _noautoclose='1'&gt;#3&lt;/ltx:text&gt;)",
+  //   alias =&gt; '\framebox', sizer =&gt; '#3',
   //   beforeDigest =&gt; sub {
   //     my ($stomach) = @_;
-  //     my $wasmath = LookupValue(&#39;IN_MATH&#39;);
-  //     $stomach-&gt;beginMode(&#39;text&#39;);
+  //     my $wasmath = LookupValue('IN_MATH');
+  //     $stomach-&gt;beginMode('text');
   //     AssignValue(FRAME_IN_MATH =&gt; $wasmath); },
   //   properties =&gt; sub {
   //     (($_[2] ? (align =&gt; $makebox_alignment{ ToString($_[2]) }) : ()),
-  //       framecolor =&gt; LookupValue(&#39;font&#39;)-&gt;getColor,
+  //       framecolor =&gt; LookupValue('font')-&gt;getColor,
   //       ($_[1] ? (width =&gt; $_[1]) : ())); },
   //   afterDigest =&gt; sub {
   //     my ($stomach, $whatsit) = @_;
-  //     my $wasmath = LookupValue(&#39;FRAME_IN_MATH&#39;);
+  //     my $wasmath = LookupValue('FRAME_IN_MATH');
   //     my $arg     = $whatsit-&gt;getArg(3);
-  //     $stomach-&gt;endMode(&#39;text&#39;);
+  //     $stomach-&gt;endMode('text');
   //     if ($wasmath &amp;&amp; $arg-&gt;isMath) {
   //       $whatsit-&gt;setProperties(mathframe =&gt; 1, inner =&gt; $arg-&gt;getBody); }
   //     return; },
@@ -477,7 +479,7 @@
   //     my $model = $document-&gt;getModel;
   //     # and that child can have the framed attribute
   //     if ((scalar(@c) == 1)
-  //       &amp;&amp; $document-&gt;canHaveAttribute($model-&gt;getNodeQName($c[0]), &#39;framed&#39;)) {
+  //       &amp;&amp; $document-&gt;canHaveAttribute($model-&gt;getNodeQName($c[0]), 'framed')) {
   //       # unwrap, copying the attributes
   //       $document-&gt;unwrapNodes($node);
   //       foreach my $k (qw(width align framed)) {
@@ -485,14 +487,14 @@
   //           $document-&gt;setAttribute($c[0], $k =&gt; $v); } } } }
   // );
 
-  </span><span class="macro">AssignValue!</span>(<span class="string">&quot;SAVEBOX&quot;</span>, <span class="number">100</span>);
-  <span class="comment">// DefPrimitive!(&quot;\\newsavebox DefToken&quot;, sub {
-  //     my $n = LookupValue(&#39;SAVEBOX&#39;) + 1;
-  //     AssignValue(SAVEBOX =&gt; $n, &#39;global&#39;);
+  </span><span class="macro">AssignValue!</span>(<span class="string">"SAVEBOX"</span>, <span class="number">100</span>);
+  <span class="comment">// DefPrimitive!("\\newsavebox DefToken", sub {
+  //     my $n = LookupValue('SAVEBOX') + 1;
+  //     AssignValue(SAVEBOX =&gt; $n, 'global');
   //     DefRegisterI($_[1], undef, Number($n));
-  //     AssignValue(&#39;box&#39; . $n, List()); });
+  //     AssignValue('box' . $n, List()); });
 
-  // DefPrimitive!(&quot;\\sbox {Register} {}&quot;, sub {
+  // DefPrimitive!("\\sbox {Register} {}", sub {
   //     my ($defn) = @{ $_[1] };
   //     my $value;
   //     if ($defn &amp;&amp; ref $defn) {
@@ -501,91 +503,91 @@
   //         $value = $value-&gt;valueOf;
   //       }
   //     } else {
-  //       Error(&#39;expected&#39;, &#39;&lt;definition&gt;&#39;, undef, &quot;\\sbox expected a definition, was missing&quot;);
+  //       Error('expected', '&lt;definition&gt;', undef, "\\sbox expected a definition, was missing");
   //     }
   //     my $contents = Digest($_[2]);
-  //     AssignValue(&#39;box&#39; . $value, $contents); return; });
+  //     AssignValue('box' . $value, $contents); return; });
 
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\savebox{}&quot;</span>,
-    <span class="string">&quot;\\@ifnextchar({\\pic@savebox#1}{\\@savebox#1}&quot;
+    <span class="string">"\\savebox{}"</span>,
+    <span class="string">"\\@ifnextchar({\\pic@savebox#1}{\\@savebox#1}"
   </span>);
-  <span class="comment">// DefPrimitive!(&quot;\\@savebox DefToken[][]{}&quot;, sub {
+  <span class="comment">// DefPrimitive!("\\@savebox DefToken[][]{}", sub {
   //     my ($defn, @args) = @{ LookupDefinition($_[1]) };
   //     my $value = $defn-&gt;valueOf(@args);
-  //     AssignValue(&#39;box&#39; . $value, Digest($_[4])); return; });
-  // DefPrimitive!(&quot;\\@savebox Register [][]{}&quot;, sub {
+  //     AssignValue('box' . $value, Digest($_[4])); return; });
+  // DefPrimitive!("\\@savebox Register [][]{}", sub {
   //     my ($defn)   = @{ $_[1] };
   //     my $value    = $defn-&gt;valueOf()-&gt;valueOf;
   //     my $contents = Digest($_[4]);
-  //     #    AssignValue(&#39;box&#39; . $value, Digest($_[4])); return; });
-  //     AssignValue(&#39;box&#39; . $value, $contents); return; });
+  //     #    AssignValue('box' . $value, Digest($_[4])); return; });
+  //     AssignValue('box' . $value, $contents); return; });
 
-  // DefMacro!(T_CS!(&quot;\\begin{lrbox}&quot;), &#39;{Token}&#39;, &quot;\@begin@lrbox #1&quot;);
-  // DefPrimitive!(&quot;\\end{lrbox}&quot;, primtiveproc!( args, {stomach.egroup()?; }));
-  // DefPrimitive!(&quot;\\@begin@lrbox Token&quot;, sub {
+  // DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
+  // DefPrimitive!("\\end{lrbox}", primtiveproc!( args, {stomach.egroup()?; }));
+  // DefPrimitive!("\\@begin@lrbox Token", sub {
   //     my ($stomach, $token) = @_;
   //     $stomach-&gt;bgroup;
   //     my $box = List($stomach-&gt;digestNextBody());
-  //     AssignValue(&#39;box&#39; . ToString($token), $box); });
+  //     AssignValue('box' . ToString($token), $box); });
 
-  // DefPrimitive!(&quot;\\usebox {Register}&quot;, sub {
+  // DefPrimitive!("\\usebox {Register}", sub {
   //     my ($defn) = @{ $_[1] };
-  //     return Box() unless $defn &amp;&amp; ($defn ne &#39;missing&#39;);
+  //     return Box() unless $defn &amp;&amp; ($defn ne 'missing');
   //     my $value = $defn-&gt;valueOf()-&gt;valueOf;
-  //     LookupValue(&#39;box&#39; . $value) || Box(); });
+  //     LookupValue('box' . $value) || Box(); });
 
   // A soft sorta \par that only closes an ltx:p, but not ltx:para
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@parboxnewline[]&quot;</span>, sub[document, _args, _props] {
-    document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>)<span class="question-mark">?</span>;
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@parboxnewline[]"</span>, sub[document, _args, _props] {
+    document.maybe_close_element(<span class="string">"ltx:p"</span>)<span class="question-mark">?</span>;
   });
 
   <span class="comment">// //NOTE: There are 2 extra arguments (See LaTeX Companion, p.866)
-  // //for height and inner-pos.  We&#39;re ignoring them, for now, though.
-  // DefConstructor(&#39;\parbox[][Dimension][]{Dimension}{}&#39;, sub {
+  // //for height and inner-pos.  We're ignoring them, for now, though.
+  // DefConstructor('\parbox[][Dimension][]{Dimension}{}', sub {
   //     my ($document, $attachment, $b, $c, $width, $body, %props) = @_;
   //     insertBlock($document, $body,
   //       width   =&gt; $width,
   //       vattach =&gt; $props{vattach},
-  //       class   =&gt; &#39;ltx_parbox&#39;);
+  //       class   =&gt; 'ltx_parbox');
   //     return; },
-  //   sizer      =&gt; &#39;#5&#39;,
+  //   sizer      =&gt; '#5',
   //   properties =&gt; sub {
   //     (width =&gt; $_[4],
   //       vattach =&gt; translateAttachment($_[1]),
   //       height  =&gt; $_[2]); },
-  //   mode =&gt; &#39;text&#39;, bounded =&gt; 1,
+  //   mode =&gt; 'text', bounded =&gt; 1,
   //   beforeDigest =&gt; sub {
-  // AssignRegister(&#39;\hsize&#39; =&gt; $_[4]);
-  //     Let(&#39;\\\\&#39;, &#39;\lx@parboxnewline&#39;); });
+  // AssignRegister('\hsize' =&gt; $_[4]);
+  //     Let('\\\\', '\lx@parboxnewline'); });
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@parboxrestore&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\if@minipage&quot;</span>);
-  <span class="comment">// DefEnvironment(&#39;{minipage}[][][]{Dimension}&#39;, sub {
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@parboxrestore"</span>, <span class="string">""</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\if@minipage"</span>);
+  <span class="comment">// DefEnvironment('{minipage}[][][]{Dimension}', sub {
   //     my ($document, $attachment, $b, $c, $width, %props) = @_;
   //     my $vattach = translateAttachment($attachment);
   //     insertBlock($document, $props{body},
   //       para    =&gt; 1,
   //       width   =&gt; $width,
   //       vattach =&gt; $vattach,
-  //       class   =&gt; &#39;ltx_minipage&#39;);
+  //       class   =&gt; 'ltx_minipage');
   //     return; },
-  //   mode =&gt; &#39;text&#39;,
+  //   mode =&gt; 'text',
   //   properties =&gt; sub { (
   //       width   =&gt; $_[4],
   //       vattach =&gt; translateAttachment($_[1])); },
   //   beforeDigest =&gt; sub {
-  //     Digest(T_CS(&#39;\@minipagetrue&#39;));
-  // AssignRegister(&#39;\hsize&#39; =&gt; $_[4]);
+  //     Digest(T_CS('\@minipagetrue'));
+  // AssignRegister('\hsize' =&gt; $_[4]);
   //     // this conflicts (&amp; not needed?) with insertBlock
-  //     Let(&#39;\\\\&#39;, &#39;\lx@parboxnewline&#39;); });
+  //     Let('\\\\', '\lx@parboxnewline'); });
 
-  // DefConstructor(&quot;\\rule[Dimension]{Dimension}{Dimension}&quot;,
-  //   &quot;&lt;ltx:rule ?#offset(yoffset=&#39;#offset&#39;) width=&#39;#width&#39; height=&#39;#height&#39;/&gt;&quot;,
+  // DefConstructor("\\rule[Dimension]{Dimension}{Dimension}",
+  //   "&lt;ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/&gt;",
   //   properties =&gt; sub { (offset =&gt; $_[1], width =&gt; $_[2], height =&gt; $_[3]) });
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\raisebox{Dimension}[Dimension][Dimension]{}&quot;</span>,
-    <span class="string">&quot;&lt;ltx:text yoffset=&#39;#1&#39; _noautoclose=&#39;1&#39;&gt;#4&lt;/ltx:text&gt;&quot;</span>,
-    mode         =&gt; <span class="string">&quot;text&quot;</span>, bounded =&gt; <span class="bool-val">true</span>,
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\raisebox{Dimension}[Dimension][Dimension]{}"</span>,
+    <span class="string">"&lt;ltx:text yoffset='#1' _noautoclose='1'&gt;#4&lt;/ltx:text&gt;"</span>,
+    mode         =&gt; <span class="string">"text"</span>, bounded =&gt; <span class="bool-val">true</span>,
     before_digest =&gt; {
       reenter_text_mode(<span class="bool-val">false</span>); }
     <span class="comment">// TODO

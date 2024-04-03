@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/rewrite.rs`."><title>rewrite.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/rewrite.rs`."><title>rewrite.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -386,7 +388,7 @@
   <span class="kw">pub </span>select_count: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>RewriteOptions {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;&lt;RewriteOptions&gt;&quot;</span>) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">"&lt;RewriteOptions&gt;"</span>) }
 }
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>RewriteOptions {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>RewriteOptions) -&gt; bool { <span class="self">self</span>.select == other.select }
@@ -419,10 +421,10 @@
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>RewritePattern {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">match </span><span class="self">self </span>{
-      RewritePattern::String(x) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{x:?}&quot;</span>),
-      RewritePattern::Scope(x) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{x:?}&quot;</span>),
-      RewritePattern::Tokens(x) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{x:?}&quot;</span>),
-      RewritePattern::Closure(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;&lt;Rewrite Replacement Closure&gt;&quot;</span>),
+      RewritePattern::String(x) =&gt; <span class="macro">write!</span>(f, <span class="string">"{x:?}"</span>),
+      RewritePattern::Scope(x) =&gt; <span class="macro">write!</span>(f, <span class="string">"{x:?}"</span>),
+      RewritePattern::Tokens(x) =&gt; <span class="macro">write!</span>(f, <span class="string">"{x:?}"</span>),
+      RewritePattern::Closure(<span class="kw">_</span>) =&gt; <span class="macro">write!</span>(f, <span class="string">"&lt;Rewrite Replacement Closure&gt;"</span>),
     }
   }
 }
@@ -521,31 +523,31 @@
     <span class="kw">let </span>op = clause.op;
     <span class="kw">let </span>pattern = clause.pattern;
     <span class="comment">//   my ($oop, $opattern) = ($op, $pattern);
-    //   if ($op eq &#39;label&#39;) {
-    //     if (ref $pattern eq &#39;ARRAY&#39;) {
-    //       #      $op=&#39;multi_select&#39;; $pattern = [map([&quot;descendant-or-self::*[\@label=&#39;$_&#39;]&quot;,1],
+    //   if ($op eq 'label') {
+    //     if (ref $pattern eq 'ARRAY') {
+    //       #      $op='multi_select'; $pattern = [map(["descendant-or-self::*[\@label='$_']",1],
     // @$pattern)]; }
 
-    //       $op = &#39;multi_select&#39;; $pattern = [map { [&quot;descendant-or-self::*[\@xml:id=&#39;$_&#39;]&quot;, 1] }
+    //       $op = 'multi_select'; $pattern = [map { ["descendant-or-self::*[\@xml:id='$_']", 1] }
     //           map { $self-&gt;getLabelID($_) } @$pattern]; }
     //     else {
-    //       #      $op=&#39;select&#39;; $pattern=[&quot;descendant-or-self::*[\@label=&#39;$pattern&#39;]&quot;,1]; }}
-    //       $op      = &#39;select&#39;;
-    //       $pattern = [&quot;descendant-or-self::*[\@xml:id=&#39;&quot; . $self-&gt;getLabelID($pattern) . &quot;&#39;]&quot;,
-    // 1]; } }   elsif ($op eq &#39;scope&#39;) {
-    //     $op = &#39;select&#39;;
+    //       #      $op='select'; $pattern=["descendant-or-self::*[\@label='$pattern']",1]; }}
+    //       $op      = 'select';
+    //       $pattern = ["descendant-or-self::*[\@xml:id='" . $self-&gt;getLabelID($pattern) . "']",
+    // 1]; } }   elsif ($op eq 'scope') {
+    //     $op = 'select';
     //     if ($pattern =~ /^label:(.*)$/) {
-    //       #      $pattern=[&quot;descendant-or-self::*[\@label=&#39;$1&#39;]&quot;,1]; }
-    //       $pattern = [&quot;descendant-or-self::*[\@xml:id=&#39;&quot; . $self-&gt;getLabelID($1) . &quot;&#39;]&quot;, 1]; }
+    //       #      $pattern=["descendant-or-self::*[\@label='$1']",1]; }
+    //       $pattern = ["descendant-or-self::*[\@xml:id='" . $self-&gt;getLabelID($1) . "']", 1]; }
     //     elsif ($pattern =~ /^id:(.*)$/) {
-    //       $pattern = [&quot;descendant-or-self::*[\@xml:id=&#39;$1&#39;]&quot;, 1]; }
+    //       $pattern = ["descendant-or-self::*[\@xml:id='$1']", 1]; }
     // ### Is this pattern ever used? &lt;elementname&gt;:&lt;refnum&gt; expects attribute!!!
     // ###    elsif ($pattern =~ /^(.*):(.*)$/) {
-    // ###      $pattern = [&quot;descendant-or-self::*[local-name()=&#39;$1&#39; and \@refnum=&#39;$2&#39;]&quot;, 1]; }
+    // ###      $pattern = ["descendant-or-self::*[local-name()='$1' and \@refnum='$2']", 1]; }
     //     else {
-    //       Error(&#39;misdefined&#39;, &#39;&lt;rewrite&gt;&#39;, undef,
-    //         &quot;Unrecognized scope pattern in Rewrite clause: \&quot;$pattern\&quot;; Ignoring it.&quot;);
-    //       $op = &#39;ignore&#39;; $pattern = []; } }
+    //       Error('misdefined', '&lt;rewrite&gt;', undef,
+    //         "Unrecognized scope pattern in Rewrite clause: \"$pattern\"; Ignoring it.");
+    //       $op = 'ignore'; $pattern = []; } }
     </span><span class="kw">if </span>op == RewriteOperator::Xpath {
       <span class="self">self</span>.options.select_count = <span class="prelude-val">Some</span>(<span class="number">1</span>);
       <span class="kw">return </span>RewriteClause {
@@ -554,21 +556,21 @@
         pattern,
       };
     }
-    <span class="comment">//   elsif ($op eq &#39;match&#39;) {
-    //     if (ref $pattern eq &#39;CODE&#39;) {
-    //       $op = &#39;test&#39;; }
-    //     elsif (ref $pattern eq &#39;ARRAY&#39;) {    # Multiple patterns!
-    //       $op      = &#39;multi_select&#39;;
+    <span class="comment">//   elsif ($op eq 'match') {
+    //     if (ref $pattern eq 'CODE') {
+    //       $op = 'test'; }
+    //     elsif (ref $pattern eq 'ARRAY') {    # Multiple patterns!
+    //       $op      = 'multi_select';
     //       $pattern = [map { $self-&gt;compile_match($document, $_) } @$pattern]; }
     //     else {
-    //       $op = &#39;select&#39;; $pattern = $self-&gt;compile_match($document, $pattern); } }
-    //   elsif ($op eq &#39;replace&#39;) {
-    //     if (ref $pattern eq &#39;CODE&#39;) { }
+    //       $op = 'select'; $pattern = $self-&gt;compile_match($document, $pattern); } }
+    //   elsif ($op eq 'replace') {
+    //     if (ref $pattern eq 'CODE') { }
     //     else {
     //       $pattern = $self-&gt;compile_replacement($document, $pattern); } }
-    //   elsif ($op eq &#39;regexp&#39;) {
+    //   elsif ($op eq 'regexp') {
     //     $pattern = $self-&gt;compile_regexp($pattern); }
-    //   Debug(&quot;Compiled clause $oop=&gt;&quot; . ToString($opattern) . &quot;  ==&gt; $op=&gt;&quot; . ToString($pattern))
+    //   Debug("Compiled clause $oop=&gt;" . ToString($opattern) . "  ==&gt; $op=&gt;" . ToString($pattern))
     //     if $LaTeXML::DEBUG{rewrite};
     </span>RewriteClause {
       compiled: <span class="bool-val">true</span>,
@@ -578,14 +580,14 @@
   }
 
   <span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, root: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="comment">// Debug((&#39;=&#39; x 40)) if $LaTeXML::DEBUG{rewrite};
+    <span class="comment">// Debug(('=' x 40)) if $LaTeXML::DEBUG{rewrite};
     // What goes into self.clauses ???
     </span><span class="kw">let </span>clauses = <span class="self">self</span>.clauses.iter().collect();
     <span class="self">self</span>.apply_clause(document, root, <span class="number">0</span>, clauses)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
   }
   <span class="comment">// Rewrite spec as input
-  //   scope  =&gt; $scope  : a scope like &quot;section:1.2.3&quot; or &quot;label:eq.one&quot;; translated to xpath
+  //   scope  =&gt; $scope  : a scope like "section:1.2.3" or "label:eq.one"; translated to xpath
   //   select =&gt; $xpath  : selects subtrees based on xpath expression.
   //   match  =&gt; $code   : called on $document and current $node: tests current node, returns
   // $nnodes, if match   match  =&gt; $string : Treats as TeX, converts Box, then DOM tree, to xpath
@@ -624,12 +626,12 @@
           <span class="comment">// my ($xpath, $nnodes, @wilds) = @$pattern;
           </span><span class="kw">if let </span>RewritePattern::String(xpath) = pattern {
             <span class="kw">let </span>matches = document.findnodes(xpath, <span class="prelude-val">Some</span>(tree));
-            <span class="comment">// Debug(&quot;Rewrite selecting \&quot;$xpath\&quot; =&gt; &quot; . scalar(@matches) . &quot; matches&quot;) if
+            <span class="comment">// Debug("Rewrite selecting \"$xpath\" =&gt; " . scalar(@matches) . " matches") if
             // $LaTeXML::DEBUG{rewrite};
             </span><span class="kw">for </span>node <span class="kw">in </span>matches {
               <span class="comment">// next unless node.get_owner_document()-&gt;isSameNode($tree-&gt;ownerDocument); # If still
               // attached to original document!
-              </span><span class="kw">if </span>node.has_attribute(<span class="string">&quot;_matched&quot;</span>) {
+              </span><span class="kw">if </span>node.has_attribute(<span class="string">"_matched"</span>) {
                 <span class="kw">continue</span>;
               }
               <span class="comment">// let w = mark_wildcards(node, wilds);
@@ -643,11 +645,11 @@
             </span>}
           } <span class="kw">else </span>{
             <span class="comment">// unsupported rewrite pattern? should never happen.
-            </span><span class="macro">unimplemented!</span>()
+            </span><span class="macro">todo!</span>()
           }
         },
         Replace =&gt; {
-          <span class="comment">//     Debug(&quot;Rewrite replace at &quot; . $tree-&gt;toString . &quot; using $pattern&quot;)
+          <span class="comment">//     Debug("Rewrite replace at " . $tree-&gt;toString . " using $pattern")
           // if $LaTeXML::DEBUG{rewrite};
           </span><span class="kw">let </span><span class="kw-2">mut </span>parent = tree.get_parent().unwrap();
           <span class="comment">// Remove &amp; separate nodes to be replaced, and sibling nodes following them.
@@ -667,7 +669,7 @@
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(popped) = following.pop_front() {
               replaced.push(popped);
             } <span class="kw">else </span>{
-              <span class="macro">unimplemented!</span>(); <span class="comment">// should we report an error if nmatched was too large?
+              <span class="macro">todo!</span>(); <span class="comment">// should we report an error if nmatched was too large?
             </span>}
           }
           <span class="kw">for </span>rnode <span class="kw">in </span>replaced.iter() {
@@ -711,7 +713,7 @@
             parent.add_child(<span class="kw-2">&amp;mut </span>follow_node)<span class="question-mark">?</span>;
           }
         },
-        <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
+        <span class="kw">_ </span>=&gt; <span class="macro">todo!</span>(),
       }
     }
 

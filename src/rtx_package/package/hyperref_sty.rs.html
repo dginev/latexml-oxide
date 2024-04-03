@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/hyperref_sty.rs`."><title>hyperref_sty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/hyperref_sty.rs`."><title>hyperref_sty.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -841,41 +843,60 @@
 <a href="#841" id="841">841</a>
 <a href="#842" id="842">842</a>
 <a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::package::url_sty::LEADING_BACKSLASH_RE;
+
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">// Some of the requirements not yet applicable/supported in latexml
-  //TODO: RequirePackage!(&quot;ltxcmds&quot;);
-  //RequirePackage(&quot;iftex&quot;);
-  //RequirePackage(&quot;pdftexcmds&quot;);
-  //RequirePackage(&quot;infwarerr&quot;);
+  //TODO: RequirePackage!("ltxcmds");
+  //RequirePackage("iftex");
+  //RequirePackage("pdftexcmds");
+  //RequirePackage("infwarerr");
 
   // This is actually important in practice (arXiv), and its location is sensitive
   // in a complex document the order between loading keyval.sty and xkeyval.sty
   // determines the argument patterns to some macros, e.g. \setkeys
   // so emulating the exact raw .sty order of loading is the only way to ensure
   // robust conversions in latexml for all files that succeed in pdflatex
-  //TODO: RequirePackage!(&quot;keyval&quot;);
+  //TODO: RequirePackage!("keyval");
 
-  //TODO: RequirePackage!(&quot;kvsetkeys&quot;);
-  //TODO: RequirePackage!(&quot;kvdefinekeys&quot;);
-  //RequirePackage(&quot;pdfescape&quot;);
-  //RequirePackage(&quot;hycolor&quot;);
-  //RequirePackage(&quot;letltxmacro&quot;);
-  //RequirePackage(&quot;auxhook&quot;);
-  //TODO: RequirePackage!(&quot;kvoptions&quot;);
-  //RequirePackage(&quot;intcalc&quot;);
-  //RequirePackage(&quot;etexcmds&quot;);
-  </span><span class="macro">RequirePackage!</span>(<span class="string">&quot;nameref&quot;</span>);
-  <span class="macro">RequirePackage!</span>(<span class="string">&quot;url&quot;</span>);
-  <span class="comment">//TODO: RequirePackage!(&quot;bitset&quot;);
-  //RequirePackage(&quot;atbegshi&quot;);
+  //TODO: RequirePackage!("kvsetkeys");
+  //TODO: RequirePackage!("kvdefinekeys");
+  //RequirePackage("pdfescape");
+  //RequirePackage("hycolor");
+  //RequirePackage("letltxmacro");
+  //RequirePackage("auxhook");
+  //TODO: RequirePackage!("kvoptions");
+  //RequirePackage("intcalc");
+  //RequirePackage("etexcmds");
+  </span><span class="macro">RequirePackage!</span>(<span class="string">"nameref"</span>);
+  <span class="macro">RequirePackage!</span>(<span class="string">"url"</span>);
+  <span class="comment">//TODO: RequirePackage!("bitset");
+  //RequirePackage("atbegshi");
 
-  // Can we load hyperref, to get all it&#39;s random sundry definitions?
+  // Can we load hyperref, to get all it's random sundry definitions?
   // No, too many weird extra packages loaded.
-  //// InputDefinitions(&#39;hyperref&#39;, type =&gt; &#39;sty&#39;, noltxml =&gt; 1);
+  //// InputDefinitions('hyperref', type =&gt; 'sty', noltxml =&gt; 1);
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  // Follow hyperref&#39;s manual.pdf
+  // Follow hyperref's manual.pdf
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -885,122 +906,122 @@
   //  * The metadata could be used to augment the RDFa
   </span><span class="kw">for </span>option <span class="kw">in </span>[
     <span class="comment">// 3.1 General Options
-    </span><span class="string">&quot;draft&quot;</span>,
-    <span class="string">&quot;final&quot;</span>,
-    <span class="string">&quot;debug&quot;</span>,
-    <span class="string">&quot;verbose&quot;</span>,
-    <span class="string">&quot;implicit&quot;</span>,
-    <span class="string">&quot;hypertexnames&quot;</span>,
-    <span class="string">&quot;naturalnames&quot;</span>,
-    <span class="string">&quot;a4paper&quot;</span>,
-    <span class="string">&quot;a5paper&quot;</span>,
-    <span class="string">&quot;b5paper&quot;</span>,
-    <span class="string">&quot;letterpaper&quot;</span>,
-    <span class="string">&quot;legalpaper&quot;</span>,
-    <span class="string">&quot;executivepaper&quot;</span>,
-    <span class="string">&quot;setpagesizes&quot;</span>,
+    </span><span class="string">"draft"</span>,
+    <span class="string">"final"</span>,
+    <span class="string">"debug"</span>,
+    <span class="string">"verbose"</span>,
+    <span class="string">"implicit"</span>,
+    <span class="string">"hypertexnames"</span>,
+    <span class="string">"naturalnames"</span>,
+    <span class="string">"a4paper"</span>,
+    <span class="string">"a5paper"</span>,
+    <span class="string">"b5paper"</span>,
+    <span class="string">"letterpaper"</span>,
+    <span class="string">"legalpaper"</span>,
+    <span class="string">"executivepaper"</span>,
+    <span class="string">"setpagesizes"</span>,
     <span class="comment">// 3.2 Configuration Options
-    </span><span class="string">&quot;raiselinks&quot;</span>,
-    <span class="string">&quot;breaklinks&quot;</span>,
-    <span class="string">&quot;pageanchor&quot;</span>,
-    <span class="string">&quot;plainpages&quot;</span>,
-    <span class="string">&quot;nesting&quot;</span>,
+    </span><span class="string">"raiselinks"</span>,
+    <span class="string">"breaklinks"</span>,
+    <span class="string">"pageanchor"</span>,
+    <span class="string">"plainpages"</span>,
+    <span class="string">"nesting"</span>,
     <span class="comment">// 3.3 Backend Drivers
-    </span><span class="string">&quot;dvipdfm&quot;</span>,
-    <span class="string">&quot;dvipdfmx&quot;</span>,
-    <span class="string">&quot;dvips&quot;</span>,
-    <span class="string">&quot;dvipsone&quot;</span>,
-    <span class="string">&quot;dviwindo&quot;</span>,
-    <span class="string">&quot;hypertex&quot;</span>,
-    <span class="string">&quot;latex2html&quot;</span>,
-    <span class="string">&quot;nativepdf&quot;</span>,
-    <span class="string">&quot;pdfmark&quot;</span>,
-    <span class="string">&quot;pdftex&quot;</span>,
-    <span class="string">&quot;ps2pdf&quot;</span>,
-    <span class="string">&quot;tex4ht&quot;</span>,
-    <span class="string">&quot;textures&quot;</span>,
-    <span class="string">&quot;vtex&quot;</span>,
-    <span class="string">&quot;vtexpdfmark&quot;</span>,
-    <span class="string">&quot;xetex&quot;</span>,
+    </span><span class="string">"dvipdfm"</span>,
+    <span class="string">"dvipdfmx"</span>,
+    <span class="string">"dvips"</span>,
+    <span class="string">"dvipsone"</span>,
+    <span class="string">"dviwindo"</span>,
+    <span class="string">"hypertex"</span>,
+    <span class="string">"latex2html"</span>,
+    <span class="string">"nativepdf"</span>,
+    <span class="string">"pdfmark"</span>,
+    <span class="string">"pdftex"</span>,
+    <span class="string">"ps2pdf"</span>,
+    <span class="string">"tex4ht"</span>,
+    <span class="string">"textures"</span>,
+    <span class="string">"vtex"</span>,
+    <span class="string">"vtexpdfmark"</span>,
+    <span class="string">"xetex"</span>,
     <span class="comment">// 3.4 Extension Options
-    </span><span class="string">&quot;extension&quot;</span>,
-    <span class="string">&quot;hyperfigures&quot;</span>,
-    <span class="string">&quot;backref&quot;</span>,
-    <span class="string">&quot;pagebackref&quot;</span>,
-    <span class="string">&quot;hyperindex&quot;</span>,
-    <span class="string">&quot;pageanchors&quot;</span>,
-    <span class="string">&quot;plainpages&quot;</span>,
-    <span class="string">&quot;hyperfootnotes&quot;</span>,
-    <span class="string">&quot;encap&quot;</span>,
-    <span class="string">&quot;linktocpage&quot;</span>,
-    <span class="string">&quot;breaklinks&quot;</span>,
-    <span class="string">&quot;colorlinks&quot;</span>,
-    <span class="string">&quot;linkcolor&quot;</span>,
-    <span class="string">&quot;anchorcolor&quot;</span>,
-    <span class="string">&quot;citecolor&quot;</span>,
-    <span class="string">&quot;filecolor&quot;</span>,
-    <span class="string">&quot;menucolor&quot;</span>,
-    <span class="string">&quot;pagecolor&quot;</span>,
-    <span class="string">&quot;urlcolor&quot;</span>,
-    <span class="string">&quot;frenchlinks&quot;</span>,
+    </span><span class="string">"extension"</span>,
+    <span class="string">"hyperfigures"</span>,
+    <span class="string">"backref"</span>,
+    <span class="string">"pagebackref"</span>,
+    <span class="string">"hyperindex"</span>,
+    <span class="string">"pageanchors"</span>,
+    <span class="string">"plainpages"</span>,
+    <span class="string">"hyperfootnotes"</span>,
+    <span class="string">"encap"</span>,
+    <span class="string">"linktocpage"</span>,
+    <span class="string">"breaklinks"</span>,
+    <span class="string">"colorlinks"</span>,
+    <span class="string">"linkcolor"</span>,
+    <span class="string">"anchorcolor"</span>,
+    <span class="string">"citecolor"</span>,
+    <span class="string">"filecolor"</span>,
+    <span class="string">"menucolor"</span>,
+    <span class="string">"pagecolor"</span>,
+    <span class="string">"urlcolor"</span>,
+    <span class="string">"frenchlinks"</span>,
     <span class="comment">// 3.5 PDF-specific display options
-    </span><span class="string">&quot;bookmarks&quot;</span>,
-    <span class="string">&quot;bookmarksopen&quot;</span>,
-    <span class="string">&quot;bookmarksopenlevel&quot;</span>,
-    <span class="string">&quot;bookmarksnumbered&quot;</span>,
-    <span class="string">&quot;bookmarstype&quot;</span>,
-    <span class="string">&quot;CJKbookmarks&quot;</span>,
-    <span class="string">&quot;pdfhighlight&quot;</span>,
-    <span class="string">&quot;citebordercolor&quot;</span>,
-    <span class="string">&quot;filebordercolor&quot;</span>,
-    <span class="string">&quot;linkbordercolor&quot;</span>,
-    <span class="string">&quot;menubordercolor&quot;</span>,
-    <span class="string">&quot;pagebordercolor&quot;</span>,
-    <span class="string">&quot;urlbordercolor&quot;</span>,
-    <span class="string">&quot;runbordercolor&quot;</span>,
-    <span class="string">&quot;pdfborder&quot;</span>,
+    </span><span class="string">"bookmarks"</span>,
+    <span class="string">"bookmarksopen"</span>,
+    <span class="string">"bookmarksopenlevel"</span>,
+    <span class="string">"bookmarksnumbered"</span>,
+    <span class="string">"bookmarstype"</span>,
+    <span class="string">"CJKbookmarks"</span>,
+    <span class="string">"pdfhighlight"</span>,
+    <span class="string">"citebordercolor"</span>,
+    <span class="string">"filebordercolor"</span>,
+    <span class="string">"linkbordercolor"</span>,
+    <span class="string">"menubordercolor"</span>,
+    <span class="string">"pagebordercolor"</span>,
+    <span class="string">"urlbordercolor"</span>,
+    <span class="string">"runbordercolor"</span>,
+    <span class="string">"pdfborder"</span>,
     <span class="comment">// 3.6 PDF display and information options
-    </span><span class="string">&quot;baseurl&quot;</span>,
-    <span class="string">&quot;pdfpagemode&quot;</span>,
-    <span class="string">&quot;pdfview&quot;</span>,
-    <span class="string">&quot;pdfstartpage&quot;</span>,
-    <span class="string">&quot;pdfstartview&quot;</span>,
-    <span class="string">&quot;pdfpagescrop&quot;</span>,
-    <span class="string">&quot;pdfcenterwindow&quot;</span>,
-    <span class="string">&quot;pdfdirection&quot;</span>,
-    <span class="string">&quot;pdfdisplaydoctitle&quot;</span>,
-    <span class="string">&quot;pdfduplex&quot;</span>,
-    <span class="string">&quot;pdffitwindow&quot;</span>,
-    <span class="string">&quot;pdfmenubar&quot;</span>,
-    <span class="string">&quot;pdfnewwindow&quot;</span>,
-    <span class="string">&quot;pdfnonfullscreenpagemode&quot;</span>,
-    <span class="string">&quot;pdfnumcopies&quot;</span>,
-    <span class="string">&quot;pdfpagelayout&quot;</span>,
-    <span class="string">&quot;pdfpagelabels&quot;</span>,
-    <span class="string">&quot;pdfpagetransition&quot;</span>,
-    <span class="string">&quot;pdfpicktrackbypdfsize&quot;</span>,
-    <span class="string">&quot;pdfprintarea&quot;</span>,
-    <span class="string">&quot;pdfprintclip&quot;</span>,
-    <span class="string">&quot;pdfprintpagerange&quot;</span>,
-    <span class="string">&quot;pdfprintscaling&quot;</span>,
-    <span class="string">&quot;pdftoolbar&quot;</span>,
-    <span class="string">&quot;pdfviewarea&quot;</span>,
-    <span class="string">&quot;pdfviewclip&quot;</span>,
-    <span class="string">&quot;pdfprintpagerange&quot;</span>,
-    <span class="string">&quot;pdfprintscaling&quot;</span>,
-    <span class="string">&quot;pdftoolbar&quot;</span>,
-    <span class="string">&quot;pdfviewarea&quot;</span>,
-    <span class="string">&quot;pdfviewclip&quot;</span>,
-    <span class="string">&quot;pdfwindowui&quot;</span>,
-    <span class="string">&quot;unicode&quot;</span>,
+    </span><span class="string">"baseurl"</span>,
+    <span class="string">"pdfpagemode"</span>,
+    <span class="string">"pdfview"</span>,
+    <span class="string">"pdfstartpage"</span>,
+    <span class="string">"pdfstartview"</span>,
+    <span class="string">"pdfpagescrop"</span>,
+    <span class="string">"pdfcenterwindow"</span>,
+    <span class="string">"pdfdirection"</span>,
+    <span class="string">"pdfdisplaydoctitle"</span>,
+    <span class="string">"pdfduplex"</span>,
+    <span class="string">"pdffitwindow"</span>,
+    <span class="string">"pdfmenubar"</span>,
+    <span class="string">"pdfnewwindow"</span>,
+    <span class="string">"pdfnonfullscreenpagemode"</span>,
+    <span class="string">"pdfnumcopies"</span>,
+    <span class="string">"pdfpagelayout"</span>,
+    <span class="string">"pdfpagelabels"</span>,
+    <span class="string">"pdfpagetransition"</span>,
+    <span class="string">"pdfpicktrackbypdfsize"</span>,
+    <span class="string">"pdfprintarea"</span>,
+    <span class="string">"pdfprintclip"</span>,
+    <span class="string">"pdfprintpagerange"</span>,
+    <span class="string">"pdfprintscaling"</span>,
+    <span class="string">"pdftoolbar"</span>,
+    <span class="string">"pdfviewarea"</span>,
+    <span class="string">"pdfviewclip"</span>,
+    <span class="string">"pdfprintpagerange"</span>,
+    <span class="string">"pdfprintscaling"</span>,
+    <span class="string">"pdftoolbar"</span>,
+    <span class="string">"pdfviewarea"</span>,
+    <span class="string">"pdfviewclip"</span>,
+    <span class="string">"pdfwindowui"</span>,
+    <span class="string">"unicode"</span>,
     <span class="comment">// PDF display and information options that provide interesting Metadata
-    </span><span class="string">&quot;pdftitle&quot;</span>,
-    <span class="string">&quot;pdfauthor&quot;</span>,
-    <span class="string">&quot;pdfsubject&quot;</span>,
-    <span class="string">&quot;pdfcreator&quot;</span>,
-    <span class="string">&quot;pdfproducer&quot;</span>,
-    <span class="string">&quot;pdfkeywords&quot;</span>,
-    <span class="string">&quot;pdflang&quot;</span>,
+    </span><span class="string">"pdftitle"</span>,
+    <span class="string">"pdfauthor"</span>,
+    <span class="string">"pdfsubject"</span>,
+    <span class="string">"pdfcreator"</span>,
+    <span class="string">"pdfproducer"</span>,
+    <span class="string">"pdfkeywords"</span>,
+    <span class="string">"pdflang"</span>,
   ] {
     <span class="macro">DeclareOption!</span>(option, <span class="prelude-val">None</span>);
   }
@@ -1008,31 +1029,31 @@
   <span class="comment">// \hypersetup{keyvals} configures various parameters,
   // for each pdf keyword, provide [property,(content|resource),datatype]
   // our %pdfkey_property = (
-  //   baseurl     =&gt; &#39;&#39;,                                 # xmp:BaseURL ??
-  //   pdfauthor   =&gt; [&#39;dcterms:creator&#39;,  &#39;content&#39;],
-  //   pdfkeywords =&gt; [&#39;dcterms:subject&#39;,  &#39;content&#39;],    # &amp; pdf:Keywords
-  //   pdflang     =&gt; [&#39;dcterms:language&#39;, &#39;content&#39;],
-  //   pdfproducer =&gt; &#39;&#39;,                                 # pdf:Producer &amp; xmp:CreatorTool
-  //   pdfsubject  =&gt; [&#39;dcterms:subject&#39;, &#39;content&#39;],
-  //   pdftitle    =&gt; [&#39;dcterms:title&#39;,   &#39;content&#39;],
-  //   # Include hyperxmp&#39;s keywords, as well.
-  //   pdfauthortitle   =&gt; &#39;&#39;,                                # photoshop:AuthorsPosition
-  //   pdfcaptionwriter =&gt; &#39;&#39;,                                # photoshop:CaptionWriter !?!?!?
-  //   pdfcopyright     =&gt; [&#39;dcterms:rights&#39;, &#39;content&#39;],     # &amp; xmpRights:Marked
-  //   pdflicenseurl    =&gt; [&#39;cc:licence&#39;,     &#39;resource&#39;],    # xmpRights:Webstate::ent
-  //   pdfmetalang      =&gt; &#39;&#39;,                                # dcterms:language ??
+  //   baseurl     =&gt; '',                                 # xmp:BaseURL ??
+  //   pdfauthor   =&gt; ['dcterms:creator',  'content'],
+  //   pdfkeywords =&gt; ['dcterms:subject',  'content'],    # &amp; pdf:Keywords
+  //   pdflang     =&gt; ['dcterms:language', 'content'],
+  //   pdfproducer =&gt; '',                                 # pdf:Producer &amp; xmp:CreatorTool
+  //   pdfsubject  =&gt; ['dcterms:subject', 'content'],
+  //   pdftitle    =&gt; ['dcterms:title',   'content'],
+  //   # Include hyperxmp's keywords, as well.
+  //   pdfauthortitle   =&gt; '',                                # photoshop:AuthorsPosition
+  //   pdfcaptionwriter =&gt; '',                                # photoshop:CaptionWriter !?!?!?
+  //   pdfcopyright     =&gt; ['dcterms:rights', 'content'],     # &amp; xmpRights:Marked
+  //   pdflicenseurl    =&gt; ['cc:licence',     'resource'],    # xmpRights:Webstate::ent
+  //   pdfmetalang      =&gt; '',                                # dcterms:language ??
   // );
   // date=&gt;dcterms:date xmp:CreateDate xmp:ModifyDate xmp:MetadataDate ?
   // document identifier =&gt; xmlMM:DocumentID
   // file format =&gt; dcterms:format
   // LaTeX file name =&gt; dcterms:source
 
-  //DefKeyVal(&#39;Hyp&#39;, &#39;baseurl&#39;, &#39;Semiverbatim&#39;);
+  //DefKeyVal('Hyp', 'baseurl', 'Semiverbatim');
 
   // sub hyperref_setoption {
   //   my ($key, $value) = @_;
-  //   AssignMapping(&#39;Hyperref_options&#39;, $key, $value);
-  //   if ($key eq &#39;baseurl&#39;) {
+  //   AssignMapping('Hyperref_options', $key, $value);
+  //   if ($key eq 'baseurl') {
   //     AssignValue(BASE_URL =&gt; ToString($value)); }
   //   return; }
 
@@ -1040,7 +1061,7 @@
   // # Some are useful properties for generating RDFa
   // # This can appear anywhere in the doc, including preamble.
   // # Note also that the last value for any given key replaces previous ones! (eg.ONE author entry)
-  // DefPrimitive(&#39;\hypersetup RequiredKeyVals:Hyp&#39;, sub {
+  // DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
   //     my ($stomach, $kv) = @_;
   //     my @pairs = $kv-&gt;getPairs;
   //     while (@pairs) {
@@ -1048,99 +1069,116 @@
   //       hyperref_setoption($key, Digest($value)); }
   //     return; });
 
-  // PushValue(&#39;@at@end@document&#39;, T_CS(&#39;\@add@PDF@RDFa@triples&#39;));
+  // PushValue('@at@end@document', T_CS('\@add@PDF@RDFa@triples'));
 
-  // DefConstructor(&#39;\@add@PDF@RDFa@triples&#39;, sub {
+  // DefConstructor('\@add@PDF@RDFa@triples', sub {
   //     my ($document, $xproperty, $content) = @_;
   //     if (my $root = $document-&gt;getDocument-&gt;documentElement) {
-  //       foreach my $key (LookupMappingKeys(&#39;Hyperref_options&#39;)) {
+  //       foreach my $key (LookupMappingKeys('Hyperref_options')) {
   //         if (my $entry = ($pdfkey_property{$key})) {
   //           my ($property, $object, $datatype) = @$entry;
-  //           my $value = LookupMapping(&#39;Hyperref_options&#39;, $key);
-  //           my $node  = $document-&gt;openElementAt($root, &#39;ltx:rdf&#39;,
+  //           my $value = LookupMapping('Hyperref_options', $key);
+  //           my $node  = $document-&gt;openElementAt($root, 'ltx:rdf',
   //             property =&gt; $property, $object =&gt; $value,
   //             ($datatype ? (datatype =&gt; $datatype) : ()));
   //           # Must do directly; $document-&gt;setAttribute omits empty attributes
-  //           $node-&gt;setAttribute(about =&gt; &#39;&#39;);
+  //           $node-&gt;setAttribute(about =&gt; '');
   //           $document-&gt;closeElementAt($node); } } } });
 
   // Need some work here!?!?
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfcatalog{}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfcompresslevel&quot;</span>, Number::new(<span class="number">0</span>));
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfcatalog{}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfcompresslevel"</span>, Number::new(<span class="number">0</span>));
 
   <span class="comment">// #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // # Additional User Macros
 
   // \href{url}{text}
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\href HyperVerbatim {}&quot;</span>, <span class="string">&quot;\\@@Url\\href{}{}{#1}{#2}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\href HyperVerbatim {}"</span>, <span class="string">"\\lx@hyper@url@\\href{}{}{#1}{#2}"</span>);
 
-  <span class="comment">// \url{url} from url.sty... well sorta
-  // It&#39;s slightly different in that it expands the argument
+  <span class="comment">// Redefine \url{url} from url.sty...
+  // It's slightly different in that it expands the argument
   // Redefine \@url to sanitize the argument less
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@Url Token&quot;</span>, sub[(cmd)] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@hyper@url Token"</span>, sub[(cmd)] {
     <span class="kw">let </span>open = gullet::read_token()<span class="question-mark">?</span>.unwrap();
-   begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39;%&#39;</span>]));
-    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;~&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;~&quot;</span>), <span class="prelude-val">None</span>); <span class="comment">// Needs special protection?
+    begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="string">'%'</span>]));
+    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>), <span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"~"</span>), <span class="prelude-val">None</span>); <span class="comment">// Needs special protection?
     </span><span class="kw">let </span>(open,close,url) = <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN {
-      ( <span class="macro">T_OTHER!</span>(<span class="string">&quot;{&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;}&quot;</span>),
-        gullet::read_balanced(<span class="bool-val">true</span>)<span class="question-mark">?</span>.unwrap_or_default()) <span class="comment">// Expand as we go!
+      ( <span class="macro">T_OTHER!</span>(<span class="string">"{"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"}"</span>),
+        gullet::read_balanced(<span class="bool-val">true</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>.unwrap_or_default()) <span class="comment">// Expand as we go!
     </span>} <span class="kw">else </span>{
-      ( <span class="macro">T_OTHER!</span>(<span class="string">&quot;{&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;}&quot;</span>),
+      ( <span class="macro">T_OTHER!</span>(<span class="string">"{"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"}"</span>),
         <span class="macro">Tokens!</span>(open.as_other()) )
     };
     end_semiverbatim()<span class="question-mark">?</span>;
     <span class="kw">let </span>toks : Vec&lt;Token&gt; = url.unlist().into_iter()
       .filter(|t| t.get_catcode() != Catcode::SPACE)
-      <span class="comment">// Identical with url&#39;s \@Url except, let CS&#39;s through!
+      <span class="comment">// Identical with url's \@Url except, let CS's through!
       </span>.map(|t| <span class="kw">if </span>t.get_catcode() == Catcode::CS { t } <span class="kw">else </span>{ t.as_other() })
       .collect();
-    <span class="kw">let </span><span class="kw-2">mut </span>url_wrapped = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\UrlFont&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\UrlLeft&quot;</span>)];
+    <span class="kw">let </span><span class="kw-2">mut </span>url_wrapped = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\UrlFont"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\UrlLeft"</span>)];
     url_wrapped.extend(toks.clone());
-    url_wrapped.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\UrlRight&quot;</span>));
-    <span class="kw">let </span><span class="kw-2">mut </span>invocation_tokens = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@@Url&quot;</span>),<span class="macro">vec!</span>[
+    url_wrapped.push(<span class="macro">T_CS!</span>(<span class="string">"\\UrlRight"</span>));
+    <span class="kw">let </span><span class="kw-2">mut </span>invocation_tokens = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@hyper@url@"</span>),<span class="macro">vec!</span>[
         <span class="macro">Tokens!</span>(cmd.as_other()),
         <span class="macro">Tokens!</span>(open),
         <span class="macro">Tokens!</span>(close),
         Tokens::new(toks),
         Tokens::new(url_wrapped)]).unlist();
-    invocation_tokens.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\endgroup&quot;</span>));
+    invocation_tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>));
     Tokens::new(invocation_tokens)
   });
 
+  <span class="comment">// RE-define from url w
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\url"</span>, <span class="string">"\\begingroup\\lx@hyper@url\\url"</span>, locked =&gt; <span class="bool-val">true</span>);
+
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@hyper@url@ Undigested {}{} Semiverbatim {}"</span>,<span class="comment">// Allow this to work in Math!
+    </span><span class="string">"?#isMath(&lt;ltx:XMWrap class='#class' href='#href'&gt;#5&lt;/ltx:XMWrap&gt;)(&lt;ltx:ref href='#href' class='#class'&gt;#5&lt;/ltx:ref&gt;)"</span>,
+    properties =&gt; sub[args] {
+      <span class="macro">unref!</span>(args =&gt; cmd, _open, _close, url, _formattedurl);
+      <span class="kw">let </span>ltx_cmd = <span class="macro">s!</span>(<span class="string">"ltx_{}"</span>, LEADING_BACKSLASH_RE.replace(<span class="kw-2">&amp;</span>cmd.to_string(),<span class="string">""</span>));
+      <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(
+        <span class="string">"href" </span>=&gt; compose_url(<span class="kw-2">&amp;</span>state::lookup_string(<span class="string">"BASE_URL"</span>), <span class="kw-2">&amp;</span>url.to_string(), <span class="prelude-val">None</span>).into(),
+        <span class="comment">// TODO: why was class realized in Perl as "sub" closure here?
+        </span><span class="string">"class"</span>=&gt; ltx_cmd.into()
+      ))
+    },
+    sizer     =&gt; <span class="string">"#5"</span>,
+    reversion =&gt; <span class="string">"#1#2#4#3"</span>);
   <span class="comment">// \nolinkurl{url}
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\nolinkurl Semiverbatim&quot;</span>, <span class="string">&quot;#1&quot;</span>);
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\nolinkurl Semiverbatim"</span>,
+    <span class="string">"&lt;ltx:ref href='#1' class='ltx_nolink' &gt;#1&lt;/ltx:ref&gt;"</span>);
 
   <span class="comment">// \hyperbaseurl{url}
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\hyperbaseurl Semiverbatim&quot;</span>, sub[(url)] {
-  <span class="macro">AssignValue!</span>(<span class="string">&quot;BASE_URL&quot; </span>=&gt; url.to_string()); });
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\hyperbaseurl Semiverbatim"</span>, sub[(url)] {
+  <span class="macro">AssignValue!</span>(<span class="string">"BASE_URL" </span>=&gt; url.to_string()); });
 
   <span class="comment">// \hyperimage{imageurl}{text}
   </span><span class="macro">DefConstructor!</span>(
-    <span class="string">&quot;\\hyperimage Semiverbatim {}&quot;</span>,
-    <span class="string">&quot;&lt;ltx:graphic graphic=&#39;#1&#39; description=&#39;#2&#39;/&gt;&quot;
+    <span class="string">"\\hyperimage Semiverbatim {}"</span>,
+    <span class="string">"&lt;ltx:graphic graphic='#1' description='#2'/&gt;"
   </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\hyperref&quot;</span>, <span class="string">&quot;\\@ifnextchar[\\hyperref@@ii\\hyperref@@iv&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\hyperref"</span>, <span class="string">"\\@ifnextchar[\\hyperref@@ii\\hyperref@@iv"</span>);
   <span class="comment">// # 2 argument form
-  // DefConstructor(&#39;\hyperref@@ii OptionalSemiverbatim {}&#39;,
-  //   &quot;&lt;ltx:ref labelref=&#39;#label&#39;&gt;#2&lt;/ltx:ref&gt;&quot;,
+  // DefConstructor('\hyperref@@ii OptionalSemiverbatim {}',
+  //   "&lt;ltx:ref labelref='#label'&gt;#2&lt;/ltx:ref&gt;",
   //   properties =&gt; sub { (label =&gt; CleanLabel($_[1])); });
   // # 4 argument form
-  // DefConstructor(&#39;\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim&#39;,
-  //   &quot;&lt;ltx:ref href=&#39;#href&#39;&gt;#4&lt;/ltx:ref&gt;&quot;,
+  // DefConstructor('\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim',
+  //   "&lt;ltx:ref href='#href'&gt;#4&lt;/ltx:ref&gt;",
   //   properties =&gt; sub {
-  //     (href =&gt; ComposeURL(LookupValue(&#39;BASE_URL&#39;), $_[1],
-  //         CleanID(ToString($_[2]) . &#39;.&#39; . ToString($_[3])))); });
+  //     (href =&gt; ComposeURL(LookupValue('BASE_URL'), $_[1],
+  //         CleanID(ToString($_[2]) . '.' . ToString($_[3])))); });
 
-  // DefConstructor(&#39;\htmlref Semiverbatim  Semiverbatim&#39;,
-  //   &quot;&lt;ltx:ref labelref=&#39;#label&#39;&gt;#1&lt;/ltx:ref&gt;&quot;,
+  // DefConstructor('\htmlref Semiverbatim  Semiverbatim',
+  //   "&lt;ltx:ref labelref='#label'&gt;#1&lt;/ltx:ref&gt;",
   //   properties =&gt; sub { (label =&gt; CleanLabel($_[2])); });
 
   // # \hyperlink{name}{text}
-  // DefConstructor(&#39;\hyperlink Semiverbatim {}&#39;,
-  //   &quot;&lt;ltx:ref idref=&#39;#1&#39;&gt;#2&lt;/ltx:ref&gt;&quot;,
+  // DefConstructor('\hyperlink Semiverbatim {}',
+  //   "&lt;ltx:ref idref='#1'&gt;#2&lt;/ltx:ref&gt;",
   //   properties =&gt; sub { (id =&gt; CleanID($_[1])); });
-  // DefMacro(&#39;\hyper@@link{}{}{}&#39;, &#39;\hyperlink{#2}{#3}&#39;);
+  // DefMacro('\hyper@@link{}{}{}', '\hyperlink{#2}{#3}');
 
   // sub localized_anchor {
   //   my ($document, $whatsit) = @_;
@@ -1151,89 +1189,88 @@
   //   while ($candidate = pop(@candidates)) {
   //     my $type = $candidate-&gt;nodeType;
   //     if ($type == XML_ELEMENT_NODE) {
-  //       last if ($model-&gt;canContain(&#39;ltx:anchor&#39;, $model-&gt;getNodeQName($candidate)));
+  //       last if ($model-&gt;canContain('ltx:anchor', $model-&gt;getNodeQName($candidate)));
   //       unshift(@candidates, $candidate-&gt;childNodes); }
   //     elsif ($type = XML_TEXT_NODE) {
   //       last; } }
-  //   my $id = $whatsit-&gt;getProperty(&#39;id&#39;);
+  //   my $id = $whatsit-&gt;getProperty('id');
   //   if ($candidate) {
-  //     my $anchor = $document-&gt;wrapNodes(&#39;ltx:anchor&#39;, $candidate);
-  //     $anchor-&gt;setAttribute(&#39;xml:id&#39;, $id);
+  //     my $anchor = $document-&gt;wrapNodes('ltx:anchor', $candidate);
+  //     $anchor-&gt;setAttribute('xml:id', $id);
   //     $document-&gt;closeNode($anchor) if $document-&gt;isOpen($anchor); }
   //   else {
-  //     Error(&quot;No available insertion point for ltx:anchor, failing \\hypertarget to $id&quot;); }
+  //     Error("No available insertion point for ltx:anchor, failing \\hypertarget to $id"); }
   //   return; }
 
   // # \hyperdef{category}{name}{text}
-  // DefConstructor(&#39;\hyperdef Semiverbatim Semiverbatim Semiverbatim&#39;,
-  //   &quot;#3&quot;,
+  // DefConstructor('\hyperdef Semiverbatim Semiverbatim Semiverbatim',
+  //   "#3",
   //   afterConstruct =&gt; \&amp;localized_anchor,
-  //   properties     =&gt; sub { (id =&gt; CleanID(ToString($_[1]) . &#39;.&#39; . ToString($_[2]))); });
+  //   properties     =&gt; sub { (id =&gt; CleanID(ToString($_[1]) . '.' . ToString($_[2]))); });
   // # \hypertarget{name}{text}
-  // DefConstructor(&#39;\hypertarget Semiverbatim {}&#39;, &#39;#2&#39;,
+  // DefConstructor('\hypertarget Semiverbatim {}', '#2',
   //   afterConstruct =&gt; \&amp;localized_anchor,
   //   properties     =&gt; sub { (id =&gt; CleanID(ToString($_[1]))); });
 
   // # Should create an anchor with automatically chosen name;
-  // # But it&#39;s to be used where LaTeXML already would have created an anchor &amp; link...
+  // # But it's to be used where LaTeXML already would have created an anchor &amp; link...
   // # Should leverage
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\phantomsection&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\phantomsection"</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">Let!</span>(<span class="string">&quot;\\footref&quot;</span>, <span class="string">&quot;\\ref&quot;</span>); <span class="comment">// ?
+  <span class="macro">Let!</span>(<span class="string">"\\footref"</span>, <span class="string">"\\ref"</span>); <span class="comment">// ?
 
-  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@stoppedearly&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@typexml&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@activeanchor&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@backref&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@bookmarks&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@bookmarksnumbered&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@bookmarksopen&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@breaklinks&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfcenterwindow&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@CJKbookmarks&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@colorlinks&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@destlabel&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@draft&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\Hy@finaltrue&quot;</span>, <span class="string">&quot;\\Hy@draftfalse&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\Hy@finalfalse&quot;</span>, <span class="string">&quot;\\Hy@drafttrue&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfescapeform&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@hyperfigures&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdffitwindow&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@frenchlinks&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@hyperfootnotes&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@hyperindex&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@hypertexnames&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@implicit&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@linktocpage&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@localanchorname&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfmenubar&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@naturalnames&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@nesting&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfnewwindowset&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfnewwindow&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@ocgcolorlinks&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pageanchor&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfpagelabels&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfstring&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@plainpages&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@psize&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@raiselinks&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@seminarslides&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@setpagesize&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@texht&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@psdextra&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdftoolbar&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@unicode&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfusetitle&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@verbose&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\Hy@debugtrue&quot;</span>, <span class="string">&quot;\\Hy@verbosetrue&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\Hy@debugfalse&quot;</span>, <span class="string">&quot;\\Hy@verbosefalse&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfwindowui&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfdisplaydoctitle&quot;</span>);
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifHy@pdfa&quot;</span>);
+  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@stoppedearly"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@typexml"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@activeanchor"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@backref"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@bookmarks"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@bookmarksnumbered"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@bookmarksopen"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@breaklinks"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfcenterwindow"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@CJKbookmarks"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@colorlinks"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@destlabel"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@draft"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\Hy@finaltrue"</span>, <span class="string">"\\Hy@draftfalse"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\Hy@finalfalse"</span>, <span class="string">"\\Hy@drafttrue"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfescapeform"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@hyperfigures"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdffitwindow"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@frenchlinks"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@hyperfootnotes"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@hyperindex"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@hypertexnames"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@implicit"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@linktocpage"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@localanchorname"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfmenubar"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@naturalnames"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@nesting"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfnewwindowset"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfnewwindow"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@ocgcolorlinks"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pageanchor"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfpagelabels"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfstring"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@plainpages"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@psize"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@raiselinks"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@seminarslides"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@setpagesize"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@texht"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@psdextra"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdftoolbar"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@unicode"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfusetitle"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@verbose"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\Hy@debugtrue"</span>, <span class="string">"\\Hy@verbosetrue"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\Hy@debugfalse"</span>, <span class="string">"\\Hy@verbosefalse"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfwindowui"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfdisplaydoctitle"</span>);
+  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHy@pdfa"</span>);
   <span class="macro">RawTeX!</span>(
-    <span class="string">r###&quot;
-\Hy@backreffalse
+    <span class="string">r"\Hy@backreffalse
 \Hy@bookmarksnumberedfalse
 \Hy@bookmarksopenfalse
 \Hy@bookmarkstrue
@@ -1266,34 +1303,33 @@
 \Hy@pdftoolbartrue
 \Hy@typexmlfalse
 \Hy@unicodetrue
-&quot;###
-  </span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@bookmarksopenlevel&quot;</span>, <span class="string">&quot;\\maxdimen&quot;</span>);
-  <span class="comment">// This only approximates the &quot;contextual label&quot; that should precede the number,
+"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@bookmarksopenlevel"</span>, <span class="string">"\\maxdimen"</span>);
+  <span class="comment">// This only approximates the "contextual label" that should precede the number,
   // and ignores the user-definable macros.
   // But, we normally defer such bookkeeping until postprocessing....sigh
   // TODO: The star forms prevent nested double links.
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\autoref OptionalMatch:* Semiverbatim&quot;</span>,
-  <span class="string">&quot;&lt;ltx:ref ?#1(class=&#39;ltx_refmacro_autoref ltx_nolink&#39;)(class=&#39;ltx_refmacro_autoref&#39;)
-    show=&#39;autoref&#39; labelref=&#39;#label&#39; _force_font=&#39;true&#39;/&gt;&quot;</span>,
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\autoref OptionalMatch:* Semiverbatim"</span>,
+  <span class="string">"&lt;ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref')
+    show='autoref' labelref='#label' _force_font='true'/&gt;"</span>,
   properties =&gt; sub[args] {
     <span class="kw">let </span>refarg = <span class="kw-2">&amp;</span>args[<span class="number">1</span>];
-    <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;label&quot; </span>=&gt; clean_label(<span class="kw-2">&amp;</span>refarg.as_ref().unwrap().to_string(), <span class="prelude-val">None</span>).to_string()))
+    <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"label" </span>=&gt; clean_label(<span class="kw-2">&amp;</span>refarg.as_ref().unwrap().to_string(), <span class="prelude-val">None</span>).to_string()))
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@autorefnum@@{}&quot;</span>, sub[(ttype)] {
+  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@autorefnum@@{}"</span>, sub[(ttype)] {
     <span class="kw">let </span>type_s  = ttype.unwrap().to_string();
-    <span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{type_s}autorefname&quot;</span>)))<span class="question-mark">?</span>.is_some() {
-      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="macro">format!</span>(<span class="string">&quot;\\{type_s}autorefname&quot;</span>)), <span class="macro">T_CS!</span>(<span class="string">&quot;\\nobreakspace&quot;</span>)]
+    <span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{type_s}autorefname"</span>)))<span class="question-mark">?</span>.is_some() {
+      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="macro">format!</span>(<span class="string">"\\{type_s}autorefname"</span>)), <span class="macro">T_CS!</span>(<span class="string">"\\nobreakspace"</span>)]
     } <span class="kw">else </span>{
       Vec::new()
     };
 
-    <span class="kw">let </span>counter_str = with_mapping(<span class="string">&quot;counter_for_type&quot;</span>,<span class="kw-2">&amp;</span>type_s, |mapping_opt|
+    <span class="kw">let </span>counter_str = with_mapping(<span class="string">"counter_for_type"</span>,<span class="kw-2">&amp;</span>type_s, |mapping_opt|
       mapping_opt.map(ToString::to_string)).unwrap_or(type_s);
 
-    <span class="kw">let </span>pcounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\p@{counter_str}&quot;</span>,));
-    <span class="kw">let </span>thecounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{counter_str}&quot;</span>));
+    <span class="kw">let </span>pcounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\p@{counter_str}"</span>,));
+    <span class="kw">let </span>thecounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{counter_str}"</span>));
     <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>pcounter)<span class="question-mark">?</span>.is_some() {
       tokens.push(pcounter);
     }
@@ -1301,91 +1337,91 @@
     Tokens::new(tokens)
   });
 
-  <span class="macro">Let!</span>(<span class="string">&quot;\\HyOrg@addtoreset&quot;</span>, <span class="string">&quot;\\@addtoreset&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\H@refstepcounter&quot;</span>, <span class="string">&quot;\\refstepcounter&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\HyOrg@addtoreset"</span>, <span class="string">"\\@addtoreset"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\H@refstepcounter"</span>, <span class="string">"\\refstepcounter"</span>);
 
-  <span class="macro">AssignMapping!</span>(<span class="string">&quot;type_tag_formatter&quot;</span>, <span class="string">&quot;autoref&quot; </span>=&gt; <span class="string">&quot;\\lx@autorefnum@@&quot;</span>);
+  <span class="macro">AssignMapping!</span>(<span class="string">"type_tag_formatter"</span>, <span class="string">"autoref" </span>=&gt; <span class="string">"\\lx@autorefnum@@"</span>);
 
   <span class="comment">// Blech...
   </span><span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@itemiautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@itemiautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@itemiiautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@itemiiautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@itemiiiautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@itemiiiautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@itemivautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@itemivautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@itemvautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@itemvautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@itemviautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@itemviautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\enumiautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\enumiautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\enumiiautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\enumiiautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\enumiiiautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\enumiiiautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\enumivautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\enumivautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@desciautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@desciautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@desciiautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@desciiautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@desciiiautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@desciiiautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@descivautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@descivautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@descvautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@descvautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
   <span class="macro">DefMacro!</span>(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@descviautorefname&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@descviautorefname"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\itemautorefname&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\itemautorefname"</span>)
   );
 
   <span class="comment">// Covered in LaTeX.pool, but non-ref character is ignored.
@@ -1394,39 +1430,39 @@
 
   // I wonder if this is good enough for our context?
   // \pdfstringdef{macroname}{texstring}
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfstringdef{Token}{}&quot;</span>, <span class="string">&quot;\\def#1{#2}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfstringdef{Token}{}"</span>, <span class="string">"\\def#1{#2}"</span>);
   <span class="comment">// Hopefully noop is sufficient for PDF-specific uses?
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfstringdefDisableCommands&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfbookmark[]{}{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\currentpdfbookmark{}{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\subpdfbookmark{}{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\belowpdfbookmark{}{}&quot;</span>, <span class="string">&quot;&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfstringdefDisableCommands"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfbookmark[]{}{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\currentpdfbookmark{}{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\subpdfbookmark{}{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\belowpdfbookmark{}{}"</span>, <span class="string">""</span>);
 
   <span class="comment">//======================================================================
   // 4.1 Replacement macros
 
   // \texorpdfstring{TeXString}{PDFstring}
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\texorpdfstring{}{}&quot;</span>, <span class="string">&quot;#1&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\texorpdfstring{}{}"</span>, <span class="string">"#1"</span>);
 
-  <span class="comment">// if (!IsDefined(T_CS(&quot;\\pdfstringdefPreHook&quot;))) {
-  //   Let(&#39;\pdfstringdefPreHook&#39;, &#39;\@empty&#39;); }
-  // if (!IsDefined(T_CS(&quot;\\pdfstringdefPostHook&quot;))) {
-  //   Let(&#39;\pdfstringdefPostHook&#39;, &#39;\@gobble&#39;); }
+  <span class="comment">// if (!IsDefined(T_CS("\\pdfstringdefPreHook"))) {
+  //   Let('\pdfstringdefPreHook', '\@empty'); }
+  // if (!IsDefined(T_CS("\\pdfstringdefPostHook"))) {
+  //   Let('\pdfstringdefPostHook', '\@gobble'); }
 
   //======================================================================
   // 4.2 Utility macros
   // \hypercalcbp{dimen}
-  // DefMacro(&#39;\hypercalcbp{Dimension}&#39;, sub {
+  // DefMacro('\hypercalcbp{Dimension}', sub {
   //     my ($gullet, $dimen) = @_;
-  //     Explode($dimen-&gt;valueOf / $state-&gt;convertUnit(&#39;bp&#39;)); });
+  //     Explode($dimen-&gt;valueOf / $state-&gt;convertUnit('bp')); });
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // 5 Acrobat-specific behaviour
 
   // \Acrobatmenu{menuoption}{text}
   // These create buttons that activate Acrobat Reader or Exchange actions.
-  // It&#39;s doubtful that they have meaningful analogs in our context?
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\Acrobatmenu{}{}&quot;</span>, <span class="string">&quot;[#1 Button: #2]&quot;</span>);
+  // It's doubtful that they have meaningful analogs in our context?
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Acrobatmenu{}{}"</span>, <span class="string">"[#1 Button: #2]"</span>);
 
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // 6 PDF and HTML forms
@@ -1443,7 +1479,7 @@
   // \Reset[parameters]{label}
   //----------------------------------------------------------------------
   // Layout:
-  //  typically:  &quot;#1 #2&quot;
+  //  typically:  "#1 #2"
   // \LayoutTextField{label}{field}
   // \LayoutChoiceField{label}{field}
   // \LayoutCheckField{label}{field}
@@ -1469,15 +1505,15 @@
 
   // #### ProcessOptions();
   // # Note that hyperref uses keyval + kvoptions
-  // if (my $options = LookupValue(&#39;opt@hyperref.sty&#39;)) {
+  // if (my $options = LookupValue('opt@hyperref.sty')) {
   //   foreach my $option (@$options) {
-  //     if ($option eq &#39;colorlinks&#39;) {
-  //       RequirePackage(&#39;color&#39;); }
+  //     if ($option eq 'colorlinks') {
+  //       RequirePackage('color'); }
   //     elsif (my ($key, $value) = $option =~ /^(.*?)\s*=\s*(.*?)$/) {
   //       hyperref_setoption($key, $value); } } }
 
   </span><span class="macro">RawTeX!</span>(
-    <span class="string">r###&quot;
+    <span class="string">r#"
 \def\HyLang@afrikaans{%
   \def\equationautorefname{Vergelyking}%
   \def\footnoteautorefname{Voetnota}%
@@ -1515,7 +1551,7 @@
   \def\pageautorefname{page}%
 }
 \def\HyLang@french{%
-  \def\equationautorefname{\&#39;Equation}%
+  \def\equationautorefname{\'Equation}%
   \def\footnoteautorefname{note}%
   \def\itemautorefname{item}%
   \def\figureautorefname{Figure}%
@@ -1529,7 +1565,7 @@
   \def\paragraphautorefname{paragraphe}%
   \def\subparagraphautorefname{sous-paragraphe}%
   \def\FancyVerbLineautorefname{ligne}%
-  \def\theoremautorefname{Th\&#39;eor\`eme}%
+  \def\theoremautorefname{Th\'eor\`eme}%
   \def\pageautorefname{page}%
 }
 \def\HyLang@german{%
@@ -1570,39 +1606,39 @@
 }
 \def\HyLang@magyar{%
   \def\equationautorefname{Egyenlet}%
-  \def\footnoteautorefname{l\&#39;abjegyzet}%
+  \def\footnoteautorefname{l\'abjegyzet}%
   \def\itemautorefname{Elem}%
-  \def\figureautorefname{\&#39;Abra}%
-  \def\tableautorefname{T\&#39;abl\&#39;azat}%
-  \def\partautorefname{R\&#39;esz}%
-  \def\appendixautorefname{F\&quot;uggel\&#39;ek}%
+  \def\figureautorefname{\'Abra}%
+  \def\tableautorefname{T\'abl\'azat}%
+  \def\partautorefname{R\'esz}%
+  \def\appendixautorefname{F\"uggel\'ek}%
   \def\chapterautorefname{fejezet}%
   \def\sectionautorefname{szakasz}%
   \def\subsectionautorefname{alszakasz}%
   \def\subsubsectionautorefname{alalszakasz}%
-  \def\paragraphautorefname{bekezd\&#39;es}%
-  \def\subparagraphautorefname{albekezd\&#39;es}%
+  \def\paragraphautorefname{bekezd\'es}%
+  \def\subparagraphautorefname{albekezd\'es}%
   \def\FancyVerbLineautorefname{sor}%
-  \def\theoremautorefname{T\&#39;etel}%
+  \def\theoremautorefname{T\'etel}%
   \def\pageautorefname{oldal}%
 }
 \def\HyLang@portuges{%
   \def\equationautorefname{Equa\c c\~ao}%
-  \def\footnoteautorefname{Nota de rodap\&#39;e}%
+  \def\footnoteautorefname{Nota de rodap\'e}%
   \def\itemautorefname{Item}%
   \def\figureautorefname{Figura}%
   \def\tableautorefname{Tabela}%
   \def\partautorefname{Parte}%
   \def\appendixautorefname{Ap\^endice}%
-  \def\chapterautorefname{Cap\&#39;itulo}%
+  \def\chapterautorefname{Cap\'itulo}%
   \def\sectionautorefname{Se\c c\~ao}%
   \def\subsectionautorefname{Subse\c c\~ao}%
   \def\subsubsectionautorefname{Subsubse\c c\~ao}%
-  \def\paragraphautorefname{par\&#39;agrafo}%
-  \def\subparagraphautorefname{subpar\&#39;agrafo}%
+  \def\paragraphautorefname{par\'agrafo}%
+  \def\subparagraphautorefname{subpar\'agrafo}%
   \def\FancyVerbLineautorefname{linha}%
   \def\theoremautorefname{Teorema}%
-  \def\pageautorefname{P\&#39;agina}%
+  \def\pageautorefname{P\'agina}%
 }
 \def\HyLang@russian{%
   \def\equationautorefname{\cyr\cyrv\cyrery\cyrr.}%
@@ -1625,44 +1661,44 @@
   \def\pageautorefname{\cyr\cyrs.}%
 }
 \def\HyLang@spanish{%
-  \def\equationautorefname{Ecuaci\&#39;on}%
-  \def\footnoteautorefname{Nota a pie de p\&#39;agina}%
+  \def\equationautorefname{Ecuaci\'on}%
+  \def\footnoteautorefname{Nota a pie de p\'agina}%
   \def\itemautorefname{Elemento}%
   \def\figureautorefname{Figura}%
   \def\tableautorefname{Tabla}%
   \def\partautorefname{Parte}%
-  \def\appendixautorefname{Ap\&#39;endice}%
-  \def\chapterautorefname{Cap\&#39;itulo}%
-  \def\sectionautorefname{Secci\&#39;on}%
-  \def\subsectionautorefname{Subsecci\&#39;on}%
-  \def\subsubsectionautorefname{Subsubsecci\&#39;on}%
-  \def\paragraphautorefname{P\&#39;arrafo}%
-  \def\subparagraphautorefname{Subp\&#39;arrafo}%
-  \def\FancyVerbLineautorefname{L\&#39;inea}%
+  \def\appendixautorefname{Ap\'endice}%
+  \def\chapterautorefname{Cap\'itulo}%
+  \def\sectionautorefname{Secci\'on}%
+  \def\subsectionautorefname{Subsecci\'on}%
+  \def\subsubsectionautorefname{Subsubsecci\'on}%
+  \def\paragraphautorefname{P\'arrafo}%
+  \def\subparagraphautorefname{Subp\'arrafo}%
+  \def\FancyVerbLineautorefname{L\'inea}%
   \def\theoremautorefname{Teorema}%
-  \def\pageautorefname{P\&#39;agina}%
+  \def\pageautorefname{P\'agina}%
 }
 \def\HyLang@catalan{%
-\def\equationautorefname{Equaci\&#39;o}%
+\def\equationautorefname{Equaci\'o}%
 \def\footnoteautorefname{Nota al peu de p\`agina}%
 \def\itemautorefname{Element}%
 \def\figureautorefname{Figura}%
 \def\tableautorefname{Taula}%
 \def\partautorefname{Part}%
 \def\appendixautorefname{Ap\`endix}%
-\def\chapterautorefname{Cap\&#39;itol}%
-\def\sectionautorefname{Secci\&#39;o}%
-\def\subsectionautorefname{Subsecci\&#39;o}%
-\def\subsubsectionautorefname{Subsubsecci\&#39;o}%
+\def\chapterautorefname{Cap\'itol}%
+\def\sectionautorefname{Secci\'o}%
+\def\subsectionautorefname{Subsecci\'o}%
+\def\subsubsectionautorefname{Subsubsecci\'o}%
 \def\paragraphautorefname{Par\`agraf}%
 \def\subparagraphautorefname{Subpar\`agraf}%
-\def\FancyVerbLineautorefname{L\&#39;inia}%
+\def\FancyVerbLineautorefname{L\'inia}%
 \def\theoremautorefname{Teorema}%
 \def\pageautorefname{P\`agina}%
 }
 \def\HyLang@vietnamese{%
   \def\equationautorefname{Ph\uhorn{}\ohorn{}ng tr\`inh}%
-  \def\footnoteautorefname{Ch\&#39;u th\&#39;ich}%
+  \def\footnoteautorefname{Ch\'u th\'ich}%
   \def\itemautorefname{m\d{u}c}%
   \def\figureautorefname{H\`inh}%
   \def\tableautorefname{B\h{a}ng}%
@@ -1675,12 +1711,12 @@
   \def\paragraphautorefname{\dj{}o\d{a}n}%
   \def\subparagraphautorefname{\dj{}o\d{a}n}%
   \def\FancyVerbLineautorefname{d\`ong}%
-  \def\theoremautorefname{\DJ{}\d{i}nh l\&#39;y}%
+  \def\theoremautorefname{\DJ{}\d{i}nh l\'y}%
   \def\pageautorefname{Trang}%
 }
 % For now...
 \HyLang@english
-&quot;###
+"#
   </span>);
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 </span>});

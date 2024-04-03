@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/model.rs`."><title>model.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/model.rs`."><title>model.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -799,6 +801,43 @@
 <a href="#799" id="799">799</a>
 <a href="#800" id="800">800</a>
 <a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
@@ -806,7 +845,6 @@
 <span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::io::BufRead;
 <span class="kw">use </span>std::io::BufReader;
-<span class="kw">use </span>std::string::ToString;
 <span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, ANY_SYM};
@@ -824,15 +862,15 @@
 
 <span class="comment">// use common::font::*;
 
-</span><span class="kw">pub const </span>LTX_NAMESPACE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;http://dlmf.nist.gov/LaTeXML&quot;</span>;
+</span><span class="kw">pub const </span>LTX_NAMESPACE: <span class="kw-2">&amp;</span>str = <span class="string">"http://dlmf.nist.gov/LaTeXML"</span>;
 <span class="kw">pub type </span>IndirectModel = HashMap&lt;SymbolU32, HashMap&lt;SymbolU32, SymbolU32&gt;&gt;;
 
-<span class="kw">static </span>PREFIXED_LOCALNAME_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^([^:]+):(.+)$&quot;</span>).unwrap());
-<span class="kw">static </span>CAPTURE_TAG_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;(.*?:)?_Capture_$&quot;</span>).unwrap());
+<span class="kw">static </span>PREFIXED_LOCALNAME_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^([^:]+):(.+)$"</span>).unwrap());
+<span class="kw">static </span>CAPTURE_TAG_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"(.*?:)?_Capture_$"</span>).unwrap());
 <span class="kw">static </span>TAG_MODEL_LINE_RE: Lazy&lt;Regex&gt; =
-  Lazy::new(|| Regex::new(<span class="string">r&quot;^([^\{]+)\{(.*?)\}\((.*?)\)$&quot;</span>).unwrap());
-<span class="kw">static </span>CLASS_MODEL_LINE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^([^:=]+):=(.*?)$&quot;</span>).unwrap());
-<span class="kw">static </span>NAMESPACE_MODEL_LINE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^([^=]+)=(.*?)$&quot;</span>).unwrap());
+  Lazy::new(|| Regex::new(<span class="string">r"^([^\{]+)\{(.*?)\}\((.*?)\)$"</span>).unwrap());
+<span class="kw">static </span>CLASS_MODEL_LINE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^([^:=]+):=(.*?)$"</span>).unwrap());
+<span class="kw">static </span>NAMESPACE_MODEL_LINE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^([^=]+)=(.*?)$"</span>).unwrap());
 
 <span class="attr">#[derive(Default, Debug)]
 </span><span class="kw">pub struct </span>TagFrame {
@@ -863,10 +901,10 @@
 <span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>MODEL : Lazy&lt;RefCell&lt;Model&gt;&gt; = Lazy::new(|| RefCell::new(Model::new()));
 
-<span class="macro">macro_rules! </span>model {
+<span class="macro">macro_rules!</span> model {
   () =&gt; ((<span class="kw-2">*</span>MODEL).borrow())
 }
-<span class="macro">macro_rules! </span>model_mut {
+<span class="macro">macro_rules!</span> model_mut {
   () =&gt; ((<span class="kw-2">*</span>MODEL).borrow_mut())
 }
 
@@ -878,9 +916,9 @@
 <span class="kw">impl </span>Model {
   <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
     <span class="kw">let </span><span class="kw-2">mut </span>model = Model::default();
-    <span class="comment">// model.xpath.register_function(&quot;match-font&quot;, |x, y| {font::match_font(x,y)})
-    </span>model.register_namespace(<span class="string">&quot;xml&quot;</span>, <span class="prelude-val">Some</span>(XML_NS));
-    model.register_document_namespace(<span class="string">&quot;xml&quot;</span>, <span class="prelude-val">Some</span>(XML_NS));
+    <span class="comment">// model.xpath.register_function("match-font", |x, y| {font::match_font(x,y)})
+    </span>model.register_namespace(<span class="string">"xml"</span>, <span class="prelude-val">Some</span>(XML_NS));
+    model.register_document_namespace(<span class="string">"xml"</span>, <span class="prelude-val">Some</span>(XML_NS));
     model
   }
   <span class="doccomment">///**********************************************************************
@@ -895,7 +933,7 @@
   /// Document: this namespace mapping associates prefixes to namespace URIs
   ///   as used in the generated document, and will be the
   ///   set of prefixes used in the generated output.
-  ///   This mapping may also use a prefix of &quot;#default&quot; which is for
+  ///   This mapping may also use a prefix of "#default" which is for
   ///   the unprefixed form of elements (not used for attributes!)
   </span><span class="kw">pub fn </span>register_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, codeprefix: <span class="kw-2">&amp;</span>str, namespace_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) {
     <span class="self">self</span>.register_namespace_sym(arena::pin(codeprefix), namespace_opt.map(arena::pin))
@@ -933,10 +971,10 @@
     <span class="kw">match </span>namespace_opt {
       <span class="prelude-val">Some</span>(namespace) =&gt; {
         <span class="comment">// Since the default namespace url can still ALSO have a prefix associated,
-        // we prepend &quot;DEFAULT#url&quot; when using as a hash key in the prefixes table.
+        // we prepend "DEFAULT#url" when using as a hash key in the prefixes table.
         </span><span class="kw">let </span>ns_sym = arena::pin(namespace);
         <span class="kw">let </span>regnamespace = <span class="kw">if </span>docprefix_sym == default_sym {
-          arena::pin(<span class="macro">s!</span>(<span class="string">&quot;DEFAULT#{namespace}&quot;</span>))
+          arena::pin(<span class="macro">s!</span>(<span class="string">"DEFAULT#{namespace}"</span>))
         } <span class="kw">else </span>{
           ns_sym
         };
@@ -961,40 +999,41 @@
   /// For now, simply reimplementing the runtime loading of
   /// LaTeXML.model as-is from Model.pm
   </span><span class="kw">pub fn </span>load_compiled_schema(<span class="kw-2">&amp;mut </span><span class="self">self</span>, path: <span class="kw-2">&amp;</span>str) {
-    note_begin(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Loading compiled schema {}\n&quot;</span>, path));
+    note_begin(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Loading compiled schema {}\n"</span>, path));
     <span class="kw">let </span>compiled_fh = File::open(path).unwrap();
     <span class="kw">let </span>compiled_reader = BufReader::new(<span class="kw-2">&amp;</span>compiled_fh);
-    <span class="kw">for </span>line <span class="kw">in </span>compiled_reader.lines().flatten() {
+    <span class="kw">for </span>line_item <span class="kw">in </span>compiled_reader.lines().map_while(std::result::Result::ok) {
+      <span class="kw">let </span>line : String = line_item;
       <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = TAG_MODEL_LINE_RE.captures(<span class="kw-2">&amp;</span>line) {
-        <span class="kw">let </span>tag = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-        <span class="kw">let </span>attr = caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-        <span class="kw">let </span>children = caps.get(<span class="number">3</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-        <span class="self">self</span>.add_tag_attribute(tag, attr.split(<span class="string">&#39;,&#39;</span>).collect());
-        <span class="self">self</span>.add_tag_content(tag, children.split(<span class="string">&#39;,&#39;</span>).collect());
+        <span class="kw">let </span>tag = caps.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
+        <span class="kw">let </span>attr = caps.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str());
+        <span class="kw">let </span>children = caps.get(<span class="number">3</span>).map_or(<span class="string">""</span>, |m| m.as_str());
+        <span class="self">self</span>.add_tag_attribute(tag, attr.split(<span class="string">','</span>).collect());
+        <span class="self">self</span>.add_tag_content(tag, children.split(<span class="string">','</span>).collect());
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = CLASS_MODEL_LINE_RE.captures(<span class="kw-2">&amp;</span>line) {
-        <span class="kw">let </span>classname = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-        <span class="kw">let </span>elements = caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
+        <span class="kw">let </span>classname = caps.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
+        <span class="kw">let </span>elements = caps.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str());
         <span class="kw">let </span><span class="kw-2">mut </span>class_set = HashSet::default();
-        <span class="kw">for </span>set_element <span class="kw">in </span>elements.split(<span class="string">&#39;,&#39;</span>).collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;() {
+        <span class="kw">for </span>set_element <span class="kw">in </span>elements.split(<span class="string">','</span>).collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;() {
           class_set.insert(arena::pin(set_element));
         }
         <span class="self">self</span>.set_schema_class(classname, class_set);
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = NAMESPACE_MODEL_LINE_RE.captures(<span class="kw-2">&amp;</span>line) {
-        <span class="kw">let </span>prefix = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-        <span class="kw">let </span>namespace = caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
+        <span class="kw">let </span>prefix = caps.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
+        <span class="kw">let </span>namespace = caps.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str());
         <span class="self">self</span>.register_document_namespace(prefix, <span class="prelude-val">Some</span>(namespace));
       } <span class="kw">else </span>{
-        <span class="macro">panic!</span>(<span class="string">&quot;Fatal:internal:{path} Compiled model &#39;{path}&#39; is malformatted at \&quot;{line}\&quot;&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"Fatal:internal:{path} Compiled model '{path}' is malformatted at \"{line}\""</span>);
       }
     }
 
-    note_end(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Loading compiled schema {path}\n&quot;</span>));
+    note_end(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Loading compiled schema {path}\n"</span>));
   }
   <span class="kw">pub fn </span>add_tag_content(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, elements: Vec&lt;<span class="kw-2">&amp;</span>str&gt;) {
     <span class="kw">let </span>frame = <span class="self">self
       </span>.tagprop
       .entry(arena::pin(tag))
-      .or_insert_with(TagFrame::default);
+      .or_default();
 
     <span class="kw">for </span>element <span class="kw">in </span>elements {
       frame.model.insert(arena::pin(element));
@@ -1016,7 +1055,7 @@
     <span class="kw">let </span>frame = <span class="self">self
       </span>.tagprop
       .entry(arena::pin(tag))
-      .or_insert_with(TagFrame::default);
+      .or_default();
 
     <span class="kw">for </span>attribute <span class="kw">in </span>attributes {
       frame.attributes.insert(arena::pin(attribute));
@@ -1027,6 +1066,43 @@
     <span class="self">self</span>.schema_class.insert(arena::pin(classname), content);
   }
   <span class="kw">pub fn </span>describe_model(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
+  <span class="kw">fn </span>load_internal_extensions(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="kw">if </span>!<span class="self">self</span>.tagprop.contains_key(<span class="kw-2">&amp;</span>arena::pin_static(<span class="string">"ltx:_CaptureBlock_"</span>)) {
+      <span class="comment">// Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block, ltx:para,
+      </span><span class="self">self</span>.synthesize_element(<span class="string">"ltx:_CaptureBlock_"</span>,
+        <span class="kw-2">&amp;</span>[<span class="string">"ltx:block"</span>,<span class="string">"ltx:logical-block"</span>,<span class="string">"ltx:sectional-block"</span>,<span class="string">"Caption"</span>]);
+      <span class="kw">let </span>cb_entry = <span class="self">self</span>.tagprop.entry(arena::pin_static(<span class="string">"ltx:_CaptureBlock_"</span>))
+        .or_default();
+      cb_entry.model.insert(arena::pin_static(<span class="string">"svg:g"</span>));
+      cb_entry.model.insert(arena::pin_static(<span class="string">"svg:foreignObject"</span>));
+    }
+  }
+  
+  <span class="doccomment">/// Clone the tagprop's (allowed content &amp; attributes) of @other to $tag
+  </span><span class="kw">fn </span>synthesize_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, others: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) {
+    <span class="kw">let </span><span class="kw-2">mut </span>to_add_in_model = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>to_add_in_attrs = Vec::new();
+    <span class="kw">for </span>other <span class="kw">in </span>others {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = <span class="self">self</span>.schema_class.get(<span class="kw-2">&amp;</span>arena::pin(other)) {
+        <span class="kw">for </span>child <span class="kw">in </span>content {
+          to_add_in_model.push(<span class="kw-2">*</span>child); } }
+      <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.tagprop.get(<span class="kw-2">&amp;</span>arena::pin(other)) {
+        <span class="kw">for </span>child <span class="kw">in </span><span class="kw-2">&amp;</span>entry.model {
+          to_add_in_model.push(<span class="kw-2">*</span>child);
+        }
+        <span class="kw">for </span>attr <span class="kw">in </span><span class="kw-2">&amp;</span>entry.attributes {
+          to_add_in_attrs.push(<span class="kw-2">*</span>attr);
+        }
+      }
+    }
+    <span class="kw">let </span>capture = <span class="self">self</span>.tagprop.entry(arena::pin(tag)).or_default();
+    <span class="kw">for </span>child <span class="kw">in </span>to_add_in_model {
+      capture.model.insert(child);
+    }
+    <span class="kw">for </span>attr <span class="kw">in </span>to_add_in_attrs {
+      capture.attributes.insert(attr);
+    }
+  }
 }
 
 <span class="kw">pub fn </span>set_doc_type(roottag: <span class="kw-2">&amp;</span>str, publicid: <span class="kw-2">&amp;</span>str, systemid: <span class="kw-2">&amp;</span>str) {
@@ -1056,17 +1132,17 @@
   <span class="kw">let </span><span class="kw-2">mut </span>name = String::new();
   <span class="kw">if </span>model.schema_data.is_none() {
     <span class="comment">// TODO: Return this code path to normal once we properly load schemas
-    </span><span class="macro">Warn!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;model&gt;&quot;</span>, <span class="string">&quot;TODO&quot;</span>);
-    <span class="comment">// Warn(&#39;expected&#39;, &#39;&lt;model&gt;&#39;, undef, &quot;No Schema Model has been declared; assuming LaTeXML&quot;);
+    </span><span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;model&gt;"</span>, <span class="string">"TODO"</span>);
+    <span class="comment">// Warn('expected', '&lt;model&gt;', undef, "No Schema Model has been declared; assuming LaTeXML");
     // // article ??? or what ? undef gives problems!
 
-    </span>model.register_document_namespace(<span class="string">&quot;ltx&quot;</span>, <span class="prelude-val">Some</span>(LTX_NAMESPACE));
-    model.set_relaxng_schema(<span class="string">&quot;LaTeXML&quot;</span>);
-    model.register_namespace(<span class="string">&quot;ltx&quot;</span>, <span class="prelude-val">Some</span>(LTX_NAMESPACE));
-    model.register_namespace(<span class="string">&quot;svg&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;http://www.w3.org/2000/svg&quot;</span>));
-    model.register_namespace(<span class="string">&quot;xlink&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;http://www.w3.org/1999/xlink&quot;</span>)); <span class="comment">// Needed for SVG
-    </span>model.register_namespace(<span class="string">&quot;m&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;http://www.w3.org/1998/Math/MathML&quot;</span>));
-    model.register_namespace(<span class="string">&quot;xhtml&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;http://www.w3.org/1999/xhtml&quot;</span>));
+    </span>model.register_document_namespace(<span class="string">"ltx"</span>, <span class="prelude-val">Some</span>(LTX_NAMESPACE));
+    model.set_relaxng_schema(<span class="string">"LaTeXML"</span>);
+    model.register_namespace(<span class="string">"ltx"</span>, <span class="prelude-val">Some</span>(LTX_NAMESPACE));
+    model.register_namespace(<span class="string">"svg"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/2000/svg"</span>));
+    model.register_namespace(<span class="string">"xlink"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1999/xlink"</span>)); <span class="comment">// Needed for SVG
+    </span>model.register_namespace(<span class="string">"m"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1998/Math/MathML"</span>));
+    model.register_namespace(<span class="string">"xhtml"</span>, <span class="prelude-val">Some</span>(<span class="string">"http://www.w3.org/1999/xhtml"</span>));
     model.permissive = <span class="bool-val">true</span>;
   } <span class="comment">// Actually, they could have declared all sorts of Tags....
   </span><span class="kw">let </span><span class="kw-2">mut </span>schema_type = <span class="kw-2">*</span>EMPTY_SYM;
@@ -1078,10 +1154,10 @@
         <span class="comment">// NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
         // ($roottag, $publicid, $systemid) = @data;
         </span>name = arena::with(<span class="kw-2">*</span>data.last().unwrap(), |data_str| {
-          data_str.replace(<span class="string">&quot;.dtd&quot;</span>, <span class="string">&quot;&quot;</span>)
+          data_str.replace(<span class="string">".dtd"</span>, <span class="string">""</span>)
         });
         model.schema = <span class="prelude-val">Some</span>(Relaxng {
-          name: <span class="string">&quot;DTD&quot;</span>.to_string(), <span class="comment">// HACK, phase out DTD support!
+          name: <span class="string">"DTD"</span>.to_string(), <span class="comment">// HACK, phase out DTD support!
           </span>..Relaxng::default()
         });
         <span class="comment">// $systemid);
@@ -1093,9 +1169,9 @@
         });
       } <span class="kw">else </span>{
         <span class="kw">let </span>message = arena::with(schema_type, |schema_type_str| {
-          <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t load a schema of type {schema_type_str:?}&quot;</span>)
+          <span class="macro">s!</span>(<span class="string">"Can't load a schema of type {schema_type_str:?}"</span>)
         });
-        <span class="macro">Error!</span>(<span class="string">&quot;unknown&quot;</span>, <span class="string">&quot;schematype&quot;</span>, message)
+        <span class="macro">Error!</span>(<span class="string">"unknown"</span>, <span class="string">"schematype"</span>, message)
       }
     },
   };
@@ -1110,8 +1186,8 @@
       <span class="kw-2">&amp;</span>name,
       pathname::PathnameFindOptions {
         paths,
-        extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">&quot;model&quot;</span>)]),
-        installation_subdir: <span class="prelude-val">Some</span>(arena::with(schema_type, |str| <span class="macro">s!</span>(<span class="string">&quot;resources/{str}&quot;</span>))),
+        extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"model"</span>)]),
+        installation_subdir: <span class="prelude-val">Some</span>(arena::with(schema_type, |str| <span class="macro">s!</span>(<span class="string">"resources/{str}"</span>))),
       },
     );
 
@@ -1120,7 +1196,7 @@
       <span class="prelude-val">None </span>=&gt; model.schema.as_mut().unwrap().load_schema(),
     };
   }
-
+  model.load_internal_extensions();
   <span class="kw">if </span>model.debug_mode {
     model.describe_model()
   }
@@ -1134,12 +1210,12 @@
   probe: bool,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; {
   <span class="comment">// Get the prefix associated with the namespace url, noting that for elements, it might by
-  // &quot;#default&quot;, but for attributes would never be.
-  // log!(&quot;Searching for {:?} in {:?}&quot;, namespace, self.document_namespace_prefixes);
+  // "#default", but for attributes would never be.
+  // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
   </span><span class="kw">let </span><span class="kw-2">mut </span>docprefix = <span class="kw">if </span>!forattribute {
     <span class="macro">model!</span>()
       .document_namespace_prefixes
-      .get(<span class="kw-2">&amp;</span>arena::pin(<span class="macro">s!</span>(<span class="string">&quot;DEFAULT#{namespace}&quot;</span>)))
+      .get(<span class="kw-2">&amp;</span>arena::pin(<span class="macro">s!</span>(<span class="string">"DEFAULT#{namespace}"</span>)))
       .copied()
   } <span class="kw">else </span>{
     <span class="prelude-val">None
@@ -1151,18 +1227,18 @@
 
   <span class="kw">if </span>docprefix.is_none() &amp;&amp; !probe {
     { <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>; }
-    <span class="kw">let </span>ns_err = <span class="macro">s!</span>(<span class="string">&quot;namespace{}&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string());
+    <span class="kw">let </span>ns_err = <span class="macro">s!</span>(<span class="string">"namespace{}"</span>, <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string());
     docprefix = <span class="prelude-val">Some</span>(arena::pin(<span class="kw-2">&amp;</span>ns_err));
     { <span class="macro">model_mut!</span>().register_document_namespace(<span class="kw-2">&amp;</span>ns_err, <span class="prelude-val">Some</span>(namespace)); }
     <span class="kw">let </span>message2 = <span class="kw">if let </span><span class="prelude-val">Some</span>(dp) = docprefix {
-      arena::with(dp, |dp_str| <span class="macro">s!</span>(<span class="string">&quot;Using &#39;{dp_str}&#39; instead&quot;</span>))
+      arena::with(dp, |dp_str| <span class="macro">s!</span>(<span class="string">"Using '{dp_str}' instead"</span>))
     } <span class="kw">else </span>{
-      String::from(<span class="string">&quot;No prefix to fall back on.&quot;</span>)
+      String::from(<span class="string">"No prefix to fall back on."</span>)
     };
     <span class="macro">Warn!</span>(
-      <span class="string">&quot;malformed&quot;</span>,
+      <span class="string">"malformed"</span>,
       namespace,
-      <span class="string">&quot;No prefix has been registered for namespace (in document)&quot;</span>,
+      <span class="string">"No prefix has been registered for namespace (in document)"</span>,
       message2
     );
   }
@@ -1180,8 +1256,8 @@
   <span class="kw">let </span>ns_str = <span class="kw">match </span><span class="macro">model!</span>().document_namespaces.get(<span class="kw-2">&amp;</span>docprefix_sym) {
     <span class="prelude-val">None </span>=&gt; String::new(),
     <span class="prelude-val">Some</span>(sym) =&gt; arena::with(<span class="kw-2">*</span>sym, |s| {
-      <span class="kw">if </span>s.starts_with(<span class="string">&quot;DEFAULT#&quot;</span>) {
-        s.replacen(<span class="string">&quot;DEFAULT#&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="number">1</span>)
+      <span class="kw">if </span>s.starts_with(<span class="string">"DEFAULT#"</span>) {
+        s.replacen(<span class="string">"DEFAULT#"</span>, <span class="string">""</span>, <span class="number">1</span>)
       } <span class="kw">else </span>{
         s.to_string()
       }
@@ -1191,15 +1267,15 @@
   <span class="kw">if </span>docprefix_sym != h_default_sym &amp;&amp; ns_str.is_empty() &amp;&amp; !probe {
     { <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>; }
     <span class="kw">let </span>ns_error = <span class="macro">s!</span>(
-      <span class="string">&quot;http://example.com/namespace{}&quot;</span>,
+      <span class="string">"http://example.com/namespace{}"</span>,
       <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string()
     );
     { <span class="macro">model_mut!</span>().register_document_namespace(docprefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ns_error)); }
     <span class="kw">let </span>msg1 = arena::with(docprefix_sym, |dp_str| {
-      <span class="macro">s!</span>(<span class="string">&quot;No namespace has been registered for prefix &#39;{dp_str}&#39; (in document)&quot;</span>)
+      <span class="macro">s!</span>(<span class="string">"No namespace has been registered for prefix '{dp_str}' (in document)"</span>)
     });
-    <span class="kw">let </span>msg2 = <span class="macro">s!</span>(<span class="string">&quot;Using &#39;{ns_str}&#39; instead&quot;</span>);
-    <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, docprefix, msg1, msg2); <span class="prelude-val">Ok</span>(()) };
+    <span class="kw">let </span>msg2 = <span class="macro">s!</span>(<span class="string">"Using '{ns_str}' instead"</span>);
+    <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"malformed"</span>, docprefix, msg1, msg2); <span class="prelude-val">Ok</span>(()) };
     err().ok();
   }
   <span class="kw">if </span>ns_str.is_empty() {
@@ -1228,7 +1304,7 @@
     <span class="kw">if </span>codeprefix.is_some() &amp;&amp; !probe {
       {
         <span class="kw">let </span>docprefix = model.document_namespace_prefixes.get(<span class="kw-2">&amp;</span>ns_sym);
-        <span class="comment">// if there&#39;s a doc prefix and it&#39;s NOT already used in code namespace mapping
+        <span class="comment">// if there's a doc prefix and it's NOT already used in code namespace mapping
         </span><span class="kw">if </span>docprefix.is_some() &amp;&amp; !model.code_namespaces.contains_key(docprefix.unwrap()) {
           codeprefix = docprefix.copied();
         }
@@ -1236,13 +1312,13 @@
     } <span class="kw">else </span>{
       <span class="comment">// Else synthesize one
       </span>model.namespace_errors += <span class="number">1</span>;
-      <span class="kw">let </span>auto_prefix = arena::pin(<span class="macro">s!</span>(<span class="string">&quot;namespace{}&quot;</span>, <span class="kw-2">&amp;</span>model.namespace_errors.to_string()));
+      <span class="kw">let </span>auto_prefix = arena::pin(<span class="macro">s!</span>(<span class="string">"namespace{}"</span>, <span class="kw-2">&amp;</span>model.namespace_errors.to_string()));
       codeprefix = <span class="prelude-val">Some</span>(auto_prefix);
     }
     model.register_namespace_sym(codeprefix.unwrap(), <span class="prelude-val">Some</span>(arena::pin(namespace)));
-    <span class="comment">// Warn!(&#39;malformed&#39;, $namespace, undef,
-    //   &quot;No prefix has been registered for namespace &#39;$namespace&#39; (in code)&quot;,
-    //   &quot;Using &#39;$codeprefix&#39; instead&quot;); }
+    <span class="comment">// Warn!('malformed', $namespace, undef,
+    //   "No prefix has been registered for namespace '$namespace' (in code)",
+    //   "Using '$codeprefix' instead"); }
   </span>}
 
   codeprefix
@@ -1254,50 +1330,50 @@
   <span class="kw">if </span>ns.is_none() &amp;&amp; !probe {
     model.namespace_errors += <span class="number">1</span>;
     <span class="kw">let </span>example_namespace = <span class="macro">s!</span>(
-      <span class="string">&quot;http://example.com/namespace{}&quot;</span>,
+      <span class="string">"http://example.com/namespace{}"</span>,
       <span class="kw-2">&amp;</span>model.namespace_errors.to_string()
     );
     ns = <span class="prelude-val">Some</span>(arena::pin(<span class="kw-2">&amp;</span>example_namespace));
     model.register_namespace(codeprefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>example_namespace));
     <span class="macro">Error!</span>(
-      <span class="string">&quot;malformed&quot;</span>,
+      <span class="string">"malformed"</span>,
       codeprefix,
-      <span class="macro">s!</span>(<span class="string">&quot;No namespace has been registered for prefix &#39;{codeprefix}&#39; (in code)&quot;</span>),
-      <span class="macro">s!</span>(<span class="string">&quot;Using &#39;{example_namespace}&#39; instead&quot;</span>)
+      <span class="macro">s!</span>(<span class="string">"No namespace has been registered for prefix '{codeprefix}' (in code)"</span>),
+      <span class="macro">s!</span>(<span class="string">"Using '{example_namespace}' instead"</span>)
     );
   }
   <span class="prelude-val">Ok</span>(ns)
 }
 
-<span class="doccomment">/// Get the node&#39;s qualified name in standard form
+<span class="doccomment">/// Get the node's qualified name in standard form
 /// Ie. using the registered (code) prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
 </span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymbolU32 {
   <span class="kw">use </span>libxml::tree::NodeType::<span class="kw-2">*</span>;
   <span class="kw">let </span>node_type = node.get_type();
   <span class="kw">if </span>node_type.is_none() {
-    <span class="kw">return </span>arena::pin_static(<span class="string">&quot;#BrokenNode&quot;</span>);
+    <span class="kw">return </span>arena::pin_static(<span class="string">"#BrokenNode"</span>);
   }
   <span class="kw">match </span>node_type.unwrap() {
-    TextNode =&gt; arena::pin_static(<span class="string">&quot;#PCDATA&quot;</span>),
-    DocumentNode =&gt; arena::pin_static(<span class="string">&quot;#Document&quot;</span>),
-    CommentNode =&gt; arena::pin_static(<span class="string">&quot;#Comment&quot;</span>),
-    PiNode =&gt; arena::pin_static(<span class="string">&quot;#ProcessingInstruction&quot;</span>),
-    DTDNode =&gt; arena::pin_static(<span class="string">&quot;#DTD&quot;</span>),
+    TextNode =&gt; arena::pin_static(<span class="string">"#PCDATA"</span>),
+    DocumentNode =&gt; arena::pin_static(<span class="string">"#Document"</span>),
+    CommentNode =&gt; arena::pin_static(<span class="string">"#Comment"</span>),
+    PiNode =&gt; arena::pin_static(<span class="string">"#ProcessingInstruction"</span>),
+    DTDNode =&gt; arena::pin_static(<span class="string">"#DTD"</span>),
     NamespaceDecl =&gt; {
       <span class="comment">// match node.declared_uri() {
       //   Some(ns) =&gt; match self.get_namespace_prefix(ns, false, true) {
-      //     Some(prefix) =&gt; s!(&quot;xmlns:&quot;)+prefix,
-      //     None =&gt; s!(&quot;xmlns&quot;)
+      //     Some(prefix) =&gt; s!("xmlns:")+prefix,
+      //     None =&gt; s!("xmlns")
       //   },
-      //   None =&gt; s!(&quot;xmlns&quot;)
+      //   None =&gt; s!("xmlns")
       // }
-      </span>arena::pin_static(<span class="string">&quot;xmlns&quot;</span>)
+      </span>arena::pin_static(<span class="string">"xmlns"</span>)
     },
     ElementNode | AttributeNode =&gt; {
       <span class="comment">// match node.namespace_uri() {
       //   Some(ns) =&gt; match self.get_namespace_prefix(ns, false, true) {
-      //     Some(prefix) =&gt; prefx+&quot;:&quot;+node.get_name(),
+      //     Some(prefix) =&gt; prefx+":"+node.get_name(),
       //     None =&gt; node.get_name()
       //   },
       //   None =&gt; node.get_name()
@@ -1305,13 +1381,13 @@
       // TODO: Mock for now, add namespace_uri capability to rust-libxml next
       </span><span class="kw">let </span>name_str = node.get_name();
       <span class="kw">match </span>name_str.as_str() {
-        <span class="string">&quot;song&quot; </span>| <span class="string">&quot;verse&quot; </span>| <span class="string">&quot;line&quot; </span>=&gt; arena::pin(name_str),
-        regular =&gt; arena::pin(<span class="macro">s!</span>(<span class="string">&quot;ltx:{}&quot;</span>, regular)),
+        <span class="string">"song" </span>| <span class="string">"verse" </span>| <span class="string">"line" </span>=&gt; arena::pin(name_str),
+        regular =&gt; arena::pin(<span class="macro">s!</span>(<span class="string">"ltx:{}"</span>, regular)),
       }
     },
     <span class="comment">// Need others?
     </span>t =&gt; {
-      <span class="macro">panic!</span>(<span class="string">&quot;Fatal:misdefined:&lt;caller&gt; should not ask for qualified name for node of type {t:?}&quot;</span>)
+      <span class="macro">panic!</span>(<span class="string">"Fatal:misdefined:&lt;caller&gt; should not ask for qualified name for node of type {t:?}"</span>)
     },
   }
 }
@@ -1327,22 +1403,22 @@
   <span class="kw">use </span>libxml::tree::NodeType::<span class="kw-2">*</span>;
   <span class="kw">let </span>node_type = node.get_type();
   <span class="kw">if </span>node_type.is_none() {
-    <span class="kw">return </span>arena::pin_static(<span class="string">&quot;#BrokenNode&quot;</span>);
+    <span class="kw">return </span>arena::pin_static(<span class="string">"#BrokenNode"</span>);
   }
 
   <span class="kw">match </span>node_type.unwrap() {
-    TextNode =&gt; arena::pin_static(<span class="string">&quot;#PCDATA&quot;</span>),
-    DocumentNode =&gt; arena::pin_static(<span class="string">&quot;#Document&quot;</span>),
-    CommentNode =&gt; arena::pin_static(<span class="string">&quot;#Comment&quot;</span>),
-    PiNode =&gt; arena::pin_static(<span class="string">&quot;#ProcessingInstruction&quot;</span>),
-    DTDNode =&gt; arena::pin_static(<span class="string">&quot;#DTD&quot;</span>),
+    TextNode =&gt; arena::pin_static(<span class="string">"#PCDATA"</span>),
+    DocumentNode =&gt; arena::pin_static(<span class="string">"#Document"</span>),
+    CommentNode =&gt; arena::pin_static(<span class="string">"#Comment"</span>),
+    PiNode =&gt; arena::pin_static(<span class="string">"#ProcessingInstruction"</span>),
+    DTDNode =&gt; arena::pin_static(<span class="string">"#DTD"</span>),
 
     <span class="comment">// TODO
     // elsif ($type == XML_NAMESPACE_DECL) {
     //   my $ns = $node-&gt;declaredURI;
     //   my $prefix = $ns &amp;&amp; $self-&gt;getDocumentNamespacePrefix($ns, 0, 1);
-    //   return ($prefix ? &#39;xmlns:&#39; . $prefix : &#39;xmlns&#39;); }
-    </span>NamespaceDecl =&gt; arena::pin_static(<span class="string">&quot;xmlns&quot;</span>),
+    //   return ($prefix ? 'xmlns:' . $prefix : 'xmlns'); }
+    </span>NamespaceDecl =&gt; arena::pin_static(<span class="string">"xmlns"</span>),
 
     ElementNode | AttributeNode =&gt; {
       <span class="kw">let </span>empty_sym = <span class="kw-2">*</span>EMPTY_SYM;
@@ -1358,13 +1434,13 @@
         arena::pin(node.get_name())
       } <span class="kw">else </span>{
         arena::pin(arena::with(prefix, |prefix_str| {
-          <span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, prefix_str, node.get_name())
+          <span class="macro">s!</span>(<span class="string">"{}:{}"</span>, prefix_str, node.get_name())
         }))
       }
     },
     <span class="comment">// Need others?
     </span>t =&gt; {
-      <span class="macro">panic!</span>(<span class="string">&quot;Fatal:misdefined:&lt;caller&gt; should not ask for qualified name for node of type {t:?}&quot;</span>)
+      <span class="macro">panic!</span>(<span class="string">"Fatal:misdefined:&lt;caller&gt; should not ask for qualified name for node of type {t:?}"</span>)
     },
   }
 }
@@ -1375,10 +1451,10 @@
 </span><span class="kw">pub fn </span>decode_qname(codetag: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, String)&gt; {
   <span class="kw">match </span>PREFIXED_LOCALNAME_RE.captures(codetag) {
     <span class="prelude-val">Some</span>(captures) =&gt; {
-      <span class="kw">let </span>prefix = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-      <span class="kw">let </span>localname = captures.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
+      <span class="kw">let </span>prefix = captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
+      <span class="kw">let </span>localname = captures.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str());
 
-      <span class="kw">if </span>prefix == <span class="string">&quot;xml&quot; </span>{
+      <span class="kw">if </span>prefix == <span class="string">"xml" </span>{
         <span class="prelude-val">Ok</span>((<span class="prelude-val">None</span>, codetag.to_string()))
       } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>((
@@ -1435,7 +1511,7 @@
   </span><span class="kw">let </span>model_entry = <span class="kw-2">&amp;mut </span>model
     .tagprop
     .entry(tag)
-    .or_insert_with(TagFrame::default)
+    .or_default()
     .model;
   model_entry.contains(<span class="kw-2">&amp;</span>ANY_SYM) || model_entry.contains(<span class="kw-2">&amp;</span>child)
 }
@@ -1444,8 +1520,8 @@
 </span><span class="kw">pub fn </span>can_contain(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
   <span class="comment">// Handle obvious cases explicitly.
   </span><span class="kw">match </span>tag {
-    <span class="string">&quot;#PCDATA&quot; </span>| <span class="string">&quot;#Comment&quot; </span>| <span class="string">&quot;&quot; </span>=&gt; <span class="kw">return </span><span class="bool-val">false</span>,
-    <span class="string">&quot;_WildCard_&quot; </span>=&gt; <span class="kw">return </span><span class="bool-val">true</span>,
+    <span class="string">"#PCDATA" </span>| <span class="string">"#Comment" </span>| <span class="string">"" </span>=&gt; <span class="kw">return </span><span class="bool-val">false</span>,
+    <span class="string">"_WildCard_" </span>=&gt; <span class="kw">return </span><span class="bool-val">true</span>,
     <span class="kw">_ </span>=&gt; {},
   };
   <span class="kw">if </span>CAPTURE_TAG_RE.is_match(tag) || CAPTURE_TAG_RE.is_match(child) {
@@ -1454,11 +1530,11 @@
   }
 
   <span class="kw">match </span>child {
-    <span class="string">&quot;_WildCard_&quot; </span>| <span class="string">&quot;#Comment&quot; </span>| <span class="string">&quot;#ProcessingInstruction&quot; </span>| <span class="string">&quot;#DTD&quot; </span>=&gt; <span class="kw">return </span><span class="bool-val">true</span>,
+    <span class="string">"_WildCard_" </span>| <span class="string">"#Comment" </span>| <span class="string">"#ProcessingInstruction" </span>| <span class="string">"#DTD" </span>=&gt; <span class="kw">return </span><span class="bool-val">true</span>,
     <span class="kw">_ </span>=&gt; {},
   };
   <span class="kw">let </span>model = <span class="macro">model!</span>();
-  <span class="kw">if </span>model.permissive &amp;&amp; tag == <span class="string">&quot;#Document&quot; </span>&amp;&amp; child != <span class="string">&quot;#PCDATA&quot; </span>{
+  <span class="kw">if </span>model.permissive &amp;&amp; tag == <span class="string">"#Document" </span>&amp;&amp; child != <span class="string">"#PCDATA" </span>{
     <span class="kw">return </span><span class="bool-val">true</span>; <span class="comment">// No DTD? Punt!
   </span>}
 
@@ -1474,8 +1550,8 @@
 <span class="kw">pub fn </span>can_have_attribute(tag: SymbolU32, attrib: SymbolU32) -&gt; bool {
   <span class="comment">// Handle obvious cases explicitly.
   </span><span class="kw">if let </span><span class="prelude-val">Some</span>(early_choice) = arena::with(tag, |tag_str| <span class="kw">match </span>tag_str {
-    <span class="string">&quot;#PCDATA&quot; </span>| <span class="string">&quot;#Comment&quot; </span>| <span class="string">&quot;#Document&quot; </span>| <span class="string">&quot;#ProcessingInstruction&quot; </span>| <span class="string">&quot;#DTD&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
-    <span class="string">&quot;_WildCard_&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
+    <span class="string">"#PCDATA" </span>| <span class="string">"#Comment" </span>| <span class="string">"#Document" </span>| <span class="string">"#ProcessingInstruction" </span>| <span class="string">"#DTD" </span>=&gt; <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
+    <span class="string">"_WildCard_" </span>=&gt; <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
     other <span class="kw">if </span>CAPTURE_TAG_RE.is_match(other) =&gt; <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
     <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
   }) {
@@ -1528,8 +1604,8 @@
 }
 
 <span class="kw">pub fn </span>with_schema_data&lt;FnR,R&gt;(caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Vec&lt;SymbolU32&gt;&gt;) -&gt; R {
-  caller(<span class="kw-2">&amp;</span><span class="macro">model!</span>().schema_data)
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;SymbolU32&gt;&gt;) -&gt; R {
+  caller(<span class="macro">model!</span>().schema_data.as_ref())
 }
 <span class="kw">pub fn </span>set_schema(schema: Relaxng) {
   <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
@@ -1565,7 +1641,7 @@
   <span class="kw">for </span>kid <span class="kw">in </span>tag_contents {
     <span class="kw">if </span>desc
       .entry(kid)
-      .or_insert_with(HashMap::default)
+      .or_default()
       .contains_key(<span class="kw-2">&amp;</span>start)
     {
       <span class="kw">continue</span>;
@@ -1574,7 +1650,7 @@
     </span><span class="kw">if </span>start != <span class="kw-2">*</span>EMPTY_SYM {
       desc
         .entry(kid)
-        .or_insert_with(HashMap::default)
+        .or_default()
         .insert(start, desirability);
     }
 

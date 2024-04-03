@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/store.rs`."><title>store.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/store.rs`."><title>store.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1033,6 +1035,7 @@
 <a href="#1033" id="1033">1033</a>
 <a href="#1034" id="1034">1034</a>
 <a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1069,7 +1072,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::mouth::Mouth;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameter;
 <span class="kw">use </span><span class="kw">crate</span>::rewrite::Rewrite;
-<span class="kw">use </span><span class="kw">crate</span>::state::{StashTable};
+<span class="kw">use </span><span class="kw">crate</span>::state::StashTable;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 
@@ -1086,13 +1089,13 @@
 //    we may consider a RefCell&lt;&gt; wrapper for interior mutability.
 //      BUT it is often possible to take the value out to mutate, and re-insert.
 //      state::checkout_value(key) + mutate + state::checkin_value(key,val)
-//      The only cases where this isn&#39;t straightforward is for deep recursive callchains,
+//      The only cases where this isn't straightforward is for deep recursive callchains,
 //      as in the ones where we rely on Stomach or a Mouth being in state.
 </span><span class="doccomment">/// The original global state (in Perl) allowed arbitrary values. To stay consistent, we create an
 /// extremely permissive struct that affords all essential kinds of values that appear essential.
 </span><span class="attr">#[derive(Default, Clone)]
 </span><span class="kw">pub enum </span>Stored {
-  <span class="doccomment">/// if we want to keep a key but make it &#39;undef&#39;, set it to None
+  <span class="doccomment">/// if we want to keep a key but make it 'undef', set it to None
   </span><span class="attr">#[default]
   </span><span class="prelude-val">None</span>,
   <span class="comment">// Primitives (Copy types, or cheap Clone)
@@ -1108,14 +1111,12 @@
   <span class="doccomment">/// atomic data (Clone)
   </span>Node(Node),
   <span class="comment">// Collections (boxed)
-  </span><span class="doccomment">/// boxed Vec&lt;char&gt;
-  </span>VecChar(Vec&lt;char&gt;),
-  <span class="doccomment">/// boxed Vec&lt;Option&lt;char&gt;&gt;
+  </span><span class="doccomment">/// boxed [char]
+  </span>Chars(Box&lt;[char]&gt;),
+  <span class="doccomment">/// boxed [Option&lt;char&gt;]
   </span>Fontmap(Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;),
   <span class="doccomment">/// boxed collection
-  </span>VecString(Vec&lt;String&gt;),
-  <span class="doccomment">/// boxed collection (latexml)
-  </span>VecTokens(Vec&lt;<span class="kw">crate</span>::Tokens&gt;),
+  </span>Strings(Rc&lt;[String]&gt;),
   <span class="doccomment">/// boxed collection (latexml)
   </span>VecDigested(Vec&lt;<span class="kw">crate</span>::Digested&gt;),
   <span class="doccomment">/// the heart of state - a stored Stash table
@@ -1185,47 +1186,46 @@
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">use </span><span class="kw">crate</span>::Stored::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
-      <span class="prelude-val">None </span>=&gt; <span class="macro">write!</span>(f, <span class="string">&quot;None&quot;</span>),
-      String(<span class="kw-2">ref </span>s) =&gt; arena::with(<span class="kw-2">*</span>s, |str| <span class="macro">write!</span>(f, <span class="string">&quot;{str}&quot;</span>)),
-      Int(<span class="kw-2">ref </span>num) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Int[{num:?}]&quot;</span>),
-      Node(<span class="kw-2">ref </span>n) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Node[{n:?}]&quot;</span>),
-      VecChar(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::VecChar[{vs:?}]&quot;</span>),
-      Fontmap(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Fontmap[{vs:?}]&quot;</span>),
-      Stash(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Stash[{vs:?}]&quot;</span>),
-      VecString(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::VecString[{vs:?}]&quot;</span>),
-      Bool(<span class="kw-2">ref </span>b) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Bool[{b:?}]&quot;</span>),
-      Token(<span class="kw-2">ref </span>t) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Token[{t:?}]&quot;</span>),
-      Tokens(<span class="kw-2">ref </span>t) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Tokens[{t:?}]&quot;</span>),
-      Locator(<span class="kw-2">ref </span>t) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Locator[{t:?}]&quot;</span>),
-      Reversion(<span class="kw-2">ref </span>_t) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Reversion[TODO]&quot;</span>),
-      Catcode(<span class="kw-2">ref </span>cc) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Catcode[{cc:?}]&quot;</span>),
-      Charcode(<span class="kw-2">ref </span>cc) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Charcode[{cc:?}]&quot;</span>),
-      IfFrame(<span class="kw-2">ref </span>fr) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::IfFrame[{fr:?}]&quot;</span>),
-      Expandable(<span class="kw-2">ref </span>expandable) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Expandable[{expandable:?}]&quot;</span>),
-      Conditional(<span class="kw-2">ref </span>_conditional) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Conditional[TODO]&quot;</span>),
-      Primitive(<span class="kw-2">ref </span>_primitive) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Primitive[TODO]&quot;</span>),
-      MathPrimitive(<span class="kw-2">ref </span>_primitive) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::MathPrimitive[TODO]&quot;</span>),
-      <span class="comment">// MathPrimitiveOptions(ref _primitive) =&gt; write!(f, &quot;&lt;math primitive options&gt;&quot;),
-      </span>Constructor(<span class="kw-2">ref </span>_constructor) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Constructor[TODO]&quot;</span>),
-      Digested(<span class="kw-2">ref </span>digested) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Digested[{digested:?}]&quot;</span>),
-      Parameter(<span class="kw-2">ref </span>parameter) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Parameter[{parameter:?}]&quot;</span>),
-      Register(<span class="kw-2">ref </span>register) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Register[{:?}]&quot;</span>, register.cs),
-      Rewrite(<span class="kw-2">ref </span>rewrite) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Rewrite[{rewrite:?}]&quot;</span>),
-      Mouth(<span class="kw-2">ref </span>mouth) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Mouth[{:?}]&quot;</span>, mouth.borrow().get_source()),
-      Font(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Font[{font:?}]&quot;</span>),
-      FontDirective(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::FontDirective[{font:?}]&quot;</span>),
-      Number(<span class="kw-2">ref </span>number) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Number[{number:?}]&quot;</span>),
-      Glue(<span class="kw-2">ref </span>glue) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Glue[{glue:?}]&quot;</span>),
-      MuGlue(<span class="kw-2">ref </span>glue) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::MuGlue[{glue:?}]&quot;</span>),
-      Dimension(<span class="kw-2">ref </span>dimension) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Dimension[{dimension:?}]&quot;</span>),
-      MuDimension(<span class="kw-2">ref </span>dimension) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::MuDimension[{dimension:?}]&quot;</span>),
-      VecDigested(<span class="kw-2">ref </span>digested_vec) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;VecDigested{digested_vec:?}&quot;</span>),
-      VecTokens(<span class="kw-2">ref </span>vec) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;VecTokens{vec:?}&quot;</span>),
-      VecDequeStored(<span class="kw-2">ref </span>vec) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;VecDequeStored{vec:?}&quot;</span>),
-      HashStored(<span class="kw-2">ref </span>hos) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;HashStored{hos:?}&quot;</span>),
-      HashTagData(<span class="kw-2">ref </span>htd) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;HashTagData[{htd:?}]&quot;</span>),
-      HashString(<span class="kw-2">ref </span>hstr) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;HashStr[{hstr:?}]&quot;</span>),
-      Ligature(<span class="kw-2">ref </span>lig) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Ligature[{lig:?}]&quot;</span>),
+      <span class="prelude-val">None </span>=&gt; <span class="macro">write!</span>(f, <span class="string">"None"</span>),
+      String(<span class="kw-2">ref </span>s) =&gt; arena::with(<span class="kw-2">*</span>s, |str| <span class="macro">write!</span>(f, <span class="string">"{str}"</span>)),
+      Int(<span class="kw-2">ref </span>num) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Int[{num:?}]"</span>),
+      Node(<span class="kw-2">ref </span>n) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Node[{n:?}]"</span>),
+      Chars(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Chars[{vs:?}]"</span>),
+      Fontmap(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Fontmap[{vs:?}]"</span>),
+      Stash(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Stash[{vs:?}]"</span>),
+      Strings(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Strings[{vs:?}]"</span>),
+      Bool(<span class="kw-2">ref </span>b) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Bool[{b:?}]"</span>),
+      Token(<span class="kw-2">ref </span>t) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Token[{t:?}]"</span>),
+      Tokens(<span class="kw-2">ref </span>t) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Tokens[{t:?}]"</span>),
+      Locator(<span class="kw-2">ref </span>t) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Locator[{t:?}]"</span>),
+      Reversion(<span class="kw-2">ref </span>_t) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Reversion[TODO]"</span>),
+      Catcode(<span class="kw-2">ref </span>cc) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Catcode[{cc:?}]"</span>),
+      Charcode(<span class="kw-2">ref </span>cc) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Charcode[{cc:?}]"</span>),
+      IfFrame(<span class="kw-2">ref </span>fr) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::IfFrame[{fr:?}]"</span>),
+      Expandable(<span class="kw-2">ref </span>expandable) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Expandable[{expandable:?}]"</span>),
+      Conditional(<span class="kw-2">ref </span>_conditional) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Conditional[TODO]"</span>),
+      Primitive(<span class="kw-2">ref </span>_primitive) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Primitive[TODO]"</span>),
+      MathPrimitive(<span class="kw-2">ref </span>_primitive) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::MathPrimitive[TODO]"</span>),
+      <span class="comment">// MathPrimitiveOptions(ref _primitive) =&gt; write!(f, "&lt;math primitive options&gt;"),
+      </span>Constructor(<span class="kw-2">ref </span>_constructor) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Constructor[TODO]"</span>),
+      Digested(<span class="kw-2">ref </span>digested) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Digested[{digested:?}]"</span>),
+      Parameter(<span class="kw-2">ref </span>parameter) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Parameter[{parameter:?}]"</span>),
+      Register(<span class="kw-2">ref </span>register) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Register[{:?}]"</span>, register.cs),
+      Rewrite(<span class="kw-2">ref </span>rewrite) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Rewrite[{rewrite:?}]"</span>),
+      Mouth(<span class="kw-2">ref </span>mouth) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Mouth[{:?}]"</span>, mouth.borrow().get_source()),
+      Font(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Font[{font:?}]"</span>),
+      FontDirective(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::FontDirective[{font:?}]"</span>),
+      Number(<span class="kw-2">ref </span>number) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Number[{number:?}]"</span>),
+      Glue(<span class="kw-2">ref </span>glue) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Glue[{glue:?}]"</span>),
+      MuGlue(<span class="kw-2">ref </span>glue) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::MuGlue[{glue:?}]"</span>),
+      Dimension(<span class="kw-2">ref </span>dimension) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::Dimension[{dimension:?}]"</span>),
+      MuDimension(<span class="kw-2">ref </span>dimension) =&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::MuDimension[{dimension:?}]"</span>),
+      VecDigested(<span class="kw-2">ref </span>digested_vec) =&gt; <span class="macro">write!</span>(f, <span class="string">"VecDigested{digested_vec:?}"</span>),
+      VecDequeStored(<span class="kw-2">ref </span>vec) =&gt; <span class="macro">write!</span>(f, <span class="string">"VecDequeStored{vec:?}"</span>),
+      HashStored(<span class="kw-2">ref </span>hos) =&gt; <span class="macro">write!</span>(f, <span class="string">"HashStored{hos:?}"</span>),
+      HashTagData(<span class="kw-2">ref </span>htd) =&gt; <span class="macro">write!</span>(f, <span class="string">"HashTagData[{htd:?}]"</span>),
+      HashString(<span class="kw-2">ref </span>hstr) =&gt; <span class="macro">write!</span>(f, <span class="string">"HashStr[{hstr:?}]"</span>),
+      Ligature(<span class="kw-2">ref </span>lig) =&gt; <span class="macro">write!</span>(f, <span class="string">"Ligature[{lig:?}]"</span>),
     }
   }
 }
@@ -1233,24 +1233,24 @@
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">use </span><span class="kw">crate</span>::Stored::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
-      Digested(<span class="kw-2">ref </span>digested) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{digested}&quot;</span>),
-      Dimension(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{v}&quot;</span>),
-      Number(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{v}&quot;</span>),
-      Glue(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{v}&quot;</span>),
-      MuGlue(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{v}&quot;</span>),
-      MuDimension(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{v}&quot;</span>),
-      Font(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{font}&quot;</span>),
-      String(<span class="kw-2">ref </span>s) =&gt; arena::with(<span class="kw-2">*</span>s, |str| <span class="macro">write!</span>(f, <span class="string">&quot;{str}&quot;</span>)),
-      Int(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
-      Bool(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
-      Tokens(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
-      Token(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
-      Conditional(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
-      Constructor(<span class="kw-2">ref </span>c) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Constructor[{}]&quot;</span>, c.get_cs_name()),
-      <span class="prelude-val">None </span>=&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::None&quot;</span>),
+      Digested(<span class="kw-2">ref </span>digested) =&gt; <span class="macro">write!</span>(f, <span class="string">"{digested}"</span>),
+      Dimension(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">"{v}"</span>),
+      Number(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">"{v}"</span>),
+      Glue(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">"{v}"</span>),
+      MuGlue(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">"{v}"</span>),
+      MuDimension(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">"{v}"</span>),
+      Font(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">"{font}"</span>),
+      String(<span class="kw-2">ref </span>s) =&gt; arena::with(<span class="kw-2">*</span>s, |str| <span class="macro">write!</span>(f, <span class="string">"{str}"</span>)),
+      Int(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">"{s}"</span>),
+      Bool(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">"{s}"</span>),
+      Tokens(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">"{s}"</span>),
+      Token(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">"{s}"</span>),
+      Conditional(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">"{s}"</span>),
+      Constructor(<span class="kw-2">ref </span>c) =&gt; <span class="macro">write!</span>(f, <span class="string">"Constructor[{}]"</span>, c.get_cs_name()),
+      <span class="prelude-val">None </span>=&gt; <span class="macro">write!</span>(f, <span class="string">"Stored::None"</span>),
       <span class="kw-2">ref </span>variant =&gt; {
-        <span class="macro">panic!</span>(<span class="string">&quot;TODO: implement Display for Stored variant {variant:?}&quot;</span>);
-        <span class="comment">// write!(f, &quot;{:?}&quot;, self)
+        <span class="macro">panic!</span>(<span class="string">"TODO: implement Display for Stored variant {variant:?}"</span>);
+        <span class="comment">// write!(f, "{:?}", self)
       </span>},
     }
   }
@@ -1259,7 +1259,7 @@
 <span class="doccomment">/// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
 /// if it is safe to eagerly borrow() from the RefCell guards over fields with interior
 /// mutability.
-/// Worse: some conditions depend on the stateful meaning of Token&#39;s,
+/// Worse: some conditions depend on the stateful meaning of Token's,
 ///        so the perfect equality check would need state::as an argument.
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Stored {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Stored) -&gt; bool {
@@ -1287,9 +1287,9 @@
           <span class="bool-val">false
         </span>}
       },
-      VecChar(<span class="kw-2">ref </span>vs) =&gt; {
-        <span class="kw">if let </span>VecChar(vs2) = other {
-          <span class="kw-2">*</span>vs == <span class="kw-2">*</span>vs2
+      Chars(<span class="kw-2">ref </span>vs) =&gt; {
+        <span class="kw">if let </span>Chars(vs2) = other {
+          <span class="kw-2">**</span>vs == <span class="kw-2">**</span>vs2
         } <span class="kw">else </span>{
           <span class="bool-val">false
         </span>}
@@ -1301,8 +1301,8 @@
           <span class="bool-val">false
         </span>}
       },
-      VecString(<span class="kw-2">ref </span>vs) =&gt; {
-        <span class="kw">if let </span>VecString(vs2) = other {
+      Strings(<span class="kw-2">ref </span>vs) =&gt; {
+        <span class="kw">if let </span>Strings(vs2) = other {
           <span class="kw-2">*</span>vs == <span class="kw-2">*</span>vs2
         } <span class="kw">else </span>{
           <span class="bool-val">false
@@ -1491,13 +1491,6 @@
           <span class="bool-val">false
         </span>}
       },
-      VecTokens(<span class="kw-2">ref </span>vd) =&gt; {
-        <span class="kw">if let </span>VecTokens(vd2) = other {
-          <span class="kw-2">*</span>vd == <span class="kw-2">*</span>vd2
-        } <span class="kw">else </span>{
-          <span class="bool-val">false
-        </span>}
-      },
       VecDequeStored(<span class="kw-2">ref </span>v) =&gt; {
         <span class="kw">if let </span>VecDequeStored(v2) = other {
           v.len() == v2.len() &amp;&amp; v.iter().zip(v2.iter()).all(|(item1, item2)| item1 == item2)
@@ -1562,7 +1555,7 @@
     }
     out_map
   }
-  <span class="doccomment">/// Dynamic dispatch for Definition&#39;s `read_arguments`,
+  <span class="doccomment">/// Dynamic dispatch for Definition's `read_arguments`,
   /// to circumvent the limitations of using trait objects with `Rc&lt;Definition&gt;`
   </span><span class="kw">pub fn </span>read_arguments(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArgWrap&gt;&gt; {
     <span class="kw">match </span><span class="self">self </span>{
@@ -1572,7 +1565,7 @@
       Stored::MathPrimitive(<span class="kw-2">ref </span>entry) =&gt; entry.read_arguments(),
       Stored::Primitive(<span class="kw-2">ref </span>entry) =&gt; entry.read_arguments(),
       Stored::Register(<span class="kw-2">ref </span>entry) =&gt; entry.read_arguments(),
-      e =&gt; <span class="prelude-val">Err</span>(<span class="macro">s!</span>(<span class="string">&quot;.read_arguments not defined for stored variant {:?}&quot;</span>, e).into()),
+      e =&gt; <span class="prelude-val">Err</span>(<span class="macro">s!</span>(<span class="string">".read_arguments not defined for stored variant {:?}"</span>, e).into()),
     }
   }
   <span class="doccomment">/// Uses `NumericOps::to_attribute` for Stored values supporting it, otherwise
@@ -1587,13 +1580,24 @@
       other =&gt; other.to_string(),
     }
   }
+  <span class="kw">pub fn </span>to_definition(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;<span class="kw">dyn </span>Definition&gt;&gt; {
+    <span class="kw">match </span><span class="self">self </span>{
+      Stored::Primitive(defn) =&gt; <span class="prelude-val">Some</span>(defn.clone()),
+      Stored::MathPrimitive(defn) =&gt; <span class="prelude-val">Some</span>(defn.clone()),
+      Stored::Conditional(defn) =&gt; <span class="prelude-val">Some</span>(defn.clone()),
+      Stored::Register(defn) =&gt; <span class="prelude-val">Some</span>(defn.clone()),
+      Stored::Expandable(defn) =&gt; <span class="prelude-val">Some</span>(defn.clone()),
+      Stored::Constructor(defn) =&gt; <span class="prelude-val">Some</span>(defn.clone()),
+      <span class="kw">_ </span>=&gt; <span class="prelude-val">None
+    </span>}
+  }
 }
 
 <span class="kw">impl </span>From&lt;bool&gt; <span class="kw">for </span>Stored {
   <span class="kw">fn </span>from(value: bool) -&gt; <span class="self">Self </span>{ Stored::Bool(value) }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;bool&gt; <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;bool&gt; <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored {
   <span class="kw">fn </span>from(value: bool) -&gt; <span class="self">Self </span>{
     <span class="kw">if </span>value {
       <span class="kw-2">&amp;</span>STORED_TRUE
@@ -1603,8 +1607,8 @@
   }
 }
 
-<span class="kw">impl </span>From&lt;Cow&lt;<span class="lifetime">&#39;_</span>,str&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Cow&lt;<span class="lifetime">&#39;_</span>,str&gt;) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin(value)) }
+<span class="kw">impl </span>From&lt;Cow&lt;<span class="lifetime">'_</span>,str&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: Cow&lt;<span class="lifetime">'_</span>,str&gt;) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin(value)) }
 }
 <span class="kw">impl </span>From&lt;String&gt; <span class="kw">for </span>Stored {
   <span class="kw">fn </span>from(value: String) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin(value)) }
@@ -1617,12 +1621,12 @@
   <span class="kw">fn </span>from(value: char) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin_char(value)) }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin(value)) }
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>String&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>String) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin(value)) }
 }
 
-<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin_static(value)) }
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin_static(value)) }
 }
 
 <span class="kw">impl </span>From&lt;usize&gt; <span class="kw">for </span>Stored {
@@ -1725,8 +1729,8 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;Cow&lt;<span class="lifetime">&#39;a</span>, <span class="kw">crate</span>::Digested&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Cow&lt;<span class="lifetime">&#39;a</span>, <span class="kw">crate</span>::Digested&gt;) -&gt; <span class="self">Self </span>{ <span class="kw">crate</span>::Stored::Digested(value.into_owned()) }
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;Cow&lt;<span class="lifetime">'a</span>, <span class="kw">crate</span>::Digested&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: Cow&lt;<span class="lifetime">'a</span>, <span class="kw">crate</span>::Digested&gt;) -&gt; <span class="self">Self </span>{ <span class="kw">crate</span>::Stored::Digested(value.into_owned()) }
 }
 
 <span class="kw">impl </span>From&lt;Box&lt;<span class="kw">crate</span>::Digested&gt;&gt; <span class="kw">for </span>Stored {
@@ -1756,7 +1760,7 @@
   <span class="kw">fn </span>from(value: Font) -&gt; <span class="self">Self </span>{ Rc::new(value).into() }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;Cow&lt;<span class="lifetime">&#39;a</span>, Font&gt;&gt; <span class="kw">for </span>Stored {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;Cow&lt;<span class="lifetime">'a</span>, Font&gt;&gt; <span class="kw">for </span>Stored {
   <span class="kw">fn </span>from(value: Cow&lt;Font&gt;) -&gt; <span class="self">Self </span>{ Rc::new((<span class="kw-2">*</span>value).clone()).into() }
 }
 
@@ -1767,32 +1771,37 @@
   <span class="kw">fn </span>from(value: Dimension) -&gt; <span class="self">Self </span>{ Stored::Dimension(value) }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Token&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Token) -&gt; <span class="self">Self </span>{ Stored::Token(value.clone()) }
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Token&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Token) -&gt; <span class="self">Self </span>{ Stored::Token(<span class="kw-2">*</span>value) }
 }
 
 <span class="kw">impl </span>From&lt;Alignment&gt; <span class="kw">for </span>Stored {
   <span class="kw">fn </span>from(a: Alignment) -&gt; <span class="self">Self </span>{ Stored::Digested(<span class="kw">crate</span>::Digested::from(a)) }
 }
 
-<span class="kw">impl </span>From&lt;Vec&lt;char&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Vec&lt;char&gt;) -&gt; <span class="self">Self </span>{ Stored::VecChar(value) }
+<span class="kw">impl </span>From&lt;Box&lt;[char]&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: Box&lt;[char]&gt;) -&gt; <span class="self">Self </span>{ Stored::Chars(value) }
 }
 <span class="kw">impl </span>From&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; <span class="kw">for </span>Stored {
   <span class="kw">fn </span>from(value: Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;) -&gt; <span class="self">Self </span>{ Stored::Fontmap(value) }
 }
 
-<span class="kw">impl </span>From&lt;Vec&lt;String&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Vec&lt;String&gt;) -&gt; <span class="self">Self </span>{ Stored::VecString(value) }
+<span class="kw">impl </span>From&lt;Rc&lt;[String]&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: Rc&lt;[String]&gt;) -&gt; <span class="self">Self </span>{ Stored::Strings(value) }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;) -&gt; <span class="self">Self </span>{
-    Stored::VecString(
+<span class="kw">impl </span>From&lt;Vec&lt;String&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: Vec&lt;String&gt;) -&gt; <span class="self">Self </span>{ Stored::Strings(Rc::from(value.into_boxed_slice())) }
+}
+
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt;) -&gt; <span class="self">Self </span>{
+    Stored::Strings(
       value
         .iter()
         .map(ToString::to_string)
-        .collect::&lt;Vec&lt;String&gt;&gt;(),
+        .collect(),
     )
   }
 }
@@ -1803,10 +1812,6 @@
 
 <span class="kw">impl </span>From&lt;Vec&lt;<span class="kw">crate</span>::Digested&gt;&gt; <span class="kw">for </span>Stored {
   <span class="kw">fn </span>from(value: Vec&lt;<span class="kw">crate</span>::Digested&gt;) -&gt; <span class="self">Self </span>{ Stored::VecDigested(value) }
-}
-
-<span class="kw">impl </span>From&lt;Vec&lt;<span class="kw">crate</span>::Tokens&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Vec&lt;<span class="kw">crate</span>::Tokens&gt;) -&gt; <span class="self">Self </span>{ Stored::VecTokens(value) }
 }
 
 <span class="kw">impl </span>From&lt;HashMap&lt;String, String&gt;&gt; <span class="kw">for </span>Stored {
@@ -1863,7 +1868,7 @@
 <span class="comment">// Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where
 // impossible
 
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span>bool {
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span>bool {
   <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>Stored) -&gt; bool {
     <span class="kw">match </span>value {
       Stored::Bool(b) =&gt; <span class="kw-2">*</span>b,
@@ -1872,17 +1877,17 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span>String {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span>String {
   <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>Stored) -&gt; String {
     <span class="kw">match </span>value {
       Stored::String(v) =&gt; arena::to_string(<span class="kw-2">*</span>v),
-      v =&gt; <span class="macro">s!</span>(<span class="string">&quot;{v:?}&quot;</span>),
+      v =&gt; <span class="macro">s!</span>(<span class="string">"{v:?}"</span>),
     }
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>VecDeque&lt;Stored&gt;&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>VecDeque&lt;Stored&gt;&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>VecDeque&lt;Stored&gt;&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>VecDeque&lt;Stored&gt;&gt; {
     <span class="kw">match </span>value {
       Stored::VecDequeStored(<span class="kw-2">ref </span>v) =&gt; <span class="prelude-val">Some</span>(v),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -1890,8 +1895,8 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; {
     <span class="kw">match </span>value {
       Stored::Font(<span class="kw-2">ref </span>f) =&gt; <span class="prelude-val">Some</span>(Rc::clone(f)),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -1899,8 +1904,8 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Number&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Number&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Number&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Number&gt; {
     <span class="kw">match </span>value {
       Stored::Number(<span class="kw-2">ref </span>n) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>n),
       Stored::Dimension(<span class="kw-2">ref </span>n) =&gt; <span class="prelude-val">Some</span>(Number::new(n.value_of())),
@@ -1908,15 +1913,15 @@
       Stored::MuDimension(<span class="kw-2">ref </span>n) =&gt; <span class="prelude-val">Some</span>(Number::new(n.value_of())),
       Stored::MuGlue(<span class="kw-2">ref </span>n) =&gt; <span class="prelude-val">Some</span>(Number::new(n.value_of())),
       other =&gt; {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;TODO: auto-cast of Stored to Number attempted on {other:?}&quot;</span>);
+        <span class="macro">eprintln!</span>(<span class="string">"TODO: auto-cast of Stored to Number attempted on {other:?}"</span>);
         <span class="prelude-val">None
       </span>},
     }
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Dimension&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Dimension&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Dimension&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Dimension&gt; {
     <span class="kw">match </span>value {
       Stored::Dimension(<span class="kw-2">ref </span>n) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>n),
       Stored::Number(<span class="kw-2">ref </span>n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(n.value_of())),
@@ -1928,8 +1933,8 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Glue&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Glue&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Glue&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Glue&gt; {
     <span class="kw">match </span>value {
       Stored::Dimension(<span class="kw-2">ref </span>n) =&gt; <span class="prelude-val">Some</span>(Glue::new(n.value_of())),
       Stored::Number(<span class="kw-2">ref </span>n) =&gt; <span class="prelude-val">Some</span>(Glue::new(n.value_of())),
@@ -1968,8 +1973,8 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
     <span class="kw">match </span>value {
       Stored::Register(<span class="kw-2">ref </span>reg) =&gt; <span class="prelude-val">Some</span>(Rc::clone(reg)),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -1977,8 +1982,8 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Catcode&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Catcode&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Catcode&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Catcode&gt; {
     <span class="kw">match </span>value {
       Stored::Catcode(<span class="kw-2">ref </span>cc) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>cc),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -1986,10 +1991,10 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;char&gt;&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;char&gt;&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[char]&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a</span>[char]&gt; {
     <span class="kw">match </span>value {
-      Stored::VecChar(<span class="kw-2">ref </span>cc) =&gt; <span class="prelude-val">Some</span>(cc),
+      Stored::Chars(<span class="kw-2">ref </span>cc) =&gt; <span class="prelude-val">Some</span>(cc),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
@@ -2009,14 +2014,14 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
     <span class="kw">match </span>value {
       Stored::Number(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Number(<span class="kw-2">*</span>v)),
       Stored::Dimension(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Dimension(<span class="kw-2">*</span>v)),
       Stored::Glue(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Glue(<span class="kw-2">*</span>v)),
       Stored::MuGlue(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::MuGlue(<span class="kw-2">*</span>v)),
-      Stored::Token(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Token(v.clone())),
+      Stored::Token(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Token(<span class="kw-2">*</span>v)),
       Stored::Tokens(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Tokens(v.clone())),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     }
@@ -2034,8 +2039,8 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
     <span class="kw">match </span>value {
       Stored::Digested(digested) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>digested).clone()),
       Stored::String(text) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>text).into()),
@@ -2045,23 +2050,22 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; { (<span class="kw-2">*</span>value).into() }
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">&amp;</span><span class="lifetime">'b </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">&amp;</span><span class="lifetime">'b </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; { (<span class="kw-2">*</span>value).into() }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span>Token {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; Token {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span>Token {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; Token {
     <span class="kw">match </span>value {
       Stored::Tokens(ts) =&gt; ts.into(),
-      Stored::Token(t) =&gt; (<span class="kw-2">*</span>t).clone(),
+      Stored::Token(t) =&gt; <span class="kw-2">*</span>t,
       Stored::String(text) =&gt; Token {
         text: <span class="kw-2">*</span>text,
-        code: Catcode::CS,
-        smuggled: <span class="prelude-val">None</span>,
+        code: Catcode::CS
       },
       t =&gt; {
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;dangerous cast to CS for {:?}&quot;</span>, t);
-        <span class="macro">Warn!</span>(<span class="string">&quot;Stored&quot;</span>, <span class="string">&quot;cast&quot;</span>, message);
+        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"dangerous cast to CS for {:?}"</span>, t);
+        <span class="macro">Warn!</span>(<span class="string">"Stored"</span>, <span class="string">"cast"</span>, message);
         <span class="macro">T_CS!</span>(t.to_string())
       }, <span class="comment">/* TODO, is this the right place to default to CS? Do we need a
           * custom method instead? */

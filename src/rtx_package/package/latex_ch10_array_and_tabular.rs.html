@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch10_array_and_tabular.rs`."><title>latex_ch10_array_and_tabular.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch10_array_and_tabular.rs`."><title>latex_ch10_array_and_tabular.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -187,56 +189,56 @@
 // the &amp; and \\. Also \multicolumn has to be cooperative.
 // Along with this, we have to track which column specification applies
 // to the current column.
-// To simulate LaTeX&#39;s tabular borders &amp; hlines, we simply add border
+// To simulate LaTeX's tabular borders &amp; hlines, we simply add border
 // attributes to all cells.  For HTML, CSS will be necessary to display them.
-// [We&#39;ll ignore HTML&#39;s frame, rules and colgroup mechanisms.]
+// [We'll ignore HTML's frame, rules and colgroup mechanisms.]
 
 </span><span class="macro">LoadDefinitions!</span>({
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\lx@arstrut&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\lx@default@tabcolsep&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;6pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\tabcolsep&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;6pt&quot;</span>));
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\arraystretch&quot;</span>, <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;1&quot;</span>));
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@tabularcr&quot;</span>, <span class="string">&quot;\\@alignment@newline&quot;</span>);
-  <span class="kw">if </span>! has_value(<span class="string">&quot;GUESS_TABULAR_HEADERS&quot;</span>) {
-    <span class="macro">AssignValue!</span>(<span class="string">&quot;GUESS_TABULAR_HEADERS&quot; </span>=&gt; <span class="bool-val">true</span>); <span class="comment">// Defaults to yes
+  <span class="macro">DefRegister!</span>(<span class="string">"\\lx@arstrut"</span>, <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\lx@default@tabcolsep"</span>, <span class="macro">Dimension!</span>(<span class="string">"6pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tabcolsep"</span>, <span class="macro">Dimension!</span>(<span class="string">"6pt"</span>));
+  <span class="macro">DefMacro!</span>(<span class="string">"\\arraystretch"</span>, <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">"1"</span>));
+  <span class="macro">Let!</span>(<span class="string">"\\@tabularcr"</span>, <span class="string">"\\@alignment@newline"</span>);
+  <span class="kw">if </span>! has_value(<span class="string">"GUESS_TABULAR_HEADERS"</span>) {
+    <span class="macro">AssignValue!</span>(<span class="string">"GUESS_TABULAR_HEADERS" </span>=&gt; <span class="bool-val">true</span>); <span class="comment">// Defaults to yes
   </span>}
 
   <span class="comment">// Keyvals are for attributes for the alignment.
   // Typical keys are width, vattach,...
-  </span><span class="macro">DefKeyVal!</span>(<span class="string">&quot;tabular&quot;</span>, <span class="string">&quot;width&quot;</span>, <span class="string">&quot;Dimension&quot;</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular&quot;</span>,
+  </span><span class="macro">DefKeyVal!</span>(<span class="string">"tabular"</span>, <span class="string">"width"</span>, <span class="string">"Dimension"</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular"</span>,
     sub[(template, attributes_opt)] {
     <span class="kw">let </span>attrs_stored = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
     <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
     <span class="kw">for </span>(k,v) <span class="kw">in </span>attrs_stored {
       attrs.insert(k, v.to_string());
     }
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(va) = attrs.get(<span class="string">&quot;vattach&quot;</span>) {
-      attrs.insert(String::from(<span class="string">&quot;vattach&quot;</span>), translate_attachment(va).to_string());
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(va) = attrs.get(<span class="string">"vattach"</span>) {
+      attrs.insert(String::from(<span class="string">"vattach"</span>), translate_attachment(va).to_string());
     }
 
     tabular_bindings(template, HashMap::default(), attrs)<span class="question-mark">?</span>;
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@tabular@before&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@tabular@after&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@tabular@row@before&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@tabular@row@after&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@tabular@column@before&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@tabular@column@after&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabular@before"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabular@after"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabular@row@before"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabular@row@after"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabular@column@before"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabular@column@after"</span>, <span class="prelude-val">None</span>);
 
   <span class="comment">// The Core alignment support is in LaTeXML::Core::Alignment and in TeX.ltxml
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\tabular[]{}&quot;</span>,
-    <span class="string">r&quot;\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\@start@alignment\@tabular@before&quot;</span>,
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tabular[]{}"</span>,
+    <span class="string">r"\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\@start@alignment\@tabular@before"</span>,
     locked =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endtabular&quot;</span>, <span class="string">r&quot;\@tabular@after\@finish@alignment\@end@tabular&quot;</span>,
+  <span class="macro">DefMacro!</span>(<span class="string">"\\endtabular"</span>, <span class="string">r"\@tabular@after\@finish@alignment\@end@tabular"</span>,
     locked =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@end@tabular&quot;</span>, { egroup()<span class="question-mark">?</span>; });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@tabular[] Undigested DigestedBody&quot;</span>,
-    <span class="string">&quot;#3&quot;</span>,
-    reversion    =&gt; <span class="string">r&quot;\begin{tabular}[#1]{#2}#3\end{tabular}&quot;</span>,
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@end@tabular"</span>, { egroup()<span class="question-mark">?</span>; });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@tabular[] Undigested DigestedBody"</span>,
+    <span class="string">"#3"</span>,
+    reversion    =&gt; <span class="string">r"\begin{tabular}[#1]{#2}#3\end{tabular}"</span>,
     before_digest =&gt; { bgroup(); },
-    sizer        =&gt; <span class="string">&quot;#3&quot;</span>,
+    sizer        =&gt; <span class="string">"#3"</span>,
     after_digest  =&gt; sub[whatsit] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment) = lookup_alignment() {
         <span class="kw">if let </span>DigestedData::Alignment(data) = alignment.data() {
@@ -244,32 +246,32 @@
           <span class="kw">else </span>{ translate_attachment(String::new()) };
           <span class="kw">let </span><span class="kw-2">mut </span>data_lock = data.borrow_mut();
           <span class="kw">let </span>attributes = data_lock.get_xml_attributes_mut();
-          attributes.insert(String::from(<span class="string">&quot;vattach&quot;</span>), attachment.to_string());
+          attributes.insert(String::from(<span class="string">"vattach"</span>), attachment.to_string());
         }
       }
     },
     locked =&gt; <span class="bool-val">true</span>,
-    mode   =&gt; <span class="string">&quot;text&quot;</span>);
+    mode   =&gt; <span class="string">"text"</span>);
 
-  <span class="comment">// DefMacro!(T_CS!(&quot;tabular*&quot;),&quot;{Dimension}[]{}&quot;,
-  //   r&quot;\@tabular@bindings{#3}[width=#1,vattach=#2]\@@tabular@{#1}[#2]{#3}\@start@alignment&quot;);
-  // DefMacro!(T_CS!(&quot;endtabular*&quot;),
-  //   r&quot;\@finish@alignment\@end@tabular@&quot;);
-  // DefConstructor!(&quot;\\@@tabular@{Dimension}[] Undigested DigestedBody&quot;,
-  //   &quot;#4&quot;,
+  <span class="comment">// DefMacro!(T_CS!("tabular*"),"{Dimension}[]{}",
+  //   r"\@tabular@bindings{#3}[width=#1,vattach=#2]\@@tabular@{#1}[#2]{#3}\@start@alignment");
+  // DefMacro!(T_CS!("endtabular*"),
+  //   r"\@finish@alignment\@end@tabular@");
+  // DefConstructor!("\\@@tabular@{Dimension}[] Undigested DigestedBody",
+  //   "#4",
   //   before_digest =&gt; { stomach.bgroup(); },
-  //   reversion    =&gt; r&quot;\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*&quot;,
-  //   mode         =&gt; &quot;text&quot;);
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@end@tabular@&quot;</span>, { egroup()<span class="question-mark">?</span>; });
-  <span class="macro">Let!</span>(<span class="string">&quot;\\multicolumn&quot;</span>, <span class="string">&quot;\\@multicolumn&quot;</span>);
+  //   reversion    =&gt; r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*",
+  //   mode         =&gt; "text");
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@end@tabular@"</span>, { egroup()<span class="question-mark">?</span>; });
+  <span class="macro">Let!</span>(<span class="string">"\\multicolumn"</span>, <span class="string">"\\@multicolumn"</span>);
 
   <span class="comment">// A weird bit that sometimes gets invoked by Cargo Cult programmers...
   // to \noalign in the defn of \hline! Bizarre! (see latex.ltx)
   // However, the really weird thing is the way this provides the } to close the argument
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@xhline&quot;</span>, <span class="string">r&quot;\ifnum0=`{\fi}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@xhline"</span>, <span class="string">r"\ifnum0=`{\fi}"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cline{}&quot;</span>, <span class="string">r&quot;\noalign{\@cline{#1}}&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@cline{}&quot;</span>, <span class="string">&quot;&quot;</span>,
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cline{}"</span>, <span class="string">r"\noalign{\@cline{#1}}"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@cline{}"</span>, <span class="string">""</span>,
     after_digest =&gt; sub[whatsit] {
       <span class="kw">let </span>cols = whatsit.get_arg(<span class="number">1</span>).map(ToString::to_string).unwrap_or_default();
       <span class="kw">let </span><span class="kw-2">mut </span>cols_vec = Vec::new();
@@ -278,7 +280,7 @@
       <span class="kw">let </span><span class="kw-2">mut </span>num = String::new();
       <span class="kw">for </span>c_next <span class="kw">in </span>cols_chars {
         <span class="kw">match </span>c_next {
-          <span class="string">&#39;,&#39; </span>=&gt; <span class="kw">if </span>!num.is_empty() {
+          <span class="string">',' </span>=&gt; <span class="kw">if </span>!num.is_empty() {
             <span class="kw">let </span>this_num = num.parse::&lt;usize&gt;().unwrap();
             <span class="kw">if let </span><span class="prelude-val">Some</span>(from_num) = from {
               <span class="kw">for </span>num_in_range <span class="kw">in </span>from_num..=this_num {
@@ -290,7 +292,7 @@
             from = <span class="prelude-val">None</span>;
             num = String::new();
           },
-          <span class="string">&#39;-&#39; </span>=&gt; {
+          <span class="string">'-' </span>=&gt; {
             from = <span class="prelude-val">Some</span>(num.parse::&lt;usize&gt;().unwrap());
             num = String::new();
           }
@@ -310,52 +312,52 @@
       }
       <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_stored) = lookup_alignment() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()
-          .add_line(<span class="string">&quot;t&quot;</span>, cols_vec);
+          .add_line(<span class="string">"t"</span>, cols_vec);
       }
     },
-    sizer      =&gt; <span class="number">0</span>, alias =&gt; <span class="string">&quot;\\cline&quot;</span>,
-    <span class="comment">// properties =&gt; { &quot;isHorizontalRule&quot; =&gt; true }
+    sizer      =&gt; <span class="number">0</span>, alias =&gt; <span class="string">"\\cline"</span>,
+    <span class="comment">// properties =&gt; { "isHorizontalRule" =&gt; true }
   </span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\vline&quot;</span>, <span class="string">&quot;&quot;</span>,   <span class="comment">// ???
-    // properties =&gt; { &quot;isVerticalRule&quot; =&gt; true },
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\vline"</span>, <span class="string">""</span>,   <span class="comment">// ???
+    // properties =&gt; { "isVerticalRule" =&gt; true },
     </span>sizer      =&gt; <span class="number">0</span>,
   );
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\lx@default@arraycolsep&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;5pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\arraycolsep&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;5pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\arrayrulewidth&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;0.4pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\doublerulesep&quot;</span>, <span class="macro">Dimension!</span>(<span class="string">&quot;2pt&quot;</span>));
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\extracolsep{}&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefRegister!</span>(<span class="string">"\\lx@default@arraycolsep"</span>, <span class="macro">Dimension!</span>(<span class="string">"5pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\arraycolsep"</span>, <span class="macro">Dimension!</span>(<span class="string">"5pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\arrayrulewidth"</span>, <span class="macro">Dimension!</span>(<span class="string">"0.4pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\doublerulesep"</span>, <span class="macro">Dimension!</span>(<span class="string">"2pt"</span>));
+  <span class="macro">DefMacro!</span>(<span class="string">"\\extracolsep{}"</span>, <span class="prelude-val">None</span>);
 
   <span class="comment">// Array and similar environments
 
-  // DefPrimitive!(&quot;\\@array@bindings [] AlignmentTemplate&quot;, sub[(pos,template)] {
+  // DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[(pos,template)] {
   // my $attr = { vattach =&gt; translateAttachment($pos),
-  //   role =&gt; &#39;ARRAY&#39; };
+  //   role =&gt; 'ARRAY' };
   // # Determine column and row separations, if non default
-  // my $colsep = LookupDimension(&#39;\arraycolsep&#39;);
-  // if ($colsep &amp;&amp; ($colsep-&gt;valueOf != LookupDimension(&#39;\lx@default@arraycolsep&#39;)-&gt;valueOf)) {
+  // my $colsep = LookupDimension('\arraycolsep');
+  // if ($colsep &amp;&amp; ($colsep-&gt;valueOf != LookupDimension('\lx@default@arraycolsep')-&gt;valueOf)) {
   //   $$attr{colsep} = $colsep; }
-  // my $str = ToString(Expand(T_CS(&#39;\arraystretch&#39;)));
+  // my $str = ToString(Expand(T_CS('\arraystretch')));
   // if ($str != 1) {
-  //   $$attr{rowsep} = Dimension(($str - 1) . &#39;em&#39;); }
-  // alignmentBindings($template, &#39;math&#39;, attributes =&gt; $attr);
-  // MergeFont(mathstyle =&gt; &#39;text&#39;);
-  // Let(&quot;\\\\&quot;, &#39;\@alignment@newline&#39;);
+  //   $$attr{rowsep} = Dimension(($str - 1) . 'em'); }
+  // alignmentBindings($template, 'math', attributes =&gt; $attr);
+  // MergeFont(mathstyle =&gt; 'text');
+  // Let("\\\\", '\@alignment@newline');
 
   // });
 
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\array[]{}&quot;</span>,
-    <span class="string">r&quot;\@array@bindings[#1]{#2}\@@array[#1]{#2}\@start@alignment&quot;
+    <span class="string">"\\array[]{}"</span>,
+    <span class="string">r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\@start@alignment"
   </span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endarray&quot;</span>, <span class="prelude-val">None</span>, <span class="string">r&quot;\@finish@alignment\@end@array&quot;</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@end@array&quot;</span>, { egroup()<span class="question-mark">?</span>; });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@array[] Undigested DigestedBody&quot;</span>,
-    <span class="string">&quot;#3&quot;</span>,
+  <span class="macro">DefMacro!</span>(<span class="string">"\\endarray"</span>, <span class="prelude-val">None</span>, <span class="string">r"\@finish@alignment\@end@array"</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@end@array"</span>, { egroup()<span class="question-mark">?</span>; });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@array[] Undigested DigestedBody"</span>,
+    <span class="string">"#3"</span>,
     before_digest =&gt; { bgroup(); },
-    reversion    =&gt; <span class="string">r&quot;\begin{array}[#1]{#2}#3\end{array}&quot;</span>);
+    reversion    =&gt; <span class="string">r"\begin{array}[#1]{#2}#3\end{array}"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@tabarray&quot;</span>, <span class="string">r&quot;\m@th\@@array[c]&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabarray"</span>, <span class="string">r"\m@th\@@array[c]"</span>);
 });
 </code></pre></div></section></main></body></html>

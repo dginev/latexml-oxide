@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ErrorCategory","ErrorTarget","LogStatus"],"fn":["get_status","initialize_report","note_begin","note_end","note_progress","note_progress_detailed","note_status"],"static":["REPORT"],"struct":["Error","LogState"],"type":["Result"]};
+window.SIDEBAR_ITEMS = {"enum":["ErrorCategory","ErrorTarget","LogStatus"],"fn":["get_status","initialize_report","note_begin","note_end","note_progress","note_progress_detailed","note_status","progress_step"],"static":["REPORT"],"struct":["Error","LogState"],"type":["Result"]};

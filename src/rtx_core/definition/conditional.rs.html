@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/definition/conditional.rs`."><title>conditional.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/definition/conditional.rs`."><title>conditional.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -418,8 +420,6 @@
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
 <a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Conditionals Control sequence definitions.
 //! These represent the control sequences for conditionals, as well as
 //! `\else`, `\or` and `\fi`.
@@ -433,7 +433,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="comment">// use crate::common::numeric_ops::NumericOps;
 </span><span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
@@ -471,11 +470,11 @@
   <span class="kw">fn </span>from(cs: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
     <span class="kw">use </span><span class="self">self</span>::ConditionalType::<span class="kw-2">*</span>;
     <span class="kw">match </span>cs {
-      <span class="string">&quot;\\if&quot; </span>=&gt; If,
-      <span class="string">&quot;\\unless&quot; </span>=&gt; Unless,
-      <span class="string">&quot;\\else&quot; </span>=&gt; Else,
-      <span class="string">&quot;\\or&quot; </span>=&gt; Or,
-      <span class="string">&quot;\\fi&quot; </span>=&gt; Fi,
+      <span class="string">"\\if" </span>=&gt; If,
+      <span class="string">"\\unless" </span>=&gt; Unless,
+      <span class="string">"\\else" </span>=&gt; Else,
+      <span class="string">"\\or" </span>=&gt; Or,
+      <span class="string">"\\fi" </span>=&gt; Fi,
       <span class="kw">_ </span>=&gt; If,
     }
   }
@@ -510,7 +509,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Conditional {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Conditional {
-      cs: <span class="macro">T_CS!</span>(<span class="string">&quot;Conditional&quot;</span>),
+      cs: <span class="macro">T_CS!</span>(<span class="string">"Conditional"</span>),
       paramlist: <span class="prelude-val">None</span>,
       test: <span class="prelude-val">None</span>,
       conditional_type: ConditionalType::Unknown,
@@ -523,24 +522,23 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Conditional {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.cs) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.cs) }
 }
 <span class="kw">impl </span>Object <span class="kw">for </span>Conditional {
   <span class="kw">fn </span>is_expandable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">true </span>}
-  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="self">self</span>.stringify_type(<span class="string">&quot;Conditional&quot;</span>) }
-  <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">None </span>} <span class="comment">// TODO
-</span>}
+  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="self">self</span>.stringify_type(<span class="string">"Conditional"</span>) }
+}
 <span class="kw">impl </span>Definition <span class="kw">for </span>Conditional {
   <span class="comment">// sub new {
   //   my ($class, $cs, $parameters, $test, %traits) = @_;
   //   my $source = $state-&gt;getStomach-&gt;getGullet-&gt;getMouth;
   //   return bless { cs =&gt; $cs, parameters =&gt; $parameters, test =&gt; $test,
-  //     locator      =&gt; &quot;from &quot; . $source-&gt;getLocator(-1),
+  //     locator      =&gt; "from " . $source-&gt;getLocator(-1),
   //     isExpandable =&gt; 1,
   //     %traits }, $class; }
 
   // Note that although conditionals are Expandable,
-  // they are NOT defined as macros, so they don&#39;t need to handle doInvocation,
+  // they are NOT defined as macros, so they don't need to handle doInvocation,
   </span><span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="comment">// A real conditional must have condition_type set
     </span><span class="kw">use </span><span class="self">self</span>::ConditionalType::<span class="kw-2">*</span>;
@@ -550,10 +548,10 @@
       Fi =&gt; <span class="self">self</span>.invoke_fi(),
       <span class="kw">_ </span>=&gt; {
         <span class="kw">let </span>message = <span class="macro">s!</span>(
-          <span class="string">&quot;Unknown conditional control sequence {}&quot;</span>,
+          <span class="string">"Unknown conditional control sequence {}"</span>,
           get_current_token().unwrap().stringify()
         );
-        <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="self">self</span>.cs, message);
+        <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="self">self</span>.cs, message);
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
       },
     }
@@ -565,7 +563,7 @@
   <span class="kw">fn </span>get_alias(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt; { <span class="prelude-val">None </span>}
   <span class="comment">// Not implemented for expandable
   </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-    <span class="macro">unimplemented!</span>()
+    <span class="macro">todo!</span>()
   }
   <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">None </span>}
@@ -577,7 +575,7 @@
     <span class="macro">fatal!</span>(
       Definition,
       Unexpected,
-      <span class="string">&quot;do_absorbtion on Conditional should never be called!&quot;
+      <span class="string">"do_absorbtion on Conditional should never be called!"
     </span>);
   }
 }
@@ -601,45 +599,45 @@
   <span class="kw">fn </span>invoke_conditional(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="comment">// TODO!!! Implement in full
     // Keep a stack of the conditionals we are processing.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>ifid = state::lookup_int(<span class="string">&quot;if_count&quot;</span>);
+    </span><span class="kw">let </span><span class="kw-2">mut </span>ifid = state::lookup_int(<span class="string">"if_count"</span>);
     ifid += <span class="number">1</span>;
-    state::assign_value(<span class="string">&quot;if_count&quot;</span>, ifid, <span class="prelude-val">Some</span>(Scope::Global));
+    state::assign_value(<span class="string">"if_count"</span>, ifid, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="comment">// TODO:
     // if ($LaTeXML::IF_LIMIT and $ifid &gt; $LaTeXML::IF_LIMIT) {
-    //   Fatal(&#39;timeout&#39;, &#39;if_limit&#39;, $self,
-    //     &quot;Conditional limit of $LaTeXML::IF_LIMIT exceeded, infinite loop?&quot;); }
+    //   Fatal('timeout', 'if_limit', $self,
+    //     "Conditional limit of $LaTeXML::IF_LIMIT exceeded, infinite loop?"); }
     </span><span class="kw">let </span>if_frame = Rc::new(RefCell::new(IfFrame {
       token: get_current_token().unwrap(),
-      start: gullet::get_locator().unwrap(),
+      start: gullet::get_locator(),
       parsing: <span class="bool-val">true</span>,
       elses: <span class="bool-val">false</span>,
       ifid,
     }));
     state::set_ifframe(<span class="prelude-val">Some</span>(Rc::clone(<span class="kw-2">&amp;</span>if_frame)));
-    state::unshift_value(<span class="string">&quot;if_stack&quot;</span>, <span class="macro">vec!</span>[Rc::clone(<span class="kw-2">&amp;</span>if_frame)]);
+    state::unshift_value(<span class="string">"if_stack"</span>, <span class="macro">vec!</span>[Rc::clone(<span class="kw-2">&amp;</span>if_frame)]);
     <span class="kw">let </span>args = <span class="self">self</span>.read_arguments()<span class="question-mark">?</span>;
 
     state::get_ifframe().unwrap().borrow_mut().parsing = <span class="bool-val">false</span>;
-    <span class="kw">let </span>tracing = state::lookup_bool(<span class="string">&quot;TRACINGCOMMANDS&quot;</span>);
-    <span class="comment">//   print STDERR &#39;{&#39; . $self-&gt;tracingCSName . &quot;} [#$ifid]\n&quot; if $tracing;
-    //   print STDERR $self-&gt;tracingArgs(@args) . &quot;\n&quot; if $tracing &amp;&amp; @args;
+    <span class="kw">let </span>tracing = state::lookup_bool(<span class="string">"TRACINGCOMMANDS"</span>);
+    <span class="comment">//   print STDERR '{' . $self-&gt;tracingCSName . "} [#$ifid]\n" if $tracing;
+    //   print STDERR $self-&gt;tracingArgs(@args) . "\n" if $tracing &amp;&amp; @args;
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>test) = <span class="self">self</span>.test {
       <span class="kw">if </span>(test)(args)<span class="question-mark">? </span>{
         <span class="kw">if </span>tracing {
-          <span class="macro">Debug!</span>(<span class="string">&quot;{{true}}\n&quot;</span>);
+          <span class="macro">Debug!</span>(<span class="string">"{{true}}\n"</span>);
         }
       } <span class="kw">else </span>{
         <span class="kw">let </span>to = <span class="self">self</span>.skip_conditional_body(-<span class="number">1</span>);
         <span class="kw">if </span>tracing {
-          <span class="macro">Debug!</span>(<span class="string">&quot;{{false}} [skipped to {:?}]\n&quot;</span>, to);
+          <span class="macro">Debug!</span>(<span class="string">"{{false}} [skipped to {:?}]\n"</span>, to);
         }
       }
     } <span class="kw">else </span>{
-      <span class="comment">// If there&#39;s no test, it must be the Special Case, \ifcase
+      <span class="comment">// If there's no test, it must be the Special Case, \ifcase
       </span><span class="kw">let </span>num = args[<span class="number">0</span>].value_of();
       <span class="kw">if </span>num &gt; <span class="number">0 </span>{
         <span class="kw">let </span>_to = <span class="self">self</span>.skip_conditional_body(num);
-        <span class="comment">//       print STDERR &quot;{$num} [skipped to &quot; . ToString($to) . &quot;]\n&quot; if $tracing;
+        <span class="comment">//       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;
       </span>}
     }
     state::expire_ifframe();
@@ -654,22 +652,22 @@
   //  -1 : skip to \else, if any, or \fi
   //   n : skip to n-th \or, if any, or \else, if any, or \fi.
   //
-  // NOTE that there are 2 kinds of &quot;nested&quot; ifs.
-  //  \if&#39;s inside the body of either the true or false branch
+  // NOTE that there are 2 kinds of "nested" ifs.
+  //  \if's inside the body of either the true or false branch
   // are easily skipped by tracking a level of if nesting and skipping over the
   // same number of \fi as you find \if.
-  //  \if&#39;s that get expanded while evaluating the test clause itself
-  // are considerably trickier. There&#39;s a frame on the if-stack for this \if
-  // that&#39;s above the one we&#39;re currently processing; typically the \else &amp; \fi
+  //  \if's that get expanded while evaluating the test clause itself
+  // are considerably trickier. There's a frame on the if-stack for this \if
+  // that's above the one we're currently processing; typically the \else &amp; \fi
   // may still remain, but we need to either evaluate them a normal
-  // if we&#39;re continuing to follow the true branch, or skip oever them if
-  // we&#39;re trying to find the \else for the false branch.
-  // The danger is mistaking the \else that&#39;s associated with the test clause&#39;s \if
-  // and taking it for the \else that we&#39;re skipping to!
+  // if we're continuing to follow the true branch, or skip oever them if
+  // we're trying to find the \else for the false branch.
+  // The danger is mistaking the \else that's associated with the test clause's \if
+  // and taking it for the \else that we're skipping to!
   // Canonical example:
   //   \if\ifx AA XY junk \else blah \fi True \else False \fi
-  // The inner \ifx should expand to &quot;XY junk&quot;, since A==A
-  // Return the token we&#39;ve skipped to, and the frame that this applies to.
+  // The inner \ifx should expand to "XY junk", since A==A
+  // Return the token we've skipped to, and the frame that this applies to.
   </span><span class="kw">fn </span>skip_conditional_body(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
     nskips: i64,
@@ -679,7 +677,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>n_ors = <span class="number">0</span>;
     <span class="kw">let </span>_start = gullet::get_locator();
     <span class="comment">// NOTE: Open-coded manipulation of if_stack!
-    // [we&#39;re only reading tokens &amp; looking up, so state::shouldn&#39;t change behind our backs]
+    // [we're only reading tokens &amp; looking up, so state::shouldn't change behind our backs]
     </span><span class="kw">loop </span>{
       <span class="kw">let </span>(t, cond_type) = <span class="kw">match </span>gullet::read_next_conditional()<span class="question-mark">? </span>{
         <span class="prelude-val">Some</span>((tok, typ)) =&gt; (<span class="macro">Tokens!</span>(tok), <span class="prelude-val">Some</span>(typ)),
@@ -691,16 +689,16 @@
         </span><span class="prelude-val">Some</span>(ConditionalType::Fi) =&gt; {
           <span class="comment">// Found a \fi
           </span><span class="kw">let </span>local_frame = get_ifframe();
-          <span class="kw">let </span>maybe_last = with_value_mut(<span class="string">&quot;if_stack&quot;</span>,|value_opt| {
+          <span class="kw">let </span>maybe_last = with_value_mut(<span class="string">"if_stack"</span>,|value_opt| {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = value_opt {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.pop_front() {
                 <span class="kw">if </span><span class="kw-2">*</span>stack_frame.borrow() != <span class="kw-2">*</span>local_frame.as_ref().unwrap().borrow() {
                   <span class="comment">// But is it for a condition nested in the test clause?
-                  // then DO pop that conditional&#39;s frame; it&#39;s DONE!
+                  // then DO pop that conditional's frame; it's DONE!
                 </span>} <span class="kw">else </span>{
                   level -= <span class="number">1</span>;
                   <span class="kw">if </span>level == <span class="number">0 </span>{
-                    <span class="comment">// otherwise, if no more nesting, we&#39;re done.
+                    <span class="comment">// otherwise, if no more nesting, we're done.
                     // Done with this frame, keep it removed
                     </span><span class="kw">return </span><span class="prelude-val">Some</span>(t); <span class="comment">// AND Return the finishing token.
                   </span>} <span class="kw">else </span>{
@@ -724,14 +722,14 @@
               <span class="kw">return </span><span class="prelude-val">Ok</span>(t);
             }
           } <span class="kw">else if </span>other_type == ConditionalType::Else &amp;&amp; nskips != <span class="number">0 </span>{
-            <span class="comment">// Found \else and we&#39;re looking for one?
+            <span class="comment">// Found \else and we're looking for one?
             </span><span class="kw">let </span>local_frame = get_ifframe();
             <span class="comment">// Make sure this \else is NOT for a nested \if that is part of the test clause!
-            </span><span class="kw">let </span>maybe_last = with_value(<span class="string">&quot;if_stack&quot;</span>, |stack_opt| {
+            </span><span class="kw">let </span>maybe_last = with_value(<span class="string">"if_stack"</span>, |stack_opt| {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = stack_opt {
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(<span class="kw-2">ref </span>stack_frame)) = stack.front() {
                   <span class="kw">if </span><span class="kw-2">*</span>stack_frame.borrow() == <span class="kw-2">*</span>local_frame.as_ref().unwrap().borrow() {
-                    <span class="comment">// No need to actually call elseHandler, but note that we&#39;ve seen an \else!
+                    <span class="comment">// No need to actually call elseHandler, but note that we've seen an \else!
                     </span>stack_frame.borrow_mut().elses = <span class="bool-val">true</span>;
                     <span class="kw">return </span><span class="prelude-val">Some</span>(t);
                   }
@@ -747,16 +745,16 @@
       };
     }
     <span class="macro">Error!</span>(
-      <span class="string">&quot;expected&quot;</span>,
-      <span class="string">&quot;\\fi&quot;</span>,
+      <span class="string">"expected"</span>,
+      <span class="string">"\\fi"</span>,
       <span class="self">self</span>,
-      <span class="string">&quot;Missing \\fi or \\else, conditional fell off end&quot;
+      <span class="string">"Missing \\fi or \\else, conditional fell off end"
     </span>);
     <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
   }
 
   <span class="kw">fn </span>invoke_else(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="kw">let </span>stack_frame_opt = with_value_mut(<span class="string">&quot;if_stack&quot;</span>, |stack_opt|
+    <span class="kw">let </span>stack_frame_opt = with_value_mut(<span class="string">"if_stack"</span>, |stack_opt|
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = stack_opt {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.front() {
           <span class="prelude-val">Some</span>(Rc::clone(stack_frame))
@@ -769,45 +767,45 @@
     <span class="kw">let </span>local_token = get_current_token().unwrap();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(stack_frame) = stack_frame_opt {
       <span class="kw">if </span>stack_frame.borrow().parsing {
-        <span class="comment">// Defer expanding the \else if we&#39;re still parsing the test
+        <span class="comment">// Defer expanding the \else if we're still parsing the test
         </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_RELAX!</span>(), local_token))
       } <span class="kw">else if </span>stack_frame.borrow().elses {
-        <span class="comment">// Already seen an \else&#39;s at this level?
+        <span class="comment">// Already seen an \else's at this level?
         </span><span class="kw">let </span>message = <span class="macro">s!</span>(
-          <span class="string">&quot;Extra {} already saw \\else for {:?} [{:?}] at {:?}&quot;</span>,
+          <span class="string">"Extra {} already saw \\else for {:?} [{:?}] at {:?}"</span>,
           local_token.stringify(),
           stack_frame.borrow().token,
           stack_frame.borrow().ifid,
           stack_frame.borrow().start
         );
         <span class="kw">let </span>local_token_str = local_token.to_string();
-        <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, local_token_str, message);
+        <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, local_token_str, message);
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
       } <span class="kw">else </span>{
         state::set_ifframe(<span class="prelude-val">Some</span>(Rc::clone(<span class="kw-2">&amp;</span>stack_frame)));
         <span class="kw">let </span>_t = <span class="self">self</span>.skip_conditional_body(<span class="number">0</span>);
-        <span class="comment">//     print STDERR &#39;{&#39; . ToString($LaTeXML::CURRENT_TOKEN) . &#39;}&#39;
-        //       . &quot; [for &quot; . ToString($$LaTeXML::IFFRAME{token}) . &quot; #&quot; .
-        // $$LaTeXML::IFFRAME{ifid}       . &quot; skipping to &quot; . ToString($t) . &quot;]\n&quot;
-        //       if $state-&gt;lookupValue(&#39;TRACINGCOMMANDS&#39;);
+        <span class="comment">//     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
+        //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
+        // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"
+        //       if $state-&gt;lookupValue('TRACINGCOMMANDS');
         </span>state::expire_ifframe();
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
       }
     } <span class="kw">else </span>{
       <span class="comment">// No if stack entry ?
       </span><span class="kw">let </span>message = <span class="macro">s!</span>(
-        <span class="string">&quot;Didn&#39;t expect a {:?} since we seem not to be in a conditional&quot;</span>,
+        <span class="string">"Didn't expect a {:?} since we seem not to be in a conditional"</span>,
         local_token.stringify()
       );
       <span class="kw">let </span>local_token_str = local_token.to_string();
-      <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, local_token_str, message);
+      <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, local_token_str, message);
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
     }
   }
 
   <span class="kw">fn </span>invoke_fi(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span>stack_frame_opt: <span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;IfFrame&gt;&gt;&gt; =
-      with_value(<span class="string">&quot;if_stack&quot;</span>, |stack_opt|
+      with_value(<span class="string">"if_stack"</span>, |stack_opt|
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>stack)) = stack_opt {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(frame)) = stack.front() {
             <span class="prelude-val">Some</span>(Rc::clone(frame))
@@ -819,25 +817,25 @@
         </span>});
     <span class="kw">if let </span><span class="prelude-val">Some</span>(stack_frame) = stack_frame_opt {
       <span class="kw">if </span>stack_frame.borrow().parsing {
-        <span class="comment">// Defer expanding the \else if we&#39;re still parsing the test
+        <span class="comment">// Defer expanding the \else if we're still parsing the test
         </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_RELAX!</span>(), get_current_token().unwrap()))
       } <span class="kw">else </span>{
-        <span class="comment">// &quot;expand&quot; by removing the stack entry for this level
+        <span class="comment">// "expand" by removing the stack entry for this level
         </span>set_ifframe(<span class="prelude-val">Some</span>(stack_frame));
-        shift_value(<span class="string">&quot;if_stack&quot;</span>)<span class="question-mark">?</span>; <span class="comment">// Done with this frame
+        shift_value(<span class="string">"if_stack"</span>)<span class="question-mark">?</span>; <span class="comment">// Done with this frame
 
-        //     print STDERR &#39;{&#39; . ToString($LaTeXML::CURRENT_TOKEN) . &#39;}&#39;
-        // . &quot; [for &quot; . Stringify($$LaTeXML::IFFRAME{token}) . &quot; #&quot; . $$LaTeXML::IFFRAME{ifid} .
-        // &quot;]\n&quot;       if $state-&gt;lookupValue(&#39;TRACINGCOMMANDS&#39;);
+        //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
+        // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
+        // "]\n"       if $state-&gt;lookupValue('TRACINGCOMMANDS');
         </span>expire_ifframe();
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
       }
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(
-        <span class="string">&quot;Didn&#39;t expect a {:?} since we seem not to be in a conditional&quot;</span>,
+        <span class="string">"Didn't expect a {:?} since we seem not to be in a conditional"</span>,
         get_current_token().unwrap().stringify()
       );
-      <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;fi&quot;</span>, message);
+      <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"fi"</span>, message);
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
     }
   }

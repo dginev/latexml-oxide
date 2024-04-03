@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/rtx_math_macros.rs`."><title>rtx_math_macros.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/rtx_math_macros.rs`."><title>rtx_math_macros.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -395,10 +397,8 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::collections::hash_map::Entry;
-<span class="kw">use </span><span class="kw">crate</span>::common::xml::XML_NS;
 
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">// ======================================================================
@@ -406,9 +406,9 @@
 
   // # Common XMath pattern for assigning attributes from Whatsit properties.
   // our $XMath_attributes =
-  //   &quot; role=&#39;#role&#39; name=&#39;#name&#39; meaning=&#39;#meaning&#39; omcd=&#39;#omcd&#39;&quot;
-  //   . &quot; width=&#39;#width&#39; height=&#39;#height&#39; xoffset=&#39;#xoffset&#39; yoffset=&#39;#yoffset&#39;&quot;
-  //   . &quot; lpadding=&#39;#lpadding&#39; rpadding=&#39;#rpadding&#39;&quot;;
+  //   " role='#role' name='#name' meaning='#meaning' omcd='#omcd'"
+  //   . " width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset'"
+  //   . " lpadding='#lpadding' rpadding='#rpadding'";
 
   // sub XMath_copy_keyvals {
   //   my ($stomach, $whatsit) = @_;
@@ -420,23 +420,23 @@
   // # first piece of (TeX) argument is expected to be the operator
   // # Usually used on content side, but at least the arguments should be properly encapsulated:
   // # They should build individual subtrees; use ltx::XMArg, ltx:XMWrap ... if needed
-  // DefConstructor(&#39;\lx@apply OptionalKeyVals:XMath {}{}&#39;,
-  //   &quot;&lt;ltx:XMApp $XMath_attributes&gt;#2#3&lt;/ltx:XMApp&gt;&quot;,
-  //   reversion   =&gt; &#39;#2#3&#39;,
+  // DefConstructor('\lx@apply OptionalKeyVals:XMath {}{}',
+  //   "&lt;ltx:XMApp $XMath_attributes&gt;#2#3&lt;/ltx:XMApp&gt;",
+  //   reversion   =&gt; '#2#3',
   //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
 
   // # Build an ltx:XMTok, a mathematical symbol, with given attributes
   // # the argument should create text to be the content of the token.
-  // DefConstructor(&#39;\lx@symbol OptionalKeyVals:XMath {}&#39;,
-  //   &quot;&lt;ltx:XMTok $XMath_attributes&gt;#2&lt;/ltx:XMTok&gt;&quot;,
-  //   reversion   =&gt; &#39;#2&#39;,
+  // DefConstructor('\lx@symbol OptionalKeyVals:XMath {}',
+  //   "&lt;ltx:XMTok $XMath_attributes&gt;#2&lt;/ltx:XMTok&gt;",
+  //   reversion   =&gt; '#2',
   //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
 
   // # Wrap the contents in an ltx:XMWrap, to stand as a single subtree &amp; providing attributes
   // # The ltx:XMWrap may be collapsed, later, by parsing
-  // DefConstructor(&#39;\lx@wrap OptionalKeyVals:XMath {}&#39;,
-  //   &quot;&lt;ltx:XMWrap $XMath_attributes&gt;#2&lt;/ltx:XMWrap&gt;&quot;,
-  //   reversion   =&gt; &#39;#2&#39;,
+  // DefConstructor('\lx@wrap OptionalKeyVals:XMath {}',
+  //   "&lt;ltx:XMWrap $XMath_attributes&gt;#2&lt;/ltx:XMWrap&gt;",
+  //   reversion   =&gt; '#2',
   //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
 
   // # Convert a hashref into a list of tokens of the form key=value,...
@@ -446,41 +446,41 @@
   //   if ($keyvals) {
   //     while (my ($key, $value) = each %$keyvals) {
   //       $value = TokenizeInternal($value) if defined $value &amp;&amp; !ref $value;
-  //       push(@options, T_OTHER(&#39;,&#39;)) if @options;
-  //       push(@options, T_OTHER($key), T_OTHER(&#39;=&#39;), T_BEGIN, $value, T_END); } }
-  //   return (@options ? Tokens(T_OTHER(&#39;[&#39;), @options, T_OTHER(&#39;]&#39;)) : ()); }
+  //       push(@options, T_OTHER(',')) if @options;
+  //       push(@options, T_OTHER($key), T_OTHER('='), T_BEGIN, $value, T_END); } }
+  //   return (@options ? Tokens(T_OTHER('['), @options, T_OTHER(']')) : ()); }
 
   // sub I_apply {
   //   my ($kv, $op, @args) = @_;
-  //   return Tokens(T_CS(&#39;\lx@apply&#39;), I_keyvals($kv),
-  //     T_BEGIN, T_CS(&#39;\lx@wrap&#39;), T_BEGIN, $op, T_END, T_END,
-  //     T_BEGIN, (map { (T_CS(&#39;\lx@wrap&#39;), T_BEGIN, $_, T_END); } @args), T_END); }
+  //   return Tokens(T_CS('\lx@apply'), I_keyvals($kv),
+  //     T_BEGIN, T_CS('\lx@wrap'), T_BEGIN, $op, T_END, T_END,
+  //     T_BEGIN, (map { (T_CS('\lx@wrap'), T_BEGIN, $_, T_END); } @args), T_END); }
 
   // sub I_symbol {
   //   my ($kv, $text) = @_;
-  //   return Tokens(T_CS(&#39;\lx@symbol&#39;), I_keyvals($kv), T_BEGIN, (defined $text ? $text : ()),
+  //   return Tokens(T_CS('\lx@symbol'), I_keyvals($kv), T_BEGIN, (defined $text ? $text : ()),
   // T_END); }
 
   // sub I_wrap {
   //   my ($kv, @stuff) = @_;
-  //   return Tokens(T_CS(&#39;\lx@wrap&#39;), I_keyvals($kv), T_BEGIN, @stuff, T_END); }
+  //   return Tokens(T_CS('\lx@wrap'), I_keyvals($kv), T_BEGIN, @stuff, T_END); }
 
   // # These two accept key operator_meaning, operator_omcd to give a meaning to the sub/superscript
   // # NOTE (BUG): We SHOULD nest paired sub/superscripts, but avoid conflicting double scripts
   // # To do that we need to sniff at the base, whether it already contains scripts.
-  // # However, IsScript isn&#39;t quite sufficient if the scripts are hidden within Whatsits, duals,
+  // # However, IsScript isn't quite sufficient if the scripts are hidden within Whatsits, duals,
   // etc. # Currently, LaTeXML manages to deal with the double scripts anyway;
   // # The reversion ALWAYS wraps the base (which will render non-optimally in images but avoid
-  // Errors) DefConstructor(&#39;\lx@superscript OptionalKeyVals:XMath {} InScriptStyle&#39;,
-  //   &quot;&lt;ltx:XMApp $XMath_attributes&gt;&quot;
-  //     . &quot;&lt;ltx:XMTok role=&#39;SUPERSCRIPTOP&#39; meaning=&#39;#operator_meaning&#39; omcd=&#39;#operator_omcd&#39;
-  // scriptpos=&#39;#scriptpos&#39;/&gt;&quot;     . &quot;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&quot;
-  //     . &quot;&lt;ltx:XMArg rule=&#39;Superscript&#39;&gt;#3&lt;/ltx:XMArg&gt;&quot;
-  //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
+  // Errors) DefConstructor('\lx@superscript OptionalKeyVals:XMath {} InScriptStyle',
+  //   "&lt;ltx:XMApp $XMath_attributes&gt;"
+  //     . "&lt;ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd'
+  // scriptpos='#scriptpos'/&gt;"     . "&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;"
+  //     . "&lt;ltx:XMArg rule='Superscript'&gt;#3&lt;/ltx:XMArg&gt;"
+  //     . "&lt;/ltx:XMApp&gt;",
   //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); },
   //   reversion   =&gt; sub {
   //     my ($whatsit, $kv, $base, $sup) = @_;
-  //     my $bump = $whatsit-&gt;getProperty(&#39;bump&#39;);
+  //     my $bump = $whatsit-&gt;getProperty('bump');
   //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
   //     ($sup &amp;&amp; $sup-&gt;unlist
   //       ? (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUPER,
@@ -488,22 +488,22 @@
   //   properties =&gt; sub {
   //     my ($stomach, $kv, $base, $script) = @_;
   //     my $basetype = IsScript($base);
-  //     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq &#39;SUPERSCRIPT&#39;) ? 1 : 0);
-  //     (scriptpos =&gt; &quot;post&quot; . ($_[0]-&gt;getScriptLevel + $bump),
+  //     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq 'SUPERSCRIPT') ? 1 : 0);
+  //     (scriptpos =&gt; "post" . ($_[0]-&gt;getScriptLevel + $bump),
   //       bump =&gt; $bump); },
-  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, &#39;SUPERSCRIPT&#39;, &#39;post&#39;);
+  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, 'SUPERSCRIPT', 'post');
   // });
 
-  // DefConstructor(&#39;\lx@subscript OptionalKeyVals:XMath {} InScriptStyle&#39;,
-  //   &quot;&lt;ltx:XMApp $XMath_attributes&gt;&quot;
-  //     . &quot;&lt;ltx:XMTok role=&#39;SUBSCRIPTOP&#39; meaning=&#39;#operator_meaning&#39; omcd=&#39;#operator_omcd&#39;
-  // scriptpos=&#39;#scriptpos&#39;/&gt;&quot;     . &quot;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&quot;
-  //     . &quot;&lt;ltx:XMArg rule=&#39;Subscript&#39;&gt;#3&lt;/ltx:XMArg&gt;&quot;
-  //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
+  // DefConstructor('\lx@subscript OptionalKeyVals:XMath {} InScriptStyle',
+  //   "&lt;ltx:XMApp $XMath_attributes&gt;"
+  //     . "&lt;ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd'
+  // scriptpos='#scriptpos'/&gt;"     . "&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;"
+  //     . "&lt;ltx:XMArg rule='Subscript'&gt;#3&lt;/ltx:XMArg&gt;"
+  //     . "&lt;/ltx:XMApp&gt;",
   //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); },
   //   reversion   =&gt; sub {
   //     my ($whatsit, $kv, $base, $sub) = @_;
-  //     my $bump = $whatsit-&gt;getProperty(&#39;bump&#39;);
+  //     my $bump = $whatsit-&gt;getProperty('bump');
   //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
   //     ($sub &amp;&amp; $sub-&gt;unlist
   // ###      ? (T_BEGIN, Revert($base), T_END, T_SUB, revertScript($sub))
@@ -512,82 +512,82 @@
   //   properties =&gt; sub {
   //     my ($stomach, $kv, $base, $script) = @_;
   //     my $basetype = IsScript($base);
-  //     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq &#39;SUBSCRIPT&#39;) ? 1 : 0);
-  //     (scriptpos =&gt; &quot;post&quot; . ($_[0]-&gt;getScriptLevel + $bump),
+  //     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq 'SUBSCRIPT') ? 1 : 0);
+  //     (scriptpos =&gt; "post" . ($_[0]-&gt;getScriptLevel + $bump),
   //       bump =&gt; $bump); },
-  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, &#39;SUBSCRIPT&#39;, &#39;post&#39;);
+  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, 'SUBSCRIPT', 'post');
   // });
 
   // # Ignore $kv for the moment?????
   // sub I_subscript {
   //   my ($kv, $base, $script) = @_;
-  //   return Tokens(T_CS(&#39;\lx@subscript&#39;), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script,
+  //   return Tokens(T_CS('\lx@subscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script,
   // T_END); }
 
   // sub I_superscript {
   //   my ($kv, $base, $script) = @_;
-  //   return Tokens(T_CS(&#39;\lx@superscript&#39;), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN,
+  //   return Tokens(T_CS('\lx@superscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN,
   // $script, T_END); }
 
   // Superscript meaning power
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@power{}{}&quot;</span>, <span class="string">&quot;\\lx@superscript[operator_meaning=power]{#1}{#2}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@power{}{}"</span>, <span class="string">"\\lx@superscript[operator_meaning=power]{#1}{#2}"</span>);
   <span class="comment">// Superscript meaning functional (or applicative) power; iterated function/operator application
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@functionalpower{}{}&quot;</span>,
-    <span class="string">&quot;\\lx@superscript[operator_meaning=functional-power]{#1}{#2}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@functionalpower{}{}"</span>,
+    <span class="string">"\\lx@superscript[operator_meaning=functional-power]{#1}{#2}"</span>);
 
   <span class="comment">// These to be used in presentation side
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@ApplyFunction&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2061}&quot;</span>, reversion =&gt; <span class="string">&quot;&quot;</span>, name =&gt; <span class="string">&quot;&quot;</span>, role =&gt;<span class="string">&quot;APPLYOP&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@InvisibleTimes&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2062}&quot;</span>, reversion =&gt; <span class="string">&quot;&quot;</span>, name =&gt; <span class="string">&quot;&quot;</span>,
-    meaning =&gt; <span class="string">&quot;times&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@InvisibleComma&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2063}&quot;</span>, reversion =&gt; <span class="string">&quot;&quot;</span>, name =&gt; <span class="string">&quot;&quot;</span>, role =&gt; <span class="string">&quot;PUNCT&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@InvisiblePlus&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2064}&quot;</span>, reversion =&gt; <span class="string">&quot;&quot;</span>, name =&gt; <span class="string">&quot;&quot;</span>, meaning =&gt; <span class="string">&quot;plus&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@kludged{}&quot;</span>,
-    <span class="string">&quot;?#isMath(&lt;ltx:XMWrap rule=&#39;kludge&#39;&gt;#1&lt;/ltx:XMWrap&gt;)(#1)&quot;</span>,
-    reversion =&gt; <span class="string">&quot;#1&quot;</span>);
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@ApplyFunction"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2061}"</span>, reversion =&gt; <span class="string">""</span>, name =&gt; <span class="string">""</span>, role =&gt;<span class="string">"APPLYOP"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@InvisibleTimes"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2062}"</span>, reversion =&gt; <span class="string">""</span>, name =&gt; <span class="string">""</span>,
+    meaning =&gt; <span class="string">"times"</span>, role =&gt; <span class="string">"MULOP"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@InvisibleComma"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2063}"</span>, reversion =&gt; <span class="string">""</span>, name =&gt; <span class="string">""</span>, role =&gt; <span class="string">"PUNCT"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@InvisiblePlus"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2064}"</span>, reversion =&gt; <span class="string">""</span>, name =&gt; <span class="string">""</span>, meaning =&gt; <span class="string">"plus"</span>, role =&gt; <span class="string">"ADDOP"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@kludged{}"</span>,
+    <span class="string">"?#isMath(&lt;ltx:XMWrap rule='kludge'&gt;#1&lt;/ltx:XMWrap&gt;)(#1)"</span>,
+    reversion =&gt; <span class="string">"#1"</span>);
   <span class="comment">// TODO:
-  // DefConstructor!(&quot;\\lx@padded[MuDimension]{MuDimension}{}&quot;,
-  //   &quot;#3&quot;,
+  // DefConstructor!("\\lx@padded[MuDimension]{MuDimension}{}",
+  //   "#3",
   //   afterConstruct =&gt; sub {
   //     my ($document, $whatsit) = @_;
   //     my $node = $document-&gt;getLastChildElement($document-&gt;getNode);
-  //     if ($document-&gt;getNodeQName($node) eq &#39;ltx:XMDual&#39;) {
+  //     if ($document-&gt;getNodeQName($node) eq 'ltx:XMDual') {
   //       my (@ch) = $node-&gt;childNodes;
   //       $node = $ch[1]; }
   //     if (my $lpadding = $whatsit-&gt;getArg(1)) {
   //       $document-&gt;setAttribute($node, lpadding =&gt; $lpadding); }
   //     if (my $rpadding = $whatsit-&gt;getArg(2)) {
   //       $document-&gt;setAttribute($node, rpadding =&gt; $rpadding); } },
-  //   reversion =&gt; &#39;#3&#39;);
+  //   reversion =&gt; '#3');
 
   // #======================================================================
   // # Building XMDuals for Mathematical Parallel markup
   // # Used when the content and presentation forms have different structure.
 
-  </span><span class="macro">DefKeyVal!</span>(<span class="string">&quot;XMath&quot;</span>, <span class="string">&quot;reversion&quot;</span>,              <span class="string">&quot;UndigestedDefKey&quot;</span>);
-  <span class="macro">DefKeyVal!</span>(<span class="string">&quot;XMath&quot;</span>, <span class="string">&quot;content_reversion&quot;</span>,      <span class="string">&quot;UndigestedDefKey&quot;</span>);
-  <span class="macro">DefKeyVal!</span>(<span class="string">&quot;XMath&quot;</span>, <span class="string">&quot;presentation_reversion&quot;</span>, <span class="string">&quot;UndigestedDefKey&quot;</span>);
+  </span><span class="macro">DefKeyVal!</span>(<span class="string">"XMath"</span>, <span class="string">"reversion"</span>,              <span class="string">"UndigestedDefKey"</span>);
+  <span class="macro">DefKeyVal!</span>(<span class="string">"XMath"</span>, <span class="string">"content_reversion"</span>,      <span class="string">"UndigestedDefKey"</span>);
+  <span class="macro">DefKeyVal!</span>(<span class="string">"XMath"</span>, <span class="string">"presentation_reversion"</span>, <span class="string">"UndigestedDefKey"</span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@dual OptionalKeyVals:XMath {}{}&quot;</span>,
-  <span class="string">&quot;&lt;ltx:XMDual role=&#39;#role&#39; name=&#39;#name&#39; meaning=&#39;#meaning&#39; omcd=&#39;#omcd&#39; width=&#39;#width&#39; height=&#39;#height&#39; xoffset=&#39;#xoffset&#39; yoffset=&#39;#yoffset&#39; lpadding=&#39;#lpadding&#39; rpadding=&#39;#rpadding&#39;&gt;#2&lt;ltx:XMWrap&gt;#3&lt;/ltx:XMWrap&gt;&lt;/ltx:XMDual&gt;&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@dual OptionalKeyVals:XMath {}{}"</span>,
+  <span class="string">"&lt;ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'&gt;#2&lt;ltx:XMWrap&gt;#3&lt;/ltx:XMWrap&gt;&lt;/ltx:XMDual&gt;"</span>,
   before_digest =&gt; {
-    push_value(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>, Stored::HashStored(HashMap::default()))
+    push_value(<span class="string">"PENDING_DUAL_XMARGS"</span>, Stored::HashStored(HashMap::default()))
   },
   after_digest =&gt; sub[whatsit] {
     <span class="comment">// let kv     = whatsit.get_arg(1);
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(xmargs)) = pop_value(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>)<span class="question-mark">? </span>{ <span class="comment">// Really SHOULD be a hash
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(xmargs)) = pop_value(<span class="string">"PENDING_DUAL_XMARGS"</span>)<span class="question-mark">? </span>{ <span class="comment">// Really SHOULD be a hash
       </span>whatsit.set_properties(xmargs);  <span class="comment">// Hopefully no name class with XM&lt;digits&gt;
     </span>}
     <span class="comment">// TODO:
     // whatsit.set_properties($kv-&gt;getPairs) if $kv;
 
     </span><span class="kw">let </span>props = whatsit.get_properties();
-    <span class="kw">let </span>cr    = props.get(<span class="string">&quot;content_reversion&quot;</span>).cloned();
-    <span class="kw">let </span>pr    = props.get(<span class="string">&quot;presentation_reversion&quot;</span>).cloned();
-    <span class="kw">let </span>r     = <span class="kw">match </span>props.get(<span class="string">&quot;revert_as&quot;</span>) {
+    <span class="kw">let </span>cr    = props.get(<span class="string">"content_reversion"</span>).cloned();
+    <span class="kw">let </span>pr    = props.get(<span class="string">"presentation_reversion"</span>).cloned();
+    <span class="kw">let </span>r     = <span class="kw">match </span>props.get(<span class="string">"revert_as"</span>) {
       <span class="prelude-val">Some</span>(v) =&gt; v.to_string(),
-      <span class="prelude-val">None </span>=&gt; String::from(<span class="string">&quot;content&quot;</span>)
+      <span class="prelude-val">None </span>=&gt; String::from(<span class="string">"content"</span>)
     };    <span class="comment">// ?????
-    </span><span class="kw">if </span>whatsit.get_property(<span class="string">&quot;reversion&quot;</span>).is_none() {
+    </span><span class="kw">if </span>whatsit.get_property(<span class="string">"reversion"</span>).is_none() {
       <span class="kw">let </span>reversion_closure = Reversion::Closure(Rc::new(<span class="kw">move </span>|wself, args| {
         <span class="comment">// TODO: The data manamgement here is far from final.
         // Can we avoid clones? Can we consolidate the reversion variants?
@@ -595,7 +595,7 @@
         </span><span class="kw">let </span>c = <span class="kw-2">&amp;</span>args[<span class="number">1</span>];
         <span class="kw">let </span>p = <span class="kw-2">&amp;</span>args[<span class="number">2</span>];
         <span class="kw">let </span>reverted = <span class="kw">match </span>r.as_str() {
-         <span class="string">&quot;content&quot; </span>=&gt; <span class="kw">match </span><span class="kw-2">&amp;</span>cr {
+         <span class="string">"content" </span>=&gt; <span class="kw">match </span><span class="kw-2">&amp;</span>cr {
           <span class="prelude-val">Some</span>(Stored::Reversion(Reversion::Tokens(cr_tks))) =&gt; cr_tks.clone(),
           <span class="prelude-val">Some</span>(Stored::Reversion(Reversion::Closure(cr_closure))) =&gt; cr_closure(wself,args)<span class="question-mark">?</span>,
           <span class="prelude-val">Some</span>(Stored::Tokens(cr_tks)) =&gt; cr_tks.clone(),
@@ -603,7 +603,7 @@
             <span class="prelude-val">Some</span>(inner) =&gt; inner.revert()<span class="question-mark">?</span>,
             <span class="prelude-val">None </span>=&gt; <span class="macro">Tokens!</span>()
           }},
-         <span class="string">&quot;presentation&quot; </span>=&gt; <span class="kw">match </span><span class="kw-2">&amp;</span>pr {
+         <span class="string">"presentation" </span>=&gt; <span class="kw">match </span><span class="kw-2">&amp;</span>pr {
           <span class="prelude-val">Some</span>(Stored::Reversion(Reversion::Tokens(pr_tks))) =&gt; pr_tks.clone(),
           <span class="prelude-val">Some</span>(Stored::Reversion(Reversion::Closure(pr_closure))) =&gt; pr_closure(wself,args)<span class="question-mark">?</span>,
           <span class="prelude-val">Some</span>(Stored::Tokens(pr_tks)) =&gt; pr_tks.clone(),
@@ -611,50 +611,50 @@
             <span class="prelude-val">Some</span>(inner) =&gt; inner.revert()<span class="question-mark">?</span>,
             <span class="prelude-val">None </span>=&gt; <span class="macro">Tokens!</span>()
           }},
-         <span class="string">&quot;dual&quot; </span>=&gt; {
-            <span class="macro">unimplemented!</span>()
-            <span class="comment">// Tokens!(T_CS!(&quot;\\lx@dual&quot;))
-            //               : ($r eq &#39;dual&#39;
-            //                 ? Tokens(T_CS(&#39;\lx@dual&#39;), I_keyvals($kvs),
+         <span class="string">"dual" </span>=&gt; {
+            <span class="macro">todo!</span>()
+            <span class="comment">// Tokens!(T_CS!("\\lx@dual"))
+            //               : ($r eq 'dual'
+            //                 ? Tokens(T_CS('\lx@dual'), I_keyvals($kvs),
             //                   T_BEGIN, ($cr || Revert($c)), T_END,
             //                   T_BEGIN, ($pr || Revert($p)), T_END)
          </span>},
           _other =&gt; {
-            <span class="macro">unimplemented!</span>()
-            <span class="comment">//                 : (($LaTeXML::DUAL_BRANCH || &#39;&#39;) eq &#39;presentation&#39;    # Context dependent reversion
+            <span class="macro">todo!</span>()
+            <span class="comment">//                 : (($LaTeXML::DUAL_BRANCH || '') eq 'presentation'    # Context dependent reversion
             //                   ? $pr || Revert($p)
             //                   : $cr || Revert($c))))); }
          </span>}
         };
         <span class="prelude-val">Ok</span>(reverted)
       }));
-      whatsit.set_property(<span class="string">&quot;reversion&quot;</span>, reversion_closure);
+      whatsit.set_property(<span class="string">"reversion"</span>, reversion_closure);
     }
     <span class="prelude-val">Ok</span>(Vec::new())
   },
-  sizer =&gt; <span class="string">&quot;#3&quot;</span>); <span class="comment">// size according to presentation
+  sizer =&gt; <span class="string">"#3"</span>); <span class="comment">// size according to presentation
 
   // These are used within XMDual
   // The XMDual represents both a content &amp; presentation representation of some
-  // possibly exotic structure (&quot;Transfix notation&quot;),
+  // possibly exotic structure ("Transfix notation"),
   // or just a somewhat complex presentation that corresponds (often) to a simpler
   // applicative content structure.
-  // Invoking such a mathematical object to &quot;arguments&quot; requires that both the
+  // Invoking such a mathematical object to "arguments" requires that both the
   // content &amp; presentation branches contain those arguments.
   // There will be an XMArg, with an ID, containing the actual markup, and an XMRef that referrs to
   // it. The XMArg will usually be in the presentation branch (so that it inherits appropriate
-  // style), unless the arg is &quot;hidden&quot; (ie. semantic, but not displayed).
-  // This means that we don&#39;t know which one appears first! (See Package&#39;s dualize_arglist)
+  // style), unless the arg is "hidden" (ie. semantic, but not displayed).
+  // This means that we don't know which one appears first! (See Package's dualize_arglist)
   //
-  // To get a &quot;proper id&quot;, we&#39;ll use a temporary label-like attribute (_xmkey)
+  // To get a "proper id", we'll use a temporary label-like attribute (_xmkey)
   // and establish an id and idref later.
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@xmarg{}{}&quot;</span>, <span class="string">&quot;&lt;ltx:XMArg _xmkey=&#39;#1&#39;&gt;#2&lt;/ltx:XMArg&gt;&quot;</span>,
-    reversion   =&gt; <span class="string">&quot;#2&quot;</span>,
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@xmarg{}{}"</span>, <span class="string">"&lt;ltx:XMArg _xmkey='#1'&gt;#2&lt;/ltx:XMArg&gt;"</span>,
+    reversion   =&gt; <span class="string">"#2"</span>,
     after_digest =&gt; sub[whatsit] {
       <span class="kw">let </span>xmid = whatsit.get_arg(<span class="number">1</span>).map(ToString::to_string).unwrap_or_default();
       <span class="kw">let </span>arg = whatsit.get_arg(<span class="number">2</span>);
-      <span class="kw">let </span>reversion_key = <span class="macro">s!</span>(<span class="string">&quot;xref:{}@reversion&quot;</span>, xmid);
-      with_value_mut(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>, |pending_opt|
+      <span class="kw">let </span>reversion_key = <span class="macro">s!</span>(<span class="string">"xref:{}@reversion"</span>, xmid);
+      with_value_mut(<span class="string">"PENDING_DUAL_XMARGS"</span>, |pending_opt|
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>pending)) = pending_opt  {
           pending.insert(xmid, arg.into());
         });
@@ -662,55 +662,55 @@
       // let whatsit_stored = Stored::Digested(whatsit.into());
       </span>state::assign_value(<span class="kw-2">&amp;</span>reversion_key, Stored::Tokens(whatsit.revert()<span class="question-mark">?</span>),
         <span class="prelude-val">Some</span>(Scope::Global));
-      <span class="comment">// state::assign_value(&amp;s!(&quot;xref:{}@size&quot;, xmid),
+      <span class="comment">// state::assign_value(&amp;s!("xref:{}@size", xmid),
       //   whatsit.get_size(None), Some(Scope::Global));
   </span>});
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@xmref{}&quot;</span>, <span class="string">&quot;&lt;ltx:XMRef _xmkey=&#39;#1&#39;/&gt;&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@xmref{}"</span>, <span class="string">"&lt;ltx:XMRef _xmkey='#1'/&gt;"</span>,
     <span class="comment">// TODO: Must we store and lookup the Whatsit?
     </span>reversion =&gt; sub[_whatsit,args] {
       <span class="kw">let </span>xmid = args[<span class="number">0</span>].as_ref().unwrap().to_string();
-      <span class="prelude-val">Ok</span>( state::lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;xref:{xmid}@reversion&quot;</span>)).unwrap_or_default() )}
-    <span class="comment">// sizer =&gt; sub { LookupValue(&#39;xref:&#39; . ToString($_[0]-&gt;getArg(1)))-&gt;getSize; }
+      <span class="prelude-val">Ok</span>( state::lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"xref:{xmid}@reversion"</span>)).unwrap_or_default() )}
+    <span class="comment">// sizer =&gt; sub { LookupValue('xref:' . ToString($_[0]-&gt;getArg(1)))-&gt;getSize; }
   </span>);
 
-  <span class="comment">// Connect up the XMRef/XMArg pairs (actually can be multiple XMRef&#39;s)
-  // We want to set the idref of the XMRef&#39;s to point to the id of the XMArg (or other XM element),
+  <span class="comment">// Connect up the XMRef/XMArg pairs (actually can be multiple XMRef's)
+  // We want to set the idref of the XMRef's to point to the id of the XMArg (or other XM element),
   // but usually the XMRef is created first, and we want to let the referred to element
-  // get it&#39;s id computed by whatever means it prefers.
+  // get it's id computed by whatever means it prefers.
   // so we have to work both ways (use state::to record associations, to avoid expensive xpath)
-  // Set id&#39;s on any non-XMRef nodes that have an _xmkey
+  // Set id's on any non-XMRef nodes that have an _xmkey
   // This gets a more natural ordering
-  </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:*&quot;</span>, after_open_late =&gt; sub[document,node] {
-    <span class="kw">if </span>node.has_attribute(<span class="string">&quot;_xmkey&quot;</span>) {
+  </span><span class="macro">Tag!</span>(<span class="string">"ltx:*"</span>, after_open_late =&gt; sub[document,node] {
+    <span class="kw">if </span>node.has_attribute(<span class="string">"_xmkey"</span>) {
       <span class="kw">let </span>qname = document::get_node_qname(node);
-      <span class="kw">if </span>(qname != arena::pin_static(<span class="string">&quot;ltx:XMRef&quot;</span>)) &amp;&amp;
-        arena::with(qname, |qstr| qstr.starts_with(<span class="string">&quot;ltx:XM&quot;</span>)) &amp;&amp; !node.has_attribute(<span class="string">&quot;xml:id&quot;</span>) {
-        document.generate_id(node, <span class="string">&quot;&quot;</span>)<span class="question-mark">?</span>;
+      <span class="kw">if </span>(qname != arena::pin_static(<span class="string">"ltx:XMRef"</span>)) &amp;&amp;
+        arena::with(qname, |qstr| qstr.starts_with(<span class="string">"ltx:XM"</span>)) &amp;&amp; !node.has_attribute(<span class="string">"xml:id"</span>) {
+        document.generate_id(node, <span class="string">""</span>)<span class="question-mark">?</span>;
       }
     }
   });
 
-  <span class="macro">Tag!</span>(<span class="string">&quot;ltx:XMDual&quot;</span>, after_close_late =&gt; sub[document,node] {
+  <span class="macro">Tag!</span>(<span class="string">"ltx:XMDual"</span>, after_close_late =&gt; sub[document,node] {
     <span class="kw">let </span><span class="kw-2">mut </span>ids  = HashMap::default();
     <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::new();
     <span class="comment">// Collect all children with _xmkey attribute
-    </span><span class="kw">for </span><span class="kw-2">mut </span>n <span class="kw">in </span>document.findnodes(<span class="string">&quot;descendant::*[@_xmkey]&quot;</span>, <span class="prelude-val">Some</span>(node)) {
-      <span class="kw">if </span>document::with_node_qname(<span class="kw-2">&amp;</span>n, |qname| qname == <span class="string">&quot;ltx:XMRef&quot;</span>)
-         &amp;&amp; !n.has_attribute(<span class="string">&quot;idref&quot;</span>) {
-        refs.push(n);    <span class="comment">// we&#39;ll fill these in next
+    </span><span class="kw">for </span><span class="kw-2">mut </span>n <span class="kw">in </span>document.findnodes(<span class="string">"descendant::*[@_xmkey]"</span>, <span class="prelude-val">Some</span>(node)) {
+      <span class="kw">if </span>document::with_node_qname(<span class="kw-2">&amp;</span>n, |qname| qname == <span class="string">"ltx:XMRef"</span>)
+         &amp;&amp; !n.has_attribute(<span class="string">"idref"</span>) {
+        refs.push(n);    <span class="comment">// we'll fill these in next
       </span>} <span class="kw">else </span>{ <span class="comment">// generate &amp; record ids for all referenced noces
-        </span><span class="kw">let </span>key = n.get_attribute(<span class="string">&quot;_xmkey&quot;</span>).unwrap();
+        </span><span class="kw">let </span>key = n.get_attribute(<span class="string">"_xmkey"</span>).unwrap();
         <span class="kw">if let </span>Entry::Vacant(e) = ids.entry(key) {
-          document.generate_id(<span class="kw-2">&amp;mut </span>n, <span class="string">&quot;&quot;</span>)<span class="question-mark">?</span>; <span class="comment">// Generate id if none already.
-          </span>e.insert(n.get_attribute_ns(<span class="string">&quot;id&quot;</span>,XML_NS).unwrap_or_default());
+          document.generate_id(<span class="kw-2">&amp;mut </span>n, <span class="string">""</span>)<span class="question-mark">?</span>; <span class="comment">// Generate id if none already.
+          </span>e.insert(n.get_attribute_ns(<span class="string">"id"</span>,XML_NS).unwrap_or_default());
         }
       }
     }
     <span class="kw">for </span><span class="kw-2">mut </span>r <span class="kw">in </span>refs {                        <span class="comment">// Now fill in the references
-      </span><span class="kw">let </span>r_xmkey = r.get_attribute(<span class="string">&quot;_xmkey&quot;</span>).unwrap();
-      document.set_attribute(<span class="kw-2">&amp;mut </span>r, <span class="string">&quot;idref&quot;</span>, ids.get(<span class="kw-2">&amp;</span>r_xmkey).unwrap())<span class="question-mark">?</span>;
-      r.remove_attribute(<span class="string">&quot;_xmkey&quot;</span>)<span class="question-mark">?</span>;
+      </span><span class="kw">let </span>r_xmkey = r.get_attribute(<span class="string">"_xmkey"</span>).unwrap();
+      document.set_attribute(<span class="kw-2">&amp;mut </span>r, <span class="string">"idref"</span>, ids.get(<span class="kw-2">&amp;</span>r_xmkey).unwrap())<span class="question-mark">?</span>;
+      r.remove_attribute(<span class="string">"_xmkey"</span>)<span class="question-mark">?</span>;
     }
   });
 
@@ -732,8 +732,8 @@
   //   foreach my $arg (@args) {
   //     my $id = LaTeXML::Package::getXMArgID();
   //     push(@revargs, Tokens(I_arg(ToString($id))));
-  //     push(@pargs,   Invocation(T_CS(&#39;\lx@xmarg&#39;), $id, $arg));
-  //     push(@cargs,   Invocation(T_CS(&#39;\lx@xmref&#39;), $id)); }
+  //     push(@pargs,   Invocation(T_CS('\lx@xmarg'), $id, $arg));
+  //     push(@cargs,   Invocation(T_CS('\lx@xmref'), $id)); }
   //   my $optional = undef;
   //   if ($keyvals) {
   //     my @options = ();
@@ -741,54 +741,54 @@
   //       $value = TokenizeInternal($value) if $value &amp;&amp; !ref $value;
   //       if ($key =~ /^(?:presentation_|content_|)reversion$/) {
   //         $value = $value-&gt;substituteParameters(@revargs); }
-  //       push(@options, T_OTHER(&#39;,&#39;)) if @options;
-  //       push(@options, T_OTHER($key), T_OTHER(&#39;=&#39;), T_BEGIN, $value, T_END); }
+  //       push(@options, T_OTHER(',')) if @options;
+  //       push(@options, T_OTHER($key), T_OTHER('='), T_BEGIN, $value, T_END); }
   //     $optional = Tokens(@options); }
   //   return
-  //     Invocation(T_CS(&#39;\lx@dual&#39;), $optional,
+  //     Invocation(T_CS('\lx@dual'), $optional,
   //     $content-&gt;substituteParameters(@cargs),
   //     I_wrap({}, $presentation-&gt;substituteParameters(@pargs))); }
 
   // # A little helper to shorten things up a bit; simply generates #1 (or whatever)
   // sub I_arg {    # uncoditionally create an arg token
-  //   return bless [&quot;$_[0]&quot;, CC_ARG], &#39;LaTeXML::Core::Token&#39;; }
+  //   return bless ["$_[0]", CC_ARG], 'LaTeXML::Core::Token'; }
 
   // sub I_xmarg {
   //   my ($id, $arg) = @_;
-  //   return Tokens(T_CS(&#39;\lx@xmarg&#39;),
+  //   return Tokens(T_CS('\lx@xmarg'),
   //     T_BEGIN, (ref $id ? $id : T_OTHER($id)), T_END, T_BEGIN, $arg, T_END); }
 
   // sub I_xmref {
   //   my ($id) = @_;
-  //   return Tokens(T_CS(&#39;\lx@xmref&#39;), T_BEGIN, (ref $id ? $id : T_OTHER($id)), T_END); }
+  //   return Tokens(T_CS('\lx@xmref'), T_BEGIN, (ref $id ? $id : T_OTHER($id)), T_END); }
 
   // #----------------------------------------------------------------------
   // # This group should be renamed to \lx@somethings and deprecated
   // # NOTE: work through this systematically!
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\FCN{}&quot;</span>, <span class="string">r&quot;\lx@wrap[role=FUNCTION]{#1}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\ROLE{}{}&quot;</span>, <span class="string">r&quot;\lx@wrap[role={#1}]{#2}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@SYMBOL{}&quot;</span>, <span class="string">r&quot;\lx@wrap[role=ID]{#1}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@CSYMBOL{}&quot;</span>, <span class="string">r&quot;\lx@symbol[meaning={#1}]{}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@APPLY{}&quot;</span>, <span class="string">r&quot;\lx@apply[]{#1}{}&quot;</span>); <span class="comment">// Sorta broken?
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@MAYBEAPPLY{}{}&quot;</span>, <span class="string">r&quot;\ifx.#2.#1\else\lx@apply{#1}{#2}\fi&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@WRAP{}&quot;</span>, <span class="string">r&quot;\lx@wrap[]{#1}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@TOKEN{}&quot;</span>, <span class="string">r&quot;\lx@symbol[name={#1}]{}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\FCN{}"</span>, <span class="string">r"\lx@wrap[role=FUNCTION]{#1}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\ROLE{}{}"</span>, <span class="string">r"\lx@wrap[role={#1}]{#2}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@SYMBOL{}"</span>, <span class="string">r"\lx@wrap[role=ID]{#1}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@CSYMBOL{}"</span>, <span class="string">r"\lx@symbol[meaning={#1}]{}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@APPLY{}"</span>, <span class="string">r"\lx@apply[]{#1}{}"</span>); <span class="comment">// Sorta broken?
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@MAYBEAPPLY{}{}"</span>, <span class="string">r"\ifx.#2.#1\else\lx@apply{#1}{#2}\fi"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@WRAP{}"</span>, <span class="string">r"\lx@wrap[]{#1}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@TOKEN{}"</span>, <span class="string">r"\lx@symbol[name={#1}]{}"</span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\@SUPERSCRIPT{}{}&quot;</span>,
-    <span class="string">r&quot;\ifx.#2.#1\else\lx@superscript[]{#1}{#2}\fi&quot;
+    <span class="string">"\\@SUPERSCRIPT{}{}"</span>,
+    <span class="string">r"\ifx.#2.#1\else\lx@superscript[]{#1}{#2}\fi"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\@SUBSCRIPT{}{}&quot;</span>,
-    <span class="string">r&quot;\ifx.#2.#1\else\lx@subscript[]{#1}{#2}\fi&quot;
+    <span class="string">"\\@SUBSCRIPT{}{}"</span>,
+    <span class="string">r"\ifx.#2.#1\else\lx@subscript[]{#1}{#2}\fi"
   </span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@PADDED&quot;</span>, <span class="string">&quot;\\lx@padded&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\DUAL&quot;</span>, <span class="string">&quot;\\lx@dual&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@XMArg&quot;</span>, <span class="string">&quot;\\lx@xmarg&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@XMRef&quot;</span>, <span class="string">&quot;\\lx@xmref&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@APPLYFUNCTION&quot;</span>, <span class="string">&quot;\\lx@ApplyFunction&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLETIMES&quot;</span>, <span class="string">&quot;\\lx@InvisibleTimes&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLECOMMA&quot;</span>, <span class="string">&quot;\\lx@InvisibleComma&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLEPLUS&quot;</span>, <span class="string">&quot;\\lx@InvisiblePlus&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@PADDED"</span>, <span class="string">"\\lx@padded"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\DUAL"</span>, <span class="string">"\\lx@dual"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@XMArg"</span>, <span class="string">"\\lx@xmarg"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@XMRef"</span>, <span class="string">"\\lx@xmref"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@APPLYFUNCTION"</span>, <span class="string">"\\lx@ApplyFunction"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@INVISIBLETIMES"</span>, <span class="string">"\\lx@InvisibleTimes"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@INVISIBLECOMMA"</span>, <span class="string">"\\lx@InvisibleComma"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@INVISIBLEPLUS"</span>, <span class="string">"\\lx@InvisiblePlus"</span>);
 
   <span class="comment">// End of stuff to be deprecated.
   //----------------------------------------------------------------------

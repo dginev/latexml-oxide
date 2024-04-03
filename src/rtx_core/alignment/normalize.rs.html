@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/alignment/normalize.rs`."><title>normalize.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/alignment/normalize.rs`."><title>normalize.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -479,13 +481,13 @@
 ///   copying borders appropriately)
 /// Note that a trailing \\ in allignment (often needed to effect \hline)
 /// causes an empty row at the end. Other fancy layout fine-tuning often
-/// involves adding extra rows &amp; columsn for spacing.  HTML&#39;s table model
-/// is more forgiving that TeX&#39;s, so we don&#39;t need these extras
+/// involves adding extra rows &amp; columsn for spacing.  HTML's table model
+/// is more forgiving that TeX's, so we don't need these extras
 /// and, in fact, they often mess up the html layout!
 /// However, math alignments, and those with expected structure (eg. eqnarray)
 /// should generally NOT have rows &amp; columns collapsed --- except the last row!
 ///
-/// Also note the inconsistency between TeX &amp; HTML&#39;s table models regarding spans.
+/// Also note the inconsistency between TeX &amp; HTML's table models regarding spans.
 /// \multicolumn creates a cell that covers a certain number of columns
 /// which are then omitted from the LaTeX AND the HTML.
 /// OTOH, \multirow creates a cell which overlaps following rows!
@@ -513,21 +515,21 @@
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>boxes) = <span class="kw-2">&amp;mut </span>cell.boxes {
         <span class="kw">let </span>(w, h, d, cw, _ch, _cd) = boxes.get_size(
           <span class="prelude-val">Some</span>(<span class="macro">stored_map!</span>(
-            <span class="string">&quot;align&quot; </span>=&gt; cell.align.map(|a| a.char_code()), <span class="string">&quot;width&quot; </span>=&gt; cell.width,
-            <span class="string">&quot;vattach&quot; </span>=&gt; cell.vattach.clone() )),
+            <span class="string">"align" </span>=&gt; cell.align.map(|a| a.char_code()), <span class="string">"width" </span>=&gt; cell.width,
+            <span class="string">"vattach" </span>=&gt; cell.vattach.clone() )),
               )<span class="question-mark">?</span>;
-        <span class="comment">// Debug(&quot;CELL (&quot; . join(&#39;,&#39;, map { $_ . &quot;=&quot; . ToString($$cell{$_}); } qw(align width
-        // vattach))     . &quot;) size &quot; . showSize($w,  $h,  $d)
-        //     . &quot; csize &quot; . showSize($cw, $ch, $cd)
-        //     . &quot; Boxes=&quot; . ToString($boxes)) if $LaTeXML::DEBUG{halign} &amp;&amp; $LaTeXML::DEBUG{size};
-        // TODO: We can&#39;t do heights and depths yet
+        <span class="comment">// Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width
+        // vattach))     . ") size " . showSize($w,  $h,  $d)
+        //     . " csize " . showSize($cw, $ch, $cd)
+        //     . " Boxes=" . ToString($boxes)) if $LaTeXML::DEBUG{halign} &amp;&amp; $LaTeXML::DEBUG{size};
+        // TODO: We can't do heights and depths yet
         // || h.value_of() &lt; 1
         // || d.value_of() &lt; 1
         </span><span class="kw">let </span>empty = (cw.value_of() &lt; <span class="number">1
           </span>|| boxes
             .unlist_ref()
             .iter()
-            .all(|tb| tb.get_property_bool(<span class="string">&quot;isSpace&quot;</span>)))
+            .all(|tb| tb.get_property_bool(<span class="string">"isSpace"</span>)))
           &amp;&amp; preserved_boxes(<span class="prelude-val">Some</span>(boxes)).is_empty();
         cell.cached_width = <span class="prelude-val">Some</span>(w);
         cell.cached_height = <span class="prelude-val">Some</span>(h);
@@ -547,11 +549,11 @@
 </span><span class="doccomment">/// Mark any cells that are covered by rowspan or colspan
 </span><span class="kw">pub fn </span>normalize_mark_spans(_alignment: <span class="kw-2">&amp;mut </span>Alignment) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { <span class="prelude-val">Ok</span>(()) }
 <span class="doccomment">/// Scan for and remove empty rows
-/// but copying borders and adjusting rowspan&#39;s &amp; colspan&#39;s appropriately.
+/// but copying borders and adjusting rowspan's &amp; colspan's appropriately.
 </span><span class="kw">pub fn </span>normalize_prune_rows(alignment: <span class="kw-2">&amp;mut </span>Alignment) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// Examines: rowspan,rowspanned, border, pseudorow, empty
   // Sets: border, rowspan
-  </span><span class="kw">let </span>preserve = alignment.is_math || alignment.properties.contains_key(<span class="string">&quot;preserve_structure&quot;</span>);
+  </span><span class="kw">let </span>preserve = alignment.is_math || alignment.properties.contains_key(<span class="string">"preserve_structure"</span>);
   <span class="comment">// First, do rows.
   </span><span class="kw">let </span>init_rows: Vec&lt;<span class="kw">_</span>&gt; = alignment.rows.drain(..).collect();
   <span class="kw">let </span><span class="kw-2">mut </span>rows = init_rows.into_iter().peekable();
@@ -565,7 +567,7 @@
       </span><span class="kw">if </span>preserve {
         filtered.push_back(row);
         <span class="kw">continue</span>;
-      } <span class="comment">// don&#39;t remove inner rows from math EXCEPT last row!!
+      } <span class="comment">// don't remove inner rows from math EXCEPT last row!!
         // let (mut pruneh, mut pruned) = (0, 0);
       </span><span class="kw">for </span>(j, col) <span class="kw">in </span>row.get_columns().iter().enumerate() {
         <span class="comment">// TODO: add cached_height and cached_depth
@@ -587,8 +589,8 @@
         <span class="kw">for </span>border_c <span class="kw">in </span>col.border.chars() {
           <span class="kw">match </span>border_c {
             <span class="comment">//  but convert to top
-            </span><span class="string">&#39;t&#39; </span>| <span class="string">&#39;b&#39; </span>=&gt; converted_border.push(<span class="string">&#39;t&#39;</span>),
-            <span class="string">&#39;T&#39; </span>| <span class="string">&#39;B&#39; </span>=&gt; converted_border.push(<span class="string">&#39;T&#39;</span>),
+            </span><span class="string">'t' </span>| <span class="string">'b' </span>=&gt; converted_border.push(<span class="string">'t'</span>),
+            <span class="string">'T' </span>| <span class="string">'B' </span>=&gt; converted_border.push(<span class="string">'T'</span>),
             <span class="kw">_ </span>=&gt; {},
           };
         }
@@ -617,8 +619,8 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>converted_border = String::new();
         <span class="kw">for </span>c <span class="kw">in </span>col.border.chars() {
           <span class="kw">match </span>c {
-            <span class="string">&#39;t&#39; </span>=&gt; converted_border.push(<span class="string">&#39;b&#39;</span>), <span class="comment">// convert to bottom
-            </span><span class="string">&#39;T&#39; </span>=&gt; converted_border.push(<span class="string">&#39;B&#39;</span>), <span class="comment">// convert to bottom
+            <span class="string">'t' </span>=&gt; converted_border.push(<span class="string">'b'</span>), <span class="comment">// convert to bottom
+            </span><span class="string">'T' </span>=&gt; converted_border.push(<span class="string">'B'</span>), <span class="comment">// convert to bottom
             </span><span class="kw">_ </span>=&gt; {},
           };
         }
@@ -644,10 +646,10 @@
   <span class="prelude-val">Ok</span>(())
 }
 <span class="doccomment">/// Scan for and remove empty columns
-/// but copying borders and adjusting rowspan&#39;s &amp; colspan&#39;s appropriately.
+/// but copying borders and adjusting rowspan's &amp; colspan's appropriately.
 </span><span class="kw">pub fn </span>normalize_prune_columns(alignment: <span class="kw-2">&amp;mut </span>Alignment) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">if </span>alignment.is_math || alignment.properties.contains_key(<span class="string">&quot;preserve_structure&quot;</span>) {
-    <span class="comment">// Don&#39;t remove empty columns from math.
+  <span class="kw">if </span>alignment.is_math || alignment.properties.contains_key(<span class="string">"preserve_structure"</span>) {
+    <span class="comment">// Don't remove empty columns from math.
     </span><span class="kw">return </span><span class="prelude-val">Ok</span>(());
   }
   <span class="comment">// Now prune empty columns.
@@ -685,12 +687,12 @@
               <span class="comment">// mask all but left and right border
               </span><span class="kw">match </span>c {
                 <span class="comment">// convert to right
-                </span><span class="string">&#39;l&#39; </span>| <span class="string">&#39;r&#39; </span>=&gt; {
-                  new_border.push(<span class="string">&#39;r&#39;</span>);
+                </span><span class="string">'l' </span>| <span class="string">'r' </span>=&gt; {
+                  new_border.push(<span class="string">'r'</span>);
                 },
                 <span class="comment">// convert to right
-                </span><span class="string">&#39;L&#39; </span>| <span class="string">&#39;R&#39; </span>=&gt; {
-                  new_border.push(<span class="string">&#39;R&#39;</span>);
+                </span><span class="string">'L' </span>| <span class="string">'R' </span>=&gt; {
+                  new_border.push(<span class="string">'R'</span>);
                 },
                 <span class="kw">_ </span>=&gt; {},
               }
@@ -700,12 +702,12 @@
               <span class="comment">// mask all but left and right border
               </span><span class="kw">match </span>c {
                 <span class="comment">// but convert to left
-                </span><span class="string">&#39;l&#39; </span>| <span class="string">&#39;r&#39; </span>=&gt; {
-                  new_border.push(<span class="string">&#39;l&#39;</span>);
+                </span><span class="string">'l' </span>| <span class="string">'r' </span>=&gt; {
+                  new_border.push(<span class="string">'l'</span>);
                 },
                 <span class="comment">// but convert to left
-                </span><span class="string">&#39;L&#39; </span>| <span class="string">&#39;R&#39; </span>=&gt; {
-                  new_border.push(<span class="string">&#39;L&#39;</span>);
+                </span><span class="string">'L' </span>| <span class="string">'R' </span>=&gt; {
+                  new_border.push(<span class="string">'L'</span>);
                 },
                 <span class="kw">_ </span>=&gt; {},
               }
@@ -737,8 +739,8 @@
             }
           }
         }
-        <span class="comment">// Changed: we need to first finish all work with &quot;col&quot; before we can mutably re-borrow
-        // the &quot;prev&quot; column from the same row.
+        <span class="comment">// Changed: we need to first finish all work with "col" before we can mutably re-borrow
+        // the "prev" column from the same row.
         </span><span class="kw">if </span>!new_border.is_empty() {
           <span class="kw">if </span>j &gt; <span class="number">0 </span>{
             <span class="kw">if let </span><span class="prelude-val">Some</span>(prev) = row.get_columns_mut().get_mut(j - <span class="number">1</span>) {
@@ -772,10 +774,10 @@
   <span class="kw">let </span><span class="kw-2">mut </span>colwidths = Vec::new();
   <span class="kw">let </span><span class="kw-2">mut </span>colrights = Vec::new();
   <span class="kw">let </span><span class="kw-2">mut </span>collefts = Vec::new();
-  <span class="comment">// Uses cell&#39;s cached_width,cached_height,cached_depth
+  <span class="comment">// Uses cell's cached_width,cached_height,cached_depth
   // Computes net row &amp; column sizes &amp; positions
   // add spacing between rows? Or only from \\[..] ?
-  </span><span class="kw">let </span>strut = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Dimension(<span class="kw-2">ref </span>d)) = alignment.get_property(<span class="string">&quot;strut&quot;</span>).as_deref() {
+  </span><span class="kw">let </span>strut = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Dimension(<span class="kw-2">ref </span>d)) = alignment.get_property(<span class="string">"strut"</span>).as_deref() {
     <span class="kw-2">*</span>d
   } <span class="kw">else </span>{
     Dimension::new(<span class="number">0</span>)
@@ -897,9 +899,9 @@
       };
       cell.x = <span class="prelude-val">Some</span>(colx);
       cell.y = <span class="prelude-val">Some</span>(rowpos[i]);
-      <span class="comment">//     Debug(&quot;CELL[$j,$i] &quot; . showSize($$cell{cached_width}, $$cell{cached_height},
-      // $$cell{cached_depth})         . &quot; @ &quot; . ToString($$cell{x}) . &quot;,&quot; .
-      // ToString($$cell{y})         . &quot; w/ &quot; . join(&#39;,&#39;, map { $_ . &#39;=&#39; .
+      <span class="comment">//     Debug("CELL[$j,$i] " . showSize($$cell{cached_width}, $$cell{cached_height},
+      // $$cell{cached_depth})         . " @ " . ToString($$cell{x}) . "," .
+      // ToString($$cell{y})         . " w/ " . join(',', map { $_ . '=' .
       // ToString($$cell{$_}); }           (qw(align vattach skipped colspan rowspan))))
       //       if $LaTeXML::DEBUG{halign} &amp;&amp; $LaTeXML::DEBUG{size};
     </span>}
@@ -913,7 +915,7 @@
     <span class="prelude-val">Some</span>(boxes) =&gt; boxes
       .unlist()
       .into_iter()
-      .filter(|tb| tb.get_property_bool(<span class="string">&quot;alignmentPreserve&quot;</span>))
+      .filter(|tb| tb.get_property_bool(<span class="string">"alignmentPreserve"</span>))
       .collect(),
     <span class="prelude-val">None </span>=&gt; Vec::new(),
   }

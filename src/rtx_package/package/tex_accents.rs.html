@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_accents.rs`."><title>tex_accents.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_accents.rs`."><title>tex_accents.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -132,15 +134,14 @@
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>unicode_normalization::char::compose;
 <span class="kw">use </span>unicode_normalization::UnicodeNormalization;
 
-<span class="kw">static </span>SPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\s&quot;</span>).unwrap());
+<span class="kw">static </span>SPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\s"</span>).unwrap());
 
 <span class="comment">// Create a box applying an accent to a letter
-// Hopefully, we&#39;ll get a Box from digestion with a plain string.
+// Hopefully, we'll get a Box from digestion with a plain string.
 // Then we can apply combining accents to it.
 </span><span class="kw">pub fn </span>apply_accent(
   letter: Tokens,
@@ -153,8 +154,8 @@
   <span class="kw">let </span>font = letter_box.get_font()<span class="question-mark">?</span>.map(|f| Rc::new((<span class="kw-2">*</span>f).clone()));
 
   <span class="kw">let </span><span class="kw-2">mut </span>string: String = letter_box.to_string();
-  string = string.replace(<span class="string">&#39;\u{0131}&#39;</span>, <span class="string">&quot;i&quot;</span>).replace(<span class="string">&#39;\u{0237}&#39;</span>, <span class="string">&quot;j&quot;</span>);
-  string = SPACE_RE.replace_all(<span class="kw-2">&amp;</span>string, <span class="string">&quot; &quot;</span>).into_owned();
+  string = string.replace(<span class="string">'\u{0131}'</span>, <span class="string">"i"</span>).replace(<span class="string">'\u{0237}'</span>, <span class="string">"j"</span>);
+  string = SPACE_RE.replace_all(<span class="kw-2">&amp;</span>string, <span class="string">" "</span>).into_owned();
   <span class="kw">let </span>text = <span class="kw">if </span>string.chars().all(|l| l.is_whitespace()) {
     standalonechar.to_string()
   } <span class="kw">else </span>{
@@ -162,7 +163,7 @@
     <span class="kw">let </span>lead_letter = letters.next().unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>combined_str = compose(lead_letter, combiningchar)
       .map(|c| c.to_string())
-      .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;{lead_letter}{combiningchar}&quot;</span>));
+      .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">"{lead_letter}{combiningchar}"</span>));
     <span class="kw">for </span>rest <span class="kw">in </span>letters {
       combined_str.push(rest);
     }
@@ -171,7 +172,7 @@
   <span class="prelude-val">Ok</span>(Tbox::new(
     arena::pin(text),
     font,
-    locator.map(|l| l.into_owned()),
+    <span class="prelude-val">Some</span>(locator),
     reversion.unwrap_or(<span class="macro">Tokens!</span>()),
     HashMap::default(),
   ))
@@ -181,68 +182,67 @@
   <span class="comment">//----------------------------------------------------------------------
   // Accents.  LaTeX Table 3.1, p.38
   //----------------------------------------------------------------------
-  // All of TeX&#39;s accents can (sorta) be handled by Unicode&#39;s combining accents
+  // All of TeX's accents can (sorta) be handled by Unicode's combining accents
   // (which follow the character to be accented).
-  // We&#39;ll let unicode normalization do the combination, if needed.
+  // We'll let unicode normalization do the combination, if needed.
   // Also, note that \t is intended to combine multiple chars, but it appears to
   // work (via mozilla !?) best when the combining char is after the 1st char.
   // Further, the accents \d and \b seem to center the under dot or bar under multiple
   // chars --- how should this be handled in Unicode?
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@applyaccent DefToken Token Token {}&quot;</span>,
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@applyaccent DefToken Token Token {}"</span>,
   sub[(accent, combiningchar, standalonechar, letter)] {
-    <span class="kw">let </span>letter_str = letter.to_string();
     <span class="kw">let </span>combiningchar = combiningchar.to_string().chars().next().unwrap();
     <span class="kw">let </span>standalonechar = standalonechar.to_string();
     apply_accent(letter.clone(), combiningchar, <span class="kw-2">&amp;</span>standalonechar, <span class="prelude-val">Some</span>(
       <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(accent.to_string()),<span class="macro">T_BEGIN!</span>(),letter,<span class="macro">T_END!</span>())))
-  }, mode =&gt; <span class="string">&quot;text&quot;</span>);
+  }, mode =&gt; <span class="string">"text"</span>);
 
   <span class="comment">// Since people sometimes try to get fancy by using an empty argument,
-  // for each, I&#39;m providing the combining code and an equivalent(?) spacing one.
-  // (doesn&#39;t look quite the same to use a combining char after a space)
+  // for each, I'm providing the combining code and an equivalent(?) spacing one.
+  // (doesn't look quite the same to use a combining char after a space)
 
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\`&quot;</span>, <span class="string">&#39;\u{0300}&#39;</span>, <span class="string">&quot;\u{0060}&quot;</span>); <span class="comment">// COMBINING GRAVE ACCENT &amp; GRAVE ACCENT
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\`"</span>, <span class="string">'\u{0300}'</span>, <span class="string">"\u{0060}"</span>); <span class="comment">// COMBINING GRAVE ACCENT &amp; GRAVE ACCENT
 
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\&#39;&quot;</span>, <span class="string">&#39;\u{0301}&#39;</span>, <span class="string">&quot;\u{00B4}&quot;</span>); <span class="comment">// COMBINING ACUTE ACCENT &amp; ACUTE ACCENT
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\^&quot;</span>, <span class="string">&#39;\u{0302}&#39;</span>, <span class="string">&quot;\u{005E}&quot;</span>); <span class="comment">// COMBINING CIRCUMFLEX ACCENT &amp; CIRCUMFLEX ACCENT
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\\&quot;&quot;</span>, <span class="string">&#39;\u{0308}&#39;</span>, <span class="string">&quot;\u{00A8}&quot;</span>); <span class="comment">// COMBINING DIAERESIS &amp; DIAERESIS
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\~&quot;</span>, <span class="string">&#39;\u{0303}&#39;</span>, <span class="string">&quot;~&quot;</span>); <span class="comment">// COMBINING TILDE
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\=&quot;</span>, <span class="string">&#39;\u{0304}&#39;</span>, <span class="string">&quot;\u{00AF}&quot;</span>); <span class="comment">// COMBINING MACRON &amp; MACRON
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\.&quot;</span>, <span class="string">&#39;\u{0307}&#39;</span>, <span class="string">&quot;\u{02D9}&quot;</span>); <span class="comment">// COMBINING DOT ABOVE &amp; DOT ABOVE
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\u&quot;</span>, <span class="string">&#39;\u{0306}&#39;</span>, <span class="string">&quot;\u{02D8}&quot;</span>); <span class="comment">// COMBINING BREVE &amp; BREVE
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\v&quot;</span>, <span class="string">&#39;\u{030C}&#39;</span>, <span class="string">&quot;\u{02C7}&quot;</span>); <span class="comment">// COMBINING CARON &amp; CARON
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\@ringaccent&quot;</span>, <span class="string">&#39;\u{030A}&#39;</span>, <span class="string">&quot;o&quot;</span>); <span class="comment">// COMBINING RING ABOVE &amp; non-combining
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\r&quot;</span>, <span class="string">&#39;\u{030A}&#39;</span>, <span class="string">&quot;o&quot;</span>); <span class="comment">// COMBINING RING ABOVE &amp; non-combining
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\H&quot;</span>, <span class="string">&#39;\u{030B}&#39;</span>, <span class="string">&quot;\u{02DD}&quot;</span>); <span class="comment">// COMBINING DOUBLE ACUTE ACCENT &amp; non-combining
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\c&quot;</span>, <span class="string">&#39;\u{0327}&#39;</span>, <span class="string">&quot;\u{00B8}&quot;</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING CEDILLA &amp; CEDILLA
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\'"</span>, <span class="string">'\u{0301}'</span>, <span class="string">"\u{00B4}"</span>); <span class="comment">// COMBINING ACUTE ACCENT &amp; ACUTE ACCENT
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\^"</span>, <span class="string">'\u{0302}'</span>, <span class="string">"\u{005E}"</span>); <span class="comment">// COMBINING CIRCUMFLEX ACCENT &amp; CIRCUMFLEX ACCENT
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\\""</span>, <span class="string">'\u{0308}'</span>, <span class="string">"\u{00A8}"</span>); <span class="comment">// COMBINING DIAERESIS &amp; DIAERESIS
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\~"</span>, <span class="string">'\u{0303}'</span>, <span class="string">"~"</span>); <span class="comment">// COMBINING TILDE
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\="</span>, <span class="string">'\u{0304}'</span>, <span class="string">"\u{00AF}"</span>); <span class="comment">// COMBINING MACRON &amp; MACRON
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\."</span>, <span class="string">'\u{0307}'</span>, <span class="string">"\u{02D9}"</span>); <span class="comment">// COMBINING DOT ABOVE &amp; DOT ABOVE
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\u"</span>, <span class="string">'\u{0306}'</span>, <span class="string">"\u{02D8}"</span>); <span class="comment">// COMBINING BREVE &amp; BREVE
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\v"</span>, <span class="string">'\u{030C}'</span>, <span class="string">"\u{02C7}"</span>); <span class="comment">// COMBINING CARON &amp; CARON
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\@ringaccent"</span>, <span class="string">'\u{030A}'</span>, <span class="string">"o"</span>); <span class="comment">// COMBINING RING ABOVE &amp; non-combining
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\r"</span>, <span class="string">'\u{030A}'</span>, <span class="string">"o"</span>); <span class="comment">// COMBINING RING ABOVE &amp; non-combining
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\H"</span>, <span class="string">'\u{030B}'</span>, <span class="string">"\u{02DD}"</span>); <span class="comment">// COMBINING DOUBLE ACUTE ACCENT &amp; non-combining
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\c"</span>, <span class="string">'\u{0327}'</span>, <span class="string">"\u{00B8}"</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING CEDILLA &amp; CEDILLA
   // NOTE: The next two get define for math, as well; See below
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\@text@daccent&quot;</span>, <span class="string">&#39;\u{0323}&#39;</span>, <span class="string">&quot;.&quot;</span>,       below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING DOT BELOW &amp; DOT (?)
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\@text@baccent&quot;</span>, <span class="string">&#39;\u{0331}&#39;</span>, <span class="string">&quot;\u{00AF}&quot;</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING MACRON BELOW  &amp; MACRON
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\@text@daccent"</span>, <span class="string">'\u{0323}'</span>, <span class="string">"."</span>,       below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING DOT BELOW &amp; DOT (?)
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\@text@baccent"</span>, <span class="string">'\u{0331}'</span>, <span class="string">"\u{00AF}"</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING MACRON BELOW  &amp; MACRON
   // COMBINING DOUBLE INVERTED BREVE &amp; ???? What????
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\t&quot;</span>, <span class="string">&#39;\u{0361}&#39;</span>, <span class="string">&quot;-&quot;</span>);
-  <span class="comment">// this one&quot;s actually defined in mathscinet.sty, but just stick it here!
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\t"</span>, <span class="string">'\u{0361}'</span>, <span class="string">"-"</span>);
+  <span class="comment">// this one"s actually defined in mathscinet.sty, but just stick it here!
   // COMBINING COMMA BELOW
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\lfhook&quot;</span>, <span class="string">&#39;\u{0326}&#39;</span>, <span class="string">&quot;,&quot;</span>, below =&gt; <span class="bool-val">true</span>);
+  </span><span class="macro">DefAccent!</span>(<span class="string">"\\lfhook"</span>, <span class="string">'\u{0326}'</span>, <span class="string">","</span>, below =&gt; <span class="bool-val">true</span>);
 
-  <span class="comment">// This will fail if there really are &quot;assignments&quot; after the number!
-  // We&#39;re given a number pointing into the font, from which we can derive the standalone char.
+  <span class="comment">// This will fail if there really are "assignments" after the number!
+  // We're given a number pointing into the font, from which we can derive the standalone char.
   // From that, we want to figure out the combining character, but there could be one for
-  // both the above &amp; below cases!  We&#39;ll prefer the above case.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\accent Number Expanded&quot;</span>, sub[(num,letter)] {
-    <span class="macro">unimplemented!</span>();
-
-    <span class="prelude-val">Ok</span>(())
+  // both the above &amp; below cases!  We'll prefer the above case.
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\accent Number {}"</span>, sub[(_num,_letter)] {
+    <span class="comment">// let n = num.value_of();
+    // let font_info = lookup_font_info(lookup_value("textfont_0"));
+    </span><span class="macro">unported!</span>()
   });
   <span class="comment">// Note that these two apparently work in Math? BUT the argument is treated as text!!!
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\d{}&quot;</span>, <span class="string">r&quot;\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\b{}&quot;</span>, <span class="string">r&quot;\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\d{}"</span>, <span class="string">r"\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\b{}"</span>, <span class="string">r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi"</span>);
 
-  <span class="comment">//   DefConstructor(&#39;\@math@daccent {}&#39;,
-  //   &quot;&lt;ltx:XMApp&gt;&lt;ltx:XMTok role=&#39;UNDERACCENT&#39;&gt;\x{22c5}&lt;/ltx:XMTok&gt;&quot;
-  //     . &quot;?#textarg(&lt;ltx:XMText&gt;#textarg&lt;/ltx:XMText&gt;)(&lt;ltx:XMArg&gt;#matharg&lt;/ltx:XMArg&gt;)&quot;
-  //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
-  //   mode        =&gt; &#39;text&#39;, alias =&gt; &#39;\d&#39;,
+  <span class="comment">//   DefConstructor('\@math@daccent {}',
+  //   "&lt;ltx:XMApp&gt;&lt;ltx:XMTok role='UNDERACCENT'&gt;\x{22c5}&lt;/ltx:XMTok&gt;"
+  //     . "?#textarg(&lt;ltx:XMText&gt;#textarg&lt;/ltx:XMText&gt;)(&lt;ltx:XMArg&gt;#matharg&lt;/ltx:XMArg&gt;)"
+  //     . "&lt;/ltx:XMApp&gt;",
+  //   mode        =&gt; 'text', alias =&gt; '\d',
   //   afterDigest =&gt; sub {
   //     my ($stomach, $whatsit) = @_;
   //     my $arg = $whatsit-&gt;getArg(1);
@@ -252,11 +252,11 @@
   //       $whatsit-&gt;setProperty(textarg =&gt; $arg); }
   //     return; });
 
-  // DefConstructor(&#39;\@math@baccent {}&#39;,
-  //   &quot;&lt;ltx:XMApp&gt;&lt;ltx:XMTok role=&#39;UNDERACCENT&#39;&gt;&quot; . UTF(0xAF) . &quot;&lt;/ltx:XMTok&gt;&quot;
-  //     . &quot;?#textarg(&lt;ltx:XMText&gt;#textarg&lt;/ltx:XMText&gt;)(&lt;ltx:XMArg&gt;#matharg&lt;/ltx:XMArg&gt;)&quot;
-  //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
-  //   mode        =&gt; &#39;text&#39;, alias =&gt; &#39;\b&#39;,
+  // DefConstructor('\@math@baccent {}',
+  //   "&lt;ltx:XMApp&gt;&lt;ltx:XMTok role='UNDERACCENT'&gt;" . UTF(0xAF) . "&lt;/ltx:XMTok&gt;"
+  //     . "?#textarg(&lt;ltx:XMText&gt;#textarg&lt;/ltx:XMText&gt;)(&lt;ltx:XMArg&gt;#matharg&lt;/ltx:XMArg&gt;)"
+  //     . "&lt;/ltx:XMApp&gt;",
+  //   mode        =&gt; 'text', alias =&gt; '\b',
   //   afterDigest =&gt; sub {
   //     my ($stomach, $whatsit) = @_;
   //     my $arg = $whatsit-&gt;getArg(1);

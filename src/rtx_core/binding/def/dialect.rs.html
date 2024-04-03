@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/dialect.rs`."><title>dialect.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rtx_core/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/dialect.rs`."><title>dialect.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1483,6 +1485,7 @@
 <a href="#1483" id="1483">1483</a>
 <a href="#1484" id="1484">1484</a>
 <a href="#1485" id="1485">1485</a>
+<a href="#1486" id="1486">1486</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1509,12 +1512,12 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
-  ExpansionBody, FontDirective, PrimitiveClosure, ReplacementClosure, Reversion, SizingClosure,
+  ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion, SizingClosure,
 };
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
-<span class="kw">use crate</span>::{gullet};
+<span class="kw">use </span><span class="kw">crate</span>::gullet;
 <span class="kw">use </span><span class="kw">crate</span>::tbox::Tbox;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
@@ -1525,35 +1528,35 @@
 
 
 <span class="kw">const </span>MATH_CONSTRUCTOR_ATTRIBUTES: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
-  <span class="string">&quot;name&quot;</span>,
-  <span class="string">&quot;meaning&quot;</span>,
-  <span class="string">&quot;omcd&quot;</span>,
-  <span class="string">&quot;decl_id&quot;</span>,
-  <span class="string">&quot;mathstyle&quot;</span>,
-  <span class="string">&quot;lpadding&quot;</span>,
-  <span class="string">&quot;rpadding&quot;</span>,
+  <span class="string">"name"</span>,
+  <span class="string">"meaning"</span>,
+  <span class="string">"omcd"</span>,
+  <span class="string">"decl_id"</span>,
+  <span class="string">"mathstyle"</span>,
+  <span class="string">"lpadding"</span>,
+  <span class="string">"rpadding"</span>,
 ];
 
 <span class="doccomment">/// regex for the prefix of a conditional command sequence
 </span><span class="kw">pub static </span>CONDITIONAL_CS_RE: Lazy&lt;Regex&gt; =
-  Lazy::new(|| Regex::new(<span class="string">r&quot;^\\(?:if(.*)|unless)$&quot;</span>).unwrap());
+  Lazy::new(|| Regex::new(<span class="string">r"^\\(?:if(.*)|unless)$"</span>).unwrap());
 <span class="doccomment">/// regex for the prefix of a protocol (such as literal:)
-</span><span class="kw">pub static </span>LEADING_PROTOCOL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\w+:&quot;</span>).unwrap());
+</span><span class="kw">pub static </span>LEADING_PROTOCOL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\w+:"</span>).unwrap());
 <span class="doccomment">/// regex for a trailing slash (trivial, but aids replacement of said slash)
-</span><span class="kw">pub static </span>TRAILING_SLASH_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;/$&quot;</span>).unwrap());
+</span><span class="kw">pub static </span>TRAILING_SLASH_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"/$"</span>).unwrap());
 <span class="doccomment">/// regex for one-or-more spaces
-</span><span class="kw">pub static </span>SPACES_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\s+&quot;</span>).unwrap());
+</span><span class="kw">pub static </span>SPACES_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\s+"</span>).unwrap());
 <span class="doccomment">/// regex for ${}^{label}$
 </span><span class="kw">pub static </span>DIRTY_ID_IDIOM_RE: Lazy&lt;Regex&gt; =
-  Lazy::new(|| Regex::new(<span class="string">r&quot;\$\{\}\^\{(?P&lt;label&gt;[^\}]*)\}\$&quot;</span>).unwrap());
+  Lazy::new(|| Regex::new(<span class="string">r"\$\{\}\^\{(?P&lt;label&gt;[^\}]*)\}\$"</span>).unwrap());
 <span class="doccomment">/// regex for characters not expected in a usual id attribute
-</span><span class="kw">pub static </span>NON_ID_CHARSET_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;[^\w_\-.]+&quot;</span>).unwrap());
+</span><span class="kw">pub static </span>NON_ID_CHARSET_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"[^\w_\-.]+"</span>).unwrap());
 <span class="doccomment">/// regex for a strange noisy TeX `\\~{}`
-</span><span class="kw">pub static </span>TILDE_NOISE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\\~\{\}&quot;</span>).unwrap());
+</span><span class="kw">pub static </span>TILDE_NOISE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\\~\{\}"</span>).unwrap());
 <span class="doccomment">/// regex for a TeX argument specifier or any command sequence
-</span><span class="kw">pub static </span>HAS_ARG_OR_CS: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;#\d|\\.&quot;</span>).unwrap());
+</span><span class="kw">pub static </span>HAS_ARG_OR_CS: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"#\d|\\."</span>).unwrap());
 <span class="doccomment">/// regex for the usual argument placeholders `#1`-`#9`
-</span><span class="kw">pub static </span>ARG_HOLE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;#(\d)&quot;</span>).unwrap());
+</span><span class="kw">pub static </span>ARG_HOLE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"#(\d)"</span>).unwrap());
 
 <span class="doccomment">/// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 </span><span class="kw">pub fn </span>is_defined(name: <span class="kw-2">&amp;</span>str) -&gt; bool {
@@ -1566,10 +1569,10 @@
   <span class="kw">match </span>lookup_meaning(cs) {
     <span class="prelude-val">Some</span>(store) =&gt; <span class="kw">match </span>store {
       Stored::Token(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
-      Stored::Expandable(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
-      Stored::Primitive(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
-      Stored::Constructor(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
-      other =&gt; <span class="macro">panic!</span>(<span class="string">&quot;TODO: unexpected case for is_defined_token, got: {other:?}&quot;</span>)
+      Stored::Expandable(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
+      Stored::Primitive(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
+      Stored::Constructor(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
+      other =&gt; <span class="macro">panic!</span>(<span class="string">"TODO: unexpected case for is_defined_token, got: {other:?}"</span>)
     },
     <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
   }
@@ -1578,9 +1581,9 @@
 <span class="doccomment">/// Check if the `token` is not yet defined, or let to `\relax`
 </span><span class="kw">pub fn </span>is_definable(token: <span class="kw-2">&amp;</span>Token) -&gt; bool {
   <span class="kw">let </span>meaning = lookup_meaning(token);
-  token.with_str(|name| name != <span class="string">&quot;\\relax&quot; </span>&amp;&amp; !name.starts_with(<span class="string">&quot;\\end&quot;</span>))
+  token.with_str(|name| name != <span class="string">"\\relax" </span>&amp;&amp; !name.starts_with(<span class="string">"\\end"</span>))
     &amp;&amp; (meaning.is_none() || (meaning == lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX))
-        || lookup_bool(<span class="string">&quot;2.09_COMPATIBILITY&quot;</span>))
+        || lookup_bool(<span class="string">"2.09_COMPATIBILITY"</span>))
 }
 
 <span class="doccomment">/// unconditionally wraps a CS token around a string
@@ -1593,7 +1596,7 @@
 </span><span class="doccomment">/// Define a conditional control sequence. Its processing takes place in
 /// the Gullet.  The test is applied to the arguments (if any),
 /// which determines which branch is executed.
-/// If the test is undefined, the conditional is a &quot;user defined&quot; one;
+/// If the test is undefined, the conditional is a "user defined" one;
 /// Two additional primitives are defined \footrue and \foofalse;
 /// the test is then determined by the most recently called of those.
 ///
@@ -1605,15 +1608,15 @@
   test: <span class="prelude-ty">Option</span>&lt;ConditionalClosure&gt;,
   options: ConditionalOptions,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">let </span>locked_key = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="bool-val">true</span>) = options.locked {
-    arena::with(cs.get_sym(), |cs_name| <span class="macro">s!</span>(<span class="string">&quot;{cs_name}:locked&quot;</span>))
+  <span class="kw">let </span>locked_key_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="bool-val">true</span>) = options.locked {
+    <span class="prelude-val">Some</span>(arena::with(cs.get_sym(), |cs_name| <span class="macro">s!</span>(<span class="string">"{cs_name}:locked"</span>)))
   } <span class="kw">else </span>{
-    String::new()
-  };
-  <span class="kw">if </span>cs.with_str(|cs_name| <span class="macro">matches!</span>(cs_name, <span class="string">&quot;\\fi&quot; </span>| <span class="string">&quot;\\else&quot; </span>| <span class="string">&quot;\\or&quot; </span>| <span class="string">&quot;\\unless&quot;</span>)) {
+    <span class="prelude-val">None
+  </span>};
+  <span class="kw">if </span>cs.with_str(|cs_name| <span class="macro">matches!</span>(cs_name, <span class="string">"\\fi" </span>| <span class="string">"\\else" </span>| <span class="string">"\\or" </span>| <span class="string">"\\unless"</span>)) {
     install_definition(
       Conditional {
-        cs: cs.clone(),
+        cs,
         paramlist,
         test,
         conditional_type: cs.with_str(|cs_name| ConditionalType::from(cs_name)),
@@ -1625,10 +1628,10 @@
     <span class="kw">let </span>name_opt = cs.with_str(|custom| {
       CONDITIONAL_CS_RE
         .captures(custom)
-        .map(|captures| captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string())
+        .map(|captures| captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string())
     });
     <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = name_opt {
-      <span class="kw">if </span>!name.is_empty() &amp;&amp; name != <span class="string">&quot;case&quot; </span>&amp;&amp; test.is_none() {
+      <span class="kw">if </span>!name.is_empty() &amp;&amp; name != <span class="string">"case" </span>&amp;&amp; test.is_none() {
         <span class="comment">// user-defined conditional, like with \newif
         // Note: setting up these macros is compile-time expensive, maybe there is some way to
         // avoid...
@@ -1637,18 +1640,18 @@
         // second, each invocation of the conditional macro needs to create new tokens to
         // return,       hence a clone is required on each call.
         </span>def_macro(
-          <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}true&quot;</span>, name)),
+          <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}true"</span>, name)),
           <span class="prelude-val">None</span>,
-          <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\let&quot;</span>), cs.clone(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\iftrue&quot;</span>)),
+          <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), cs, <span class="macro">T_CS!</span>(<span class="string">"\\iftrue"</span>)),
           <span class="prelude-val">None
         </span>)<span class="question-mark">?</span>;
         def_macro(
-          <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}false&quot;</span>, name)),
+          <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}false"</span>, name)),
           <span class="prelude-val">None</span>,
-          <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\let&quot;</span>), cs.clone(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\iffalse&quot;</span>)),
+          <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), cs, <span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>)),
           <span class="prelude-val">None
         </span>)<span class="question-mark">?</span>;
-        let_i(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\iffalse&quot;</span>), <span class="prelude-val">None</span>);
+        let_i(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>), <span class="prelude-val">None</span>);
       } <span class="kw">else </span>{
         <span class="comment">//  For \ifcase, the parameter list better be a single Number !!
         </span>install_definition(
@@ -1664,15 +1667,15 @@
       }
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(
-        <span class="string">&quot;The conditional {} is being defined but doesn&#39;t start with \\if&quot;</span>,
+        <span class="string">"The conditional {} is being defined but doesn't start with \\if"</span>,
         cs
       );
-      <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, cs, message);
+      <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, cs, message);
     }
   }
 
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="bool-val">true</span>) = options.locked {
-    assign_value(<span class="kw-2">&amp;</span>locked_key, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(locked_key) = locked_key_opt {
+    assign_value(<span class="kw-2">&amp;</span>locked_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
   }
   <span class="prelude-val">Ok</span>(())
 }
@@ -1688,9 +1691,8 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>expansion_opt: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = expansion.into();
   <span class="comment">// TODO: The None case could be refactored to feel much cleaner.
-  // For now it&#39;s equivalent to Tokens!()
-  </span><span class="kw">let </span>expansion = expansion_opt.unwrap_or_default();
-  <span class="kw">let </span><span class="kw-2">mut </span>options = options_opt.unwrap_or_default();
+  // For now it's equivalent to Tokens!()
+  </span><span class="kw">let </span><span class="kw-2">mut </span>options = options_opt.unwrap_or_default();
   <span class="kw">let </span>scope = options.scope.take();
   <span class="kw">if </span>options.mathactive &amp;&amp; cs.with_str(|s| s.len()) == <span class="number">1 </span>{
     assign_mathcode(
@@ -1700,7 +1702,7 @@
     );
   }
   <span class="kw">let </span>locked_key_opt = <span class="kw">if </span>options.locked {
-    <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;{cs}:locked&quot;</span>))
+    <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"{cs}:locked"</span>))
   } <span class="kw">else </span>{
     <span class="prelude-val">None
   </span>};
@@ -1710,7 +1712,7 @@
     cs
   };
   install_definition(
-    Expandable::new(defcs, paramlist, expansion, <span class="prelude-val">Some</span>(options))<span class="question-mark">?</span>,
+    Expandable::new(defcs, paramlist, expansion_opt, <span class="prelude-val">Some</span>(options))<span class="question-mark">?</span>,
     scope,
   );
   <span class="kw">if let </span><span class="prelude-val">Some</span>(locked_key) = locked_key_opt {
@@ -1735,7 +1737,7 @@
 }
 
 <span class="doccomment">/// Defines a register with `value` as the initial value
-/// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven&#39;t handled Box&#39;s yet).
+/// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
 /// Usually, the `prototype` is just the control sequence,
 /// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
 /// that the register value can be accessed when a numeric, dimension, ... value is being read,
@@ -1777,8 +1779,10 @@
       setter: options.setter,
       default: <span class="prelude-val">Some</span>(value),
       value: <span class="prelude-val">None</span>,
-      internalcs: <span class="prelude-val">None</span>,
-    },
+      role: <span class="prelude-val">None</span>,
+      locator: gullet::get_locator(),
+      mathglyph: <span class="prelude-val">None
+    </span>},
     <span class="prelude-val">Some</span>(Scope::Global),
   );
   <span class="prelude-val">Ok</span>(())
@@ -1793,7 +1797,7 @@
 </span><span class="kw">pub fn </span>def_primitive(
   cs: Token,
   paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
-  compiled_replacement: <span class="prelude-ty">Option</span>&lt;PrimitiveClosure&gt;,
+  compiled_replacement: <span class="prelude-ty">Option</span>&lt;PrimitiveBody&gt;,
   options: PrimitiveOptions,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>options_locked = options.locked;
@@ -1871,7 +1875,7 @@
     scope,
   );
   <span class="kw">if </span>options_locked {
-    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:locked&quot;</span>, cs_name), <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}:locked"</span>, cs_name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
   }
   <span class="prelude-val">Ok</span>(())
 }
@@ -1884,77 +1888,77 @@
   options: MathPrimitiveOptions,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>(cont_cs_str, pres_cs_str) =
-    cs.with_str(|csname| (<span class="macro">s!</span>(<span class="string">&quot;{csname}@content&quot;</span>), <span class="macro">s!</span>(<span class="string">&quot;{csname}@presentation&quot;</span>)));
+    cs.with_str(|csname| (<span class="macro">s!</span>(<span class="string">"{csname}@content"</span>), <span class="macro">s!</span>(<span class="string">"{csname}@presentation"</span>)));
   <span class="kw">let </span>cont_cs = <span class="macro">T_CS!</span>(cont_cs_str);
   <span class="kw">let </span>pres_cs = <span class="macro">T_CS!</span>(pres_cs_str);
   <span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs.clone(), options.locked, options.scope.clone())<span class="question-mark">?
+    def_robust_cs(cs, options.locked, options.scope.clone())<span class="question-mark">?
   </span>} <span class="kw">else </span>{
-    cs.clone()
+    cs
   };
   <span class="kw">let </span>presentation_toks = mouth::tokenize_internal(<span class="kw-2">&amp;</span>presentation);
 
   <span class="comment">// Make the original CS expand into a DUAL invoking a presentation macro and content constructor
   </span><span class="kw">let </span>captured_role = options.role.clone();
   <span class="kw">let </span>captured_revert_as = options.revert_as.clone();
-  <span class="kw">let </span>captured_cont_cs = cont_cs.clone();
-  <span class="kw">let </span>captured_pres_cs = pres_cs.clone();
+  <span class="kw">let </span>captured_cont_cs = cont_cs;
+  <span class="kw">let </span>captured_pres_cs = pres_cs;
   <span class="kw">let </span>captured_pres = presentation.clone();
   install_definition(
     Expandable::new(
       defcs,
       paramlist.clone(),
-      ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|args| {
+      <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|args| {
         <span class="kw">let </span>args_opt_tks = args
           .into_iter()
           .map(|arg| arg.into())
           .collect::&lt;Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;&gt;();
         <span class="kw">let </span>(cargs, pargs) = dualize_arglist(<span class="kw-2">&amp;</span>captured_pres, args_opt_tks)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>dtks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@dual&quot;</span>)];
+        <span class="kw">let </span><span class="kw-2">mut </span>dtks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@dual"</span>)];
         <span class="comment">// optional keyval arg
         </span><span class="kw">if </span>captured_role.is_some() || captured_revert_as.is_some() {
-          dtks.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>));
+          dtks.push(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>));
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>role) = captured_role {
-            dtks.extend(<span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">&quot;role&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;=&quot;</span>), <span class="macro">T_OTHER!</span>(role)]);
+            dtks.extend(<span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"role"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"="</span>), <span class="macro">T_OTHER!</span>(role)]);
             <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_revert_as) = captured_revert_as {
-              dtks.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;,&quot;</span>));
+              dtks.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
             }
           }
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>revert_as) = captured_revert_as {
             dtks.extend(<span class="macro">vec!</span>[
-              <span class="macro">T_OTHER!</span>(<span class="string">&quot;revert_as&quot;</span>),
-              <span class="macro">T_OTHER!</span>(<span class="string">&quot;=&quot;</span>),
+              <span class="macro">T_OTHER!</span>(<span class="string">"revert_as"</span>),
+              <span class="macro">T_OTHER!</span>(<span class="string">"="</span>),
               <span class="macro">T_OTHER!</span>(revert_as),
             ]);
           }
-          dtks.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>));
+          dtks.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
         }
         <span class="comment">// end optional keyval arg
         </span>dtks.push(<span class="macro">T_BEGIN!</span>());
-        dtks.push(captured_cont_cs.clone());
+        dtks.push(captured_cont_cs);
         dtks.push(<span class="macro">T_BEGIN!</span>());
         <span class="kw">for </span>carg <span class="kw">in </span>cargs.into_iter().flatten() {
           <span class="comment">// if let Some(carg) = carg_opt {
             </span>dtks.extend(carg.unlist());
           <span class="comment">//} else {}
-          // TODO: we can&#39;t push an empty tokens in the flat setup. Is this a problem?
+          // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         </span>}
         dtks.push(<span class="macro">T_END!</span>());
         dtks.push(<span class="macro">T_END!</span>());
         dtks.push(<span class="macro">T_BEGIN!</span>());
-        dtks.push(captured_pres_cs.clone());
+        dtks.push(captured_pres_cs);
         dtks.push(<span class="macro">T_BEGIN!</span>());
         <span class="kw">for </span>parg <span class="kw">in </span>pargs.into_iter().flatten() {
           <span class="comment">// if let Some(parg) = parg_opt {
             </span>dtks.extend(parg.unlist());
-          <span class="comment">//} else {} // TODO: we can&#39;t push an empty tokens in the flat setup. Is this a problem?
+          <span class="comment">//} else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         </span>}
         dtks.push(<span class="macro">T_END!</span>());
         dtks.push(<span class="macro">T_END!</span>());
 
         <span class="prelude-val">Ok</span>(Tokens::new(dtks))
-      })),
+      }))),
       <span class="prelude-val">Some</span>(ExpandableOptions {
         protected: options.protected,
         ..ExpandableOptions::default()
@@ -1968,7 +1972,7 @@
     Expandable::new(
       pres_cs,
       paramlist.clone(),
-      ExpansionBody::Tokens(presentation_toks),
+      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(presentation_toks)),
       <span class="prelude-val">Some</span>(ExpandableOptions {
         protected: options.protected,
         ..ExpandableOptions::default()
@@ -1986,7 +1990,7 @@
   <span class="kw">let </span>content_closure: ReplacementClosure = <span class="kw">if </span>nargs == <span class="number">0 </span>{
     Rc::new(|document, _args, props| {
       <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
-      <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">&quot;role&quot;</span>, <span class="string">&quot;scriptpos&quot;</span>, <span class="string">&quot;stretchy&quot;</span>] {
+      <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"role"</span>, <span class="string">"scriptpos"</span>, <span class="string">"stretchy"</span>] {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
           attrs.insert(key.to_owned(), v.to_string());
         }
@@ -1996,27 +2000,27 @@
           attrs.insert(key.to_string(), v.to_string());
         }
       }
-      document.insert_element(<span class="string">&quot;ltx:XMTok&quot;</span>, Vec::new(), <span class="prelude-val">Some</span>(attrs))<span class="question-mark">?</span>;
+      document.insert_element(<span class="string">"ltx:XMTok"</span>, Vec::new(), <span class="prelude-val">Some</span>(attrs))<span class="question-mark">?</span>;
       <span class="prelude-val">Ok</span>(())
     })
   } <span class="kw">else </span>{
     Rc::new(|document, args, props| {
       <span class="kw">let </span><span class="kw-2">mut </span>app_attrs = HashMap::default();
-      <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">&quot;role&quot;</span>, <span class="string">&quot;scriptpos&quot;</span>] {
+      <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"role"</span>, <span class="string">"scriptpos"</span>] {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
           app_attrs.insert(key.to_owned(), v.to_string());
         }
       }
-      document.open_element(<span class="string">&quot;ltx:XMApp&quot;</span>, <span class="prelude-val">Some</span>(app_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+      document.open_element(<span class="string">"ltx:XMApp"</span>, <span class="prelude-val">Some</span>(app_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
       <span class="kw">let </span><span class="kw-2">mut </span>op_attrs = HashMap::default();
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="string">&quot;operator_stretchy&quot;</span>) {
-        op_attrs.insert(<span class="string">&quot;stretchy&quot;</span>.to_owned(), v.to_string());
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="string">"operator_stretchy"</span>) {
+        op_attrs.insert(<span class="string">"stretchy"</span>.to_owned(), v.to_string());
       }
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="string">&quot;operator_role&quot;</span>) {
-        op_attrs.insert(<span class="string">&quot;role&quot;</span>.to_owned(), v.to_string());
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="string">"operator_role"</span>) {
+        op_attrs.insert(<span class="string">"role"</span>.to_owned(), v.to_string());
       }
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="string">&quot;operator_scriptpos&quot;</span>) {
-        op_attrs.insert(<span class="string">&quot;scriptpos&quot;</span>.to_owned(), v.to_string());
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="string">"operator_scriptpos"</span>) {
+        op_attrs.insert(<span class="string">"scriptpos"</span>.to_owned(), v.to_string());
       }
       <span class="kw">for </span>key <span class="kw">in </span>MATH_CONSTRUCTOR_ATTRIBUTES {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="kw-2">*</span>key) {
@@ -2024,13 +2028,13 @@
         }
       }
       <span class="comment">// operator
-      </span>document.insert_element(<span class="string">&quot;ltx:XMTok&quot;</span>, Vec::new(), <span class="prelude-val">Some</span>(op_attrs))<span class="question-mark">?</span>;
+      </span>document.insert_element(<span class="string">"ltx:XMTok"</span>, Vec::new(), <span class="prelude-val">Some</span>(op_attrs))<span class="question-mark">?</span>;
       <span class="comment">// arguments
       // TODO: options.reorder?
       </span><span class="kw">for </span>arg <span class="kw">in </span>args.iter().flatten() {
         document.absorb(arg, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
       }
-      document.close_element(<span class="string">&quot;ltx:XMApp&quot;</span>)<span class="question-mark">?</span>;
+      document.close_element(<span class="string">"ltx:XMApp"</span>)<span class="question-mark">?</span>;
       <span class="prelude-val">Ok</span>(())
     })
   };
@@ -2061,12 +2065,12 @@
 
   install_definition(
     MathPrimitive {
-      cs: cs.clone(),
+      cs,
       paramlist: <span class="prelude-val">None</span>, <span class="comment">// never any parameters, this is intentional
       </span>replacement: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|_args| {
-        <span class="kw">let </span>locator = gullet::get_locator().unwrap();
+        <span class="kw">let </span>locator = gullet::get_locator();
         <span class="kw">let </span><span class="kw-2">mut </span>properties = moved_options.clone();
-        properties.mode = <span class="prelude-val">Some</span>(String::from(<span class="string">&quot;math&quot;</span>));
+        properties.mode = <span class="prelude-val">Some</span>(String::from(<span class="string">"math"</span>));
         <span class="kw">let </span>state_font = lookup_font().unwrap();
         <span class="kw">let </span>font = Rc::new(<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>reqfont) = reqfont_opt {
           <span class="kw">let </span>this_reqfont = reqfont.get_font(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
@@ -2079,7 +2083,7 @@
 
         <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox {
           text: arena::pin(<span class="kw-2">&amp;</span>presentation),
-          tokens: <span class="macro">Tokens!</span>(cs.clone()),
+          tokens: <span class="macro">Tokens!</span>(cs),
           font,
           properties: properties.to_hash_stored(),
           locator,
@@ -2111,17 +2115,17 @@
   //   None
   // };
   </span><span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs.clone(), options.locked, options.scope.clone())<span class="question-mark">?
+    def_robust_cs(cs, options.locked, options.scope.clone())<span class="question-mark">?
   </span>} <span class="kw">else </span>{
-    cs.clone()
+    cs
   };
   <span class="kw">if </span>options.reversion.is_none() &amp;&amp; nargs == <span class="number">0 </span>&amp;&amp; options.alias.is_none() {
     <span class="kw">if </span>options.revert_as.is_none()
-      || options.revert_as == <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">&quot;content&quot;</span>))
-      || options.revert_as == <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">&quot;context&quot;</span>))
+      || options.revert_as == <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"content"</span>))
+      || options.revert_as == <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"context"</span>))
     {
-      <span class="comment">// TODO :&amp;&amp; (($LaTeXML::DUAL_BRANCH || &#39;content&#39;) eq &#39;content&#39;))
-      </span>options.reversion = <span class="prelude-val">Some</span>(Reversion::Tokens(<span class="macro">Tokens!</span>(cs.clone())));
+      <span class="comment">// TODO :&amp;&amp; (($LaTeXML::DUAL_BRANCH || 'content') eq 'content'))
+      </span>options.reversion = <span class="prelude-val">Some</span>(Reversion::Tokens(<span class="macro">Tokens!</span>(cs)));
     } <span class="kw">else </span>{
       <span class="comment">// TODO: This differs from the Perl, where `presentation` comes in as Tokens
       //       we have it come in as a `String`,
@@ -2162,7 +2166,7 @@
     </span>Rc::new(
       <span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document, <span class="kw">_</span>, props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;| {
         <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
-        <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">&quot;role&quot;</span>, <span class="string">&quot;scriptpos&quot;</span>, <span class="string">&quot;stretchy&quot;</span>] {
+        <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"role"</span>, <span class="string">"scriptpos"</span>, <span class="string">"stretchy"</span>] {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
             attrs.insert(key.to_owned(), v.to_string());
           }
@@ -2172,7 +2176,7 @@
             attrs.insert(key.to_string(), v.to_string());
           }
         }
-        <span class="kw">let </span>font_opt = <span class="kw">match </span>props.get(<span class="string">&quot;font&quot;</span>) {
+        <span class="kw">let </span>font_opt = <span class="kw">match </span>props.get(<span class="string">"font"</span>) {
           <span class="prelude-val">Some</span>(Stored::Font(f)) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>f)),
           <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Closure(code))) =&gt; {
             <span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">None</span>)<span class="question-mark">?</span>))
@@ -2181,12 +2185,12 @@
           <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         };
         <span class="kw">if let </span><span class="prelude-val">Some</span>(font) = font_opt {
-          document.open_element(<span class="string">&quot;ltx:XMTok&quot;</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>font))<span class="question-mark">?</span>;
+          document.open_element(<span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>font))<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
-          document.open_element(<span class="string">&quot;ltx:XMTok&quot;</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+          document.open_element(<span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
         }
         document.absorb_string(<span class="kw-2">&amp;</span>presentation_for_replacement, props)<span class="question-mark">?</span>;
-        document.close_element(<span class="string">&quot;ltx:XMTok&quot;</span>)<span class="question-mark">?</span>;
+        document.close_element(<span class="string">"ltx:XMTok"</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
       },
@@ -2197,12 +2201,12 @@
             args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
             props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;| {
         <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
-        <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">&quot;role&quot;</span>, <span class="string">&quot;scriptpos&quot;</span>, <span class="string">&quot;stretchy&quot;</span>] {
+        <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"role"</span>, <span class="string">"scriptpos"</span>, <span class="string">"stretchy"</span>] {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
             attrs.insert(key.to_owned(), v.to_string());
           }
         }
-        <span class="kw">let </span>font_opt = <span class="kw">match </span>props.get(<span class="string">&quot;font&quot;</span>) {
+        <span class="kw">let </span>font_opt = <span class="kw">match </span>props.get(<span class="string">"font"</span>) {
           <span class="prelude-val">Some</span>(Stored::Font(f)) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>f)),
           <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Closure(code))) =&gt; {
             <span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">None</span>)<span class="question-mark">?</span>))
@@ -2211,20 +2215,20 @@
           <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         };
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font_opt {
-          document.open_element(<span class="string">&quot;ltx:XMApp&quot;</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">Some</span>(font))<span class="question-mark">?</span>;
+          document.open_element(<span class="string">"ltx:XMApp"</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">Some</span>(font))<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
-          document.open_element(<span class="string">&quot;ltx:XMApp&quot;</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+          document.open_element(<span class="string">"ltx:XMApp"</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
         }
         <span class="comment">// operator
         </span><span class="kw">let </span><span class="kw-2">mut </span>op_attrs = HashMap::default();
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(role) = props.get(<span class="string">&quot;operator_role&quot;</span>) {
-          op_attrs.insert(String::from(<span class="string">&quot;role&quot;</span>), role.to_string());
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(role) = props.get(<span class="string">"operator_role"</span>) {
+          op_attrs.insert(String::from(<span class="string">"role"</span>), role.to_string());
         }
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(stretchy) = props.get(<span class="string">&quot;operator_stretchy&quot;</span>) {
-          op_attrs.insert(String::from(<span class="string">&quot;stretchy&quot;</span>), stretchy.to_string());
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(stretchy) = props.get(<span class="string">"operator_stretchy"</span>) {
+          op_attrs.insert(String::from(<span class="string">"stretchy"</span>), stretchy.to_string());
         }
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(scriptpos) = props.get(<span class="string">&quot;operator_scriptpos&quot;</span>) {
-          op_attrs.insert(String::from(<span class="string">&quot;scriptpos&quot;</span>), scriptpos.to_string());
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(scriptpos) = props.get(<span class="string">"operator_scriptpos"</span>) {
+          op_attrs.insert(String::from(<span class="string">"scriptpos"</span>), scriptpos.to_string());
         }
         <span class="kw">for </span>key <span class="kw">in </span>MATH_CONSTRUCTOR_ATTRIBUTES {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="kw-2">*</span>key) {
@@ -2232,22 +2236,22 @@
           }
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(font) = font_opt {
-          document.open_element(<span class="string">&quot;ltx:XMTok&quot;</span>, <span class="prelude-val">Some</span>(op_attrs), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>font))<span class="question-mark">?</span>;
+          document.open_element(<span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(op_attrs), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>font))<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
-          document.open_element(<span class="string">&quot;ltx:XMTok&quot;</span>, <span class="prelude-val">Some</span>(op_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+          document.open_element(<span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(op_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
         }
         document.absorb_string(<span class="kw-2">&amp;</span>presentation_for_replacement, props)<span class="question-mark">?</span>;
-        document.close_element(<span class="string">&quot;ltx:XMTok&quot;</span>)<span class="question-mark">?</span>;
+        document.close_element(<span class="string">"ltx:XMTok"</span>)<span class="question-mark">?</span>;
         <span class="comment">// arguments
         </span><span class="kw">for </span>arg <span class="kw">in </span>args {
-          document.open_element(<span class="string">&quot;ltx:XMArg&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+          document.open_element(<span class="string">"ltx:XMArg"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
           <span class="kw">if let </span><span class="prelude-val">Some</span>(arg_v) = arg {
             document.absorb(arg_v, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
           }
-          document.close_element(<span class="string">&quot;ltx:XMArg&quot;</span>)<span class="question-mark">?</span>;
+          document.close_element(<span class="string">"ltx:XMArg"</span>)<span class="question-mark">?</span>;
         }
 
-        document.close_element(<span class="string">&quot;ltx:XMApp&quot;</span>)<span class="question-mark">?</span>;
+        document.close_element(<span class="string">"ltx:XMApp"</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
       },
     )
@@ -2275,11 +2279,11 @@
 }
 
 <span class="kw">fn </span>infer_sizer(
-  sizer: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;SizingClosure&gt;,
-  reversion: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Reversion&gt;,
+  sizer: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>SizingClosure&gt;,
+  reversion: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Reversion&gt;,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;SizingClosure&gt; {
   <span class="kw">match </span>sizer {
-    <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>closure) =&gt; <span class="prelude-val">Some</span>(Rc::clone(closure)),
+    <span class="prelude-val">Some</span>(closure) =&gt; <span class="prelude-val">Some</span>(Rc::clone(closure)),
     <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>reversion {
       <span class="prelude-val">Some</span>(Reversion::Tokens(tks)) =&gt; (<span class="kw-2">*</span>tks).to_string().as_str().into_option(),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -2288,17 +2292,18 @@
 }
 
 <span class="kw">fn </span>def_robust_cs(cs: Token, locked: bool, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Token&gt; {
-  <span class="kw">let </span>cs_str = cs.with_str(|cstr| <span class="macro">format!</span>(<span class="string">&quot;{} &quot;</span>, cstr));
+  <span class="kw">let </span>cs_str = cs.with_str(|cstr| <span class="macro">format!</span>(<span class="string">"{cstr} "</span>));
   <span class="kw">let </span>defcs = <span class="macro">T_CS!</span>(cs_str);
-  <span class="kw">let </span>return_cs = defcs.clone();
-  <span class="kw">let </span>expansion = <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\protect&quot;</span>), defcs);
+  <span class="kw">let </span>return_cs = defcs;
+  <span class="kw">let </span>expansion = <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>), defcs);
   <span class="kw">let </span>options = ExpandableOptions {
     locked,
+    robust: <span class="bool-val">true</span>,
     ..ExpandableOptions::default()
   };
   <span class="comment">// scope should be \x@protect?
   </span>install_definition(
-    Expandable::new(cs, <span class="prelude-val">None</span>, expansion, <span class="prelude-val">Some</span>(options))<span class="question-mark">?</span>,
+    Expandable::new(cs, <span class="prelude-val">None</span>, expansion.into(), <span class="prelude-val">Some</span>(options))<span class="question-mark">?</span>,
     scope,
   );
   <span class="prelude-val">Ok</span>(return_cs)
@@ -2316,16 +2321,15 @@
   compiled_replacement: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt;,
   options: ConstructorOptions,
 ) {
-  <span class="comment">// TODO: This won&#39;t work, as we can only invoke method calls on paramlist in runtime
+  <span class="comment">// TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
   </span><span class="kw">let </span>scope = options.scope;
-  <span class="kw">let </span>is_locked = options.locked;
   <span class="kw">let </span>cs_name = cs.with_cs_name(ToString::to_string);
-  <span class="kw">let </span>locked_key = <span class="kw">if </span>is_locked {
-    <span class="macro">s!</span>(<span class="string">&quot;{}:locked&quot;</span>, cs_name)
+  <span class="kw">let </span>locked_key_opt = <span class="kw">if </span>options.locked {
+    <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"{cs_name}:locked"</span>))
   } <span class="kw">else </span>{
-    String::new()
-  };
+    <span class="prelude-val">None
+  </span>};
 
   <span class="kw">let </span><span class="kw-2">mut </span>before_digest_closures: Vec&lt;BeforeDigestClosure&gt; = Vec::new();
 
@@ -2354,8 +2358,8 @@
     before_digest_closures.push(bgroup_closure);
   }
   <span class="comment">// DG: The situations with Fonts in Constructors appears rather complex?
-  //  LaTeXML seems to currently rely on both the top-level &quot;font&quot; option but *also*
-  //  has code checking for a second-tier &quot;properties =&gt; { font =&gt; VALUE}&quot; option
+  //  LaTeXML seems to currently rely on both the top-level "font" option but *also*
+  //  has code checking for a second-tier "properties =&gt; { font =&gt; VALUE}" option
   //  Can we consolidate into a single, top-level, font handler?
   </span><span class="kw">match </span>options.font {
     <span class="prelude-val">Some</span>(FontDirective::Asset(chosen_font)) =&gt; {
@@ -2398,7 +2402,7 @@
     after_construct: options.after_construct,
     nargs: options.nargs,
     alias: options.alias,
-    sizer: infer_sizer(<span class="kw-2">&amp;</span>options.sizer, <span class="kw-2">&amp;</span>options.reversion),
+    sizer: infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
     reversion: options.reversion,
     capture_body: options.capture_body,
     properties: options.properties,
@@ -2408,8 +2412,8 @@
   };
   install_definition(constructor, scope);
 
-  <span class="kw">if </span>is_locked {
-    assign_value(<span class="kw-2">&amp;</span>locked_key, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(locked_key) = locked_key_opt {
+    assign_value(<span class="kw-2">&amp;</span>locked_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
   }
 }
 
@@ -2422,7 +2426,7 @@
 /// created and the `after_digest_begin` hook is run.
 /// Next, the body will be digested and collected until the balancing `\end{env}`.
 /// Then, any `after_digest` hook is run, the environment is ended, finally the mode is ended or the
-/// group is closed.  The body and `\end{env}` whatsit are added to the `\begin{env}`&#39;s whatsit as
+/// group is closed.  The body and `\end{env}` whatsit are added to the `\begin{env}`'s whatsit as
 /// body and trailer, respectively.
 </span><span class="kw">pub fn </span>def_environment(
   name: String,
@@ -2431,8 +2435,8 @@
   options: ConstructorOptions,
 ) {
   <span class="comment">// This is for the common case where the environment is opened by \begin{env}
-  </span><span class="kw">let </span>begin_name = <span class="macro">s!</span>(<span class="string">&quot;\\begin{{{name}}}&quot;</span>);
-  <span class="kw">let </span>end_name = <span class="macro">s!</span>(<span class="string">&quot;\\end{{{name}}}&quot;</span>);
+  </span><span class="kw">let </span>begin_name = <span class="macro">s!</span>(<span class="string">"\\begin{{{name}}}"</span>);
+  <span class="kw">let </span>end_name = <span class="macro">s!</span>(<span class="string">"\\end{{{name}}}"</span>);
   <span class="kw">let </span><span class="kw-2">mut </span>before_digest_env: Vec&lt;BeforeDigestClosure&gt; = Vec::new();
   <span class="kw">if </span>options.require_math {
     <span class="kw">let </span>require_name = begin_name.clone();
@@ -2450,7 +2454,7 @@
     bgroup();
   });
   before_digest_env.push(bgroup_closure);
-  <span class="kw">let </span>atbegin_key = <span class="macro">s!</span>(<span class="string">&quot;@environment@{name}@atbegin&quot;</span>);
+  <span class="kw">let </span>atbegin_key = <span class="macro">s!</span>(<span class="string">"@environment@{name}@atbegin"</span>);
   <span class="kw">let </span>atbegin_hook_closure = <span class="macro">before_digest_simple!</span>( {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = lookup_tokens(<span class="kw-2">&amp;</span>atbegin_key) {
       <span class="macro">vec!</span>[digest(b.unlist())<span class="question-mark">?</span>]
@@ -2470,10 +2474,10 @@
 
   <span class="kw">let </span>env_name = name.clone();
   <span class="kw">let </span>current_environment_closure = <span class="macro">before_digest_simple!</span>( {
-    assign_value(<span class="string">&quot;current_environment&quot;</span>, env_name.clone(), <span class="prelude-val">None</span>);
+    assign_value(<span class="string">"current_environment"</span>, env_name.clone(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>body = <span class="macro">T_LETTER!</span>(env_name.clone());
     def_macro(
-      <span class="macro">T_CS!</span>(<span class="string">&quot;\\@currenvir&quot;</span>),
+      <span class="macro">T_CS!</span>(<span class="string">"\\@currenvir"</span>),
       <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>(body))),
       <span class="prelude-val">None</span>,
@@ -2519,14 +2523,14 @@
     after_digest: options.after_digest_begin,
     after_digest_body: options.after_digest_body,
     before_construct: before_construct_with_frame,
-    <span class="comment">// Curiously, it&#39;s the \begin whose afterConstruct gets called.
+    <span class="comment">// Curiously, it's the \begin whose afterConstruct gets called.
     </span>after_construct: after_construct_with_frame,
     capture_body: <span class="bool-val">true</span>,
     properties: options.properties.clone(),
     <span class="comment">// (defined $options{reversion} ? (reversion =&gt; $options{reversion}) : ()),
     // (defined $sizer ? (sizer =&gt; $sizer) : ()),
     // ), $options{scope});
-    </span>sizer: infer_sizer(<span class="kw-2">&amp;</span>options.sizer, <span class="kw-2">&amp;</span>options.reversion),
+    </span>sizer: infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
     reversion: options.reversion,
     alias: options.alias,
   });
@@ -2536,19 +2540,19 @@
   <span class="kw">let </span>name_clone = name.to_string();
   <span class="kw">let </span>end_name_clone = end_name.to_string();
   <span class="kw">let </span>unexpected_end_closure = <span class="macro">after_digest_simple!</span>( _whatsit, {
-    <span class="kw">let </span>env = lookup_string(<span class="string">&quot;current_environment&quot;</span>);
+    <span class="kw">let </span>env = lookup_string(<span class="string">"current_environment"</span>);
     <span class="kw">if </span>env.is_empty() || name_clone != env {
-      <span class="kw">let </span>message1 = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t close environment {}&quot;</span>, name_clone);
+      <span class="kw">let </span>message1 = <span class="macro">s!</span>(<span class="string">"Can't close environment {}"</span>, name_clone);
       <span class="kw">let </span>message2 = <span class="macro">s!</span>(
-        <span class="string">&quot;Current are {} &quot;</span>,
-        with_stacked_values(<span class="string">&quot;current_environment&quot;</span>, |vals| vals
+        <span class="string">"Current are {} "</span>,
+        with_stacked_values(<span class="string">"current_environment"</span>, |vals| vals
           .iter()
-          .map(|x| <span class="macro">s!</span>(<span class="string">&quot;{:?}&quot;</span>, x))
+          .map(|x| <span class="macro">s!</span>(<span class="string">"{:?}"</span>, x))
           .collect::&lt;Vec&lt;String&gt;&gt;()
-          .join(<span class="string">&quot;, &quot;</span>))
+          .join(<span class="string">", "</span>))
       );
       <span class="macro">Error!</span>(
-        <span class="string">&quot;unexpected&quot;</span>,
+        <span class="string">"unexpected"</span>,
         end_name_clone,
         message1,
         message2
@@ -2581,7 +2585,7 @@
   };
 
   <span class="kw">let </span><span class="kw-2">mut </span>before_digest_for_endenv = options.before_digest_end;
-  <span class="kw">let </span>atend_key = <span class="macro">s!</span>(<span class="string">&quot;@environment@{name}@atend&quot;</span>);
+  <span class="kw">let </span>atend_key = <span class="macro">s!</span>(<span class="string">"@environment@{name}@atend"</span>);
   <span class="kw">let </span>atend_hook_closure = <span class="macro">before_digest_simple!</span>( {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(e) = lookup_tokens(<span class="kw-2">&amp;</span>atend_key) {
       <span class="macro">vec!</span>[digest(e.unlist())<span class="question-mark">?</span>]
@@ -2603,7 +2607,7 @@
 
   <span class="comment">// For the uncommon case opened by \csname env\endcsname
   </span><span class="kw">let </span>name_constructor = Rc::new(Constructor {
-    cs: <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}&quot;</span>, <span class="kw-2">&amp;</span>name)),
+    cs: <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}"</span>, <span class="kw-2">&amp;</span>name)),
     paramlist,
     replacement: compiled_replacement,
     <span class="comment">// beforeDigest =&gt; flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
@@ -2614,7 +2618,7 @@
     // afterDigest     =&gt; flatten($options{afterDigestBegin}),
     // afterDigestBody =&gt; flatten($options{afterDigestBody}),
     // beforeConstruct =&gt; flatten(sub { &gt;pushFrame; }, $options{beforeConstruct}),
-    // Curiously, it&#39;s the \begin whose afterConstruct gets called.
+    // Curiously, it's the \begin whose afterConstruct gets called.
     // afterConstruct =&gt; flatten($options{afterConstruct}, sub { &gt;popFrame; }),
     </span>nargs: options.nargs,
     capture_body: <span class="bool-val">true</span>,
@@ -2625,7 +2629,7 @@
     </span>..Constructor::default()
   });
   install_definition(name_constructor, options.scope.clone());
-  <span class="kw">let </span>end_name = <span class="macro">s!</span>(<span class="string">&quot;\\end{}&quot;</span>, <span class="kw-2">&amp;</span>name);
+  <span class="kw">let </span>end_name = <span class="macro">s!</span>(<span class="string">"\\end{}"</span>, <span class="kw-2">&amp;</span>name);
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_end = options.after_digest;
   after_digest_end.push(<span class="macro">after_digest_simple!</span>( _whatsit, {
     egroup()<span class="question-mark">?</span>;
@@ -2644,10 +2648,10 @@
   install_definition(Rc::new(end_name_constructor), options.scope);
 
   <span class="kw">if </span>options.locked {
-    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\begin{{{}}}:locked&quot;</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
-    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\end{{{}}}:locked&quot;</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
-    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\{}:locked&quot;</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
-    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\end{}:locked&quot;</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\begin{{{}}}:locked"</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\end{{{}}}:locked"</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\{}:locked"</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\end{}:locked"</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
   }
 }
 
@@ -2655,13 +2659,13 @@
 // Support for XMDual
 
 // Perhaps it would be better to use a label(-like) indirection here,
-// so all ID&#39;s can stay in the desired format?
+// so all ID's can stay in the desired format?
 </span><span class="kw">pub fn </span>get_xmarg_id() -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-  step_counter(<span class="string">&quot;@XMARG&quot;</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+  step_counter(<span class="string">"@XMARG"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
   def_macro(
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@XMARG@ID&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">"\\@@XMARG@ID"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(lookup_register(<span class="string">&quot;\\c@@XMARG&quot;</span>, Vec::new())<span class="question-mark">?
+    <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(lookup_register(<span class="string">"\\c@@XMARG"</span>, Vec::new())<span class="question-mark">?
       </span>.unwrap()
       .value_of())),
     <span class="prelude-val">Some</span>(ExpandableOptions {
@@ -2669,22 +2673,22 @@
       ..ExpandableOptions::default()
     })
   )<span class="question-mark">?</span>;
-  gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\the@XMARG@ID&quot;</span>))
+  gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\the@XMARG@ID"</span>))
 }
 
 <span class="kw">type </span>ArgsUnpacked = Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;;
 <span class="doccomment">/// Given a list of Tokens (to be expanded into mathematical objects)
 /// return two lists:
-///   (1) The Tokens&#39; wrapped in an XMAarg, with an ID added
-///   (2) a corresponding list of Tokens creating XMRef&#39;s to those IDs
+///   (1) The Tokens' wrapped in an XMAarg, with an ID added
+///   (2) a corresponding list of Tokens creating XMRef's to those IDs
 </span><span class="comment">// Ah, but there are complications!!!
 // On the one hand, arguments may be hidden, never appearing on the presentation side
-// (all will be passed to the content side); This argues for putting the XMArg&#39;s on the content
+// (all will be passed to the content side); This argues for putting the XMArg's on the content
 // side. OTOH, they ought to be on the presentation side, so that they can be expanded &amp; digested in
 // the proper context they will be presented, and pick up all the styling (font size,
-// displaystyle..) I don&#39;t know how to work around the latter, so we&#39;ll put args on the presentation
-// side, UNLESS they are hidden, in which case they&#39;ll be on the content side.
-// So, how do we know if they&#39;re hidden? We&#39;ll scan the presentation for #\d, that&#39;s how!
+// displaystyle..) I don't know how to work around the latter, so we'll put args on the presentation
+// side, UNLESS they are hidden, in which case they'll be on the content side.
+// So, how do we know if they're hidden? We'll scan the presentation for #\d, that's how!
 </span><span class="kw">pub fn </span>dualize_arglist(
   presentation: <span class="kw-2">&amp;</span>str,
   args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;,
@@ -2713,7 +2717,7 @@
           <span class="comment">// used in presentation?
           </span><span class="kw">let </span>id = get_xmarg_id()<span class="question-mark">?</span>;
           pargs.push(<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(
-            <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@xmarg&quot;</span>),
+            <span class="macro">T_CS!</span>(<span class="string">"\\lx@xmarg"</span>),
             <span class="macro">T_BEGIN!</span>(),
             id.clone().unlist(),
             <span class="macro">T_END!</span>(),
@@ -2722,7 +2726,7 @@
             <span class="macro">T_END!</span>()
           ))); <span class="comment">// put XMArg in presentation
           </span>cargs.push(<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(
-            <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@xmref&quot;</span>),
+            <span class="macro">T_CS!</span>(<span class="string">"\\lx@xmref"</span>),
             <span class="macro">T_BEGIN!</span>(),
             id.unlist(),
             <span class="macro">T_END!</span>()
@@ -2731,7 +2735,7 @@
           <span class="comment">// Hidden arg, put XMArg in content.
           </span><span class="kw">let </span>id = get_xmarg_id()<span class="question-mark">?</span>;
           cargs.push(<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(
-            <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@xmarg&quot;</span>),
+            <span class="macro">T_CS!</span>(<span class="string">"\\lx@xmarg"</span>),
             <span class="macro">T_BEGIN!</span>(),
             id.clone().unlist(),
             <span class="macro">T_END!</span>(),
@@ -2740,7 +2744,7 @@
             <span class="macro">T_END!</span>()
           )));
           pargs.push(<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(
-            <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@xmref&quot;</span>),
+            <span class="macro">T_CS!</span>(<span class="string">"\\lx@xmref"</span>),
             <span class="macro">T_BEGIN!</span>(),
             id.unlist(),
             <span class="macro">T_END!</span>()
@@ -2759,7 +2763,7 @@
 ///  (2) But if the presentation is a simple string, or unicode,
 /// it is just the content of the symbol; even if the function takes arguments.
 </span><span class="comment">// ALSO
-//  arrange that the operator token gets cs=&quot;$cs&quot;
+//  arrange that the operator token gets cs="$cs"
 // ALSO
 //  Possibly some trick with SUMOP/INTOP affecting limits ?
 //  Well, not exactly, but....
@@ -2772,7 +2776,7 @@
   presentation: String,
   <span class="kw-2">mut </span>options: MathPrimitiveOptions,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="comment">// Can&#39;t defer parsing parameters since we need to know number of args!
+  <span class="comment">// Can't defer parsing parameters since we need to know number of args!
   // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist &amp;&amp; !ref $paramlist;
 
   </span><span class="kw">let </span>nargs = <span class="kw">match </span>paramlist {
@@ -2788,8 +2792,8 @@
           <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>alias) =&gt; Cow::Owned(alias.to_owned()),
           <span class="prelude-val">None </span>=&gt; Cow::Borrowed(<span class="kw-2">&amp;</span>csname),
         };
-        <span class="kw">if </span>inferred_name.starts_with(<span class="string">&#39;\\&#39;</span>) {
-          inferred_name = Cow::Owned(inferred_name.replacen(<span class="string">&#39;\\&#39;</span>, <span class="string">&quot;&quot;</span>, <span class="number">1</span>))
+        <span class="kw">if </span>inferred_name.starts_with(<span class="string">'\\'</span>) {
+          inferred_name = Cow::Owned(inferred_name.replacen(<span class="string">'\\'</span>, <span class="string">""</span>, <span class="number">1</span>))
         }
         inferred_name
       },
@@ -2806,13 +2810,13 @@
   };
   options.name = name_opt;
   <span class="kw">if </span>nargs == <span class="number">0 </span>&amp;&amp; options.role.is_none() {
-    options.role = <span class="prelude-val">Some</span>(String::from(<span class="string">&quot;UNKNOWN&quot;</span>))
+    options.role = <span class="prelude-val">Some</span>(String::from(<span class="string">"UNKNOWN"</span>))
   }
   <span class="kw">if </span>nargs &gt; <span class="number">0 </span>&amp;&amp; options.operator_role.is_none() {
-    options.operator_role = <span class="prelude-val">Some</span>(String::from(<span class="string">&quot;UNKNOWN&quot;</span>))
+    options.operator_role = <span class="prelude-val">Some</span>(String::from(<span class="string">"UNKNOWN"</span>))
   }
   <span class="kw">if </span>options.hide_content_reversion {
-    options.revert_as = <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">&quot;context&quot;</span>));
+    options.revert_as = <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"context"</span>));
   }
 
   <span class="kw">let </span>locked = options.locked;
@@ -2831,7 +2835,7 @@
     <span class="macro">transfer_opt_default!</span>(mathstyle, options, math_attr_hash);
     <span class="macro">transfer_opt_default!</span>(stretchy, options, math_attr_hash);
     assign_value(
-      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;math_token_attributes_{}&quot;</span>, csname),
+      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"math_token_attributes_{}"</span>, csname),
       math_attr_hash,
       <span class="prelude-val">Some</span>(Scope::Global),
     );
@@ -2841,7 +2845,7 @@
   // from the (likely) convoluted presentation.
   </span><span class="kw">else if </span>HAS_ARG_OR_CS.is_match(<span class="kw-2">&amp;</span>presentation) {
     <span class="comment">// TODO: Are the code variants still applicable in Rust?
-    //((ref presentation eq &quot;CODE&quot;)
+    //((ref presentation eq "CODE")
     // || ((ref presentation) &amp;&amp; grep { $_-&gt;equals(T_PARAM) } presentation-&gt;unlist)
     // || ((ref presentation) &amp;&amp; (grep { $_-&gt;isExecutable } presentation-&gt;unlist)))
     </span>def_math_dual(cs, paramlist, presentation, options)<span class="question-mark">?</span>;
@@ -2854,7 +2858,7 @@
     def_math_constructor(cs, paramlist, presentation, options)<span class="question-mark">?</span>;
   }
   <span class="kw">if </span>locked {
-    assign_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{csname}:locked&quot;</span>), <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+    assign_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{csname}:locked"</span>), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
   }
   <span class="prelude-val">Ok</span>(())
 }
@@ -2869,7 +2873,7 @@
   <span class="kw">let </span>cs_str = cs.with_str(ToString::to_string);
   <span class="kw">let </span><span class="kw-2">mut </span>properties = options.to_hash_stored();
   cons.alias = <span class="prelude-val">Some</span>(options.alias.unwrap_or_else(|| cs_str.to_owned()));
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = infer_sizer(<span class="kw-2">&amp;</span>options.sizer, <span class="kw-2">&amp;</span>options.reversion) {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()) {
     cons.sizer = <span class="prelude-val">Some</span>(sizer);
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(reversion) = options.reversion {
@@ -2910,7 +2914,7 @@
   cons.after_construct = options.after_construct;
   <span class="kw">let </span>presentation_for_font = presentation.to_owned();
   properties.insert(
-    String::from(<span class="string">&quot;font&quot;</span>),
+    String::from(<span class="string">"font"</span>),
     Stored::FontDirective(FontDirective::Closure(
       <span class="kw">if let </span><span class="prelude-val">Some</span>(mathstyle) = options.mathstyle {
         Rc::new(<span class="kw">move </span>|_whatsit| {
@@ -2946,25 +2950,25 @@
 
 </span><span class="kw">pub fn </span>allocate_register(rtype:<span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; {
   <span class="kw">let </span>addr = <span class="kw">match </span>rtype {
-    <span class="string">&quot;\\count&quot; </span>=&gt; <span class="string">&quot;\\count10&quot;</span>,
-    <span class="string">&quot;\\dimen&quot; </span>=&gt; <span class="string">&quot;\\count11&quot;</span>,
-    <span class="string">&quot;\\skip&quot; </span>=&gt; <span class="string">&quot;\\count12&quot;</span>,
-    <span class="string">&quot;\\muskip&quot; </span>=&gt; <span class="string">&quot;\\count13&quot;</span>,
-    <span class="string">&quot;\\box&quot;   </span>=&gt; <span class="string">&quot;\\count14&quot;</span>,
-    <span class="string">&quot;\\toks&quot;  </span>=&gt; <span class="string">&quot;\\count15&quot;</span>,
-    <span class="kw">_ </span>=&gt; <span class="string">&quot;&quot;
+    <span class="string">"\\count" </span>=&gt; <span class="string">"\\count10"</span>,
+    <span class="string">"\\dimen" </span>=&gt; <span class="string">"\\count11"</span>,
+    <span class="string">"\\skip" </span>=&gt; <span class="string">"\\count12"</span>,
+    <span class="string">"\\muskip" </span>=&gt; <span class="string">"\\count13"</span>,
+    <span class="string">"\\box"   </span>=&gt; <span class="string">"\\count14"</span>,
+    <span class="string">"\\toks"  </span>=&gt; <span class="string">"\\count15"</span>,
+    <span class="kw">_ </span>=&gt; <span class="string">""
   </span>};
   <span class="kw">if </span>!addr.is_empty() { <span class="comment">// addr is a Register but MUST be stored as \count&lt;#&gt;
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(n) = lookup_number(addr) {
       <span class="kw">let </span>next = n.value_of() + <span class="number">1</span>;
       assign_value(addr, Number::new(next), <span class="prelude-val">Some</span>(Scope::Global));
-      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;{rtype}{next}&quot;</span>)))
+      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"{rtype}{next}"</span>)))
     }
     <span class="kw">else </span>{
       <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
   } <span class="kw">else </span>{
-    <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, rtype, <span class="macro">format!</span>(<span class="string">&quot;Type {rtype} is not an allocated register type&quot;</span>));
+    <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, rtype, <span class="macro">format!</span>(<span class="string">"Type {rtype} is not an allocated register type"</span>));
     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
   }
 }

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/macros.rs`."><title>macros.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rtx_core/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/macros.rs`."><title>macros.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -468,24 +470,13 @@
 <a href="#468" id="468">468</a>
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
-<a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a>
-<a href="#473" id="473">473</a>
-<a href="#474" id="474">474</a>
-<a href="#475" id="475">475</a>
-<a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a>
-<a href="#478" id="478">478</a>
-<a href="#479" id="479">479</a>
-<a href="#480" id="480">480</a>
-<a href="#481" id="481">481</a>
 </pre></div><pre class="rust"><code><span class="comment">// Macros requiring repetitions need to be handled outside of the main setup macro, as nested
-// macros currently don&#39;t support repetition Details at:
+// macros currently don't support repetition Details at:
 // https://github.com/rust-lang/rust/issues/35853
 
 </span><span class="doccomment">/// build a Font from key=&gt;val pairs
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>Font {
+</span><span class="macro">macro_rules!</span> Font {
   ($(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (
     <span class="prelude-val">Some</span>(Font { $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>.into_font_field(),)* .. Font::default() })
 )}
@@ -493,7 +484,7 @@
 <span class="doccomment">/// build a FontDirective from key=&gt;val pairs
 /// (currently only FontDirective::Asset is supported in this macro)
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>FontDirective {
+</span><span class="macro">macro_rules!</span> FontDirective {
   ($(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (
     <span class="prelude-val">Some</span>(FontDirective::Asset(Rc::new(
       Font { $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>.into_font_field(),)* .. Font::default() }
@@ -503,7 +494,7 @@
 <span class="doccomment">/// given a struct `$name`, create a new instance of it using the given key=&gt;val pairs
 /// and complete the remaining entries via the Default instance
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>NewDefault {
+</span><span class="macro">macro_rules!</span> NewDefault {
   (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$name </span>{
     $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>,)*
     ..<span class="macro-nonterminal">$name::default</span>()
@@ -512,7 +503,7 @@
 
 <span class="doccomment">/// Just like NewDefault, but adds a mandatory `.into_option()` to all values
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>NewDefaultV {
+</span><span class="macro">macro_rules!</span> NewDefaultV {
   (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$name </span>{
     $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>.into_option(),)*
     ..<span class="macro-nonterminal">$name::default</span>()
@@ -527,7 +518,7 @@
 /// and `$struct_source` has a set value at `$val`,
 /// then transfers (with ownership) the `$val` field of a `$struct_source` into the `$receiver`.
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>transfer_opt_default {
+</span><span class="macro">macro_rules!</span> transfer_opt_default {
   (<span class="macro-nonterminal">$val</span>:ident, <span class="macro-nonterminal">$struct_source</span>:ident, <span class="macro-nonterminal">$receiver</span>:ident) =&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>tval) = <span class="macro-nonterminal">$struct_source</span>.<span class="macro-nonterminal">$val </span>{
       <span class="macro-nonterminal">$receiver
@@ -537,43 +528,32 @@
   };
 }
 
-<span class="comment">// Discussion: Ideally we wouldn&#39;t need any of these closure macros, just the way latexml proper
-// doesn&#39;t. In latexml, you could say:
+<span class="comment">// Discussion: Ideally we wouldn't need any of these closure macros, just the way latexml proper
+// doesn't. In latexml, you could say:
 
-</span><span class="doccomment">/// create a PrimitiveClosure from the pieces, with a forced empty return value
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>primitiveproc {
-  (<span class="macro-nonterminal">$args</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; (Rc::new(
-    |<span class="kw-2">mut </span><span class="macro-nonterminal">$args </span>: Vec&lt;ArgWrap&gt;| {
-      <span class="macro-nonterminal">$body
-      </span><span class="prelude-val">Ok</span>(Vec::new())
-    }
-  ))
-}
-
-<span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>before_digest {
+</span><span class="macro">macro_rules!</span> before_digest {
   ($(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="macro">vec!</span>[<span class="macro">before_digest_single!</span>( <span class="macro-nonterminal">$body</span>)]
   };
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>before_digest_single {
+</span><span class="macro">macro_rules!</span> before_digest_single {
   (<span class="macro-nonterminal">$body</span>:block) =&gt; {
     Rc::new(<span class="kw">move </span>|| <span class="macro-nonterminal">$body</span>.into_digested_result())
   };
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>before_digest_simple {
+</span><span class="macro">macro_rules!</span> before_digest_simple {
   (<span class="macro-nonterminal">$body</span>:block) =&gt; {
     Rc::new(<span class="kw">move </span>|| <span class="macro-nonterminal">$body</span>.into_digested_result())
   };
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>tagsub {
+</span><span class="macro">macro_rules!</span> tagsub {
   (<span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$node</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="macro">vec!</span>[Rc::new(
       |<span class="macro-nonterminal">$document</span>: <span class="kw-2">&amp;mut </span>Document, <span class="kw-2">mut </span><span class="macro-nonterminal">$node</span>: <span class="kw-2">&amp;mut </span>Node| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -585,7 +565,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>sizersub {
+</span><span class="macro">macro_rules!</span> sizersub {
   (<span class="macro-nonterminal">$whatsit</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     Rc::new(
       |<span class="macro-nonterminal">$whatsit</span>: <span class="kw-2">&amp;</span>Whatsit| -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
@@ -597,7 +577,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>rewrite_replace_sub {
+</span><span class="macro">macro_rules!</span> rewrite_replace_sub {
   (<span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$nodes</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
   <span class="prelude-val">Some</span>(Rc::new(
     |<span class="macro-nonterminal">$document</span>: <span class="kw-2">&amp;mut </span>Document, <span class="kw-2">mut </span><span class="macro-nonterminal">$nodes</span>: Vec&lt;<span class="kw-2">&amp;mut </span>Node&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -609,14 +589,14 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>noreplacement {
+</span><span class="macro">macro_rules!</span> noreplacement {
   () =&gt; {
     |doc, whatsit, props| <span class="prelude-val">Ok</span>(())
   };
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>replacement {
+</span><span class="macro">macro_rules!</span> replacement {
   (<span class="macro-nonterminal">$doc</span>:ident, <span class="macro-nonterminal">$args</span>:ident, <span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; (
     <span class="kw">move </span>|<span class="macro-nonterminal">$doc</span>:<span class="kw-2">&amp;mut </span>Document,<span class="macro-nonterminal">$args</span>: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
       <span class="macro-nonterminal">$props</span>: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -626,7 +606,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>construct {
+</span><span class="macro">macro_rules!</span> construct {
   (<span class="macro-nonterminal">$doc</span>:ident, <span class="macro-nonterminal">$whatsit</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
   <span class="macro">vec!</span>[Rc::new(
     <span class="kw">move </span>|<span class="macro-nonterminal">$doc</span>: <span class="kw-2">&amp;mut </span>Document, <span class="macro-nonterminal">$whatsit</span>: <span class="kw-2">&amp;</span>Whatsit| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -637,7 +617,7 @@
 }}
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>properties {
+</span><span class="macro">macro_rules!</span> properties {
   (sub [<span class="macro-nonterminal">$args</span>:ident] <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="macro">properties!</span>(<span class="macro-nonterminal">$args</span>, <span class="macro-nonterminal">$body</span>)
   };
@@ -666,7 +646,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>after_digest {
+</span><span class="macro">macro_rules!</span> after_digest {
   ($(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="macro">vec!</span>[<span class="macro">after_digest_single!</span>(_whatsit, <span class="macro-nonterminal">$body</span>)]
   };
@@ -676,7 +656,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>after_digest_single {
+</span><span class="macro">macro_rules!</span> after_digest_single {
   (<span class="macro-nonterminal">$whatsit</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     Rc::new(
       <span class="kw">move </span>|<span class="macro-nonterminal">$whatsit</span>: <span class="kw-2">&amp;mut </span>Whatsit| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; { <span class="macro-nonterminal">$body</span>.into_digested_result() },
@@ -684,7 +664,7 @@
   };
 }
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>after_digest_simple {
+</span><span class="macro">macro_rules!</span> after_digest_simple {
   (<span class="macro-nonterminal">$whatsit</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     Rc::new(
       <span class="kw">move </span>|<span class="macro-nonterminal">$whatsit</span>: <span class="kw-2">&amp;mut </span>Whatsit| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; { <span class="macro-nonterminal">$body</span>.into_digested_result() },
@@ -693,7 +673,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>reader {
+</span><span class="macro">macro_rules!</span> reader {
   (<span class="macro-nonterminal">$inner</span>:ident, <span class="macro-nonterminal">$extra</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     Rc::new(
       |<span class="macro-nonterminal">$inner</span>: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="macro-nonterminal">$extra</span>: <span class="kw-2">&amp;</span>[Tokens]|
@@ -703,7 +683,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>predigest {
+</span><span class="macro">macro_rules!</span> predigest {
   (<span class="macro-nonterminal">$arg</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="prelude-val">Some</span>(Rc::new(|<span class="macro-nonterminal">$arg</span>: ArgWrap| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
         <span class="macro-nonterminal">$body</span>.into_digested_option_result()
@@ -714,7 +694,7 @@
 
 <span class="doccomment">/// A closure for obtaining a `RegisterValue`, usually owned by a `Register` getter.
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>getter {
+</span><span class="macro">macro_rules!</span> getter {
   (<span class="macro-nonterminal">$args</span>: ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="prelude-val">Some</span>(Rc::new(
       <span class="kw">move </span>|<span class="kw-2">mut </span><span class="macro-nonterminal">$args</span>: Vec&lt;ArgWrap&gt;| -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
@@ -725,7 +705,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>setter {
+</span><span class="macro">macro_rules!</span> setter {
   (<span class="macro-nonterminal">$value</span>:ident, <span class="macro-nonterminal">$args</span>: ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="prelude-val">Some</span>(Rc::new(
       <span class="kw">move </span>|<span class="macro-nonterminal">$value</span>: RegisterValue, _scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;, <span class="kw-2">mut </span><span class="macro-nonterminal">$args</span>: Vec&lt;ArgWrap&gt;| {
@@ -743,7 +723,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>reversion {
+</span><span class="macro">macro_rules!</span> reversion {
   (<span class="macro-nonterminal">$arg</span>:ident, <span class="macro-nonterminal">$inner</span>:ident, <span class="macro-nonterminal">$extra</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="prelude-val">Some</span>(Rc::new(
       |<span class="kw-2">mut </span><span class="macro-nonterminal">$arg</span>: Vec&lt;Token&gt;,
@@ -755,7 +735,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>reversion_digested {
+</span><span class="macro">macro_rules!</span> reversion_digested {
   (<span class="macro-nonterminal">$whatsit</span>:ident, <span class="macro-nonterminal">$args</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="prelude-val">Some</span>(Reversion::Closure(Rc::new(
       <span class="kw">move </span>|<span class="macro-nonterminal">$whatsit</span>: <span class="kw-2">&amp;</span>Whatsit, <span class="macro-nonterminal">$args</span>: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {<span class="macro-nonterminal">$body</span>}
@@ -769,22 +749,22 @@
 // for cases that will be absorbed? or something else that is lighter on memory allocations?
 
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>prop_digested {
+</span><span class="macro">macro_rules!</span> prop_digested {
   (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
     <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
       <span class="prelude-val">Some</span>(Stored::VecDigested(<span class="kw-2">ref </span>vd)) =&gt; vd.iter().collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>Digested&gt;&gt;(),
       <span class="prelude-val">Some</span>(Stored::Digested(d)) =&gt; <span class="macro">vec!</span>[<span class="kw-2">&amp;*</span>d],
       <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; <span class="macro">panic!</span>(
-        <span class="string">&quot;prop_digested! called on a string property {:?} with value {:?}.&quot;</span>,
+        <span class="string">"prop_digested! called on a string property {:?} with value {:?}."</span>,
         <span class="macro-nonterminal">$key</span>, s
       ),
       <span class="prelude-val">None </span>=&gt; Vec::new(),
       other =&gt; {
         <span class="macro">eprintln!</span>(
-          <span class="string">&quot;Please extend the api_macros::prop_digested macro to support: {:?}&quot;</span>,
+          <span class="string">"Please extend the api_macros::prop_digested macro to support: {:?}"</span>,
           other
         );
-        <span class="macro">unimplemented!</span>();
+        <span class="macro">todo!</span>();
       },
     }
   };
@@ -800,17 +780,17 @@
 // struct is another idea. I will use a helper though:
 
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>prop_str {
+</span><span class="macro">macro_rules!</span> prop_str {
   (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
     <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
       <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::String(<span class="kw-2">ref </span>id)) =&gt; <span class="kw-2">*</span>id,
-      <span class="kw">_ </span>=&gt; arena::pin_static(<span class="string">&quot;&quot;</span>),
+      <span class="kw">_ </span>=&gt; arena::pin_static(<span class="string">""</span>),
     }
   };
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>prop_string {
+</span><span class="macro">macro_rules!</span> prop_string {
   (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
     <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
       <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::String(id)) =&gt; arena::to_string(id),
@@ -820,7 +800,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>prop_whatsit {
+</span><span class="macro">macro_rules!</span> prop_whatsit {
   (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
     <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
       <span class="comment">// Cloning here is OK now, as there is an Rc&lt;&gt; guard over the DigestedData
@@ -831,7 +811,7 @@
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>prop_bool {
+</span><span class="macro">macro_rules!</span> prop_bool {
   (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
     <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
       <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(v)) =&gt; v,
@@ -843,13 +823,13 @@
 <span class="doccomment">/// Convenience macro to flexibly unpack a collection of `Vec&lt;ArgWrap&gt;` arguments into individual
 /// `Tokens` variables.
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>unref {
+</span><span class="macro">macro_rules!</span> unref {
   (<span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$var</span>:ident) =&gt; (<span class="macro">count_unpack_ref!</span>(<span class="number">0usize</span>, <span class="macro-nonterminal">$args </span>=&gt; <span class="macro-nonterminal">$var</span>));
   (<span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$var</span>:ident,$(<span class="macro-nonterminal">$tail</span>:ident),<span class="kw-2">*</span>) =&gt; (
     <span class="macro">count_unpack_ref!</span>(<span class="number">0usize</span>,<span class="macro-nonterminal">$args </span>=&gt; <span class="macro-nonterminal">$var</span>,$(<span class="macro-nonterminal">$tail</span>),<span class="kw-2">*</span>))
 }
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>count_unpack_ref {
+</span><span class="macro">macro_rules!</span> count_unpack_ref {
   (<span class="macro-nonterminal">$index</span>:expr, <span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$var</span>:ident) =&gt; {
     <span class="kw">let </span><span class="macro-nonterminal">$var </span>= <span class="macro-nonterminal">$args</span>[<span class="macro-nonterminal">$index</span>].as_ref().unwrap();
   };
@@ -861,7 +841,7 @@
 
 <span class="doccomment">/// Try to efficiently unwrap a Vec&lt;T&gt; into a [T;n] for `$arg1`...`$argn`
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>unpack_opt {
+</span><span class="macro">macro_rules!</span> unpack_opt {
   (<span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$arg1</span>:ident) =&gt; {
     <span class="kw">let </span>[<span class="macro-nonterminal">$arg1</span>]: [<span class="kw">_</span>; <span class="number">1</span>] = <span class="macro-nonterminal">$args</span>.try_into().unwrap();
   };
@@ -881,7 +861,7 @@
 
 <span class="doccomment">/// Try to efficiently unwrap a &amp;Vec&lt;T&gt; into a &amp;[T;n] for `$arg1`...`$argn`
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>unpack_opt_ref {
+</span><span class="macro">macro_rules!</span> unpack_opt_ref {
   (<span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$arg1</span>:ident) =&gt; {
     <span class="kw">let </span>[<span class="macro-nonterminal">$arg1</span>]: <span class="kw-2">&amp;</span>[<span class="kw">_</span>; <span class="number">1</span>] = <span class="macro-nonterminal">$args</span>[..<span class="number">1</span>].try_into().unwrap();
   };
@@ -901,40 +881,40 @@
 
 <span class="doccomment">/// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>roman {
+</span><span class="macro">macro_rules!</span> roman {
   (<span class="macro-nonterminal">$stuff</span>:expr) =&gt; {
     Tokens::new(<span class="macro">ExplodeText!</span>(roman_aux(<span class="macro-nonterminal">$stuff </span><span class="kw">as </span>i64)))
   };
 }
 <span class="doccomment">/// Convert the number to upper case roman numerals, returning a list of LaTeXML::Core::Token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>Roman {
+</span><span class="macro">macro_rules!</span> Roman {
   (<span class="macro-nonterminal">$stuff</span>:expr) =&gt; {
     Tokens::new(<span class="macro">ExplodeText!</span>(roman_aux(<span class="macro-nonterminal">$stuff </span><span class="kw">as </span>i64).to_ascii_uppercase()))
   };
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>requireMath {
+</span><span class="macro">macro_rules!</span> requireMath {
   (<span class="macro-nonterminal">$cs_name</span>:expr) =&gt; {
-    <span class="kw">if </span>! <span class="macro-nonterminal">$crate::state::lookup_bool</span>(<span class="string">&quot;IN_MATH&quot;</span>) {
-      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;{} should only appear in math mode&quot;</span>, <span class="macro-nonterminal">$cs_name</span>);
-      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;mode&quot;</span>, message);
+    <span class="kw">if </span>! <span class="macro-nonterminal">$crate::state::lookup_bool</span>(<span class="string">"IN_MATH"</span>) {
+      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{} should only appear in math mode"</span>, <span class="macro-nonterminal">$cs_name</span>);
+      <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"mode"</span>, message);
     }
   };
 }
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>forbidMath {
+</span><span class="macro">macro_rules!</span> forbidMath {
   (<span class="macro-nonterminal">$cs_name</span>:expr) =&gt; {
-    <span class="kw">if </span><span class="macro-nonterminal">$crate::state::lookup_bool</span>(<span class="string">&quot;IN_MATH&quot;</span>) {
-      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;{} should not appear in math mode&quot;</span>, <span class="macro-nonterminal">$cs_name</span>);
-      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;mode&quot;</span>, message);
+    <span class="kw">if </span><span class="macro-nonterminal">$crate::state::lookup_bool</span>(<span class="string">"IN_MATH"</span>) {
+      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{} should not appear in math mode"</span>, <span class="macro-nonterminal">$cs_name</span>);
+      <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"mode"</span>, message);
     }
   }
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>AssignRegister {
+</span><span class="macro">macro_rules!</span> AssignRegister {
   (<span class="macro-nonterminal">$cs</span>:literal, <span class="macro-nonterminal">$value</span>:expr) =&gt; {
     <span class="macro">AssignRegister!</span>(<span class="macro-nonterminal">$cs</span>,<span class="macro-nonterminal">$value</span>,Vec::new())
   };
@@ -943,18 +923,18 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state::lookup_register_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$cs</span>)) {
       (<span class="kw-2">*</span>defn).set_value(value_ident, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$args</span>);
     } <span class="kw">else </span>{
-      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;The control sequence {} is not a register&quot;</span>, <span class="macro-nonterminal">$cs</span>);
-      <span class="macro">Warn!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;register&quot;</span>, message);
+      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The control sequence {} is not a register"</span>, <span class="macro-nonterminal">$cs</span>);
+      <span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"register"</span>, message);
     }
   };
 }
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>SetCounter {
+</span><span class="macro">macro_rules!</span> SetCounter {
   (<span class="macro-nonterminal">$ctr</span>:expr, <span class="macro-nonterminal">$value</span>:expr) =&gt; {
-    state::assign_register(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>,<span class="macro-nonterminal">$ctr</span>), <span class="macro-nonterminal">$value</span>.into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
+    state::assign_register(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{}"</span>,<span class="macro-nonterminal">$ctr</span>), <span class="macro-nonterminal">$value</span>.into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
     after_assignment();
-    def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@{}@ID&quot;</span>,<span class="macro-nonterminal">$ctr</span>)), <span class="prelude-val">None</span>,
+    def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{}@ID"</span>,<span class="macro-nonterminal">$ctr</span>)), <span class="prelude-val">None</span>,
       Tokens::new(<span class="macro">Explode!</span>(<span class="macro-nonterminal">$value</span>.value_of())),
       <span class="prelude-val">Some</span>(ExpandableOptions{ scope: <span class="prelude-val">Some</span>(Scope::Global),
          ..ExpandableOptions::default()}))<span class="question-mark">?</span>;

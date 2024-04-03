@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_math_parser/src/pragmatics.rs`."><title>pragmatics.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_math_parser/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_math_parser/src/pragmatics.rs`."><title>pragmatics.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_math_parser/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -714,7 +716,7 @@
   /// all choices, the rule is skipped.
   </span><span class="kw">pub fn </span>student_defaults() -&gt; Vec&lt;<span class="self">Self</span>&gt; {
     <span class="comment">// Order here is crucial - it shows a decreasing level of adoption of each rule in the
-    // scientific community, ending with some &quot;crutch&quot;-like rules, as last ditch attempts to discard
+    // scientific community, ending with some "crutch"-like rules, as last ditch attempts to discard
     // parses
     </span><span class="kw">use </span>ValidationPragmatics::<span class="kw-2">*</span>;
     <span class="macro">vec!</span>[
@@ -788,7 +790,7 @@
 ///   required to coordinate to the same xarith type where each separate style of a letter
 ///   (italic/bold;Uppercase/lowercase) stands for a separate pragmatic block.
 ///
-/// For example in &quot;Ax^2 + Bx + C&quot; we can obtain a single parse where A,B,C are coefficients
+/// For example in "Ax^2 + Bx + C" we can obtain a single parse where A,B,C are coefficients
 </span><span class="kw">fn </span>_pragma_letter_blocks(name: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">let </span>(base, sep, lexeme) = distill_lexeme(name);
   <span class="kw">let </span>lexeme_pragmatic = <span class="kw">if </span>lexeme.len() == <span class="number">1 </span>{
@@ -814,9 +816,9 @@
 </span><span class="kw">fn </span>_pragma_letter_case(name: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">let </span>(base, sep, lexeme) = distill_lexeme(name);
   <span class="kw">let </span>lexeme_pragmatic = <span class="kw">if </span>lexeme.chars().next().unwrap().is_uppercase() {
-    <span class="string">&quot;U&quot;
+    <span class="string">"U"
   </span>} <span class="kw">else </span>{
-    <span class="string">&quot;l&quot;
+    <span class="string">"l"
   </span>};
   base.to_owned() + sep + lexeme_pragmatic
 }
@@ -824,20 +826,20 @@
 <span class="doccomment">/// Validate a pragmatic class, indicated by the case of a named lexeme
 /// ALSO disregarding any scripted guards
 /// (i.e. scripted lexemes must coordinate with unscripted ones)
-/// For example in &quot;R S_2&quot;
-</span><span class="kw">fn </span>_pragma_letter_case_flat(name: <span class="kw-2">&amp;</span>str) -&gt; String { _pragma_letter_case(name).replace(<span class="string">&quot;sub__&quot;</span>, <span class="string">&quot;&quot;</span>) }
+/// For example in "R S_2"
+</span><span class="kw">fn </span>_pragma_letter_case_flat(name: <span class="kw-2">&amp;</span>str) -&gt; String { _pragma_letter_case(name).replace(<span class="string">"sub__"</span>, <span class="string">""</span>) }
 
 <span class="kw">fn </span>_pragma_letter_case_flat_unstyled(name: <span class="kw-2">&amp;</span>str) -&gt; String {
-  <span class="kw">let </span>unstyled_name = <span class="kw">match </span>name.rfind(<span class="string">&#39;-&#39;</span>) {
+  <span class="kw">let </span>unstyled_name = <span class="kw">match </span>name.rfind(<span class="string">'-'</span>) {
     <span class="prelude-val">Some</span>(position) =&gt; {
       <span class="kw">let </span>(base, trailer) = name.split_at(position);
       <span class="kw">let </span>(_sep, lexeme) = trailer.split_at(<span class="number">1</span>);
-      <span class="kw">match </span>base.rfind(<span class="string">&#39;:&#39;</span>) {
+      <span class="kw">match </span>base.rfind(<span class="string">':'</span>) {
         <span class="prelude-val">Some</span>(position) =&gt; {
           <span class="kw">let </span>(role, _discard) = base.split_at(position);
-          <span class="macro">format!</span>(<span class="string">&quot;{role}:{lexeme}&quot;</span>)
+          <span class="macro">format!</span>(<span class="string">"{role}:{lexeme}"</span>)
         },
-        <span class="prelude-val">None </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;{base}:{lexeme}&quot;</span>),
+        <span class="prelude-val">None </span>=&gt; <span class="macro">format!</span>(<span class="string">"{base}:{lexeme}"</span>),
       }
     },
     <span class="prelude-val">None </span>=&gt; name.to_owned(),
@@ -849,9 +851,9 @@
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>_lexeme, <span class="kw-2">ref </span>atom_meta) = <span class="kw-2">**</span>op {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>fences) = atom_meta.fenced {
-        <span class="kw">if </span>fences.as_str() == <span class="string">&quot;parens&quot; </span>{
+        <span class="kw">if </span>fences.as_str() == <span class="string">"parens" </span>{
           <span class="kw">return </span><span class="prelude-val">Err</span>(
-            <span class="string">&quot;pruning non-argument parenthetical atom, used as LHS of function application&quot;</span>.into(),
+            <span class="string">"pruning non-argument parenthetical atom, used as LHS of function application"</span>.into(),
           );
         }
       }
@@ -863,14 +865,14 @@
 <span class="kw">fn </span>pragma_fenced_letters_are_function_arguments(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
-      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">&quot;x.invisible_operator&quot; </span>=&gt; {
+      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">"x.invisible_operator" </span>=&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(top_lhs) = args.trees().first() {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>fences) = top_lhs.get_meta().fenced {
-            <span class="kw">if </span>fences.as_str() == <span class="string">&quot;parens&quot; </span>{
+            <span class="kw">if </span>fences.as_str() == <span class="string">"parens" </span>{
               <span class="kw">if let </span>XM::Lexeme(lhs_name, <span class="kw">_</span>) = top_lhs.get_baseline() {
-                <span class="kw">if </span>!lhs_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>) {
+                <span class="kw">if </span>!lhs_name.starts_with(<span class="string">"NUMBER"</span>) {
                   <span class="kw">return </span><span class="prelude-val">Err</span>(
-                    <span class="string">&quot;pruning non-argument parenthetical atom, used as LHS of invisible times&quot;
+                    <span class="string">"pruning non-argument parenthetical atom, used as LHS of invisible times"
                       </span>.into(),
                   );
                 }
@@ -879,31 +881,31 @@
           }
 
           <span class="comment">// Slightly tricky check -- the top RHS needs to be fenced, but we care about the
-          // &quot;baseline&quot; content being a variable - disregarding scripts.
+          // "baseline" content being a variable - disregarding scripts.
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(top_rhs) = args.trees().get(<span class="number">1</span>) {
             <span class="kw">if let </span>XM::Lexeme(rhs_name, <span class="kw">_</span>) = top_rhs.get_baseline() {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>fences) = top_rhs.get_meta().fenced {
-                <span class="kw">if </span>fences.as_str() == <span class="string">&quot;parens&quot; </span>{
+                <span class="kw">if </span>fences.as_str() == <span class="string">"parens" </span>{
                   <span class="comment">// if the RHS is a number, prune unless the LHS is fenced (things like cycle
                   // notation)
-                  </span><span class="kw">if </span>!rhs_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>) {
+                  </span><span class="kw">if </span>!rhs_name.starts_with(<span class="string">"NUMBER"</span>) {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(
-                      <span class="string">&quot;pruning non-argument parenthetical atom, used as RHS of invisible times&quot;
+                      <span class="string">"pruning non-argument parenthetical atom, used as RHS of invisible times"
                         </span>.into(),
                     );
                   } <span class="kw">else </span>{
                     <span class="kw">match </span>args.trees().first() {
                       <span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw">_</span>, lhs_meta)) <span class="kw">if </span>lhs_meta.fenced.is_none() =&gt; {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(
-                          <span class="string">&quot;pruning non-argument parenthetical NUMBER, used as RHS of invisible \
-                           times&quot;
+                          <span class="string">"pruning non-argument parenthetical NUMBER, used as RHS of invisible \
+                           times"
                             </span>.into(),
                         );
                       },
                       <span class="prelude-val">Some</span>(XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, lhs_meta)) <span class="kw">if </span>lhs_meta.fenced.is_none() =&gt; {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(
-                          <span class="string">&quot;pruning non-argument parenthetical NUMBER, used as RHS of invisible \
-                           times&quot;
+                          <span class="string">"pruning non-argument parenthetical NUMBER, used as RHS of invisible \
+                           times"
                             </span>.into(),
                         );
                       },
@@ -922,10 +924,10 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// If we have two standalone letters in the same, such as &quot;A x&quot; or &quot;F X&quot;, prune parses that
+<span class="doccomment">/// If we have two standalone letters in the same, such as "A x" or "F X", prune parses that
 /// interpret them as an application, unless they have a role that clearly indicates the LHS is
 /// intended as a functional. This may need to be applied as an optional filter at the end of
-/// pruning, as there are known, albeit rare, counter-examples (&quot;f x&quot;).
+/// pruning, as there are known, albeit rare, counter-examples ("f x").
 </span><span class="kw">fn </span>pragma_unfenced_letter_arguments_require_visual_cues(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">match </span><span class="kw-2">*</span>tree {
     XM::Apply(Operator(<span class="kw-2">ref </span>op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>=&gt; {
@@ -939,16 +941,16 @@
           } <span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(()); <span class="comment">// rule only applies to single char cases
           </span>};
-          <span class="kw">if </span>arg_base.starts_with(<span class="string">&quot;OPERATOR&quot;</span>) {
-            <span class="comment">// for now single letter OPERATOR arguments just don&#39;t make sense without parentheses
-            // e.g. OPERATOR:italic-delta is a differential, and wouldn&#39;t be used carelessly as an
+          <span class="kw">if </span>arg_base.starts_with(<span class="string">"OPERATOR"</span>) {
+            <span class="comment">// for now single letter OPERATOR arguments just don't make sense without parentheses
+            // e.g. OPERATOR:italic-delta is a differential, and wouldn't be used carelessly as an
             // arg
-            </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;single letter argument with role OPERATOR is unusual, prune.&quot;</span>.into());
+            </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"single letter argument with role OPERATOR is unusual, prune."</span>.into());
           }
           <span class="kw">let </span>op_name = op.base_operator_name();
           <span class="kw">let </span>(base, _sep, lexeme) = distill_lexeme(<span class="kw-2">&amp;</span>op_name);
-          <span class="kw">if </span>base.starts_with(<span class="string">&quot;FUNCTION&quot;</span>) || base.starts_with(<span class="string">&quot;OPERATOR&quot;</span>) {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(()); <span class="comment">// don&#39;t doubt dedicated roles
+          <span class="kw">if </span>base.starts_with(<span class="string">"FUNCTION"</span>) || base.starts_with(<span class="string">"OPERATOR"</span>) {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(()); <span class="comment">// don't doubt dedicated roles
           </span>}
 
           <span class="kw">let </span>op_letter: char = <span class="kw">if </span>lexeme.len() == <span class="number">1 </span>{
@@ -961,7 +963,7 @@
           <span class="kw">if </span>(op_letter.is_lowercase() &amp;&amp; arg_letter.is_lowercase())
             || (op_letter.is_uppercase() &amp;&amp; arg_letter.is_uppercase())
           {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;operator and argument are visually similar, prune.&quot;</span>.into());
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"operator and argument are visually similar, prune."</span>.into());
           }
         }
       }
@@ -978,8 +980,8 @@
   <span class="kw">match </span><span class="kw-2">*</span>tree {
     XM::Apply(<span class="kw">_</span>, <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>=&gt; {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw-2">ref </span>arg_name, <span class="kw-2">ref </span>atom_meta)) = args.<span class="number">0</span>[<span class="number">0</span>] {
-        <span class="kw">if </span>arg_name.starts_with(<span class="string">&quot;OPFUNCTION&quot;</span>) &amp;&amp; atom_meta.fenced.is_none() {
-          <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;OPFUNCTIONs are rarely arguments, prune.&quot;</span>.into());
+        <span class="kw">if </span>arg_name.starts_with(<span class="string">"OPFUNCTION"</span>) &amp;&amp; atom_meta.fenced.is_none() {
+          <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"OPFUNCTIONs are rarely arguments, prune."</span>.into());
         }
       }
     },
@@ -988,28 +990,28 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Higher order &quot;ID ( FUNCTION )&quot; constructs occassionally show up in the
+<span class="doccomment">/// Higher order "ID ( FUNCTION )" constructs occassionally show up in the
 /// current DLMF markup, and should remain valid. But they are exceptions.
 /// Meanwhile, a reading of
-/// &quot;ID FUNCTION&quot; as an ID &quot;applied to&quot; the FUNCTION should be invalid.
+/// "ID FUNCTION" as an ID "applied to" the FUNCTION should be invalid.
 /// For now this looks easiest to achieve via a pragmatic prune,
-/// Mostly since we can&#39;t enforce IDs to strictly have &quot;curry=1&quot;, rather
-/// we need them with &quot;curry &gt;= 1&quot;, to stay a little more lenient.
+/// Mostly since we can't enforce IDs to strictly have "curry=1", rather
+/// we need them with "curry &gt;= 1", to stay a little more lenient.
 </span><span class="kw">fn </span>pragma_higher_order_ids_are_exceptions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>{
       <span class="kw">match </span><span class="kw-2">&amp;*</span>op.<span class="number">0 </span>{
-        XM::Lexeme(<span class="kw-2">ref </span>op_name, <span class="kw">_</span>) <span class="kw">if </span>op_name.starts_with(<span class="string">&quot;ID:&quot;</span>) =&gt; <span class="kw">match </span>args.<span class="number">0</span>[<span class="number">0</span>] {
+        XM::Lexeme(<span class="kw-2">ref </span>op_name, <span class="kw">_</span>) <span class="kw">if </span>op_name.starts_with(<span class="string">"ID:"</span>) =&gt; <span class="kw">match </span>args.<span class="number">0</span>[<span class="number">0</span>] {
           <span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw-2">ref </span>rhs_name, <span class="kw-2">ref </span>rhs_meta)) =&gt; {
-            <span class="kw">if </span>rhs_name.starts_with(<span class="string">&quot;FUNCTION&quot;</span>) &amp;&amp; rhs_meta.fenced.is_none() {
-              <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ID of a higher order than a FUNCTION is not allowed.&quot;</span>.into());
+            <span class="kw">if </span>rhs_name.starts_with(<span class="string">"FUNCTION"</span>) &amp;&amp; rhs_meta.fenced.is_none() {
+              <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ID of a higher order than a FUNCTION is not allowed."</span>.into());
             }
-            <span class="kw">if </span>rhs_name.starts_with(<span class="string">&quot;ID:&quot;</span>) &amp;&amp; rhs_meta.fenced.is_none() {
-              <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ID applied to unfenced ID is highly unusual, prune.&quot;</span>.into());
+            <span class="kw">if </span>rhs_name.starts_with(<span class="string">"ID:"</span>) &amp;&amp; rhs_meta.fenced.is_none() {
+              <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ID applied to unfenced ID is highly unusual, prune."</span>.into());
             }
           },
           <span class="prelude-val">Some</span>(XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>)) =&gt; {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ID of a higher order shouldn&#39;t accept any compound trees.&quot;</span>.into());
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ID of a higher order shouldn't accept any compound trees."</span>.into());
           },
           <span class="kw">_ </span>=&gt; {},
         },
@@ -1020,14 +1022,14 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// If we see &quot; h f (x,y) &quot; a parse where
-/// &quot;h f&quot; are invisible multiplied, is not our first choice.
+<span class="doccomment">/// If we see " h f (x,y) " a parse where
+/// "h f" are invisible multiplied, is not our first choice.
 /// A right-associative application h(f(x,y)) is instead.
 /// Prune it out if possible.
 </span><span class="kw">fn </span>pragma_higher_order_invisible_ops_are_exceptions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
-      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">&quot;x.invisible_operator&quot; </span>=&gt; {
+      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">"x.invisible_operator" </span>=&gt; {
         <span class="kw">let </span>trees = args.trees();
         <span class="kw">if </span>trees.len() == <span class="number">2 </span>{
           <span class="kw">let </span>lhs = trees[<span class="number">0</span>];
@@ -1036,8 +1038,8 @@
             <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>rhs_name, <span class="kw">_</span>) = rhs.get_baseline() {
               <span class="kw">if </span>name_is_functional_or_id(lhs_name) &amp;&amp; name_is_functional(rhs_name) {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(
-                  <span class="string">&quot;Pruning higher order &#39;FUNCTION x FUNCTION&#39; parse to give precedence to \
-                   right-associative readings&quot;
+                  <span class="string">"Pruning higher order 'FUNCTION x FUNCTION' parse to give precedence to \
+                   right-associative readings"
                     </span>.into(),
                 );
               }
@@ -1052,21 +1054,21 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// If two numbers are left next to each other, as in &quot;10(5)&quot; it is rarely (never?) the intention
+<span class="doccomment">/// If two numbers are left next to each other, as in "10(5)" it is rarely (never?) the intention
 /// that they are to be multiplied Prune such parses. We have special rules for some notations, such
-/// as &quot;dlmf_range&quot;.
+/// as "dlmf_range".
 </span><span class="kw">fn </span>pragma_adjacent_numbers_dont_use_invisible_times(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
-      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">&quot;x.invisible_operator&quot; </span>=&gt; {
+      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">"x.invisible_operator" </span>=&gt; {
         <span class="kw">let </span>arg_trees = args.trees();
         <span class="kw">if </span>arg_trees.len() == <span class="number">2 </span>{
           <span class="kw">if let </span><span class="prelude-val">Some</span>(lhs) = arg_trees.first() {
-            <span class="kw">if </span>lhs.base_operator_name().starts_with(<span class="string">&quot;NUMBER&quot;</span>) {
+            <span class="kw">if </span>lhs.base_operator_name().starts_with(<span class="string">"NUMBER"</span>) {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(rhs) = arg_trees.get(<span class="number">1</span>) {
-                <span class="kw">if </span>rhs.base_operator_name().starts_with(<span class="string">&quot;NUMBER&quot;</span>) {
+                <span class="kw">if </span>rhs.base_operator_name().starts_with(<span class="string">"NUMBER"</span>) {
                   <span class="kw">return </span><span class="prelude-val">Err</span>(
-                    <span class="string">&quot;pruning two adjacent NUMBERs that used an invisible operator&quot;</span>.into(),
+                    <span class="string">"pruning two adjacent NUMBERs that used an invisible operator"</span>.into(),
                   );
                 }
               }
@@ -1081,15 +1083,15 @@
 }
 
 <span class="doccomment">/// Sometimes differentials can be written in numerators, but only if followed by their variable.
-/// The only case (that I currently know) of a standalone &quot;d&quot; is in the Lebnitz derivative notation.
+/// The only case (that I currently know) of a standalone "d" is in the Lebnitz derivative notation.
 /// For which we have a special rule. So the generic fraction parse should be pruned.
 </span><span class="kw">fn </span>pragma_standalone_diffops_are_not_numerators(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
-      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme.starts_with(<span class="string">&quot;MULOP&quot;</span>) =&gt; {
+      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme.starts_with(<span class="string">"MULOP"</span>) =&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw-2">ref </span>numlexeme, <span class="kw">_</span>)) = args.trees().first() {
-          <span class="kw">if </span>numlexeme.starts_with(<span class="string">&quot;DIFFOP&quot;</span>) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;pruning standalone diffops are not numerators&quot;</span>.into());
+          <span class="kw">if </span>numlexeme.starts_with(<span class="string">"DIFFOP"</span>) {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"pruning standalone diffops are not numerators"</span>.into());
           }
         }
       },
@@ -1099,22 +1101,22 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Constructs such as &quot; e_i z_0 &quot; are rarely applying e(z). This is even a common expectation of
-/// function symbols say &quot; f_i g_j &quot;. This pragma prunes trees that applies two adjacent scripted
+<span class="doccomment">/// Constructs such as " e_i z_0 " are rarely applying e(z). This is even a common expectation of
+/// function symbols say " f_i g_j ". This pragma prunes trees that applies two adjacent scripted
 /// constructs.
 </span><span class="kw">fn </span>pragma_adjacent_unfenced_scripts_dont_apply(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">if </span>args.trees().len() == <span class="number">1 </span>{
       <span class="kw">if let </span>XM::Apply(Operator(<span class="kw-2">ref </span>op_op), <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>op_meta) = <span class="kw-2">**</span>op {
         <span class="kw">let </span>op_base_name = op_op.base_operator_name();
-        <span class="kw">if </span>op_meta.fenced.is_none() &amp;&amp; (op_base_name == <span class="string">&quot;unknown.subscript&quot;</span>) {
+        <span class="kw">if </span>op_meta.fenced.is_none() &amp;&amp; (op_base_name == <span class="string">"unknown.subscript"</span>) {
           <span class="comment">// only subscripts on the outer one to avoid pruning e.g. \nabla^2 u_{0,0}
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Apply(Operator(arg_op), <span class="kw">_</span>, <span class="kw">_</span>, arg_meta)) = args.trees().first() {
             <span class="kw">let </span>arg_op_name = arg_op.base_operator_name();
             <span class="kw">if </span>arg_meta.fenced.is_none()
-              &amp;&amp; (arg_op_name == <span class="string">&quot;unknown.subscript&quot; </span>|| arg_op_name == <span class="string">&quot;unknown.superscript&quot;</span>)
+              &amp;&amp; (arg_op_name == <span class="string">"unknown.subscript" </span>|| arg_op_name == <span class="string">"unknown.superscript"</span>)
             {
-              <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Prune: adjacent unfenced scripts do not form an application.&quot;</span>.into());
+              <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Prune: adjacent unfenced scripts do not form an application."</span>.into());
             }
           }
         }
@@ -1124,7 +1126,7 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Adjacent functions don&#39;t unify into a single operator
+<span class="doccomment">/// Adjacent functions don't unify into a single operator
 /// as they are meant to apply right-to-left, one-by-one
 </span><span class="kw">fn </span>pragma_adjacent_functions_dont_unify_into_op(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
@@ -1137,7 +1139,7 @@
               <span class="kw">if let </span>XM::Lexeme(rhs_name, <span class="kw">_</span>) = inner_args.trees().first().unwrap().get_baseline() {
                 <span class="kw">if </span>name_is_functional(rhs_name) {
                   <span class="kw">return </span><span class="prelude-val">Err</span>(
-                    <span class="string">&quot;Two applied FUNCTIONS as operator violates right-associative behavior.&quot;</span>.into(),
+                    <span class="string">"Two applied FUNCTIONS as operator violates right-associative behavior."</span>.into(),
                   );
                 }
               }
@@ -1155,15 +1157,15 @@
     <span class="kw">let </span>arg_trees = args.trees();
     <span class="kw">if </span>arg_trees.len() == <span class="number">1 </span>{
       <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Apply(Operator(arg_op), <span class="kw">_</span>, <span class="kw">_</span>, arg_meta)) = arg_trees.first() {
-        <span class="kw">if </span>arg_op.base_operator_name().starts_with(<span class="string">&quot;POSTFIX&quot;</span>) &amp;&amp; arg_meta.fenced.is_none() {
+        <span class="kw">if </span>arg_op.base_operator_name().starts_with(<span class="string">"POSTFIX"</span>) &amp;&amp; arg_meta.fenced.is_none() {
           <span class="kw">let </span>op_name = op.base_operator_name();
-          <span class="kw">if </span>op_name.starts_with(<span class="string">&quot;ID&quot;</span>)
-            || op_name.starts_with(<span class="string">&quot;UNKNOWN&quot;</span>)
-            || op_name.starts_with(<span class="string">&quot;FUNCTION&quot;</span>)
-            || op_name.starts_with(<span class="string">&quot;OPERATOR&quot;</span>)
-            || op_name.starts_with(<span class="string">&quot;DIFFOP&quot;</span>)
+          <span class="kw">if </span>op_name.starts_with(<span class="string">"ID"</span>)
+            || op_name.starts_with(<span class="string">"UNKNOWN"</span>)
+            || op_name.starts_with(<span class="string">"FUNCTION"</span>)
+            || op_name.starts_with(<span class="string">"OPERATOR"</span>)
+            || op_name.starts_with(<span class="string">"DIFFOP"</span>)
           {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;pruning postfix term used as single argument without fences&quot;</span>.into());
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"pruning postfix term used as single argument without fences"</span>.into());
           }
         }
       }
@@ -1175,19 +1177,19 @@
 <span class="kw">fn </span>pragma_restrict_numeral_fractions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
-      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">&quot;arith1.divide&quot; </span>=&gt; {
+      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">"arith1.divide" </span>=&gt; {
         <span class="kw">let </span>arg_trees = args.trees();
         <span class="kw">if </span>arg_trees.len() == <span class="number">2 </span>{
           <span class="kw">if let </span>XM::Lexeme(arg1_name, arg1_meta) = arg_trees[<span class="number">0</span>] {
             <span class="kw">if let </span>XM::Lexeme(arg2_name, arg2_meta) = arg_trees[<span class="number">1</span>] {
-              <span class="kw">if </span>arg1_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>)
-                &amp;&amp; arg2_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>)
+              <span class="kw">if </span>arg1_name.starts_with(<span class="string">"NUMBER"</span>)
+                &amp;&amp; arg2_name.starts_with(<span class="string">"NUMBER"</span>)
                 &amp;&amp; !arg1_meta.syntax_trace.is_empty()
                 || !arg2_meta.syntax_trace.is_empty()
               {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(
-                  <span class="string">&quot;only tokens are allowed in numeric fractions, derived rules are pruned to \
-                   avoid redundancy.&quot;
+                  <span class="string">"only tokens are allowed in numeric fractions, derived rules are pruned to \
+                   avoid redundancy."
                     </span>.into(),
                 );
               }
@@ -1204,120 +1206,120 @@
 <span class="doccomment">/// Auxiliary function transforming the spelled-out name of a greek letter to its unicode character
 </span><span class="kw">pub fn </span>greek_name_to_letter(name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;char&gt; {
   <span class="kw">match </span>name {
-    <span class="string">&quot;alpha&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;α&#39;</span>),
-    <span class="string">&quot;beta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;β&#39;</span>),
-    <span class="string">&quot;gamma&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;γ&#39;</span>),
-    <span class="string">&quot;delta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;δ&#39;</span>),
-    <span class="string">&quot;epsilon&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ϵ&#39;</span>),
-    <span class="string">&quot;zeta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ζ&#39;</span>),
-    <span class="string">&quot;eta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;η&#39;</span>),
-    <span class="string">&quot;theta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;θ&#39;</span>),
-    <span class="string">&quot;iota&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ι&#39;</span>),
-    <span class="string">&quot;kappa&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;κ&#39;</span>),
-    <span class="string">&quot;lambda&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;λ&#39;</span>),
-    <span class="string">&quot;mu&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;μ&#39;</span>),
-    <span class="string">&quot;nu&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ν&#39;</span>),
-    <span class="string">&quot;xi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ξ&#39;</span>),
-    <span class="string">&quot;omicron&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ο&#39;</span>),
-    <span class="string">&quot;pi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;π&#39;</span>),
-    <span class="string">&quot;rho&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ρ&#39;</span>),
-    <span class="string">&quot;sigma&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;σ&#39;</span>),
-    <span class="string">&quot;tau&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;τ&#39;</span>),
-    <span class="string">&quot;upsilon&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;υ&#39;</span>),
-    <span class="string">&quot;phi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ϕ&#39;</span>),
-    <span class="string">&quot;chi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;χ&#39;</span>),
-    <span class="string">&quot;psi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ψ&#39;</span>),
-    <span class="string">&quot;omega&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;ω&#39;</span>),
-    <span class="string">&quot;Alpha&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Α&#39;</span>),
-    <span class="string">&quot;Beta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Β&#39;</span>),
-    <span class="string">&quot;Gamma&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Γ&#39;</span>),
-    <span class="string">&quot;Delta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Δ&#39;</span>),
-    <span class="string">&quot;Epsilon&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ε&#39;</span>),
-    <span class="string">&quot;Zeta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ζ&#39;</span>),
-    <span class="string">&quot;Eta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Η&#39;</span>),
-    <span class="string">&quot;Theta&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Θ&#39;</span>),
-    <span class="string">&quot;Iota&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ι&#39;</span>),
-    <span class="string">&quot;Kappa&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Κ&#39;</span>),
-    <span class="string">&quot;Lambda&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Λ&#39;</span>),
-    <span class="string">&quot;Mu&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Μ&#39;</span>),
-    <span class="string">&quot;Nu&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ν&#39;</span>),
-    <span class="string">&quot;Xi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ξ&#39;</span>),
-    <span class="string">&quot;Omicron&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ο&#39;</span>),
-    <span class="string">&quot;Pi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Π&#39;</span>),
-    <span class="string">&quot;Rho&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ρ&#39;</span>),
-    <span class="string">&quot;Sigma&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Σ&#39;</span>),
-    <span class="string">&quot;Tau&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Τ&#39;</span>),
-    <span class="string">&quot;Upsilon&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Υ&#39;</span>),
-    <span class="string">&quot;Phi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Φ&#39;</span>),
-    <span class="string">&quot;Chi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Χ&#39;</span>),
-    <span class="string">&quot;Psi&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ψ&#39;</span>),
-    <span class="string">&quot;Omega&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">&#39;Ω&#39;</span>),
+    <span class="string">"alpha" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'α'</span>),
+    <span class="string">"beta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'β'</span>),
+    <span class="string">"gamma" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'γ'</span>),
+    <span class="string">"delta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'δ'</span>),
+    <span class="string">"epsilon" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ϵ'</span>),
+    <span class="string">"zeta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ζ'</span>),
+    <span class="string">"eta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'η'</span>),
+    <span class="string">"theta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'θ'</span>),
+    <span class="string">"iota" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ι'</span>),
+    <span class="string">"kappa" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'κ'</span>),
+    <span class="string">"lambda" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'λ'</span>),
+    <span class="string">"mu" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'μ'</span>),
+    <span class="string">"nu" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ν'</span>),
+    <span class="string">"xi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ξ'</span>),
+    <span class="string">"omicron" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ο'</span>),
+    <span class="string">"pi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'π'</span>),
+    <span class="string">"rho" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ρ'</span>),
+    <span class="string">"sigma" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'σ'</span>),
+    <span class="string">"tau" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'τ'</span>),
+    <span class="string">"upsilon" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'υ'</span>),
+    <span class="string">"phi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ϕ'</span>),
+    <span class="string">"chi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'χ'</span>),
+    <span class="string">"psi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ψ'</span>),
+    <span class="string">"omega" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'ω'</span>),
+    <span class="string">"Alpha" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Α'</span>),
+    <span class="string">"Beta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Β'</span>),
+    <span class="string">"Gamma" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Γ'</span>),
+    <span class="string">"Delta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Δ'</span>),
+    <span class="string">"Epsilon" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ε'</span>),
+    <span class="string">"Zeta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ζ'</span>),
+    <span class="string">"Eta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Η'</span>),
+    <span class="string">"Theta" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Θ'</span>),
+    <span class="string">"Iota" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ι'</span>),
+    <span class="string">"Kappa" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Κ'</span>),
+    <span class="string">"Lambda" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Λ'</span>),
+    <span class="string">"Mu" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Μ'</span>),
+    <span class="string">"Nu" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ν'</span>),
+    <span class="string">"Xi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ξ'</span>),
+    <span class="string">"Omicron" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ο'</span>),
+    <span class="string">"Pi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Π'</span>),
+    <span class="string">"Rho" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ρ'</span>),
+    <span class="string">"Sigma" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Σ'</span>),
+    <span class="string">"Tau" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Τ'</span>),
+    <span class="string">"Upsilon" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Υ'</span>),
+    <span class="string">"Phi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Φ'</span>),
+    <span class="string">"Chi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Χ'</span>),
+    <span class="string">"Psi" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ψ'</span>),
+    <span class="string">"Omega" </span>=&gt; <span class="prelude-val">Some</span>(<span class="string">'Ω'</span>),
     <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
   }
 }
 
 <span class="kw">pub fn </span>name_is_functional(name: <span class="kw-2">&amp;</span>str) -&gt; bool {
-  name.starts_with(<span class="string">&quot;FUNCTION&quot;</span>)
-    || name.starts_with(<span class="string">&quot;OPFUNCTION&quot;</span>)
-    || name.starts_with(<span class="string">&quot;TRIGFUNCTION&quot;</span>)
-    || name.starts_with(<span class="string">&quot;UNKNOWN&quot;</span>)
+  name.starts_with(<span class="string">"FUNCTION"</span>)
+    || name.starts_with(<span class="string">"OPFUNCTION"</span>)
+    || name.starts_with(<span class="string">"TRIGFUNCTION"</span>)
+    || name.starts_with(<span class="string">"UNKNOWN"</span>)
 }
 
 <span class="kw">pub fn </span>name_is_functional_or_id(name: <span class="kw-2">&amp;</span>str) -&gt; bool {
-  name.starts_with(<span class="string">&quot;ID&quot;</span>) || name_is_functional(name)
+  name.starts_with(<span class="string">"ID"</span>) || name_is_functional(name)
 }
 
 <span class="kw">static </span>_PRAGMATIC_BLOCK_MAP: Lazy&lt;HashMap&lt;char, String&gt;&gt; = Lazy::new(|| {
-  <span class="comment">// generally, we can observe that the latin alphabet shares &quot;intent&quot;
+  <span class="comment">// generally, we can observe that the latin alphabet shares "intent"
   // in blocks of 3 letter in mathematics,
   // as a fast-and-loose rule of thumb. a-e is an exception as
   // a rather stable 5 letter block with shared utility.
   </span><span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::default();
   <span class="comment">// |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
   </span><span class="kw">let </span>latin_blocks = [
-    (<span class="string">&#39;a&#39;</span>, <span class="string">&#39;e&#39;</span>),
-    (<span class="string">&#39;f&#39;</span>, <span class="string">&#39;h&#39;</span>),
-    (<span class="string">&#39;i&#39;</span>, <span class="string">&#39;k&#39;</span>),
-    (<span class="string">&#39;l&#39;</span>, <span class="string">&#39;n&#39;</span>),
-    (<span class="string">&#39;o&#39;</span>, <span class="string">&#39;q&#39;</span>),
-    (<span class="string">&#39;r&#39;</span>, <span class="string">&#39;t&#39;</span>),
-    (<span class="string">&#39;u&#39;</span>, <span class="string">&#39;w&#39;</span>),
-    (<span class="string">&#39;x&#39;</span>, <span class="string">&#39;z&#39;</span>),
+    (<span class="string">'a'</span>, <span class="string">'e'</span>),
+    (<span class="string">'f'</span>, <span class="string">'h'</span>),
+    (<span class="string">'i'</span>, <span class="string">'k'</span>),
+    (<span class="string">'l'</span>, <span class="string">'n'</span>),
+    (<span class="string">'o'</span>, <span class="string">'q'</span>),
+    (<span class="string">'r'</span>, <span class="string">'t'</span>),
+    (<span class="string">'u'</span>, <span class="string">'w'</span>),
+    (<span class="string">'x'</span>, <span class="string">'z'</span>),
   ];
   <span class="comment">// |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω
   </span><span class="kw">let </span>greek_blocks = [
-    (<span class="string">&#39;α&#39;</span>, <span class="string">&#39;γ&#39;</span>),
-    (<span class="string">&#39;ζ&#39;</span>, <span class="string">&#39;θ&#39;</span>),
-    (<span class="string">&#39;ι&#39;</span>, <span class="string">&#39;κ&#39;</span>),
-    (<span class="string">&#39;λ&#39;</span>, <span class="string">&#39;ξ&#39;</span>),
-    (<span class="string">&#39;ο&#39;</span>, <span class="string">&#39;ρ&#39;</span>),
-    (<span class="string">&#39;σ&#39;</span>, <span class="string">&#39;υ&#39;</span>),
-    (<span class="string">&#39;ϕ&#39;</span>, <span class="string">&#39;ψ&#39;</span>),
+    (<span class="string">'α'</span>, <span class="string">'γ'</span>),
+    (<span class="string">'ζ'</span>, <span class="string">'θ'</span>),
+    (<span class="string">'ι'</span>, <span class="string">'κ'</span>),
+    (<span class="string">'λ'</span>, <span class="string">'ξ'</span>),
+    (<span class="string">'ο'</span>, <span class="string">'ρ'</span>),
+    (<span class="string">'σ'</span>, <span class="string">'υ'</span>),
+    (<span class="string">'ϕ'</span>, <span class="string">'ψ'</span>),
   ];
   <span class="comment">// | Α Β Γ | Δ | Ε | Ζ Η Θ | Ι Κ | Λ Μ Ν Ξ | Ο Π Ρ | Σ Τ Υ | Φ Χ Ψ | Ω
   </span><span class="kw">let </span>up_greek_blocks = [
-    (<span class="string">&#39;Α&#39;</span>, <span class="string">&#39;Γ&#39;</span>),
-    (<span class="string">&#39;Ζ&#39;</span>, <span class="string">&#39;Θ&#39;</span>),
-    (<span class="string">&#39;Ι&#39;</span>, <span class="string">&#39;Κ&#39;</span>),
-    (<span class="string">&#39;Λ&#39;</span>, <span class="string">&#39;Ξ&#39;</span>),
-    (<span class="string">&#39;Ο&#39;</span>, <span class="string">&#39;Ρ&#39;</span>),
-    (<span class="string">&#39;Σ&#39;</span>, <span class="string">&#39;Υ&#39;</span>),
-    (<span class="string">&#39;Φ&#39;</span>, <span class="string">&#39;Ψ&#39;</span>),
+    (<span class="string">'Α'</span>, <span class="string">'Γ'</span>),
+    (<span class="string">'Ζ'</span>, <span class="string">'Θ'</span>),
+    (<span class="string">'Ι'</span>, <span class="string">'Κ'</span>),
+    (<span class="string">'Λ'</span>, <span class="string">'Ξ'</span>),
+    (<span class="string">'Ο'</span>, <span class="string">'Ρ'</span>),
+    (<span class="string">'Σ'</span>, <span class="string">'Υ'</span>),
+    (<span class="string">'Φ'</span>, <span class="string">'Ψ'</span>),
   ];
   <span class="kw">for </span>(start, end) <span class="kw">in </span>latin_blocks.iter() {
-    <span class="kw">let </span>mark = <span class="macro">format!</span>(<span class="string">&quot;{start}{end}&quot;</span>);
+    <span class="kw">let </span>mark = <span class="macro">format!</span>(<span class="string">"{start}{end}"</span>);
     <span class="kw">let </span>up_start = start.to_ascii_uppercase();
     <span class="kw">let </span>up_end = end.to_ascii_uppercase();
     <span class="kw">for </span>c_u8 <span class="kw">in </span>(<span class="kw-2">*</span>start <span class="kw">as </span>u8)..=(<span class="kw-2">*</span>end <span class="kw">as </span>u8) {
       map.insert(c_u8.into(), mark.clone());
     }
-    <span class="kw">let </span>up_mark = <span class="macro">format!</span>(<span class="string">&quot;{up_start}{up_end}&quot;</span>);
+    <span class="kw">let </span>up_mark = <span class="macro">format!</span>(<span class="string">"{up_start}{up_end}"</span>);
     <span class="kw">for </span>c_u8 <span class="kw">in </span>(up_start <span class="kw">as </span>u8)..=(up_end <span class="kw">as </span>u8) {
       map.insert(c_u8.into(), up_mark.clone());
     }
   }
   <span class="kw">for </span>(start, end) <span class="kw">in </span>greek_blocks.iter().chain(up_greek_blocks.iter()) {
-    <span class="kw">let </span>mark = <span class="macro">format!</span>(<span class="string">&quot;{start}{end}&quot;</span>);
+    <span class="kw">let </span>mark = <span class="macro">format!</span>(<span class="string">"{start}{end}"</span>);
     <span class="kw">for </span>c_u32 <span class="kw">in </span>(<span class="kw-2">*</span>start <span class="kw">as </span>u32)..=(<span class="kw-2">*</span>end <span class="kw">as </span>u32) {
       map.insert(std::char::from_u32(c_u32).unwrap(), mark.clone());
     }

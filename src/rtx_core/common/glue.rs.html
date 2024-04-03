@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/glue.rs`."><title>glue.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/glue.rs`."><title>glue.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -464,12 +466,8 @@
 <a href="#464" id="464">464</a>
 <a href="#465" id="465">465</a>
 <a href="#466" id="466">466</a>
-<a href="#467" id="467">467</a>
-<a href="#468" id="468">468</a>
-<a href="#469" id="469">469</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
-<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::cmp::Ordering;
 <span class="kw">use </span>std::fmt;
 
@@ -477,7 +475,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{fixpoint, kround, NumericOps};
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
-<span class="kw">use crate</span>::{Locator, Object};
+<span class="kw">use crate</span>::{Object};
 
 <span class="kw">use </span><span class="kw">super</span>::dimension::fixedformat;
 
@@ -492,7 +490,7 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>FillCode {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.to_str()) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.to_str()) }
 }
 
 <span class="kw">impl </span>FillCode {
@@ -506,60 +504,60 @@
   }
   <span class="kw">pub fn </span>from(ftype: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;FillCode&gt; {
     <span class="kw">match </span>ftype {
-      <span class="string">&quot;fil&quot; </span>=&gt; <span class="prelude-val">Some</span>(FillCode::Fil),
-      <span class="string">&quot;fill&quot; </span>=&gt; <span class="prelude-val">Some</span>(FillCode::Fill),
-      <span class="string">&quot;filll&quot; </span>=&gt; <span class="prelude-val">Some</span>(FillCode::Filll),
+      <span class="string">"fil" </span>=&gt; <span class="prelude-val">Some</span>(FillCode::Fil),
+      <span class="string">"fill" </span>=&gt; <span class="prelude-val">Some</span>(FillCode::Fill),
+      <span class="string">"filll" </span>=&gt; <span class="prelude-val">Some</span>(FillCode::Filll),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
-  <span class="kw">pub fn </span>to_str(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+  <span class="kw">pub fn </span>to_str(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
     <span class="kw">match </span><span class="self">self </span>{
-      FillCode::Fil =&gt; <span class="string">&quot;fil&quot;</span>,
-      FillCode::Fill =&gt; <span class="string">&quot;fill&quot;</span>,
-      FillCode::Filll =&gt; <span class="string">&quot;filll&quot;</span>,
+      FillCode::Fil =&gt; <span class="string">"fil"</span>,
+      FillCode::Fill =&gt; <span class="string">"fill"</span>,
+      FillCode::Filll =&gt; <span class="string">"filll"</span>,
     }
   }
 }
 
 <span class="comment">// Note: Regexes are not first-level objects in Rust, and neither are Strings
 //       yet we would like to have some efficient
-</span><span class="macro">macro_rules! </span>num_re_str {
+</span><span class="macro">macro_rules!</span> num_re_str {
   () =&gt; {
-    <span class="string">r&quot;\d*\.?\d*&quot;
+    <span class="string">r"\d*\.?\d*"
   </span>};
 }
-<span class="macro">macro_rules! </span>unit_re_str {
+<span class="macro">macro_rules!</span> unit_re_str {
   () =&gt; {
-    <span class="string">r&quot;[a-zA-Z][a-zA-Z]&quot;
+    <span class="string">r"[a-zA-Z][a-zA-Z]"
   </span>};
 }
-<span class="macro">macro_rules! </span>fill_re_str {
+<span class="macro">macro_rules!</span> fill_re_str {
   () =&gt; {
-    <span class="string">r&quot;fil|fill|filll|[a-zA-Z][a-zA-Z]&quot;
+    <span class="string">r"fil|fill|filll|[a-zA-Z][a-zA-Z]"
   </span>};
 }
 
-<span class="macro">macro_rules! </span>plus_re_str {
+<span class="macro">macro_rules!</span> plus_re_str {
   () =&gt; {
-    <span class="macro">concat!</span>(<span class="string">r&quot;\s+plus\s*(&quot;</span>, <span class="macro">num_re_str!</span>(), <span class="string">&quot;)(&quot;</span>, <span class="macro">fill_re_str!</span>(), <span class="string">r&quot;)&quot;</span>)
+    <span class="macro">concat!</span>(<span class="string">r"\s+plus\s*("</span>, <span class="macro">num_re_str!</span>(), <span class="string">")("</span>, <span class="macro">fill_re_str!</span>(), <span class="string">r")"</span>)
   };
 }
-<span class="macro">macro_rules! </span>minus_re_str {
+<span class="macro">macro_rules!</span> minus_re_str {
   () =&gt; {
-    <span class="macro">concat!</span>(<span class="string">r&quot;\s+minus\s*(&quot;</span>, <span class="macro">num_re_str!</span>(), <span class="string">r&quot;)(&quot;</span>, <span class="macro">fill_re_str!</span>(), <span class="string">r&quot;)&quot;</span>)
+    <span class="macro">concat!</span>(<span class="string">r"\s+minus\s*("</span>, <span class="macro">num_re_str!</span>(), <span class="string">r")("</span>, <span class="macro">fill_re_str!</span>(), <span class="string">r")"</span>)
   };
 }
 
 <span class="kw">static </span>GLUE_RE_STR: <span class="kw-2">&amp;</span>str = <span class="macro">concat!</span>(
-  <span class="string">r&quot;^(\+?\-?&quot;</span>,
+  <span class="string">r"^(\+?\-?"</span>,
   <span class="macro">num_re_str!</span>(),
-  <span class="string">r&quot;)(&quot;</span>,
+  <span class="string">r")("</span>,
   <span class="macro">unit_re_str!</span>(),
-  <span class="string">r&quot;)(&quot;</span>,
+  <span class="string">r")("</span>,
   <span class="macro">plus_re_str!</span>(),
-  <span class="string">r&quot;)?(&quot;</span>,
+  <span class="string">r")?("</span>,
   <span class="macro">minus_re_str!</span>(),
-  <span class="string">r&quot;)?$&quot;
+  <span class="string">r")?$"
 </span>);
 
 <span class="kw">static </span>_NUM_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">num_re_str!</span>()).unwrap());
@@ -632,7 +630,7 @@
   </span><span class="kw">let </span><span class="kw-2">mut </span>string = fixedformat(skip, <span class="prelude-val">Some</span>(unit));
   <span class="kw">if let </span><span class="prelude-val">Some</span>(plus) = plus_opt {
     <span class="kw">if </span>plus != <span class="number">0 </span>{
-      string.push_str(<span class="string">&quot; plus &quot;</span>);
+      string.push_str(<span class="string">" plus "</span>);
       <span class="kw">let </span>p_fill = <span class="kw">if let </span><span class="prelude-val">Some</span>(fill) = pfill_opt {
         fill.to_str()
       } <span class="kw">else </span>{
@@ -643,7 +641,7 @@
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(minus) = minus_opt {
     <span class="kw">if </span>minus != <span class="number">0 </span>{
-      string.push_str(<span class="string">&quot; minus &quot;</span>);
+      string.push_str(<span class="string">" minus "</span>);
       <span class="kw">let </span>p_fill = <span class="kw">if let </span><span class="prelude-val">Some</span>(fill) = mfill_opt {
         fill.to_str()
       } <span class="kw">else </span>{
@@ -658,14 +656,12 @@
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Glue {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">let </span>string = glue_string(
-      <span class="self">self</span>.skip, <span class="self">self</span>.plus, <span class="self">self</span>.pfill, <span class="self">self</span>.minus, <span class="self">self</span>.mfill, <span class="string">&quot;pt&quot;</span>,
+      <span class="self">self</span>.skip, <span class="self">self</span>.plus, <span class="self">self</span>.pfill, <span class="self">self</span>.minus, <span class="self">self</span>.mfill, <span class="string">"pt"</span>,
     );
-    <span class="macro">write!</span>(f, <span class="string">&quot;{string}&quot;</span>)
+    <span class="macro">write!</span>(f, <span class="string">"{string}"</span>)
   }
 }
-<span class="kw">impl </span>Object <span class="kw">for </span>Glue {
-  <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">None </span>}
-}
+<span class="kw">impl </span>Object <span class="kw">for </span>Glue {}
 
 <span class="kw">pub fn </span>new_setup(
   skip: f64,
@@ -709,13 +705,13 @@
     </span><span class="kw">let </span>skip: f64 = spec.parse::&lt;f64&gt;().unwrap_or_default();
     new_setup(skip, plus, pfill, minus, mfill)
   } <span class="kw">else </span>{
-    <span class="kw">let </span>is_mu = unit == <span class="string">&quot;mu&quot;</span>;
+    <span class="kw">let </span>is_mu = unit == <span class="string">"mu"</span>;
     <span class="kw">if </span>plus.is_some() || pfill.is_some() || minus.is_some() || mfill.is_some() {
       <span class="kw">let </span>msg = <span class="macro">s!</span>(
-        <span class="string">&quot;You should not create {} with both units and stretch&quot;</span>,
-        <span class="kw">if </span>is_mu { <span class="string">&quot;MuGlue&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;Glue&quot; </span>}
+        <span class="string">"You should not create {} with both units and stretch"</span>,
+        <span class="kw">if </span>is_mu { <span class="string">"MuGlue" </span>} <span class="kw">else </span>{ <span class="string">"Glue" </span>}
       );
-      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;fill&quot;</span>, msg);
+      <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"fill"</span>, msg);
     }
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(cs) = GLUE_RE.captures(spec) {
@@ -723,21 +719,21 @@
         cs.get(<span class="number">1</span>)
           .map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default())
           .unwrap_or_default(),
-        cs.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
+        cs.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str()),
         cs.get(<span class="number">4</span>)
           .map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default())
           .unwrap_or_default(),
-        cs.get(<span class="number">5</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
+        cs.get(<span class="number">5</span>).map_or(<span class="string">""</span>, |m| m.as_str()),
         cs.get(<span class="number">7</span>)
           .map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default())
           .unwrap_or_default(),
-        cs.get(<span class="number">8</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
+        cs.get(<span class="number">8</span>).map_or(<span class="string">""</span>, |m| m.as_str()),
       );
       <span class="kw">let </span>skip = <span class="kw">if </span>unit.is_empty() {
         f.trunc() <span class="kw">as </span>i64
       } <span class="kw">else if </span>is_mu {
-        <span class="kw">if </span>unit != <span class="string">&quot;mu&quot; </span>{
-          <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, unit, <span class="string">&quot;Assumed mu&quot;</span>);
+        <span class="kw">if </span>unit != <span class="string">"mu" </span>{
+          <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, unit, <span class="string">"Assumed mu"</span>);
         }
         fixpoint(f, <span class="prelude-val">None</span>) <span class="comment">// in mu
       </span>} <span class="kw">else </span>{
@@ -746,14 +742,14 @@
 
       <span class="kw">let </span><span class="kw-2">mut </span>plus = <span class="kw">if </span>punit.is_empty() {
         <span class="prelude-val">None </span><span class="comment">// Some(0.0) ?
-             // ? punit = &quot;0&quot;;
+             // ? punit = "0";
       </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(code) = FillCode::from(punit) {
         pfill = <span class="prelude-val">Some</span>(code);
         <span class="prelude-val">Some</span>(fixpoint(p, <span class="prelude-val">None</span>))
       } <span class="kw">else if </span>is_mu {
         pfill = <span class="prelude-val">None</span>;
-        <span class="kw">if </span>punit != <span class="string">&quot;mu&quot; </span>{
-          <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, punit, <span class="string">&quot;Assumed mu&quot;</span>);
+        <span class="kw">if </span>punit != <span class="string">"mu" </span>{
+          <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, punit, <span class="string">"Assumed mu"</span>);
         }
         <span class="prelude-val">Some</span>(fixpoint(p, <span class="prelude-val">None</span>))
       } <span class="kw">else </span>{
@@ -769,8 +765,8 @@
         <span class="prelude-val">Some</span>(fixpoint(m, <span class="prelude-val">None</span>))
       } <span class="kw">else if </span>is_mu {
         mfill = <span class="prelude-val">None</span>; <span class="comment">// 0
-        </span><span class="kw">if </span>munit != <span class="string">&quot;mu&quot; </span>{
-          <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, munit, <span class="string">&quot;Assumed mu&quot;</span>);
+        </span><span class="kw">if </span>munit != <span class="string">"mu" </span>{
+          <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, munit, <span class="string">"Assumed mu"</span>);
         }
         <span class="prelude-val">Some</span>(fixpoint(m, <span class="prelude-val">None</span>))
       } <span class="kw">else </span>{
@@ -797,10 +793,10 @@
       (skip, plus, pfill, minus, mfill)
     } <span class="kw">else </span>{
       <span class="kw">let </span>msg = <span class="macro">s!</span>(
-        <span class="string">&quot;Missing {} specification assuming 0pt&quot;</span>,
-        <span class="kw">if </span>is_mu { <span class="string">&quot;MuGlue&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;Glue&quot; </span>}
+        <span class="string">"Missing {} specification assuming 0pt"</span>,
+        <span class="kw">if </span>is_mu { <span class="string">"MuGlue" </span>} <span class="kw">else </span>{ <span class="string">"Glue" </span>}
       );
-      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, spec, msg);
+      <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, spec, msg);
       (<span class="number">0</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
     }
   }
@@ -846,7 +842,7 @@
     mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;
   ) -&gt; <span class="self">Self </span>{
     <span class="kw">let </span>(skip, plus, pfill, minus, mfill) =
-      spec_setup(spec, plus, pfill, minus, mfill, <span class="string">&quot;pt&quot;</span>);
+      spec_setup(spec, plus, pfill, minus, mfill, <span class="string">"pt"</span>);
     Glue {
       skip,
       plus,
@@ -858,7 +854,7 @@
 
   <span class="kw">pub fn </span>add_glue(<span class="self">self</span>, other: Glue) -&gt; Glue {
     <span class="comment">// (pts, p, pf, m, mf) = @$self;
-    // if (ref $other eq &#39;LaTeXML::Common::Glue&#39;) {
+    // if (ref $other eq 'LaTeXML::Common::Glue') {
     // my ($pts2, $p2, $pf2, $m2, $mf2) = @$other;
     </span><span class="kw">let </span>skip = <span class="self">self</span>.skip + other.skip;
     <span class="kw">let </span><span class="kw-2">mut </span>plus = <span class="self">self</span>.plus;
@@ -909,11 +905,11 @@
   </span>}
 
   <span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-    <span class="kw">let </span>u = <span class="string">&quot;pt&quot;</span>;
+    <span class="kw">let </span>u = <span class="string">"pt"</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>string = attribute_format(<span class="self">self</span>.skip, <span class="prelude-val">Some</span>(u));
     <span class="kw">if let </span><span class="prelude-val">Some</span>(plus) = <span class="self">self</span>.plus {
       <span class="kw">if </span>plus != <span class="number">0 </span>{
-        string.push_str(<span class="string">&quot; plus &quot;</span>);
+        string.push_str(<span class="string">" plus "</span>);
         <span class="kw">let </span>fill_u = <span class="kw">if let </span><span class="prelude-val">Some</span>(pfill) = <span class="self">self</span>.pfill {
           pfill.to_str()
         } <span class="kw">else </span>{
@@ -924,7 +920,7 @@
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(minus) = <span class="self">self</span>.minus {
       <span class="kw">if </span>minus != <span class="number">0 </span>{
-        string.push_str(<span class="string">&quot; minus &quot;</span>);
+        string.push_str(<span class="string">" minus "</span>);
         <span class="kw">let </span>mfill_u = <span class="kw">if let </span><span class="prelude-val">Some</span>(mfill) = <span class="self">self</span>.mfill {
           mfill.to_str()
         } <span class="kw">else </span>{

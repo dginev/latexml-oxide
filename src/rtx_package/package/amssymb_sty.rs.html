@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/amssymb_sty.rs`."><title>amssymb_sty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/amssymb_sty.rs`."><title>amssymb_sty.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -349,350 +351,350 @@
 <a href="#349" id="349">349</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
-<span class="macro">RequirePackage!</span>(<span class="string">&quot;amsfonts&quot;</span>);
+<span class="macro">RequirePackage!</span>(<span class="string">"amsfonts"</span>);
 
 <span class="comment">//======================================================================
 // Lowercase Greek letters
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\digamma&quot;</span>,  <span class="string">&quot;\u{03DD}&quot;</span>);   <span class="comment">// GREEK SMALL LETTER DIGAMMA
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\varkappa&quot;</span>, <span class="string">&quot;\u{03F0}&quot;</span>);   <span class="comment">// GREEK KAPPA SYMBOL
+</span><span class="macro">DefMath!</span>(<span class="string">"\\digamma"</span>,  <span class="string">"\u{03DD}"</span>);   <span class="comment">// GREEK SMALL LETTER DIGAMMA
+</span><span class="macro">DefMath!</span>(<span class="string">"\\varkappa"</span>, <span class="string">"\u{03F0}"</span>);   <span class="comment">// GREEK KAPPA SYMBOL
 
 //======================================================================
 // Hebrew
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\beth&quot;</span>,   <span class="string">&quot;\u{2136}&quot;</span>);   <span class="comment">// BET SYMBOL
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\daleth&quot;</span>, <span class="string">&quot;\u{2138}&quot;</span>);   <span class="comment">// DALET SYMBOL
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\gimel&quot;</span>,  <span class="string">&quot;\u{2137}&quot;</span>);   <span class="comment">// GIMEL SYMBOL
+</span><span class="macro">DefMath!</span>(<span class="string">"\\beth"</span>,   <span class="string">"\u{2136}"</span>);   <span class="comment">// BET SYMBOL
+</span><span class="macro">DefMath!</span>(<span class="string">"\\daleth"</span>, <span class="string">"\u{2138}"</span>);   <span class="comment">// DALET SYMBOL
+</span><span class="macro">DefMath!</span>(<span class="string">"\\gimel"</span>,  <span class="string">"\u{2137}"</span>);   <span class="comment">// GIMEL SYMBOL
 
 //======================================================================
 // Miscellaneous
 // \hbar  in LaTeX
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\hslash&quot;</span>, <span class="string">&quot;\u{210F}&quot;</span>, role =&gt; <span class="string">&quot;ID&quot;</span>, meaning =&gt; <span class="string">&quot;Planck-constant-over-2-pi&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\vartriangle&quot;</span>,  <span class="string">&quot;\u{25B3}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\triangledown&quot;</span>, <span class="string">&quot;\u{25BD}&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\hslash"</span>, <span class="string">"\u{210F}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"Planck-constant-over-2-pi"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\vartriangle"</span>,  <span class="string">"\u{25B3}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\triangledown"</span>, <span class="string">"\u{25BD}"</span>);
 <span class="comment">// \square, \lozenge in amsfonts
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\circledS&quot;</span>, <span class="string">&quot;\u{24C8}&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\circledS"</span>, <span class="string">"\u{24C8}"</span>);
 <span class="comment">// \angle in tex
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\measuredangle&quot;</span>, <span class="string">&quot;\u{2221}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nexists&quot;</span>, <span class="string">&quot;\u{2204}&quot;</span>, role =&gt; <span class="string">&quot;FUNCTION&quot;</span>, meaning =&gt; <span class="string">&quot;not-exists&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\measuredangle"</span>, <span class="string">"\u{2221}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nexists"</span>, <span class="string">"\u{2204}"</span>, role =&gt; <span class="string">"FUNCTION"</span>, meaning =&gt; <span class="string">"not-exists"</span>);
 <span class="comment">// \mho in latex
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\Finv&quot;</span>,              <span class="string">&quot;\u{2132}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\Game&quot;</span>,              <span class="string">&quot;\u{2141}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\Bbbk&quot;</span>,              <span class="string">&quot;\u{1D55C}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\backprime&quot;</span>,         <span class="string">&quot;\u{2035}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\varnothing&quot;</span>,        <span class="string">&quot;\u{2205}&quot;</span>, role =&gt; <span class="string">&quot;ID&quot;</span>, meaning =&gt; <span class="string">&quot;empty-set&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\blacktriangle&quot;</span>,     <span class="string">&quot;\u{25B2}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\blacktriangledown&quot;</span>, <span class="string">&quot;\u{25BC}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\blacksquare&quot;</span>,       <span class="string">&quot;\u{25A0}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\blacklozenge&quot;</span>,      <span class="string">&quot;\u{25C6}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\bigstar&quot;</span>,           <span class="string">&quot;\u{2605}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\sphericalangle&quot;</span>,    <span class="string">&quot;\u{2222}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\complement&quot;</span>, <span class="string">&quot;\u{2201}&quot;</span>, meaning =&gt; <span class="string">&quot;complement&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\eth&quot;</span>,        <span class="string">&quot;\u{00F0}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\diagup&quot;</span>,     <span class="string">&quot;\u{2571}&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\diagdown&quot;</span>,   <span class="string">&quot;\u{2572}&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\Finv"</span>,              <span class="string">"\u{2132}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\Game"</span>,              <span class="string">"\u{2141}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\Bbbk"</span>,              <span class="string">"\u{1D55C}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\backprime"</span>,         <span class="string">"\u{2035}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\varnothing"</span>,        <span class="string">"\u{2205}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"empty-set"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\blacktriangle"</span>,     <span class="string">"\u{25B2}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\blacktriangledown"</span>, <span class="string">"\u{25BC}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\blacksquare"</span>,       <span class="string">"\u{25A0}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\blacklozenge"</span>,      <span class="string">"\u{25C6}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\bigstar"</span>,           <span class="string">"\u{2605}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\sphericalangle"</span>,    <span class="string">"\u{2222}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\complement"</span>, <span class="string">"\u{2201}"</span>, meaning =&gt; <span class="string">"complement"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\eth"</span>,        <span class="string">"\u{00F0}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\diagup"</span>,     <span class="string">"\u{2571}"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\diagdown"</span>,   <span class="string">"\u{2572}"</span>);
 
 <span class="comment">//======================================================================
 // Binary operators
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\dotplus&quot;</span>,        <span class="string">&quot;\u{2214}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);                                 <span class="comment">// DOT PLUS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\smallsetminus&quot;</span>,  <span class="string">&quot;\u{2216}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;set-minus&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\Cap&quot;</span>,            <span class="string">&quot;\u{22D2}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;double-intersection&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\doublecap&quot;</span>,      <span class="string">&quot;\u{22D2}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;double-intersection&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\Cup&quot;</span>,            <span class="string">&quot;\u{22D3}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;double-union&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\doublecup&quot;</span>,      <span class="string">&quot;\u{22D3}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;double-union&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\barwedge&quot;</span>,       <span class="string">&quot;\u{22BC}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;not-and&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\veebar&quot;</span>,         <span class="string">&quot;\u{22BB}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;exclusive-or&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\doublebarwedge&quot;</span>, <span class="string">&quot;\u{2A5E}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\boxminus&quot;</span>,      <span class="string">&quot;\u{229F}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);   <span class="comment">// SQUARED MINUS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\boxtimes&quot;</span>,      <span class="string">&quot;\u{22A0}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>);   <span class="comment">// SQUARED TIMES
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\boxdot&quot;</span>,        <span class="string">&quot;\u{22A1}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>);   <span class="comment">// SQUARED DOT OPERATOR
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\boxplus&quot;</span>,       <span class="string">&quot;\u{229E}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);   <span class="comment">// SQUARED PLUS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\divideontimes&quot;</span>, <span class="string">&quot;\u{22C7}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>);   <span class="comment">// DIVISION TIMES
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\ltimes&quot;</span>, <span class="string">&quot;\u{22C9}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>, meaning =&gt; <span class="string">&quot;left-normal-factor-semidirect-product&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\rtimes&quot;</span>, <span class="string">&quot;\u{22CA}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>, meaning =&gt; <span class="string">&quot;right-normal-factor-semidirect-product&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\leftthreetimes&quot;</span>,  <span class="string">&quot;\u{22CB}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>, meaning =&gt; <span class="string">&quot;left-semidirect-product&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\rightthreetimes&quot;</span>, <span class="string">&quot;\u{22CC}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>, meaning =&gt; <span class="string">&quot;right-semidirect-product&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\curlywedge&quot;</span>,      <span class="string">&quot;\u{22CF}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;and&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\curlyvee&quot;</span>,        <span class="string">&quot;\u{22CE}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;or&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\circleddash&quot;</span>, <span class="string">&quot;\u{229D}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);     <span class="comment">// CIRCLED DASH
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\circledast&quot;</span>,  <span class="string">&quot;\u{229B}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>);     <span class="comment">// CIRCLED ASTERISK OPERATOR
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\circledcirc&quot;</span>, <span class="string">&quot;\u{229A}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>);     <span class="comment">// CIRCLED RING OPERATOR
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\centerdot&quot;</span>,   <span class="string">&quot;\u{2219}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>);     <span class="comment">// CIRCLED DOT OPERATOR
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\intercal&quot;</span>,    <span class="string">&quot;\u{22BA}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);     <span class="comment">// INTERCALATE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\dotplus"</span>,        <span class="string">"\u{2214}"</span>, role =&gt; <span class="string">"ADDOP"</span>);                                 <span class="comment">// DOT PLUS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\smallsetminus"</span>,  <span class="string">"\u{2216}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"set-minus"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\Cap"</span>,            <span class="string">"\u{22D2}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"double-intersection"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\doublecap"</span>,      <span class="string">"\u{22D2}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"double-intersection"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\Cup"</span>,            <span class="string">"\u{22D3}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"double-union"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\doublecup"</span>,      <span class="string">"\u{22D3}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"double-union"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\barwedge"</span>,       <span class="string">"\u{22BC}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"not-and"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\veebar"</span>,         <span class="string">"\u{22BB}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"exclusive-or"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\doublebarwedge"</span>, <span class="string">"\u{2A5E}"</span>, role =&gt; <span class="string">"ADDOP"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\boxminus"</span>,      <span class="string">"\u{229F}"</span>, role =&gt; <span class="string">"ADDOP"</span>);   <span class="comment">// SQUARED MINUS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\boxtimes"</span>,      <span class="string">"\u{22A0}"</span>, role =&gt; <span class="string">"MULOP"</span>);   <span class="comment">// SQUARED TIMES
+</span><span class="macro">DefMath!</span>(<span class="string">"\\boxdot"</span>,        <span class="string">"\u{22A1}"</span>, role =&gt; <span class="string">"MULOP"</span>);   <span class="comment">// SQUARED DOT OPERATOR
+</span><span class="macro">DefMath!</span>(<span class="string">"\\boxplus"</span>,       <span class="string">"\u{229E}"</span>, role =&gt; <span class="string">"ADDOP"</span>);   <span class="comment">// SQUARED PLUS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\divideontimes"</span>, <span class="string">"\u{22C7}"</span>, role =&gt; <span class="string">"MULOP"</span>);   <span class="comment">// DIVISION TIMES
+</span><span class="macro">DefMath!</span>(<span class="string">"\\ltimes"</span>, <span class="string">"\u{22C9}"</span>, role =&gt; <span class="string">"MULOP"</span>, meaning =&gt; <span class="string">"left-normal-factor-semidirect-product"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\rtimes"</span>, <span class="string">"\u{22CA}"</span>, role =&gt; <span class="string">"MULOP"</span>, meaning =&gt; <span class="string">"right-normal-factor-semidirect-product"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\leftthreetimes"</span>,  <span class="string">"\u{22CB}"</span>, role =&gt; <span class="string">"MULOP"</span>, meaning =&gt; <span class="string">"left-semidirect-product"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\rightthreetimes"</span>, <span class="string">"\u{22CC}"</span>, role =&gt; <span class="string">"MULOP"</span>, meaning =&gt; <span class="string">"right-semidirect-product"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\curlywedge"</span>,      <span class="string">"\u{22CF}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"and"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\curlyvee"</span>,        <span class="string">"\u{22CE}"</span>, role =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"or"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\circleddash"</span>, <span class="string">"\u{229D}"</span>, role =&gt; <span class="string">"ADDOP"</span>);     <span class="comment">// CIRCLED DASH
+</span><span class="macro">DefMath!</span>(<span class="string">"\\circledast"</span>,  <span class="string">"\u{229B}"</span>, role =&gt; <span class="string">"MULOP"</span>);     <span class="comment">// CIRCLED ASTERISK OPERATOR
+</span><span class="macro">DefMath!</span>(<span class="string">"\\circledcirc"</span>, <span class="string">"\u{229A}"</span>, role =&gt; <span class="string">"MULOP"</span>);     <span class="comment">// CIRCLED RING OPERATOR
+</span><span class="macro">DefMath!</span>(<span class="string">"\\centerdot"</span>,   <span class="string">"\u{2219}"</span>, role =&gt; <span class="string">"MULOP"</span>);     <span class="comment">// CIRCLED DOT OPERATOR
+</span><span class="macro">DefMath!</span>(<span class="string">"\\intercal"</span>,    <span class="string">"\u{22BA}"</span>, role =&gt; <span class="string">"ADDOP"</span>);     <span class="comment">// INTERCALATE
 
 //======================================================================
 // Binary relations
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\leqq&quot;</span>, <span class="string">&quot;\u{2266}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\leqslant&quot;</span>, <span class="string">&quot;\u{2A7D}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\eqslantless&quot;</span>, <span class="string">&quot;\u{2A95}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lesssim&quot;</span>, <span class="string">&quot;\u{2272}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-or-similar-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lessapprox&quot;</span>, <span class="string">&quot;\u{2A85}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-or-approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\approxeq&quot;</span>, <span class="string">&quot;\u{224A}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;approximately-equals-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lessdot&quot;</span>, <span class="string">&quot;\u{22D6}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// LESS-THAN WITH DOT
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lll&quot;</span>, <span class="string">&quot;\u{22D8}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;very-much-less-than&quot;</span>);                <span class="comment">// VERY MUCH LESS-THAN
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\llless&quot;</span>, <span class="string">&quot;\u{22D8}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;very-much-less-than&quot;</span>);                <span class="comment">// VERY MUCH LESS-THAN
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lessgtr&quot;</span>, <span class="string">&quot;\u{2276}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-or-greater-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lesseqgtr&quot;</span>, <span class="string">&quot;\u{22DA}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-or-equals-or-greater-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lesseqqgtr&quot;</span>, <span class="string">&quot;\u{2A8B}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-or-equals-or-greater-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\doteqdot&quot;</span>, <span class="string">&quot;\u{2251}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;geometrically-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\Doteq&quot;</span>, <span class="string">&quot;\u{2251}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;geometrically-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\risingdotseq&quot;</span>, <span class="string">&quot;\u{2253}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;image-of-or-approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\fallingdotseq&quot;</span>, <span class="string">&quot;\u{2252}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;approximately-equals-or-image-of&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\backsim&quot;</span>, <span class="string">&quot;\u{223D}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// REVERSED TILDE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\backsimeq&quot;</span>, <span class="string">&quot;\u{224C}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>); <span class="comment">// ALL EQUAL TO; Note: this has double rather than single bar!!!
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\subseteqq&quot;</span>, <span class="string">&quot;\u{2AC5}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;subset-of-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\Subset&quot;</span>, <span class="string">&quot;\u{22D0}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;double-subset-of&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\leqq"</span>, <span class="string">"\u{2266}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\leqslant"</span>, <span class="string">"\u{2A7D}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\eqslantless"</span>, <span class="string">"\u{2A95}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lesssim"</span>, <span class="string">"\u{2272}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-or-similar-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lessapprox"</span>, <span class="string">"\u{2A85}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-or-approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\approxeq"</span>, <span class="string">"\u{224A}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"approximately-equals-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lessdot"</span>, <span class="string">"\u{22D6}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// LESS-THAN WITH DOT
+</span><span class="macro">DefMath!</span>(<span class="string">"\\lll"</span>, <span class="string">"\u{22D8}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"very-much-less-than"</span>);                <span class="comment">// VERY MUCH LESS-THAN
+</span><span class="macro">DefMath!</span>(<span class="string">"\\llless"</span>, <span class="string">"\u{22D8}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"very-much-less-than"</span>);                <span class="comment">// VERY MUCH LESS-THAN
+</span><span class="macro">DefMath!</span>(<span class="string">"\\lessgtr"</span>, <span class="string">"\u{2276}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-or-greater-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lesseqgtr"</span>, <span class="string">"\u{22DA}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-or-equals-or-greater-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lesseqqgtr"</span>, <span class="string">"\u{2A8B}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-or-equals-or-greater-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\doteqdot"</span>, <span class="string">"\u{2251}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"geometrically-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\Doteq"</span>, <span class="string">"\u{2251}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"geometrically-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\risingdotseq"</span>, <span class="string">"\u{2253}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"image-of-or-approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\fallingdotseq"</span>, <span class="string">"\u{2252}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"approximately-equals-or-image-of"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\backsim"</span>, <span class="string">"\u{223D}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// REVERSED TILDE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\backsimeq"</span>, <span class="string">"\u{224C}"</span>, role =&gt; <span class="string">"RELOP"</span>); <span class="comment">// ALL EQUAL TO; Note: this has double rather than single bar!!!
+</span><span class="macro">DefMath!</span>(<span class="string">"\\subseteqq"</span>, <span class="string">"\u{2AC5}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"subset-of-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\Subset"</span>, <span class="string">"\u{22D0}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"double-subset-of"</span>);
 <span class="comment">// \sqsubset in tex
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\preccurlyeq&quot;</span>, <span class="string">&quot;\u{227C}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;precedes-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\curlyeqprec&quot;</span>, <span class="string">&quot;\u{22DE}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;equals-or-preceeds&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\precsim&quot;</span>, <span class="string">&quot;\u{227E}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;precedes-or-equivalent-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\precapprox&quot;</span>, <span class="string">&quot;\u{2AB7}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;precedes-or-approximately-equals&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\preccurlyeq"</span>, <span class="string">"\u{227C}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"precedes-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\curlyeqprec"</span>, <span class="string">"\u{22DE}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"equals-or-preceeds"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\precsim"</span>, <span class="string">"\u{227E}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"precedes-or-equivalent-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\precapprox"</span>, <span class="string">"\u{2AB7}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"precedes-or-approximately-equals"</span>);
 <span class="comment">// \vartriangleleft, trianglelefteq in amsfonts
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\vDash&quot;</span>,      <span class="string">&quot;\u{22A8}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// TRUE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\Vvdash&quot;</span>,     <span class="string">&quot;\u{22AA}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// TRIPLE VERTICAL BAR RIGHT TURNSTILE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\smallsmile&quot;</span>, <span class="string">&quot;\u{2323}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// SMILE (small ?)
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\smallfrown&quot;</span>, <span class="string">&quot;\u{2322}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// FROWN (small ?)
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\bumpeq&quot;</span>, <span class="string">&quot;\u{224F}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;difference-between&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\Bumpeq&quot;</span>, <span class="string">&quot;\u{224E}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;geometrically-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\geqq&quot;</span>, <span class="string">&quot;\u{2267}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\geqslant&quot;</span>, <span class="string">&quot;\u{2A7E}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\eqslantgtr&quot;</span>, <span class="string">&quot;\u{2A96}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gtrsim&quot;</span>, <span class="string">&quot;\u{2273}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-or-equivalent-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gtrapprox&quot;</span>, <span class="string">&quot;\u{2A86}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-or-approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\eqsim&quot;</span>,  <span class="string">&quot;\u{2242}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// MINUS TILDE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\gtrdot&quot;</span>, <span class="string">&quot;\u{22D7}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// GREATER-THAN WITH DOT
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\ggg&quot;</span>, <span class="string">&quot;\u{22D9}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;very-much-greater-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gggtr&quot;</span>, <span class="string">&quot;\u{22D9}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;very-much-greater-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gtrless&quot;</span>, <span class="string">&quot;\u{2277}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-or-less-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gtreqless&quot;</span>, <span class="string">&quot;\u{22DB}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-or-equals-or-less-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gtreqqless&quot;</span>, <span class="string">&quot;\u{2A8C}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-or-equals-or-less-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\eqcirc&quot;</span>,    <span class="string">&quot;\u{2256}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// RING IN EQUAL TO
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\circeq&quot;</span>,    <span class="string">&quot;\u{2257}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// RING EQUAL TO
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\triangleq&quot;</span>, <span class="string">&quot;\u{225C}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// DELTA EQUAL TO
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\thicksim&quot;</span>,  <span class="string">&quot;\u{223C}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// TILDE OPERATOR; Not thick!!!
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\thickapprox&quot;</span>, <span class="string">&quot;\u{2248}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\supseteqq&quot;</span>, <span class="string">&quot;\u{2AC6}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;superset-of-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\Supset&quot;</span>, <span class="string">&quot;\u{22D1}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;double-superset-of&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\vDash"</span>,      <span class="string">"\u{22A8}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// TRUE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\Vvdash"</span>,     <span class="string">"\u{22AA}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// TRIPLE VERTICAL BAR RIGHT TURNSTILE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\smallsmile"</span>, <span class="string">"\u{2323}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// SMILE (small ?)
+</span><span class="macro">DefMath!</span>(<span class="string">"\\smallfrown"</span>, <span class="string">"\u{2322}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// FROWN (small ?)
+</span><span class="macro">DefMath!</span>(<span class="string">"\\bumpeq"</span>, <span class="string">"\u{224F}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"difference-between"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\Bumpeq"</span>, <span class="string">"\u{224E}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"geometrically-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\geqq"</span>, <span class="string">"\u{2267}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\geqslant"</span>, <span class="string">"\u{2A7E}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\eqslantgtr"</span>, <span class="string">"\u{2A96}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gtrsim"</span>, <span class="string">"\u{2273}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-or-equivalent-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gtrapprox"</span>, <span class="string">"\u{2A86}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-or-approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\eqsim"</span>,  <span class="string">"\u{2242}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// MINUS TILDE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\gtrdot"</span>, <span class="string">"\u{22D7}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// GREATER-THAN WITH DOT
+</span><span class="macro">DefMath!</span>(<span class="string">"\\ggg"</span>, <span class="string">"\u{22D9}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"very-much-greater-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gggtr"</span>, <span class="string">"\u{22D9}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"very-much-greater-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gtrless"</span>, <span class="string">"\u{2277}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-or-less-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gtreqless"</span>, <span class="string">"\u{22DB}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-or-equals-or-less-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gtreqqless"</span>, <span class="string">"\u{2A8C}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-or-equals-or-less-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\eqcirc"</span>,    <span class="string">"\u{2256}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// RING IN EQUAL TO
+</span><span class="macro">DefMath!</span>(<span class="string">"\\circeq"</span>,    <span class="string">"\u{2257}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// RING EQUAL TO
+</span><span class="macro">DefMath!</span>(<span class="string">"\\triangleq"</span>, <span class="string">"\u{225C}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// DELTA EQUAL TO
+</span><span class="macro">DefMath!</span>(<span class="string">"\\thicksim"</span>,  <span class="string">"\u{223C}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// TILDE OPERATOR; Not thick!!!
+</span><span class="macro">DefMath!</span>(<span class="string">"\\thickapprox"</span>, <span class="string">"\u{2248}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\supseteqq"</span>, <span class="string">"\u{2AC6}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"superset-of-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\Supset"</span>, <span class="string">"\u{22D1}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"double-superset-of"</span>);
 <span class="comment">// \sqsupset in TeX
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\succcurlyeq&quot;</span>, <span class="string">&quot;\u{227D}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;succeeds-or-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\curlyeqsucc&quot;</span>, <span class="string">&quot;\u{22DF}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;equals-or-succeeds&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\succsim&quot;</span>, <span class="string">&quot;\u{227F}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;succeeds-or-equivalent-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\succapprox&quot;</span>, <span class="string">&quot;\u{2AB8}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;succeeds-or-approximately-equals&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\succcurlyeq"</span>, <span class="string">"\u{227D}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"succeeds-or-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\curlyeqsucc"</span>, <span class="string">"\u{22DF}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"equals-or-succeeds"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\succsim"</span>, <span class="string">"\u{227F}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"succeeds-or-equivalent-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\succapprox"</span>, <span class="string">"\u{2AB8}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"succeeds-or-approximately-equals"</span>);
 <span class="comment">// \vartriangleright, \trianglerighteq in amsfonts
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\Vdash&quot;</span>, <span class="string">&quot;\u{22A9}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;forces&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\shortmid&quot;</span>, <span class="string">&quot;\u{2223}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;divides&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\shortparallel&quot;</span>, <span class="string">&quot;\u{2225}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;parallel-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\between&quot;</span>, <span class="string">&quot;\u{226C}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;between&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\pitchfork&quot;</span>, <span class="string">&quot;\u{22D4}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;proper-intersection&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\varpropto&quot;</span>, <span class="string">&quot;\u{221D}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;proportional-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\blacktriangleleft&quot;</span>, <span class="string">&quot;\u{25C0}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// BLACK LEFT-POINTING TRIANGLE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\therefore&quot;</span>, <span class="string">&quot;\u{2234}&quot;</span>, role =&gt; <span class="string">&quot;METARELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;therefore&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\backepsilon&quot;</span>,        <span class="string">&quot;\u{03F6}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);  <span class="comment">// GREEK REVERSED LUNATE EPSILON SYMBOL
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\blacktriangleright&quot;</span>, <span class="string">&quot;\u{25B6}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);  <span class="comment">// BLACK RIGHT-POINTING TRIANGLE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\because&quot;</span>, <span class="string">&quot;\u{2235}&quot;</span>, role =&gt; <span class="string">&quot;METARELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;because&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\Vdash"</span>, <span class="string">"\u{22A9}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"forces"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\shortmid"</span>, <span class="string">"\u{2223}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"divides"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\shortparallel"</span>, <span class="string">"\u{2225}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"parallel-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\between"</span>, <span class="string">"\u{226C}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"between"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\pitchfork"</span>, <span class="string">"\u{22D4}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"proper-intersection"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\varpropto"</span>, <span class="string">"\u{221D}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"proportional-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\blacktriangleleft"</span>, <span class="string">"\u{25C0}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// BLACK LEFT-POINTING TRIANGLE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\therefore"</span>, <span class="string">"\u{2234}"</span>, role =&gt; <span class="string">"METARELOP"</span>,
+  meaning =&gt; <span class="string">"therefore"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\backepsilon"</span>,        <span class="string">"\u{03F6}"</span>, role =&gt; <span class="string">"RELOP"</span>);  <span class="comment">// GREEK REVERSED LUNATE EPSILON SYMBOL
+</span><span class="macro">DefMath!</span>(<span class="string">"\\blacktriangleright"</span>, <span class="string">"\u{25B6}"</span>, role =&gt; <span class="string">"RELOP"</span>);  <span class="comment">// BLACK RIGHT-POINTING TRIANGLE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\because"</span>, <span class="string">"\u{2235}"</span>, role =&gt; <span class="string">"METARELOP"</span>,
+  meaning =&gt; <span class="string">"because"</span>);
 
 <span class="comment">//======================================================================
 // Negated relations
-// NOTE: There are several here that I couldn&quot;t find, but all
-// were negations of other symbols. I&quot;ve used 0338 COMBINING LONG SOLIDUS OVERLAY
-// to create them, but I don&quot;t know if that&quot;s right.
+// NOTE: There are several here that I couldn"t find, but all
+// were negations of other symbols. I"ve used 0338 COMBINING LONG SOLIDUS OVERLAY
+// to create them, but I don"t know if that"s right.
 
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nless&quot;</span>, <span class="string">&quot;\u{226E}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-less-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nleq&quot;</span>, <span class="string">&quot;\u{2270}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-less-than-nor-greater-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nleqslant&quot;</span>, <span class="string">&quot;\u{2A7D}\u{0338}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-less-than-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nleqq&quot;</span>, <span class="string">&quot;\u{2266}\u{0338}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-less-than-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lneq&quot;</span>, <span class="string">&quot;\u{2A87}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lneqq&quot;</span>, <span class="string">&quot;\u{2268}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lvertneqq&quot;</span>, <span class="string">&quot;\u{2268}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lnsim&quot;</span>, <span class="string">&quot;\u{22E6}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-and-not-equivalent-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lnapprox&quot;</span>, <span class="string">&quot;\u{2A89}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;less-than-and-not-approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nprec&quot;</span>, <span class="string">&quot;\u{2280}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-precedes&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\npreceq&quot;</span>, <span class="string">&quot;\u{22E0}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-precedes-nor-equals&quot;</span>);   <span class="comment">// Using slant equals?
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\precneqq&quot;</span>, <span class="string">&quot;\u{2AB5}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;precedes-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\precnsim&quot;</span>, <span class="string">&quot;\u{22E8}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;precedes-and-not-equivalent-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\precnapprox&quot;</span>, <span class="string">&quot;\u{2AB9}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;precedes-and-not-approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nsim&quot;</span>, <span class="string">&quot;\u{2241}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-similar-to&quot;</span>);            <span class="comment">// NOTE TILDE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nshortmid&quot;</span>, <span class="string">&quot;\u{2224}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-divides&quot;</span>);               <span class="comment">// DOES NOT DIVIDE; Note: not short!
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nmid&quot;</span>, <span class="string">&quot;\u{2224}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-divides&quot;</span>);               <span class="comment">// DOES NOT DIVIDE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nvdash&quot;</span>, <span class="string">&quot;\u{22AC}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-proves&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nVdash&quot;</span>, <span class="string">&quot;\u{22AE}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-forces&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\ntriangleleft&quot;</span>, <span class="string">&quot;\u{22EA}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-subgroup-of&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\ntrianglelefteq&quot;</span>, <span class="string">&quot;\u{22EC}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-subgroup-of-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nsubseteq&quot;</span>, <span class="string">&quot;\u{2288}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-subset-of-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nsubseteqq&quot;</span>, <span class="string">&quot;\u{2AC5}\u{0338}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-subset-of-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\subsetneq&quot;</span>, <span class="string">&quot;\u{228A}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;subset-of-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\varsubsetneq&quot;</span>, <span class="string">&quot;\u{228A}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;subset-of-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\subsetneqq&quot;</span>, <span class="string">&quot;\u{2ACB}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;subset-of-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\varsubsetneqq&quot;</span>, <span class="string">&quot;\u{2ACB}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;subset-of-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\supsetneq&quot;</span>, <span class="string">&quot;\u{228B}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;superset-of-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\varsupsetneq&quot;</span>, <span class="string">&quot;\u{228B}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;superset-of-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\supsetneqq&quot;</span>, <span class="string">&quot;\u{2ACC}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;superset-of-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\varsupsetneqq&quot;</span>, <span class="string">&quot;\u{2ACC}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;superset-of-and-not-equals&quot;</span>);
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nless"</span>, <span class="string">"\u{226E}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-less-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nleq"</span>, <span class="string">"\u{2270}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-less-than-nor-greater-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nleqslant"</span>, <span class="string">"\u{2A7D}\u{0338}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-less-than-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nleqq"</span>, <span class="string">"\u{2266}\u{0338}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-less-than-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lneq"</span>, <span class="string">"\u{2A87}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lneqq"</span>, <span class="string">"\u{2268}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lvertneqq"</span>, <span class="string">"\u{2268}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lnsim"</span>, <span class="string">"\u{22E6}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-and-not-equivalent-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\lnapprox"</span>, <span class="string">"\u{2A89}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"less-than-and-not-approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nprec"</span>, <span class="string">"\u{2280}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-precedes"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\npreceq"</span>, <span class="string">"\u{22E0}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-precedes-nor-equals"</span>);   <span class="comment">// Using slant equals?
+</span><span class="macro">DefMath!</span>(<span class="string">"\\precneqq"</span>, <span class="string">"\u{2AB5}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"precedes-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\precnsim"</span>, <span class="string">"\u{22E8}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"precedes-and-not-equivalent-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\precnapprox"</span>, <span class="string">"\u{2AB9}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"precedes-and-not-approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nsim"</span>, <span class="string">"\u{2241}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-similar-to"</span>);            <span class="comment">// NOTE TILDE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nshortmid"</span>, <span class="string">"\u{2224}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-divides"</span>);               <span class="comment">// DOES NOT DIVIDE; Note: not short!
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nmid"</span>, <span class="string">"\u{2224}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-divides"</span>);               <span class="comment">// DOES NOT DIVIDE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nvdash"</span>, <span class="string">"\u{22AC}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-proves"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nVdash"</span>, <span class="string">"\u{22AE}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-forces"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\ntriangleleft"</span>, <span class="string">"\u{22EA}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-subgroup-of"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\ntrianglelefteq"</span>, <span class="string">"\u{22EC}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-subgroup-of-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nsubseteq"</span>, <span class="string">"\u{2288}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-subset-of-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nsubseteqq"</span>, <span class="string">"\u{2AC5}\u{0338}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-subset-of-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\subsetneq"</span>, <span class="string">"\u{228A}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"subset-of-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\varsubsetneq"</span>, <span class="string">"\u{228A}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"subset-of-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\subsetneqq"</span>, <span class="string">"\u{2ACB}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"subset-of-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\varsubsetneqq"</span>, <span class="string">"\u{2ACB}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"subset-of-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\supsetneq"</span>, <span class="string">"\u{228B}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"superset-of-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\varsupsetneq"</span>, <span class="string">"\u{228B}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"superset-of-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\supsetneqq"</span>, <span class="string">"\u{2ACC}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"superset-of-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\varsupsetneqq"</span>, <span class="string">"\u{2ACC}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"superset-of-and-not-equals"</span>);
 
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\ngtr&quot;</span>, <span class="string">&quot;\u{226F}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-greater-than&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\ngeq&quot;</span>, <span class="string">&quot;\u{2271}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-greater-than-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\ngeqslant&quot;</span>, <span class="string">&quot;\u{2A7E}\u{0338}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-greater-than-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\ngeqq&quot;</span>, <span class="string">&quot;\u{2267}\u{0338}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-greater-than-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gneq&quot;</span>, <span class="string">&quot;\u{2A88}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gneqq&quot;</span>, <span class="string">&quot;\u{2269}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gvertneqq&quot;</span>, <span class="string">&quot;\u{2269}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gnsim&quot;</span>, <span class="string">&quot;\u{22E7}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-and-not-equivalent-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\gnapprox&quot;</span>, <span class="string">&quot;\u{2A8A}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;greater-than-and-not-approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nsucc&quot;</span>, <span class="string">&quot;\u{2281}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-succeeds&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nsucceq&quot;</span>, <span class="string">&quot;\u{22E1}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-succeeds-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\succneqq&quot;</span>, <span class="string">&quot;\u{2AB6}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;succeeds-and-not-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\succnsim&quot;</span>, <span class="string">&quot;\u{22E9}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;succeeds-and-not-equivalent-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\succnapprox&quot;</span>, <span class="string">&quot;\u{2ABA}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;succeeds-and-not-approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\ncong&quot;</span>, <span class="string">&quot;\u{2247}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-approximately-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nshortparallel&quot;</span>, <span class="string">&quot;\u{2226}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-parallel-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nparallel&quot;</span>, <span class="string">&quot;\u{2226}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-parallel-to&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nvDash&quot;</span>, <span class="string">&quot;\u{22AD}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>);   <span class="comment">// NOT TRUE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nVDash&quot;</span>, <span class="string">&quot;\u{22AF}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>); <span class="comment">// NEGATED DOUBLE VERTICAL BAR DOUBLE RIGHT TURNSTILE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\ntriangleright&quot;</span>, <span class="string">&quot;\u{22EB}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-contains&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\ntrianglerighteq&quot;</span>, <span class="string">&quot;\u{22ED}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-contains-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nsupseteq&quot;</span>, <span class="string">&quot;\u{2289}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-superset-of-nor-equals&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\nsupseteqq&quot;</span>, <span class="string">&quot;\u{2AC6}\u{0338}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
-  meaning =&gt; <span class="string">&quot;not-superset-of-nor-equals&quot;</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\ngtr"</span>, <span class="string">"\u{226F}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-greater-than"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\ngeq"</span>, <span class="string">"\u{2271}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-greater-than-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\ngeqslant"</span>, <span class="string">"\u{2A7E}\u{0338}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-greater-than-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\ngeqq"</span>, <span class="string">"\u{2267}\u{0338}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-greater-than-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gneq"</span>, <span class="string">"\u{2A88}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gneqq"</span>, <span class="string">"\u{2269}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gvertneqq"</span>, <span class="string">"\u{2269}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gnsim"</span>, <span class="string">"\u{22E7}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-and-not-equivalent-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\gnapprox"</span>, <span class="string">"\u{2A8A}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"greater-than-and-not-approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nsucc"</span>, <span class="string">"\u{2281}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-succeeds"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nsucceq"</span>, <span class="string">"\u{22E1}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-succeeds-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\succneqq"</span>, <span class="string">"\u{2AB6}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"succeeds-and-not-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\succnsim"</span>, <span class="string">"\u{22E9}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"succeeds-and-not-equivalent-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\succnapprox"</span>, <span class="string">"\u{2ABA}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"succeeds-and-not-approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\ncong"</span>, <span class="string">"\u{2247}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-approximately-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nshortparallel"</span>, <span class="string">"\u{2226}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-parallel-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nparallel"</span>, <span class="string">"\u{2226}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-parallel-to"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nvDash"</span>, <span class="string">"\u{22AD}"</span>, role =&gt; <span class="string">"RELOP"</span>);   <span class="comment">// NOT TRUE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nVDash"</span>, <span class="string">"\u{22AF}"</span>, role =&gt; <span class="string">"RELOP"</span>); <span class="comment">// NEGATED DOUBLE VERTICAL BAR DOUBLE RIGHT TURNSTILE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\ntriangleright"</span>, <span class="string">"\u{22EB}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-contains"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\ntrianglerighteq"</span>, <span class="string">"\u{22ED}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-contains-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nsupseteq"</span>, <span class="string">"\u{2289}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-superset-of-nor-equals"</span>);
+<span class="macro">DefMath!</span>(<span class="string">"\\nsupseteqq"</span>, <span class="string">"\u{2AC6}\u{0338}"</span>, role =&gt; <span class="string">"RELOP"</span>,
+  meaning =&gt; <span class="string">"not-superset-of-nor-equals"</span>);
 
 <span class="comment">//======================================================================
 // Arrows
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\leftleftarrows&quot;</span>,   <span class="string">&quot;\u{21C7}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// LEFTWARDS PAIRED ARROWS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\leftrightarrows&quot;</span>,  <span class="string">&quot;\u{21C6}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// LEFTWARDS ARROW OVER RIGHTWARDS ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\Lleftarrow&quot;</span>,       <span class="string">&quot;\u{21DA}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// LEFTWARDS TRIPLE ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\twoheadleftarrow&quot;</span>, <span class="string">&quot;\u{219E}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// LEFTWARDS TWHO HEADED ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\leftarrowtail&quot;</span>,    <span class="string">&quot;\u{21A2}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// LEFTWARDS ARROW WITH TAIL
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\looparrowleft&quot;</span>,    <span class="string">&quot;\u{21AB}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// leftwards arrow with loop
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\leftrightharpoons&quot;</span>, <span class="string">&quot;\u{21CB}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// LEFTWARDS HARPOON OVER RIGHTWARDS HARPOON
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\curvearrowleft&quot;</span>,    <span class="string">&quot;\u{21B6}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// ANTICLOCKWISE TOP SEMICIRCLE ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\circlearrowleft&quot;</span>,   <span class="string">&quot;\u{21BA}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// ANTICLOCKWISE OPEN CIRCLE ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\Lsh&quot;</span>,               <span class="string">&quot;\u{21B0}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// UPWAARDS ARROW WITH TIP LEFTWARDS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\upuparrows&quot;</span>,        <span class="string">&quot;\u{21C8}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// UPWARDS PAIRED ARROWS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\upharpoonleft&quot;</span>,     <span class="string">&quot;\u{21BF}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// UPWARDS HARPOON WITH BARB LEFTWARDS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rightrightarrows&quot;</span>,  <span class="string">&quot;\u{21C9}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// RIGHTWARDS PAIRED ARROWS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rightleftarrows&quot;</span>,   <span class="string">&quot;\u{21C4}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// RIGHTWARDS ARROW OVER LEFTWARD ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\Rrightarrow&quot;</span>,       <span class="string">&quot;\u{21DB}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// RIGHTWARDS TRIPLE ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\twoheadrightarrow&quot;</span>, <span class="string">&quot;\u{21A0}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// RIGHTWARDS TWO HEADED ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rightarrowtail&quot;</span>,    <span class="string">&quot;\u{21A3}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// RIGHTWARDS ARROW WITH TAIL
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\looparrowright&quot;</span>,    <span class="string">&quot;\u{21AC}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>); <span class="comment">// RIGHTWARDS ARROW WITH LOOP
+</span><span class="macro">DefMath!</span>(<span class="string">"\\leftleftarrows"</span>,   <span class="string">"\u{21C7}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LEFTWARDS PAIRED ARROWS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\leftrightarrows"</span>,  <span class="string">"\u{21C6}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LEFTWARDS ARROW OVER RIGHTWARDS ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\Lleftarrow"</span>,       <span class="string">"\u{21DA}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LEFTWARDS TRIPLE ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\twoheadleftarrow"</span>, <span class="string">"\u{219E}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LEFTWARDS TWHO HEADED ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\leftarrowtail"</span>,    <span class="string">"\u{21A2}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LEFTWARDS ARROW WITH TAIL
+</span><span class="macro">DefMath!</span>(<span class="string">"\\looparrowleft"</span>,    <span class="string">"\u{21AB}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// leftwards arrow with loop
+</span><span class="macro">DefMath!</span>(<span class="string">"\\leftrightharpoons"</span>, <span class="string">"\u{21CB}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LEFTWARDS HARPOON OVER RIGHTWARDS HARPOON
+</span><span class="macro">DefMath!</span>(<span class="string">"\\curvearrowleft"</span>,    <span class="string">"\u{21B6}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// ANTICLOCKWISE TOP SEMICIRCLE ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\circlearrowleft"</span>,   <span class="string">"\u{21BA}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// ANTICLOCKWISE OPEN CIRCLE ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\Lsh"</span>,               <span class="string">"\u{21B0}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// UPWAARDS ARROW WITH TIP LEFTWARDS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\upuparrows"</span>,        <span class="string">"\u{21C8}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// UPWARDS PAIRED ARROWS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\upharpoonleft"</span>,     <span class="string">"\u{21BF}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// UPWARDS HARPOON WITH BARB LEFTWARDS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\rightrightarrows"</span>,  <span class="string">"\u{21C9}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS PAIRED ARROWS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\rightleftarrows"</span>,   <span class="string">"\u{21C4}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS ARROW OVER LEFTWARD ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\Rrightarrow"</span>,       <span class="string">"\u{21DB}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS TRIPLE ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\twoheadrightarrow"</span>, <span class="string">"\u{21A0}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS TWO HEADED ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\rightarrowtail"</span>,    <span class="string">"\u{21A3}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS ARROW WITH TAIL
+</span><span class="macro">DefMath!</span>(<span class="string">"\\looparrowright"</span>,    <span class="string">"\u{21AC}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS ARROW WITH LOOP
 // \rightleftharpoons  21CC # RIGHTWARDS HARPOON OVER LEFTWARDS HARPOON ; in amsfonts
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\curvearrowright&quot;</span>,  <span class="string">&quot;\u{21B7}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// CLOCKWISE TOP SEMICIRCLE ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\circlearrowright&quot;</span>, <span class="string">&quot;\u{21BB}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// CLOCKWISE OPEN CIRCLE ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\Rsh&quot;</span>,              <span class="string">&quot;\u{21B1}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// UPWAARDS ARROW WITH TIP RIGHTWARDS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\downdownarrows&quot;</span>,   <span class="string">&quot;\u{21CA}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// DOWNWARDS PAIRED ARROWS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\upharpoonright&quot;</span>,   <span class="string">&quot;\u{21BE}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// UPWARDS HARPOON WITH BARB RIGHTWARDS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\restriction&quot;</span>,      <span class="string">&quot;\u{21BE}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// UPWARDS HARPOON WITH BARB RIGHTWARDS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\curvearrowright"</span>,  <span class="string">"\u{21B7}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// CLOCKWISE TOP SEMICIRCLE ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\circlearrowright"</span>, <span class="string">"\u{21BB}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// CLOCKWISE OPEN CIRCLE ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\Rsh"</span>,              <span class="string">"\u{21B1}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// UPWAARDS ARROW WITH TIP RIGHTWARDS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\downdownarrows"</span>,   <span class="string">"\u{21CA}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// DOWNWARDS PAIRED ARROWS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\upharpoonright"</span>,   <span class="string">"\u{21BE}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// UPWARDS HARPOON WITH BARB RIGHTWARDS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\restriction"</span>,      <span class="string">"\u{21BE}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// UPWARDS HARPOON WITH BARB RIGHTWARDS
                                                             // (same as \upharpoonright)
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\downharpoonleft&quot;</span>,  <span class="string">&quot;\u{21C3}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// DOWNWARDS HARPOON WITH BARB LEFTWARDS
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\multimap&quot;</span>,         <span class="string">&quot;\u{22B8}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// MULTIMAP
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\leftrightsquigarrow&quot;</span>, <span class="string">&quot;\u{21AD}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);   <span class="comment">// LEFT RIGHT WAVE ARROW
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\downharpoonright&quot;</span>, <span class="string">&quot;\u{21C2}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);  <span class="comment">// DOWNWARDS HARPOON WITH BARB RIGHTWARDS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\downharpoonleft"</span>,  <span class="string">"\u{21C3}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// DOWNWARDS HARPOON WITH BARB LEFTWARDS
+</span><span class="macro">DefMath!</span>(<span class="string">"\\multimap"</span>,         <span class="string">"\u{22B8}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// MULTIMAP
+</span><span class="macro">DefMath!</span>(<span class="string">"\\leftrightsquigarrow"</span>, <span class="string">"\u{21AD}"</span>, role =&gt; <span class="string">"ARROW"</span>);   <span class="comment">// LEFT RIGHT WAVE ARROW
+</span><span class="macro">DefMath!</span>(<span class="string">"\\downharpoonright"</span>, <span class="string">"\u{21C2}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// DOWNWARDS HARPOON WITH BARB RIGHTWARDS
 // \rightsquigarrow amsfonts
 
 //======================================================================
 // Negated arrows
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nleftarrow&quot;</span>,      <span class="string">&quot;\u{219A}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);   <span class="comment">// LEFTWARDS ARROW WITH STROKE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nLeftarrow&quot;</span>,      <span class="string">&quot;\u{21CD}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);   <span class="comment">// LEFTWARDS DOUBLE ARROW WITH STROKE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nleftrightarrow&quot;</span>, <span class="string">&quot;\u{21AE}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);   <span class="comment">// LEFT RIGHT ARROW WITH STROKE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nrightarrow&quot;</span>,     <span class="string">&quot;\u{219B}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);   <span class="comment">// RIGHTWARDS ARROW WITH STROKE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nRightarrow&quot;</span>,     <span class="string">&quot;\u{21CF}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);   <span class="comment">// LEFTWARDS DOUBLE ARROW WITH STROKE
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\nLeftrightarrow&quot;</span>, <span class="string">&quot;\u{21CE}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);   <span class="comment">// LEFT RIGHT DOUBLE ARROW WITH STROKE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nleftarrow"</span>,      <span class="string">"\u{219A}"</span>, role =&gt; <span class="string">"ARROW"</span>);   <span class="comment">// LEFTWARDS ARROW WITH STROKE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nLeftarrow"</span>,      <span class="string">"\u{21CD}"</span>, role =&gt; <span class="string">"ARROW"</span>);   <span class="comment">// LEFTWARDS DOUBLE ARROW WITH STROKE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nleftrightarrow"</span>, <span class="string">"\u{21AE}"</span>, role =&gt; <span class="string">"ARROW"</span>);   <span class="comment">// LEFT RIGHT ARROW WITH STROKE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nrightarrow"</span>,     <span class="string">"\u{219B}"</span>, role =&gt; <span class="string">"ARROW"</span>);   <span class="comment">// RIGHTWARDS ARROW WITH STROKE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nRightarrow"</span>,     <span class="string">"\u{21CF}"</span>, role =&gt; <span class="string">"ARROW"</span>);   <span class="comment">// LEFTWARDS DOUBLE ARROW WITH STROKE
+</span><span class="macro">DefMath!</span>(<span class="string">"\\nLeftrightarrow"</span>, <span class="string">"\u{21CE}"</span>, role =&gt; <span class="string">"ARROW"</span>);   <span class="comment">// LEFT RIGHT DOUBLE ARROW WITH STROKE
 
 //======================================================================
 </span>});</code></pre></div></section></main></body></html>

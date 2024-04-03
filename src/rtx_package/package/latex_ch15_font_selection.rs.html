@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch15_font_selection.rs`."><title>latex_ch15_font_selection.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch15_font_selection.rs`."><title>latex_ch15_font_selection.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -180,164 +182,164 @@
   //======================================================================
   // Text styles.
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\rmdefault&quot;</span>, <span class="string">&quot;cmr&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\sfdefault&quot;</span>, <span class="string">&quot;cmss&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\ttdefault&quot;</span>, <span class="string">&quot;cmtt&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\bfdefault&quot;</span>, <span class="string">&quot;bx&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\mddefault&quot;</span>, <span class="string">&quot;m&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\itdefault&quot;</span>, <span class="string">&quot;it&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\sldefault&quot;</span>, <span class="string">&quot;sl&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\scdefault&quot;</span>, <span class="string">&quot;sc&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\updefault&quot;</span>, <span class="string">&quot;n&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\encodingdefault&quot;</span>, <span class="string">&quot;OT1&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\familydefault&quot;</span>, <span class="string">&quot;\\rmdefault&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\seriesdefault&quot;</span>, <span class="string">&quot;\\mddefault&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\shapedefault&quot;</span>, <span class="string">&quot;\\updefault&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\rmdefault"</span>, <span class="string">"cmr"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\sfdefault"</span>, <span class="string">"cmss"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\ttdefault"</span>, <span class="string">"cmtt"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\bfdefault"</span>, <span class="string">"bx"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\mddefault"</span>, <span class="string">"m"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\itdefault"</span>, <span class="string">"it"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\sldefault"</span>, <span class="string">"sl"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\scdefault"</span>, <span class="string">"sc"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\updefault"</span>, <span class="string">"n"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\encodingdefault"</span>, <span class="string">"OT1"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\familydefault"</span>, <span class="string">"\\rmdefault"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\seriesdefault"</span>, <span class="string">"\\mddefault"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\shapedefault"</span>, <span class="string">"\\updefault"</span>);
 
-  <span class="macro">Let!</span>(<span class="string">&quot;\\mediumseries&quot;</span>, <span class="string">&quot;\\mdseries&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\normalshape&quot;</span>, <span class="string">&quot;\\upshape&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\mediumseries"</span>, <span class="string">"\\mdseries"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\normalshape"</span>, <span class="string">"\\upshape"</span>);
 
-  <span class="comment">// ? DefMacro(&quot;\\f@encoding&#39;,&#39;cm&#39;);
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmr&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;m&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;n&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@size&quot;</span>, <span class="string">&quot;10&quot;</span>);
+  <span class="comment">// ? DefMacro("\\f@encoding','cm');
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\f@family"</span>, <span class="string">"cmr"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\f@series"</span>, <span class="string">"m"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\f@shape"</span>, <span class="string">"n"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\f@size"</span>, <span class="string">"10"</span>);
 
   <span class="comment">// These do NOT immediately effect the font!
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\fontfamily{}&quot;</span>, <span class="string">&quot;\\edef\\f@family{#1}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\fontseries{}&quot;</span>, <span class="string">&quot;\\edef\\f@series{#1}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\fontshape{}&quot;</span>, <span class="string">&quot;\\edef\\f@shape{#1}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fontfamily{}"</span>, <span class="string">"\\edef\\f@family{#1}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\fontseries{}"</span>, <span class="string">"\\edef\\f@series{#1}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\fontshape{}"</span>, <span class="string">"\\edef\\f@shape{#1}"</span>);
 
   <span class="comment">// For fonts not allowed in math!!!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\not@math@alphabet@@ {}&quot;</span>, sub[(c)] {
-    <span class="kw">if </span>lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>) {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\not@math@alphabet@@ {}"</span>, sub[(c)] {
+    <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
       <span class="kw">let </span>c = c.to_string();
-      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Command {:?} invalid in math mode&quot;</span>, c);
-      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, c, message);
+      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Command {:?} invalid in math mode"</span>, c);
+      <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, c, message);
     }
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
   });
 
   <span class="comment">// These DO immediately effect the font!
   </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\mdseries&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\mddefault}\\fontseries{\\mddefault}\\selectfont&quot;
+    <span class="string">"\\mdseries"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\mddefault}\\fontseries{\\mddefault}\\selectfont"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\bfseries&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\bfdefault}\\fontseries{\\bfdefault}\\selectfont&quot;
+    <span class="string">"\\bfseries"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\bfdefault}\\fontseries{\\bfdefault}\\selectfont"
   </span>);
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\rmfamily&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\rmdefault}\\fontfamily{\\rmdefault}\\selectfont&quot;
+    <span class="string">"\\rmfamily"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\rmdefault}\\fontfamily{\\rmdefault}\\selectfont"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\sffamily&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\sfdefault}\\fontfamily{\\sfdefault}\\selectfont&quot;
+    <span class="string">"\\sffamily"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\sfdefault}\\fontfamily{\\sfdefault}\\selectfont"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\ttfamily&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\ttdefault}\\fontfamily{\\ttdefault}\\selectfont&quot;
+    <span class="string">"\\ttfamily"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\ttdefault}\\fontfamily{\\ttdefault}\\selectfont"
   </span>);
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\upshape&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\updefault}\\fontshape{\\updefault}\\selectfont&quot;
+    <span class="string">"\\upshape"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\updefault}\\fontshape{\\updefault}\\selectfont"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\itshape&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\itdefault}\\fontshape{\\itdefault}\\selectfont&quot;
+    <span class="string">"\\itshape"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\itdefault}\\fontshape{\\itdefault}\\selectfont"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\slshape&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\sldefault}\\fontshape{\\sldefault}\\selectfont&quot;
+    <span class="string">"\\slshape"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\sldefault}\\fontshape{\\sldefault}\\selectfont"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\scshape&quot;</span>,
-    <span class="string">&quot;\\not@math@alphabet@@{\\scdefault}\\fontshape{\\scdefault}\\selectfont&quot;
+    <span class="string">"\\scshape"</span>,
+    <span class="string">"\\not@math@alphabet@@{\\scdefault}\\fontshape{\\scdefault}\\selectfont"
   </span>);
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\normalfont&quot;</span>,
-    <span class="string">&quot;\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont&quot;
+    <span class="string">"\\normalfont"</span>,
+    <span class="string">"\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
   </span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\verbatim@font&quot;</span>,
-    <span class="string">&quot;\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont&quot;
+    <span class="string">"\\verbatim@font"</span>,
+    <span class="string">"\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
   </span>);
 
-  <span class="macro">Let!</span>(<span class="string">&quot;\\reset@font&quot;</span>, <span class="string">&quot;\\normalfont&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\reset@font"</span>, <span class="string">"\\normalfont"</span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\selectfont&quot;</span>, {
-    <span class="kw">let </span>family = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\f@family&quot;</span>)).to_string();
-    <span class="kw">let </span>series = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\f@series&quot;</span>)).to_string();
-    <span class="kw">let </span>shape  = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\f@shape&quot;</span>)).to_string();
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\selectfont"</span>, {
+    <span class="kw">let </span>family = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\f@family"</span>)).to_string();
+    <span class="kw">let </span>series = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\f@series"</span>)).to_string();
+    <span class="kw">let </span>shape  = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\f@shape"</span>)).to_string();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_family(<span class="kw-2">&amp;</span>family) { <span class="macro">MergeFont!</span>(sh.clone()); }
     <span class="kw">else </span>{
-      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Unrecognized font family {:?}.&quot;</span>, family);
-      <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>, family, message); }
+      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Unrecognized font family {:?}."</span>, family);
+      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, family, message); }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_series(<span class="kw-2">&amp;</span>series) { <span class="macro">MergeFont!</span>(sh.clone()); }
     <span class="kw">else </span>{
-      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Unrecognized font series {:?}.&quot;</span>, series);
-      <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>, series, message); }
+      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Unrecognized font series {:?}."</span>, series);
+      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, series, message); }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_shape(<span class="kw-2">&amp;</span>shape) { <span class="macro">MergeFont!</span>(sh.clone()); }
     <span class="kw">else </span>{
-      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Unrecognized font shape {:?}.&quot;</span>, shape);
-      <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>,shape,message); }
+      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Unrecognized font shape {:?}."</span>, shape);
+      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>,shape,message); }
     <span class="prelude-val">Ok</span>(Vec::new())
   });
 
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\usefont{}{}{}{}&quot;</span>,
-    <span class="string">&quot;\\fontencoding{#1}\\fontfamily{#2}\\fontseries{#3}\\fontshape{#4}\\selectfont&quot;
+    <span class="string">"\\usefont{}{}{}{}"</span>,
+    <span class="string">"\\fontencoding{#1}\\fontfamily{#2}\\fontseries{#3}\\fontshape{#4}\\selectfont"
   </span>);
 
   <span class="comment">// If these series or shapes appear in math, they revert it to roman, medium, upright (?)
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textmd@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
-    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { series =&gt; <span class="string">&quot;medium&quot; </span>}, alias =&gt; <span class="string">&quot;\\textmd&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;m&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textbf@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
-    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, alias =&gt; <span class="string">&quot;\\textbf&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;b&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textrm@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>,
-    mode =&gt; <span class="string">&quot;text&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">&quot;serif&quot; </span>}, alias =&gt; <span class="string">&quot;\\textrm&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cm&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textsf@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
-    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">&quot;sansserif&quot; </span>}, alias =&gt; <span class="string">&quot;\\textsf&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmss&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\texttt@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
-    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">&quot;typewriter&quot; </span>}, alias =&gt; <span class="string">&quot;\\texttt&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmtt&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textup@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
-    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">&quot;upright&quot; </span>}, alias =&gt; <span class="string">&quot;\\textup&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textit@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
-    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">&quot;italic&quot; </span>}, alias =&gt; <span class="string">&quot;\\textit&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;i&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textsl@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
-    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">&quot;slanted&quot; </span>}, alias =&gt; <span class="string">&quot;\\textsl&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;sl&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textsc@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
-    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">&quot;smallcaps&quot; </span>}, alias =&gt; <span class="string">&quot;\\textsc&quot;</span>,
-    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;sc&quot;</span>); });
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textnormal@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt;
-  <span class="string">&quot;text&quot;</span>,   bounded =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">&quot;serif&quot;</span>, series =&gt; <span class="string">&quot;medium&quot;</span>, shape =&gt; <span class="string">&quot;upright&quot;
-  </span>}, alias =&gt; <span class="string">&quot;\\textnormal&quot;</span>,   before_digest =&gt; {
-    <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmtt&quot;</span>);
-    <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;m&quot;</span>);
-    <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>,  <span class="string">&quot;n&quot;</span>); });
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\textmd@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt; <span class="string">"text"</span>,
+    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { series =&gt; <span class="string">"medium" </span>}, alias =&gt; <span class="string">"\\textmd"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@series"</span>, <span class="string">"m"</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\textbf@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt; <span class="string">"text"</span>,
+    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { series =&gt; <span class="string">"bold" </span>}, alias =&gt; <span class="string">"\\textbf"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@series"</span>, <span class="string">"b"</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\textrm@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>,
+    mode =&gt; <span class="string">"text"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">"serif" </span>}, alias =&gt; <span class="string">"\\textrm"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@family"</span>, <span class="string">"cm"</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\textsf@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt; <span class="string">"text"</span>,
+    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">"sansserif" </span>}, alias =&gt; <span class="string">"\\textsf"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@family"</span>, <span class="string">"cmss"</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\texttt@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt; <span class="string">"text"</span>,
+    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">"typewriter" </span>}, alias =&gt; <span class="string">"\\texttt"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@family"</span>, <span class="string">"cmtt"</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\textup@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt; <span class="string">"text"</span>,
+    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">"upright" </span>}, alias =&gt; <span class="string">"\\textup"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@shape"</span>, <span class="string">""</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\textit@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt; <span class="string">"text"</span>,
+    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">"italic" </span>}, alias =&gt; <span class="string">"\\textit"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@shape"</span>, <span class="string">"i"</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\textsl@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt; <span class="string">"text"</span>,
+    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">"slanted" </span>}, alias =&gt; <span class="string">"\\textsl"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@shape"</span>, <span class="string">"sl"</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\textsc@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt; <span class="string">"text"</span>,
+    bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">"smallcaps" </span>}, alias =&gt; <span class="string">"\\textsc"</span>,
+    before_digest =&gt; { <span class="macro">DefMacro!</span>(<span class="string">"\\f@shape"</span>, <span class="string">"sc"</span>); });
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\textnormal@math{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>, mode =&gt;
+  <span class="string">"text"</span>,   bounded =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"
+  </span>}, alias =&gt; <span class="string">"\\textnormal"</span>,   before_digest =&gt; {
+    <span class="macro">DefMacro!</span>(<span class="string">"\\f@family"</span>, <span class="string">"cmtt"</span>);
+    <span class="macro">DefMacro!</span>(<span class="string">"\\f@series"</span>, <span class="string">"m"</span>);
+    <span class="macro">DefMacro!</span>(<span class="string">"\\f@shape"</span>,  <span class="string">"n"</span>); });
 
   <span class="comment">// These really should be robust! which is a source of expand timing issues!
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\textmd{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\textmd@math{#1}\\else{\\mdseries #1}\\fi&quot;</span>,       protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textbf{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\textbf@math{#1}\\else{\\bfseries #1}\\fi&quot;</span>,       protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textrm{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\textrm@math{#1}\\else{\\rmfamily #1}\\fi&quot;</span>,       protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textsf{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\textsf@math{#1}\\else{\\sffamily #1}\\fi&quot;</span>,       protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\texttt{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\texttt@math{#1}\\else{\\ttfamily #1}\\fi&quot;</span>,       protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textup{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\textup@math{#1}\\else{\\upshape #1}\\fi&quot;</span>,        protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textit{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\textit@math{#1}\\else{\\itshape #1}\\fi&quot;</span>,        protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textsl{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\textsl@math{#1}\\else{\\slshape #1}\\fi&quot;</span>,        protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textsc{}&quot;</span>,     <span class="string">&quot;\\ifmmode\\textsc@math{#1}\\else{\\scshape #1}\\fi&quot;</span>,        protected =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textnormal{}&quot;</span>, <span class="string">&quot;\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi&quot;</span>, protected =&gt; <span class="bool-val">true</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\textmd{}"</span>,     <span class="string">"\\ifmmode\\textmd@math{#1}\\else{\\mdseries #1}\\fi"</span>,       protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\textbf{}"</span>,     <span class="string">"\\ifmmode\\textbf@math{#1}\\else{\\bfseries #1}\\fi"</span>,       protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\textrm{}"</span>,     <span class="string">"\\ifmmode\\textrm@math{#1}\\else{\\rmfamily #1}\\fi"</span>,       protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\textsf{}"</span>,     <span class="string">"\\ifmmode\\textsf@math{#1}\\else{\\sffamily #1}\\fi"</span>,       protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\texttt{}"</span>,     <span class="string">"\\ifmmode\\texttt@math{#1}\\else{\\ttfamily #1}\\fi"</span>,       protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\textup{}"</span>,     <span class="string">"\\ifmmode\\textup@math{#1}\\else{\\upshape #1}\\fi"</span>,        protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\textit{}"</span>,     <span class="string">"\\ifmmode\\textit@math{#1}\\else{\\itshape #1}\\fi"</span>,        protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\textsl{}"</span>,     <span class="string">"\\ifmmode\\textsl@math{#1}\\else{\\slshape #1}\\fi"</span>,        protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\textsc{}"</span>,     <span class="string">"\\ifmmode\\textsc@math{#1}\\else{\\scshape #1}\\fi"</span>,        protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\textnormal{}"</span>, <span class="string">"\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi"</span>, protected =&gt; <span class="bool-val">true</span>);
 });
 </code></pre></div></section></main></body></html>

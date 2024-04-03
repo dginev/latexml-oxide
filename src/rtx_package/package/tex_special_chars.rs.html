@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_special_chars.rs`."><title>tex_special_chars.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_special_chars.rs`."><title>tex_special_chars.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -134,125 +136,125 @@
 
   // Special Characters.
   // Try to give them some sense in math...
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\#&quot;</span>, <span class="string">&quot;\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\&amp;&quot;</span>, <span class="string">&quot;\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\#"</span>, <span class="string">"\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\&amp;"</span>, <span class="string">"\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi"</span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\%&quot;</span>,
-    <span class="string">&quot;\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi&quot;
+    <span class="string">"\\%"</span>,
+    <span class="string">"\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi"
   </span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\$&quot;</span>, <span class="string">&quot;\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\$"</span>, <span class="string">"\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi"</span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\_&quot;</span>,
-    <span class="string">&quot;\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi&quot;
+    <span class="string">"\\_"</span>,
+    <span class="string">"\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi"
   </span>);
-  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@text@hash&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;#&quot;</span>),  alias =&gt; <span class="string">&quot;\\#&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@text@amp&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;&amp;&quot;</span>),  alias =&gt; <span class="string">&quot;\\&amp;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@text@percent&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;%&quot;</span>),  alias =&gt; <span class="string">&quot;\\%&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@text@dollar&quot;</span>), <span class="prelude-val">None</span>,  <span class="macro">T_OTHER!</span>(<span class="string">&quot;$&quot;</span>), alias =&gt; <span class="string">&quot;\\$&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@text@underscore&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;_&quot;</span>),  alias =&gt; <span class="string">&quot;\\_&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@text@hash"</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">"#"</span>),  alias =&gt; <span class="string">"\\#"</span>);
+  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@text@amp"</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">"&amp;"</span>),  alias =&gt; <span class="string">"\\&amp;"</span>);
+  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@text@percent"</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">"%"</span>),  alias =&gt; <span class="string">"\\%"</span>);
+  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@text@dollar"</span>), <span class="prelude-val">None</span>,  <span class="macro">T_OTHER!</span>(<span class="string">"$"</span>), alias =&gt; <span class="string">"\\$"</span>);
+  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@text@underscore"</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">"_"</span>),  alias =&gt; <span class="string">"\\_"</span>);
 
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@hash&quot;</span>,  <span class="prelude-val">None</span>, <span class="string">&quot;#&quot;</span>, alias =&gt; <span class="string">&quot;\\#&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@amp&quot;</span>,   <span class="prelude-val">None</span>, <span class="string">&quot;&amp;&quot;</span>, role  =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;and&quot;</span>, alias =&gt; <span class="string">&quot;\\&amp;&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@percent&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;%&quot;</span>, role  =&gt; <span class="string">&quot;POSTFIX&quot;</span>, meaning =&gt; <span class="string">&quot;percent&quot;</span>, alias =&gt; <span class="string">&quot;\\%&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@dollar&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\\$&quot;</span>, role =&gt; <span class="string">&quot;OPERATOR&quot;</span>, meaning =&gt; <span class="string">&quot;currency-dollar&quot;</span>,
-    alias =&gt; <span class="string">&quot;\\$&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@underscore&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;_&quot;</span>, alias =&gt; <span class="string">&quot;\\_&quot;</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@hash"</span>,  <span class="prelude-val">None</span>, <span class="string">"#"</span>, alias =&gt; <span class="string">"\\#"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@amp"</span>,   <span class="prelude-val">None</span>, <span class="string">"&amp;"</span>, role  =&gt; <span class="string">"ADDOP"</span>, meaning =&gt; <span class="string">"and"</span>, alias =&gt; <span class="string">"\\&amp;"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@percent"</span>, <span class="prelude-val">None</span>, <span class="string">"%"</span>, role  =&gt; <span class="string">"POSTFIX"</span>, meaning =&gt; <span class="string">"percent"</span>, alias =&gt; <span class="string">"\\%"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@dollar"</span>, <span class="prelude-val">None</span>, <span class="string">"\\$"</span>, role =&gt; <span class="string">"OPERATOR"</span>, meaning =&gt; <span class="string">"currency-dollar"</span>,
+    alias =&gt; <span class="string">"\\$"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@underscore"</span>, <span class="prelude-val">None</span>, <span class="string">"_"</span>, alias =&gt; <span class="string">"\\_"</span>);
 
   <span class="comment">// Discretionary times; just treat as invisible ?
   // INVISIBLE TIMES (or MULTIPLICATION SIGN = 00D7)
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\*&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2062}&quot;</span>, role =&gt; <span class="string">&quot;MULOP&quot;</span>, name =&gt; <span class="string">&quot;&quot;</span>, meaning =&gt; <span class="string">&quot;times&quot;</span>);
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\*"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2062}"</span>, role =&gt; <span class="string">"MULOP"</span>, name =&gt; <span class="string">""</span>, meaning =&gt; <span class="string">"times"</span>);
 
-  <span class="comment">// These 3 should have some `name&#39; assigned ... but what???
+  <span class="comment">// These 3 should have some `name' assigned ... but what???
 
   // Is XMWrap the right thing to wrap with (instead of XMArg)?
-  // We can&#39;t really assume that the stuff inside is sensible math.
-  // NOTE that \mathord and \mathbin aren&#39;t really right here.
+  // We can't really assume that the stuff inside is sensible math.
+  // NOTE that \mathord and \mathbin aren't really right here.
   // We need a finer granularity than TeX does: an ORD could be several things,
   // a BIN could be a MULOP or ADDOP.
-  // AND, rarely, they&#39;re empty.... Is it wrong to drop them?
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathord{}&quot;</span>, <span class="string">&quot;?#1(&lt;ltx:XMWrap role=&#39;ID&#39;   &gt;#1&lt;/ltx:XMWrap&gt;)()&quot;</span>, bounded =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathop{}&quot;</span>, <span class="string">&quot;?#1(&lt;ltx:XMWrap role=&#39;BIGOP&#39; scriptpos=&#39;#scriptpos&#39;&gt;#1&lt;/ltx:XMWrap&gt;)()&quot;</span>,
+  // AND, rarely, they're empty.... Is it wrong to drop them?
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\mathord{}"</span>, <span class="string">"?#1(&lt;ltx:XMWrap role='ID'   &gt;#1&lt;/ltx:XMWrap&gt;)()"</span>, bounded =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\mathop{}"</span>, <span class="string">"?#1(&lt;ltx:XMWrap role='BIGOP' scriptpos='#scriptpos'&gt;#1&lt;/ltx:XMWrap&gt;)()"</span>,
     bounded =&gt; <span class="bool-val">true</span>); <span class="comment">// TODO: , properties =&gt; { scriptpos =&gt; \&amp;doScriptpos });
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathbin{}&quot;</span>, <span class="string">&quot;?#1(&lt;ltx:XMWrap role=&#39;BINOP&#39;&gt;#1&lt;/ltx:XMWrap&gt;)()&quot;</span>, bounded =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathrel{}&quot;</span>, <span class="string">&quot;?#1(&lt;ltx:XMWrap role=&#39;RELOP&#39;&gt;#1&lt;/ltx:XMWrap&gt;)()&quot;</span>, bounded =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathopen{}&quot;</span>, <span class="string">&quot;?#1(&lt;ltx:XMWrap role=&#39;OPEN&#39; &gt;#1&lt;/ltx:XMWrap&gt;)()&quot;</span>, bounded =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathclose{}&quot;</span>, <span class="string">&quot;?#1(&lt;ltx:XMWrap role=&#39;CLOSE&#39;&gt;#1&lt;/ltx:XMWrap&gt;)()&quot;</span>, bounded =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathpunct{}&quot;</span>, <span class="string">&quot;?#1(&lt;ltx:XMWrap role=&#39;PUNCT&#39;&gt;#1&lt;/ltx:XMWrap&gt;)()&quot;</span>, bounded =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathinner{}&quot;</span>, <span class="string">&quot;?#1(&lt;ltx:XMWrap role=&#39;ATOM&#39;&gt;#1&lt;/ltx:XMWrap&gt;)()&quot;</span>,  bounded =&gt; <span class="bool-val">true</span>);
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\mathbin{}"</span>, <span class="string">"?#1(&lt;ltx:XMWrap role='BINOP'&gt;#1&lt;/ltx:XMWrap&gt;)()"</span>, bounded =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\mathrel{}"</span>, <span class="string">"?#1(&lt;ltx:XMWrap role='RELOP'&gt;#1&lt;/ltx:XMWrap&gt;)()"</span>, bounded =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\mathopen{}"</span>, <span class="string">"?#1(&lt;ltx:XMWrap role='OPEN' &gt;#1&lt;/ltx:XMWrap&gt;)()"</span>, bounded =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\mathclose{}"</span>, <span class="string">"?#1(&lt;ltx:XMWrap role='CLOSE'&gt;#1&lt;/ltx:XMWrap&gt;)()"</span>, bounded =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\mathpunct{}"</span>, <span class="string">"?#1(&lt;ltx:XMWrap role='PUNCT'&gt;#1&lt;/ltx:XMWrap&gt;)()"</span>, bounded =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\mathinner{}"</span>, <span class="string">"?#1(&lt;ltx:XMWrap role='ATOM'&gt;#1&lt;/ltx:XMWrap&gt;)()"</span>,  bounded =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// If an XMWrap (presumably from \mathop, \mathbin, etc)
   // has multiple children, ALL are XMTok, within a restricted set of roles,
   // we want to concatenate the text content into a single XMTok.
-  </span><span class="macro">DefMathRewrite!</span>(xpath =&gt; <span class="macro">concat!</span>(<span class="string">&quot;descendant-or-self::ltx:XMWrap[&quot;</span>,
-    <span class="comment">// Only XMWrap&#39;s from the above class of operators
-    </span><span class="string">&quot;(@role=&#39;OP&#39; or @role=&#39;BIGOP&#39; or @role=&#39;RELOP&#39; &quot;</span>,
-    <span class="string">&quot;or @role=&#39;ADDOP&#39; or @role=&#39;MULOP&#39; or @role=&#39;BINOP&#39;&quot;</span>,
-    <span class="string">&quot;or @role=&#39;OPEN&#39; or @role=&#39;CLOSE&#39;)&quot;</span>,
-    <span class="string">&quot; and count(child::*) &gt; 1 &quot;</span>,
+  </span><span class="macro">DefMathRewrite!</span>(xpath =&gt; <span class="macro">concat!</span>(<span class="string">"descendant-or-self::ltx:XMWrap["</span>,
+    <span class="comment">// Only XMWrap's from the above class of operators
+    </span><span class="string">"(@role='OP' or @role='BIGOP' or @role='RELOP' "</span>,
+    <span class="string">"or @role='ADDOP' or @role='MULOP' or @role='BINOP'"</span>,
+    <span class="string">"or @role='OPEN' or @role='CLOSE')"</span>,
+    <span class="string">" and count(child::*) &gt; 1 "</span>,
     <span class="comment">// with only XMTok as children with the roles in (roughly) the same set
-    </span><span class="string">&quot; and not(child::*[local-name() != &#39;XMTok&#39;])&quot;</span>,
-    <span class="string">&quot; and not(ltx:XMTok[&quot;</span>,
-    <span class="string">&quot;@role !=&#39;OP&#39; and @role!=&#39;BIGOP&#39; and @role!=&#39;RELOP&#39; and role!=&#39;METARELOP&#39;&quot;</span>,
-    <span class="string">&quot;and @role!=&#39;ADDOP&#39; and @role!=&#39;MULOP&#39; and @role!=&#39;BINOP&#39;&quot;</span>,
-    <span class="string">&quot;and @role!=&#39;OPEN&#39; and @role!=&#39;CLOSE&#39;&quot;</span>,
-    <span class="string">&quot;])]&quot;</span>),
+    </span><span class="string">" and not(child::*[local-name() != 'XMTok'])"</span>,
+    <span class="string">" and not(ltx:XMTok["</span>,
+    <span class="string">"@role !='OP' and @role!='BIGOP' and @role!='RELOP' and role!='METARELOP'"</span>,
+    <span class="string">"and @role!='ADDOP' and @role!='MULOP' and @role!='BINOP'"</span>,
+    <span class="string">"and @role!='OPEN' and @role!='CLOSE'"</span>,
+    <span class="string">"])]"</span>),
   replace =&gt; sub[document, nodes] {
     <span class="kw">let </span>node = nodes.pop().unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>replacement = node.clone();
     <span class="kw">let </span>content     = node.get_content();
     replacement.append_text(<span class="kw-2">&amp;</span>content)<span class="question-mark">?</span>;
-    replacement.set_name(<span class="string">&quot;ltx:XMTok&quot;</span>)<span class="question-mark">?</span>;
+    replacement.set_name(<span class="string">"ltx:XMTok"</span>)<span class="question-mark">?</span>;
     document.get_node_mut().add_child(<span class="kw-2">&amp;mut </span>replacement)<span class="question-mark">?</span>;
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\hiderel{}&quot;</span>, <span class="string">&quot;#1&quot;</span>);    <span class="comment">// Just ignore, for now...
+  <span class="macro">DefMacro!</span>(<span class="string">"\\hiderel{}"</span>, <span class="string">"#1"</span>);    <span class="comment">// Just ignore, for now...
 
   // RIGHTWARDS ARROW??? a bit more explicitly relation-like?
-  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\to&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2192}&quot;</span>, role =&gt; <span class="string">&quot;ARROW&quot;</span>);
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\to"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2192}"</span>, role =&gt; <span class="string">"ARROW"</span>);
 
-  <span class="comment">// TeX&#39;s ligatures handled by rewrite regexps.
+  <span class="comment">// TeX's ligatures handled by rewrite regexps.
   // Note: applied in reverse order of definition (latest defined applied first!)
   // Note also, these area only applied in text content, not in attributes!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@@endash&quot;</span>, {
-    Tbox::new(arena::pin_static(<span class="string">&quot;\u{2013}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@@endash&quot;</span>)), HashMap::default()); });
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@@emdash&quot;</span>, {
-    Tbox::new(arena::pin_static(<span class="string">&quot;\u{2014}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@@emdash&quot;</span>)), HashMap::default()); });
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@@endash"</span>, {
+    Tbox::new(arena::pin_static(<span class="string">"\u{2013}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@endash"</span>)), HashMap::default()); });
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@@emdash"</span>, {
+    Tbox::new(arena::pin_static(<span class="string">"\u{2014}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@emdash"</span>)), HashMap::default()); });
 
 
   <span class="comment">// EN DASH (NOTE: With digits before &amp; aft =&gt; \N{FIGURE DASH})
-  </span><span class="macro">DefLigature!</span>(<span class="string">r&quot;--&quot;</span>, <span class="string">&quot;\u{2013}&quot;</span>,
-    fontTest =&gt; sub[arg] { arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>)) != <span class="string">&quot;typewriter&quot; </span>});
+  </span><span class="macro">DefLigature!</span>(<span class="string">r"--"</span>, <span class="string">"\u{2013}"</span>,
+    fontTest =&gt; sub[arg] { arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>)) != <span class="string">"typewriter" </span>});
   <span class="comment">// EM DASH
-  </span><span class="macro">DefLigature!</span>(<span class="string">r&quot;---&quot;</span>, <span class="string">&quot;\u{2014}&quot;</span>, fontTest =&gt; sub[arg] {arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>)) != <span class="string">&quot;typewriter&quot; </span>});
+  </span><span class="macro">DefLigature!</span>(<span class="string">r"---"</span>, <span class="string">"\u{2014}"</span>, fontTest =&gt; sub[arg] {arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>)) != <span class="string">"typewriter" </span>});
   <span class="comment">// Ligatures for doubled single left &amp; right quotes to convert to double quotes
   // [should ligatures be part of a font, in the first place? (it is in TeX!)
-  </span><span class="macro">DefLigature!</span>(<span class="string">&quot;\u{2018}\u{2018}&quot;</span>, <span class="string">&quot;\u{201C}&quot;</span>, fontTest =&gt; sub[arg] {
-    <span class="kw">let </span>family = arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>));
-    <span class="kw">if </span>family != <span class="string">&quot;typewriter&quot; </span>{
-      <span class="kw">let </span>encoding = arg.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;OT1&quot;</span>));
-      encoding == <span class="string">&quot;OT1&quot; </span>|| encoding == <span class="string">&quot;T1&quot; </span>} <span class="kw">else </span>{<span class="bool-val">false</span>} });
-  <span class="macro">DefLigature!</span>(<span class="string">&quot;\u{2019}\u{2019}&quot;</span>, <span class="string">&quot;\u{201D}&quot;</span>, fontTest =&gt; sub[arg] {
-    <span class="kw">let </span>family = arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>));
-    <span class="kw">if </span>family != <span class="string">&quot;typewriter&quot; </span>{
-      <span class="kw">let </span>encoding = arg.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;OT1&quot;</span>));
-      encoding == <span class="string">&quot;OT1&quot; </span>|| encoding == <span class="string">&quot;T1&quot; </span>} <span class="kw">else </span>{<span class="bool-val">false</span>} });
+  </span><span class="macro">DefLigature!</span>(<span class="string">"\u{2018}\u{2018}"</span>, <span class="string">"\u{201C}"</span>, fontTest =&gt; sub[arg] {
+    <span class="kw">let </span>family = arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>));
+    <span class="kw">if </span>family != <span class="string">"typewriter" </span>{
+      <span class="kw">let </span>encoding = arg.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">"OT1"</span>));
+      encoding == <span class="string">"OT1" </span>|| encoding == <span class="string">"T1" </span>} <span class="kw">else </span>{<span class="bool-val">false</span>} });
+  <span class="macro">DefLigature!</span>(<span class="string">"\u{2019}\u{2019}"</span>, <span class="string">"\u{201D}"</span>, fontTest =&gt; sub[arg] {
+    <span class="kw">let </span>family = arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>));
+    <span class="kw">if </span>family != <span class="string">"typewriter" </span>{
+      <span class="kw">let </span>encoding = arg.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">"OT1"</span>));
+      encoding == <span class="string">"OT1" </span>|| encoding == <span class="string">"T1" </span>} <span class="kw">else </span>{<span class="bool-val">false</span>} });
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\TeX&quot;</span>, <span class="string">r###&quot;&lt;ltx:text class=&#39;ltx_TeX_logo&#39;
-    cssstyle=&#39;letter-spacing:-0.2em; margin-right:0.2em&#39;&gt;T&lt;ltx:text yoffset=&#39;-0.4ex&#39;&gt;E&lt;/ltx:text&gt;X&lt;/ltx:text&gt;&quot;###</span>,
-    sizer =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>((<span class="macro">Dimension!</span>(<span class="string">&quot;1.9em&quot;</span>), <span class="macro">Dimension!</span>(<span class="string">&quot;1.6ex&quot;</span>), <span class="macro">Dimension!</span>(<span class="string">&quot;0.5ex&quot;</span>))) });
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\i&quot;</span>, <span class="string">&quot;\u{0131}&quot;</span>); <span class="comment">// LATIN SMALL LETTER DOTLESS I
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\j&quot;</span>, <span class="string">&quot;\u{0237}&quot;</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\TeX"</span>, <span class="string">r###"&lt;ltx:text class='ltx_TeX_logo'
+    cssstyle='letter-spacing:-0.2em; margin-right:0.2em'&gt;T&lt;ltx:text yoffset='-0.4ex'&gt;E&lt;/ltx:text&gt;X&lt;/ltx:text&gt;"###</span>,
+    sizer =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>((<span class="macro">Dimension!</span>(<span class="string">"1.9em"</span>), <span class="macro">Dimension!</span>(<span class="string">"1.6ex"</span>), <span class="macro">Dimension!</span>(<span class="string">"0.5ex"</span>))) });
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\i"</span>, <span class="string">"\u{0131}"</span>); <span class="comment">// LATIN SMALL LETTER DOTLESS I
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\j"</span>, <span class="string">"\u{0237}"</span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\buildrel Until:\\over {}&quot;</span>,
-    <span class="string">&quot;&lt;ltx:XMApp role=&#39;RELOP&#39;&gt;\
-      &lt;ltx:XMTok role=&#39;SUPERSCRIPTOP&#39; scriptpos=&#39;#scriptpos&#39;/&gt;\
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\buildrel Until:\\over {}"</span>,
+    <span class="string">"&lt;ltx:XMApp role='RELOP'&gt;\
+      &lt;ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/&gt;\
       &lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;\
       &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;\
-      &lt;/ltx:XMApp&gt;&quot;
+      &lt;/ltx:XMApp&gt;"
     </span><span class="comment">// TODO
-    // properties =&gt; { scriptpos =&gt; sub { &quot;mid&quot; . $_[0]-&gt;getBoxingLevel; } }
+    // properties =&gt; { scriptpos =&gt; sub { "mid" . $_[0]-&gt;getBoxingLevel; } }
   </span>);
 
 });

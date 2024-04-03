@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/pdftex.rs`."><title>pdftex.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/pdftex.rs`."><title>pdftex.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -249,132 +251,132 @@
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">// A rough initial draft of the extra commands &amp; registers defined in pdfTeX.
 
-  // See the pdfTeX User&#39;s Manual
+  // See the pdfTeX User's Manual
 
   // Integer Registers
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfoutput&quot;                </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfminorversion&quot;          </span>=&gt; Number::new(<span class="number">4</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfoptionpdfminorversion&quot; </span>=&gt; Number::new(<span class="number">4</span>)); <span class="comment">// obsolete name
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfcompresslevel&quot;         </span>=&gt; Number::new(<span class="number">9</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfobjcompresslevel&quot;      </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfdecimaldigits&quot;         </span>=&gt; Number::new(<span class="number">4</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfimageresolution&quot;       </span>=&gt; Number::new(<span class="number">72</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpkresolution&quot;          </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdftracingfonts&quot;          </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfuniqueresname&quot;         </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfadjustspacing&quot;         </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfprotrudechars&quot;         </span>=&gt; Number::new(<span class="number">0</span>));
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\pdfoutput"                </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfminorversion"          </span>=&gt; Number::new(<span class="number">4</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfoptionpdfminorversion" </span>=&gt; Number::new(<span class="number">4</span>)); <span class="comment">// obsolete name
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\pdfcompresslevel"         </span>=&gt; Number::new(<span class="number">9</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfobjcompresslevel"      </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfdecimaldigits"         </span>=&gt; Number::new(<span class="number">4</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfimageresolution"       </span>=&gt; Number::new(<span class="number">72</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfpkresolution"          </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdftracingfonts"          </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfuniqueresname"         </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfadjustspacing"         </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfprotrudechars"         </span>=&gt; Number::new(<span class="number">0</span>));
   <span class="comment">// \efcode &lt;font&gt; &lt;8bitnumber&gt;  =&gt; &lt;integer&gt;
   // \lpfcode &lt;font&gt; &lt;8bitnumber&gt; =&gt; &lt;integer&gt;
   // \rpfcode &lt;font&gt; &lt;8bitnumber&gt; =&gt; &lt;integer&gt;
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\efcode Token Number&quot;</span>, Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\lpcode Token Number&quot;</span>, Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\rpcode Token Number&quot;</span>, Number::new(<span class="number">0</span>));
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\efcode Token Number"</span>, Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\lpcode Token Number"</span>, Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\rpcode Token Number"</span>, Number::new(<span class="number">0</span>));
 
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfforcepagebox&quot;                </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfoptionalwaysusepdfpagebox&quot;   </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfinclusionerrorlevel&quot;         </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfoptionalinclusionerrorlevel&quot; </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfimagehicolor&quot;                </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfimageapplygamma&quot;             </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfgamma&quot;                       </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfimagegamma&quot;                  </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfdraftmode&quot;                   </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfadjustinterwordglue&quot;          </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfappendkern&quot;                   </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfgentounicode&quot;                 </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfinclusioncopyfonts&quot;           </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfinfoomitdate&quot;                 </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpagebox&quot;                      </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfprependkern&quot;                  </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfsuppressptexinfo&quot;             </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfsuppresswarningdupdest&quot;       </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfsuppresswarningdupmap&quot;        </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfsuppresswarningpagegroup&quot;     </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfforcepagebox"                </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfoptionalwaysusepdfpagebox"   </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfinclusionerrorlevel"         </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfoptionalinclusionerrorlevel" </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfimagehicolor"                </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfimageapplygamma"             </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfgamma"                       </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfimagegamma"                  </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfdraftmode"                   </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfadjustinterwordglue"          </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfappendkern"                   </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfgentounicode"                 </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfinclusioncopyfonts"           </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfinfoomitdate"                 </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfpagebox"                      </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfprependkern"                  </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfsuppressptexinfo"             </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfsuppresswarningdupdest"       </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfsuppresswarningdupmap"        </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfsuppresswarningpagegroup"     </span>=&gt; Number::new(<span class="number">0</span>));
 
   <span class="comment">// Dimen Registers
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfhorigin&quot;         </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;1in&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfvorigin&quot;         </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;1in&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpagewidth&quot;       </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpageheight&quot;      </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflinkmargin&quot;      </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfdestmargin&quot;      </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfthreadmargin&quot;    </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpxdimen&quot;         </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfeachlinedepth&quot;   </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfeachlineheight&quot;  </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdffirstlineheight&quot; </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfignoreddimen&quot;    </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastlinedepth&quot;   </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">&quot;0pt&quot;</span>));
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\pdfhorigin"         </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1in"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfvorigin"         </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1in"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfpagewidth"       </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfpageheight"      </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflinkmargin"      </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfdestmargin"      </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfthreadmargin"    </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfpxdimen"         </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfeachlinedepth"   </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfeachlineheight"  </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdffirstlineheight" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfignoreddimen"    </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastlinedepth"   </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
 
   <span class="comment">// Token Registers
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpagesattr&quot;     </span>=&gt; <span class="macro">Tokens!</span>());
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpageattr&quot;      </span>=&gt; <span class="macro">Tokens!</span>());
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpageresources&quot; </span>=&gt; <span class="macro">Tokens!</span>());
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfpkmode&quot;        </span>=&gt; <span class="macro">Tokens!</span>());
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\pdfpagesattr"     </span>=&gt; <span class="macro">Tokens!</span>());
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfpageattr"      </span>=&gt; <span class="macro">Tokens!</span>());
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfpageresources" </span>=&gt; <span class="macro">Tokens!</span>());
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfpkmode"        </span>=&gt; <span class="macro">Tokens!</span>());
 
   <span class="comment">// Expandable Commands
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdftexrevision&quot;</span>, <span class="string">&quot;19&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdftexbanner&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfcreationdate&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfpageref Number&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfxformname Number&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdffontname Token&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdffontobjnum Token&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdffontsize Token&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfincludechars Token {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\leftmarginkern Number&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\rightmarginkern Number&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfescapestring {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfescapename {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfescapehex {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfunescapehex {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="comment">// DefMacro!(&quot;\\ifpdfprimitive {}&quot;,None);
-  // DefMacro!(&quot;\\ifpdfabsnum Number&quot;&quot;,None);
-  // DefMacro!(&quot;\\ifpdfabsdim Dimension&quot;&quot;,None);
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfuniformdeviate Number Token&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfnormaldeviate Token&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfmdfivesum Number {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdf@mdfivesum Number {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdf@filemdfivesum Number {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdffilesize{}&quot;</span>, sub[(file)] {
-    <span class="comment">// used in expl3&#39;s \__file_full_name:n , among others
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdftexrevision"</span>, <span class="string">"19"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdftexbanner"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfcreationdate"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfpageref Number"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfxformname Number"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdffontname Token"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdffontobjnum Token"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdffontsize Token"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfincludechars Token {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\leftmarginkern Number"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\rightmarginkern Number"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfescapestring {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfescapename {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfescapehex {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfunescapehex {}"</span>, <span class="prelude-val">None</span>);
+  <span class="comment">// DefMacro!("\\ifpdfprimitive {}",None);
+  // DefMacro!("\\ifpdfabsnum Number"",None);
+  // DefMacro!("\\ifpdfabsdim Dimension"",None);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfuniformdeviate Number Token"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfnormaldeviate Token"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfmdfivesum Number {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdf@mdfivesum Number {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdf@filemdfivesum Number {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdffilesize{}"</span>, sub[(file)] {
+    <span class="comment">// used in expl3's \__file_full_name:n , among others
     </span><span class="kw">let </span>filepath = <span class="macro">Expand!</span>(file).to_string();
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = find_file(<span class="kw-2">&amp;</span>filepath,<span class="prelude-val">None</span>) {
-      <span class="macro">unimplemented!</span>();
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(_path) = find_file(<span class="kw-2">&amp;</span>filepath,<span class="prelude-val">None</span>) {
+      <span class="macro">todo!</span>();
       <span class="comment">// let stat = stat $path;
       // (defined $stat[7]) ? Explode($stat[7]) : ();
     </span>} <span class="kw">else </span>{
       <span class="macro">Tokens!</span>() } });
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdffilemoddate {}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdffiledump {}&quot;</span>,<span class="prelude-val">None</span>);
-  <span class="comment">// DefMacro(&quot;&quot;\pdfcolorstackinit {}&quot;,None);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdffilemoddate {}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdffiledump {}"</span>,<span class="prelude-val">None</span>);
+  <span class="comment">// DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
-  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdftexversion&quot;           </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastobj&quot;              </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastxform&quot;            </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastximage&quot;           </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastximagepages&quot;      </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastannot&quot;            </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastlink&quot;             </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastxpos&quot;             </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastypos&quot;             </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastdemerits&quot;         </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfelapsedtime&quot;          </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfrandomseed&quot;           </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfshellescape&quot;          </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdflastximagecolordepth&quot; </span>=&gt; Number::new(<span class="number">0</span>));
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\pdfretval&quot;               </span>=&gt; Number::new(<span class="number">0</span>));
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\pdftexversion"           </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastobj"              </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastxform"            </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastximage"           </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastximagepages"      </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastannot"            </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastlink"             </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastxpos"             </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastypos"             </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastdemerits"         </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfelapsedtime"          </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfrandomseed"           </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfshellescape"          </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastximagecolordepth" </span>=&gt; Number::new(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfretval"               </span>=&gt; Number::new(<span class="number">0</span>));
 
 
   <span class="comment">// \pdfximage [ image attr spec ] general text (h, v, m)
   // \pdfrefximage object number (h, v, m)
   // \pdfannot annot type spec (h, v, m)
   // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\pdfstartlink&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfstartlink"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// \pdfendlink (h, m)
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\pdfendlink&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfendlink"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// \pdfoutline outline spec (h, v, m)
   // \pdfdest dest spec (h, v, m)
   // \pdfthread thread spec (h, v, m)
@@ -383,50 +385,50 @@
   // \pdfsavepos (h, v, m)
 
   // See lxRDFa for ideas how this info might be used!
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfinfo{}&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfinfo{}"</span>, <span class="prelude-val">None</span>);
 
   <span class="comment">// Ugh, what a mess of ugly syntax....
   </span><span class="macro">DefParameterType!</span>(OpenActionSpecification, reader =&gt; <span class="macro">reader!</span>(_args, _extra, {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(_key) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;openaction&quot;</span>])<span class="question-mark">? </span>{
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(_action) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;user&quot;</span>, <span class="string">&quot;goto&quot;</span>])<span class="question-mark">? </span>{
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(_key) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"openaction"</span>])<span class="question-mark">? </span>{
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(_action) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"user"</span>, <span class="string">"goto"</span>])<span class="question-mark">? </span>{
         <span class="comment">// etc....
       </span>} } }), optional =&gt; <span class="bool-val">true</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfcatalog{} OpenActionSpecification&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfnames{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdftrailer{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfmapfile{}&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfmapline{}&quot;</span>, <span class="string">&quot;&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfcatalog{} OpenActionSpecification"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfnames{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdftrailer{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfmapfile{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfmapline{}"</span>, <span class="string">""</span>);
   <span class="comment">// \pdffontattr font general text
   // \pdffontexpand font expand spec
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\quitvmode&quot;</span>, <span class="string">&quot;&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\quitvmode"</span>, <span class="string">""</span>);
   <span class="comment">// \pdfliteral [ pdfliteral spec ] general text (h, v, m)
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// \special pdfspecial spec
   // \pdfresettimer
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\pdfresettimer&quot;</span>,           <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\pdfresettimerresettimer&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimer"</span>,           <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimerresettimer"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// \pdfsetrandomseed number
   // \pdfnoligatures font
   // \pdfprimitive control sequence
   // TODO: https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfprimitive DefToken&quot;</span>, <span class="string">&quot;#1&quot;</span>); <span class="comment">// we can just ignore the advanced effects for now.
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfprimitive DefToken"</span>, <span class="string">"#1"</span>); <span class="comment">// we can just ignore the advanced effects for now.
 
   // \pdfcolorstack stack number stack action general text
   //TODO:
-  // DefPrimitive(&#39;\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current&#39;, sub {
+  // DefPrimitive('\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current', sub {
   //   # for now, carefully read and discard all arguments
   //   my ($stomach, $number, $set, $push, $pop, $current) = @_;
   //   return if ($pop);
   //   my $gullet = $stomach-&gt;getGullet;
   //   $gullet-&gt;skipSpaces;
-  //   my $general_text_param = LookupMapping(&#39;PARAMETER_TYPES&#39;, &#39;GeneralText&#39;);
+  //   my $general_text_param = LookupMapping('PARAMETER_TYPES', 'GeneralText');
   //   my $discard            = &amp;{ $$general_text_param{reader} }($gullet);
   //   return; });
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfsetmatrix&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfsave&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfrestore&quot;</span>, <span class="string">&quot;&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfsetmatrix"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfsave"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfrestore"</span>, <span class="string">""</span>);
 
   <span class="comment">// general text → { balanced text }
   // attr spec → attr general text
@@ -476,16 +478,16 @@
   // pdfspecial modifier → direct:
   // stack action → set | push | pop | current
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\expanded Expanded&quot;</span>, <span class="string">&quot;#1&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\expanded Expanded"</span>, <span class="string">"#1"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfstrcmp Expanded Expanded&quot;</span>, sub[(first,second)] {
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfstrcmp Expanded Expanded"</span>, sub[(first,second)] {
     <span class="kw">match </span>first.to_string().cmp(<span class="kw-2">&amp;</span>second.to_string()) {
-     Ordering::Greater =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;1&quot;</span>)),
-     Ordering::Equal =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;0&quot;</span>)),
-     Ordering::Less =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;-&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;1&quot;</span>))
+     Ordering::Greater =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"1"</span>)),
+     Ordering::Equal =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)),
+     Ordering::Less =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"-"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"1"</span>))
     }
   });
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\pdfglyphtounicode{}{}&quot;</span>, <span class="string">&quot;&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfglyphtounicode{}{}"</span>, <span class="string">""</span>);
 
 });
 </code></pre></div></section></main></body></html>

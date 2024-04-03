@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/util/pathname.rs`."><title>pathname.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/util/pathname.rs`."><title>pathname.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -362,17 +364,17 @@
   </span><span class="kw">pub </span>installation_subdir: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="kw">static </span>LITERAL_PROTOCOL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;literal:&quot;</span>;
-<span class="kw">static </span>HOME_TILDE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;~&quot;</span>;
+<span class="kw">static </span>LITERAL_PROTOCOL: <span class="kw-2">&amp;</span>str = <span class="string">"literal:"</span>;
+<span class="kw">static </span>HOME_TILDE: <span class="kw-2">&amp;</span>str = <span class="string">"~"</span>;
 <span class="kw">static </span>HOME_PATH: Lazy&lt;String&gt; = Lazy::new(|| <span class="kw">match </span>dirs::home_dir() {
   <span class="prelude-val">Some</span>(val) =&gt; val.to_string_lossy().to_string(),
-  <span class="kw">_ </span>=&gt; <span class="macro">s!</span>(<span class="string">&quot;~&quot;</span>),
+  <span class="kw">_ </span>=&gt; <span class="macro">s!</span>(<span class="string">"~"</span>),
 });
-<span class="kw">static </span>PROTOCOL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;(https|http|ftp):&quot;</span>).unwrap());
+<span class="kw">static </span>PROTOCOL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"(https|http|ftp):"</span>).unwrap());
 <span class="kw">static </span>PATHNAME_IS_NASTY_RE: Lazy&lt;Regex&gt; =
-  Lazy::new(|| Regex::new(<span class="string">r&quot;[^\w\-_+=/\\\.~\s:]&quot;</span>).unwrap());
+  Lazy::new(|| Regex::new(<span class="string">r"[^\w\-_+=/\\\.~\s:]"</span>).unwrap());
 <span class="comment">// TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
-</span><span class="kw">static </span>URL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\w+://(.+)/([^/]+)$&quot;</span>).unwrap());
+</span><span class="kw">static </span>URL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\w+://(.+)/([^/]+)$"</span>).unwrap());
 
 <span class="kw">static </span>KPSE: Lazy&lt;Mutex&lt;Kpaths&gt;&gt; = Lazy::new(|| Mutex::new(Kpaths::new().unwrap()));
 
@@ -381,11 +383,11 @@
 //       match exe_path.as_path().parent() {
 //         Some(_) =&gt; Vec::new(),
 //         // Some(p) =&gt; vec![
-//         //                 p.to_string_lossy().to_string() + &quot;.&quot;,
-//         //                 p.to_string_lossy().to_string() + &quot;./..&quot;,
-//         //                 p.to_string_lossy().to_string() + &quot;./../..&quot;,
-//         //                 p.to_string_lossy().to_string() + &quot;./../../..&quot;,
-//         //                 p.to_string_lossy().to_string() + &quot;./../../../..&quot;],
+//         //                 p.to_string_lossy().to_string() + ".",
+//         //                 p.to_string_lossy().to_string() + "./..",
+//         //                 p.to_string_lossy().to_string() + "./../..",
+//         //                 p.to_string_lossy().to_string() + "./../../..",
+//         //                 p.to_string_lossy().to_string() + "./../../../.."],
 
 // TODO: HACK, see note on INSTALLDIRS further down
 //         None =&gt; Vec::new()
@@ -395,12 +397,12 @@
 //   };
 
 // TODO:
-// grep { (-f &quot;$_.pm&quot;) &amp;&amp; (-d $_) }
-// map { pathname_canonical($_ . $SEP . &#39;LaTeXML&#39;) } @INC;    # [CONSTANT]
+// grep { (-f "$_.pm") &amp;&amp; (-d $_) }
+// map { pathname_canonical($_ . $SEP . 'LaTeXML') } @INC;    # [CONSTANT]
 
 </span><span class="doccomment">/// checks if the path is a conforming URL string
 </span><span class="kw">pub fn </span>is_url(path: <span class="kw-2">&amp;</span>str) -&gt; bool { URL_RE.is_match(path) }
-<span class="doccomment">/// checks if the path starts with the &quot;literal:&quot; protocol
+<span class="doccomment">/// checks if the path starts with the "literal:" protocol
 </span><span class="kw">pub fn </span>is_literaldata(data: <span class="kw-2">&amp;</span>str) -&gt; bool { data.starts_with(LITERAL_PROTOCOL) }
 
 <span class="doccomment">/// check whether a pathname is reloadable as a TeX definition
@@ -409,7 +411,7 @@
   <span class="comment">// babel.sty exception:
   // we know the same .ldf file may be reloaded with a different option,
   // to load an adjacently defined language, so allow that.
-  </span>ext == <span class="string">&quot;ldf&quot;
+  </span>ext == <span class="string">"ldf"
 </span>}
 <span class="doccomment">/// absolute paths start with the filesystem root - check if this is one
 </span><span class="kw">pub fn </span>is_absolute(path: <span class="kw-2">&amp;</span>str) -&gt; bool { Path::new(<span class="kw-2">&amp;</span>canonical(path)).is_absolute() }
@@ -423,7 +425,7 @@
 }
 
 <span class="doccomment">/// Split the pathname into components (dir,name,type).
-/// If pathname is absolute, dir starts with volume or &#39;/&#39;
+/// If pathname is absolute, dir starts with volume or '/'
 </span><span class="kw">pub fn </span>split(pathname: <span class="kw-2">&amp;</span>str) -&gt; (String, String, String) {
   <span class="kw">let </span>canonical_pathname = canonical(pathname);
   <span class="kw">let </span>canonical_path = Path::new(<span class="kw-2">&amp;</span>canonical_pathname);
@@ -447,11 +449,11 @@
 </span><span class="kw">pub fn </span>url_split(url: <span class="kw-2">&amp;</span>str) -&gt; (<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = URL_RE.captures(url) {
     (
-      caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
-      caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
+      caps.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()),
+      caps.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str()),
     )
   } <span class="kw">else </span>{
-    (url, <span class="string">&quot;index.tex&quot;</span>) <span class="comment">// Well, what other default makes sense?
+    (url, <span class="string">"index.tex"</span>) <span class="comment">// Well, what other default makes sense?
   </span>}
 }
 
@@ -461,10 +463,10 @@
   <span class="kw">if </span>is_literaldata(pathname) {
     <span class="kw">return </span>pathname.to_owned();
   }
-  <span class="comment">// Don&#39;t call is_absolute, etc, here, cause THEY call US!
+  <span class="comment">// Don't call is_absolute, etc, here, cause THEY call US!
   </span><span class="kw">let </span>home_path: <span class="kw-2">&amp;</span>str = <span class="kw-2">&amp;</span>HOME_PATH;
 
-  <span class="comment">// TODO: consider using Path&#39;s .canonicalize()
+  <span class="comment">// TODO: consider using Path's .canonicalize()
 
   // TODO: Finish fleshing out, just a mock for now
   </span><span class="kw">if </span>pathname.starts_with(HOME_TILDE) {
@@ -473,13 +475,13 @@
     pathname.to_string()
   }
   <span class="comment">// We CAN canonicalize urls, but we need to be careful about the // before host!
-  // OHHH, but we DON&#39;T want \ for separator!
+  // OHHH, but we DON'T want \ for separator!
   // let urlprefix = None;
   // if ($pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|) {
   //   $urlprefix = $1; }
 
   // if ($pathname =~ m|//+/|) {
-  //   Carp::cluck &quot;Recursive pathname? : $pathname\n&quot;; }
+  //   Carp::cluck "Recursive pathname? : $pathname\n"; }
 
   // $pathname =~ s|/\./|/|g;
   // Collapse any foo/.. patterns, but not ../..
@@ -493,9 +495,9 @@
   <span class="kw">if let </span><span class="prelude-val">Some</span>(cap) = PROTOCOL_RE.captures(pathname) {
     cap.get(<span class="number">1</span>).map_or(String::new(), |m| m.as_str().to_string())
   } <span class="kw">else if </span>is_literaldata(pathname) {
-    <span class="string">&quot;literal&quot;</span>.to_string()
+    <span class="string">"literal"</span>.to_string()
   } <span class="kw">else </span>{
-    <span class="string">&quot;file&quot;</span>.to_string()
+    <span class="string">"file"</span>.to_string()
   }
 }
 
@@ -503,7 +505,7 @@
 </span><span class="kw">pub fn </span>concat(dir: <span class="kw-2">&amp;</span>str, file: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">if </span>dir.is_empty() {
     file.to_owned()
-  } <span class="kw">else if </span>file.is_empty() || file == <span class="string">&quot;.&quot; </span>{
+  } <span class="kw">else if </span>file.is_empty() || file == <span class="string">"." </span>{
     dir.to_owned()
   } <span class="kw">else </span>{
     <span class="kw">let </span><span class="kw-2">mut </span>path = PathBuf::from(dir);
@@ -512,12 +514,12 @@
   }
 }
 
-<span class="doccomment">/// It&#39;s presumably cheep to concatinate all the pathnames,
+<span class="doccomment">/// It's presumably cheep to concatinate all the pathnames,
 /// relative to the cost of testing for files,
 /// and this simplifies overall.
 </span><span class="kw">pub fn </span>candidate_pathnames(pathname: <span class="kw-2">&amp;</span>str, options: PathnameFindOptions) -&gt; Vec&lt;String&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>dirs: Vec&lt;String&gt; = Vec::new();
-  <span class="kw">let </span>canonical_pathname = <span class="kw">if </span>pathname != <span class="string">&quot;*&quot; </span>{
+  <span class="kw">let </span>canonical_pathname = <span class="kw">if </span>pathname != <span class="string">"*" </span>{
     canonical(pathname)
   } <span class="kw">else </span>{
     pathname.to_owned()
@@ -527,7 +529,7 @@
 
   <span class="kw">let </span>cwd = cwd();
 
-  <span class="comment">// generate the set of search paths we&#39;ll use.
+  <span class="comment">// generate the set of search paths we'll use.
   </span><span class="kw">if </span>is_absolute(<span class="kw-2">&amp;</span>canonical_pathname) {
     dirs.push(pathdir.clone());
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(paths) = options.paths {
@@ -551,8 +553,8 @@
     dirs.push(from_cwd);
   }
 
-  <span class="comment">// TODO: The use of INSTALLDIRS should be rethought entirely, as Rust currently doesn&#39;t have a
-  // native concept of &quot;installing&quot; a crate and its resources there either needs to be a
+  <span class="comment">// TODO: The use of INSTALLDIRS should be rethought entirely, as Rust currently doesn't have a
+  // native concept of "installing" a crate and its resources there either needs to be a
   // more sophisticated build process, OR, a compile step that translates all model/binding
   // dependencies into rust code. which would allow bundling them side-by-side with the
   // main application.
@@ -564,7 +566,7 @@
     <span class="kw">if </span>Path::new(<span class="kw-2">&amp;</span>full_subdir).exists() {
       dirs.push(full_subdir);
     } <span class="kw">else </span>{
-      <span class="kw">let </span>full_subdir_oneup = concat(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}/..&quot;</span>, cwd), <span class="kw-2">&amp;</span>subdir);
+      <span class="kw">let </span>full_subdir_oneup = concat(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}/.."</span>, cwd), <span class="kw-2">&amp;</span>subdir);
       <span class="kw">if </span>Path::new(<span class="kw-2">&amp;</span>full_subdir_oneup).exists() {
         dirs.push(full_subdir_oneup);
       }
@@ -576,11 +578,11 @@
     <span class="kw">for </span>ext <span class="kw">in </span>ext_vec {
       <span class="kw">if </span>ext.is_empty() || pathname_ext == ext.to_lowercase() {
         exts.push(String::new());
-      } <span class="kw">else if </span>ext == <span class="string">&quot;*&quot; </span>{
-        exts.push(<span class="macro">s!</span>(<span class="string">&quot;.*&quot;</span>));
+      } <span class="kw">else if </span>ext == <span class="string">"*" </span>{
+        exts.push(<span class="macro">s!</span>(<span class="string">".*"</span>));
         exts.push(String::new());
       } <span class="kw">else </span>{
-        exts.push(<span class="macro">s!</span>(<span class="string">&quot;.{}&quot;</span>, <span class="kw-2">&amp;</span>ext));
+        exts.push(<span class="macro">s!</span>(<span class="string">".{}"</span>, <span class="kw-2">&amp;</span>ext));
       }
     }
   }
@@ -592,9 +594,9 @@
   <span class="comment">// Now, combine; precedence to leading directories.
   </span><span class="kw">for </span>dir <span class="kw">in </span><span class="kw-2">&amp;</span>dirs {
     <span class="kw">for </span>ext <span class="kw">in </span><span class="kw-2">&amp;</span>exts {
-      <span class="kw">if </span>name == <span class="string">&quot;*&quot; </span>{
-        <span class="comment">// Unfortunately, we&#39;ve got to test the file system NOW...
-        //       if ext == &quot;.*&quot; {    // everything
+      <span class="kw">if </span>name == <span class="string">"*" </span>{
+        <span class="comment">// Unfortunately, we've got to test the file system NOW...
+        //       if ext == ".*" {    // everything
         // //         opendir(DIR, $dir) or next;
         // //         push(@paths, map { concat($dir, $_) } grep { !/^\./ } readdir(DIR));
         // //         closedir(DIR);
@@ -603,7 +605,7 @@
         // //         push(@paths, map { concat($dir, $_) } grep { /\Q$ext\E$/ } readdir(DIR));
         // //         closedir(DIR); } }
         //       }
-        //     } else if ext == &quot;.*&quot; { // Unfortunately, we&#39;ve got to test the file system NOW...
+        //     } else if ext == ".*" { // Unfortunately, we've got to test the file system NOW...
         // //       opendir(DIR, $dir) or next;      // ???
         // //       push(@paths, map { concat($dir, $_) } grep { /^\Q$name\E\.\w+$/ } readdir(DIR));
         // //       closedir(DIR);

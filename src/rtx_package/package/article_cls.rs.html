@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/article_cls.rs`."><title>article_cls.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/article_cls.rs`."><title>article_cls.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -106,118 +108,112 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="kw">use </span>rtx_core::{state};
 <span class="attr">#[rustfmt::skip]
 </span><span class="macro">LoadDefinitions!</span>( {
-  <span class="macro">LoadPool!</span>(<span class="string">&quot;LaTeX&quot;</span>);
+  <span class="macro">LoadPool!</span>(<span class="string">"LaTeX"</span>);
   <span class="comment">//**********************************************************************
   // Option handling
   </span><span class="kw">for </span>option <span class="kw">in </span>[
-    <span class="string">&quot;10pt&quot;</span>,
-    <span class="string">&quot;11pt&quot;</span>,
-    <span class="string">&quot;12pt&quot;</span>,
-    <span class="string">&quot;letterpaper&quot;</span>,
-    <span class="string">&quot;legalpaper&quot;</span>,
-    <span class="string">&quot;executivepaper&quot;</span>,
-    <span class="string">&quot;a4paper&quot;</span>,
-    <span class="string">&quot;a5paper&quot;</span>,
-    <span class="string">&quot;b5paper&quot;</span>,
-    <span class="string">&quot;landscape&quot;</span>,
-    <span class="string">&quot;final&quot;</span>,
-    <span class="string">&quot;draft&quot;</span>,
-    <span class="string">&quot;oneside&quot;</span>,
-    <span class="string">&quot;twoside&quot;</span>,
-    <span class="string">&quot;openright&quot;</span>,
-    <span class="string">&quot;openany&quot;</span>,
-    <span class="string">&quot;onecolumn&quot;</span>,
-    <span class="string">&quot;twocolumn&quot;</span>,
-    <span class="string">&quot;notitlepage&quot;</span>,
-    <span class="string">&quot;titlepage&quot;</span>,
+    <span class="string">"10pt"</span>,
+    <span class="string">"11pt"</span>,
+    <span class="string">"12pt"</span>,
+    <span class="string">"letterpaper"</span>,
+    <span class="string">"legalpaper"</span>,
+    <span class="string">"executivepaper"</span>,
+    <span class="string">"a4paper"</span>,
+    <span class="string">"a5paper"</span>,
+    <span class="string">"b5paper"</span>,
+    <span class="string">"landscape"</span>,
+    <span class="string">"final"</span>,
+    <span class="string">"draft"</span>,
+    <span class="string">"oneside"</span>,
+    <span class="string">"twoside"</span>,
+    <span class="string">"openright"</span>,
+    <span class="string">"openany"</span>,
+    <span class="string">"onecolumn"</span>,
+    <span class="string">"twocolumn"</span>,
+    <span class="string">"notitlepage"</span>,
+    <span class="string">"titlepage"</span>,
   ]
   .iter()
   {
     <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>option, <span class="prelude-val">None</span>);
   }
 
-  <span class="macro">DeclareOption!</span>(<span class="string">&quot;onecolumn&quot;</span>, <span class="string">r&quot;\@twocolumnfalse\columnwidth\textwidth&quot;</span>);
+  <span class="macro">DeclareOption!</span>(<span class="string">"onecolumn"</span>, <span class="string">r"\@twocolumnfalse\columnwidth\textwidth"</span>);
   <span class="macro">DeclareOption!</span>(
-    <span class="string">&quot;twocolumn&quot;</span>,
-    <span class="string">r&quot;\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax&quot;
+    <span class="string">"twocolumn"</span>,
+    <span class="string">r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax"
   </span>);
   <span class="comment">// TODO:
-  // DeclareOption!(&quot;openbib&quot;,
-  // || { RequireResource!(None, type: &quot;text/css&quot;, content: &quot;.ltx_bibblock{display:block;}&quot;);
-  // }); DeclareOption!(&quot;leqno&quot;, || { assign_mapping(&quot;DOCUMENT_CLASSES&quot;, &quot;ltx_leqno&quot;: 1);
-  // }); DeclareOption!(&quot;fleqn&quot;, || { assign_mapping(&quot;DOCUMENT_CLASSES&quot;, &quot;ltx_fleqn&quot;: 1);
+  // DeclareOption!("openbib",
+  // || { RequireResource!(None, type: "text/css", content: ".ltx_bibblock{display:block;}");
+  // }); DeclareOption!("leqno", || { assign_mapping("DOCUMENT_CLASSES", "ltx_leqno": 1);
+  // }); DeclareOption!("fleqn", || { assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn": 1);
   // });
 
   </span><span class="macro">ProcessOptions!</span>();
 
   <span class="comment">//**********************************************************************
   // Document structure.
-  </span><span class="macro">RelaxNGSchema!</span>(<span class="string">&quot;LaTeXML&quot;</span>);
-  <span class="macro">RequireResource!</span>(<span class="string">&quot;ltx-article.css&quot;</span>);
+  </span><span class="macro">RelaxNGSchema!</span>(<span class="string">"LaTeXML"</span>);
+  <span class="macro">RequireResource!</span>(<span class="string">"ltx-article.css"</span>);
 
   <span class="comment">// This makes the authors appear on 1 line;
   // for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
 
-  </span><span class="macro">AddToMacro!</span>(<span class="string">&quot;\\maketitle&quot;</span>, <span class="string">&quot;\\ltx@authors@oneline&quot;</span>);
+  </span><span class="macro">AddToMacro!</span>(<span class="string">"\\maketitle"</span>, <span class="string">"\\ltx@authors@oneline"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@ptsize&quot;</span>, <span class="string">&quot;0&quot;</span>); <span class="comment">// should depend on options...
-  </span><span class="macro">RawTeX!</span>(
-    <span class="string">r###&quot;
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@ptsize"</span>, <span class="string">"0"</span>); <span class="comment">// should depend on options...
+  </span><span class="macro">RawTeX!</span>(<span class="string">r"
   \newif\if@restonecol
   \newif\if@titlepage
   \@titlepagefalse
-  &quot;###
-  </span>);
+  "</span>);
 
   <span class="comment">//**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm
   // but the counter setup, etc, depends on article
-  </span><span class="macro">SetCounter!</span>(<span class="string">&quot;secnumdepth&quot;</span>, Number::new(<span class="number">3</span>));
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;part&quot;</span>,          <span class="string">&quot;document&quot;</span>,      idprefix =&gt; <span class="string">&quot;Pt&quot;</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">&quot;section&quot;</span>]);
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;section&quot;</span>,       <span class="string">&quot;document&quot;</span>,      idprefix =&gt; <span class="string">&quot;S&quot;</span>,   nested =&gt; <span class="macro">vec!</span>[<span class="string">&quot;subsection&quot;</span>]);
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;subsection&quot;</span>,    <span class="string">&quot;section&quot;</span>,       idprefix =&gt; <span class="string">&quot;SS&quot;</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">&quot;subsubsection&quot;</span>]);
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;subsubsection&quot;</span>, <span class="string">&quot;subsection&quot;</span>,    idprefix =&gt; <span class="string">&quot;SSS&quot;</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">&quot;paragraph&quot;</span>]);
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;paragraph&quot;</span>,     <span class="string">&quot;subsubsection&quot;</span>, idprefix =&gt; <span class="string">&quot;P&quot;</span>,   nested =&gt; <span class="macro">vec!</span>[<span class="string">&quot;subparagraph&quot;</span>]);
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;subparagraph&quot;</span>, <span class="string">&quot;paragraph&quot;</span>, idprefix =&gt; <span class="string">&quot;SP&quot;</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">&quot;equation&quot;</span>, <span class="string">&quot;figure&quot;</span>, <span class="string">&quot;table&quot;</span>]);
+  </span><span class="macro">SetCounter!</span>(<span class="string">"secnumdepth"</span>, Number::new(<span class="number">3</span>));
+  <span class="macro">NewCounter!</span>(<span class="string">"part"</span>,          <span class="string">"document"</span>,      idprefix =&gt; <span class="string">"Pt"</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">"section"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"section"</span>,       <span class="string">"document"</span>,      idprefix =&gt; <span class="string">"S"</span>,   nested =&gt; <span class="macro">vec!</span>[<span class="string">"subsection"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"subsection"</span>,    <span class="string">"section"</span>,       idprefix =&gt; <span class="string">"SS"</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">"subsubsection"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"subsubsection"</span>, <span class="string">"subsection"</span>,    idprefix =&gt; <span class="string">"SSS"</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">"paragraph"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"paragraph"</span>,     <span class="string">"subsubsection"</span>, idprefix =&gt; <span class="string">"P"</span>,   nested =&gt; <span class="macro">vec!</span>[<span class="string">"subparagraph"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"subparagraph"</span>, <span class="string">"paragraph"</span>, idprefix =&gt; <span class="string">"SP"</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">"equation"</span>, <span class="string">"figure"</span>, <span class="string">"table"</span>]);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thepart&quot;</span>, <span class="string">&quot;\\Roman{part}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thesection&quot;</span>, <span class="string">&quot;\\arabic{section}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thesubsection&quot;</span>, <span class="string">&quot;\\thesection.\\arabic{subsection}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thepart"</span>, <span class="string">"\\Roman{part}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thesection"</span>, <span class="string">"\\arabic{section}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thesubsection"</span>, <span class="string">"\\thesection.\\arabic{subsection}"</span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\thesubsubsection&quot;</span>,
-    <span class="string">&quot;\\thesubsection.\\arabic{subsubsection}&quot;
+    <span class="string">"\\thesubsubsection"</span>,
+    <span class="string">"\\thesubsection.\\arabic{subsubsection}"
   </span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\theparagraph&quot;</span>, <span class="string">&quot;\\thesubsubsection.\\arabic{paragraph}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thesubparagraph&quot;</span>, <span class="string">&quot;\\theparagraph.\\arabic{subparagraph}&quot;</span>);
-  <span class="macro">SetCounter!</span>(<span class="string">&quot;tocdepth&quot;</span>, Number::new(<span class="number">3</span>));
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theparagraph"</span>, <span class="string">"\\thesubsubsection.\\arabic{paragraph}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thesubparagraph"</span>, <span class="string">"\\theparagraph.\\arabic{subparagraph}"</span>);
+  <span class="macro">SetCounter!</span>(<span class="string">"tocdepth"</span>, Number::new(<span class="number">3</span>));
 
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;equation&quot;</span>,       <span class="string">&quot;document&quot;</span>, idprefix =&gt; <span class="string">&quot;E&quot;</span>,  idwithin =&gt; <span class="string">&quot;section&quot;</span>);
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;@equationgroup&quot;</span>, <span class="string">&quot;document&quot;</span>, idprefix =&gt; <span class="string">&quot;EG&quot;</span>, idwithin =&gt; <span class="string">&quot;section&quot;</span>);
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;figure&quot;</span>,         <span class="string">&quot;document&quot;</span>, idprefix =&gt; <span class="string">&quot;F&quot;</span>,  idwithin =&gt; <span class="string">&quot;section&quot;</span>);
-  <span class="macro">NewCounter!</span>(<span class="string">&quot;table&quot;</span>,          <span class="string">&quot;document&quot;</span>, idprefix =&gt; <span class="string">&quot;T&quot;</span>,  idwithin =&gt; <span class="string">&quot;section&quot;</span>);
+  <span class="macro">NewCounter!</span>(<span class="string">"equation"</span>,       <span class="string">"document"</span>, idprefix =&gt; <span class="string">"E"</span>,  idwithin =&gt; <span class="string">"section"</span>);
+  <span class="macro">NewCounter!</span>(<span class="string">"@equationgroup"</span>, <span class="string">"document"</span>, idprefix =&gt; <span class="string">"EG"</span>, idwithin =&gt; <span class="string">"section"</span>);
+  <span class="macro">NewCounter!</span>(<span class="string">"figure"</span>,         <span class="string">"document"</span>, idprefix =&gt; <span class="string">"F"</span>,  idwithin =&gt; <span class="string">"section"</span>);
+  <span class="macro">NewCounter!</span>(<span class="string">"table"</span>,          <span class="string">"document"</span>, idprefix =&gt; <span class="string">"T"</span>,  idwithin =&gt; <span class="string">"section"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\theequation&quot;</span>, <span class="string">&quot;\\arabic{equation}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thefigure&quot;</span>, <span class="string">&quot;\\arabic{figure}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thetable&quot;</span>, <span class="string">&quot;\\arabic{table}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theequation"</span>, <span class="string">"\\arabic{equation}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thefigure"</span>, <span class="string">"\\arabic{figure}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thetable"</span>, <span class="string">"\\arabic{table}"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\theenumi&quot;</span>, <span class="string">&quot;\\arabic{enumi}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\theenumii&quot;</span>, <span class="string">&quot;\\alph{enumii}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\theenumiii&quot;</span>, <span class="string">&quot;\\roman{enumiii}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\theenumiv&quot;</span>, <span class="string">&quot;\\Alph{enumiv}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theenumi"</span>, <span class="string">"\\arabic{enumi}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theenumii"</span>, <span class="string">"\\alph{enumii}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theenumiii"</span>, <span class="string">"\\roman{enumiii}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theenumiv"</span>, <span class="string">"\\Alph{enumiv}"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\refname&quot;</span>, <span class="string">&quot;References&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\refname"</span>, <span class="string">"References"</span>);
 
-  <span class="macro">Tag!</span>(<span class="string">&quot;ltx:appendix&quot;</span>, auto_close =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\appendix&quot;</span>, <span class="string">&quot;\\@appendix&quot;</span>);
+  <span class="macro">Tag!</span>(<span class="string">"ltx:appendix"</span>, auto_close =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\appendix"</span>, <span class="string">"\\@appendix"</span>);
 
   <span class="comment">// Actually we should be using section counter
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@appendix&quot;</span>, { start_appendices(<span class="string">&quot;section&quot;</span>); });
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@appendix"</span>, { start_appendices(<span class="string">"section"</span>); });
 });
 </code></pre></div></section></main></body></html>

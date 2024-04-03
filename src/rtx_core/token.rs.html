@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/token.rs`."><title>token.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/token.rs`."><title>token.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -851,100 +853,10 @@
 <a href="#851" id="851">851</a>
 <a href="#852" id="852">852</a>
 <a href="#853" id="853">853</a>
-<a href="#854" id="854">854</a>
-<a href="#855" id="855">855</a>
-<a href="#856" id="856">856</a>
-<a href="#857" id="857">857</a>
-<a href="#858" id="858">858</a>
-<a href="#859" id="859">859</a>
-<a href="#860" id="860">860</a>
-<a href="#861" id="861">861</a>
-<a href="#862" id="862">862</a>
-<a href="#863" id="863">863</a>
-<a href="#864" id="864">864</a>
-<a href="#865" id="865">865</a>
-<a href="#866" id="866">866</a>
-<a href="#867" id="867">867</a>
-<a href="#868" id="868">868</a>
-<a href="#869" id="869">869</a>
-<a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
-<a href="#874" id="874">874</a>
-<a href="#875" id="875">875</a>
-<a href="#876" id="876">876</a>
-<a href="#877" id="877">877</a>
-<a href="#878" id="878">878</a>
-<a href="#879" id="879">879</a>
-<a href="#880" id="880">880</a>
-<a href="#881" id="881">881</a>
-<a href="#882" id="882">882</a>
-<a href="#883" id="883">883</a>
-<a href="#884" id="884">884</a>
-<a href="#885" id="885">885</a>
-<a href="#886" id="886">886</a>
-<a href="#887" id="887">887</a>
-<a href="#888" id="888">888</a>
-<a href="#889" id="889">889</a>
-<a href="#890" id="890">890</a>
-<a href="#891" id="891">891</a>
-<a href="#892" id="892">892</a>
-<a href="#893" id="893">893</a>
-<a href="#894" id="894">894</a>
-<a href="#895" id="895">895</a>
-<a href="#896" id="896">896</a>
-<a href="#897" id="897">897</a>
-<a href="#898" id="898">898</a>
-<a href="#899" id="899">899</a>
-<a href="#900" id="900">900</a>
-<a href="#901" id="901">901</a>
-<a href="#902" id="902">902</a>
-<a href="#903" id="903">903</a>
-<a href="#904" id="904">904</a>
-<a href="#905" id="905">905</a>
-<a href="#906" id="906">906</a>
-<a href="#907" id="907">907</a>
-<a href="#908" id="908">908</a>
-<a href="#909" id="909">909</a>
-<a href="#910" id="910">910</a>
-<a href="#911" id="911">911</a>
-<a href="#912" id="912">912</a>
-<a href="#913" id="913">913</a>
-<a href="#914" id="914">914</a>
-<a href="#915" id="915">915</a>
-<a href="#916" id="916">916</a>
-<a href="#917" id="917">917</a>
-<a href="#918" id="918">918</a>
-<a href="#919" id="919">919</a>
-<a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
-<a href="#923" id="923">923</a>
-<a href="#924" id="924">924</a>
-<a href="#925" id="925">925</a>
-<a href="#926" id="926">926</a>
-<a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a>
-<a href="#931" id="931">931</a>
-<a href="#932" id="932">932</a>
-<a href="#933" id="933">933</a>
-<a href="#934" id="934">934</a>
-<a href="#935" id="935">935</a>
-<a href="#936" id="936">936</a>
-<a href="#937" id="937">937</a>
-<a href="#938" id="938">938</a>
-<a href="#939" id="939">939</a>
-<a href="#940" id="940">940</a>
-<a href="#941" id="941">941</a>
-<a href="#942" id="942">942</a>
-<a href="#943" id="943">943</a>
-<a href="#944" id="944">944</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>string_interner::symbol::SymbolU32;
 
@@ -959,22 +871,20 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::Register;
-<span class="kw">use crate</span>::{state};
-<span class="kw">use </span><span class="kw">crate</span>::state::is_dont_expandable;
+<span class="kw">use </span><span class="kw">crate</span>::state;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
-<span class="kw">use crate</span>::{fatal, Digested, Fatal};
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="kw">static </span>CONTROLNAME: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
-  <span class="string">&quot;NUL&quot;</span>, <span class="string">&quot;SOH&quot;</span>, <span class="string">&quot;STX&quot;</span>, <span class="string">&quot;ETX&quot;</span>, <span class="string">&quot;EOT&quot;</span>, <span class="string">&quot;ENQ&quot;</span>, <span class="string">&quot;ACK&quot;</span>, <span class="string">&quot;BEL&quot;</span>, <span class="string">&quot;BS&quot;</span>, <span class="string">&quot;HT&quot;</span>, <span class="string">&quot;LF&quot;</span>, <span class="string">&quot;VT&quot;</span>, <span class="string">&quot;FF&quot;</span>, <span class="string">&quot;CR&quot;</span>, <span class="string">&quot;SO&quot;</span>,
-  <span class="string">&quot;SI&quot;</span>, <span class="string">&quot;DLE&quot;</span>, <span class="string">&quot;DC1&quot;</span>, <span class="string">&quot;DC2&quot;</span>, <span class="string">&quot;DC3&quot;</span>, <span class="string">&quot;DC4&quot;</span>, <span class="string">&quot;NAK&quot;</span>, <span class="string">&quot;SYN&quot;</span>, <span class="string">&quot;ETB&quot;</span>, <span class="string">&quot;CAN&quot;</span>, <span class="string">&quot;EM&quot;</span>, <span class="string">&quot;SUB&quot;</span>, <span class="string">&quot;ESC&quot;</span>, <span class="string">&quot;FS&quot;</span>,
-  <span class="string">&quot;GS&quot;</span>, <span class="string">&quot;RS&quot;</span>, <span class="string">&quot;US&quot;</span>,
+  <span class="string">"NUL"</span>, <span class="string">"SOH"</span>, <span class="string">"STX"</span>, <span class="string">"ETX"</span>, <span class="string">"EOT"</span>, <span class="string">"ENQ"</span>, <span class="string">"ACK"</span>, <span class="string">"BEL"</span>, <span class="string">"BS"</span>, <span class="string">"HT"</span>, <span class="string">"LF"</span>, <span class="string">"VT"</span>, <span class="string">"FF"</span>, <span class="string">"CR"</span>, <span class="string">"SO"</span>,
+  <span class="string">"SI"</span>, <span class="string">"DLE"</span>, <span class="string">"DC1"</span>, <span class="string">"DC2"</span>, <span class="string">"DC3"</span>, <span class="string">"DC4"</span>, <span class="string">"NAK"</span>, <span class="string">"SYN"</span>, <span class="string">"ETB"</span>, <span class="string">"CAN"</span>, <span class="string">"EM"</span>, <span class="string">"SUB"</span>, <span class="string">"ESC"</span>, <span class="string">"FS"</span>,
+  <span class="string">"GS"</span>, <span class="string">"RS"</span>, <span class="string">"US"</span>,
 ];
 
 <span class="doccomment">/// A Token category code, as in TeX
 </span><span class="attr">#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 </span><span class="kw">pub enum </span>Catcode {
-  <span class="doccomment">///
-  </span>ESCAPE,
+  ESCAPE,
   BEGIN,
   END,
   MATH,
@@ -992,8 +902,7 @@
   INVALID,
   CS,
   MARKER,
-  ARG,
-  SmuggleTHE,
+  ARG
 }
 
 <span class="kw">impl </span>From&lt;u8&gt; <span class="kw">for </span>Catcode {
@@ -1019,10 +928,9 @@
       <span class="number">16 </span>=&gt; CS,
       <span class="number">17 </span>=&gt; MARKER,
       <span class="number">18 </span>=&gt; ARG,
-      <span class="number">19 </span>=&gt; SmuggleTHE,
       <span class="kw">_ </span>=&gt; {
-        <span class="comment">// let message = s!(&quot;Unrecognized catcode: {:?}&quot;, num);
-        // Warn!(&quot;unknown&quot;, &quot;catcode&quot;, None, message);
+        <span class="comment">// let message = s!("Unrecognized catcode: {:?}", num);
+        // Warn!("unknown", "catcode", None, message);
         </span>IGNORE
       },
     }
@@ -1051,89 +959,86 @@
       INVALID =&gt; <span class="number">15</span>,
       CS =&gt; <span class="number">16</span>,
       MARKER =&gt; <span class="number">17</span>,
-      ARG =&gt; <span class="number">18</span>,
-      SmuggleTHE =&gt; <span class="number">19</span>,
-    }
+      ARG =&gt; <span class="number">18
+    </span>}
   }
 }
 
 <span class="kw">impl </span>Catcode {
   <span class="doccomment">/// a debug-friendly name
-  </span><span class="kw">pub fn </span>name(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+  </span><span class="kw">pub fn </span>name(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
       <span class="comment">// Primitive
-      </span>ESCAPE =&gt; <span class="string">&quot;Escape&quot;</span>,
-      BEGIN =&gt; <span class="string">&quot;Begin&quot;</span>,
-      END =&gt; <span class="string">&quot;End&quot;</span>,
-      MATH =&gt; <span class="string">&quot;Math&quot;</span>,
-      ALIGN =&gt; <span class="string">&quot;Align&quot;</span>,
-      EOL =&gt; <span class="string">&quot;EOL&quot;</span>,
-      PARAM =&gt; <span class="string">&quot;Parameter&quot;</span>,
-      SUPER =&gt; <span class="string">&quot;Superscript&quot;</span>,
-      SUB =&gt; <span class="string">&quot;Subscript&quot;</span>,
-      SPACE =&gt; <span class="string">&quot;Space&quot;</span>,
+      </span>ESCAPE =&gt; <span class="string">"Escape"</span>,
+      BEGIN =&gt; <span class="string">"Begin"</span>,
+      END =&gt; <span class="string">"End"</span>,
+      MATH =&gt; <span class="string">"Math"</span>,
+      ALIGN =&gt; <span class="string">"Align"</span>,
+      EOL =&gt; <span class="string">"EOL"</span>,
+      PARAM =&gt; <span class="string">"Parameter"</span>,
+      SUPER =&gt; <span class="string">"Superscript"</span>,
+      SUB =&gt; <span class="string">"Subscript"</span>,
+      SPACE =&gt; <span class="string">"Space"</span>,
       <span class="comment">// Non-primitive
-      </span>IGNORE =&gt; <span class="string">&quot;Ignore&quot;</span>,
-      LETTER =&gt; <span class="string">&quot;Letter&quot;</span>,
-      OTHER =&gt; <span class="string">&quot;Other&quot;</span>,
-      ACTIVE =&gt; <span class="string">&quot;Active&quot;</span>,
-      COMMENT =&gt; <span class="string">&quot;Comment&quot;</span>,
-      INVALID =&gt; <span class="string">&quot;Invalid&quot;</span>,
-      CS =&gt; <span class="string">&quot;ControlSequence&quot;</span>,
-      MARKER =&gt; <span class="string">&quot;Marker&quot;</span>,
-      ARG =&gt; <span class="string">&quot;Arg&quot;</span>,
-      SmuggleTHE =&gt; <span class="string">&quot;SmuggleThe&quot;</span>,
-    }
+      </span>IGNORE =&gt; <span class="string">"Ignore"</span>,
+      LETTER =&gt; <span class="string">"Letter"</span>,
+      OTHER =&gt; <span class="string">"Other"</span>,
+      ACTIVE =&gt; <span class="string">"Active"</span>,
+      COMMENT =&gt; <span class="string">"Comment"</span>,
+      INVALID =&gt; <span class="string">"Invalid"</span>,
+      CS =&gt; <span class="string">"ControlSequence"</span>,
+      MARKER =&gt; <span class="string">"Marker"</span>,
+      ARG =&gt; <span class="string">"Arg"
+    </span>}
   }
   <span class="doccomment">/// a \meaning-friendly name
-  </span><span class="kw">pub fn </span>meaning(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+  </span><span class="kw">pub fn </span>meaning(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
-      ESCAPE =&gt; <span class="string">&quot;the escape character&quot;</span>,
-      BEGIN =&gt; <span class="string">&quot;begin-group character&quot;</span>,
-      END =&gt; <span class="string">&quot;end-group character&quot;</span>,
-      MATH =&gt; <span class="string">&quot;math shift character&quot;</span>,
-      ALIGN =&gt; <span class="string">&quot;alignment tab character&quot;</span>,
-      EOL =&gt; <span class="string">&quot;end-of-line character&quot;</span>,
-      PARAM =&gt; <span class="string">&quot;macro parameter character&quot;</span>,
-      SUPER =&gt; <span class="string">&quot;superscript character&quot;</span>,
-      SUB =&gt; <span class="string">&quot;subscript character&quot;</span>,
-      IGNORE =&gt; <span class="string">&quot;ignored character&quot;</span>,
-      SPACE =&gt; <span class="string">&quot;blank space&quot;</span>,
-      LETTER =&gt; <span class="string">&quot;the letter&quot;</span>,
-      OTHER =&gt; <span class="string">&quot;the character&quot;</span>,
-      ACTIVE =&gt; <span class="string">&quot;active character&quot;</span>,
-      COMMENT =&gt; <span class="string">&quot;comment character&quot;</span>,
-      INVALID =&gt; <span class="string">&quot;invalid character&quot;</span>,
-      <span class="kw">_ </span>=&gt; <span class="string">&quot;&quot;</span>,
+      ESCAPE =&gt; <span class="string">"the escape character"</span>,
+      BEGIN =&gt; <span class="string">"begin-group character"</span>,
+      END =&gt; <span class="string">"end-group character"</span>,
+      MATH =&gt; <span class="string">"math shift character"</span>,
+      ALIGN =&gt; <span class="string">"alignment tab character"</span>,
+      EOL =&gt; <span class="string">"end-of-line character"</span>,
+      PARAM =&gt; <span class="string">"macro parameter character"</span>,
+      SUPER =&gt; <span class="string">"superscript character"</span>,
+      SUB =&gt; <span class="string">"subscript character"</span>,
+      IGNORE =&gt; <span class="string">"ignored character"</span>,
+      SPACE =&gt; <span class="string">"blank space"</span>,
+      LETTER =&gt; <span class="string">"the letter"</span>,
+      OTHER =&gt; <span class="string">"the character"</span>,
+      ACTIVE =&gt; <span class="string">"active character"</span>,
+      COMMENT =&gt; <span class="string">"comment character"</span>,
+      INVALID =&gt; <span class="string">"invalid character"</span>,
+      <span class="kw">_ </span>=&gt; <span class="string">""</span>,
     }
   }
   <span class="doccomment">/// a short name helpful for Token debugging
-  </span><span class="kw">pub fn </span>short_name(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+  </span><span class="kw">pub fn </span>short_name(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
-      ESCAPE =&gt; <span class="string">&quot;T_ESCAPE&quot;</span>,
-      BEGIN =&gt; <span class="string">&quot;T_BEGIN&quot;</span>,
-      END =&gt; <span class="string">&quot;T_END&quot;</span>,
-      MATH =&gt; <span class="string">&quot;T_MATH&quot;</span>,
-      ALIGN =&gt; <span class="string">&quot;T_ALIGN&quot;</span>,
-      EOL =&gt; <span class="string">&quot;T_EOL&quot;</span>,
-      PARAM =&gt; <span class="string">&quot;T_PARAM&quot;</span>,
-      SUPER =&gt; <span class="string">&quot;T_SUPER&quot;</span>,
-      SUB =&gt; <span class="string">&quot;T_SUB&quot;</span>,
-      IGNORE =&gt; <span class="string">&quot;T_IGNORE&quot;</span>,
-      SPACE =&gt; <span class="string">&quot;T_SPACE&quot;</span>,
-      LETTER =&gt; <span class="string">&quot;T_LETTER&quot;</span>,
-      OTHER =&gt; <span class="string">&quot;T_OTHER&quot;</span>,
-      ACTIVE =&gt; <span class="string">&quot;T_ACTIVE&quot;</span>,
-      COMMENT =&gt; <span class="string">&quot;T_COMMENT&quot;</span>,
-      INVALID =&gt; <span class="string">&quot;T_INVALID&quot;</span>,
-      CS =&gt; <span class="string">&quot;T_CS&quot;</span>,
-      MARKER =&gt; <span class="string">&quot;T_MARKER&quot;</span>,
-      ARG =&gt; <span class="string">&quot;T_ARG&quot;</span>,
-      SmuggleTHE =&gt; <span class="string">&quot;T_SMUGGLE_THE&quot;</span>,
-    }
+      ESCAPE =&gt; <span class="string">"T_ESCAPE"</span>,
+      BEGIN =&gt; <span class="string">"T_BEGIN"</span>,
+      END =&gt; <span class="string">"T_END"</span>,
+      MATH =&gt; <span class="string">"T_MATH"</span>,
+      ALIGN =&gt; <span class="string">"T_ALIGN"</span>,
+      EOL =&gt; <span class="string">"T_EOL"</span>,
+      PARAM =&gt; <span class="string">"T_PARAM"</span>,
+      SUPER =&gt; <span class="string">"T_SUPER"</span>,
+      SUB =&gt; <span class="string">"T_SUB"</span>,
+      IGNORE =&gt; <span class="string">"T_IGNORE"</span>,
+      SPACE =&gt; <span class="string">"T_SPACE"</span>,
+      LETTER =&gt; <span class="string">"T_LETTER"</span>,
+      OTHER =&gt; <span class="string">"T_OTHER"</span>,
+      ACTIVE =&gt; <span class="string">"T_ACTIVE"</span>,
+      COMMENT =&gt; <span class="string">"T_COMMENT"</span>,
+      INVALID =&gt; <span class="string">"T_INVALID"</span>,
+      CS =&gt; <span class="string">"T_CS"</span>,
+      MARKER =&gt; <span class="string">"T_MARKER"</span>,
+      ARG =&gt; <span class="string">"T_ARG"
+    </span>}
   }
 
   <span class="comment">// ======================================================================
@@ -1147,23 +1052,23 @@
       <span class="comment">// Primitives
       </span>ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE =&gt; <span class="bool-val">true</span>,
       <span class="comment">// Non-primitive
-      </span>IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE =&gt; {
+      </span>IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG =&gt; {
         <span class="bool-val">false
       </span>},
     }
   }
-  <span class="doccomment">///
+  <span class="doccomment">/// Catcodes with associated primitives
   </span><span class="kw">pub fn </span>is_executable(<span class="self">self</span>) -&gt; bool {
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
       <span class="comment">// Executable
       </span>BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS =&gt; <span class="bool-val">true</span>,
       <span class="comment">// Non-executable
-      </span>EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG
-      | SmuggleTHE =&gt; <span class="bool-val">false</span>,
+      </span>EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER |
+      ARG =&gt; <span class="bool-val">false</span>,
     }
   }
-  <span class="doccomment">///
+  <span class="doccomment">/// Catcodes which can be neutralized
   </span><span class="kw">pub fn </span>is_neutralizable(<span class="self">self</span>) -&gt; bool {
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
@@ -1171,15 +1076,15 @@
       </span>MATH | ALIGN | PARAM | SUPER | SUB | ACTIVE =&gt; <span class="bool-val">true</span>,
       <span class="comment">// Non-neutralizable
       </span>ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS
-      | MARKER | ARG | SmuggleTHE =&gt; <span class="bool-val">false</span>,
+      | MARKER | ARG =&gt; <span class="bool-val">false</span>,
     }
   }
-  <span class="doccomment">///
+  <span class="doccomment">/// Shorthand to match the "active" and "command sequence" catcodes
   </span><span class="kw">pub fn </span>is_active_or_cs(<span class="self">self</span>) -&gt; bool {
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
     <span class="macro">matches!</span>(<span class="self">self</span>, ACTIVE | CS)
   }
-  <span class="doccomment">///
+  <span class="doccomment">/// Tokens which can be absorbed without side-effects
   </span><span class="kw">pub fn </span>is_absorbable(<span class="self">self</span>) -&gt; bool {
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
     <span class="comment">// Absorbable
@@ -1190,41 +1095,35 @@
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
     <span class="macro">matches!</span>(<span class="self">self</span>, COMMENT | MARKER)
   }
-  <span class="doccomment">/// gullet::is_balanced reacts to BEGIN,END,MARKER coded tokens
+  <span class="doccomment">/// Catcodes that are of note for balanced reads.
   </span><span class="kw">pub fn </span>is_balanced_interesting(<span class="self">self</span>) -&gt; bool {
     <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
-    <span class="macro">matches!</span>(<span class="self">self</span>, BEGIN | END | MARKER)
-  }
-  <span class="doccomment">/// can a token of this catcode be used to smuggle for `\the`
-  </span><span class="kw">pub fn </span>can_smuggle_the(<span class="self">self</span>) -&gt; bool {
-    <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
-    <span class="macro">matches!</span>(<span class="self">self</span>, PARAM | ACTIVE | CS | ARG)
+    <span class="comment">// `gullet::is_balanced` reacts to BEGIN,END,MARKER coded tokens
+    </span><span class="macro">matches!</span>(<span class="self">self</span>, BEGIN | END | MARKER)
   }
 }
 
-<span class="doccomment">/// The core immutable syntactic primitive resulting from TeX&#39;s read-in and expansion process
+<span class="doccomment">/// The core immutable syntactic primitive resulting from TeX's read-in and expansion process
 /// We allow the fields to be public, so that we can use builder macros such as
 /// ```
 /// macro_rules! T_SPACE(() =&gt; {
-///     Token { text: arena::pin_static(&quot; &quot;), code: Catcode::SPACE}
+///     Token { text: arena::pin_static(" "), code: Catcode::SPACE}
 ///   });
 /// ```
-</span><span class="attr">#[derive(Clone)]
+</span><span class="attr">#[derive(Copy, Clone)]
 </span><span class="kw">pub struct </span>Token {
   <span class="doccomment">/// an arena id the character content for this token
   </span><span class="kw">pub </span>text: SymbolU32,
   <span class="doccomment">/// a TeX catcode
   </span><span class="kw">pub </span>code: Catcode,
-  <span class="doccomment">/// possibly smuggled inner token (for \noexpand)
-  </span><span class="kw">pub </span>smuggled: <span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt;,
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Token {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">if </span><span class="self">self</span>.code == Catcode::ARG {
-      <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">&quot;\&quot;#{}\&quot;&quot;</span>, text))
+      <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">"\"#{}\""</span>, text))
     } <span class="kw">else </span>{
-      <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">&quot;{:?}&quot;</span>, text))
+      <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">"{:?}"</span>, text))
     }
   }
 }
@@ -1232,21 +1131,20 @@
 <span class="kw">impl </span>Display <span class="kw">for </span>Token {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">if </span><span class="self">self</span>.code == Catcode::ARG {
-      <span class="macro">write!</span>(f, <span class="string">&quot;#&quot;</span>)<span class="question-mark">?</span>;
+      <span class="macro">write!</span>(f, <span class="string">"#"</span>)<span class="question-mark">?</span>;
     }
-    <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, text))
+    <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">"{}"</span>, text))
   }
 }
 
 <span class="doccomment">/// Compare two tokens; They are equal if they both have same catcode &amp; string
-</span><span class="comment">// [We pretend all SPACE&#39;s are the same, since we&#39;d like to hide newline&#39;s in there!]
-// NOTE: That another popular equality checks whether the &quot;meaning&quot; (defn) are the same.
+</span><span class="comment">// [We pretend all SPACE's are the same, since we'd like to hide newline's in there!]
+// NOTE: That another popular equality checks whether the "meaning" (defn) are the same.
 // That is NOT done here; see Equals(x,y) and XEquals(x,y)
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Token {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Token) -&gt; bool {
     <span class="self">self</span>.code == other.code
       &amp;&amp; (<span class="self">self</span>.code == Catcode::SPACE || (<span class="self">self</span>.text == other.text))
-      &amp;&amp; (<span class="self">self</span>.smuggled.is_none() == other.smuggled.is_none())
   }
 }
 
@@ -1255,273 +1153,245 @@
 //  a known token than it is to build a new one
 //  (as the arena lookup is a hair slower than copying a u32)
 
-</span><span class="doccomment">/// constant for an END &quot;}&quot; token
+</span><span class="doccomment">/// constant for a BEGIN "{" token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_BEGIN: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;{&quot;</span>),
-  code: Catcode::BEGIN,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"{"</span>),
+  code: Catcode::BEGIN
 });
-<span class="doccomment">/// constant for a BEGIN &quot;{&quot; token
+<span class="doccomment">/// constant for an END "}" token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_END: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;}&quot;</span>),
-  code: Catcode::END,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"}"</span>),
+  code: Catcode::END
 });
-<span class="doccomment">/// constant for a MATH &quot;$&quot; token
+<span class="doccomment">/// constant for a MATH "$" token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_MATH: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;$&quot;</span>),
-  code: Catcode::MATH,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"$"</span>),
+  code: Catcode::MATH
 });
-<span class="doccomment">/// constant for an ALIGN &quot;&amp;&quot; token
+<span class="doccomment">/// constant for an ALIGN "&amp;" token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_ALIGN: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;&amp;&quot;</span>),
-  code: Catcode::ALIGN,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"&amp;"</span>),
+  code: Catcode::ALIGN
 });
-<span class="doccomment">/// constant for a PARAM &quot;#&quot; token
+<span class="doccomment">/// constant for a PARAM "#" token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_PARAM: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;#&quot;</span>),
-  code: Catcode::PARAM,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"#"</span>),
+  code: Catcode::PARAM
 });
-<span class="doccomment">/// constant for a SUPER &quot;^&quot; token
+<span class="doccomment">/// constant for a SUPER "^" token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_SUPER: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;^&quot;</span>),
-  code: Catcode::SUPER,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"^"</span>),
+  code: Catcode::SUPER
 });
-<span class="doccomment">/// constant for a SUB &quot;_&quot; token
+<span class="doccomment">/// constant for a SUB "_" token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_SUB: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;_&quot;</span>),
-  code: Catcode::SUB,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"_"</span>),
+  code: Catcode::SUB
 });
-<span class="doccomment">/// constant for a SPACE &quot; &quot; token
+<span class="doccomment">/// constant for a SPACE " " token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_SPACE: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot; &quot;</span>),
-  code: Catcode::SPACE,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">" "</span>),
+  code: Catcode::SPACE
 });
-<span class="doccomment">/// constant for a CR &quot;\n&quot; token
+<span class="doccomment">/// constant for a CR "\n" token
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_CR: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;\n&quot;</span>),
-  code: Catcode::SPACE,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"\n"</span>),
+  code: Catcode::SPACE
 });
-<span class="doccomment">/// constant for T_CS(&quot;\relax&quot;)
+<span class="doccomment">/// constant for T_CS("\relax")
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>TOKEN_RELAX: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin_static(<span class="string">&quot;\\relax&quot;</span>),
-  code: Catcode::CS,
-  smuggled: <span class="prelude-val">None</span>,
+  text: arena::pin_static(<span class="string">"\\relax"</span>),
+  code: Catcode::CS
 });
 
 <span class="attr">#[macro_export]
-</span><span class="doccomment">/// macro for a BEGIN &quot;{&quot; token
-</span><span class="macro">macro_rules! </span>T_BEGIN(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_BEGIN</span>.clone() });
+</span><span class="doccomment">/// macro for a BEGIN "{" token
+</span><span class="macro">macro_rules!</span> T_BEGIN(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_BEGIN</span>.clone() });
 <span class="attr">#[macro_export]
-</span><span class="doccomment">/// macro for a new END &quot;{&quot; token
-</span><span class="macro">macro_rules! </span>T_END(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_END</span>.clone() });
-<span class="doccomment">/// macro for a MATH &quot;$&quot; token
+</span><span class="doccomment">/// macro for a new END "{" token
+</span><span class="macro">macro_rules!</span> T_END(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_END</span>.clone() });
+<span class="doccomment">/// macro for a MATH "$" token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_MATH(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_MATH</span>.clone() });
-<span class="doccomment">/// macro for an ALIGN &quot;&amp;&quot; token
+</span><span class="macro">macro_rules!</span> T_MATH(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_MATH</span>.clone() });
+<span class="doccomment">/// macro for an ALIGN "&amp;" token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_ALIGN(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_ALIGN</span>.clone() });
-<span class="doccomment">/// macro for a PARAM &quot;#&quot; token
+</span><span class="macro">macro_rules!</span> T_ALIGN(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_ALIGN</span>.clone() });
+<span class="doccomment">/// macro for a PARAM "#" token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_PARAM(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_PARAM</span>.clone() });
-<span class="doccomment">/// macro for a SUPER &quot;^&quot; token
+</span><span class="macro">macro_rules!</span> T_PARAM(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_PARAM</span>.clone() });
+<span class="doccomment">/// macro for a SUPER "^" token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_SUPER(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SUPER</span>.clone() });
-<span class="doccomment">/// macro for a SUB &quot;_&quot; token
+</span><span class="macro">macro_rules!</span> T_SUPER(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SUPER</span>.clone() });
+<span class="doccomment">/// macro for a SUB "_" token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_SUB(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SUB</span>.clone() });
-<span class="doccomment">/// macro for a SPACE token (default &quot; &quot;)
+</span><span class="macro">macro_rules!</span> T_SUB(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SUB</span>.clone() });
+<span class="doccomment">/// macro for a SPACE token (default " ")
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_SPACE(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SPACE</span>.clone() };
+</span><span class="macro">macro_rules!</span> T_SPACE(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SPACE</span>.clone() };
 (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
-  Token { text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>), code: Catcode::SPACE, smuggled: <span class="prelude-val">None</span>}
+  Token { text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="macro-nonterminal">$text</span>), code: Catcode::SPACE}
 });
-<span class="doccomment">/// macro for a CR &quot;\n&quot; token
+<span class="doccomment">/// macro for a CR "\n" token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_CR(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_CR</span>.clone() });
+</span><span class="macro">macro_rules!</span> T_CR(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_CR</span>.clone() });
 <span class="doccomment">/// macro for a LETTER token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_LETTER {
+</span><span class="macro">macro_rules!</span> T_LETTER {
   (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::LETTER,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::LETTER,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
 }
 <span class="doccomment">/// macro for an OTHER code token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_OTHER {
+</span><span class="macro">macro_rules!</span> T_OTHER {
   (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::OTHER,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::OTHER,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
 }
 <span class="doccomment">/// T_OTHER from a single character
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_OTHER_CHAR {
+</span><span class="macro">macro_rules!</span> T_OTHER_CHAR {
   (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin_char</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::OTHER,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
 }
 <span class="doccomment">/// macro for an ACTIVE char token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_ACTIVE {
+</span><span class="macro">macro_rules!</span> T_ACTIVE {
   (<span class="macro-nonterminal">$c</span>:expr) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
     <span class="kw">let </span>s = <span class="macro-nonterminal">$c</span>.encode_utf8(<span class="kw-2">&amp;mut </span>tmp);
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(s),
       code: Catcode::ACTIVE,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   }};
 }
 <span class="doccomment">/// macro for a COMMENT content token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_COMMENT {
+</span><span class="macro">macro_rules!</span> T_COMMENT {
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::COMMENT,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
 }
 <span class="doccomment">/// macro for a command sequence token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_CS {
+</span><span class="macro">macro_rules!</span> T_CS {
   (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
     <span class="macro-nonterminal">$crate::token::Token </span>{
       text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="macro-nonterminal">$text</span>),
       code: <span class="macro-nonterminal">$crate::token::Catcode::CS</span>,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     <span class="macro-nonterminal">$crate::token::Token </span>{
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
       code: <span class="macro-nonterminal">$crate::token::Catcode::CS</span>,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
 }
 
-<span class="doccomment">/// macro for T_CS(&quot;\\relax&quot;)
+<span class="doccomment">/// macro for T_CS("\\relax")
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_RELAX(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_RELAX</span>.clone() });
+</span><span class="macro">macro_rules!</span> T_RELAX(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_RELAX</span>.clone() });
 
 <span class="doccomment">/// macro for a tracing MARKER token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_MARKER {
+</span><span class="macro">macro_rules!</span> T_MARKER {
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::MARKER,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
 }
 
 <span class="doccomment">/// macro for a numbered ARG token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_ARG {
+</span><span class="macro">macro_rules!</span> T_ARG {
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>.to_string()),
       code: Catcode::ARG,
-      smuggled: <span class="prelude-val">None</span>,
-    }
-  };
-}
-<span class="doccomment">/// macro for a SmuggleThe token (see `gullet::invoke_and_read_x_token`)
-</span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_SMUGGLE_THE {
-  (<span class="macro-nonterminal">$t</span>:ident) =&gt; {
-    <span class="kw">match </span><span class="macro-nonterminal">$t</span>.get_catcode() {
-      Catcode::SmuggleTHE =&gt; {
-        <span class="comment">// LaTeXML Bug, we haven&#39;t correctly emulated scan_toks! Offending token was:
-        </span><span class="macro">fatal!</span>(
-          SmuggledCatcode,
-          Unexpected,
-          <span class="macro">s!</span>(
-            <span class="string">&quot;We are masking a \\the-produced token twice, this must Never happen. Illegal: {}&quot;</span>,
-            <span class="macro-nonterminal">$t</span>.stringify()
-          )
-        );
-      },
-      cc <span class="kw">if </span>cc.can_smuggle_the() =&gt; Token {
-        text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="string">&quot;SMUGGLE_THE&quot;</span>),
-        code: Catcode::SmuggleTHE,
-        smuggled: <span class="prelude-val">Some</span>(Box::new(<span class="macro-nonterminal">$t</span>)),
-      },
-      <span class="kw">_ </span>=&gt; <span class="macro-nonterminal">$t</span>,
+
     }
   };
 }
 
 <span class="doccomment">/// Token constructor macro (defaults to OTHER code)
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>Token {
+</span><span class="macro">macro_rules!</span> Token {
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     <span class="macro">Token!</span>(<span class="macro-nonterminal">$text</span>, Catcode::OTHER)
+  };
+  (<span class="macro-nonterminal">$text</span>:literal, <span class="macro-nonterminal">$cc</span>:expr) =&gt; {
+    Token {
+      text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="macro-nonterminal">$text</span>),
+      code: <span class="macro-nonterminal">$cc</span>,
+
+    }
   };
   (<span class="macro-nonterminal">$text</span>:expr, <span class="macro-nonterminal">$cc</span>:expr) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
       code: <span class="macro-nonterminal">$cc</span>,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   };
 }
 
-<span class="doccomment">/// Special case: a character needs swift string conversion, so let&#39;s use a dedicated macro
+<span class="doccomment">/// Special case: a character needs swift string conversion, so let's use a dedicated macro
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>CharToken {
+</span><span class="macro">macro_rules!</span> CharToken {
   (<span class="macro-nonterminal">$c</span>:expr) =&gt; {
     <span class="macro">CharToken!</span>(<span class="macro-nonterminal">$c</span>, Catcode::OTHER)
   };
   (<span class="macro-nonterminal">$c</span>:expr, <span class="macro-nonterminal">$cc</span>:expr) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
     <span class="kw">let </span>s = <span class="macro-nonterminal">$c</span>.encode_utf8(<span class="kw-2">&amp;mut </span>tmp);
     <span class="macro">Token!</span>(s, <span class="macro-nonterminal">$cc</span>)
   }};
@@ -1529,9 +1399,9 @@
 
 <span class="doccomment">/// Explode a string into a list of tokens, all w/catcode OTHER (except space).
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>Explode((<span class="macro-nonterminal">$text</span>:expr) =&gt; (
+</span><span class="macro">macro_rules!</span> Explode((<span class="macro-nonterminal">$text</span>:expr) =&gt; (
   <span class="macro-nonterminal">$text</span>.to_string().chars().map(|c|
-    <span class="kw">if </span>c==<span class="string">&#39; &#39; </span>{ <span class="macro">T_SPACE!</span>() }
+    <span class="kw">if </span>c==<span class="string">' ' </span>{ <span class="macro">T_SPACE!</span>() }
     <span class="kw">else </span>{
       <span class="macro">CharToken!</span>(c)
     }
@@ -1539,9 +1409,9 @@
 ));
 
 <span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>ExplodeChars((<span class="macro-nonterminal">$text</span>:expr) =&gt; (
+</span><span class="macro">macro_rules!</span> ExplodeChars((<span class="macro-nonterminal">$text</span>:expr) =&gt; (
   <span class="macro-nonterminal">$text</span>.as_str().chars().map(|c|
-    <span class="kw">if </span>c==<span class="string">&#39; &#39; </span>{ <span class="macro">T_SPACE!</span>() }
+    <span class="kw">if </span>c==<span class="string">' ' </span>{ <span class="macro">T_SPACE!</span>() }
     <span class="kw">else </span>{
       <span class="macro">CharToken!</span>(c)
     }
@@ -1551,13 +1421,13 @@
 <span class="doccomment">/// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 /// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>ExplodeText(
+</span><span class="macro">macro_rules!</span> ExplodeText(
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; ({
   <span class="kw">use </span><span class="macro-nonterminal">$crate::token</span>::{Catcode,Token};
   <span class="macro-nonterminal">$text</span>.to_string().chars().map(|c|
-    <span class="kw">if </span>c==<span class="string">&#39; &#39; </span>{ <span class="macro">T_SPACE!</span>() }
+    <span class="kw">if </span>c==<span class="string">' ' </span>{ <span class="macro">T_SPACE!</span>() }
     <span class="kw">else </span>{
-      <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+      <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
       <span class="kw">let </span>s = c.encode_utf8(<span class="kw-2">&amp;mut </span>tmp);
       <span class="kw">if </span>c.is_alphabetic() {
       <span class="macro">T_LETTER!</span>(s) }
@@ -1570,9 +1440,9 @@
 </span><span class="kw">impl </span>Default <span class="kw">for </span>Token {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Token {
-      text: arena::pin_static(<span class="string">&quot;EXPECTED_TOKEN&quot;</span>),
+      text: arena::pin_static(<span class="string">"EXPECTED_TOKEN"</span>),
       code: Catcode::OTHER,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   }
 }
@@ -1585,15 +1455,15 @@
     Token {
       text: arena::pin(text),
       code,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   }
 
   <span class="doccomment">/// Get the CS Name of the token. This is the name that definitions will be
-  /// stored under; It&#39;s the same for various `different&#39; BEGIN tokens, eg.
+  /// stored under; It's the same for various `different' BEGIN tokens, eg.
   </span><span class="kw">pub fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SymbolU32 {
     <span class="kw">if </span><span class="self">self</span>.code.is_primitive() {
-      arena::pin(<span class="self">self</span>.code.name())
+      arena::pin_static(<span class="self">self</span>.code.name())
     } <span class="kw">else </span>{
       <span class="self">self</span>.get_sym()
     }
@@ -1601,7 +1471,7 @@
 
   <span class="doccomment">/// Execute a closure using the CS Name of the token.
   /// This is the name that definitions will be stored under;
-  /// It&#39;s the same for various `different&#39; BEGIN tokens, eg.
+  /// It's the same for various `different' BEGIN tokens, eg.
   </span><span class="kw">pub fn </span>with_cs_name&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
   <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
     <span class="kw">if </span><span class="self">self</span>.code.is_primitive() {
@@ -1621,7 +1491,7 @@
   }
 
   <span class="doccomment">/// Get the fixed name of a primitive catcode, or empty string otherwise
-  </span><span class="kw">pub fn </span>get_primitive_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+  </span><span class="kw">pub fn </span>get_primitive_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">if </span><span class="self">self</span>.code.is_primitive() {
       <span class="prelude-val">Some</span>(<span class="self">self</span>.code.name())
     } <span class="kw">else </span>{
@@ -1643,7 +1513,7 @@
   }
 
   <span class="doccomment">/// Intersect executable and primitive
-  </span><span class="kw">pub fn </span>get_executable_primitive_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+  </span><span class="kw">pub fn </span>get_executable_primitive_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>cc = <span class="self">self</span>.code;
     <span class="kw">if </span>cc.is_executable() &amp;&amp; cc.is_primitive() {
       <span class="prelude-val">Some</span>(<span class="self">self</span>.code.name())
@@ -1652,9 +1522,9 @@
     </span>}
   }
 
-  <span class="doccomment">/// Use the ticket representing the interned &quot;text&quot; of the token
+  <span class="doccomment">/// Use the ticket representing the interned "text" of the token
   </span><span class="kw">pub fn </span>get_sym(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SymbolU32 { <span class="self">self</span>.text }
-  <span class="doccomment">/// Use the interned &amp;str &quot;text&quot; of the token
+  <span class="doccomment">/// Use the interned &amp;str "text" of the token
   /// use `to_string` instead for an owned String with simpler
   </span><span class="kw">pub fn </span>with_str&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
   <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
@@ -1681,12 +1551,11 @@
   </span><span class="kw">pub fn </span>get_catcode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Catcode { <span class="self">self</span>.code }
   <span class="doccomment">/// is the current one
   </span><span class="kw">pub fn </span>is_executable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.code.is_executable() }
-  <span class="kw">pub fn </span>has_smuggled(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.smuggled.is_some() }
 
   <span class="doccomment">/// neutralize really should only retroactively imitate what Semiverbatim would have done.
   /// So, it needs to neutralize those in SPECIALS
-  /// NOTE that although &#39;%&#39; gets it&#39;s catcode changed in Semiverbatim,
-  /// I&#39;m pretty sure we do NOT want to neutralize comments (turn them into CC_OTHER)
+  /// NOTE that although '%' gets it's catcode changed in Semiverbatim,
+  /// I'm pretty sure we do NOT want to neutralize comments (turn them into CC_OTHER)
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the
   /// stream.
   </span><span class="kw">pub fn </span>neutralize(<span class="self">self</span>, extraspecials: <span class="kw-2">&amp;</span>[char]) -&gt; Token {
@@ -1699,16 +1568,16 @@
     <span class="kw">if </span>cc.is_neutralizable() {
       <span class="kw">for </span>extra <span class="kw">in </span>extraspecials {
         <span class="kw">if </span>extra == <span class="kw-2">&amp;</span>ch {
-          <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+          <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
           <span class="kw">let </span>s = ch.encode_utf8(<span class="kw-2">&amp;mut </span>tmp);
           <span class="kw">return </span><span class="macro">T_OTHER!</span>(s);
         }
       }
-      <span class="kw">let </span>maybe_return = state::with_value(<span class="string">&quot;SPECIALS&quot;</span>, |specials_opt| {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecChar(<span class="kw-2">ref </span>specials_list)) = specials_opt {
+      <span class="kw">let </span>maybe_return = state::with_value(<span class="string">"SPECIALS"</span>, |specials_opt| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Chars(<span class="kw-2">ref </span>specials_list)) = specials_opt {
           <span class="kw">for </span>special <span class="kw">in </span>specials_list.iter() {
             <span class="kw">if </span><span class="kw-2">*</span>special == ch {
-              <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+              <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
               <span class="kw">let </span>s = ch.encode_utf8(<span class="kw-2">&amp;mut </span>tmp);
               <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(s));
             }
@@ -1726,14 +1595,14 @@
     Token {
       text: <span class="self">self</span>.text,
       code: Catcode::OTHER,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   }
   <span class="kw">pub fn </span>as_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Token {
     Token {
       text: <span class="self">self</span>.text,
       code: Catcode::CS,
-      smuggled: <span class="prelude-val">None</span>,
+
     }
   }
 
@@ -1742,8 +1611,8 @@
       <span class="self">self</span>.with_str(|text| {
         <span class="kw">let </span>arg_idx = text
           .parse::&lt;usize&gt;()
-          .expect(<span class="string">&quot;ARG catcode tokens should always contain numeric literals as text&quot;</span>);
-        args[arg_idx - <span class="number">1</span>].clone()
+          .expect(<span class="string">"ARG catcode tokens should always contain numeric literals as text"</span>);
+        <span class="kw-2">*</span>args[arg_idx - <span class="number">1</span>]
       })
     } <span class="kw">else </span>{
       <span class="self">self
@@ -1752,56 +1621,9 @@
 
   <span class="kw">pub fn </span>pack_parameters(<span class="self">self</span>) -&gt; <span class="self">Self </span>{ <span class="self">self </span>}
 
-  <span class="kw">pub fn </span>with_dont_expand(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-    <span class="kw">match </span><span class="self">self</span>.code {
-      Catcode::SmuggleTHE =&gt; {
-        <span class="comment">// LaTeXML Bug, we haven&#39;t correctly emulated scan_toks! Offending token was:
-        </span><span class="kw">let </span>msg = <span class="macro">s!</span>(
-          <span class="string">&quot;We are marking as \\noexpand a masked \\the-produced token, this must Never happen. \
-           Illegal: {}&quot;</span>,
-          <span class="kw-2">&amp;</span><span class="self">self</span>.stringify()
-        );
-        <span class="macro">Fatal!</span>(Parameter, Unexpected, msg);
-      },
-      Catcode::CS | Catcode::ACTIVE =&gt; {
-        <span class="kw">if </span>is_dont_expandable(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-          <span class="prelude-val">Ok</span>(Token {
-            text: arena::pin_static(<span class="string">&quot;\\relax&quot;</span>),
-            code: Catcode::CS,
-            smuggled: <span class="prelude-val">Some</span>(Box::new(<span class="self">self</span>)),
-          })
-        } <span class="kw">else </span>{
-          <span class="prelude-val">Ok</span>(<span class="self">self</span>)
-        }
-      },
-      <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>),
-    }
-  }
-
-  <span class="doccomment">/// Return the original token of a not-expanded token,
-  /// or undef if it isn&#39;t marked as such.
-  </span><span class="kw">pub fn </span>get_dont_expand(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.smuggled }
-  <span class="kw">pub fn </span>get_smuggled(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.smuggled }
-  <span class="kw">pub fn </span>take_dont_expand(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt; { <span class="self">self</span>.smuggled.take() }
-  <span class="kw">pub fn </span>take_smuggled(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt; { <span class="self">self</span>.smuggled.take() }
-
-  <span class="doccomment">/// Remove dont_expand flag, remove SMUGGLE_THE wrapper
-  </span><span class="kw">pub fn </span>without_dont_expand(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; Token {
-    <span class="kw">match </span><span class="self">self</span>.smuggled.take() {
-      <span class="prelude-val">Some</span>(t) =&gt; <span class="kw-2">*</span>t,
-      <span class="prelude-val">None </span>=&gt; <span class="self">self</span>,
-    }
-  }
-  <span class="doccomment">/// Borrow a smuggled inner token, without consuming the owner Token
-  </span><span class="kw">pub fn </span>without_dont_expand_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Token {
-    <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.smuggled {
-      <span class="prelude-val">Some</span>(t) =&gt; t,
-      <span class="prelude-val">None </span>=&gt; <span class="self">self</span>,
-    }
-  }
   <span class="doccomment">///======================================================================
-  /// Note that this converts the string to a more `user readable&#39; form using `standard&#39; chars for
-  /// catcodes. We&#39;ll need to be careful about using string instead of reverting for internal
+  /// Note that this converts the string to a more `user readable' form using `standard' chars for
+  /// catcodes. We'll need to be careful about using string instead of reverting for internal
   /// purposes where the
   /// actual character is needed.
 
@@ -1810,21 +1632,19 @@
 
   <span class="doccomment">/// A string form which is primarily used for error-reporting
   </span><span class="kw">pub fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>string = <span class="self">self</span>.with_str(|text| text.to_string());
-    <span class="comment">// Make the token&#39;s char content more printable, since this is for a visual messages.
-    </span><span class="kw">if </span>string.len() == <span class="number">1 </span>{
-      <span class="kw">let </span>c = string.chars().next().unwrap() <span class="kw">as </span>u16;
-      <span class="kw">if </span>c &lt; <span class="number">0x020 </span>{
-        <span class="comment">// TODO: sprintf(&quot;%04x&quot;, c)
-        </span>string = <span class="macro">s!</span>(<span class="string">&quot;U+{}/{}&quot;</span>, c, CONTROLNAME[c <span class="kw">as </span>usize]);
-      }
-    }
-    <span class="kw">let </span>smuggled = <span class="self">self
-      </span>.smuggled
-      .as_ref()
-      .map(|t| <span class="macro">s!</span>(<span class="string">&quot;&lt;{}&gt;&quot;</span>, t.stringify()))
-      .unwrap_or_default();
-    <span class="macro">s!</span>(<span class="string">&quot;{}[{}]{}&quot;</span>, <span class="self">self</span>.code.short_name(), string, smuggled)
+    <span class="self">self</span>.with_str(|text| {
+      <span class="comment">// Make the token's char content more printable, since this is for a visual messages.
+      </span><span class="kw">let </span>display_text = <span class="kw">if </span>text.len() == <span class="number">1 </span>{
+        <span class="kw">let </span>c = text.chars().next().unwrap() <span class="kw">as </span>u16;
+        <span class="kw">if </span>c &lt; <span class="number">0x020 </span>{
+          <span class="comment">// TODO: sprintf("%04x", c)
+          </span>Cow::Owned(<span class="macro">s!</span>(<span class="string">"U+{}/{}"</span>, c, CONTROLNAME[c <span class="kw">as </span>usize]))
+        } <span class="kw">else </span>{
+          Cow::Borrowed(text)
+        }
+      } <span class="kw">else </span>{ Cow::Borrowed(text) };
+      <span class="macro">s!</span>(<span class="string">"{}[{}]"</span>, <span class="self">self</span>.code.short_name(), display_text)
+    })
   }
 
   <span class="kw">pub fn </span>to_register(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
@@ -1865,15 +1685,15 @@
 </span><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>Token {
   <span class="kw">fn </span>from(text: <span class="kw-2">&amp;</span>str) -&gt; Token {
     <span class="kw">match </span>text.chars().next() {
-      <span class="prelude-val">Some</span>(<span class="string">&#39;{&#39;</span>) =&gt; <span class="macro">T_BEGIN!</span>(),
-      <span class="prelude-val">Some</span>(<span class="string">&#39;}&#39;</span>) =&gt; <span class="macro">T_END!</span>(),
-      <span class="prelude-val">Some</span>(<span class="string">&#39;$&#39;</span>) =&gt; <span class="macro">T_MATH!</span>(),
-      <span class="prelude-val">Some</span>(<span class="string">&#39;#&#39;</span>) =&gt; <span class="macro">T_PARAM!</span>(),
-      <span class="prelude-val">Some</span>(<span class="string">&#39;&amp;&#39;</span>) =&gt; <span class="macro">T_ALIGN!</span>(),
-      <span class="prelude-val">Some</span>(<span class="string">&#39;^&#39;</span>) =&gt; <span class="macro">T_SUPER!</span>(),
-      <span class="prelude-val">Some</span>(<span class="string">&#39;_&#39;</span>) =&gt; <span class="macro">T_SUB!</span>(),
-      <span class="prelude-val">Some</span>(<span class="string">&#39;\\&#39;</span>) =&gt; <span class="macro">T_CS!</span>(text),
-      <span class="prelude-val">Some</span>(<span class="string">&#39;%&#39;</span>) =&gt; <span class="macro">T_COMMENT!</span>(text),
+      <span class="prelude-val">Some</span>(<span class="string">'{'</span>) =&gt; <span class="macro">T_BEGIN!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">'}'</span>) =&gt; <span class="macro">T_END!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">'$'</span>) =&gt; <span class="macro">T_MATH!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">'#'</span>) =&gt; <span class="macro">T_PARAM!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">'&amp;'</span>) =&gt; <span class="macro">T_ALIGN!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">'^'</span>) =&gt; <span class="macro">T_SUPER!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">'_'</span>) =&gt; <span class="macro">T_SUB!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">'\\'</span>) =&gt; <span class="macro">T_CS!</span>(text),
+      <span class="prelude-val">Some</span>(<span class="string">'%'</span>) =&gt; <span class="macro">T_COMMENT!</span>(text),
       <span class="kw">_ </span>=&gt; {
         <span class="kw">if </span>text.chars().all(|c| c.is_alphabetic()) {
           <span class="macro">T_LETTER!</span>(text)

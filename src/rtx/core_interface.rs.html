@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx/src/core_interface.rs`."><title>core_interface.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx/src/core_interface.rs`."><title>core_interface.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -413,9 +415,9 @@
   input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions,
 };
 
-<span class="kw">static </span>CLS_EXT_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\.cls$&quot;</span>).unwrap());
-<span class="kw">static </span>STY_EXT_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\.sty$&quot;</span>).unwrap());
-<span class="kw">static </span>LATEX_OPTION_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\[([^\]]*)\]&quot;</span>).unwrap());
+<span class="kw">static </span>CLS_EXT_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\.cls$"</span>).unwrap());
+<span class="kw">static </span>STY_EXT_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\.sty$"</span>).unwrap());
+<span class="kw">static </span>LATEX_OPTION_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\[([^\]]*)\]"</span>).unwrap());
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>DigestionOptions {
@@ -436,7 +438,7 @@
     no_init: bool,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;;
   <span class="kw">fn </span>digest_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: String, options: DigestionOptions) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;;
-  <span class="kw">fn </span>digest_internal(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;; <span class="comment">// used to be &quot;finishDigestion&quot;
+  <span class="kw">fn </span>digest_internal(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;; <span class="comment">// used to be "finishDigestion"
   </span><span class="kw">fn </span>convert_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, filepath: String) -&gt; <span class="prelude-ty">Result</span>&lt;Document&gt;;
   <span class="kw">fn </span>convert_document(<span class="kw-2">&amp;mut </span><span class="self">self</span>, digested: Digested) -&gt; <span class="prelude-ty">Result</span>&lt;Document&gt;;
   <span class="comment">// Mocks
@@ -454,13 +456,13 @@
     <span class="comment">// should we reset the model also?
     </span>model::initialize_model();
     <span class="comment">// let paths = state::search_paths;
-    </span>state::assign_value(<span class="string">&quot;InitialPreloads&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    </span>state::assign_value(<span class="string">"InitialPreloads"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="kw">for </span>preload <span class="kw">in </span>preloads {
       input_definitions(
         <span class="kw-2">&amp;</span>preload,
         InputDefinitionOptions::default())<span class="question-mark">?</span>;
     }
-    state::assign_value(<span class="string">&quot;InitialPreloads&quot;</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    state::assign_value(<span class="string">"InitialPreloads"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="prelude-val">Ok</span>(())
   }
 
@@ -481,7 +483,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>dir_opt = <span class="prelude-val">None</span>;
 
     <span class="kw">let </span>name = <span class="kw">if </span>pathname::is_literaldata(<span class="kw-2">&amp;</span>request) {
-      <span class="macro">s!</span>(<span class="string">&quot;Anonymous String&quot;</span>)
+      <span class="macro">s!</span>(<span class="string">"Anonymous String"</span>)
     } <span class="kw">else if </span>pathname::is_url(<span class="kw-2">&amp;</span>request) {
       request.clone()
     } <span class="kw">else </span>{
@@ -492,36 +494,36 @@
       // };
       </span>dir_opt = path.parent();
       <span class="kw">match </span>path.file_stem() {
-        <span class="prelude-val">None </span>=&gt; String::from(<span class="string">&quot;missing_name&quot;</span>),
+        <span class="prelude-val">None </span>=&gt; String::from(<span class="string">"missing_name"</span>),
         <span class="prelude-val">Some</span>(pf) =&gt; pf.to_str().unwrap().to_string(),
       }
     };
     <span class="comment">// else {
     //   $self-&gt;withState(sub {
-    //       Fatal(&#39;missing_file&#39;, $request, undef, &quot;Can&#39;t find $mode file $request&quot;); }); } }
+    //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    </span><span class="kw">let </span>digestion_note = <span class="macro">s!</span>(<span class="string">&quot;Digesting {}&quot;</span>, name);
+    </span><span class="kw">let </span>digestion_note = <span class="macro">s!</span>(<span class="string">"Digesting {}"</span>, name);
     note_begin(<span class="kw-2">&amp;</span>digestion_note);
-    <span class="comment">// $self-&gt;initializestate::$mode . &quot;.pool&quot;, @{ $$self{preload} || [] }) unless
+    <span class="comment">// $self-&gt;initializestate::$mode . ".pool", @{ $$self{preload} || [] }) unless
     // $options{noinitialize}; $state-&gt;assignValue(SOURCEFILE      =&gt; $request) if
     // (!pathname::is_literaldata($request));
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(dir) = dir_opt {
-      <span class="kw">let </span>dir = dir.to_str().unwrap_or(<span class="string">&quot;.&quot;</span>);
+      <span class="kw">let </span>dir = dir.to_str().unwrap_or(<span class="string">"."</span>);
       {
 
-        state::assign_value(<span class="string">&quot;SOURCEDIRECTORY&quot;</span>, arena::pin(dir), <span class="prelude-val">None</span>);
+        state::assign_value(<span class="string">"SOURCEDIRECTORY"</span>, arena::pin(dir), <span class="prelude-val">None</span>);
         state::add_search_path(dir.to_string());
       }
     }
-    <span class="comment">//   if defined $dir &amp;&amp; !grep { $_ eq $dir } @{ $state-&gt;lookupValue(&#39;SEARCHPATHS&#39;) };
+    <span class="comment">//   if defined $dir &amp;&amp; !grep { $_ eq $dir } @{ $state-&gt;lookupValue('SEARCHPATHS') };
     // $state-&gt;unshiftValue(GRAPHICSPATHS =&gt; $dir)
 
-    // if defined $dir &amp;&amp; !grep { $_ eq $dir } @{ $state-&gt;lookupValue(&#39;GRAPHICSPATHS&#39;) };
+    // if defined $dir &amp;&amp; !grep { $_ eq $dir } @{ $state-&gt;lookupValue('GRAPHICSPATHS') };
 
     </span><span class="kw">let </span>name_copy = name;
     state::install_definition(
       Stored::Expandable(Rc::new(Expandable {
-        cs: <span class="macro">T_CS!</span>(<span class="string">&quot;\\jobname&quot;</span>),
+        cs: <span class="macro">T_CS!</span>(<span class="string">"\\jobname"</span>),
         paramlist: <span class="prelude-val">None</span>,
         expansion: Tokens::new(<span class="macro">Explode!</span>(name_copy)).into(),
         ..Expandable::default()
@@ -536,9 +538,9 @@
     <span class="comment">// $self-&gt;loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
-    // if ($mode eq &#39;BibTeX&#39;) {
+    // if ($mode eq 'BibTeX') {
     //   my $bib = LaTeXML::Pre::BibTeX-&gt;newFromGullet($name, $state-&gt;getStomach-&gt;getGullet);
-    //   LaTeXML::Package::InputContent(&quot;literal:&quot; . $bib-&gt;toTeX); }
+    //   LaTeXML::Package::InputContent("literal:" . $bib-&gt;toTeX); }
 
     </span><span class="kw">let </span>list = <span class="self">self</span>.digest_internal()<span class="question-mark">?</span>;
     note_end(<span class="kw-2">&amp;</span>digestion_note);
@@ -555,7 +557,7 @@
 
   <span class="doccomment">/// Restriction: convert_document runs on a single thread, and should never try branching out.
   </span><span class="kw">fn </span>convert_document(<span class="kw-2">&amp;mut </span><span class="self">self</span>, digested: Digested) -&gt; <span class="prelude-ty">Result</span>&lt;Document&gt; {
-    note_begin(<span class="string">&quot;Building&quot;</span>);
+    note_begin(<span class="string">"Building"</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>document = Document::new();
     {
 
@@ -567,61 +569,61 @@
         .collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;();
       <span class="kw">let </span>default_model_load = model::with_schema_data(|schema_opt| <span class="kw">match </span>schema_opt {
         <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
-        <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>v) =&gt; v.last() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>arena::pin_static(<span class="string">&quot;LaTeXML&quot;</span>)),
+        <span class="prelude-val">Some</span>(v) =&gt; v.last() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>arena::pin_static(<span class="string">"LaTeXML"</span>)),
       });
       <span class="kw">if </span>default_model_load {
         <span class="comment">// Compile-time load of model AND indirect model
-        </span><span class="macro">load_model!</span>(<span class="string">&quot;LaTeXML&quot;</span>);
+        </span><span class="macro">load_model!</span>(<span class="string">"LaTeXML"</span>);
       } <span class="kw">else </span>{
         <span class="comment">// Eager-load at runtime
         </span>model::load_schema(schema_paths.as_slice())<span class="question-mark">?</span>; <span class="comment">// If needed?
       </span>}
       <span class="kw">if </span>state::has_search_paths() {
         {
-          <span class="kw">if </span>state::lookup_bool(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>) {
+          <span class="kw">if </span>state::lookup_bool(<span class="string">"INCLUDE_COMMENTS"</span>) {
             <span class="kw">let </span>paths_string = state::with_search_paths(|paths| paths
               .iter()
               .map(String::as_str)
               .collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;()
-              .join(<span class="string">&quot;,&quot;</span>));
-            <span class="kw">let </span>attributes = <span class="macro">map! </span>{<span class="macro">s!</span>(<span class="string">&quot;paths&quot;</span>) =&gt; paths_string};
-            document.insert_pi(<span class="string">&quot;latexml&quot;</span>, <span class="prelude-val">Some</span>(attributes))<span class="question-mark">?</span>;
+              .join(<span class="string">","</span>));
+            <span class="kw">let </span>attributes = <span class="macro">map!</span> {<span class="macro">s!</span>(<span class="string">"paths"</span>) =&gt; paths_string};
+            document.insert_pi(<span class="string">"latexml"</span>, <span class="prelude-val">Some</span>(attributes))<span class="question-mark">?</span>;
           }
         }
       }
     }
 
     <span class="kw">for </span>preload <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.preload {
-      <span class="kw">if </span>preload.ends_with(<span class="string">&quot;.pool&quot;</span>) {
+      <span class="kw">if </span>preload.ends_with(<span class="string">".pool"</span>) {
         <span class="kw">continue</span>;
       }
       <span class="kw">let </span><span class="kw-2">mut </span>options: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
       LATEX_OPTION_REGEX.replace_all(preload, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-        options = <span class="prelude-val">Some</span>(refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string());
+        options = <span class="prelude-val">Some</span>(refs.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string());
         String::new()
       });
-      <span class="kw">if </span>preload.ends_with(<span class="string">&quot;.cls&quot;</span>) {
-        CLS_EXT_REGEX.replace_all(preload, <span class="string">&quot;&quot;</span>);
-        <span class="kw">let </span>attributes = <span class="macro">map! </span>{<span class="macro">s!</span>(<span class="string">&quot;class&quot;</span>) =&gt; preload.to_string()};
-        document.insert_pi(<span class="string">&quot;latexml&quot;</span>, <span class="prelude-val">Some</span>(attributes))<span class="question-mark">?</span>;
+      <span class="kw">if </span>preload.ends_with(<span class="string">".cls"</span>) {
+        CLS_EXT_REGEX.replace_all(preload, <span class="string">""</span>);
+        <span class="kw">let </span>attributes = <span class="macro">map!</span> {<span class="macro">s!</span>(<span class="string">"class"</span>) =&gt; preload.to_string()};
+        document.insert_pi(<span class="string">"latexml"</span>, <span class="prelude-val">Some</span>(attributes))<span class="question-mark">?</span>;
       } <span class="kw">else </span>{
-        STY_EXT_REGEX.replace_all(preload, <span class="string">&quot;&quot;</span>);
-        <span class="kw">let </span>attributes = <span class="macro">map! </span>{<span class="macro">s!</span>(<span class="string">&quot;package&quot;</span>) =&gt; preload.to_string()};
-        document.insert_pi(<span class="string">&quot;latexml&quot;</span>, <span class="prelude-val">Some</span>(attributes))<span class="question-mark">?</span>;
+        STY_EXT_REGEX.replace_all(preload, <span class="string">""</span>);
+        <span class="kw">let </span>attributes = <span class="macro">map!</span> {<span class="macro">s!</span>(<span class="string">"package"</span>) =&gt; preload.to_string()};
+        document.insert_pi(<span class="string">"latexml"</span>, <span class="prelude-val">Some</span>(attributes))<span class="question-mark">?</span>;
       }
     }
-    <span class="macro">Debug!</span>(<span class="string">&quot;Doc absorb: {:?}&quot;</span>, digested);
+    <span class="macro">Debug!</span>(<span class="string">"Doc absorb: {:?}"</span>, digested);
 
     document.absorb(<span class="kw-2">&amp;</span>digested, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-    note_end(<span class="string">&quot;Building&quot;</span>);
+    note_end(<span class="string">"Building"</span>);
 
-    <span class="kw">let </span>has_rewrites = state::has_value(<span class="string">&quot;DOCUMENT_REWRITE_RULES&quot;</span>);
+    <span class="kw">let </span>has_rewrites = state::has_value(<span class="string">"DOCUMENT_REWRITE_RULES"</span>);
     <span class="kw">if </span>has_rewrites {
-      note_begin(<span class="string">&quot;Rewriting&quot;</span>);
+      note_begin(<span class="string">"Rewriting"</span>);
       document.mark_xmnode_visibility()<span class="question-mark">?</span>;
       document.load_labels_for_rewrite()<span class="question-mark">?</span>;
       <span class="comment">// TODO: What is the right way to do rewrites in a daemon-safe manner?
-      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(rules)) = state::remove_value(<span class="string">&quot;DOCUMENT_REWRITE_RULES&quot;</span>) {
+      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(rules)) = state::remove_value(<span class="string">"DOCUMENT_REWRITE_RULES"</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = document.get_document().get_root_element() {
           <span class="comment">// Step 1: copy the rules locally through Rc, to be able to invoke them with mutable state.
           // (TODO: obviously, this could be avoided if they never needed mutable state.
@@ -639,16 +641,16 @@
           }
         }
       }
-      note_end(<span class="string">&quot;Rewriting&quot;</span>);
+      note_end(<span class="string">"Rewriting"</span>);
     }
 
     <span class="kw">if </span>! state::get_nomathparse_flag() {
       <span class="kw">let </span><span class="kw-2">mut </span>parser = MathParser::default();
       parser.parse_math(<span class="kw-2">&amp;mut </span>document)<span class="question-mark">?</span>;
     }
-    note_begin(<span class="string">&quot;Finalizing&quot;</span>);
+    note_begin(<span class="string">"Finalizing"</span>);
     document.finalize()<span class="question-mark">?</span>;
-    note_end(<span class="string">&quot;Finalizing&quot;</span>);
+    note_end(<span class="string">"Finalizing"</span>);
     <span class="prelude-val">Ok</span>(document)
   }
 
@@ -656,7 +658,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>boxes = Vec::new();
     <span class="kw">while </span>gullet::has_more_input() {
       <span class="kw">let </span>next_bodies: Vec&lt;Digested&gt; = stomach::digest_next_body(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-      <span class="comment">// info!(target:&quot;core:digest_next_body&quot;, &quot;\n{:?}\n----\n&quot;,next_bodies);
+      <span class="comment">// info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       </span>boxes.extend(next_bodies);
     }
     gullet::flush();
@@ -684,12 +686,12 @@
 
     <span class="kw">if </span>pathname::is_literaldata(<span class="kw-2">&amp;</span>request) {
       <span class="comment">// ext = mode.extension();
-      </span>name = <span class="macro">s!</span>(<span class="string">&quot;Anonymous String&quot;</span>);
+      </span>name = <span class="macro">s!</span>(<span class="string">"Anonymous String"</span>);
     } <span class="kw">else if </span>pathname::is_url(<span class="kw-2">&amp;</span>request) {
       <span class="comment">// ext = mode.extension();
       </span>name = request.clone();
     } <span class="kw">else </span>{
-      <span class="kw">let </span>ext_str = <span class="macro">s!</span>(<span class="string">&quot;.{}&quot;</span>, mode.extension());
+      <span class="kw">let </span>ext_str = <span class="macro">s!</span>(<span class="string">".{}"</span>, mode.extension());
       <span class="kw">let </span>request_base = <span class="kw">if </span>request.ends_with(<span class="kw-2">&amp;</span>ext_str) {
         request[<span class="number">0</span>..request.len() - ext_str.len()].to_string()
       } <span class="kw">else </span>{
@@ -708,12 +710,12 @@
         name = pathname::file_stem(<span class="kw-2">&amp;</span>request);
       <span class="comment">// ext = pathname::extension(&amp;request);
       </span>} <span class="kw">else </span>{
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t find {} file {} &quot;</span>, mode, request_base);
+        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Can't find {} file {} "</span>, mode, request_base);
         <span class="macro">fatal!</span>(Core, MissingFile, message);
       }
     }
-    note_begin(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Digesting {} {}&quot;</span>, mode, name));
-    <span class="kw">let </span>main_pool = <span class="macro">s!</span>(<span class="string">&quot;{}.pool&quot;</span>, mode);
+    note_begin(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Digesting {} {}"</span>, mode, name));
+    <span class="kw">let </span>main_pool = <span class="macro">s!</span>(<span class="string">"{}.pool"</span>, mode);
     <span class="kw">let </span>noinitialize = options.noinitialize.unwrap_or(<span class="bool-val">false</span>);
     <span class="kw">if </span>!noinitialize {
       <span class="kw">let </span><span class="kw-2">mut </span>preloads = <span class="macro">vec!</span>[main_pool];
@@ -723,16 +725,16 @@
     {
 
       <span class="kw">if </span>!pathname::is_literaldata(<span class="kw-2">&amp;</span>request) {
-        state::assign_value(<span class="string">&quot;SOURCEFILE&quot;</span>, request.clone(), <span class="prelude-val">None</span>);
+        state::assign_value(<span class="string">"SOURCEFILE"</span>, request.clone(), <span class="prelude-val">None</span>);
       }
       <span class="kw">if </span>!dir.is_empty() {
-        state::assign_value(<span class="string">&quot;SOURCEDIRECTORY&quot;</span>, dir.clone(), <span class="prelude-val">None</span>);
+        state::assign_value(<span class="string">"SOURCEDIRECTORY"</span>, dir.clone(), <span class="prelude-val">None</span>);
       }
       state::search_paths_push_front(dir.clone());
       state::graphics_paths_push_front(dir);
       state::install_definition(
         Stored::Expandable(Rc::new(Expandable {
-          cs: <span class="macro">T_CS!</span>(<span class="string">&quot;\\jobname&quot;</span>),
+          cs: <span class="macro">T_CS!</span>(<span class="string">"\\jobname"</span>),
           paramlist: <span class="prelude-val">None</span>,
           expansion: Tokens::new(<span class="macro">Explode!</span>(name)).into(),
           ..Expandable::default()
@@ -760,11 +762,11 @@
     <span class="comment">// Now for the Hacky part for BibTeX!!!
     // if mode == DigestionMode::BibTeX {
     //   let bib = LaTeXML::Pre::BibTeX-&gt;newFromGullet($name, $state-&gt;getStomach-&gt;getGullet);
-    //   LaTeXML::Package::InputContent(&quot;literal:&quot; . $bib-&gt;toTeX);
+    //   LaTeXML::Package::InputContent("literal:" . $bib-&gt;toTeX);
     // }
 
     </span><span class="kw">let </span>list = <span class="self">self</span>.digest_internal()<span class="question-mark">?</span>;
-    note_end(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Digesting {} {}&quot;</span>, mode, name));
+    note_end(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Digesting {} {}"</span>, mode, name));
     <span class="prelude-val">Ok</span>(list)
   }
 }

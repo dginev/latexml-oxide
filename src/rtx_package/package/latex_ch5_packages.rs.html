@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch5_packages.rs`."><title>latex_ch5_packages.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch5_packages.rs`."><title>latex_ch5_packages.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -207,37 +209,37 @@
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="kw">static </span>OPTS_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;,\s*&quot;</span>).unwrap());
+<span class="kw">static </span>OPTS_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r",\s*"</span>).unwrap());
 
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">// ======================================================================
   // C.5.2 Packages
   // ======================================================================
-  // We&#39;ll prefer to load package.pm, but will try package.sty or
+  // We'll prefer to load package.pm, but will try package.sty or
   // package.tex (the latter being unlikely to work, but....)
   // See Stomach.pm for details
   // Ignorable packages ??
   // pre-defined packages??
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@clsextension&quot;</span>, <span class="string">&quot;cls&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@pkgextension&quot;</span>, <span class="string">&quot;sty&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@currext&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@currname&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@classoptionslist&quot;</span>, <span class="string">&quot;\\relax&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@raw@classoptionslist&quot;</span>, <span class="string">&quot;\\relax&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@declaredoptions&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@curroptions&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@unusedoptionlist&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@clsextension"</span>, <span class="string">"cls"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@pkgextension"</span>, <span class="string">"sty"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@currext"</span>, <span class="string">"\\@empty"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@currname"</span>, <span class="string">"\\@empty"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@classoptionslist"</span>, <span class="string">"\\relax"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@raw@classoptionslist"</span>, <span class="string">"\\relax"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@declaredoptions"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@curroptions"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@unusedoptionlist"</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\usepackage OptionalSemiverbatim Semiverbatim []&quot;</span>,
-                  <span class="string">&quot;&lt;?latexml package=&#39;#2&#39; ?#1(options=&#39;#1&#39;)?&gt;&quot;</span>,
-    before_digest =&gt; { only_preamble(<span class="string">&quot;\\usepackage&quot;</span>) },
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\usepackage OptionalSemiverbatim Semiverbatim []"</span>,
+                  <span class="string">"&lt;?latexml package='#2' ?#1(options='#1')?&gt;"</span>,
+    before_digest =&gt; { only_preamble(<span class="string">"\\usepackage"</span>) },
     after_digest =&gt; sub[whatsit] {
       <span class="kw">let </span>options: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Digested&gt; = whatsit.get_arg(<span class="number">1</span>);
       <span class="kw">let </span>packages: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Digested&gt; = whatsit.get_arg(<span class="number">2</span>);
       <span class="kw">let </span>package_list = <span class="kw">match </span>packages {
         <span class="prelude-val">Some</span>(value) =&gt; OPTS_REGEX.split(<span class="kw-2">&amp;</span>value.to_string())
-          .map(ToString::to_string).filter(|s| !s.starts_with(<span class="string">&#39;%&#39;</span>)).collect(),
+          .map(ToString::to_string).filter(|s| !s.starts_with(<span class="string">'%'</span>)).collect(),
         <span class="prelude-val">None </span>=&gt; Vec::new(),
       };
       <span class="kw">let </span>options_list = <span class="kw">match </span>options {
@@ -254,23 +256,23 @@
     }
   );
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\RequirePackage OptionalSemiverbatim Semiverbatim []&quot;</span>,
-  <span class="string">&quot;&lt;?latexml package=&#39;#2&#39; ?#1(options=&#39;#1&#39;)?&gt;&quot;</span>,
-  before_digest =&gt;  { only_preamble(<span class="string">&quot;\\RequirePackage&quot;</span>) },
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\RequirePackage OptionalSemiverbatim Semiverbatim []"</span>,
+  <span class="string">"&lt;?latexml package='#2' ?#1(options='#1')?&gt;"</span>,
+  before_digest =&gt;  { only_preamble(<span class="string">"\\RequirePackage"</span>) },
   after_digest =&gt; sub[whatsit] {
     <span class="comment">// let options  = whatsit.get_arg(1);
     </span><span class="kw">let </span>packages = whatsit.get_arg(<span class="number">2</span>).unwrap();
   <span class="comment">//   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
-    </span><span class="kw">for </span>pkg <span class="kw">in </span>packages.to_string().split(<span class="string">&#39;,&#39;</span>) {
+    </span><span class="kw">for </span>pkg <span class="kw">in </span>packages.to_string().split(<span class="string">','</span>) {
       <span class="kw">let </span>pkg_trimmed = pkg.trim();
-      <span class="kw">if </span>pkg_trimmed.is_empty() || pkg.starts_with(<span class="string">&#39;%&#39;</span>) { <span class="kw">continue</span>; }
+      <span class="kw">if </span>pkg_trimmed.is_empty() || pkg.starts_with(<span class="string">'%'</span>) { <span class="kw">continue</span>; }
       require_package(pkg, RequireOptions::default())<span class="question-mark">?</span>;
     }
   });
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\LoadClass OptionalSemiverbatim Semiverbatim []&quot;</span>,
-    <span class="string">&quot;&lt;?latexml class=&#39;#2&#39; ?#1(options=&#39;#1&#39;)?&gt;&quot;</span>,
-    before_digest =&gt; { only_preamble(<span class="string">&quot;\\LoadClass&quot;</span>) }
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\LoadClass OptionalSemiverbatim Semiverbatim []"</span>,
+    <span class="string">"&lt;?latexml class='#2' ?#1(options='#1')?&gt;"</span>,
+    before_digest =&gt; { only_preamble(<span class="string">"\\LoadClass"</span>) }
     <span class="comment">// afterDigest  =&gt; sub { my ($stomach, $whatsit) = @_;
     //   my $options = $whatsit-&gt;getArg(1);
     //   my $class   = ToString($whatsit-&gt;getArg(2));
@@ -282,38 +284,38 @@
 
   <span class="comment">// Related internal macros for package definition
   // Internals used in Packages
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\NeedsTeXFormat{}[]&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\NeedsTeXFormat{}[]"</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ProvidesClass{}[]&quot;</span>, sub[(class, version_opt)] {
-    <span class="kw">let </span>ver_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\ver@{class}.cls&quot;</span>));
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\ProvidesClass{}[]"</span>, sub[(class, version_opt)] {
+    <span class="kw">let </span>ver_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ver@{class}.cls"</span>));
     <span class="kw">let </span>version = version_opt.unwrap_or_default();
     <span class="macro">DefMacro!</span>(ver_cs, <span class="prelude-val">None</span>, version, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
   });
 
   <span class="comment">// Note that these, like LaTeX, define macros like \var@mypkg.sty to give the version info.
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\ProvidesPackage{}[]&quot;</span>, sub[(package, version_opt)] {
-    <span class="kw">let </span>ver_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\ver@{package}.sty&quot;</span>));
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ProvidesPackage{}[]"</span>, sub[(package, version_opt)] {
+    <span class="kw">let </span>ver_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ver@{package}.sty"</span>));
     <span class="kw">let </span>version = version_opt.unwrap_or_default();
     <span class="macro">DefMacro!</span>(ver_cs, <span class="prelude-val">None</span>, version, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\ProvidesFile{}[]&quot;</span>, sub[(file, version_opt)] {
-    <span class="kw">let </span>ver_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\ver@{file}&quot;</span>));
+  <span class="macro">DefMacro!</span>(<span class="string">"\\ProvidesFile{}[]"</span>, sub[(file, version_opt)] {
+    <span class="kw">let </span>ver_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ver@{file}"</span>));
     <span class="kw">let </span>version = version_opt.unwrap_or_default();
     <span class="macro">DefMacro!</span>(ver_cs, <span class="prelude-val">None</span>, version, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
   });
 
   <span class="comment">// anything useful?
   //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\DeclareRelease{}{}{}&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DeclareRelease{}{}{}"</span>, <span class="prelude-val">None</span>);
   <span class="comment">//\DeclareCurrentRelease{v4.49}{2021-11-01}
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\DeclareCurrentRelease{}{}&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\NewModuleRelease{}{}{} Until:\\EndModuleRelease&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DeclareCurrentRelease{}{}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\NewModuleRelease{}{}{} Until:\\EndModuleRelease"</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\DeclareOption{}{}&quot;</span>, sub[(option, code)] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareOption{}{}"</span>, sub[(option, code)] {
     <span class="kw">let </span>option_str = option.to_string();
-    <span class="kw">if </span>option_str == <span class="string">&quot;*&quot; </span>{
+    <span class="kw">if </span>option_str == <span class="string">"*" </span>{
       <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, code);
     } <span class="kw">else </span>{
       <span class="macro">DeclareOption!</span>(option_str, code);
@@ -321,23 +323,23 @@
     <span class="prelude-val">Ok</span>(Vec::new())
   });
 
-  <span class="comment">// DefPrimitive!(&quot;\\PassOptionsToPackage{}{}&quot;, sub[(name, options)] {
+  <span class="comment">// DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(name, options)] {
   //   // $name = ToString($name);
   //   // $name =~ s/\s+//g;
-  //   // PassOptions($name, &#39;sty&#39;, split(/\s*,\s*/, ToString(Expand($options))));
+  //   // PassOptions($name, 'sty', split(/\s*,\s*/, ToString(Expand($options))));
   //   Ok(Vec::new())
   // });
 
-  // DefPrimitive!(&quot;\\PassOptionsToClass{}{}&quot;, sub[(name, options)] {
+  // DefPrimitive!("\\PassOptionsToClass{}{}", sub[(name, options)] {
   //   // $name = ToString($name);
   //   // $name =~ s/\s+//g;
-  //   // PassOptions($name, &#39;cls&#39;, split(/\s*,\s*/, ToString(Expand($options))));
+  //   // PassOptions($name, 'cls', split(/\s*,\s*/, ToString(Expand($options))));
   //   Ok(Vec::new())
   // });
 
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\RequirePackageWithOptions Semiverbatim []&quot;</span>,
-  <span class="string">&quot;&lt;?latexml package=&#39;#1&#39;?&gt;&quot;</span>,
-  before_digest =&gt; { only_preamble(<span class="string">&quot;\\RequirePackage&quot;</span>) }
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\RequirePackageWithOptions Semiverbatim []"</span>,
+  <span class="string">"&lt;?latexml package='#1'?&gt;"</span>,
+  before_digest =&gt; { only_preamble(<span class="string">"\\RequirePackage"</span>) }
   <span class="comment">// afterDigest  =&gt; sub { my ($stomach, $whatsit) = @_;
   //   my $package = ToString($whatsit-&gt;getArg(1));
   //   $package =~ s/\s+//g;
@@ -345,73 +347,73 @@
   //   return; }
   </span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\LoadClassWithOptions Semiverbatim []&quot;</span>, <span class="string">&quot;&lt;?latexml class=&#39;#1&#39;?&gt;&quot;</span>,
-    before_digest =&gt; { only_preamble(<span class="string">&quot;\\LoadClassWithOptions&quot;</span>) }
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\LoadClassWithOptions Semiverbatim []"</span>, <span class="string">"&lt;?latexml class='#1'?&gt;"</span>,
+    before_digest =&gt; { only_preamble(<span class="string">"\\LoadClassWithOptions"</span>) }
     <span class="comment">// afterDigest  =&gt; sub { my ($stomach, $whatsit) = @_;
     //   my $class = ToString($whatsit-&gt;getArg(1));
     //   $class =~ s/\s+//g;
     //   LoadClass($class, withoptions =&gt; 1);
     //   return; });
   </span>);
-  <span class="comment">// DefPrimitive!(&quot;\\@onefilewithoptions {} [][] {}&quot;,
+  <span class="comment">// DefPrimitive!("\\@onefilewithoptions {} [][] {}",
   // sub[(name,option1,option2,ext)] {
   //   // InputDefinitions(ToString(Expand($name)),
   //   //    type =&gt; ToString(Expand($ext)), options =&gt; $option1);
   //   Ok(Vec::new())
   // });
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\CurrentOption&quot;</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\CurrentOption"</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ExecuteOptions{}&quot;</span>, sub[(options)] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\ExecuteOptions{}"</span>, sub[(_options)] {
     <span class="comment">// TODO!
     // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
-    </span><span class="macro">Info!</span>(<span class="string">&quot;TODO&quot;</span>,<span class="string">&quot;\\ExecuteOptions&quot;</span>,<span class="string">&quot;implement fully, it&#39;s an empty stub.&quot;</span>);
+    </span><span class="macro">Info!</span>(<span class="string">"TODO"</span>,<span class="string">"\\ExecuteOptions"</span>,<span class="string">"implement fully, it's an empty stub."</span>);
     <span class="prelude-val">Ok</span>(Vec::new())
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ProcessOptions OptionalMatch:*&quot;</span>, sub[(star)] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\ProcessOptions OptionalMatch:*"</span>, sub[(_star)] {
     <span class="comment">// TODO:
     // if star.is_some() {
-    //   &quot;inorder&quot;
+    //   "inorder"
     // }
     // ProcessOptions!(($star ? (inorder =&gt; 1) : ()));
-    </span><span class="macro">Info!</span>(<span class="string">&quot;TODO&quot;</span>,<span class="string">&quot;\\ProcessOptions&quot;</span>,<span class="string">&quot;implement fully, missing &#39;inorder&#39;&quot;</span>);
+    </span><span class="macro">Info!</span>(<span class="string">"TODO"</span>,<span class="string">"\\ProcessOptions"</span>,<span class="string">"implement fully, missing 'inorder'"</span>);
     process_options()<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(Vec::new())
   });
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@options&quot;</span>, <span class="string">&quot;\\ProcessOptions*&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@options"</span>, <span class="string">"\\ProcessOptions*"</span>);
 
-  <span class="macro">Let!</span>(<span class="string">&quot;\\@enddocumenthook&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\AtEndOfPackage{}&quot;</span>, sub [(code)] {
-    <span class="kw">let </span>name = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currname&quot;</span>)).to_string();
-    <span class="kw">let </span>ttype = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>)).to_string();
-    <span class="kw">let </span>hookcs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{name}.{ttype}-h@@k&quot;</span>));
+  <span class="macro">Let!</span>(<span class="string">"\\@enddocumenthook"</span>, <span class="string">"\\@empty"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\AtEndOfPackage{}"</span>, sub [(code)] {
+    <span class="kw">let </span>name = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@currname"</span>)).to_string();
+    <span class="kw">let </span>ttype = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@currext"</span>)).to_string();
+    <span class="kw">let </span>hookcs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{name}.{ttype}-h@@k"</span>));
     <span class="macro">AddToMacro!</span>(hookcs, code);
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@ifpackageloaded&quot;</span>, <span class="string">r&quot;\@ifl@aded\@pkgextension&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\ltx@ifpackageloaded&quot;</span>, <span class="string">r&quot;\@ifpackageloaded&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@ifclassloaded&quot;</span>, <span class="string">r&quot;\@ifl@aded\@clsextension&quot;</span>);
-  <span class="macro">Let!</span>(<span class="string">&quot;\\ltx@ifclassloaded&quot;</span>, <span class="string">r&quot;\@ifclassloaded&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@ifl@aded{}{}&quot;</span>, sub[(ext, name)] {
-  <span class="kw">let </span>path = <span class="macro">s!</span>(<span class="string">&quot;{}.{}&quot;</span>, <span class="macro">Expand!</span>(name), <span class="macro">Expand!</span>(ext));
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifpackageloaded"</span>, <span class="string">r"\@ifl@aded\@pkgextension"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\ltx@ifpackageloaded"</span>, <span class="string">r"\@ifpackageloaded"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifclassloaded"</span>, <span class="string">r"\@ifl@aded\@clsextension"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\ltx@ifclassloaded"</span>, <span class="string">r"\@ifclassloaded"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifl@aded{}{}"</span>, sub[(ext, name)] {
+  <span class="kw">let </span>path = <span class="macro">s!</span>(<span class="string">"{}.{}"</span>, <span class="macro">Expand!</span>(name), <span class="macro">Expand!</span>(ext));
   <span class="comment">// If EITHER the raw TeX or ltxml version of this file was loaded.
-  </span><span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{path}_loaded&quot;</span>)) || lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{path}_binding_loaded&quot;</span>)) {
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@firstoftwo&quot;</span>)
+  </span><span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{path}_loaded"</span>)) || lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{path}_binding_loaded"</span>)) {
+    <span class="macro">T_CS!</span>(<span class="string">"\\@firstoftwo"</span>)
   } <span class="kw">else </span>{
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@secondoftwo&quot;</span>)
+    <span class="macro">T_CS!</span>(<span class="string">"\\@secondoftwo"</span>)
   }});
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@ifpackagewith&quot;</span>, <span class="string">r&quot;\@if@ptions\@pkgextension&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@ifclasswith&quot;</span>, <span class="string">r&quot;\@if@ptions\@clsextension&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifpackagewith"</span>, <span class="string">r"\@if@ptions\@pkgextension"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifclasswith"</span>, <span class="string">r"\@if@ptions\@clsextension"</span>);
   <span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\@ptionlist {}&quot;</span>,
-    <span class="string">r&quot;\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}&quot;
+    <span class="string">"\\@ptionlist {}"</span>,
+    <span class="string">r"\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}"
   </span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\g@addto@macro DefToken {}&quot;</span>, sub[(target, content)] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\g@addto@macro DefToken {}"</span>, sub[(target, content)] {
     <span class="macro">AddToMacro!</span>(target, content);
   });
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\addto@hook DefToken {}&quot;</span>, <span class="string">&quot;#1\\expandafter{\\the#1#2}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\addto@hook DefToken {}"</span>, <span class="string">"#1\\expandafter{\\the#1#2}"</span>);
 });
 </code></pre></div></section></main></body></html>

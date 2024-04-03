@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/fontenc_sty.rs`."><title>fontenc_sty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/fontenc_sty.rs`."><title>fontenc_sty.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -144,75 +146,75 @@
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="kw">fn </span>setup_cyrillic() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyra&quot;</span>, <span class="string">&quot;\u{0430}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrb&quot;</span>, <span class="string">&quot;\u{0431}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrv&quot;</span>, <span class="string">&quot;\u{0432}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrg&quot;</span>, <span class="string">&quot;\u{0433}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrd&quot;</span>, <span class="string">&quot;\u{0434}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyre&quot;</span>, <span class="string">&quot;\u{0435}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrzh&quot;</span>, <span class="string">&quot;\u{0436}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrz&quot;</span>, <span class="string">&quot;\u{0437}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyri&quot;</span>, <span class="string">&quot;\u{0438}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrishrt&quot;</span>, <span class="string">&quot;\u{0439}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrk&quot;</span>, <span class="string">&quot;\u{043A}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrl&quot;</span>, <span class="string">&quot;\u{043B}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrm&quot;</span>, <span class="string">&quot;\u{043C}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrn&quot;</span>, <span class="string">&quot;\u{043D}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyro&quot;</span>, <span class="string">&quot;\u{043E}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrp&quot;</span>, <span class="string">&quot;\u{043F}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrr&quot;</span>, <span class="string">&quot;\u{0440}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrs&quot;</span>, <span class="string">&quot;\u{0441}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrt&quot;</span>, <span class="string">&quot;\u{0442}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyru&quot;</span>, <span class="string">&quot;\u{0443}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrf&quot;</span>, <span class="string">&quot;\u{0444}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrh&quot;</span>, <span class="string">&quot;\u{0445}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrc&quot;</span>, <span class="string">&quot;\u{0446}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrch&quot;</span>, <span class="string">&quot;\u{0447}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrsh&quot;</span>, <span class="string">&quot;\u{0448}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrshch&quot;</span>, <span class="string">&quot;\u{0449}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrhrdsn&quot;</span>, <span class="string">&quot;\u{044A}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrery&quot;</span>, <span class="string">&quot;\u{044B}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrsftsn&quot;</span>, <span class="string">&quot;\u{044C}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrerev&quot;</span>, <span class="string">&quot;\u{044D}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyryu&quot;</span>, <span class="string">&quot;\u{044E}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrya&quot;</span>, <span class="string">&quot;\u{044F}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyryo&quot;</span>, <span class="string">&quot;\u{0451}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRA&quot;</span>, <span class="string">&quot;\u{0410}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRB&quot;</span>, <span class="string">&quot;\u{0411}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRV&quot;</span>, <span class="string">&quot;\u{0412}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRG&quot;</span>, <span class="string">&quot;\u{0413}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRD&quot;</span>, <span class="string">&quot;\u{0414}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRE&quot;</span>, <span class="string">&quot;\u{0415}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRZH&quot;</span>, <span class="string">&quot;\u{0416}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRZ&quot;</span>, <span class="string">&quot;\u{0417}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRI&quot;</span>, <span class="string">&quot;\u{0418}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRISHRT&quot;</span>, <span class="string">&quot;\u{0419}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRK&quot;</span>, <span class="string">&quot;\u{041A}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRL&quot;</span>, <span class="string">&quot;\u{041B}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRM&quot;</span>, <span class="string">&quot;\u{041C}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRN&quot;</span>, <span class="string">&quot;\u{041D}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRO&quot;</span>, <span class="string">&quot;\u{041E}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRP&quot;</span>, <span class="string">&quot;\u{041F}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRR&quot;</span>, <span class="string">&quot;\u{0420}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRS&quot;</span>, <span class="string">&quot;\u{0421}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRT&quot;</span>, <span class="string">&quot;\u{0422}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRU&quot;</span>, <span class="string">&quot;\u{0423}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRF&quot;</span>, <span class="string">&quot;\u{0424}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRH&quot;</span>, <span class="string">&quot;\u{0425}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRC&quot;</span>, <span class="string">&quot;\u{0426}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRCH&quot;</span>, <span class="string">&quot;\u{0427}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRSH&quot;</span>, <span class="string">&quot;\u{0428}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRSHCH&quot;</span>, <span class="string">&quot;\u{0429}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRHRDSN&quot;</span>, <span class="string">&quot;\u{042A}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRERY&quot;</span>, <span class="string">&quot;\u{042B}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRSFTSN&quot;</span>, <span class="string">&quot;\u{042C}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYREREV&quot;</span>, <span class="string">&quot;\u{042D}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRYU&quot;</span>, <span class="string">&quot;\u{042E}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRYA&quot;</span>, <span class="string">&quot;\u{042F}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\CYRYO&quot;</span>, <span class="string">&quot;\u{0401}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyra"</span>, <span class="string">"\u{0430}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrb"</span>, <span class="string">"\u{0431}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrv"</span>, <span class="string">"\u{0432}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrg"</span>, <span class="string">"\u{0433}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrd"</span>, <span class="string">"\u{0434}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyre"</span>, <span class="string">"\u{0435}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrzh"</span>, <span class="string">"\u{0436}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrz"</span>, <span class="string">"\u{0437}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyri"</span>, <span class="string">"\u{0438}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrishrt"</span>, <span class="string">"\u{0439}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrk"</span>, <span class="string">"\u{043A}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrl"</span>, <span class="string">"\u{043B}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrm"</span>, <span class="string">"\u{043C}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrn"</span>, <span class="string">"\u{043D}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyro"</span>, <span class="string">"\u{043E}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrp"</span>, <span class="string">"\u{043F}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrr"</span>, <span class="string">"\u{0440}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrs"</span>, <span class="string">"\u{0441}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrt"</span>, <span class="string">"\u{0442}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyru"</span>, <span class="string">"\u{0443}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrf"</span>, <span class="string">"\u{0444}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrh"</span>, <span class="string">"\u{0445}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrc"</span>, <span class="string">"\u{0446}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrch"</span>, <span class="string">"\u{0447}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrsh"</span>, <span class="string">"\u{0448}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrshch"</span>, <span class="string">"\u{0449}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrhrdsn"</span>, <span class="string">"\u{044A}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrery"</span>, <span class="string">"\u{044B}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrsftsn"</span>, <span class="string">"\u{044C}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrerev"</span>, <span class="string">"\u{044D}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyryu"</span>, <span class="string">"\u{044E}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyrya"</span>, <span class="string">"\u{044F}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\cyryo"</span>, <span class="string">"\u{0451}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRA"</span>, <span class="string">"\u{0410}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRB"</span>, <span class="string">"\u{0411}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRV"</span>, <span class="string">"\u{0412}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRG"</span>, <span class="string">"\u{0413}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRD"</span>, <span class="string">"\u{0414}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRE"</span>, <span class="string">"\u{0415}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRZH"</span>, <span class="string">"\u{0416}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRZ"</span>, <span class="string">"\u{0417}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRI"</span>, <span class="string">"\u{0418}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRISHRT"</span>, <span class="string">"\u{0419}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRK"</span>, <span class="string">"\u{041A}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRL"</span>, <span class="string">"\u{041B}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRM"</span>, <span class="string">"\u{041C}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRN"</span>, <span class="string">"\u{041D}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRO"</span>, <span class="string">"\u{041E}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRP"</span>, <span class="string">"\u{041F}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRR"</span>, <span class="string">"\u{0420}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRS"</span>, <span class="string">"\u{0421}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRT"</span>, <span class="string">"\u{0422}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRU"</span>, <span class="string">"\u{0423}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRF"</span>, <span class="string">"\u{0424}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRH"</span>, <span class="string">"\u{0425}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRC"</span>, <span class="string">"\u{0426}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRCH"</span>, <span class="string">"\u{0427}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRSH"</span>, <span class="string">"\u{0428}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRSHCH"</span>, <span class="string">"\u{0429}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRHRDSN"</span>, <span class="string">"\u{042A}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRERY"</span>, <span class="string">"\u{042B}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRSFTSN"</span>, <span class="string">"\u{042C}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYREREV"</span>, <span class="string">"\u{042D}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRYU"</span>, <span class="string">"\u{042E}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRYA"</span>, <span class="string">"\u{042F}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\CYRYO"</span>, <span class="string">"\u{0401}"</span>);
 
-  <span class="comment">//   AddToMacro!(T_CS!(&quot;\\@uclclist&quot;),
-  //     Tokenize!(r###&quot;
+  <span class="comment">//   AddToMacro!(T_CS!("\\@uclclist"),
+  //     Tokenize!(r###"
   //       \cyra\CYRA\cyrabhch\CYRABHCH\cyrabhchdsc\CYRABHCHDSC\cyrabhdze
   //   \CYRABHDZE\cyrabhha\CYRABHHA\cyrae\CYRAE\cyrb\CYRB\cyrbyus
   //   \CYRBYUS\cyrc\CYRC\cyrch\CYRCH\cyrchldsc\CYRCHLDSC\cyrchrdsc
@@ -238,7 +240,7 @@
   //   \cyrya\CYRYA\cyryat\CYRYAT\cyryhcrs\CYRYHCRS\cyryi\CYRYI\cyryo
   //   \CYRYO\cyryu\CYRYU\cyrz\CYRZ\cyrzdsc\CYRZDSC\cyrzh\CYRZH
   //   \cyrzhdsc\CYRZHDSC
-  // &quot;###));
+  // "###));
   </span><span class="prelude-val">Ok</span>(())
 }
 
@@ -248,35 +250,35 @@
   // We ALSO need to read in or set the char=&gt;unicode mapping.
 
   </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-    <span class="kw">let </span>current_option = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\CurrentOption&quot;</span>)).to_string();
-    <span class="macro">UnshiftValue!</span>(<span class="string">&quot;font_encodings&quot;</span>, <span class="macro">vec!</span>[Stored::String(arena::pin(current_option))]);
+    <span class="kw">let </span>current_option = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>)).to_string();
+    unshift_value(<span class="string">"font_encodings"</span>, <span class="macro">vec!</span>[Stored::String(arena::pin(current_option))]);
   });
 
-  <span class="comment">// WELL... Actually, some &quot;encodings&quot; map the normal 7bit (or 8)
+  <span class="comment">// WELL... Actually, some "encodings" map the normal 7bit (or 8)
   // apparently ASCII input characters to a completely different font.
   // EG. OT2 maps to cyrillic.
 
   </span><span class="macro">ProcessOptions!</span>();
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(font_encodings) = lookup_vecdeque(<span class="string">&quot;font_encodings&quot;</span>) {
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(font_encodings) = lookup_vecdeque(<span class="string">"font_encodings"</span>) {
     <span class="kw">if </span>!font_encodings.is_empty() {
       setup_cyrillic()<span class="question-mark">?</span>;
       <span class="kw">for </span>encoding_stored <span class="kw">in </span>font_encodings.into_iter() {
         <span class="kw">if let </span>Stored::String(enc_sym) = encoding_stored {
           <span class="kw">let </span>encoding = arena::to_string(enc_sym);
-          <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\encodingdefault&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(encoding)),
+          <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\encodingdefault"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(encoding)),
             scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
-          <span class="kw">let </span>encfile = encoding.to_lowercase() + <span class="string">&quot;enc&quot;</span>;
-          <span class="macro">InputDefinitions!</span>(<span class="kw-2">&amp;</span>encfile, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">&quot;def&quot;</span>)));
+          <span class="kw">let </span>encfile = encoding.to_lowercase() + <span class="string">"enc"</span>;
+          <span class="macro">InputDefinitions!</span>(<span class="kw-2">&amp;</span>encfile, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"def"</span>)));
           <span class="kw">if </span>load_font_map(<span class="kw-2">&amp;</span>encoding).is_some() {
             <span class="macro">MergeFont!</span>(encoding =&gt; encoding);
           }
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(
-            <span class="string">&quot;Only strings should be stored as font encoding names, at: {:?}&quot;</span>,
+            <span class="string">"Only strings should be stored as font encoding names, at: {:?}"</span>,
             encoding_stored
           );
-          <span class="macro">Error!</span>(<span class="string">&quot;fontenc&quot;</span>, <span class="string">&quot;font_encodings&quot;</span>, message);
+          <span class="macro">Error!</span>(<span class="string">"fontenc"</span>, <span class="string">"font_encodings"</span>, message);
         }
       }
     }

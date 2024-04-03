@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/locator.rs`."><title>locator.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/locator.rs`."><title>locator.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1684a753d 2024-04-01)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -183,11 +185,26 @@
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::util::pathname;
-<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Write <span class="kw">as _</span>;
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="comment">// TODO: This will require a large refactor, but
 // switching the source from an owned String to a &amp;str reference
@@ -195,37 +212,49 @@
 // (and especially if we also start adding locators to tokens)
 // my current thoughts are that we can have the core/gullet own the sources of all mouths
 // so that we can borrow them with the lifetime of the main convert_document loop...
-// that&#39;s harder than it sounds, I&#39;ve already tried unsuccessfully with the Token contents,
+// that's harder than it sounds, I've already tried unsuccessfully with the Token contents,
 // but the mouth sources should be easier to manage.
 // definitely something that can be tried after test milestone is achieved.
 
-</span><span class="attr">#[derive(Clone, Default, PartialEq, Eq)]
+</span><span class="attr">#[derive(Copy, Clone, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>Locator {
-  <span class="kw">pub </span>source: String,
-  <span class="kw">pub </span>from_line: usize,
-  <span class="kw">pub </span>to_line: usize,
-  <span class="kw">pub </span>from_column: usize,
-  <span class="kw">pub </span>to_column: usize,
+  <span class="kw">pub </span>source: SymbolU32,
+  <span class="kw">pub </span>from_line: u32,
+  <span class="kw">pub </span>to_line: u32,
+  <span class="kw">pub </span>from_column: u32,
+  <span class="kw">pub </span>to_column: u32,
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>Locator {
+  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+    Locator {
+      source: arena::pin(<span class="macro">file!</span>()),
+      from_line: <span class="macro">line!</span>(),
+      to_line: <span class="macro">line!</span>(),
+      from_column: <span class="macro">column!</span>(),
+      to_column: <span class="macro">column!</span>()
+    }
+  }
 }
 
 <span class="comment">// elide Locator debugging until we get to implementing them faithfully
 </span><span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Locator {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;[...]&quot;</span>) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">"[...]"</span>) }
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Locator {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.get_short_source(<span class="string">&quot;&quot;</span>))<span class="question-mark">?</span>;
+    <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.get_short_source(<span class="string">""</span>))<span class="question-mark">?</span>;
     <span class="kw">if </span><span class="self">self</span>.from_line &gt; <span class="number">0 </span>{
-      <span class="macro">write!</span>(f, <span class="string">&quot;; line {}&quot;</span>, <span class="self">self</span>.from_line)<span class="question-mark">?</span>;
+      <span class="macro">write!</span>(f, <span class="string">"; line {}"</span>, <span class="self">self</span>.from_line)<span class="question-mark">?</span>;
       <span class="kw">if </span><span class="self">self</span>.from_column &gt; <span class="number">0 </span>{
-        <span class="macro">write!</span>(f, <span class="string">&quot; col {}&quot;</span>, <span class="self">self</span>.from_column)<span class="question-mark">?</span>;
+        <span class="macro">write!</span>(f, <span class="string">" col {}"</span>, <span class="self">self</span>.from_column)<span class="question-mark">?</span>;
       }
     }
     <span class="kw">if </span><span class="self">self</span>.to_line &gt; <span class="number">0 </span>{
-      <span class="macro">write!</span>(f, <span class="string">&quot; - line {}&quot;</span>, <span class="self">self</span>.to_line)<span class="question-mark">?</span>;
+      <span class="macro">write!</span>(f, <span class="string">" - line {}"</span>, <span class="self">self</span>.to_line)<span class="question-mark">?</span>;
       <span class="kw">if </span><span class="self">self</span>.to_column &gt; <span class="number">0 </span>{
-        <span class="macro">write!</span>(f, <span class="string">&quot; col {}&quot;</span>, <span class="self">self</span>.to_column)<span class="question-mark">?</span>;
+        <span class="macro">write!</span>(f, <span class="string">" col {}"</span>, <span class="self">self</span>.to_column)<span class="question-mark">?</span>;
       }
     }
     <span class="prelude-val">Ok</span>(())
@@ -233,15 +262,15 @@
 }
 
 <span class="kw">impl </span>Locator {
-  <span class="kw">pub fn </span>new(
-    source: String,
-    from_line: usize,
-    from_column: usize,
-    to_line: usize,
-    to_column: usize,
+  <span class="kw">pub fn </span>new&lt;S: AsRef&lt;str&gt;&gt;(
+    source: S,
+    from_line: u32,
+    from_column: u32,
+    to_line: u32,
+    to_column: u32,
   ) -&gt; <span class="self">Self </span>{
     Locator {
-      source,
+      source: arena::pin(source.as_ref()),
       from_line,
       to_line,
       from_column,
@@ -262,37 +291,39 @@
     } <span class="kw">else </span>{
       (to.from_line, to.from_column)
     };
-    <span class="prelude-val">Some</span>(Locator::new(
-      from.source,
-      from.from_line,
-      from.from_column,
+    <span class="prelude-val">Some</span>(Locator {
+      source: from.source,
+      from_line: from.from_line,
+      from_column: from.from_column,
       to_line,
-      to_column,
-    ))
+      to_column
+    })
   }
 
   <span class="kw">pub fn </span>is_range(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.to_line &gt; <span class="number">0 </span>|| <span class="self">self</span>.to_column &gt; <span class="number">0 </span>}
 
   <span class="kw">pub fn </span>get_short_source(<span class="kw-2">&amp;</span><span class="self">self</span>, string_source: <span class="kw-2">&amp;</span>str) -&gt; String {
-    <span class="kw">if </span><span class="self">self</span>.source.is_empty() {
-      <span class="kw">if </span>string_source.is_empty() {
-        <span class="string">&quot;String&quot;</span>.to_string()
+    arena::with(<span class="self">self</span>.source, |source| {
+      <span class="kw">if </span>source.is_empty() {
+        <span class="kw">if </span>string_source.is_empty() {
+          <span class="string">"String"</span>.to_string()
+        } <span class="kw">else </span>{
+          string_source.to_string()
+        }
+      } <span class="kw">else if </span>source.contains(<span class="string">':'</span>) {
+        <span class="kw">let </span>(base, ext) = pathname::url_split(source);
+        <span class="macro">s!</span>(<span class="string">"{}.{}"</span>, base, ext)
       } <span class="kw">else </span>{
-        string_source.to_string()
+        <span class="kw">let </span>(_path, base, _ext) = pathname::split(source);
+        base
       }
-    } <span class="kw">else if </span><span class="self">self</span>.source.contains(<span class="string">&#39;:&#39;</span>) {
-      <span class="kw">let </span>(base, ext) = pathname::url_split(<span class="kw-2">&amp;</span><span class="self">self</span>.source);
-      <span class="macro">s!</span>(<span class="string">&quot;{}.{}&quot;</span>, base, ext)
-    } <span class="kw">else </span>{
-      <span class="kw">let </span>(_path, base, _ext) = pathname::split(<span class="kw-2">&amp;</span><span class="self">self</span>.source);
-      base
-    }
+    })
   }
-  <span class="kw">pub fn </span>get_source(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str { <span class="kw-2">&amp;</span><span class="self">self</span>.source }
+  <span class="kw">pub fn </span>get_source(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SymbolU32 { <span class="self">self</span>.source }
 
   <span class="kw">pub fn </span>get_from_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Locator {
     Locator {
-      source: <span class="self">self</span>.source.clone(),
+      source: <span class="self">self</span>.source,
       from_line: <span class="self">self</span>.from_line,
       from_column: <span class="self">self</span>.from_column,
       ..Locator::default()
@@ -301,7 +332,7 @@
 
   <span class="kw">pub fn </span>get_to_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Locator {
     Locator {
-      source: <span class="self">self</span>.source.clone(),
+      source: <span class="self">self</span>.source,
       from_line: <span class="self">self</span>.to_line,
       from_column: <span class="self">self</span>.to_column,
       ..Locator::default()
@@ -310,61 +341,60 @@
 }
 <span class="kw">impl </span>Object <span class="kw">for </span>Locator {
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>loc = <span class="kw">if </span><span class="self">self</span>.source.is_empty() {
-      <span class="string">&quot;Anonymous String&quot;</span>.to_string()
-    } <span class="kw">else </span>{
-      <span class="self">self</span>.source.to_string()
+    <span class="kw">let </span><span class="kw-2">mut </span>loc = arena::to_string(<span class="self">self</span>.source);
+    <span class="kw">if </span>loc.is_empty() {
+      loc = <span class="string">"Anonymous String"</span>.to_string()
     };
-    <span class="kw">let </span>range_from = <span class="kw">if </span><span class="self">self</span>.is_range() { <span class="string">&quot; from&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>};
+    <span class="kw">let </span>range_from = <span class="kw">if </span><span class="self">self</span>.is_range() { <span class="string">" from" </span>} <span class="kw">else </span>{ <span class="string">"" </span>};
     <span class="kw">if </span><span class="self">self</span>.from_line &gt; <span class="number">0 </span>{
-      <span class="macro">write!</span>(loc, <span class="string">&quot;;{} line {}&quot;</span>, range_from, <span class="self">self</span>.from_line).ok();
+      <span class="macro">write!</span>(loc, <span class="string">";{} line {}"</span>, range_from, <span class="self">self</span>.from_line).ok();
       <span class="kw">if </span><span class="self">self</span>.from_column &gt; <span class="number">0 </span>{
-        <span class="macro">write!</span>(loc, <span class="string">&quot; col {}&quot;</span>, <span class="self">self</span>.from_column).ok();
+        <span class="macro">write!</span>(loc, <span class="string">" col {}"</span>, <span class="self">self</span>.from_column).ok();
       }
     }
     <span class="kw">if </span><span class="self">self</span>.to_line &gt; <span class="number">0 </span>{
-      <span class="macro">write!</span>(loc, <span class="string">&quot; to line {}&quot;</span>, <span class="self">self</span>.to_line).ok();
+      <span class="macro">write!</span>(loc, <span class="string">" to line {}"</span>, <span class="self">self</span>.to_line).ok();
       <span class="kw">if </span><span class="self">self</span>.to_column &gt; <span class="number">0 </span>{
-        <span class="macro">write!</span>(loc, <span class="string">&quot; col {}&quot;</span>, <span class="self">self</span>.to_column).ok();
+        <span class="macro">write!</span>(loc, <span class="string">" col {}"</span>, <span class="self">self</span>.to_column).ok();
       }
     }
     loc
   }
 
   <span class="doccomment">/// getting the locator of a locator should return itself
-  </span><span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="self">self</span>)) }
+  </span><span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Locator { <span class="kw-2">*</span><span class="self">self </span>}
 }
 
 <span class="kw">impl </span>Locator {
   <span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>loc = <span class="self">self</span>.get_short_source(<span class="string">&quot;anonymous_string&quot;</span>) + <span class="string">&quot;#text&quot;</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>loc = <span class="self">self</span>.get_short_source(<span class="string">"anonymous_string"</span>) + <span class="string">"#text"</span>;
     <span class="kw">if </span><span class="self">self</span>.is_range() {
-      loc.push_str(<span class="string">&quot;range(from=&#39;&quot;</span>);
+      loc.push_str(<span class="string">"range(from='"</span>);
       <span class="comment">// if self.from_line &gt; 0 {
       </span>loc.push_str(<span class="kw-2">&amp;</span><span class="self">self</span>.from_line.to_string());
       <span class="comment">// }
       // if self.from_column &gt; 0 {
-      </span>loc.push(<span class="string">&#39;;&#39;</span>);
+      </span>loc.push(<span class="string">';'</span>);
       loc.push_str(<span class="kw-2">&amp;</span><span class="self">self</span>.from_column.to_string());
       <span class="comment">// }
-      </span>loc.push_str(<span class="string">&quot;,to=&#39;&quot;</span>);
+      </span>loc.push_str(<span class="string">",to='"</span>);
       <span class="comment">// if self.to_line &gt; 0 {
       </span>loc.push_str(<span class="kw-2">&amp;</span><span class="self">self</span>.to_line.to_string());
       <span class="comment">// }
       // if self.to_column &gt; 0 {
-      </span>loc.push(<span class="string">&#39;;&#39;</span>);
+      </span>loc.push(<span class="string">';'</span>);
       loc.push_str(<span class="kw-2">&amp;</span><span class="self">self</span>.to_column.to_string());
     } <span class="kw">else </span>{
-      loc.push_str(<span class="string">&quot;point(&#39;&quot;</span>);
+      loc.push_str(<span class="string">"point('"</span>);
       <span class="comment">// if self.from_line &gt; 0 {
       </span>loc.push_str(<span class="kw-2">&amp;</span><span class="self">self</span>.from_line.to_string());
       <span class="comment">// }
       // if self.from_column &gt; 0 {
-      </span>loc.push(<span class="string">&#39;;&#39;</span>);
+      </span>loc.push(<span class="string">';'</span>);
       loc.push_str(<span class="kw-2">&amp;</span><span class="self">self</span>.from_column.to_string());
     }
     <span class="comment">// }
-    </span>loc.push_str(<span class="string">&quot;)&#39;&quot;</span>);
+    </span>loc.push_str(<span class="string">")'"</span>);
     loc
   }
 }
