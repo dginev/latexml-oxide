@@ -18,6 +18,7 @@ pub mod object;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
+pub mod local_assignments;
 
 use crate::common::error::*;
 use crate::fmt;

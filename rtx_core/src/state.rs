@@ -8,7 +8,6 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 use string_interner::symbol::SymbolU32;
 
-use crate::alignment::template::Template;
 use crate::alignment::Alignment;
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
@@ -23,7 +22,7 @@ use crate::common::numeric_ops::NumericOps;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
 use crate::definition::argument::ArgWrap;
-use crate::definition::conditional::{ConditionalType, IfFrame};
+use crate::definition::conditional::ConditionalType;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::register::{Register, RegisterValue};
@@ -36,6 +35,9 @@ use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
 use crate::{Digested, DigestedData};
+
+// expose Perl-style local assignments from state
+pub use crate::common::local_assignments::*;
 
 static CODE_TEX_EXT: &str = ".code.tex";
 
@@ -209,20 +211,6 @@ impl UndoFrame {
 ///      (see also activateScope & deactivateScope)
 pub type Table = HashMap<SymbolU32, VecDeque<Stored>>;
 
-/// These are fields realized via Perl's "local" mechanism in LaTeXML,
-/// but (for now) require explicit "expire" calls in Rust.
-/// Ideally their ergonomics gets improved, or we gradually phase them out.
-#[derive(Debug, Default)]
-pub struct Localized {
-  pub dual_branch: Vec<&'static str>,
-  pub if_frames: Vec<Option<Rc<RefCell<IfFrame>>>>,
-  pub current_token: Vec<Token>,
-  pub align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
-  pub reading_alignment: Vec<Digested>,
-  pub build_template: Vec<Template>,
-  pub unlocked: Vec<bool>,
-}
-
 /// The state efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
@@ -265,8 +253,6 @@ pub struct State {
   // include_styles: bool,
   /// flag to disable math parsing
   pub nomathparse: bool,
-  /// Localized as in Perl's "local" dynamic variables
-  localized: Localized,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   /// A dispatcher routing to the compiled code of the main/official rtx bindings
   pub bindings_dispatch: Option<BindingDispatcher>,
@@ -314,7 +300,6 @@ impl Default for State {
       graphics_paths: VecDeque::new(),
       // include_styles: false,
       nomathparse: false,
-      localized: Localized::default(),
       bindings_dispatch: None,
       extra_bindings_dispatch: None,
     }
@@ -746,12 +731,6 @@ impl State {
       None
     }
   }
-  /// gets the (localized) current token
-  pub fn get_current_token(&self) -> Option<&Token> { self.localized.current_token.last()  }
-  pub fn current_build_template(&mut self) -> Option<&mut Template> {
-    self.localized.build_template.last_mut()
-  }
-
   pub fn ensure_tag_property(&mut self, tag: SymbolU32) -> &mut TagOptions {
     self
     .tag_properties
@@ -2124,109 +2103,6 @@ pub fn after_assignment() {
 
 // Ported from Perl's "local" declarations
 
-/// sets a (originally Perl-local) `IfFrame` that needs to be manually expired.
-pub fn set_ifframe(if_frame: Option<Rc<RefCell<IfFrame>>>) {
-  state_mut!().localized.if_frames.push(if_frame);
-}
-
-/// retrieves the most recent (originally Perl-local) `IfFrame`
-pub fn get_ifframe() -> Option<Rc<RefCell<IfFrame>>> {
-  match state!().localized.if_frames.last() {
-    Some(Some(frame)) => Some(Rc::clone(frame)),
-    _ => None,
-  }
-}
-/// expires the most recent (originally Perl-local) `IfFrame`
-pub fn expire_ifframe() { state_mut!().localized.if_frames.pop(); }
-/// localizes a new current token. see `Stomach::invoke_token`
-pub fn local_current_token(token: Token) { state_mut!().localized.current_token.push(token); }
-/// expires the most recent (localized) current token.
-pub fn expire_current_token() { state_mut!().localized.current_token.pop(); }
-/// gets the (localized) current token
-pub fn get_current_token() -> Option<Token> { state!().get_current_token().cloned() }
-
-/// sets the (localized) flag for "dual branch"
-pub fn set_dual_branch(mode: &'static str) { state_mut!().localized.dual_branch.push(mode); }
-/// expire (localized) flag for "dual branch"
-pub fn expire_dual_branch() { state_mut!().localized.dual_branch.pop(); }
-/// get the current value for "dual branch"
-pub fn get_dual_branch() -> Option<&'static str> {
-  state!().localized.dual_branch.last().cloned()
-}
-
-pub fn increment_align_group_count() {
-  let mut state = state_mut!();
-  match state.localized.align_group_count.last_mut() {
-    Some(v) => *v += 1,
-    None => {
-      state.localized.align_group_count.push(1);
-    },
-  }
-}
-pub fn decrement_align_group_count() {
-  let mut state = state_mut!();
-  match state.localized.align_group_count.last_mut() {
-    Some(v) => *v -= 1,
-    None => {
-      state.localized.align_group_count.push(-1);
-    },
-  }
-}
-
-pub fn state_is_unlocked() -> bool {
-  state!().localized.unlocked.last().copied().unwrap_or(false)
-}
-pub fn local_state_unlocked(v: bool) {
-  state_mut!().localized.unlocked.push(v);
-}
-pub fn expire_state_unlocked() {
-  state_mut!().localized.unlocked.pop();
-}
-
-pub fn align_group_count() -> i32 {
-  state!()
-    .localized
-    .align_group_count
-    .last()
-    .copied()
-    .unwrap_or_default()
-}
-pub fn set_align_group_count(v: i32) {
-  let mut state = state_mut!();
-  if let Some(gc) = state.localized.align_group_count.last_mut() {
-    *gc = v;
-  } else {
-    state.localized.align_group_count.push(v);
-  }
-}
-pub fn local_align_group_count(v: i32) { state_mut!().localized.align_group_count.push(v); }
-pub fn expire_align_group_count() -> Option<i32> {
-  state_mut!().localized.align_group_count.pop()
-}
-
-pub fn get_reading_alignment() -> Option<Digested> {
-  state!().localized.reading_alignment.last().cloned()
-}
-pub fn has_reading_alignment() -> bool { ! state!().localized.reading_alignment.is_empty() }
-pub fn local_reading_alignment(alignment: &Digested) {
-  state_mut!().localized.reading_alignment.push(alignment.clone());
-}
-pub fn expire_reading_alignment() -> Option<Digested> {
-  state_mut!().localized.reading_alignment.pop()
-}
-
-pub fn local_build_template(template: Template) {
-  state_mut!().localized.build_template.push(template);
-}
-pub fn set_build_template(template: Template) {
-  *state_mut!()
-    .localized
-    .build_template
-    .last_mut()
-    .expect("set_build_template should not be called before the first local_build_template") =
-    template;
-}
-pub fn take_build_template() -> Option<Template> { state_mut!().localized.build_template.pop() }
 
 pub fn get_tag_property(tag: SymbolU32) -> TagOptions {
   state_mut!().ensure_tag_property(tag).clone()
@@ -2319,11 +2195,6 @@ pub fn get_graphics_paths() -> Vec<String> {
 pub fn graphics_paths_push_front(path:String) {
   let mut state = state_mut!();
   state.graphics_paths.push_front(path);
-}
-
-pub fn with_current_build_template<R, FnR>(caller: FnR) -> R
-where FnR: FnOnce(Option<&mut Template>) -> R  {
-  caller(state_mut!().localized.build_template.last_mut())
 }
 
 /// manage a (global) hash of values
