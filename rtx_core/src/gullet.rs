@@ -157,7 +157,7 @@ impl Gullet {
       for token in tokens.into_iter().rev() {
         runtime.pushback.push_front(token);
       }
-    };
+    }
   }
 
 }
@@ -177,7 +177,7 @@ pub fn open_mouth(mouth: Mouth, autoclose: bool) {
   gullet.runtime = Some(MouthRuntime {
     mouth,
     autoclose,
-    pushback: VecDeque::new(),
+    pushback: VecDeque::with_capacity(128),
   });
 }
 
@@ -278,11 +278,12 @@ fn handle_template(
 // but always keeps comment tokens pending.
 fn read_internal_token() -> Option<Token> {
   let mut next_token = None;
-  let mut gullet = gullet_mut!();
+  let Gullet {ref mut runtime, ref mut pending_comments, ..} = *gullet_mut!();
+  let pushback = &mut runtime.as_mut().unwrap().pushback;
   // Check in pushback first....
-  while let Some(pushback_token) = gullet.runtime.as_mut().unwrap().pushback.pop_front() {
+  while let Some(pushback_token) = pushback.pop_front() {
     match pushback_token.get_catcode() {
-      Catcode::COMMENT => gullet.pending_comments.push_back(pushback_token),
+      Catcode::COMMENT => pending_comments.push_back(pushback_token),
       Catcode::MARKER => handle_marker(pushback_token),
       _ => {
         next_token = Some(pushback_token);
@@ -292,9 +293,9 @@ fn read_internal_token() -> Option<Token> {
   }
   // Not in pushback, read from the current Mouth
   if next_token.is_none() {
-    while let Some(token) = gullet.runtime.as_mut().unwrap().mouth.read_token() {
+    while let Some(token) = runtime.as_mut().unwrap().mouth.read_token() {
       match token.get_catcode() {
-        Catcode::COMMENT => gullet.pending_comments.push_back(token),
+        Catcode::COMMENT => pending_comments.push_back(token),
         Catcode::MARKER => handle_marker(token),
         _ => {
           next_token = Some(token);
@@ -1634,7 +1635,7 @@ pub fn flush() {
   }
   g.runtime = Some(MouthRuntime {
     mouth: Mouth::default(),
-    pushback: VecDeque::new(),
+    pushback: VecDeque::with_capacity(128),
     autoclose: true,
   });
   g.mouthstack = VecDeque::new();
