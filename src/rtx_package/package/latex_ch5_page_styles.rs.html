@@ -85,7 +85,7 @@
   <span class="macro">DefRegister!</span>(<span class="string">"\\linewidth"       </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"6in"</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\baselinestretch" </span>=&gt; Dimension::new(<span class="number">0</span>));
 
-  <span class="macro">RawTeX!</span>(<span class="string">r"\def\@ifl@t@r#1#2{%
+  <span class="macro">TeX!</span>(<span class="string">r"\def\@ifl@t@r#1#2{%
   \ifnum\expandafter\@parse@version@#1//00\@nil&lt;%
         \expandafter\@parse@version@#2//00\@nil
     \expandafter\@secondoftwo

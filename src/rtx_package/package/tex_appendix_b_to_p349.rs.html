@@ -476,7 +476,7 @@
   //======================================================================
   // TeX Book, Appendix B, p. 344
   //======================================================================
-  </span><span class="macro">RawTeX!</span>(<span class="string">r"\outer\def^^L{\par}"</span>);
+  </span><span class="macro">TeX!</span>(<span class="string">r"\outer\def^^L{\par}"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\dospecials"</span>, <span class="string">r"\do\ \do\\\do\{\do\}\do\$\do\&amp;\do\#\do\^\do\^^K\do\_\do\^^A\do\%\do\~"</span>);
 
   <span class="comment">//
@@ -708,7 +708,7 @@
   <span class="comment">//======================================================================
   // TeX Book, Appendix B, p. 345
 
-  </span><span class="macro">RawTeX!</span>(
+  </span><span class="macro">TeX!</span>(
     <span class="string">r"\chardef\active=13
     \chardef\@ne=1
     \chardef\tw@=2
@@ -725,7 +725,7 @@
 
   <span class="comment">//======================================================================
   // TeX Book, Appendix B, p. 346
-  </span><span class="macro">RawTeX!</span>(
+  </span><span class="macro">TeX!</span>(
     <span class="string">r"\countdef\count@=255
   \toksdef\toks@=0
   \skipdef\skip@=0
@@ -840,7 +840,7 @@
   <span class="macro">DefRegister!</span>(<span class="string">"\\z@skip"</span>, Glue::new(<span class="number">0</span>));
 
   <span class="comment">// First approximation. till I figure out \newbox
-  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newbox\voidb@x"</span>);
+  </span><span class="macro">TeX!</span>(<span class="string">r"\newbox\voidb@x"</span>);
   <span class="comment">//======================================================================
   // TeX Book, Appendix B, p. 348
 

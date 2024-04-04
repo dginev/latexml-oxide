@@ -43,7 +43,7 @@
   <span class="macro">Let!</span>(<span class="string">"\\@nx"</span>, <span class="string">"\\noexpand"</span>);
   <span class="macro">DefRegister!</span>(<span class="string">"\\@emptytoks" </span>=&gt; <span class="macro">Tokens!</span>());
   <span class="macro">DefMacro!</span>(<span class="string">"\\@ifempty {}"</span>, <span class="string">r"\@xifempty#1@@..\@nil"</span>);
-  <span class="macro">RawTeX!</span>(<span class="string">r"
+  <span class="macro">TeX!</span>(<span class="string">r"
   \def\@oparg#1[#2]{\@ifnextchar[{#1}{#1[#2]}}
   \long\def\@ifempty#1{\@xifempty#1@@..\@nil}
   \long\def\@xifempty#1#2@#3#4#5\@nil{%

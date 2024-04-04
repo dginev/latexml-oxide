@@ -1721,7 +1721,7 @@
 <a href="#1719" id="1719">1719</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
-  <span class="macro">RawTeX!</span>(
+  <span class="macro">TeX!</span>(
     <span class="string">r"
 \def\etb@catcodes{\do\&amp;\do\|\do\:\do\-\do\=\do\&lt;\do\&gt;}
 \def\do#1{\catcode\number`#1=\the\catcode`#1\relax}
@@ -1766,7 +1766,7 @@
     <span class="macro">DefMacro!</span>(cs, args, body, protected =&gt; <span class="bool-val">true</span>, long =&gt; <span class="bool-val">true</span>); }
   <span class="macro">Tokens!</span>() });
 
-  <span class="macro">RawTeX!</span>(
+  <span class="macro">TeX!</span>(
     <span class="string">r"
 % {&lt;csname&gt;}
 
@@ -1909,7 +1909,7 @@
     tfalse
   } }, protected =&gt; <span class="bool-val">true</span>);
 
-  <span class="macro">RawTeX!</span>(
+  <span class="macro">TeX!</span>(
     <span class="string">r"
 
 % {&lt;csname&gt;}{&lt;true&gt;}{&lt;false&gt;}
@@ -2883,7 +2883,7 @@
   // returns the "true" case in all intended correct uses. Hence:
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\etb@ifpattern DefToken {}"</span>, <span class="string">"\\begingroup\\@firstoftwo"</span>, protected =&gt; <span class="bool-val">true</span>);
 
-  <span class="macro">RawTeX!</span>(
+  <span class="macro">TeX!</span>(
     <span class="string">r"
 % {&lt;string&gt;}{&lt;true}{&lt;false&gt;}
 
@@ -3020,7 +3020,7 @@
   }
 }, protected =&gt; <span class="bool-val">true</span>);
 
-  <span class="macro">RawTeX!</span>(
+  <span class="macro">TeX!</span>(
     <span class="string">r"
 \newcommand{\etb@patchcmd}[4][########1]{%
   \etb@ifpatchable#2{#3}
@@ -3425,7 +3425,7 @@
   <span class="macro">DefMacro!</span>(<span class="string">"\\AfterEndDocument{}"</span>, sub[(arg)] {
   push_value(<span class="string">"@after@end@document"</span>, arg.unlist())<span class="question-mark">?</span>; });
 
-  <span class="macro">RawTeX!</span>(<span class="string">r"\AtEndDocument{\let\AfterEndPreamble\@gobble}"</span>);
+  <span class="macro">TeX!</span>(<span class="string">r"\AtEndDocument{\let\AfterEndPreamble\@gobble}"</span>);
   <span class="comment">//======================================================================
   // 2.6 Environment Hooks
 

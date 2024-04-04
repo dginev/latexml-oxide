@@ -2304,6 +2304,15 @@
 <a href="#2302" id="2302">2302</a>
 <a href="#2303" id="2303">2303</a>
 <a href="#2304" id="2304">2304</a>
+<a href="#2305" id="2305">2305</a>
+<a href="#2306" id="2306">2306</a>
+<a href="#2307" id="2307">2307</a>
+<a href="#2308" id="2308">2308</a>
+<a href="#2309" id="2309">2309</a>
+<a href="#2310" id="2310">2310</a>
+<a href="#2311" id="2311">2311</a>
+<a href="#2312" id="2312">2312</a>
+<a href="#2313" id="2313">2313</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LoadDefinitions {
   (<span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -3830,6 +3839,15 @@
 </span><span class="macro">macro_rules!</span> RawTeX {
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     ::rtx_core::stomach::raw_tex(<span class="macro-nonterminal">$text</span>)<span class="question-mark">?</span>;
+  }
+}
+
+<span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> TeX {
+  (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
+    <span class="kw">let </span>tokenized;
+    <span class="macro">compile_tokenize_internal!</span>(tokenized, <span class="macro-nonterminal">$text</span>);
+    ::rtx_core::stomach::digest(tokenized)<span class="question-mark">?</span>;
   }
 }
 
