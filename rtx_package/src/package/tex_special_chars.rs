@@ -93,22 +93,28 @@ LoadDefinitions!({
 
 
   // EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})
-  DefLigature!(r"--", "\u{2013}",
-    fontTest => sub[arg] { arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" });
+  DefLigature!(r"--", "\u{2013}", fontTest => sub[arg] { non_typewriter(arg) });
   // EM DASH
-  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" });
+  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {non_typewriter(arg) });
+
   // Ligatures for doubled single left & right quotes to convert to double quotes
   // [should ligatures be part of a font, in the first place? (it is in TeX!)
-  DefLigature!("\u{2018}\u{2018}", "\u{201C}", fontTest => sub[arg] {
-    let family = arg.get_family().unwrap_or(&Cow::Borrowed(""));
-    if family != "typewriter" {
-      let encoding = arg.get_encoding().unwrap_or(&Cow::Borrowed("OT1"));
-      encoding == "OT1" || encoding == "T1" } else {false} });
-  DefLigature!("\u{2019}\u{2019}", "\u{201D}", fontTest => sub[arg] {
-    let family = arg.get_family().unwrap_or(&Cow::Borrowed(""));
-    if family != "typewriter" {
-      let encoding = arg.get_encoding().unwrap_or(&Cow::Borrowed("OT1"));
-      encoding == "OT1" || encoding == "T1" } else {false} });
+  DefLigature!("\u{2018}\u{2018}", "\u{201C}", 
+    fontTest => sub[arg] {non_typewriter_t1(arg)}); // double left quote
+  DefLigature!("\u{2019}\u{2019}", "\u{201D}", 
+    fontTest => sub[arg] {non_typewriter_t1(arg)}); // double right quote
+  DefLigature!("[?]\u{2018}",       "\u{00BF}",  
+    fontTest => sub[arg] {non_typewriter_t1(arg)});   // ? backquote
+  DefLigature!("!\u{2018}",       "\u{00A1}",  
+    fontTest => sub[arg] {non_typewriter_t1(arg)});   // ! backquote
+  // These ligatures are also handled by TeX.
+  // However, it appears that decent modern fonts in modern browsers handle these at that level.
+  // So it's likely not worth doing it at the conversion level, possibly adversely affecting search.
+  // DefLigature(qr{ff},               "\x{FB00}", fontTest => \&nonTypewriterT1);
+  // DefLigature(qr{fi},               "\x{FB01}", fontTest => \&nonTypewriterT1);
+  // DefLigature(qr{fl},               "\x{FB02}", fontTest => \&nonTypewriterT1);
+  // DefLigature(qr{ffi},              "\x{FB03}", fontTest => \&nonTypewriterT1);
+  // DefLigature(qr{ffl},              "\x{FB04}", fontTest => \&nonTypewriterT1);
 
   DefConstructor!("\\TeX", r###"<ltx:text class='ltx_TeX_logo'
     cssstyle='letter-spacing:-0.2em; margin-right:0.2em'>T<ltx:text yoffset='-0.4ex'>E</ltx:text>X</ltx:text>"###,
@@ -127,3 +133,12 @@ LoadDefinitions!({
   );
 
 });
+
+fn non_typewriter(font: &Font) -> bool {
+  font.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter"
+}
+
+fn non_typewriter_t1(font: &Font) -> bool {
+  non_typewriter(font) &&
+  matches!(font.get_encoding().unwrap_or(&Cow::Borrowed("OT1")).as_ref(), "OT1" | "T1")
+}
