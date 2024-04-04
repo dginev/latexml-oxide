@@ -355,9 +355,9 @@ impl Mouth {
     self.buffer.pop_front()
   }
 
-  /// Get the next character & it's catcode from the input,
+  /// Get the next character & it's catcode from the current line of input, even ignored chars,
   /// handling TeX's "^^" encoding.
-  /// Note that this is the only place where catcode lookup is done,
+  /// Note that this is the only place where catcode lookup is done (well almost),
   /// and that it is somewhat `inlined'.
   fn get_next_char(&mut self) -> Option<(char, Catcode)> {
     if self.colno >= self.nchars {
@@ -487,24 +487,24 @@ impl Mouth {
 
         self.chars = line.chars().collect::<VecDeque<char>>();
         self.nchars = self.chars.len();
-        // In state::N, skip spaces
-        while self.colno < self.nchars {
-          let cc_next = match self.chars.get(self.colno) {
-            None => Catcode::OTHER,
-            Some(c) => match lookup_catcode(*c) {
-              Some(cc) => cc,
-              None => Catcode::OTHER,
+        // In state N, skip leading spaces & ignored, possibly decoding (trailing space removed above)
+        while let Some((_ch,cc)) = self.get_next_char() {  
+          match cc {
+            Catcode::SPACE | Catcode::IGNORE => { },
+            Catcode::EOL => { // Eolch already? empty line!
+              self.colno = self.nchars; // ignore rest of line.
+              return Some(T_CS!("\\par"));
             },
-          };
-          if cc_next == Catcode::SPACE {
-            self.colno += 1;
-          } else {
-            break;
+            _ => break
           }
         }
-        // If upcoming line is empty, and there is no recognizable EOL, fake one
-        if read_mode && (self.colno >= self.nchars) && (eolch.is_none() || eolch != Some('\r')) {
-          return Some(T_MARKER!("EOL"));
+        if self.nchars == 0 || self.colno > self.nchars { // Past end of line?
+          // If upcoming line is empty, and there is no recognizable EOL, fake one
+          if read_mode && eolch != Some('\r') {
+            return Some(T_MARKER!("EOL"));
+          }
+        } else { // Back up over peeked char
+          self.colno -= 1;
         }
         // Sneak a comment out, every so often.
         if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && lookup_bool("INCLUDE_COMMENTS") {
@@ -646,7 +646,7 @@ impl Mouth {
           Some(CharToken!(ch, ALIGN))
         }
       },
-      EOL => self.handle_end_of_line(),
+      EOL => Some(self.handle_end_of_line()),
       PARAM => {
         if ch == '#' {
           Some(T_PARAM!())
@@ -678,18 +678,15 @@ impl Mouth {
     }
   }
 
-  fn handle_end_of_line(&mut self) -> Option<Token> {
+  fn handle_end_of_line(&mut self) -> Token {
     // Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
-    let token = if self.colno == 1 {
-      T_CS!("\\par")
-    } else if lookup_int("PRESERVE_NEWLINES") > 0 {
+    self.colno = self.nchars; // Ignore any remaining characters after EOL
+    if lookup_int("PRESERVE_NEWLINES") > 0 {
       Token!("\n", Catcode::SPACE)
     } else {
       T_SPACE!()
-    };
-    self.colno = self.nchars; // Ignore any remaining characters after EOL
-    Some(token)
+    }
   }
 
   fn handle_space(&mut self) -> Option<Token> {
@@ -791,6 +788,7 @@ impl Mouth {
       // Back-up if too far.
       self.colno -= 1;
     }
+    // If skipping spaces (really, reading for input (\endinput) ?), jump to end of EOL or comments
     if self.skipping_spaces && (cc == Some(Catcode::EOL) || cc == Some(Catcode::COMMENT)) {
       // If we've got an EOL | COMMENT
       self.colno = self.nchars
