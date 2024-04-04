@@ -26,7 +26,7 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B, p. 344
   //======================================================================
-  RawTeX!(r"\outer\def^^L{\par}");
+  TeX!(r"\outer\def^^L{\par}");
   DefMacro!("\\dospecials", r"\do\ \do\\\do\{\do\}\do\$\do\&\do\#\do\^\do\^^K\do\_\do\^^A\do\%\do\~");
 
   //
@@ -258,7 +258,7 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B, p. 345
 
-  RawTeX!(
+  TeX!(
     r"\chardef\active=13
     \chardef\@ne=1
     \chardef\tw@=2
@@ -275,7 +275,7 @@ LoadDefinitions!({
 
   //======================================================================
   // TeX Book, Appendix B, p. 346
-  RawTeX!(
+  TeX!(
     r"\countdef\count@=255
   \toksdef\toks@=0
   \skipdef\skip@=0
@@ -390,7 +390,7 @@ LoadDefinitions!({
   DefRegister!("\\z@skip", Glue::new(0));
 
   // First approximation. till I figure out \newbox
-  RawTeX!(r"\newbox\voidb@x");
+  TeX!(r"\newbox\voidb@x");
   //======================================================================
   // TeX Book, Appendix B, p. 348
 

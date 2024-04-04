@@ -71,7 +71,7 @@ LoadDefinitions!({
       Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))
     }
   });
-  RawTeX!(
+  TeX!(
     r"
   \def\@protected@testopt#1{%%
     \ifx\protect\@typeset@protect
@@ -88,7 +88,7 @@ LoadDefinitions!({
   );
 
   // maybe this is easiest just to punt.
-  RawTeX!(
+  TeX!(
     r"
   \def\in@#1#2{%
   \def\in@@##1#1##2##3\in@@{%

@@ -5,7 +5,7 @@ LoadDefinitions!({
   // TeX Book, Appendix B, p. 350
 
   // Font stuff ...
-  RawTeX!(
+  TeX!(
     r"\font\tenrm=cmr10
   \font\tenrm=cmr10
   \font\sevenrm=cmr7
@@ -115,7 +115,7 @@ LoadDefinitions!({
 
   DefConstructor!("\\@break", "<ltx:break/>");
 
-  RawTeX!(
+  TeX!(
     r"
   \def\loop#1\repeat{\def\body{#1}\iterate}
   \def\iterate{\body \let\next=\iterate \else\let\next=\relax\fi \next}
@@ -228,7 +228,7 @@ LoadDefinitions!({
 
   // \strutbox
   DefMacro!("\\strut", None);
-  RawTeX!("\\newbox\\strutbox");
+  TeX!("\\newbox\\strutbox");
 
   //======================================================================
   // TeX Book, Appendix B. p. 354

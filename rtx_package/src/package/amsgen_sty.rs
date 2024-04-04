@@ -7,7 +7,7 @@ LoadDefinitions!({
   Let!("\\@nx", "\\noexpand");
   DefRegister!("\\@emptytoks" => Tokens!());
   DefMacro!("\\@ifempty {}", r"\@xifempty#1@@..\@nil");
-  RawTeX!(r"
+  TeX!(r"
   \def\@oparg#1[#2]{\@ifnextchar[{#1}{#1[#2]}}
   \long\def\@ifempty#1{\@xifempty#1@@..\@nil}
   \long\def\@xifempty#1#2@#3#4#5\@nil{%

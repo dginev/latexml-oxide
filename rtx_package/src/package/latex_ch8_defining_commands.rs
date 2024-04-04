@@ -234,7 +234,7 @@ LoadDefinitions!({
   DefPrimitive!("\\addtoversion{}{}", None);
   DefPrimitive!("\\TextSymbolUnavailable{}", None);
 
-  RawTeX!(
+  TeX!(
     r#"""
   \DeclareSymbolFont{operators}   {OT1}{cmr} {m}{n}
   \DeclareSymbolFont{letters}     {OML}{cmm} {m}{it}

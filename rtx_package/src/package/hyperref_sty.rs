@@ -407,7 +407,7 @@ LoadDefinitions!({
   DefConditional!("\\ifHy@pdfwindowui");
   DefConditional!("\\ifHy@pdfdisplaydoctitle");
   DefConditional!("\\ifHy@pdfa");
-  RawTeX!(
+  TeX!(
     r"\Hy@backreffalse
 \Hy@bookmarksnumberedfalse
 \Hy@bookmarksopenfalse
@@ -650,7 +650,7 @@ LoadDefinitions!({
   //     elsif (my ($key, $value) = $option =~ /^(.*?)\s*=\s*(.*?)$/) {
   //       hyperref_setoption($key, $value); } } }
 
-  RawTeX!(
+  TeX!(
     r#"
 \def\HyLang@afrikaans{%
   \def\equationautorefname{Vergelyking}%
