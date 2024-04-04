@@ -33,7 +33,7 @@ LoadDefinitions!({
   DefRegister!("\\linewidth"       => Dimension!("6in"));
   DefRegister!("\\baselinestretch" => Dimension::new(0));
 
-  RawTeX!(r"\def\@ifl@t@r#1#2{%
+  TeX!(r"\def\@ifl@t@r#1#2{%
   \ifnum\expandafter\@parse@version@#1//00\@nil<%
         \expandafter\@parse@version@#2//00\@nil
     \expandafter\@secondoftwo

@@ -5,7 +5,7 @@
 
 use crate::package::*;
 LoadDefinitions!({
-  RawTeX!(
+  TeX!(
     r"
     \def\@namedef#1{\expandafter\def\csname #1\endcsname}
     \def\@nameuse#1{\csname #1\endcsname}
@@ -31,7 +31,7 @@ LoadDefinitions!({
   );
 
   // PORT: continue here... \noexpand is passed in as an argument, which seems wrong - it should be #1 ?
-  RawTeX!(r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
+  TeX!(r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
   \def\i{I}\def\j{J}%
   \def\reserved@a##1##2{\let##1##2\reserved@a}%
   \expandafter\reserved@a\@uclclist\reserved@b{\reserved@b\@gobble}%
@@ -87,14 +87,14 @@ LoadDefinitions!({
     assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
   });
 
-  RawTeX!(
+  TeX!(
     r"{\catcode`\^^M=13 \gdef\obeycr{\catcode`\^^M13 \def^^M{\\\relax}%
     \@gobblecr}%
     {\catcode`\^^M=13 \gdef\@gobblecr{\@ifnextchar
     \@gobble\ignorespaces}}%
     \gdef\restorecr{\catcode`\^^M5 }}"
   );
-  RawTeX!(
+  TeX!(
     r"\begingroup
   \catcode`P=12
   \catcode`T=12
@@ -151,7 +151,7 @@ LoadDefinitions!({
   });
 
   Let!("\\MessageBreak", "\\relax");
-  RawTeX!(
+  TeX!(
     r"\gdef\PackageError#1#2#3{%
        \GenericError{%
            (#1)\@spaces\@spaces\@spaces\@spaces
@@ -243,7 +243,7 @@ LoadDefinitions!({
     r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}"
   );
   //======================================================================
-  RawTeX!(
+  TeX!(
     r"\chardef\@xxxii=32
     \mathchardef\@Mi=10001
     \mathchardef\@Mii=10002
@@ -270,7 +270,7 @@ LoadDefinitions!({
   DefMacro!("\\@tempc", None);
   DefMacro!("\\@gtempa", None);
 
-  RawTeX!(
+  TeX!(
     r"
     \long\def\loop#1\repeat{%
       \def\iterate{#1\relax\expandafter\iterate\fi}%

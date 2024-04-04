@@ -1,6 +1,6 @@
 use crate::package::*;
 LoadDefinitions!({
-  RawTeX!(
+  TeX!(
     r"
 \def\etb@catcodes{\do\&\do\|\do\:\do\-\do\=\do\<\do\>}
 \def\do#1{\catcode\number`#1=\the\catcode`#1\relax}
@@ -45,7 +45,7 @@ LoadDefinitions!({
     DefMacro!(cs, args, body, protected => true, long => true); }
   Tokens!() });
 
-  RawTeX!(
+  TeX!(
     r"
 % {<csname>}
 
@@ -188,7 +188,7 @@ LoadDefinitions!({
     tfalse
   } }, protected => true);
 
-  RawTeX!(
+  TeX!(
     r"
 
 % {<csname>}{<true>}{<false>}
@@ -1162,7 +1162,7 @@ LoadDefinitions!({
   // returns the "true" case in all intended correct uses. Hence:
   DefMacro!("\\etb@ifpattern DefToken {}", "\\begingroup\\@firstoftwo", protected => true);
 
-  RawTeX!(
+  TeX!(
     r"
 % {<string>}{<true}{<false>}
 
@@ -1299,7 +1299,7 @@ LoadDefinitions!({
   }
 }, protected => true);
 
-  RawTeX!(
+  TeX!(
     r"
 \newcommand{\etb@patchcmd}[4][########1]{%
   \etb@ifpatchable#2{#3}
@@ -1704,7 +1704,7 @@ LoadDefinitions!({
   DefMacro!("\\AfterEndDocument{}", sub[(arg)] {
   push_value("@after@end@document", arg.unlist())?; });
 
-  RawTeX!(r"\AtEndDocument{\let\AfterEndPreamble\@gobble}");
+  TeX!(r"\AtEndDocument{\let\AfterEndPreamble\@gobble}");
   //======================================================================
   // 2.6 Environment Hooks
 

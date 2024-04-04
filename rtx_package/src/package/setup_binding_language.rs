@@ -1528,6 +1528,15 @@ macro_rules! RawTeX {
 }
 
 #[macro_export]
+macro_rules! TeX {
+  ($text:literal) => {
+    let tokenized;
+    compile_tokenize_internal!(tokenized, $text);
+    ::rtx_core::stomach::digest(tokenized)?;
+  }
+}
+
+#[macro_export]
 macro_rules! Dimension {
   ($number:expr) => {
     Dimension::new_f64(Dimension::spec_to_f64($number)?)

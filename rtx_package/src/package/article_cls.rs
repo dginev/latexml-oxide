@@ -56,7 +56,7 @@ LoadDefinitions!( {
   AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
 
   DefMacro!("\\@ptsize", "0"); // should depend on options...
-  RawTeX!(r"
+  TeX!(r"
   \newif\if@restonecol
   \newif\if@titlepage
   \@titlepagefalse

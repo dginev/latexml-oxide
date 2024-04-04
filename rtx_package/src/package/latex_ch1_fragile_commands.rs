@@ -1,7 +1,7 @@
 use crate::package::*;
 
 LoadDefinitions!({
-  RawTeX!(r"
+  TeX!(r"
 \def\@ignorefalse{\global\let\if@ignore\iffalse}
 \def\@ignoretrue {\global\let\if@ignore\iftrue}
 \def\zap@space#1 #2{%
