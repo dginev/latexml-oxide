@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_special_chars.rs`."><title>tex_special_chars.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (88c2f4f5f 2024-04-02)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_special_chars.rs`."><title>tex_special_chars.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (4fd4797c2 2024-04-03)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -129,6 +129,21 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
@@ -224,24 +239,30 @@
 
 
   <span class="comment">// EN DASH (NOTE: With digits before &amp; aft =&gt; \N{FIGURE DASH})
-  </span><span class="macro">DefLigature!</span>(<span class="string">r"--"</span>, <span class="string">"\u{2013}"</span>,
-    fontTest =&gt; sub[arg] { arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>)) != <span class="string">"typewriter" </span>});
+  </span><span class="macro">DefLigature!</span>(<span class="string">r"--"</span>, <span class="string">"\u{2013}"</span>, fontTest =&gt; sub[arg] { non_typewriter(arg) });
   <span class="comment">// EM DASH
-  </span><span class="macro">DefLigature!</span>(<span class="string">r"---"</span>, <span class="string">"\u{2014}"</span>, fontTest =&gt; sub[arg] {arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>)) != <span class="string">"typewriter" </span>});
+  </span><span class="macro">DefLigature!</span>(<span class="string">r"---"</span>, <span class="string">"\u{2014}"</span>, fontTest =&gt; sub[arg] {non_typewriter(arg) });
+
   <span class="comment">// Ligatures for doubled single left &amp; right quotes to convert to double quotes
   // [should ligatures be part of a font, in the first place? (it is in TeX!)
-  </span><span class="macro">DefLigature!</span>(<span class="string">"\u{2018}\u{2018}"</span>, <span class="string">"\u{201C}"</span>, fontTest =&gt; sub[arg] {
-    <span class="kw">let </span>family = arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>));
-    <span class="kw">if </span>family != <span class="string">"typewriter" </span>{
-      <span class="kw">let </span>encoding = arg.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">"OT1"</span>));
-      encoding == <span class="string">"OT1" </span>|| encoding == <span class="string">"T1" </span>} <span class="kw">else </span>{<span class="bool-val">false</span>} });
-  <span class="macro">DefLigature!</span>(<span class="string">"\u{2019}\u{2019}"</span>, <span class="string">"\u{201D}"</span>, fontTest =&gt; sub[arg] {
-    <span class="kw">let </span>family = arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>));
-    <span class="kw">if </span>family != <span class="string">"typewriter" </span>{
-      <span class="kw">let </span>encoding = arg.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">"OT1"</span>));
-      encoding == <span class="string">"OT1" </span>|| encoding == <span class="string">"T1" </span>} <span class="kw">else </span>{<span class="bool-val">false</span>} });
+  </span><span class="macro">DefLigature!</span>(<span class="string">"\u{2018}\u{2018}"</span>, <span class="string">"\u{201C}"</span>, 
+    fontTest =&gt; sub[arg] {non_typewriter_t1(arg)}); <span class="comment">// double left quote
+  </span><span class="macro">DefLigature!</span>(<span class="string">"\u{2019}\u{2019}"</span>, <span class="string">"\u{201D}"</span>, 
+    fontTest =&gt; sub[arg] {non_typewriter_t1(arg)}); <span class="comment">// double right quote
+  </span><span class="macro">DefLigature!</span>(<span class="string">"[?]\u{2018}"</span>,       <span class="string">"\u{00BF}"</span>,  
+    fontTest =&gt; sub[arg] {non_typewriter_t1(arg)});   <span class="comment">// ? backquote
+  </span><span class="macro">DefLigature!</span>(<span class="string">"!\u{2018}"</span>,       <span class="string">"\u{00A1}"</span>,  
+    fontTest =&gt; sub[arg] {non_typewriter_t1(arg)});   <span class="comment">// ! backquote
+  // These ligatures are also handled by TeX.
+  // However, it appears that decent modern fonts in modern browsers handle these at that level.
+  // So it's likely not worth doing it at the conversion level, possibly adversely affecting search.
+  // DefLigature(qr{ff},               "\x{FB00}", fontTest =&gt; \&amp;nonTypewriterT1);
+  // DefLigature(qr{fi},               "\x{FB01}", fontTest =&gt; \&amp;nonTypewriterT1);
+  // DefLigature(qr{fl},               "\x{FB02}", fontTest =&gt; \&amp;nonTypewriterT1);
+  // DefLigature(qr{ffi},              "\x{FB03}", fontTest =&gt; \&amp;nonTypewriterT1);
+  // DefLigature(qr{ffl},              "\x{FB04}", fontTest =&gt; \&amp;nonTypewriterT1);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\TeX"</span>, <span class="string">r###"&lt;ltx:text class='ltx_TeX_logo'
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\TeX"</span>, <span class="string">r###"&lt;ltx:text class='ltx_TeX_logo'
     cssstyle='letter-spacing:-0.2em; margin-right:0.2em'&gt;T&lt;ltx:text yoffset='-0.4ex'&gt;E&lt;/ltx:text&gt;X&lt;/ltx:text&gt;"###</span>,
     sizer =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>((<span class="macro">Dimension!</span>(<span class="string">"1.9em"</span>), <span class="macro">Dimension!</span>(<span class="string">"1.6ex"</span>), <span class="macro">Dimension!</span>(<span class="string">"0.5ex"</span>))) });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\i"</span>, <span class="string">"\u{0131}"</span>); <span class="comment">// LATIN SMALL LETTER DOTLESS I
@@ -258,4 +279,12 @@
   </span>);
 
 });
-</code></pre></div></section></main></body></html>
+
+<span class="kw">fn </span>non_typewriter(font: <span class="kw-2">&amp;</span>Font) -&gt; bool {
+  font.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>)) != <span class="string">"typewriter"
+</span>}
+
+<span class="kw">fn </span>non_typewriter_t1(font: <span class="kw-2">&amp;</span>Font) -&gt; bool {
+  non_typewriter(font) &amp;&amp;
+  <span class="macro">matches!</span>(font.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">"OT1"</span>)).as_ref(), <span class="string">"OT1" </span>| <span class="string">"T1"</span>)
+}</code></pre></div></section></main></body></html>
