@@ -1672,6 +1672,7 @@
 <a href="#1670" id="1670">1670</a>
 <a href="#1671" id="1671">1671</a>
 <a href="#1672" id="1672">1672</a>
+<a href="#1673" id="1673">1673</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
@@ -1831,7 +1832,7 @@
       <span class="kw">for </span>token <span class="kw">in </span>tokens.into_iter().rev() {
         runtime.pushback.push_front(token);
       }
-    };
+    }
   }
 
 }
@@ -1851,7 +1852,7 @@
   gullet.runtime = <span class="prelude-val">Some</span>(MouthRuntime {
     mouth,
     autoclose,
-    pushback: VecDeque::new(),
+    pushback: VecDeque::with_capacity(<span class="number">128</span>),
   });
 }
 
@@ -1952,11 +1953,12 @@
 // but always keeps comment tokens pending.
 </span><span class="kw">fn </span>read_internal_token() -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>next_token = <span class="prelude-val">None</span>;
-  <span class="kw">let </span><span class="kw-2">mut </span>gullet = <span class="macro">gullet_mut!</span>();
+  <span class="kw">let </span>Gullet {<span class="kw-2">ref mut </span>runtime, <span class="kw-2">ref mut </span>pending_comments, ..} = <span class="kw-2">*</span><span class="macro">gullet_mut!</span>();
+  <span class="kw">let </span>pushback = <span class="kw-2">&amp;mut </span>runtime.as_mut().unwrap().pushback;
   <span class="comment">// Check in pushback first....
-  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(pushback_token) = gullet.runtime.as_mut().unwrap().pushback.pop_front() {
+  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(pushback_token) = pushback.pop_front() {
     <span class="kw">match </span>pushback_token.get_catcode() {
-      Catcode::COMMENT =&gt; gullet.pending_comments.push_back(pushback_token),
+      Catcode::COMMENT =&gt; pending_comments.push_back(pushback_token),
       Catcode::MARKER =&gt; handle_marker(pushback_token),
       <span class="kw">_ </span>=&gt; {
         next_token = <span class="prelude-val">Some</span>(pushback_token);
@@ -1966,9 +1968,9 @@
   }
   <span class="comment">// Not in pushback, read from the current Mouth
   </span><span class="kw">if </span>next_token.is_none() {
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet.runtime.as_mut().unwrap().mouth.read_token() {
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = runtime.as_mut().unwrap().mouth.read_token() {
       <span class="kw">match </span>token.get_catcode() {
-        Catcode::COMMENT =&gt; gullet.pending_comments.push_back(token),
+        Catcode::COMMENT =&gt; pending_comments.push_back(token),
         Catcode::MARKER =&gt; handle_marker(token),
         <span class="kw">_ </span>=&gt; {
           next_token = <span class="prelude-val">Some</span>(token);
@@ -3308,7 +3310,7 @@
   }
   g.runtime = <span class="prelude-val">Some</span>(MouthRuntime {
     mouth: Mouth::default(),
-    pushback: VecDeque::new(),
+    pushback: VecDeque::with_capacity(<span class="number">128</span>),
     autoclose: <span class="bool-val">true</span>,
   });
   g.mouthstack = VecDeque::new();
