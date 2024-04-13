@@ -175,10 +175,10 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         "level"       => get_boxing_level()
       )};
       if let Some(pvs) = prevscript {
-        properties.insert("prevscript".to_string(), pvs.into());
+        properties.insert("prevscript", pvs.into());
       }
       if let Some(font) = script.get_font()? {
-        properties.insert("font".to_string(), font.into());
+        properties.insert("font", font.into());
       }
       let mut with_script = vec![Digested::from(Whatsit {
         definition: lookup_definition(&T_CS!(cs))?.unwrap(),
@@ -210,7 +210,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       None,
       None,
       Tokens!(placeholder),
-      HashMap::default(),
+      SymHashMap::default(),
       ))])
   }
 }

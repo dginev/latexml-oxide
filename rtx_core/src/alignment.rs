@@ -29,6 +29,7 @@ use self::cell::Cell;
 use self::normalize::*;
 use self::template::{Align, Axis, BorderSpec, ColumnSpec, Row, Template, TemplateConfig};
 use crate::common::arena;
+use crate::common::arena::SymHashMap;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -70,7 +71,7 @@ pub struct AlignmentConfig {
   pub close_row: CloseRowFn,
   pub open_column: OpenColumnFn,
   pub close_column: CloseColumnFn,
-  pub properties: HashMap<String, Stored>,
+  pub properties: SymHashMap<Stored>,
   pub xml_attributes: HashMap<String, String>,
   pub is_math: bool,
 }
@@ -87,7 +88,7 @@ pub struct Alignment {
   reversion: Option<Tokens>,
   content_reversion: Option<Tokens>,
   rows: VecDeque<Row>,
-  properties: HashMap<String, Stored>,
+  properties: SymHashMap<Stored>,
   xml_attributes: HashMap<String, String>,
   template: Template,
   open_container: OpenContainerFn,
@@ -388,7 +389,7 @@ impl Alignment {
   pub fn unset_in_tabular_head(&mut self) { self.in_tabular_head = false; }
   pub fn is_in_tabular_head(&self) -> bool { self.in_tabular_head }
 
-  pub fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
+  pub fn get_properties_mut(&mut self) -> &mut SymHashMap<Stored> { &mut self.properties }
   pub fn get_xml_attributes_mut(&mut self) -> &mut HashMap<String, String> {
     &mut self.xml_attributes
   }
@@ -399,19 +400,19 @@ impl Alignment {
 
 impl Object for Alignment {}
 impl BoxOps for Alignment {
-  fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_properties(&self) -> &SymHashMap<Stored> { &self.properties }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
-  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+  where FnR: FnOnce(&SymHashMap<Stored>) -> R {
     caller(&self.properties)
   }
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     self.properties.get(key).map(Cow::Borrowed)
   }
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
+  fn get_properties_mut(&mut self) -> &mut SymHashMap<Stored> { &mut self.properties }
 
   fn compute_size(
     &self,
-    _options: HashMap<String, Stored>,
+    _options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     todo!();
   }
@@ -422,7 +423,7 @@ impl BoxOps for Alignment {
 
   fn compute_size_and_cache(
     &mut self,
-    _options: HashMap<String, Stored>,
+    _options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     normalize_alignment(self)?;
     Ok((

@@ -68,7 +68,7 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\/", {
-    Tbox::new(arena::pin_static(""), None, None, Tokens!(T_CS!("\\/")),
+    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\/")),
       stored_map!("isSpace" => true, "name" => "italiccorr", "width" => Dimension::default()))
   });
 

@@ -5,10 +5,10 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt;
 use std::rc::Rc;
-use string_interner::symbol::SymbolU32;
 
 use crate::alignment::Alignment;
-use crate::common::arena;
+use crate::common::arena::{self,SymStr};
+use crate::common::arena::data::SymHashMap;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -64,7 +64,7 @@ pub enum Stored {
   /// atomic data (Copy)
   Bool(bool),
   /// atomic data (Clone)
-  String(SymbolU32),
+  String(SymStr),
   /// atomic data (Copy)
   Charcode(u16),
   /// atomic data (Copy)
@@ -88,7 +88,7 @@ pub enum Stored {
   /// boxed collection - Stored
   VecDequeStored(VecDeque<Stored>),
   /// boxed map - Stored
-  HashStored(HashMap<String, Stored>),
+  HashStored(SymHashMap<Stored>),
   /// boxed map (latexml)
   HashTagData(HashMap<String, Vec<TagData>>),
   // LaTeXML primitives (Copy types)
@@ -471,7 +471,7 @@ impl PartialEq for Stored {
         if let HashStored(hs2) = other {
           hs.len() == hs2.len()
             && hs.iter().all(|(key, value)| {
-              if let Some(item2) = hs2.get(key) {
+              if let Some(item2) = hs2.get_sym(key) {
                 value == item2
               } else {
                 false
@@ -510,10 +510,14 @@ unsafe impl Send for Stored {}
 unsafe impl Sync for Stored {}
 impl Stored {
   /// helper method that uses `ToString::to_string` to flatten a map with Stored values
-  pub fn cast_to_string_hash(in_map: &HashMap<String, Stored>) -> HashMap<String, String> {
+  // TODO: Obviously a performance issue, find a way to unify the interfaces where string allocation
+  // is completely avoided until serialization in the XML.
+  // libxml can accept &str, so as long as we can stay within the interner arena paradigm,
+  // we should be allocation free. [end TODO]
+  pub fn cast_to_string_hash(in_map: &SymHashMap<Stored>) -> HashMap<String, String> {
     let mut out_map: HashMap<String, String> = HashMap::default();
-    for (key, val) in in_map.iter() {
-      out_map.insert(key.to_owned(), val.to_string());
+    for (key, val) in in_map {
+      out_map.insert(arena::to_string(*key), val.to_string());
     }
     out_map
   }
@@ -575,8 +579,8 @@ impl From<Cow<'_,str>> for Stored {
 impl From<String> for Stored {
   fn from(value: String) -> Self { Stored::String(arena::pin(value)) }
 }
-impl From<SymbolU32> for Stored {
-  fn from(value: SymbolU32) -> Self { Stored::String(value) }
+impl From<SymStr> for Stored {
+  fn from(value: SymStr) -> Self { Stored::String(value) }
 }
 
 impl From<char> for Stored {
@@ -784,8 +788,23 @@ impl From<VecDeque<Stored>> for Stored {
   fn from(value: VecDeque<Stored>) -> Self { Stored::VecDequeStored(value) }
 }
 
+impl From<HashMap<SymStr, Stored>> for Stored {
+  fn from(value: HashMap<SymStr, Stored>) -> Self { Stored::HashStored(SymHashMap(value)) }
+}
+impl From<SymHashMap<Stored>> for Stored {
+  fn from(value: SymHashMap<Stored>) -> Self { Stored::HashStored(value) }
+}
+
+// TODO: What is the right interface here? Should we really commit to SymStr?
+// Or is it too distracting from a developer perspective and String should be allowed more widely?
 impl From<HashMap<String, Stored>> for Stored {
-  fn from(value: HashMap<String, Stored>) -> Self { Stored::HashStored(value) }
+  fn from(str_hash: HashMap<String, Stored>) -> Self { 
+    let mut arena_value = HashMap::default();
+    for (key,value) in str_hash {
+      arena_value.insert(arena::pin(key), value);
+    }
+    Stored::HashStored(SymHashMap(arena_value))
+  }
 }
 
 impl From<HashMap<String, Vec<TagData>>> for Stored {

@@ -171,7 +171,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
   before_digest => {
-    push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::default()))
+    push_value("PENDING_DUAL_XMARGS", Stored::HashStored(SymHashMap::default()))
   },
   after_digest => sub[whatsit] {
     // let kv     = whatsit.get_arg(1);
@@ -257,7 +257,7 @@ LoadDefinitions!({
       let reversion_key = s!("xref:{}@reversion", xmid);
       with_value_mut("PENDING_DUAL_XMARGS", |pending_opt|
         if let Some(Stored::HashStored(ref mut pending)) = pending_opt  {
-          pending.insert(xmid, arg.into());
+          pending.insert(&xmid, arg.into());
         });
       // TODO: Must we store the (currently &mut) Whatsit?
       // let whatsit_stored = Stored::Digested(whatsit.into());

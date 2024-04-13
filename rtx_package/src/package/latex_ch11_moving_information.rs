@@ -69,7 +69,7 @@ LoadDefinitions!({
     properties => sub[args] {
       unpack_opt_ref!(args => _star, label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
-      Ok(map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
+      Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
   });
 
   // "page" does not make sense in xml.  If the user really wants, they will need:
@@ -266,7 +266,7 @@ LoadDefinitions!({
       } else { String::default() };
       if let Some(tag) = tag_opt {
         let mut properties = RefStepID!("@bibitem")?;
-        properties.insert("key".to_string(), key.into());
+        properties.insert("key", key.into());
         let mut tag_tokens = vec![
             T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
         tag_tokens.extend(Revert!(tag));
@@ -274,12 +274,12 @@ LoadDefinitions!({
         tag_tokens.extend(
           Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")]).unlist());
         tag_tokens.push(T_END!());
-        properties.insert("tags".to_string(),
+        properties.insert("tags",
           stomach::digest(tag_tokens)?.into());
         whatsit.set_properties(properties);
       } else {
         let mut properties = RefStepCounter!("@bibitem")?;
-        properties.insert("key".to_string(), key.into());
+        properties.insert("key", key.into());
         whatsit.set_properties(properties);
       }
     }
@@ -375,13 +375,13 @@ LoadDefinitions!({
       yyseparator='#yyseparator'>#3#4</ltx:bibref>",
     properties => sub[args] {
       unref!(args => _show, keys, _phrase1, _phrase2);
-      Ok(map!("bibrefs" => clean_bib_key(&keys.to_string()).into(),
+      Ok(stored_map!("bibrefs" => clean_bib_key(&keys.to_string()),
         "separator" => match state::lookup_tokens("CITE_SEPARATOR") {
-          Some(sep) => stomach::digest(sep)?.to_string().into(),
-          None => String::new().into() },
+          Some(sep) => stomach::digest(sep)?.to_string(),
+          None => String::new() },
         "yyseparator" => match state::lookup_tokens("CITE_YY_SEPARATOR") {
-          Some(yysep) => stomach::digest(yysep)?.to_string().into(),
-          None => String::new().into() }
+          Some(yysep) => stomach::digest(yysep)?.to_string(),
+          None => String::new() }
       ))
     }
   );

@@ -1,5 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
+use rtx_core::common::arena;
 use rtx_core::common::def_parser::parse_prototype;
 use syn::{DeriveInput, Lit, Meta};
 
@@ -41,16 +42,16 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
           params
             .get_parameters()
             .iter()
-            .filter(|p| !p.name.starts_with("Skip"))
+            .filter(|p| !arena::with(p.name,|name|name.starts_with("Skip")))
             .map(|p| {
               if let Some(ref inner_p) = p.inner {
                 if let Some(first_inner) = inner_p.get_parameters().first() {
-                  format_ident!("{}", first_inner.name)
+                  arena::with(first_inner.name, |name| format_ident!("{name}"))
                 } else {
-                  format_ident!("{}", p.name)
+                  arena::with(p.name, |name| format_ident!("{name}"))
                 }
               } else {
-                format_ident!("{}", p.name)
+                arena::with(p.name, |name| format_ident!("{name}"))
               }
             })
             .collect()

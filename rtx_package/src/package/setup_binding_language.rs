@@ -331,7 +331,7 @@ macro_rules! DefPrimitive {
     let closure : PrimitiveBody = PrimitiveBody::Closure(Rc::new(
       | _args: Vec<ArgWrap>| {
       Tbox::new(arena::pin_static($replacement), None, None,
-        Tokens!(), HashMap::default())
+        Tokens!(), SymHashMap::default())
         .into_digested_result()
     }));
     def_primitive(cs, params, Some(closure), options)?;
@@ -849,7 +849,7 @@ macro_rules! DefAccent {
       assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
     }
     let plain_param = Some(Parameters::new(vec![Parameter {
-      name: Cow::Borrowed("Plain"), spec: Cow::Borrowed("{}"), ..Parameter::default()
+      name: arena::pin_static("Plain"), spec: arena::pin_static("{}"), ..Parameter::default()
       }.init()?
     ]));
     def_macro(T_CS!($accent), plain_param, ExpansionBody::Tokens(Tokens!(
@@ -1160,8 +1160,8 @@ macro_rules! DefMacro {
   };
   // the triple expr case should be near the end, as it matches too many cases.
   // It's an internal use of DefMacro e.g. with 3 variable name arguments
-  ($cs:expr, $replacement:expr, $expansion:expr) => {{
-    def_macro($cs, $replacement, $expansion, None)?;
+  ($cs:expr, $parameters:expr, $expansion:expr) => {{
+    def_macro($cs, $parameters, $expansion, None)?;
   }};
   // The least-specified option-parsing cases come last due to the TT munchers accepting any inputs
   ($proto:literal, None $($input:tt)*) => {
@@ -1263,7 +1263,7 @@ macro_rules! DefEnvironment {
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     DefEnvironmentIWO!($proto,
       Some(Rc::new(|$document: &mut Document, $args: &Vec<Option<Digested>>,
-        $props: &HashMap<String, Stored>| $body
+        $props: &SymHashMap<Stored>| $body
       )),
       options);
   }};
@@ -1309,7 +1309,7 @@ macro_rules! DefMath(
 #[macro_export]
 macro_rules! DefParameterType {
   ($name:ident, $($key:ident => $value:expr),*)=>(
-    DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)),
+    DefParameterTypeWO!($name, NewDefault!(Parameter, name => arena::pin_static(stringify!($name)),
     $($key=>$value),*)));
   // with reader as explicit sub
   ($name:ident, sub[$inner:ident, $extra:ident] $body:block) => (
@@ -1319,7 +1319,7 @@ macro_rules! DefParameterType {
   ($name:ident, sub[$inner:ident, $extra:ident] $body:block, $($input:tt)+) => (
       let mut paramtype_options = defi_opts!(@munch ($($input)*) -> {Parameter,});
       paramtype_options.reader = reader!($inner, $extra, $body);
-      paramtype_options.name = Cow::Borrowed(stringify!($name));
+      paramtype_options.name = arena::pin_static(stringify!($name));
       DefParameterTypeWO!($name, paramtype_options));
 }
 
@@ -1448,9 +1448,10 @@ macro_rules! DefKeyVal {
       })?;
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr) => {{
-    // extract the prefix
+    // TODO: extract the prefix
     // my $prefix = $options{prefix} || 'KV';
     let prefix = "KV";
+    // delete $options{prefix};
     ::rtx_core::keyval::define(
       KeyvalConfig {
         prefix,
@@ -1468,6 +1469,12 @@ macro_rules! DefKeyVal {
     // should we tokenize the code?
     // let code_expansion = ExpansionBody::Tokens(tokenize(
     // code.unwrap_or(""), Some()));
+
+    // TODO: extract the prefix
+    // my $prefix = $options{prefix} || 'KV';
+    // let prefix = "KV";
+    // delete $options{prefix};
+    // define($prefix, $keyset, $key, $vtype, $default, %options);
     todo!();
   };
 }

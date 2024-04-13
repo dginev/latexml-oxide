@@ -1,11 +1,11 @@
 use rtx_core::common::arena;
+use rtx_core::common::arena::SymHashMap;
 use rtx_core::common::locator::Locator;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::{s, CharToken, Explode, Token, T_CS, T_SPACE};
-use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 
 #[test]
@@ -41,8 +41,8 @@ fn assign_lookup_value() {
     Some(_) => panic!("Looked up value of STRICT didn't match assigned value"),
   };
 
-  let mut hash_val = HashMap::default();
-  hash_val.insert(s!("a"), Stored::Bool(true));
+  let mut hash_val = SymHashMap::default();
+  hash_val.insert("a", Stored::Bool(true));
   let hash_store = Stored::HashStored(hash_val);
 
   assign_value("hashref_test", hash_store, Some(Scope::Global));

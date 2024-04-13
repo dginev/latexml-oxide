@@ -80,10 +80,10 @@ LoadDefinitions!({
     properties => sub[args] {
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
-      Ok(map!(
-        "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None).into(),
+      Ok(stored_map!(
+        "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None),
         // TODO: why was class realized in Perl as "sub" closure here?
-        "class"=> ltx_cmd.into()
+        "class"=> ltx_cmd
       ))
     },
     sizer     => "#5",

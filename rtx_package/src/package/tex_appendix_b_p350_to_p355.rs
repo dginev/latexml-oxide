@@ -149,7 +149,7 @@ LoadDefinitions!({
         "isSpace"=>true)) });
 
   DefPrimitive!("\\negthinspace", {
-      Tbox::new(arena::pin_static(""), None, None, Tokens!(T_CS!("\\negthinspace")),
+      Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\negthinspace")),
       stored_map!("name" => "negthinspace", "width" => Dimension::from_str("-0.16667em")?,
         "isSpace"=>true)) });
 

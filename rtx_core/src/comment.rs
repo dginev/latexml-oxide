@@ -1,8 +1,8 @@
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -26,7 +26,7 @@ impl Object for Comment {
 }
 impl BoxOps for Comment {
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
-  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+  where FnR: FnOnce(&HashMap<Stored>) -> R {
     caller(&NO_PROPERTIES)
   }
   fn get_property(&self, _key: &str) -> Option<Cow<Stored>> { None }
@@ -39,14 +39,14 @@ impl BoxOps for Comment {
   fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(None) }
   fn get_width(
     &self,
-    _options: Option<HashMap<String, Stored>>,
+    _options: Option<HashMap<Stored>>,
   ) -> Result<Option<RegisterValue>> {
     Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
   }
 
   fn compute_size(
     &self,
-    _options: HashMap<String, Stored>,
+    _options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     Ok((
       Dimension::default(),

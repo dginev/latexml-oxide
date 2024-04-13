@@ -1,10 +1,10 @@
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
 use string_interner::symbol::SymbolU32;
 
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::arena::{self, EMPTY_SYM, MATH_SYM, TEXT_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -29,7 +29,7 @@ pub struct Tbox {
   /// source location where the box originated
   pub locator: Locator,
   /// misc properties, such as sizing information
-  pub properties: HashMap<String, Stored>,
+  pub properties: HashMap<Stored>,
   /// a Tokens list containing the TeX that created (or could have) the Tbox.
   pub tokens: Tokens,
 }
@@ -37,7 +37,7 @@ pub struct Tbox {
 impl Default for Tbox {
   fn default() -> Self {
     Tbox {
-      text: arena::pin_static(""),
+      text: *EMPTY_SYM,
       font: Rc::new(Font::text_default()),
       locator: Locator::default(),
       properties: HashMap::default(),
@@ -74,7 +74,7 @@ impl Tbox {
     font_opt: Option<Rc<Font>>,
     locator_opt: Option<Locator>,
     tokens_opt: Tokens,
-    mut properties: HashMap<String, Stored>,
+    mut properties: HashMap<Stored>,
   ) -> Self {
     let locator = locator_opt.unwrap_or_else(gullet::get_locator);
     let mut font = match font_opt {
@@ -97,24 +97,24 @@ impl Tbox {
         || properties.contains_key("depth"))
     {
       properties
-        .entry(String::from("width"))
+        .entry("width")
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
       properties
-        .entry("height".to_string())
+        .entry("height")
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
       properties
-        .entry("depth".to_string())
+        .entry("depth")
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
     if lookup_bool("IN_MATH") {
-      properties.insert(s!("mode"), Stored::String(*MATH_SYM));
+      properties.insert("mode", Stored::String(*MATH_SYM));
       if text != empty_sym {
         with_value(&arena::with(text, |text_str| {
           s!("math_token_attributes_{}", text_str) }), |value_opt|
         if let Some(Stored::HashString(attr)) = value_opt {
           for (key, value) in attr.iter() {
             properties
-              .entry(key.to_string())
+              .entry(key)
               .or_insert_with(|| Stored::String(arena::pin(value)));
           }
         });
@@ -142,7 +142,7 @@ impl Tbox {
 
 impl BoxOps for Tbox {
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
-  fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_properties(&self) -> &HashMap<Stored> { &self.properties }
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     let props = &self.properties;
     if key == "isSpace" {
@@ -166,10 +166,10 @@ impl BoxOps for Tbox {
     }
   }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
-  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+  where FnR: FnOnce(&HashMap<Stored>) -> R {
     caller(&self.properties)
   }
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
+  fn get_properties_mut(&mut self) -> &mut HashMap<Stored> { &mut self.properties }
   fn get_string(&self) -> Result<Cow<'_, str>> {
     // TODO: Should we switch these to symbols? are they used often?
     Ok(Cow::Owned(arena::with(self.text, |text| text.to_string())))
@@ -207,7 +207,7 @@ impl BoxOps for Tbox {
 
   fn compute_size(
     &self,
-    options: HashMap<String, Stored>,
+    options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     if let Some(body_stored) = self.get_property("body") {
       if let Stored::Digested(ref body) = *body_stored {

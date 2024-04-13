@@ -1141,8 +1141,8 @@ pub fn convert_latex_args(
   if let Some(tks) = optional {
     params.push(
       Parameter {
-        name: Cow::Borrowed("Optional"),
-        spec: Cow::Owned(s!("[Default:{}]", tks.clone().untex())),
+        name: arena::pin_static("Optional"),
+        spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
         ..Parameter::default()
       }
@@ -1154,8 +1154,8 @@ pub fn convert_latex_args(
   for _ in 1..=nargs {
     params.push(
       Parameter {
-        name: Cow::Borrowed("Plain"),
-        spec: Cow::Borrowed("{}"),
+        name: arena::pin_static("Plain"),
+        spec: arena::pin_static("{}"),
         ..Parameter::default()
       }
       .init()?,

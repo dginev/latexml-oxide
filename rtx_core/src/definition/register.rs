@@ -3,7 +3,6 @@ use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
-use rustc_hash::FxHashMap as HashMap;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -15,6 +14,7 @@ use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::arena;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::parameter::Parameters;
@@ -534,7 +534,7 @@ impl Definition for Register {
     if matches!(self.register_type, RegisterType::CharDef) {
       let mut props = HashMap::default();
       if let Some(role) = self.role { 
-        props.insert(String::from("role"),Stored::String(role));
+        props.insert("role",Stored::String(role));
       }
       return Ok(vec![Digested::from(
         if let Some(mathglyph) = self.mathglyph {

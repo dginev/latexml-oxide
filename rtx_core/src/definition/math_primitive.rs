@@ -1,12 +1,12 @@
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 
 use crate::common::error::*;
 // use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::state::{Scope};
+use crate::common::arena::SymHashMap as HashMap;
+use crate::state::Scope;
 
 use crate::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
@@ -17,7 +17,7 @@ use crate::parameter::Parameters;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested};
+use crate::Digested;
 
 use super::SizingClosure;
 
@@ -128,59 +128,59 @@ impl PartialEq for MathPrimitiveOptions {
 }
 
 impl MathPrimitiveOptions {
-  pub fn to_hash_stored(&self) -> HashMap<String, Stored> {
+  pub fn to_hash_stored(&self) -> HashMap<Stored> {
     let mut h = HashMap::default();
     if let Some(ref meaning) = self.meaning {
-      h.insert("meaning".to_string(), meaning.into());
+      h.insert("meaning", meaning.into());
     }
     if let Some(ref name) = self.name {
-      h.insert("name".to_string(), name.into());
+      h.insert("name", name.into());
     }
     if let Some(ref omcd) = self.omcd {
-      h.insert("omcd".to_string(), omcd.into());
+      h.insert("omcd", omcd.into());
     }
     if let Some(ref role) = self.role {
-      h.insert("role".to_string(), role.into());
+      h.insert("role", role.into());
     }
     if let Some(ref decl_id) = self.decl_id {
-      h.insert("decl_id".to_string(), decl_id.into());
+      h.insert("decl_id", decl_id.into());
     }
     if let Some(ref operator_role) = self.operator_role {
-      h.insert("operator_role".to_string(), operator_role.into());
+      h.insert("operator_role", operator_role.into());
     }
     if let Some(ref mathstyle) = self.mathstyle {
-      h.insert("mathstyle".to_string(), mathstyle.into());
+      h.insert("mathstyle", mathstyle.into());
     }
     if let Some(ref scriptpos) = self.scriptpos {
-      h.insert("scriptpos".to_string(), scriptpos.into());
+      h.insert("scriptpos", scriptpos.into());
     }
     if let Some(ref operator_scriptpos) = self.operator_scriptpos {
       h.insert(
-        "operator_scriptpos".to_string(),
+        "operator_scriptpos",
         Stored::Int(*operator_scriptpos as i64),
       );
     }
     if let Some(ref stretchy) = self.stretchy {
-      h.insert("stretchy".to_string(), (*stretchy).into());
+      h.insert("stretchy", (*stretchy).into());
     }
     if let Some(ref stretchy) = self.operator_stretchy {
-      h.insert("operator_stretchy".to_string(), (*stretchy).into());
+      h.insert("operator_stretchy", (*stretchy).into());
     }
     if let Some(ref mode) = self.mode {
-      h.insert("mode".to_string(), mode.into());
+      h.insert("mode", mode.into());
     }
     // TODO: Do we want to run the font closures here? Maybe?
     if let Some(ref font_directive) = self.font {
       h.insert(
-        "font".to_string(),
+        "font",
         Stored::FontDirective(font_directive.clone()),
       );
     }
     if let Some(ref lpadding) = self.lpadding {
-      h.insert("lpadding".to_string(), (*lpadding).into());
+      h.insert("lpadding", (*lpadding).into());
     }
     if let Some(ref rpadding) = self.rpadding {
-      h.insert("rpadding".to_string(), (*rpadding).into());
+      h.insert("rpadding", (*rpadding).into());
     }
 
     h

@@ -4,7 +4,7 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 
-use crate::common::arena::EMPTY_SYM;
+use crate::common::arena::{SymHashMap,EMPTY_SYM};
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
@@ -133,7 +133,7 @@ impl Object for KeyVals {
 
 impl BoxOps for KeyVals {
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
-  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+  where FnR: FnOnce(&SymHashMap<Stored>) -> R {
     caller(&NO_PROPERTIES)
   }
   fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
@@ -146,7 +146,7 @@ impl BoxOps for KeyVals {
   fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,
-    _options: HashMap<String, Stored>,
+    _options: SymHashMap<Stored>,
   ) -> Result<(
     crate::common::dimension::Dimension,
     crate::common::dimension::Dimension,

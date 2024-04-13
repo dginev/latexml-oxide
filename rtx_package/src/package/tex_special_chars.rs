@@ -86,10 +86,10 @@ LoadDefinitions!({
   // Note also, these area only applied in text content, not in attributes!
   DefPrimitive!("\\@@endash", {
     Tbox::new(arena::pin_static("\u{2013}"), None, None,
-      Tokens!(T_CS!("\\@@endash")), HashMap::default()); });
+      Tokens!(T_CS!("\\@@endash")), SymHashMap::default()); });
   DefPrimitive!("\\@@emdash", {
     Tbox::new(arena::pin_static("\u{2014}"), None, None,
-      Tokens!(T_CS!("\\@@emdash")), HashMap::default()); });
+      Tokens!(T_CS!("\\@@emdash")), SymHashMap::default()); });
 
 
   // EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})

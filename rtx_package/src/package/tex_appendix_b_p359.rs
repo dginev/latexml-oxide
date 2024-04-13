@@ -17,7 +17,7 @@ LoadDefinitions!({
           .specialize("\u{2026}"));
         Ok(stored_map!("font" => new_font)) // Since not DefMath!
       } else {
-        Ok(HashMap::default())
+        Ok(SymHashMap::default())
       }
   });
 

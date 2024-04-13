@@ -1,5 +1,4 @@
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
@@ -7,6 +6,7 @@ use std::rc::Rc;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
+use crate::common::arena::SymHashMap;
 use crate::state::*;
 
 use crate::definition::{
@@ -82,7 +82,7 @@ impl Default for ConstructorOptions {
       // environment-specific
       require_math: false,
       forbid_math: false,
-      properties: Rc::new(| _whatsit| Ok(HashMap::default())),
+      properties: Rc::new(| _whatsit| Ok(SymHashMap::default())),
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
@@ -154,7 +154,7 @@ impl Default for Constructor {
       after_digest: vec![],
       before_construct: vec![],
       after_construct: vec![],
-      properties: Rc::new(|_whatsit| Ok(HashMap::default())),
+      properties: Rc::new(|_whatsit| Ok(SymHashMap::default())),
       capture_body: false,
       after_digest_body: vec![],
       reversion: None,
@@ -254,7 +254,7 @@ impl Definition for Constructor {
     //     $properties{$key} = &$value($stomach, @args); } }
 
     properties
-      .entry(s!("font"))
+      .entry("font")
       .or_insert_with(|| match state_font {
         Some(f) => Stored::Font(Rc::clone(&f)),
         None => Stored::Font(Rc::new(Font::text_default())), // should never happen?
@@ -262,7 +262,7 @@ impl Definition for Constructor {
     // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined
     // $properties{locator};
     properties
-      .entry(s!("isMath"))
+      .entry("isMath")
       .or_insert_with(|| Stored::Bool(ismath));
     // $properties{level}   = $stomach->getBoxingLevel;
 

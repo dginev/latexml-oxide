@@ -8,7 +8,6 @@ pub mod primitive;
 pub mod register;
 
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::fmt;
@@ -20,6 +19,7 @@ use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::arena;
+use crate::common::arena::SymHashMap;
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};
@@ -40,11 +40,11 @@ pub type PrimitiveFn = dyn Fn(Vec<ArgWrap>) -> Result<Vec<Digested>>;
 pub type PrimitiveClosure = Rc<PrimitiveFn>;
 pub type BeforeDigestClosure = Rc<dyn Fn() -> Result<Vec<Digested>>>;
 pub type PropertiesClosure =
-  Rc<dyn Fn(&Vec<Option<Digested>>) -> Result<HashMap<String, Stored>>>;
+  Rc<dyn Fn(&Vec<Option<Digested>>) -> Result<SymHashMap<Stored>>>;
 pub type DigestionClosure =
   Rc<dyn Fn(&mut Whatsit) -> Result<Vec<Digested>>>;
 pub type ReplacementClosure = Rc<
-  dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>) -> Result<()>,
+  dyn Fn(&mut Document, &Vec<Option<Digested>>, &SymHashMap<Stored>) -> Result<()>,
 >;
 pub type ConstructionClosure = Rc<dyn Fn(&mut Document, &Whatsit) -> Result<()>>;
 pub type DigestedReversionClosure =

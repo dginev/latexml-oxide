@@ -11,7 +11,7 @@ LoadDefinitions!({
   // and don't affect the "meaning" of the array structure as a matrix.
   // In that case, we'll use an XMDual to indidate the content is simply the matrix,
   // but the presentation includes the delimiters.
-  // HOWEVER, the delimeters may also signify an OPERATION on the matrix
+  // HOWEVER, the delimiters may also signify an OPERATION on the matrix
   // in which case the application & meaning of that operator must be supplied.
 
   // keys are

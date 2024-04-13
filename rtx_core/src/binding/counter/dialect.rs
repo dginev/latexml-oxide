@@ -8,23 +8,23 @@
 //! document elements (eg from \section*); this requires an additional counter
 //! (eg. UNsection) and  mechanisms to track it.
 
-use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
 use crate::binding::content::{build_invocation, digest_literal, digest_text};
 use crate::binding::def::dialect::{def_macro, def_register, is_defined, RegisterOptions};
 use crate::common::arena;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::cleaners::{clean_id, clean_label, roman_aux};
 use crate::common::error::*;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
+
 use crate::definition::expandable::ExpandableOptions;
-use crate::definition::{ExpansionBody};
+use crate::definition::{Definition,ExpansionBody};
+use crate::state;
 use crate::mouth;
 use crate::stomach;
-use crate::definition::Definition;
-use crate::{state};
 use crate::state::*;
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -306,7 +306,7 @@ pub fn step_counter(
 pub fn ref_step_counter(
   ctype: &str,
   noreset: bool,
-  ) -> Result<HashMap<String, Stored>> {
+  ) -> Result<HashMap<Stored>> {
 
   let ctr = with_mapping("counter_for_type", ctype, |meaning|
     match meaning  {
@@ -385,7 +385,7 @@ pub fn ref_step_counter(
   );
   state::activate_scope(scope);
 
-  Ok(map!(
+  Ok(stored_map!(
     "tags" => Stored::Digested(tags),
     "id" => Stored::String(arena::pin(id))
   ))
@@ -489,7 +489,7 @@ fn deactivate_counter_scope(ctr: &str) {
 /// of objects that normally get both a refnum and id.
 pub fn ref_step_id(
   ctype: &str,
-  ) -> Result<HashMap<String, Stored>> {
+  ) -> Result<HashMap<Stored>> {
   let ctr = with_mapping("counter_for_type", ctype, |mapping| match mapping  {
     Some(map) => map.to_string(),
     None => ctype.to_string(),
@@ -542,16 +542,16 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(
   tag_opt: Option<&Tokens>,
-  ) -> Result<HashMap<String, Stored>> {
+  ) -> Result<HashMap<Stored>> {
   let counter = state::lookup_string("itemcounter");
   let n = lookup_int("itemization_items");
   state::assign_value("itemization_items", n + 1, None);
-  let mut attr: HashMap<String, Stored> = HashMap::default();
+  let mut attr: HashMap<Stored> = HashMap::default();
   if n > 0 {
     if let Some(sep) = lookup_dimension("\\itemsep") {
       let default_opt = lookup_dimension("\\lx@default@itemsep");
       if default_opt.is_none() || sep.value_of() != default_opt.unwrap().value_of() {
-        attr.insert("itemsep".to_string(), sep.into());
+        attr.insert("itemsep", sep.into());
       }
     }
   }
@@ -609,14 +609,14 @@ pub fn ref_step_item_counter(
 
     let tags = stomach::digest(tag_tokens)?;
     if !tags.is_empty()? {
-      props.insert("tags".to_string(), tags.into());
+      props.insert("tags", tags.into());
     }
     props
   } else {
     ref_step_counter(&counter, false)?
   };
   for (k, v) in attr.into_iter() {
-    result.insert(k, v);
+    result.insert_sym(k, v);
   }
   Ok(result)
 }
@@ -643,7 +643,7 @@ pub fn begin_itemize(
   itype: &str,
   counter: Option<&str>,
   options: BeginItemizeOptions,
-  ) -> Result<HashMap<String, Stored>> {
+  ) -> Result<HashMap<Stored>> {
   let outercounter = state::lookup_string("itemcounter");
   let outerlevel = if !outercounter.is_empty() {
     lookup_int(&s!("{outercounter}level"))
@@ -740,10 +740,8 @@ pub fn begin_itemize(
 
   let mut rsc = ref_step_counter(&s!("@itemize{listpostfix}"), false)?;
   rsc.insert(
-    "counter".to_string(),
-    Stored::String(arena::pin(usecounter)),
-  );
-  rsc.insert("series".to_string(), Stored::String(arena::pin(series)));
+    "counter", usecounter.into());
+  rsc.insert("series", series.into());
   Ok(rsc)
 }
 

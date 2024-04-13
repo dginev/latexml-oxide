@@ -10,6 +10,7 @@ use crate::binding::content::merge_font;
 use crate::binding::counter::dialect::step_counter;
 use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::common::arena;
+use crate::common::arena::SymHashMap;
 use crate::common::font::Font;
 use crate::common::number::Number;
 use crate::common::error::*;
@@ -508,7 +509,7 @@ pub fn def_math_dual(
         }
       }
       for key in MATH_CONSTRUCTOR_ATTRIBUTES {
-        if let Some(v) = props.get(*key) {
+        if let Some(v) = props.get(key) {
           attrs.insert(key.to_string(), v.to_string());
         }
       }
@@ -535,7 +536,7 @@ pub fn def_math_dual(
         op_attrs.insert("scriptpos".to_owned(), v.to_string());
       }
       for key in MATH_CONSTRUCTOR_ATTRIBUTES {
-        if let Some(v) = props.get(*key) {
+        if let Some(v) = props.get(key) {
           op_attrs.insert(key.to_string(), v.to_string());
         }
       }
@@ -676,7 +677,7 @@ pub fn def_math_constructor(
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // If trivial presentation, allow it in Text
     Rc::new(
-      move |document: &mut Document, _, props: &HashMap<String, Stored>| {
+      move |document: &mut Document, _, props: &SymHashMap<Stored>| {
         let mut attrs = HashMap::default();
         for key in ["role", "scriptpos", "stretchy"] {
           if let Some(v) = props.get(key) {
@@ -684,7 +685,7 @@ pub fn def_math_constructor(
           }
         }
         for key in MATH_CONSTRUCTOR_ATTRIBUTES {
-          if let Some(v) = props.get(*key) {
+          if let Some(v) = props.get(key) {
             attrs.insert(key.to_string(), v.to_string());
           }
         }
@@ -711,7 +712,7 @@ pub fn def_math_constructor(
     Rc::new(
       move |document: &mut Document,
             args: &Vec<Option<Digested>>,
-            props: &HashMap<String, Stored>| {
+            props: &SymHashMap<Stored>| {
         let mut attrs = HashMap::default();
         for key in ["role", "scriptpos", "stretchy"] {
           if let Some(v) = props.get(key) {
@@ -743,7 +744,7 @@ pub fn def_math_constructor(
           op_attrs.insert(String::from("scriptpos"), scriptpos.to_string());
         }
         for key in MATH_CONSTRUCTOR_ATTRIBUTES {
-          if let Some(v) = props.get(*key) {
+          if let Some(v) = props.get(key) {
             op_attrs.insert(key.to_string(), v.to_string());
           }
         }
@@ -769,7 +770,7 @@ pub fn def_math_constructor(
     )
   });
   let sizer: Option<SizingClosure> = Some(Rc::new(move |_| {
-    Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::default()))
+    Ok(Font::math_default().compute_string_size(&presentation_for_sizer, SymHashMap::default()))
   }));
 
   // let mut prop_options = options.clone();
@@ -1426,7 +1427,7 @@ fn transfer_common_constructor_options(
   cons.after_construct = options.after_construct;
   let presentation_for_font = presentation.to_owned();
   properties.insert(
-    String::from("font"),
+    "font",
     Stored::FontDirective(FontDirective::Closure(
       if let Some(mathstyle) = options.mathstyle {
         Rc::new(move |_whatsit| {

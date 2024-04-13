@@ -35,7 +35,7 @@ LoadDefinitions!({
       attrs.insert(String::from("vattach"), translate_attachment(va).to_string());
     }
 
-    tabular_bindings(template, HashMap::default(), attrs)?;
+    tabular_bindings(template, SymHashMap::default(), attrs)?;
   });
 
   DefMacro!("\\@tabular@before", None);

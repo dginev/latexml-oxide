@@ -61,10 +61,10 @@ LoadDefinitions!({
           let tag = stomach::digest(tag_expanded)?;
           Ok(stored_map!("tag" => tag))
         } else {
-          Ok(HashMap::default())
+          Ok(SymHashMap::default())
         }
       } else {
-          Ok(HashMap::default())
+          Ok(SymHashMap::default())
       }
     }
   );

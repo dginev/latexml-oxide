@@ -204,7 +204,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   lines.push(arena::pin_static(end));
   let boxes = lines.into_iter().map(|line|
     Tbox::new(line, font.clone(), Some(loc),
-      Token{text: line, code:Catcode::OTHER}.into(), HashMap::default()).into()
+      Token{text: line, code:Catcode::OTHER}.into(), SymHashMap::default()).into()
   ).collect();
   whatsit.set_body(boxes);
   Ok(())

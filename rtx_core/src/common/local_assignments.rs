@@ -1,3 +1,7 @@
+// We need RAII Guards!
+// https://rust-unofficial.github.io/patterns/patterns/behavioural/RAII.html
+// it would be massively superior to leverage Drop, compared to explicit `expire_*` calls
+
 //! This module can benefit from some thinking over and refactoring
 //! in principle the "local" scope variables in Perl are a completely standalone feature
 //! (it's global namespace value shadowing until scope expiration)

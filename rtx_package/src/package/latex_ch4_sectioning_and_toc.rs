@@ -167,9 +167,9 @@ LoadDefinitions!({
       let xtoctitle = stomach::digest(invoked_toctitle)?;
 
       if xtoctitle.to_string() != xtitle.to_string() {
-        props.insert(s!("toctitle"), xtoctitle.into());
+        props.insert("toctitle", xtoctitle.into());
       }
-      props.insert(s!("title"), xtitle.into());
+      props.insert("title", xtitle.into());
 
       Ok(props)
     }
@@ -213,7 +213,7 @@ LoadDefinitions!({
       } else {
         title.clone()
       };
-      props.insert("title".to_string(), title_digested.into());
+      props.insert("title", title_digested.into());
 
       if let Some(toctitle) = toctitle_arg {
         if let Postponed(toctokens) = toctitle.data() {
@@ -221,7 +221,7 @@ LoadDefinitions!({
             let toctitle_digested = stomach::digest(
               Tokens!(T_CS!("\\@hidden@bgroup"),
                 toctokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?;
-            props.insert("toctitle".to_string(), toctitle_digested.into());
+            props.insert("toctitle", toctitle_digested.into());
           }
         }
       }

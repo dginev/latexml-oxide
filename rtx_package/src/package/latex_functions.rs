@@ -1,5 +1,3 @@
-use rustc_hash::FxHashMap as HashMap;
-
 use crate::package::tex_alignment::alignment_bindings;
 use crate::package::*;
 
@@ -44,17 +42,17 @@ pub fn make_note_tags(
   counter: &str,
   mark_opt: Option<&Digested>,
   tag_opt: Option<Cow<Digested>>,
-  ) -> Result<HashMap<String, Stored>> {
+  ) -> Result<SymHashMap<Stored>> {
   if let Some(tag) = tag_opt {
     let mut props = ref_step_id(counter)?;
     let mark = match mark_opt {
       None => tag.clone(),
       Some(mark) => Cow::Borrowed(mark),
     };
-    props.insert("mark".to_string(), mark.into());
+    props.insert("mark", mark.into());
     props.insert(
-      "tags".to_string(),
-      stomach::digest(
+      "tags",
+     stomach::digest(
           Tokens!(
             T_BEGIN!(),
             T_CS!("\\def"),
@@ -85,7 +83,7 @@ pub fn make_note_tags(
       None => digest_text(Tokens!(T_CS!(s!("\\the{counter}"))))?,
       Some(mark) => mark.clone(),
     });
-    props.insert("mark".to_string(), mark);
+    props.insert("mark", mark);
     Ok(props)
   }
 }
@@ -152,12 +150,12 @@ pub fn only_preamble(cs: &str) -> Result<()> {
 
 pub fn tabular_bindings(
   template: Template,
-  mut properties: HashMap<String, Stored>,
+  mut properties: SymHashMap<Stored>,
   mut xml_attributes: HashMap<String, String>
 ) -> Result<()> {
   if !properties.contains_key("guess_headers") {
     if let Some(v) = lookup_value("GUESS_TABULAR_HEADERS") {
-      properties.insert(String::from("guess_headers"), v);
+      properties.insert("guess_headers", v);
     }
   }
   if !xml_attributes.contains_key("colsep") {
@@ -186,7 +184,7 @@ pub fn tabular_bindings(
 
   if !properties.contains_key("strut") {
     properties.insert(
-      String::from("strut"),
+      "strut",
       lookup_register("\\baselineskip", Vec::new())?
         .unwrap()
         .multiply(Float::new_f64(1.5))

@@ -127,7 +127,7 @@ macro_rules! noreplacement {
 macro_rules! replacement {
   ($doc:ident, $args:ident, $props:ident, $body:block) => (
     move |$doc:&mut Document,$args: &Vec<Option<Digested>>,
-      $props: &HashMap<String, Stored>| -> Result<()> {
+      $props: &SymHashMap<Stored>| -> Result<()> {
     $body
     Ok(())
   })
@@ -152,7 +152,7 @@ macro_rules! properties {
   ($args:ident, $body:block) => {
     Rc::new(
       move |mut $args: &Vec<Option<Digested>>|
-            -> Result<HashMap<String, Stored>> {
+            -> Result<SymHashMap<Stored>> {
         $body
       },
     )
@@ -160,7 +160,7 @@ macro_rules! properties {
   ($(sub)? $body:block) => {
     Rc::new(
       move |_args: &Vec<Option<Digested>>|
-            -> Result<HashMap<String, Stored>> {
+            -> Result<SymHashMap<Stored>> {
         $body.into_properties_result()
       },
     )
@@ -168,7 +168,7 @@ macro_rules! properties {
   ($value:expr) => {
     Rc::new(
       move |_args: &Vec<Option<Digested>>|
-            -> Result<HashMap<String, Stored>> { Ok($value.clone()) },
+            -> Result<SymHashMap<Stored>> { Ok($value.clone()) },
     )
   };
 }
@@ -312,7 +312,7 @@ macro_rules! prop_str {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
       Some(&Stored::String(ref id)) => *id,
-      _ => arena::pin_static(""),
+      _ => *EMPTY_SYM,
     }
   };
 }

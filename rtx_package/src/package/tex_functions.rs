@@ -131,8 +131,8 @@ pub fn parse_def_parameters(
         let extra = Tokens::new(delim);
         params.push(
           Parameter {
-            name: Cow::Borrowed("Until"),
-            spec: Cow::Owned(format!("Until:{extra}")),
+            name: arena::pin_static("Until"),
+            spec: arena::pin(format!("Until:{extra}")),
             extra: vec![extra],
             ..Parameter::default()
           }
@@ -141,16 +141,10 @@ pub fn parse_def_parameters(
       } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
         // Special case: trailing sole # => delimited by next opening brace.
         tokens.pop_front();
-        params.push(Parameter::new(
-          Cow::Borrowed("UntilBrace"),
-          Cow::Borrowed("UntilBrace"),
-              )?);
+        params.push(Parameter::new("UntilBrace","UntilBrace")?);
       } else {
         // Nothing? Just a plain parameter.
-        params.push(Parameter::new(
-          Cow::Borrowed("Plain"),
-          Cow::Borrowed("{}"),
-              )?);
+        params.push(Parameter::new("Plain","{}")?);
       }
     } else {
       // Initial delimiting text is required.
@@ -165,8 +159,8 @@ pub fn parse_def_parameters(
       let expected = Tokens::new(lit);
       params.push(
         Parameter {
-          name: Cow::Borrowed("Match"),
-          spec: Cow::Owned(s!("Match:{}", expected)),
+          name: arena::pin_static("Match"),
+          spec: arena::pin(s!("Match:{expected}")),
           extra: vec![expected],
           novalue: true,
           ..Parameter::default()
@@ -924,7 +918,7 @@ pub fn aligning_environment(
   align: &str,
   class: &str,
   document: &mut Document,
-  props: &HashMap<String, Stored>,
+  props: &SymHashMap<Stored>,
 ) -> Result<()> {
   if let Some(Stored::Digested(body)) = props.get("body") {
     // Add class attribute to new nodes.

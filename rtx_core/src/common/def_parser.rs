@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
 
+use crate::common::arena::{self,EMPTY_SYM};
 use crate::common::error::*;
 
 use crate::mouth;
@@ -82,11 +83,11 @@ pub fn parse_parameters(
         parse_parameters(inner_spec, cs, init_flag)?
       };
       let mut p = Parameter {
-        name: Cow::Borrowed("Plain"),
+        name: arena::pin_static("Plain"),
         spec: if spec.is_empty() {
-          Cow::Borrowed("")
+          *EMPTY_SYM
         } else {
-          Cow::Owned(spec.to_string())
+          arena::pin(spec)
         },
         inner: inner.map(|ps| ps.into()).unwrap_or_default(),
         ..Parameter::default()
@@ -103,11 +104,11 @@ pub fn parse_parameters(
       if let Some(_default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
         // TODO: Add the defaults !
         let mut p = Parameter {
-          name: Cow::Borrowed("Optional"),
+          name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
-            Cow::Borrowed("")
+            *EMPTY_SYM
           } else {
-            Cow::Owned(spec.to_string())
+            arena::pin(spec)
           },
           // extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str()))],
           ..Parameter::default()
@@ -118,11 +119,11 @@ pub fn parse_parameters(
         parameters.push(p);
       } else if !inner_spec.is_empty() {
         let mut p = Parameter {
-          name: Cow::Borrowed("Optional"),
+          name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
-            Cow::Borrowed("")
+            *EMPTY_SYM
           } else {
-            Cow::Owned(spec.to_string())
+            arena::pin(spec)
           },
           inner: parse_parameters(inner_spec, cs, init_flag)?
             .map(|ps| ps.into())
@@ -135,8 +136,8 @@ pub fn parse_parameters(
         parameters.push(p);
       } else {
         let mut p = Parameter {
-          name: Cow::Borrowed("Optional"),
-          spec: Cow::Owned(spec.to_string()),
+          name: arena::pin_static("Optional"),
+          spec: arena::pin(spec),
           ..Parameter::default()
         };
         if init_flag {
@@ -145,8 +146,8 @@ pub fn parse_parameters(
         parameters.push(p);
       }
     } else if let Some(captures) = PARAMSPECT_CHECK_RE.captures(&prototype) {
-      let spec = captures.get(1).map_or("", |m| m.as_str()).to_string();
-      let name = captures.get(2).map_or("", |m| m.as_str()).to_string();
+      let spec = arena::pin(captures.get(1).map_or("", |m| m.as_str()));
+      let name = arena::pin(captures.get(2).map_or("", |m| m.as_str()));
       let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
       next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "");
       let extra: Vec<Tokens> = if extra_str.is_empty() {
@@ -158,8 +159,8 @@ pub fn parse_parameters(
           .collect()
       };
       let mut p = Parameter {
-        name: name.into(),
-        spec: spec.into(),
+        name,
+        spec,
         extra,
         ..Parameter::default()
       };

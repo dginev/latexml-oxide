@@ -37,8 +37,8 @@ LoadDefinitions!({
 
   // Remember; \par _closes_, not opens, paragraphs!
   // Here, we want to close both an open p and para (if either are open).
-  let mut skippable_props: HashMap<String, Stored> = HashMap::default();
-  skippable_props.insert(s!("alignmentSkippable"), true.into());
+  let mut skippable_props: SymHashMap<Stored> = SymHashMap::default();
+  skippable_props.insert("alignmentSkippable", Stored::Bool(true));
 
   DefConstructor!("\\normal@par",
     sub[document, _args, props] {
