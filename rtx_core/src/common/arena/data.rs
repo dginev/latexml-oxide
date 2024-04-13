@@ -1,0 +1,134 @@
+use std::fmt;
+use std::iter::IntoIterator;
+use std::collections::hash_map::{Keys,Iter,IterMut,IntoIter, Entry};
+
+use string_interner::symbol::SymbolU32;
+use rustc_hash::FxHashMap as HashMap;
+
+use crate::common::arena;
+
+pub type SymStr = SymbolU32;
+
+// TODO: Are we heading in the right direction with this interface...
+// is there performance overhead from the extra wrap? It seems borderline usable...
+
+/// A convenience abstraction over a String-keyed HashMap
+/// typically used for `HashMap<String,Stored>` states.
+/// The goal is to support both a string interface, as well as the interned tickets interface,
+/// while avoiding String allocations internally.
+#[derive(Clone,Default)]
+pub struct SymHashMap<T>(pub HashMap<SymStr, T>);
+
+impl<T> SymHashMap<T> {
+  #[inline]
+  pub fn len(&self) -> usize {
+    self.0.len()
+  }
+  #[inline]
+  pub fn is_empty(&self) -> bool {
+    self.0.is_empty()
+  }
+  #[inline]
+  pub fn get(&self, key: &str) -> Option<&T> {
+    self.0.get(&arena::pin(key))
+  }
+  #[inline]
+  pub fn get_sym(&self, key: &SymStr) -> Option<&T> {
+    self.0.get(key)
+  }
+  #[inline]
+  pub fn get_mut(&mut self, key:&str) -> Option<&mut T> {
+    self.0.get_mut(&arena::pin(key))
+  }
+  #[inline]
+  pub fn get_mut_sym(&mut self, key:SymStr) -> Option<&mut T> {
+    self.0.get_mut(&key)
+  }
+  #[inline]
+  pub fn contains_key(&self, key:&str) -> bool {
+    self.0.contains_key(&arena::pin(key))
+  }
+  #[inline]
+  pub fn contains_key_sym(&self, key:&SymStr) -> bool {
+    self.0.contains_key(key)
+  }
+  #[inline]
+  pub fn insert(&mut self, key:&str, value:T) {
+    self.0.insert(arena::pin(key),value);
+  }
+  #[inline]
+  pub fn insert_sym(&mut self, key:SymStr, value:T) {
+    self.0.insert(key,value);
+  }
+  #[inline]
+  pub fn remove(&mut self, key:&str) {
+    self.0.remove(&arena::pin(key));
+  }
+  #[inline]
+  pub fn remove_sym(&mut self, key:SymStr) {
+    self.0.remove(&key);
+  }
+  #[inline]
+  pub fn keys(&self) -> Keys<'_, SymStr, T> {
+    self.0.keys()
+  }
+  #[inline]
+  pub fn entry(&mut self, key:&str) -> Entry<SymStr,T> {
+    self.0.entry(arena::pin(key))
+  }
+  #[inline]
+  pub fn entry_sym(&mut self, key:SymStr) -> Entry<SymStr,T> {
+    self.0.entry(key)
+  }
+  #[inline]
+  pub fn iter(&self) -> Iter<'_, SymStr, T> {
+    self.0.iter()
+  }
+}
+
+impl<'a, T> IntoIterator for &'a SymHashMap<T> {
+  type Item = (&'a SymStr, &'a T);
+  type IntoIter = Iter<'a, SymStr, T>;
+
+  #[inline]
+  fn into_iter(self) -> Iter<'a, SymStr, T> {
+      self.0.iter()
+  }
+}
+
+impl<'a, T> IntoIterator for &'a mut SymHashMap<T> {
+  type Item = (&'a SymStr, &'a mut T);
+  type IntoIter = IterMut<'a, SymStr, T>;
+
+  #[inline]
+  fn into_iter(self) -> IterMut<'a, SymStr, T> {
+      self.0.iter_mut()
+  }
+}
+impl<T> IntoIterator for SymHashMap<T> {
+  type Item = (SymStr, T);
+  type IntoIter = IntoIter<SymStr, T>;
+  #[inline]
+  fn into_iter(self) -> Self::IntoIter {
+    self.0.into_iter()
+  }
+}
+
+impl<T:fmt::Debug> fmt::Debug for SymHashMap<T> {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f,"SymHashMap[")?;
+    let mut init = true;
+    for (k,v) in self {
+      if init {
+        init=false;
+      } else {
+        write!(f, ", ")?;
+      }
+      arena::with(*k,|key|
+        write!(f, "{key}")
+      )?;
+      write!(f,": {:?}",v)?;
+    }
+    write!(f,"]")
+  }
+}

@@ -20,11 +20,21 @@ macro_rules! map {
   }}
 }
 
-/// A flexary macro for constructing `HashMap<String, Stored>` maps
+/// A flexary macro for constructing `HashMap<SymbolU32, Stored>` maps
 #[macro_export]
 macro_rules! stored_map {
   ($( $key:expr => $val:expr ),*) => {{
-    let mut map : HashMap<String,$crate::common::store::Stored> = HashMap::default();
+    let mut map : $crate::common::arena::SymHashMap<$crate::common::store::Stored> = $crate::common::arena::SymHashMap::default();
+    $( map.insert($key, $val.into()); )*
+    map
+  }}
+}
+
+/// A flexary macro for constructing `HashMap<String, T>` maps
+#[macro_export]
+macro_rules! string_keys_map {
+  ($( $key:expr => $val:expr ),*) => {{
+    let mut map = HashMap::default();
     $( map.insert($key.to_string(), $val.into()); )*
     map
   }}

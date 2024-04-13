@@ -19,6 +19,7 @@ use std::rc::Rc;
 
 use crate::common::arena::{
   self, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, XML_ID_SYM,
+  SymHashMap,
 };
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
@@ -393,7 +394,7 @@ impl Document {
   pub fn absorb(
     &mut self,
     object: &Digested,
-    props_opt: Option<HashMap<String, Stored>>,
+    props_opt: Option<SymHashMap<Stored>>,
   ) -> Result<()> {
     use DigestedData::*;
     let props = props_opt.unwrap_or_default();
@@ -497,7 +498,7 @@ impl Document {
   pub fn absorb_string(
     &mut self,
     object: &str,
-    props: &HashMap<String, Stored>,
+    props: &SymHashMap<Stored>,
   ) -> Result<Option<Node>> {
     // Else, plain string in text mode.
     let ismath: bool = match props.get("isMath") {

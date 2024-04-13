@@ -38,7 +38,7 @@ pub fn apply_accent(
     font,
     Some(locator),
     reversion.unwrap_or(Tokens!()),
-    HashMap::default(),
+    SymHashMap::default(),
   ))
 }
 

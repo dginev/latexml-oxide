@@ -205,4 +205,53 @@ LoadDefinitions!({
     AddToMacro!(target, content);
   });
   DefMacro!("\\addto@hook DefToken {}", "#1\\expandafter{\\the#1#2}");
+
+
+  // Alas, we're not tracking versions, so we'll assume it's "later" & cross fingers....
+  DefMacro!("\\@ifpackagelater{}{}{}{}", "#3");
+  DefMacro!("\\@ifclasslater{}{}{}{}",   "#3");
+  Let!("\\AtEndOfClass", "\\AtEndOfPackage");
+
+  DefMacro!("\\AtBeginDvi {}", None);
+
+  TeX!(r###"
+  \def\@ifl@t@r#1#2{%
+    \ifnum\expandafter\@parse@version@#1//00\@nil<%
+          \expandafter\@parse@version@#2//00\@nil
+      \expandafter\@secondoftwo
+    \else
+      \expandafter\@firstoftwo
+    \fi}
+  \def\@parse@version@#1{\@parse@version0#1}
+  \def\@parse@version#1/#2/#3#4#5\@nil{%
+  \@parse@version@dash#1-#2-#3#4\@nil
+  }
+  \def\@parse@version@dash#1-#2-#3#4#5\@nil{%
+    \if\relax#2\relax\else#1\fi#2#3#4 }"###);
+
+  //======================================================================
+  // Somewhat related I/O stuff
+  DefMacro!("\\filename@parse{}", sub[(pathname)] {
+    let (mut dir, name, ext) = pathname::split(&Expand!(pathname).to_string());
+    if !dir.is_empty() {
+      dir.push('/');
+    }
+    let dir_tokens = Tokens!(ExplodeText!(dir));
+    DefMacro!("\\filename@area", None, dir_tokens);
+    let name_tokens = Tokens!(ExplodeText!(name));
+    DefMacro!("\\filename@base", None, name_tokens);
+    let ext_tokens = if !ext.is_empty() {
+      Tokens!(ExplodeText!(ext)) 
+    } else { Tokens!(T_CS!("\\relax")) };
+    DefMacro!("\\filename@ext", None, ext_tokens); 
+    Vec::new()
+  });
+
+  DefMacro!("\\@filelist", None);
+  DefMacro!("\\@addtofilelist{}", sub[(arg)] {
+    let expansion = Expand!(Tokens!(T_CS!("\\@filelist"), T_OTHER!(","), arg.unlist()));
+    DefMacro!("\\@filelist",None,expansion);
+    Vec::new()
+  });
+
 });

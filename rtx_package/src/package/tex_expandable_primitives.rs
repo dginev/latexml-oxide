@@ -144,46 +144,55 @@ LoadDefinitions!({
             Some(ps) => ps.get_parameters(),
             None => Vec::new()
           };
-          let mut spec_parts : Vec<Cow<str>> = Vec::new();
+          let mut spec_parts : Vec<SymStr> = Vec::new();
           let mut p_trailer = "";
           // params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
           let mut arg_index = 0;
           for param in params.iter() {
-            let mut p_spec = Cow::Borrowed("");
-            match &*param.spec {
+            let mut p_spec = *EMPTY_SYM;
+            let mut continue_flag = false;
+            // TODO: avoiding the allocation is quite painful here, since arena gets into mutability
+            // locking
+            let spec = arena::to_string(param.spec);
+            match spec.as_str() {
               "RequireBrace" => {
                 // tex's \meaning prints out the required braces for "\def\a#{}" variants
                 p_trailer = "{";
-                p_spec    = Cow::Borrowed("{");
+                p_spec    = arena::pin_static("{");
               },
               "UntilBrace" => {
                 p_trailer = "{";
                 arg_index+=1;
-                p_spec = Cow::Owned(format!("#{arg_index}{p_spec}"));
+                p_spec = arena::pin(
+                  arena::with(p_spec, |p_str| format!("#{arg_index}{p_str}")));
               }
               other if other.starts_with("Match:") => {
                 // just match, don't increment arg index
-                p_spec = LEAD_W_COLON_RE.replace(other,"");
+                p_spec = arena::pin(LEAD_W_COLON_RE.replace(other,""));
               },
               other if UNTIL_SPEC.is_match(other) => {
                 // implied argument at this slot
-                p_spec = LEAD_W_COLON_RE.replace(other,"");
+                p_spec = arena::pin(LEAD_W_COLON_RE.replace(other,""));
                 arg_index +=1 ;
-                p_spec = Cow::Owned(s!("#{arg_index}{p_spec}"));
+                p_spec = arena::pin(
+                  arena::with(p_spec, |p_str| s!("#{arg_index}{p_str}")));
               },
               _other => { // regular parameter, increment
               // skip the latexml-only requirement params, but only here,
               // since Match also have "novalue" set.
                 if param.novalue {
-                  continue;
+                  continue_flag = true;
+                } else {
+                  arg_index+=1;
+                  p_spec = arena::pin(&s!("#{arg_index}"));
                 }
-                arg_index+=1;
-                p_spec = Cow::Owned(s!("#{arg_index}"));
               }
             }
-            spec_parts.push(p_spec);
+            if !continue_flag { 
+              spec_parts.push(p_spec);
+            }
           }
-          let mut spec : String = spec_parts.join("");
+          let mut spec : String = arena::join(&spec_parts,"");
           spec = spec.replace("{}","");
           spec = spec.replace("Token","");
 

@@ -1,4 +1,3 @@
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::rc::Rc;
@@ -6,6 +5,7 @@ use std::cell::RefCell;
 use once_cell::sync::Lazy;
 
 use crate::common::arena;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::error::*;
 use crate::common::font;
 use crate::common::font::Font;

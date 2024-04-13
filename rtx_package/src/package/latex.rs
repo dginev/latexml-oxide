@@ -35,11 +35,11 @@ LoadDefinitions!({
   InnerPool!(latex_ch2_document);
   // lines 372-587
   InnerPool!(latex_ch3_sentences_and_paragraphs);
-  // lines 588-687
+  // lines 588-833
   InnerPool!(latex_ch4_sectioning_and_toc);
-  // lines 687-1066
+  // lines 833-1080 (04.2024)
   InnerPool!(latex_ch5_packages);
-  // lines 1066-1125
+  // lines 1080-1140 (04.2024)
   InnerPool!(latex_ch5_page_styles);
   // lines 1102-1310 (05.2022)
   InnerPool!(latex_ch5_title_page_and_abstract);

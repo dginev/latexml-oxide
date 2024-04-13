@@ -132,7 +132,7 @@ LoadDefinitions!({
     for key in &all_keys {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...
-        document.set_box_to_absorb(Tbox::new(arena::pin_static(""), lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default()).into());
+        document.set_box_to_absorb(Tbox::new(*EMPTY_SYM, lookup_font(), None, Tokens!(T_SPACE!()), SymHashMap::default()).into());
         for (tag, attr, stuff) in list {
           document.open_element(&tag, attr, None)?;
           // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
@@ -155,7 +155,7 @@ LoadDefinitions!({
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
   Tag!("ltx:document", after_open_late => sub[document, root] {
-    let classes = with_mapping_keys("DOCUMENT_CLASSES", |keys| keys.join(" "));
+    let classes = with_mapping_keys("DOCUMENT_CLASSES", |keys| arena::join(&keys," "));
     if !classes.is_empty()  {
       document.add_class(root, &classes)?;
     }
@@ -203,25 +203,28 @@ LoadDefinitions!({
 
   // This collects up the various declared ltx:tag's into an ltx:tags
   DefMacro!("\\lx@make@tags {}", sub[(ttype)] {
-    let formatters = if let Some(Stored::HashStored(formatters)) =
-      lookup_value("type_tag_formatter") {
-        Some(formatters)
-      } else {
-        None
-      };
-
     let mut tags = Vec::new();
-    if let Some(formatters) = formatters {
-      let mut sorted_keys : Vec<&String> = formatters.keys().collect();
+    if let Some(Stored::HashStored(formatters)) =
+      lookup_value("type_tag_formatter") {
+      let keys_sym : Vec<SymbolU32> = formatters.keys().copied().collect();
+      let mut sorted_keys : Vec<String> = arena::with_many(&keys_sym, |keys| {
+        keys.into_iter().map(str::to_owned).collect()
+      });
       sorted_keys.sort();
       for role in sorted_keys.iter() {
-        let formatter = &formatters[*role];
-        tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
-          vec![
-            Tokens!(T_OTHER!(role)),
-            build_invocation(formatter, vec![Some(ttype.clone())])?
-          ])
-        );
+        let formatter_opt = match formatters.get(role) {
+          Some(Stored::Token(t)) => Some(*t),
+          Some(Stored::String(sym)) => Some(Token { text: *sym, code: Catcode::CS }),
+          _ => None
+        };
+        if let Some(formatter_token) = formatter_opt {
+          tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
+            vec![
+              Tokens!(T_OTHER!(role)),
+              build_invocation(formatter_token, vec![Some(ttype.clone())])?
+            ])
+          );
+        }
       }
     }
 

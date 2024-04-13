@@ -9,7 +9,7 @@ use crate::package::*;
 // #   preset => boolean
 // #   postset => boolean
 // #   deferretract=>boolean
-fn prepare_equation_counter(options: HashMap<String, Stored>) {
+fn prepare_equation_counter(options: SymHashMap<Stored>) {
   state::assign_value(
     "EQUATION_NUMBERING",
     Stored::HashStored(options),
@@ -22,7 +22,7 @@ fn before_equation() -> Result<()> {
   let mut is_numbered = false;
   let ctr = with_value_mut("EQUATION_NUMBERING", |val_opt|
     if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
-      numbering.insert("in_equation".to_owned(), true.into());
+      numbering.insert("in_equation", true.into());
       // MaybePeekLabel();
       is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
       has_preset = numbering.contains_key("preset");
@@ -40,12 +40,12 @@ fn before_equation() -> Result<()> {
     } else {
       ref_step_id(&ctr)?
     };
-    tags.insert("preset".to_owned(), true.into());
+    tags.insert("preset", true.into());
     state::assign_value("EQUATIONROW_TAGS", tags, Some(Scope::Global));
   } else {
     state::assign_value(
       "EQUATIONROW_TAGS",
-      Stored::HashStored(HashMap::default()),
+      Stored::HashStored(SymHashMap::default()),
       Some(Scope::Global),
     );
   }
@@ -71,8 +71,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
     is_aligned = matches!(numbering.get("aligned"), Some(&Stored::Bool(true)));
     with_value("EQUATIONROW_TAGS", |tags_opt| if let Some(Stored::HashStored(ref tags)) = tags_opt {
       ctr = Some(
-        tags
-          .get("counter")
+        tags.get("counter")
           .map_or_else(|| numbering.get("counter"), Some)
           .map(ToString::to_string)
           .unwrap_or_else(|| String::from("equation")),
@@ -102,7 +101,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
   with_value_mut("EQUATION_NUMBERING", |eq_num_opt|
     if let Some(Stored::HashStored(ref mut numbering)) = eq_num_opt
     {
-      numbering.insert("in_equation".to_string(), Stored::Bool(false));
+      numbering.insert("in_equation", Stored::Bool(false));
     });
   if tags_numbered_update {
     let invoked_tags = build_invocation(
@@ -114,7 +113,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
       if let Some(Stored::HashStored(ref mut tags)) = tags_opt {
         // TODO: Invocation!() feels really awkward to use, should we reinvent it?
         // especially the magical `.into()` that it does behind the scenes is concerning.
-        tags.insert("tags".to_string(), stored_tags_update);
+        tags.insert("tags", stored_tags_update);
       }
     );
   }
@@ -122,7 +121,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
   #[allow(clippy::manual_unwrap_or_default)]
   let props = match state::remove_value("EQUATIONROW_TAGS") {
     Some(Stored::HashStored(hs)) => hs,
-    _ => HashMap::default(),
+    _ => SymHashMap::default(),
   };
   if is_aligned {
     todo!();

@@ -63,7 +63,6 @@ pub mod whatsit;
 
 use libxml::tree::Node;
 use once_cell::sync::Lazy;
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
@@ -76,6 +75,7 @@ use crate::common::model::Model;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::definition::register::RegisterValue;
 use crate::digested::{Digested, DigestedData};
 use crate::document::Document;
@@ -84,7 +84,7 @@ use crate::stomach::Stomach;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
 
-pub static NO_PROPERTIES: Lazy<HashMap<String, Stored>> = Lazy::new(HashMap::default);
+pub static NO_PROPERTIES: Lazy<HashMap<Stored>> = Lazy::new(HashMap::default);
 
 /// The Core conversion runtime
 pub struct Core {
@@ -163,20 +163,20 @@ pub trait BoxOps: Object {
   /// deprecated: get the map of named properties. This can not be usable as long as we have any
   /// data behind a RefCell wrapper.
   /// Use `with_properties` instead.
-  fn get_properties(&self) -> &HashMap<String, Stored> {
+  fn get_properties(&self) -> &HashMap<Stored> {
     todo!();
   }
 
   /// execute a function using this object's named properties
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
-  where FnR: FnOnce(&HashMap<String, Stored>) -> R;
+  where FnR: FnOnce(&HashMap<Stored>) -> R;
   /// get a mutable reference to the map of named properties
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { todo!() }
+  fn get_properties_mut(&mut self) -> &mut HashMap<Stored> { todo!() }
   /// set a named property (allows all `Stored` types for values)
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self
       .get_properties_mut()
-      .insert(key.to_string(), value.into());
+      .insert(key, value.into());
   }
   /// get a single named property (with special "isSpace" check)
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
@@ -244,7 +244,7 @@ pub trait BoxOps: Object {
   /// gets the "width" property value, if any
   fn get_width(
     &self,
-    options: Option<HashMap<String, Stored>>,
+    options: Option<HashMap<Stored>>,
   ) -> Result<Option<RegisterValue>> {
     if !self.has_property("width") && !self.has_property("cached_width") {
       // TODO: Restore caching?
@@ -284,7 +284,7 @@ pub trait BoxOps: Object {
   /// see `Digested::get_size` for a variant with interior mutability which caches the box size
   fn get_size(
     &mut self,
-    options: Option<HashMap<String, Stored>>,
+    options: Option<HashMap<Stored>>,
   ) -> Result<(
     Dimension,
     Dimension,
@@ -368,11 +368,11 @@ pub trait BoxOps: Object {
   /// computes and caches (via named properties) the size of a box-like object
   fn compute_size_and_cache(
     &mut self,
-    mut options: HashMap<String, Stored>,
+    mut options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     for key in ["width", "height", "depth", "vattach", "layout"] {
       if let Some(v) = self.get_property(key) {
-        options.insert(String::from(key), v.into_owned());
+        options.insert(key, v.into_owned());
       }
     }
 
@@ -393,7 +393,7 @@ pub trait BoxOps: Object {
   /// computes and returns the size of a box-like object
   fn compute_size(
     &self,
-    options: HashMap<String, Stored>,
+    options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)>;
 }
 

@@ -1,5 +1,5 @@
 use crate::binding::content::{load_font_map, preload_font_map};
-use crate::common::arena::{self, EMPTY_SYM};
+use crate::common::arena::{self, EMPTY_SYM, SymHashMap};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::state::*;
@@ -865,7 +865,7 @@ impl Font {
   pub fn compute_string_size(
     &self,
     text: &str,
-    _options: HashMap<String, Stored>,
+    _options: SymHashMap<Stored>,
   ) -> (Dimension, Dimension, Dimension) {
     if text.is_empty()
       || self
@@ -939,7 +939,7 @@ impl Font {
   pub fn compute_boxes_size(
     &self,
     boxes: &[Digested],
-    options: HashMap<String, Stored>,
+    options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let fillwidth = match options.get("width") {
       Some(Stored::Int(fw)) => Some(*fw),

@@ -382,7 +382,7 @@ setter => sub[value,_scope,args] {
      None,
      None,
      Tokens!(T_CS!("\\char"), number_tks, T_RELAX!()),
-     HashMap::default())
+     SymHashMap::default())
   });
 
   // Almost like a register (and \countdef), but different...

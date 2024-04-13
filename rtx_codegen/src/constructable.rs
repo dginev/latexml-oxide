@@ -102,7 +102,7 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
     Some(Rc::new(
     |document: &mut Document,
       #[allow(unused_variables)]args: &Vec<Option<Digested>>,
-      #[allow(unused_variables)]props: &HashMap<String, Stored>| {
+      #[allow(unused_variables)]props: &SymHashMap<Stored>| {
       #[allow(unused_assignments,unused_mut)]
       let mut savenode : Option<Node> = None;
 

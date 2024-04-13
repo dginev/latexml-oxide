@@ -23,7 +23,7 @@ LoadDefinitions!({
   // remain in the constructed tree.
   DefPrimitive!("{", {
     bgroup();
-    let open = Tbox::new(arena::pin_static(""), None, None,
+    let open = Tbox::new(*EMPTY_SYM, None, None,
         Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true));
     let mode = Some(if lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
     let body = stomach::digest_next_body(None)?;
@@ -41,14 +41,14 @@ LoadDefinitions!({
       mode,
       font,
       locator: Locator::default(),
-      properties: HashMap::default()
+      properties: SymHashMap::default()
     }
   });
 
   DefPrimitive!("}", {
     let f = LookupFont!();
     egroup()?;
-    Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true))
+    Tbox::new(*EMPTY_SYM, f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true))
   });
 
   // These are for those screwy cases where you need to create a group like box,

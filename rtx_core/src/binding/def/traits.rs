@@ -1,9 +1,9 @@
 //! A variety of traits helpful for auto-casting between the different components of the
 //! conversion toolchain
-use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 
 use crate::common::arena;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::error::*;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
@@ -393,13 +393,13 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for List {
 }
 
 pub trait IntoPropertiesResult {
-  fn into_properties_result(self) -> Result<HashMap<String, Stored>>;
+  fn into_properties_result(self) -> Result<HashMap<Stored>>;
 }
-impl IntoPropertiesResult for HashMap<String, Stored> {
-  fn into_properties_result(self) -> Result<HashMap<String, Stored>> { Ok(self) }
+impl IntoPropertiesResult for HashMap<Stored> {
+  fn into_properties_result(self) -> Result<HashMap<Stored>> { Ok(self) }
 }
-impl IntoPropertiesResult for Result<HashMap<String, Stored>> {
-  fn into_properties_result(self) -> Result<HashMap<String, Stored>> { self }
+impl IntoPropertiesResult for Result<HashMap<Stored>> {
+  fn into_properties_result(self) -> Result<HashMap<Stored>> { self }
 }
 
 pub trait IntoFontField<T>: Sized {

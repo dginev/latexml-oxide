@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 // use std::cell::RefCell;
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::fmt;
 use std::rc::Rc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
@@ -27,14 +27,14 @@ pub struct Whatsit {
   /// arguments
   pub args: Vec<Option<Digested>>,
   /// additional properties, such as font information or sizing
-  pub properties: HashMap<String, Stored>,
+  pub properties: HashMap<Stored>,
   /// the definition responsible for creating this object
   pub definition: Rc<dyn Definition>,
   /// cached tokens for reverting back
   ///  (note that the "reversion" _property_ is currently also used)
   pub reversion: Option<Tokens>,
   /// special-case reversion tokens for whatsits representing Dual math structures
-  pub dual_reversion: Option<HashMap<String,Tokens>>,
+  pub dual_reversion: Option<HashMap<Tokens>>,
   /// point of origin in the source file
   pub locator: Locator,
 }
@@ -93,9 +93,9 @@ impl Whatsit {
         }))
   }
   /// sets a pre-assembled HashMap of properties
-  pub fn set_properties(&mut self, props: HashMap<String, Stored>) {
+  pub fn set_properties(&mut self, props: HashMap<Stored>) {
     for (key, value) in props {
-      self.properties.insert(key, value);
+      self.properties.insert_sym(key, value);
     }
   }
   /// accessor for the definition which built this Whatsit
@@ -143,7 +143,7 @@ impl Whatsit {
     }
     self
       .properties
-      .insert(s!("body"), Digested::from(list).into());
+      .insert("body", Digested::from(list).into());
     if let Some(digested) = trailer_opt {
       if let DigestedData::Whatsit(ref trailer) = digested.data() {
         // And copy any otherwise undefined properties from the trailer
@@ -152,12 +152,12 @@ impl Whatsit {
         for (prop, value) in props {
           self
             .properties
-            .entry(prop.to_string())
+            .entry_sym(*prop)
             .or_insert_with(|| value.clone());
         }
         self
           .properties
-          .insert(s!("trailer"), digested.clone().into());
+          .insert("trailer", digested.clone().into());
       }
     }
   }
@@ -348,12 +348,12 @@ impl Object for Whatsit {
 }
 
 impl BoxOps for Whatsit {
-  fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_properties(&self) -> &HashMap<Stored> { &self.properties }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
-  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+  where FnR: FnOnce(&HashMap<Stored>) -> R {
     caller(&self.properties)
   }
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
+  fn get_properties_mut(&mut self) -> &mut HashMap<Stored> { &mut self.properties }
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     self.properties.get(key).map(Cow::Borrowed)
   }
@@ -395,12 +395,12 @@ impl BoxOps for Whatsit {
   fn set_font(&mut self, font: Rc<Font>) {
     self
       .properties
-      .insert("font".to_string(), Stored::Font(font));
+      .insert("font", Stored::Font(font));
   }
 
   fn compute_size(
     &self,
-    options: HashMap<String, Stored>,
+    options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {

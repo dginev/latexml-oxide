@@ -1,6 +1,5 @@
 //! Interface layer for the full range of digested objects
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fmt;
@@ -10,6 +9,7 @@ use string_interner::symbol::SymbolU32;
 use crate::alignment::Alignment;
 use crate::comment::Comment;
 use crate::common::arena;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -314,7 +314,7 @@ impl BoxOps for Digested {
   }
 
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
-  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+  where FnR: FnOnce(&HashMap<Stored>) -> R {
     use DigestedData::*;
     match &*self.0 {
       TBox(b) => caller(b.borrow().get_properties()),
@@ -452,7 +452,7 @@ impl BoxOps for Digested {
   /// but when called on the concrete types it will always compute sizes fresh.
   fn compute_size(
     &self,
-    options: HashMap<String, Stored>,
+    options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     use DigestedData::*;
     match *self.0 {

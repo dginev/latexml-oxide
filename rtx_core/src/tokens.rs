@@ -392,12 +392,12 @@ impl Tokens {
     }
     // Patch up nesting for valid TeX !!!
     match level {
-      1..=std::i32::MAX => {
+      1..=i32::MAX => {
         for _ in 0..level {
           tex_string.push('}');
         }
       },
-      std::i32::MIN..=-1 => {
+      i32::MIN..=-1 => {
         for _ in 0..(-level) {
           tex_string = String::from("{") + &tex_string;
         }

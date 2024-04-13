@@ -239,7 +239,7 @@ LoadDefinitions!({
       if let Some(preserve) = args.iter().find(|v_opt| if let Some(ref v) = v_opt {
         v.get_property("alignmentPreserve").is_some()
       } else { false }) {
-        props.insert(String::from("alignmentPreserve"), preserve.as_ref().unwrap().into());
+        props.insert("alignmentPreserve", preserve.as_ref().unwrap().into());
       }
       Ok(props) });
 
@@ -348,7 +348,7 @@ LoadDefinitions!({
 pub fn alignment_bindings(
   template: Template,
   mode: String,
-  properties: HashMap<String, Stored>,
+  properties: SymHashMap<Stored>,
   xml_attributes: HashMap<String, String>
 ) {
   let mode = if mode.is_empty() {

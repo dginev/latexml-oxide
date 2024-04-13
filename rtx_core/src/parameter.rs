@@ -2,12 +2,12 @@ use once_cell::sync::Lazy;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
-use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::object::Object;
+use crate::common::arena::{self,EMPTY_SYM,SymStr};
 use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
@@ -44,8 +44,8 @@ pub struct Parameter {
   pub novalue: bool,
   pub semiverbatim: Option<Vec<char>>,
   pub optional: bool,
-  pub name: Cow<'static, str>,
-  pub spec: Cow<'static, str>,
+  pub name: SymStr,
+  pub spec: SymStr,
   pub extra: Vec<Tokens>,
   pub inner: Option<Parameters>,
   pub reader: ReaderClosure,
@@ -60,8 +60,8 @@ impl Default for Parameter {
       novalue: false,
       semiverbatim: None,
       optional: false,
-      name: Cow::Borrowed("parameter_default"),
-      spec: Cow::Borrowed(""),
+      name: arena::pin_static("parameter_default"),
+      spec: *EMPTY_SYM,
       extra: Vec::new(),
       inner: None,
       reader: Rc::new(|_args, _extra| {
@@ -99,14 +99,16 @@ impl fmt::Debug for Parameter {
   }
 }
 impl fmt::Display for Parameter {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.name) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
+    arena::with(self.name,|name| 
+      write!(f, "{name}")) }
 }
 
 impl PartialEq for Parameter {
   fn eq(&self, other: &Parameter) -> bool { self.name == other.name }
 }
 impl Object for Parameter {
-  fn stringify(&self) -> String { self.spec.to_string() }
+  fn stringify(&self) -> String { arena::to_string(self.spec) }
 
 }
 
@@ -114,10 +116,10 @@ static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").
 static SKIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Skip(.+)$").unwrap());
 
 impl Parameter {
-  pub fn new(name: Cow<'static, str>, spec: Cow<'static, str>) -> Result<Self> {
+  pub fn new<T: AsRef<str>>(name: T, spec: T) -> Result<Self> {
     Parameter {
-      name,
-      spec,
+      name: arena::pin(name),
+      spec: arena::pin(spec),
       ..Parameter::default()
     }
     .init()
@@ -126,25 +128,27 @@ impl Parameter {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
-    let mut descriptor: Option<Rc<Parameter>> = with_mapping("PARAMETER_TYPES", &self.name, |looked_up_mapping|
+    let mut descriptor: Option<Rc<Parameter>> = with_mapping_sym(arena::pin_static("PARAMETER_TYPES"), self.name, |looked_up_mapping|
       if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
         Some(Rc::clone(d_lookup))
       } else {
         None
       });
     if descriptor.is_none() {
-      if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
-        let basetype = captures.get(1).map_or("", |m| m.as_str());
-        descriptor = with_mapping("PARAMETER_TYPES", basetype, |basetype_param_opt|
+      // TODO: see discussion on line 168
+      let basetype_opt = arena::with(self.name, |name| OPTIONAL_REGEX.captures(name).map(|captures|
+        captures.get(1).map_or("", |m| m.as_str()).to_string())).map(arena::pin);
+      if let Some(basetype) = basetype_opt {
+        descriptor = with_mapping_sym(arena::pin_static("PARAMETER_TYPES"), basetype, |basetype_param_opt|
         match basetype_param_opt {
           Some(Stored::Parameter(d_lookup)) => Ok(Some(d_lookup.clone())),
-          _ => match Parameter::check_reader_function(&s!("Read{}", &self.name)) {
+          _ => match Parameter::check_reader_function(&arena::with(self.name, |name| s!("Read{name}"))) {
             Some(reader) => Ok(Some(Rc::new(Parameter {
               reader,
               optional: true,
               ..Parameter::default()
             }))),
-            None => match Parameter::check_reader_function(&s!("Read{}", basetype)) {
+            None => match Parameter::check_reader_function(&arena::with(basetype, |type_str| s!("Read{type_str}"))) {
               Some(reader) => Ok(Some(Rc::new(Parameter {
                 reader,
                 optional: true,
@@ -160,40 +164,52 @@ impl Parameter {
           },
         })?;
         self.optional = true;
-      } else if let Some(captures) = SKIP_REGEX.captures(&self.name) {
-        let basetype = captures.get(1).map_or("", |m| m.as_str());
-        descriptor = with_mapping("PARAMETER_TYPES", basetype, |basetype_param_opt|
-        match basetype_param_opt {
-          Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
-          _ => match Parameter::check_reader_function(&self.name) {
-            Some(reader) => Some(Rc::new(Parameter {
-              reader,
-              optional: true,
-              novalue: true,
-              ..Parameter::default()
-            })),
-            None => Parameter::check_reader_function(&s!("Read{}", basetype)).map(|reader| {
-              Rc::new(Parameter {
+      } else {
+        // TODO: This looks like a code smell. Do we need a new arena method?
+        // We start with a ticket, do a non-allocation operation on the underlying &str,
+        // Then want to ping the newly acquired &str slice in the arena. Clearly that is only possible
+        // *AFTER* the original &str is released, but how do we avoid allocating? 
+        // Is this a use for unsafe{} or is there a more idiomatic way?
+        // Maybe, with_mut... which allows an inner pin?
+        let basetype_opt = arena::with(self.name, |name|
+          SKIP_REGEX.captures(name).map(|captures|
+            captures.get(1).map_or("", |m| m.as_str()).to_string())).map(arena::pin);
+        if let Some(basetype) = basetype_opt {
+          descriptor = with_mapping_sym(arena::pin_static("PARAMETER_TYPES"), basetype, |basetype_param_opt|
+          match basetype_param_opt {
+            Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
+            _ => match arena::with(self.name, |name| Parameter::check_reader_function(name)) {
+              Some(reader) => Some(Rc::new(Parameter {
                 reader,
                 optional: true,
                 novalue: true,
                 ..Parameter::default()
-              })
-            }),
-          },
-        });
-        if let Some(ref _desc) = descriptor {
-          self.novalue = true;
-          self.optional = true;
-        }
-      } else {
-        descriptor =
-          Parameter::check_reader_function(&s!("Read{}", &self.name)).map(|reader| {
-            Rc::new(Parameter {
-              reader,
-              ..Parameter::default()
-            })
+              })),
+              None => Parameter::check_reader_function(
+                &arena::with(basetype,|type_str| s!("Read{type_str}"))).map(|reader| {
+                  Rc::new(Parameter {
+                    reader,
+                    optional: true,
+                    novalue: true,
+                    ..Parameter::default()
+                  })
+                }),
+            },
           });
+          if let Some(ref _desc) = descriptor {
+            self.novalue = true;
+            self.optional = true;
+          }
+        } else {
+          descriptor =
+            Parameter::check_reader_function(&arena::with(self.name, |name| s!("Read{name}")))
+              .map(|reader| {
+              Rc::new(Parameter {
+                reader,
+                ..Parameter::default()
+              })
+            });
+        }
       }
     }
     match descriptor {
@@ -310,7 +326,7 @@ impl Parameter {
       // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in
       // the long-run        Until *may* have a value, but it also may *not*, both OK. So...
       // except it from the error message here
-      if !self.name.starts_with("Until") {
+      if !arena::with(self.name,|name| name.starts_with("Until")) {
         let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
         Error!(
           "expected",
@@ -562,14 +578,10 @@ impl ToTokens for Parameters {
 
 impl ToTokens for Parameter {
   fn to_tokens(&self, stream: &mut TokenStream) {
-    let name = match &self.name {
-      Cow::Borrowed(v) => quote!(Cow::Borrowed(#v)),
-      Cow::Owned(v) => quote!(Cow::Borrowed(#v)),
-    };
-    let spec = match &self.spec {
-      Cow::Borrowed(v) => quote!(Cow::Borrowed(#v)),
-      Cow::Owned(v) => quote!(Cow::Borrowed(#v)),
-    };
+    let name = arena::with(self.name,|name|
+      quote!(arena::pin_static(#name)));
+    let spec = arena::with(self.spec,|spec|
+      quote!(arena::pin_static(#spec)));
     let extra = &self.extra;
     let inner = match &self.inner {
       None => quote!(None),

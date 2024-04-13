@@ -6,8 +6,6 @@ use crate::common::store::Stored;
 use crate::digested::Digested;
 use crate::list::List;
 use crate::BoxOps;
-
-use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 
 use crate::common::float::Float;

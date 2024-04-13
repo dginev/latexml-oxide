@@ -103,8 +103,8 @@ LoadDefinitions!({
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
     let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
-    props.insert("list".to_string(), digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
-    props.insert("role".to_string(), note_type.into());
+    props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
+    props.insert("role", note_type.into());
     Ok(props)
   },
   reversion => "");
@@ -118,8 +118,8 @@ LoadDefinitions!({
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
     let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
-    props.insert("role".to_string(), s!("{note_type}mark").into());
-    props.insert("list".to_string(), digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
+    props.insert("role", s!("{note_type}mark").into());
+    props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     Ok(props)
   },
   reversion => "");
@@ -138,7 +138,7 @@ LoadDefinitions!({
       )
     };
     let mut props = make_note_tags(&note_type, arg1, Some(arg3_ready))?;
-    props.insert("role".to_string(), s!("{note_type}text").into());
+    props.insert("role", s!("{note_type}text").into());
     Ok(props)
   },
   reversion => "");

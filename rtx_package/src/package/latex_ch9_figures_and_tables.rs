@@ -114,7 +114,7 @@ LoadDefinitions!({
     #body
   </ltx:figure>
   "###,
-    properties   => { map!("layout" => "vertical".into()) },
+    properties   => { stored_map!("layout" => "vertical") },
     before_digest => { DefMacro!("\\@captype", "figure"); },
     after_digest  => sub[tag] {
       rescue_caption_counters("figure", tag);

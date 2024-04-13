@@ -9,7 +9,7 @@ use std::rc::Rc;
 use string_interner::symbol::SymbolU32;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
+use crate::common::arena::{self, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -692,12 +692,12 @@ impl State {
     }
   }
 
-  pub fn lookup_mapping_keys(&self, map: &str) -> Vec<&str> {
+  pub fn lookup_mapping_keys(&self, map: &str) -> Vec<SymbolU32> {
     let map_sym = arena::pin(map);
     match self.value.get(&map_sym) {
       None => Vec::new(),
       Some(map_vec) => match map_vec.front() {
-        Some(Stored::HashStored(h)) => h.keys().map(String::as_str).collect(),
+        Some(Stored::HashStored(h)) => h.keys().copied().collect(),
         _ => Vec::new(),
       },
     }
@@ -1311,21 +1311,20 @@ pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
     state.assign_internal(
       TableName::Value,
       map_sym,
-      Stored::HashStored(HashMap::default()),
+      Stored::HashStored(SymHashMap::default()),
       Some(Scope::Global),
     );
   }
   let map_store = state.value.get_mut(&map_sym).unwrap();
   // TODO: What is the right abstraction here? this is hacky
-  let mut stub_hash = HashMap::default();
+  let mut stub_hash = SymHashMap::default();
   let mapping = match *map_store.front_mut().unwrap() {
     Stored::HashStored(ref mut mapping) => mapping,
     _ => &mut stub_hash,
   };
-
   match value {
     None => mapping.remove(key),
-    Some(v) => mapping.insert(key.to_string(), v.into()),
+    Some(v) => mapping.insert(key, v.into()),
   };
 }
 
@@ -1718,7 +1717,8 @@ pub fn pop_frame() -> Result<()> {
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
 pub fn get_frame_depth() -> usize {
-  state!().undo.iter().filter(|frame| !frame.locked).count() - 1
+  state!().undo.iter().filter(|frame| !frame.locked).count()
+    .saturating_sub(1)
 }
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
@@ -2210,8 +2210,19 @@ where FnR: FnOnce(Option<&Stored>) -> R {
   })
 }
 
+pub fn with_mapping_sym<R,FnR>(map: SymbolU32, key: SymbolU32, caller: FnR) -> R
+where FnR: FnOnce(Option<&Stored>) -> R {
+  caller(match state!().value.get(&map) {
+    None => None,
+    Some(map_vec) => match map_vec.front() {
+      Some(Stored::HashStored(h)) => h.get_sym(&key),
+      _ => None,
+    },
+  })
+}
+
 pub fn with_mapping_keys<R,FnR>(map: &str, caller: FnR) -> R
-where FnR: FnOnce(Vec<&str>) -> R {
+where FnR: FnOnce(Vec<SymbolU32>) -> R {
   caller(state!().lookup_mapping_keys(map))
 }
 

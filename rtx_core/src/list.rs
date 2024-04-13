@@ -1,11 +1,11 @@
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -21,7 +21,7 @@ pub struct List {
   pub mode: Option<TexMode>,
   pub font: Option<Font>,
   pub locator: Locator,
-  pub properties: HashMap<String, Stored>,
+  pub properties: HashMap<Stored>,
 }
 
 impl fmt::Debug for List {
@@ -74,17 +74,17 @@ impl Object for List {
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
   fn unlist_ref(&self) -> Vec<Cow<Digested>> { self.boxes.iter().map(Cow::Borrowed).collect() }
-  fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_properties(&self) -> &HashMap<Stored> { &self.properties }
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     self.properties.get(key).map(Cow::Borrowed)
   }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
-  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+  where FnR: FnOnce(&HashMap<Stored>) -> R {
     caller(&self.properties)
   }
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
+  fn get_properties_mut(&mut self) -> &mut HashMap<Stored> { &mut self.properties }
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    self.properties.insert(key.to_string(), value.into());
+    self.properties.insert(key, value.into());
   }
   fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
@@ -97,7 +97,7 @@ impl BoxOps for List {
   }
   fn compute_size(
     &self,
-    options: HashMap<String, Stored>,
+    options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     Ok(match &self.font {
       Some(f) => f.compute_boxes_size(&self.boxes, options)?,

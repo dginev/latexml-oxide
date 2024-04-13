@@ -1,11 +1,10 @@
 use libxml::tree::Node;
 use std::borrow::Cow;
-use rustc_hash::FxHashMap as HashMap;
 
 use crate::common::error::*;
 use crate::common::object::Object;
-use crate::state::{Scope};
-use crate::common::arena::EMPTY_SYM;
+use crate::state::Scope;
+use crate::common::arena::{SymHashMap,EMPTY_SYM};
 use crate::definition::{
   BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
 };
@@ -15,7 +14,7 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested};
+use crate::Digested;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {
@@ -104,7 +103,7 @@ impl Definition for Primitive {
           // box_tokens.extend(params.revert_arguments(args)?);
         }
         let box_props = if symbol == *EMPTY_SYM {
-          HashMap::default()
+          SymHashMap::default()
         } else {
           stored_map!("isEmpty" => true)
         };
