@@ -211,7 +211,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     assign_mathcode(
       cs.with_str(|cstr| cstr.chars().next().unwrap()),
       0x8000u16,
-      scope.clone(),
+      scope,
     );
   }
   let locked_key_opt = if options.locked {
@@ -220,7 +220,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     None
   };
   let defcs = if options.robust {
-    def_robust_cs(cs, options.locked, options.scope.clone())?
+    def_robust_cs(cs, options.locked, options.scope)?
   } else {
     cs
   };
@@ -368,7 +368,7 @@ pub fn def_primitive(
   }
   //  Not sure robust entirely makes sense for Primitives, other than LaTeXML vs LaTeX mismatch
   let defcs = if options.robust {
-    def_robust_cs(cs, options.locked, scope.clone())?
+    def_robust_cs(cs, options.locked, scope)?
   } else {
     cs
   };
@@ -405,7 +405,7 @@ pub fn def_math_dual(
   let cont_cs = T_CS!(cont_cs_str);
   let pres_cs = T_CS!(pres_cs_str);
   let defcs = if options.robust {
-    def_robust_cs(cs, options.locked, options.scope.clone())?
+    def_robust_cs(cs, options.locked, options.scope)?
   } else {
     cs
   };
@@ -477,7 +477,7 @@ pub fn def_math_dual(
         ..ExpandableOptions::default()
       }),
     )?,
-    options.scope.clone(),
+    options.scope,
   );
 
   // Make the presentation macro.
@@ -491,7 +491,7 @@ pub fn def_math_dual(
         ..ExpandableOptions::default()
       }),
     )?,
-    options.scope.clone(),
+    options.scope,
   );
 
   // content: Make the content constructor
@@ -558,7 +558,7 @@ pub fn def_math_dual(
     replacement: Some(content_closure),
     ..Constructor::default()
   };
-  let scope = options.scope.clone();
+  let scope = options.scope;
   transfer_common_constructor_options(&cs, &presentation, options, &mut content_constructor);
   install_definition(content_constructor, scope);
   Ok(())
@@ -572,7 +572,7 @@ pub fn def_math_primitive(
   presentation: String,
   options: MathPrimitiveOptions,
 ) {
-  let scope = options.scope.clone();
+  let scope = options.scope;
   let reqfont_opt = options.font.clone();
   let moved_options = options.clone();
 
@@ -628,7 +628,7 @@ pub fn def_math_constructor(
   //   None
   // };
   let defcs = if options.robust {
-    def_robust_cs(cs, options.locked, options.scope.clone())?
+    def_robust_cs(cs, options.locked, options.scope)?
   } else {
     cs
   };
@@ -785,7 +785,7 @@ pub fn def_math_constructor(
     // long
     ..Constructor::default()
   };
-  let scope = options.scope.clone();
+  let scope = options.scope;
   transfer_common_constructor_options(&cs, &presentation, options, &mut constructor);
   install_definition(constructor, scope);
   Ok(())
@@ -1047,7 +1047,7 @@ pub fn def_environment(
     reversion: options.reversion,
     alias: options.alias,
   });
-  install_definition(begin_name_constructor, options.scope.clone());
+  install_definition(begin_name_constructor, options.scope);
 
   let mut after_digest_env = options.after_digest.clone();
   let name_clone = name.to_string();
@@ -1116,7 +1116,7 @@ pub fn def_environment(
     after_digest: after_digest_env,
     ..Constructor::default() // TODO ? fill in missing ones
   });
-  install_definition(end_envname_constructor, options.scope.clone());
+  install_definition(end_envname_constructor, options.scope);
 
   // For the uncommon case opened by \csname env\endcsname
   let name_constructor = Rc::new(Constructor {
@@ -1141,7 +1141,7 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   });
-  install_definition(name_constructor, options.scope.clone());
+  install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);
   let mut after_digest_end = options.after_digest;
   after_digest_end.push(after_digest_simple!( _whatsit, {

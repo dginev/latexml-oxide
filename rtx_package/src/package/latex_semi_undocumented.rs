@@ -65,7 +65,7 @@ LoadDefinitions!({
   DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
 
   DefMacro!("\\@testopt{}{}", sub[(cmd, option)] {
-    if gullet::if_next(&T_OTHER!("["))? {
+    if gullet::if_next(T_OTHER!("["))? {
       Ok(cmd)
     } else {
       Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))

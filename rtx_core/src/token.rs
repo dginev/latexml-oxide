@@ -361,34 +361,34 @@ pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
 
 #[macro_export]
 /// macro for a BEGIN "{" token
-macro_rules! T_BEGIN(() => { $crate::token::TOKEN_BEGIN.clone() });
+macro_rules! T_BEGIN(() => { *$crate::token::TOKEN_BEGIN });
 #[macro_export]
 /// macro for a new END "{" token
-macro_rules! T_END(() => { $crate::token::TOKEN_END.clone() });
+macro_rules! T_END(() => { *$crate::token::TOKEN_END });
 /// macro for a MATH "$" token
 #[macro_export]
-macro_rules! T_MATH(() => { $crate::token::TOKEN_MATH.clone() });
+macro_rules! T_MATH(() => { *$crate::token::TOKEN_MATH });
 /// macro for an ALIGN "&" token
 #[macro_export]
-macro_rules! T_ALIGN(() => { $crate::token::TOKEN_ALIGN.clone() });
+macro_rules! T_ALIGN(() => { *$crate::token::TOKEN_ALIGN });
 /// macro for a PARAM "#" token
 #[macro_export]
-macro_rules! T_PARAM(() => { $crate::token::TOKEN_PARAM.clone() });
+macro_rules! T_PARAM(() => { *$crate::token::TOKEN_PARAM });
 /// macro for a SUPER "^" token
 #[macro_export]
-macro_rules! T_SUPER(() => { $crate::token::TOKEN_SUPER.clone() });
+macro_rules! T_SUPER(() => { *$crate::token::TOKEN_SUPER });
 /// macro for a SUB "_" token
 #[macro_export]
-macro_rules! T_SUB(() => { $crate::token::TOKEN_SUB.clone() });
+macro_rules! T_SUB(() => { *$crate::token::TOKEN_SUB });
 /// macro for a SPACE token (default " ")
 #[macro_export]
-macro_rules! T_SPACE(() => { $crate::token::TOKEN_SPACE.clone() };
+macro_rules! T_SPACE(() => { *$crate::token::TOKEN_SPACE };
 ($text:literal) => {
   Token { text: $crate::common::arena::pin_static($text), code: Catcode::SPACE}
 });
 /// macro for a CR "\n" token
 #[macro_export]
-macro_rules! T_CR(() => { $crate::token::TOKEN_CR.clone() });
+macro_rules! T_CR(() => { *$crate::token::TOKEN_CR });
 /// macro for a LETTER token
 #[macro_export]
 macro_rules! T_LETTER {
@@ -414,14 +414,12 @@ macro_rules! T_OTHER {
     Token {
       text: $crate::common::arena::pin_static($text),
       code: Catcode::OTHER,
-
     }
   };
   ($text:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
-
     }
   };
 }

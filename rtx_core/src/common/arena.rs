@@ -154,3 +154,7 @@ pub fn join(syms: &[SymStr], sep:&str) -> String {
     strs.join(sep)
   })
 }
+
+pub fn len() -> usize {
+  ARENA.borrow().len()
+}

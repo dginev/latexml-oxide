@@ -2,65 +2,94 @@ use crate::package::*;
 
 LoadDefinitions!({
 
-DefKeyVal!("xargs", "usedefault", "");
+  DefKeyVal!("xargs", "usedefault", "", "");
 
-// DefParameterType!(XArgsOptional, sub[inner, extra] {
-//     // my ($gullet, $default, $usedefault, $inner) = @_;
-//     // my $value = $gullet->readOptional;
-//     // if (($usedefault && ToString($value) eq ToString($usedefault)) ||
-//     //   (!defined $usedefault && ToString($value) eq '')) {
-//     //   $value = $default; }
-//     // $value; 
-//   },
-//   optional => true);
+  DefParameterType!(XArgsOptional, sub[inner, extra] {
+      // TODO: how to handle the argument pattern?
+      // my ($gullet, $default, $usedefault, $inner) = @_;
+      let value = gullet::read_optional(None);
+      // if (($usedefault && ToString($value) eq ToString($usedefault)) ||
+      //   (!defined $usedefault && ToString($value) eq '')) {
+      //   $value = $default; }
+      value
+    },
+    optional => true);
 
-// Macros
+  // Macros
 
-DefPrimitive!("\\CheckCommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}", None);
+  DefPrimitive!("\\CheckCommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}", None);
 
-DefPrimitive!("\\newcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}", sub[(star,cs,nargs_opt,defaults,body)] {
-  if !is_definable(&cs) {
-    Info!("ignore", cs, "Ignoring redefinition (\\newcommandx) of '{}'",cs);
-  } else {
+  DefPrimitive!("\\newcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}", sub[(star,cs,nargs_opt,defaults,body)] {
+    if !is_definable(&cs) {
+      Info!("ignore", cs, "Ignoring redefinition (\\newcommandx) of '{}'",cs);
+    } else {
+      let scope = if get_xargs_is_global(star, defaults.as_ref()) { Some(Scope::Global) } else {None};
+      let nargs = if let Some(nargs_tks) = nargs_opt {
+        nargs_tks.to_string().parse::<usize>()?
+      } else {0};
+      DefMacro!(cs, convert_xargs_args(nargs, defaults.as_ref())?, body, scope => scope);
+    }
+  });
+
+  DefPrimitive!("\\renewcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}", 
+    sub[(star,cs,nargs_opt,defaults,body)] {
+    let scope = if get_xargs_is_global(star, defaults.as_ref()) { Some(Scope::Global) } else {None};
+    let nargs = if let Some(nargs_tks) = nargs_opt {
+      nargs_tks.to_string().parse::<usize>()?
+    } else {0};   
+    DefMacro!(cs, convert_xargs_args(nargs, defaults.as_ref())?, body, scope=>scope);
+  });
+
+  DefPrimitive!("\\providecommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}", 
+    sub[(star,cs,nargs_opt,defaults,body)] {
+    if is_definable(&cs) {
+      let scope = if get_xargs_is_global(star, defaults.as_ref()) { Some(Scope::Global) } else {None};
+      let nargs = if let Some(nargs_tks) = nargs_opt {
+        nargs_tks.to_string().parse::<usize>()?
+      } else {0};
+      DefMacro!(cs, convert_xargs_args(nargs, defaults.as_ref())?, body, scope => scope);
+    }
+  });
+
+DefPrimitive!("\\DeclareRobustCommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}", 
+  sub[(star, cs, nargs_opt, defaults, body)] {
+    let scope = if get_xargs_is_global(star, defaults.as_ref()) { Some(Scope::Global) } else {None};
+    let munged = cs.with_str(|cstr| s!("{cstr} "));
+    let mungedcs = T_CS!(munged);
+    let nargs = if let Some(nargs_tks) = nargs_opt {
+      nargs_tks.to_string().parse::<usize>()?
+    } else {0};
+    let defaults_tks = defaults.map(|kvs| kvs.revert().ok().unwrap_or_default());
+    DefMacro!(mungedcs, convert_latex_args(nargs, defaults_tks)?, body, scope => scope);
+    DefMacro!(cs, None, Tokens!(T_CS!("\\protect"), mungedcs), scope=>scope); 
+  });
+
+DefPrimitive!("\\newenvironmentx OptionalMatch:* {} [] OptionalKeyVals:xargs {}{}", 
+  sub[(star,cs_tks,nargs_opt,defaults,preamble,postamble)] {
+    let cs_str = cs_tks.to_string();
+    let cs_full = s!("\\{cs_str}");
+    if lookup_definition(&T_CS!(&cs_full))?.is_some() {
+      Info!("ignore", cs_full, s!("Ignoring redefinition (\\newenvironmentx) of Environment '{cs_full}'"));
+      return Ok(Vec::new()); }
+    let end_cs_full = s!("\\end{cs_str}");
     let scope = if get_xargs_is_global(star, defaults.as_ref()) { Some(Scope::Global) } else {None};
     let nargs = if let Some(nargs_tks) = nargs_opt {
       nargs_tks.to_string().parse::<usize>()?
     } else {0};
-    DefMacro!(cs, convert_xargs_args(nargs, defaults.as_ref())?, body, scope => scope);
-  }
-});
+    DefMacro!(T_CS!(cs_full), convert_xargs_args(nargs, defaults.as_ref())?, preamble, scope=>scope);
+    DefMacro!(T_CS!(end_cs_full), None, postamble, scope => scope);
+  });
 
-// DefPrimitive('\renewcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}', sub {
-//     my ($stomach, $star, $cs, $nargs, $defaults, $body) = @_;
-//     DefMacroI($cs, convertXArgsArgs($nargs, $defaults), $body, (getXArgsIsGlobal($star, $defaults) ? (scope => 'global') : ())); });
-
-// DefPrimitive('\providecommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}', sub {
-//     my ($stomach, $star, $cs, $nargs, $defaults, $body) = @_;
-//     return unless isDefinable($cs);
-//     DefMacroI($cs, convertXArgsArgs($nargs, $defaults), $body, (getXArgsIsGlobal($star, $defaults) ? (scope => 'global') : ())); });
-
-// DefPrimitive('\DeclareRobustCommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}', sub {
-//     my ($stomach, $star, $cs, $nargs, $defaults, $body) = @_;
-//     my @scope    = (getXArgsIsGlobal($star, $defaults) ? (scope => 'global') : ());
-//     my $mungedcs = T_CS($cs->getString . ' ');
-//     DefMacroI($mungedcs, convertLaTeXArgs($nargs, $defaults), $body, @scope);
-//     DefMacroI($cs,       undef, Tokens(T_CS('\protect'), $mungedcs), @scope); });
-
-// DefPrimitive('\newenvironmentx OptionalMatch:* {} [] OptionalKeyVals:xargs {}{}', sub {
-//     my ($stomach, $star, $cs, $nargs, $defaults, $preamble, $postamble) = @_;
-//     if (LookupDefinition(T_CS("\\$cs"))) {
-//       Info('ignore', $cs, $stomach,
-//         "Ignoring redefinition (\\newenvironmentx) of Environment '$cs'");
-//       return; }
-//     $cs = ToString($cs);
-//     DefMacroI(T_CS("\\$cs"), convertXArgsArgs($nargs, $defaults), $preamble, (getXArgsIsGlobal($star, $defaults) ? (scope => 'global') : ()));
-//     DefMacroI(T_CS("\\end$cs"), undef, $postamble, (getXArgsIsGlobal($star, $defaults) ? (scope => 'global') : ())); });
-
-// DefPrimitive('\renewenvironmentx OptionalMatch:* {} [] OptionalKeyVals:xargs {}{}', sub {
-//     my ($stomach, $star, $cs, $nargs, $defaults, $preamble, $postamble) = @_;
-//     $cs = ToString($cs);
-//     DefMacroI(T_CS("\\$cs"), convertXArgsArgs($nargs, $defaults), $preamble, (getXArgsIsGlobal($star, $defaults) ? (scope => 'global') : ()));
-//     DefMacroI(T_CS("\\end$cs"), undef, $postamble, (getXArgsIsGlobal($star, $defaults) ? (scope => 'global') : ())); });
+DefPrimitive!("\\renewenvironmentx OptionalMatch:* {} [] OptionalKeyVals:xargs {}{}",
+  sub[(star, cs_tks, nargs_opt, defaults, preamble, postamble)] {
+    let cs_str = cs_tks.to_string();
+    let scope = if get_xargs_is_global(star, defaults.as_ref()) { Some(Scope::Global) } else {None};
+    let nargs = if let Some(nargs_tks) = nargs_opt {
+      nargs_tks.to_string().parse::<usize>()?
+    } else {0};
+    DefMacro!(T_CS!(s!("\\{cs_str}")), convert_xargs_args(nargs, defaults.as_ref())?, preamble, scope => scope);
+    DefMacro!(T_CS!(s!("\\end{cs_str}")), None, postamble, scope => scope);
+  });
 });
 
 // Utils
@@ -68,23 +97,24 @@ DefPrimitive!("\\newcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {
 // generate paramlist
 fn convert_xargs_args(nargs:usize, keyval:Option<&KeyVals>) -> Result<Option<Parameters>> {
   let mut paramlist = Vec::new();
-  for i in 1 .. nargs {
+  for i in 1 ..= nargs {
     if let Some(val) = keyval.map(|kv| kv.get_value(&i.to_string())).unwrap_or(None) {
-//       my $usedef = ($keyval) ? $keyval->getValue('usedefault') : undef;
-//       if (defined $usedef) {
-//         push(@paramlist, LaTeXML::Core::Parameter->new(
-//             'XArgsOptional',
-//             "XArgsOptional:" . $val->toString() . "|" . ToString($usedef),
-//             extra => [$val, $usedef]
-//         )); }
-//       else {
-//         push(@paramlist, LaTeXML::Core::Parameter->new(
-//             'Optional',
-//             "Optional:" . $val->toString(),
-//             extra => [$val, $usedef]
-//         )); } 
+      let usedef_opt = keyval.map(|kv| kv.get_value("usedefault")).unwrap_or_default();
+      if let Some(usedef) = usedef_opt {
+        paramlist.push(Parameter::new(
+              "XArgsOptional",
+              &s!("XArgsOptional:{val}|{usedef}"),
+              Some(vec![val.revert()?, usedef.revert()?])
+          )?); 
+      } else {
+        paramlist.push(Parameter::new(
+              "Optional",
+              &s!("Optional:{val}"),
+              Some(vec![val.revert()?])
+          )?);
+      }
     } else {
-       paramlist.push(Parameter::new("Plain", "{}")?); 
+       paramlist.push(Parameter::new("Plain", "{}", None)?);
     }
   }
   Ok(

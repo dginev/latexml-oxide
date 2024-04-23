@@ -888,10 +888,10 @@ pub fn read_optional(
   }
 }
 
-pub fn if_next(token: &Token) -> Result<bool> {
+pub fn if_next(token: Token) -> Result<bool> {
   let mut is_next = false;
   if let Some(tok) = read_token()? {
-    is_next = tok == *token;
+    is_next = tok == token;
     unread_one(tok);
   }
   Ok(is_next)

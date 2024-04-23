@@ -116,10 +116,11 @@ static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").
 static SKIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Skip(.+)$").unwrap());
 
 impl Parameter {
-  pub fn new<T: AsRef<str>>(name: T, spec: T) -> Result<Self> {
+  pub fn new<T: AsRef<str>>(name: T, spec: T, extra:Option<Vec<Tokens>>) -> Result<Self> {
     Parameter {
       name: arena::pin(name),
       spec: arena::pin(spec),
+      extra: extra.unwrap_or_default(),
       ..Parameter::default()
     }
     .init()
@@ -465,7 +466,6 @@ impl Object for Parameters {
     }
     result
   }
-
 }
 
 impl Parameters {
@@ -547,6 +547,10 @@ impl Parameters {
       gullet::skip_spaces()?;
       Ok(values)
     })
+  }
+
+  pub fn as_keysets(&self) -> Vec<String> {
+    self.0.iter().map(|p| p.stringify()).collect()
   }
 }
 impl fmt::Display for Parameters {

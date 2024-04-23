@@ -1,4 +1,5 @@
 //! Token List constructors.
+use crate::definition::argument::ArgWrap;
 use crate::fmt;
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
@@ -16,7 +17,6 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
-use crate::common::store::Stored;
 use crate::keyvals::KeyVals;
 use crate::stomach;
 use crate::token::*;
@@ -230,19 +230,19 @@ impl Tokens {
 
   /// to_keyvals casts back to a parsed KeyVals (usually via a KeyVals parameter type)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
-  pub fn to_keyvals(&self) -> KeyVals {
+  pub fn to_keyvals(&self) -> Result<KeyVals> {
     let mut toks_iter = self.unlist_ref().iter();
     let mut kvs = KeyVals::default();
     while let Some(key) = toks_iter.next() {
       key.with_str(|key_str| {
         if let Some(value) = toks_iter.next() {
-          kvs.add_value(key_str, Stored::Token(*value), false, false);
+          kvs.add_value(key_str, ArgWrap::Token(*value), false, false)
         } else {
-          kvs.add_value(key_str, Stored::Tokens(Tokens!()), false, false);
+          kvs.add_value(key_str, ArgWrap::Tokens(Tokens!()), false, false)
         }
-      });
+      })?;
     }
-    kvs
+    Ok(kvs)
   }
 
   /// Methods for overloaded ops.
@@ -440,6 +440,43 @@ impl Tokens {
       }
     }
     Ok(Tokens::new(rescanned))
+  }
+
+  /// Trims outer braces (if they balance each other)
+  /// This also trims whitespace *outer to* the removed braces.
+  pub fn strip_braces(self) -> Self {
+    let mut walker = self.0.into_iter().peekable();
+    let mut back_trailer = None;
+    while let Some(t) = walker.peek() {
+      match t.get_catcode() {
+        Catcode::BEGIN => {
+          while let Some(bt) = walker.next_back() {
+            match bt.get_catcode() {
+              Catcode::SPACE => {}, // skip trailing spaces
+              Catcode::END => break, // match & skip one }
+              _ => { // FAIL: mismatched { ?
+                back_trailer = Some(bt);
+                break;
+              }
+            }
+          }
+          if back_trailer.is_some() { // bail if non-matching {
+            break;
+          } else { // move forward on balanced open {
+            walker.next();
+          }
+        },
+        Catcode::SPACE => { // skip leading spaces
+          walker.next();
+        },
+        _ => {break} // keep any other leading case
+      }
+    }
+    let mut collected : Vec<Token> = walker.collect();
+    if let Some(bt) = back_trailer {
+      collected.push(bt)
+    }
+    Tokens::new(collected)
   }
 }
 

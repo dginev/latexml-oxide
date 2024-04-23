@@ -78,7 +78,7 @@ impl IntoOption<Option<Scope>> for &str {
       "global" => Some(Scope::Global),
       "Global" => Some(Scope::Global),
       "GLOBAL" => Some(Scope::Global),
-      other => Some(Scope::Named(other.to_string())),
+      other => Some(Scope::Named(arena::pin(other))),
     }
   }
 }
@@ -92,7 +92,7 @@ impl IntoOption<Option<Scope>> for String {
       "global" => Some(Scope::Global),
       "Global" => Some(Scope::Global),
       "GLOBAL" => Some(Scope::Global),
-      _ => Some(Scope::Named(self)),
+      _ => Some(Scope::Named(arena::pin(self))),
     }
   }
 }
