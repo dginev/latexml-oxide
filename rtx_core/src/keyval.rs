@@ -8,23 +8,15 @@ use std::rc::Rc;
 use std::borrow::Cow;
 
 use crate::binding::def::dialect::{def_conditional, def_macro};
-use crate::common::arena;
 use crate::common::def_parser::parse_parameters;
 use crate::common::error::*;
-// use crate::common::font::Font;
-// use crate::common::locator::Locator;
 use crate::common::store::Stored;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::ConditionalOptions;
 use crate::definition::{ExpansionBody, ExpansionClosure};
 use crate::parameter::Parameter;
-use crate::state::State;
-// use crate::definition::expandable::Expandable;
-// use crate::definition::Definition;
-// use crate::document::Document;
-// use crate::list::List;
+use crate::state;
 use crate::mouth::tokenize;
-use crate::{state};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -76,18 +68,38 @@ impl KeyVal {
   }
 }
 
-// useful (only) for rtx_core::keyvals::KeyVals
-fn keyval_qname(prefix: &str, keyset: &str, key: &str) -> String {
+// semi-internals
+pub(crate) fn keyval_qname(prefix: &str, keyset: &str, key: &str) -> String {
   let prefix = if prefix.is_empty() { "KV" } else { prefix };
   s!("{prefix}@{keyset}@{key}")
 }
 
-pub fn keyval_get<'a>(qname: &str, prop: &str, state: &'a State) -> Option<&'a Stored> {
-  state.lookup_value_sym(&arena::pin(s!("KEYVAL@{prop}@{qname}")))
+pub(crate) fn keyval_get(qname: &str, prop: &str) -> Option<Stored> {
+  state::lookup_value(&s!("KEYVAL@{prop}@{qname}"))
 }
 
-pub fn keyval_set(qname: &str, prop: &str, value: Stored) {
-  state::assign_value_sym(arena::pin(s!("KEYVAL@{prop}@{qname}")), value, None);
+/// Using local assignments in the State to set keyvals, but that necessitates a
+/// cast of `ArgWrap`` to `State`` on set and `State` to `ArgWrap` on get.
+/// Certain values don't really work well with that, e.g. Stored::Bool ...
+/// The original Perl made no type casts, as there weren't any concrete types.
+pub(crate) fn keyval_set(qname: &str, prop: &str, value: Stored) {
+  state::assign_value(&s!("KEYVAL@{prop}@{qname}"), value, None);
+}
+
+/// check if a key-value pair is defined
+pub fn has_keyval(prefix: &str, keyset: &str, key: &str) -> bool {
+  let qname = keyval_qname(prefix, keyset, key);
+  state::lookup_value(&s!("KEYVAL@defined@{}",qname)).is_some() ||
+  state::lookup_meaning(&T_CS!(s!("\\{qname}"))).is_some()
+}
+
+/// disable a given key-val
+fn disable_keyval(prefix: &str, keyset: &str, key: &str) -> Result<()> {
+  let qname = keyval_qname(prefix, keyset, key);
+  keyval_set(&qname, "disabled", true.into());
+  // disable the key
+  define_ordinary(&qname, Some(ExpansionBody::Tokens(
+    tokenize(&s!("\\PackageWarning{{keyval}}{{`{key}' has been disabled. }}")))))
 }
 
 //======================================================================
@@ -111,6 +123,7 @@ pub struct KeyvalConfig<'a> {
 }
 
 /// (Re-)defines this Key of kind 'kind'.
+/// 
 ///Defines a keyword `key` used in keyval arguments for the set `keyset` and,
 ///and if the option `code` is given, defines appropriate macros
 ///when used with the `keyval` package (or extensions thereof).
@@ -147,16 +160,13 @@ pub struct KeyvalConfig<'a> {
 ///The kind parameter only takes effect when `code` is given, otherwise only
 ///meta-data is stored.
 pub fn define(options: KeyvalConfig) -> Result<()> {
-  let prefix = options.prefix;
-  let keyset = options.keyset;
-  let key = options.key;
-  let vtype = options.vtype;
-  let default_opt = options.default;
+  let KeyvalConfig {prefix , keyset, key, vtype, default,kind, code, macroprefix, mismatch, normalize, bin, choices} = options;
+  
   let qname = keyval_qname(prefix, keyset, key);
 
   // define that the key exists and is not disabled
-  keyval_set(&qname, "exists", 1.into());
-  keyval_set(&qname, "disabled", 0.into());
+  keyval_set(&qname, "exists", true.into());
+  keyval_set(&qname, "disabled", false.into());
   // set the type
   let vtype = if vtype.is_empty() { "{}" } else { vtype };
   let paramlist_opt = parse_parameters(
@@ -185,18 +195,19 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
       }
       keyval_set(
         &qname,
-        vtype,
+        "type",
         paramlist.take_parameters().remove(0).into(),
       );
     },
   };
   // set the default
-  if let Some(default) = default_opt {
-    let tdefault = tokenize(default);
+  // Question: Why was $default converted ToString ???
+  if let Some(default_str) = default {
+    let default_tks = tokenize(default_str);
     keyval_set(
       &qname,
       "default",
-      Stored::Tokens(Tokens!(tdefault.clone())),
+      Stored::Tokens(default_tks.clone()),
     );
     def_macro(
       T_CS!(s!("\\{qname}@default")),
@@ -204,7 +215,7 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
       ExpansionBody::Tokens(Tokens!(
         T_CS!(s!("\\{qname}")),
         T_BEGIN!(),
-        tdefault,
+        default_tks,
         T_END!()
       )),
       None,
@@ -214,29 +225,29 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   // figure out the kind of key-val parameter we are defining
   let kind = options.kind.unwrap_or("ordinary");
   match kind {
-    "ordinary" => define_ordinary(&qname, options.code)?,
+    "ordinary" => define_ordinary(&qname, code)?,
     "command" => {
       let macroname = if let Some(mpfx) = options.macroprefix {
         s!("{mpfx}{key}")
       } else {
         s!("cmd{qname}")
       };
-      define_command(&qname, options.code, &macroname)?;
+      define_command(&qname, code, &macroname)?;
     },
     "choice" => define_choice(
       &qname,
-      options.code,
-      options.mismatch,
-      options.choices,
-      options.normalize.unwrap_or(false),
-      options.bin,
+      code,
+      mismatch,
+      choices,
+      normalize.unwrap_or(false),
+      bin,
     )?,
     "boolean" => {
       define_boolean(
         &qname,
-        options.code,
-        options.mismatch,
-        &if let Some(mpfx) = options.macroprefix {
+        code,
+        mismatch,
+        &if let Some(mpfx) = macroprefix {
           Cow::Owned(s!("{mpfx}{key}"))
         } else {
           Cow::Borrowed(&qname)

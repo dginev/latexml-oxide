@@ -852,11 +852,12 @@ LoadDefinitions!({
   //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 
   pub fn required_key_vals(
-    star:bool, plus:bool, keysets: Option<&Parameters>) -> Result<KeyVals> {
-    if gullet::if_next(&T_BEGIN!())? {
+    star:bool, plus:bool, keysets_opt: Option<&Parameters>) -> Result<KeyVals> {
+    if gullet::if_next(T_BEGIN!())? {
+      let keysets = keysets_opt.map(|ps| ps.as_keysets()).unwrap_or_default();
       keyvals_aux( Some(T_END!()), KVSpec {
         star, plus,
-        keysets: vec![keysets.cloned()],
+        keysets,
         ..KVSpec::default()
       })
     } else {
@@ -892,16 +893,16 @@ LoadDefinitions!({
   pub fn optional_key_vals(
     star: bool,
     plus: bool,
-    keysets: Option<&Parameters>,
-
+    keysets_opt: Option<&Parameters>,
   ) -> Result<Option<KeyVals>> {
-    if gullet::if_next(&T_OTHER!("["))? {
+    if gullet::if_next(T_OTHER!("["))? {
+      let keysets = keysets_opt.map(|ps| ps.as_keysets()).unwrap_or_default();
       let kvs: KeyVals = keyvals_aux(
         Some(T_OTHER!("]")),
         KVSpec {
           star,
           plus,
-          keysets: vec![keysets.cloned()], // TODO: Revisit carefully
+          keysets,
           ..KVSpec::default()
         },
           )?;

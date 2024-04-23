@@ -6,10 +6,9 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
 use std::rc::Rc;
-use string_interner::symbol::SymbolU32;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
+use crate::common::arena::{self, SymStr, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -60,14 +59,14 @@ pub static UNITS: Lazy<HashMap<String, f64>> = Lazy::new(|| {
 });
 
 /// installation scope in the state_tables
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Scope {
   /// globally visible, does not expire
   Global,
   /// globally visible, but expires at the end of the current group
   Local,
   /// a named scope - visible only when explicitly activated
-  Named(String),
+  Named(SymStr),
 }
 
 /// the kinds of tables bookkept in the State
@@ -145,9 +144,9 @@ pub enum Catcodes {
 }
 
 /// Ledger for stacked assignments
-pub type AssignmentCount = HashMap<SymbolU32, usize>;
+pub type AssignmentCount = HashMap<SymStr, usize>;
 /// The `(table_name, key, value)` contents of a stored table of assignments
-pub type StashTable = Vec<(TableName, SymbolU32, Stored)>;
+pub type StashTable = Vec<(TableName, SymStr, Stored)>;
 #[derive(Debug, Clone, Default)]
 /// For each of several tables (being "value", "meaning", "catcode" or other space of names),
 /// each table maintains the bound values, and "undo" defines the stack frames
@@ -209,7 +208,7 @@ impl UndoFrame {
 ///  meaning: The definition assocated with `key`, usually a control-sequence.
 ///  stash & stash_active: support named scopes
 ///      (see also activateScope & deactivateScope)
-pub type Table = HashMap<SymbolU32, VecDeque<Stored>>;
+pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 
 /// The state efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
@@ -233,8 +232,8 @@ pub struct State {
   undo: VecDeque<UndoFrame>,
   // stateful runtime - data structures
   /// the schema-derived model used for the current document
-  prefixes: HashMap<SymbolU32, bool>, // ?
-  pub tag_properties: HashMap<SymbolU32, TagOptions>,
+  prefixes: HashMap<SymStr, bool>, // ?
+  pub tag_properties: HashMap<SymStr, TagOptions>,
   /// an optional indirect model for long-distance relationships
   pub indirect_model: Option<IndirectModel>,
   /// Document-related resources declared during core conversion, pending until XML is finalized
@@ -498,7 +497,7 @@ impl State {
   fn assign_internal(
     &mut self,
     table_name: TableName,
-    key: SymbolU32,
+    key: SymStr,
     value: Stored,
     mut scope_opt: Option<Scope>,
   ) {
@@ -592,26 +591,25 @@ impl State {
         defs.push_front(value);
       },
       Scope::Named(scope_name) => {
-        let scope_sym = arena::pin(scope_name);
         // initialize stash if empty
-        let needs_init = match self.stash.get(&scope_sym) {
+        let needs_init = match self.stash.get(&scope_name) {
           None => true,
           Some(v) => v.is_empty(),
         };
         if needs_init {
           self.assign_internal(
             TableName::Stash,
-            scope_sym,
+            scope_name,
             Stored::Stash(Vec::new()),
             Some(Scope::Global),
           );
         }
         if let Some(Stored::Stash(ref mut stash)) =
-          self.stash.get_mut(&scope_sym).as_mut().unwrap().get_mut(0)
+          self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0)
         {
           stash.push((table_name, key, value.clone()));
         }
-        let has_active = match self.stash_active.get(&scope_sym) {
+        let has_active = match self.stash_active.get(&scope_name) {
           None => false,
           Some(v) => !v.is_empty(),
         };
@@ -645,7 +643,7 @@ impl State {
       },
     }
   }
-  pub fn lookup_value_sym(&self, key: &SymbolU32) -> Option<&Stored> {
+  pub fn lookup_value_sym(&self, key: &SymStr) -> Option<&Stored> {
     match self.value.get(key) {
       None => None,
       Some(vvec) => match vvec.front() {
@@ -692,7 +690,7 @@ impl State {
     }
   }
 
-  pub fn lookup_mapping_keys(&self, map: &str) -> Vec<SymbolU32> {
+  pub fn lookup_mapping_keys(&self, map: &str) -> Vec<SymStr> {
     let map_sym = arena::pin(map);
     match self.value.get(&map_sym) {
       None => Vec::new(),
@@ -715,7 +713,7 @@ impl State {
   fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
     let cc = key.get_catcode();
     let name = key.get_sym();
-    let lookupname: Option<SymbolU32> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
+    let lookupname: Option<SymStr> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
       if name == *EMPTY_SYM {
         None
       } else {
@@ -731,7 +729,7 @@ impl State {
       None
     }
   }
-  pub fn ensure_tag_property(&mut self, tag: SymbolU32) -> &mut TagOptions {
+  pub fn ensure_tag_property(&mut self, tag: SymStr) -> &mut TagOptions {
     self
     .tag_properties
     .entry(tag)
@@ -898,7 +896,7 @@ pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(
 
 /// assigns a `Stored` value at the given (arena ticket!) key and scope
 pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(
-  key: SymbolU32,
+  key: SymStr,
   value: T,
   scope: S,
 ) {
@@ -1035,9 +1033,9 @@ pub fn lookup_bool(key: &str) -> bool {
     Some(v) => v.into(),
   }
 }
-/// like `lookup_value`, but casts the entry into a SymbolU32 from the string interner
+/// like `lookup_value`, but casts the entry into a SymStr from the string interner
 ///  (`EMPTY_SYM` if None)
-pub fn lookup_string_sym(key: &str) -> SymbolU32 {
+pub fn lookup_string_sym(key: &str) -> SymStr {
   let state = state!();
   match state.lookup_value(key) {
     None => *EMPTY_SYM,
@@ -1385,7 +1383,7 @@ pub fn lookup_mathcode(key: &str) -> Option<u16> {
     None => None,
   }
 }
-pub fn lookup_mathcode_sym(key_sym: &SymbolU32) -> Option<u16> {
+pub fn lookup_mathcode_sym(key_sym: &SymStr) -> Option<u16> {
   match state!().mathcode.get(key_sym) {
     Some(c) => match c.front() {
       Some(Stored::Charcode(codeval)) => Some(*codeval),
@@ -1805,7 +1803,7 @@ pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
 
 // #======================================================================
 /// Activates all stashed definitions for the named scope. No-op if the scope is already active.
-pub fn activate_scope(scope: SymbolU32) {
+pub fn activate_scope(scope: SymStr) {
   let mut state = state_mut!();
   // do not re-activate if already active.
   if let Some(stash_active_entry) = state.stash_active.get(&scope) {
@@ -1858,7 +1856,7 @@ pub fn activate_scope(scope: SymbolU32) {
 
 /// Removes any definitions that were associated with the named `scope`.
 /// Normally not needed, since a scopes definitions are locally bound anyway.
-pub fn deactivate_scope(scope: SymbolU32) {
+pub fn deactivate_scope(scope: SymStr) {
   let mut state = state_mut!();
   let scope_exists = match state.stash_active.get(&scope) {
     None => false,
@@ -1925,11 +1923,11 @@ pub fn deactivate_scope(scope: SymbolU32) {
   }
 }
 /// return all known named scopes
-pub fn get_known_scopes() -> Vec<SymbolU32> {
+pub fn get_known_scopes() -> Vec<SymStr> {
   state!().stash.keys().copied().collect::<Vec<_>>()
 }
 /// return the currently activated named scopes
-pub fn get_active_scopes() -> Vec<SymbolU32> {
+pub fn get_active_scopes() -> Vec<SymStr> {
   state!().stash_active.keys().copied().collect::<Vec<_>>()
 }
 
@@ -2006,7 +2004,7 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
 pub fn compute_indirect_model() -> IndirectModel {
   let mut imodel: IndirectModel = HashMap::default();
   // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-  let mut openable: HashSet<SymbolU32> = HashSet::default();
+  let mut openable: HashSet<SymStr> = HashSet::default();
   for tag in model::get_tags() {
     if let Some(x) = state!().tag_properties.get(&tag) {
       if let Some(true) = x.auto_open {
@@ -2016,12 +2014,12 @@ pub fn compute_indirect_model() -> IndirectModel {
   }
 
   for tag in model::get_tags() {
-    let mut desc: HashMap<SymbolU32, HashMap<SymbolU32, usize>> = HashMap::default();
+    let mut desc: HashMap<SymStr, HashMap<SymStr, usize>> = HashMap::default();
     crate::common::model::compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
-    let desc_keys: Vec<SymbolU32> = desc.keys().copied().collect();
+    let desc_keys: Vec<SymStr> = desc.keys().copied().collect();
     for kid in desc_keys {
       let mut best = 0; // Find best path to $kid.
-      let desc_kid_keys: Vec<SymbolU32> = desc
+      let desc_kid_keys: Vec<SymStr> = desc
         .entry(kid)
         .or_default()
         .keys()
@@ -2104,18 +2102,18 @@ pub fn after_assignment() {
 // Ported from Perl's "local" declarations
 
 
-pub fn get_tag_property(tag: SymbolU32) -> TagOptions {
+pub fn get_tag_property(tag: SymStr) -> TagOptions {
   state_mut!().ensure_tag_property(tag).clone()
 }
-pub fn ensure_tag_property(tag: SymbolU32) {
+pub fn ensure_tag_property(tag: SymStr) {
   state_mut!().ensure_tag_property(tag);
 }
 
-pub fn with_tag_property<R, FnR>(tag: SymbolU32, caller: FnR) -> R
+pub fn with_tag_property<R, FnR>(tag: SymStr, caller: FnR) -> R
 where FnR: FnOnce(Option<&TagOptions>) -> R  {
     caller(state!().tag_properties.get(&tag))
 }
-pub fn with_tag_property_mut<R, FnR>(tag: SymbolU32, caller: FnR) -> R
+pub fn with_tag_property_mut<R, FnR>(tag: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&mut TagOptions) -> R  {
   ensure_tag_property(tag);
   caller(state_mut!().tag_properties.get_mut(&tag).unwrap())
@@ -2149,7 +2147,7 @@ pub fn take_pending_resources() -> Vec<Resource> {
 pub fn reset_pending_resources() {
   state_mut!().pending_resources = Vec::new();
 }
-pub fn get_indirect_model_relationship(tag: SymbolU32, childtag: SymbolU32) -> Option<SymbolU32> {
+pub fn get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -> Option<SymStr> {
   match state!().indirect_model.as_ref().unwrap().get(&tag) {
     Some(sub_m) => sub_m.get(&childtag).copied(),
     None => None,
@@ -2210,7 +2208,7 @@ where FnR: FnOnce(Option<&Stored>) -> R {
   })
 }
 
-pub fn with_mapping_sym<R,FnR>(map: SymbolU32, key: SymbolU32, caller: FnR) -> R
+pub fn with_mapping_sym<R,FnR>(map: SymStr, key: SymStr, caller: FnR) -> R
 where FnR: FnOnce(Option<&Stored>) -> R {
   caller(match state!().value.get(&map) {
     None => None,
@@ -2222,7 +2220,7 @@ where FnR: FnOnce(Option<&Stored>) -> R {
 }
 
 pub fn with_mapping_keys<R,FnR>(map: &str, caller: FnR) -> R
-where FnR: FnOnce(Vec<SymbolU32>) -> R {
+where FnR: FnOnce(Vec<SymStr>) -> R {
   caller(state!().lookup_mapping_keys(map))
 }
 
@@ -2231,7 +2229,7 @@ pub fn with_font_info<R,FnR>(key: &Token, caller: FnR) -> R
    caller(state!().lookup_font_info(key))
 }
 
-pub fn get_input_encoding() -> Option<SymbolU32> {
+pub fn get_input_encoding() -> Option<SymStr> {
   state!().input_encoding.as_ref().map(arena::pin)
 }
 pub fn set_input_encoding(val: Option<String>) {

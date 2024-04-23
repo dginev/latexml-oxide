@@ -17,6 +17,7 @@ use crate::common::locator::Locator;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
+use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
@@ -101,6 +102,8 @@ pub enum Stored {
   /// latexml object
   Number(Number),
   /// latexml object
+  Float(Float),
+  /// latexml object
   Glue(Glue),
   /// latexml object
   MuGlue(MuGlue),
@@ -178,6 +181,7 @@ impl fmt::Debug for Stored {
       Font(ref font) => write!(f, "Stored::Font[{font:?}]"),
       FontDirective(ref font) => write!(f, "Stored::FontDirective[{font:?}]"),
       Number(ref number) => write!(f, "Stored::Number[{number:?}]"),
+      Float(ref float) => write!(f, "Stored::Float[{float:?}]"),
       Glue(ref glue) => write!(f, "Stored::Glue[{glue:?}]"),
       MuGlue(ref glue) => write!(f, "Stored::MuGlue[{glue:?}]"),
       Dimension(ref dimension) => write!(f, "Stored::Dimension[{dimension:?}]"),
@@ -198,6 +202,7 @@ impl fmt::Display for Stored {
       Digested(ref digested) => write!(f, "{digested}"),
       Dimension(ref v) => write!(f, "{v}"),
       Number(ref v) => write!(f, "{v}"),
+      Float(ref v) => write!(f, "{v}"),
       Glue(ref v) => write!(f, "{v}"),
       MuGlue(ref v) => write!(f, "{v}"),
       MuDimension(ref v) => write!(f, "{v}"),
@@ -413,6 +418,13 @@ impl PartialEq for Stored {
       },
       Number(ref n) => {
         if let Number(n2) = other {
+          *n == *n2
+        } else {
+          false
+        }
+      },
+      Float(ref n) => {
+        if let Float(n2) = other {
           *n == *n2
         } else {
           false

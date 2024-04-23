@@ -1436,10 +1436,9 @@ macro_rules! GetKeyVals {
 #[macro_export]
 macro_rules! DefKeyVal {
   ($keyset:expr, $key:expr, $vtype:expr) => {{
-    let prefix = "KV";
     ::rtx_core::keyval::define(
       KeyvalConfig {
-        prefix,
+        prefix: "KV",
         keyset: $keyset,
         key: $key,
         vtype: $vtype,
@@ -1448,28 +1447,18 @@ macro_rules! DefKeyVal {
       })?;
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr) => {{
-    // TODO: extract the prefix
-    // my $prefix = $options{prefix} || 'KV';
-    let prefix = "KV";
-    // delete $options{prefix};
     ::rtx_core::keyval::define(
       KeyvalConfig {
-        prefix,
+        prefix: "KV",
         keyset: $keyset,
         key: $key,
         vtype: $vtype,
         default: Some($default),
         ..KeyvalConfig::default()
-      },
-      st,
-    )?;
+      })?;
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) => {
     // TODO: explicit $options with prefix logic
-    // should we tokenize the code?
-    // let code_expansion = ExpansionBody::Tokens(tokenize(
-    // code.unwrap_or(""), Some()));
-
     // TODO: extract the prefix
     // my $prefix = $options{prefix} || 'KV';
     // let prefix = "KV";

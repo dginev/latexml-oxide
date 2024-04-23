@@ -404,14 +404,14 @@ LoadDefinitions!({
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
 
-    while gullet::if_next(&T_OTHER!("'"))? {
+    while gullet::if_next(T_OTHER!("'"))? {
       gullet::read_token()?;
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet::if_next(&TOKEN_SUPER)? {
+    if gullet::if_next(T_SUPER!())? {
       gullet::read_token()?;
       sup.extend(gullet::read_arg()?.unlist());
     }
@@ -424,14 +424,14 @@ LoadDefinitions!({
     // Collect up all ', convering to \prime
     let prime_token = T_OTHER!("\'");
 
-    while gullet::if_next(&prime_token)? {
+    while gullet::if_next(prime_token)? {
       gullet::read_token()?;
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet::if_next(&T_SUPER!())? {
+    if gullet::if_next(T_SUPER!())? {
       gullet::read_token()?;
       let arg = gullet::read_arg()?;
       let arg_tks = arg.unlist();

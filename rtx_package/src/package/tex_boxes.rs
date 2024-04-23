@@ -90,7 +90,7 @@ LoadDefinitions!({
         let mut keyvals = KeyVals::new(
           KeyvalsConfig{skip_missing: true, ..KeyvalsConfig::default()});
         let dim = gullet::read_dimension()?;
-        keyvals.set_value(&key.owned_tokens().unwrap().to_string(), dim.into(), false);
+        keyvals.set_value(&key.owned_tokens().unwrap().to_string(), dim.into(), false)?;
         keyvals.into()
       } else {
         Ok(None)
@@ -173,11 +173,10 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       let width : Option<RegisterValue> = {
         let spec = whatsit.get_arg(1);
-        if let Some(w) = GetKeyVal!(spec, "to") {
-          w.into()
-        } else if let Some(s) = GetKeyVal!(spec, "spread") {
-          let s_num_opt : Option<RegisterValue> = s.into();
-          let s_num = s_num_opt.unwrap_or_default();
+        if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
+          Some((*w).into())
+        } else if let Some(ArgWrap::Dimension(s_num_ref)) = GetKeyVal!(spec, "spread") {
+          let s_num = *s_num_ref;
           let tbox = whatsit.get_arg_mut(2).unwrap();
           let current_w = tbox.get_width(None)?.unwrap();
           let new_w = current_w.add(s_num);
@@ -235,7 +234,7 @@ LoadDefinitions!({
       let mut keyvals = KeyVals::new(
         KeyvalsConfig{ skip_missing: true, .. KeyvalsConfig::default()});
       while let Some(key) = gullet::read_keyword(&["width", "height", "depth"])? {
-        keyvals.set_value(&key, Stored::Dimension(gullet::read_dimension()?), false);
+        keyvals.set_value(&key, ArgWrap::Dimension(gullet::read_dimension()?), false)?;
       }
       keyvals
     },

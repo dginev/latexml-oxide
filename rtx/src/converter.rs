@@ -1,12 +1,13 @@
 use rtx_core::common::error::*;
 use rtx_core::common::object::Object;
+use rtx_core::common::arena;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::digested::Digested;
 use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
 use rtx_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut};
-use rtx_package::{package};
+use rtx_package::package;
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
@@ -282,6 +283,9 @@ impl Converter {
     // else { $serialized = $result; }                              // Compressed case
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
+    if self.opts.verbosity >= 0 {
+      Info!("arena","strings_allocated", arena::len());
+    }
     Info!("status", "conversion", self.runtime.status_code);
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);

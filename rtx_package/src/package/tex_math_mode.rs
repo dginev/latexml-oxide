@@ -20,7 +20,7 @@ LoadDefinitions!({
         let mode = state::lookup_string("MODE");
         Debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
-          if gullet::if_next(&TOKEN_MATH)? {
+          if gullet::if_next(T_MATH!())? {
             gullet::read_token()?;
             op = "\\@@ENDDISPLAYMATH";
           } else {
@@ -36,7 +36,7 @@ LoadDefinitions!({
           }
         } else if mode == "inline_math" {
           op = "\\@@ENDINLINEMATH";
-        } else if gullet::if_next(&TOKEN_MATH)? {
+        } else if gullet::if_next(T_MATH!())? {
           gullet::read_token()?;
           op = "\\@@BEGINDISPLAYMATH";
         }

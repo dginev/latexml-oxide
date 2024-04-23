@@ -11,6 +11,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
 use crate::definition::Digested;
 use crate::keyvals::KeyVals;
@@ -302,7 +303,7 @@ impl ArgWrap {
     use ArgWrap::*;
     match self {
       KV(v) => Ok(*v),
-      Tokens(tks) => Ok(tks.to_keyvals()),
+      Tokens(tks) => tks.to_keyvals(),
       None => Ok(KeyVals::default()),
       _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {:?}", self),
     }
@@ -369,6 +370,60 @@ where T: Into<ArgWrap> + Sized
       Some(t) => t.into(),
       None => ArgWrap::None,
     }
+  }
+}
+
+impl From<Stored> for Result<ArgWrap> {
+  // A maintenance detail here is that whenever a Parameter can read a new concrete type of data,
+  // then ArgWrap will have a new variant, which must then be possible to store in Stored,
+  // and possible to cast back from storage into ArgWrap
+  fn from(t: Stored) -> Result<ArgWrap> {
+    Ok(match t {
+      Stored::Tokens(t) => ArgWrap::Tokens(t),
+      Stored::Token(t) => ArgWrap::Token(t),
+      Stored::MuDimension(d) => ArgWrap::MuDimension(d),
+      Stored::Glue(g) => ArgWrap::Glue(g),
+      Stored::MuGlue(g) => ArgWrap::MuGlue(g),
+      Stored::Number(n) => ArgWrap::Number(n),
+      Stored::Float(f) => ArgWrap::Float(f),
+      Stored::Dimension(d) => ArgWrap::Dimension(d),    
+      // we could just map "_" to None, but it is safer to enumerate, to avoid missing 
+      // meaningful cases.
+      Stored::None => ArgWrap::None,
+      Stored::Mouth(_) | Stored::Primitive(_) | Stored::Bool(_) | Stored::Parameter(_) |
+      Stored::MathPrimitive(_) | Stored::Conditional(_) |
+      Stored::Constructor(_) | Stored::Charcode(_) | Stored::Expandable(_) | Stored::Ligature(_) |
+      Stored::HashStored(_) | Stored::HashTagData(_) | Stored::HashString(_) | Stored::Digested(_) |
+      Stored::FontDirective(_) | Stored::Register(_) | Stored::Rewrite(_) |
+      Stored::Stash(_) | Stored::Fontmap(_) | Stored::Int(_) | Stored::String(_) | 
+      Stored::Strings(_) | Stored::Node(_) | Stored::IfFrame(_) | Stored::Font(_) |
+      Stored::Reversion(_) | Stored::Catcode(_) | Stored::Locator(_) | Stored::VecDequeStored(_) |
+      Stored::VecDigested(_) | Stored::Chars(_)
+      => {
+        Error!("stored","type","Failed to cast to argument; Found stored {:?}", t);
+        ArgWrap::None 
+      } 
+    })
+  }
+}
+
+impl From<ArgWrap> for Result<Stored> {
+  fn from(t: ArgWrap) -> Result<Stored> {
+    Ok(match t {
+      ArgWrap::Tokens(ts) => Stored::Tokens(ts),
+      ArgWrap::Token(ts) => Stored::Token(ts),
+      ArgWrap::Dimension(v) => Stored::Dimension(v),
+      ArgWrap::MuDimension(v) => Stored::MuDimension(v),
+      ArgWrap::Number(n) => Stored::Number(n),
+      ArgWrap::Glue(v) => Stored::Glue(v),
+      ArgWrap::MuGlue(v) => Stored::MuGlue(v),
+      ArgWrap::Float(v) => Stored::Float(v),
+      ArgWrap::None => Stored::None,
+      ArgWrap::KV(_) | ArgWrap::RegisterDefinition(_) | ArgWrap::AlignmentTemplate(_) => {
+        Error!("stored","type","Failed to cast into Stored (no equivalent). Extend Stored if intended; {:?}", t);
+        Stored::None
+      }
+    })
   }
 }
 

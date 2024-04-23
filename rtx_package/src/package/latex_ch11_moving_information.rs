@@ -198,7 +198,7 @@ LoadDefinitions!({
       // it seems to be allowable to omit the argument
       // It's ignorable for latexml anyway, so we'll just read it if its there.
       gullet::skip_spaces()?;
-      if gullet::if_next(&TOKEN_BEGIN)? {
+      if gullet::if_next(T_BEGIN!())? {
         gullet::read_arg()?;
       }
       begin_bibliography(whatsit)?;

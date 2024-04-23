@@ -179,7 +179,7 @@ LoadDefinitions!({
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
   DefMacro!("\\abstract", {
-    if gullet::if_next(&TOKEN_BEGIN)? {
+    if gullet::if_next(T_BEGIN!())? {
       T_CS!("\\abstract@onearg")
     } else {
       T_CS!("\\begin{abstract}")

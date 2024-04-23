@@ -80,6 +80,7 @@ pub fn parse_def_parameters(
           params.push(Parameter::new(
             Cow::Borrowed("RequireBrace"),
             Cow::Borrowed("RequireBrace"),
+            None,
                   )?);
           break;
         } else {
@@ -141,10 +142,10 @@ pub fn parse_def_parameters(
       } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
         // Special case: trailing sole # => delimited by next opening brace.
         tokens.pop_front();
-        params.push(Parameter::new("UntilBrace","UntilBrace")?);
+        params.push(Parameter::new("UntilBrace","UntilBrace", None)?);
       } else {
         // Nothing? Just a plain parameter.
-        params.push(Parameter::new("Plain","{}")?);
+        params.push(Parameter::new("Plain","{}", None)?);
       }
     } else {
       // Initial delimiting text is required.
@@ -808,7 +809,7 @@ pub struct KVSpec {
   pub star: bool,
   pub plus: bool,
   pub prefix: Option<String>,
-  pub keysets: Vec<Option<Parameters>>,
+  pub keysets: Vec<String>,
   pub skip: bool,
 }
 pub fn keyvals_aux(
@@ -833,8 +834,7 @@ pub fn keyvals_aux(
   let mut keyvals = KeyVals::new(
     KeyvalsConfig {
       prefix: spec.prefix,
-      // keysets: spec.keysets, // TODO!
-      keysets: Vec::new(),
+      keysets: spec.keysets,
       set_all: spec.plus,
       set_internals: true,
       skip: spec.skip,
@@ -843,7 +843,7 @@ pub fn keyvals_aux(
   );
   // and read it from the gullet
   if let Some(until_token) = until {
-    keyvals.read_from( until_token)?;
+    keyvals.read_from(until_token,false)?;
   }
   // we still want to make use of the hash
   Ok(keyvals)
