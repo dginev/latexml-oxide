@@ -2,12 +2,14 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::cmp::Ordering;
 use std::fmt;
+use crate::common::error::Result;
 
 use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::{fixpoint, kround, NumericOps};
-use crate::definition::register::RegisterType;
+use crate::definition::register::{RegisterType, RegisterValue};
+use crate::digested::Digested;
 use crate::state::*;
-use crate::{Object};
+use crate::Object;
 
 use super::dimension::fixedformat;
 
@@ -193,7 +195,11 @@ impl fmt::Display for Glue {
     write!(f, "{string}")
   }
 }
-impl Object for Glue {}
+impl Object for Glue {
+  fn be_digested(self) -> Result<Digested> {
+    Ok(RegisterValue::Glue(self).into())
+  }
+}
 
 pub fn new_setup(
   skip: f64,
