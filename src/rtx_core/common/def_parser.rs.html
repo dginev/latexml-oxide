@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/def_parser.rs`."><title>def_parser.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (385fa9d84 2024-04-04)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/def_parser.rs`."><title>def_parser.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -187,10 +185,12 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>,EMPTY_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::mouth;
@@ -271,11 +271,11 @@
         parse_parameters(inner_spec, cs, init_flag)<span class="question-mark">?
       </span>};
       <span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
-        name: Cow::Borrowed(<span class="string">"Plain"</span>),
+        name: arena::pin_static(<span class="string">"Plain"</span>),
         spec: <span class="kw">if </span>spec.is_empty() {
-          Cow::Borrowed(<span class="string">""</span>)
+          <span class="kw-2">*</span>EMPTY_SYM
         } <span class="kw">else </span>{
-          Cow::Owned(spec.to_string())
+          arena::pin(spec)
         },
         inner: inner.map(|ps| ps.into()).unwrap_or_default(),
         ..Parameter::default()
@@ -292,11 +292,11 @@
       <span class="kw">if let </span><span class="prelude-val">Some</span>(_default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
         <span class="comment">// TODO: Add the defaults !
         </span><span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
-          name: Cow::Borrowed(<span class="string">"Optional"</span>),
+          name: arena::pin_static(<span class="string">"Optional"</span>),
           spec: <span class="kw">if </span>spec.is_empty() {
-            Cow::Borrowed(<span class="string">""</span>)
+            <span class="kw-2">*</span>EMPTY_SYM
           } <span class="kw">else </span>{
-            Cow::Owned(spec.to_string())
+            arena::pin(spec)
           },
           <span class="comment">// extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str()))],
           </span>..Parameter::default()
@@ -307,11 +307,11 @@
         parameters.push(p);
       } <span class="kw">else if </span>!inner_spec.is_empty() {
         <span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
-          name: Cow::Borrowed(<span class="string">"Optional"</span>),
+          name: arena::pin_static(<span class="string">"Optional"</span>),
           spec: <span class="kw">if </span>spec.is_empty() {
-            Cow::Borrowed(<span class="string">""</span>)
+            <span class="kw-2">*</span>EMPTY_SYM
           } <span class="kw">else </span>{
-            Cow::Owned(spec.to_string())
+            arena::pin(spec)
           },
           inner: parse_parameters(inner_spec, cs, init_flag)<span class="question-mark">?
             </span>.map(|ps| ps.into())
@@ -324,8 +324,8 @@
         parameters.push(p);
       } <span class="kw">else </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
-          name: Cow::Borrowed(<span class="string">"Optional"</span>),
-          spec: Cow::Owned(spec.to_string()),
+          name: arena::pin_static(<span class="string">"Optional"</span>),
+          spec: arena::pin(spec),
           ..Parameter::default()
         };
         <span class="kw">if </span>init_flag {
@@ -334,8 +334,8 @@
         parameters.push(p);
       }
     } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = PARAMSPECT_CHECK_RE.captures(<span class="kw-2">&amp;</span>prototype) {
-      <span class="kw">let </span>spec = captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
-      <span class="kw">let </span>name = captures.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
+      <span class="kw">let </span>spec = arena::pin(captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()));
+      <span class="kw">let </span>name = arena::pin(captures.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str()));
       <span class="kw">let </span>extra_str = captures.get(<span class="number">4</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string();
       next_proto = PARAMSPECT_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">""</span>);
       <span class="kw">let </span>extra: Vec&lt;Tokens&gt; = <span class="kw">if </span>extra_str.is_empty() {
@@ -347,8 +347,8 @@
           .collect()
       };
       <span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
-        name: name.into(),
-        spec: spec.into(),
+        name,
+        spec,
         extra,
         ..Parameter::default()
       };

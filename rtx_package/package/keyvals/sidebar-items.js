@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["KeyVals","KeyvalsConfig"]};
+window.SIDEBAR_ITEMS = {"enum":["SkipMissing"],"struct":["KeyVals","KeyvalsConfig"]};

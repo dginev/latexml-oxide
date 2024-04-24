@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_functions.rs`."><title>tex_functions.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (385fa9d84 2024-04-04)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_functions.rs`."><title>tex_functions.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -985,42 +983,6 @@
 <a href="#983" id="983">983</a>
 <a href="#984" id="984">984</a>
 <a href="#985" id="985">985</a>
-<a href="#986" id="986">986</a>
-<a href="#987" id="987">987</a>
-<a href="#988" id="988">988</a>
-<a href="#989" id="989">989</a>
-<a href="#990" id="990">990</a>
-<a href="#991" id="991">991</a>
-<a href="#992" id="992">992</a>
-<a href="#993" id="993">993</a>
-<a href="#994" id="994">994</a>
-<a href="#995" id="995">995</a>
-<a href="#996" id="996">996</a>
-<a href="#997" id="997">997</a>
-<a href="#998" id="998">998</a>
-<a href="#999" id="999">999</a>
-<a href="#1000" id="1000">1000</a>
-<a href="#1001" id="1001">1001</a>
-<a href="#1002" id="1002">1002</a>
-<a href="#1003" id="1003">1003</a>
-<a href="#1004" id="1004">1004</a>
-<a href="#1005" id="1005">1005</a>
-<a href="#1006" id="1006">1006</a>
-<a href="#1007" id="1007">1007</a>
-<a href="#1008" id="1008">1008</a>
-<a href="#1009" id="1009">1009</a>
-<a href="#1010" id="1010">1010</a>
-<a href="#1011" id="1011">1011</a>
-<a href="#1012" id="1012">1012</a>
-<a href="#1013" id="1013">1013</a>
-<a href="#1014" id="1014">1014</a>
-<a href="#1015" id="1015">1015</a>
-<a href="#1016" id="1016">1016</a>
-<a href="#1017" id="1017">1017</a>
-<a href="#1018" id="1018">1018</a>
-<a href="#1019" id="1019">1019</a>
-<a href="#1020" id="1020">1020</a>
-<a href="#1021" id="1021">1021</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 
@@ -1103,6 +1065,7 @@
           </span>params.push(Parameter::new(
             Cow::Borrowed(<span class="string">"RequireBrace"</span>),
             Cow::Borrowed(<span class="string">"RequireBrace"</span>),
+            <span class="prelude-val">None</span>,
                   )<span class="question-mark">?</span>);
           <span class="kw">break</span>;
         } <span class="kw">else </span>{
@@ -1154,8 +1117,8 @@
         <span class="kw">let </span>extra = Tokens::new(delim);
         params.push(
           Parameter {
-            name: Cow::Borrowed(<span class="string">"Until"</span>),
-            spec: Cow::Owned(<span class="macro">format!</span>(<span class="string">"Until:{extra}"</span>)),
+            name: arena::pin_static(<span class="string">"Until"</span>),
+            spec: arena::pin(<span class="macro">format!</span>(<span class="string">"Until:{extra}"</span>)),
             extra: <span class="macro">vec!</span>[extra],
             ..Parameter::default()
           }
@@ -1164,16 +1127,10 @@
       } <span class="kw">else if </span>tokens.len() == <span class="number">1 </span>&amp;&amp; tokens.front().unwrap().get_catcode() == Catcode::PARAM {
         <span class="comment">// Special case: trailing sole # =&gt; delimited by next opening brace.
         </span>tokens.pop_front();
-        params.push(Parameter::new(
-          Cow::Borrowed(<span class="string">"UntilBrace"</span>),
-          Cow::Borrowed(<span class="string">"UntilBrace"</span>),
-              )<span class="question-mark">?</span>);
+        params.push(Parameter::new(<span class="string">"UntilBrace"</span>,<span class="string">"UntilBrace"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
       } <span class="kw">else </span>{
         <span class="comment">// Nothing? Just a plain parameter.
-        </span>params.push(Parameter::new(
-          Cow::Borrowed(<span class="string">"Plain"</span>),
-          Cow::Borrowed(<span class="string">"{}"</span>),
-              )<span class="question-mark">?</span>);
+        </span>params.push(Parameter::new(<span class="string">"Plain"</span>,<span class="string">"{}"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
       }
     } <span class="kw">else </span>{
       <span class="comment">// Initial delimiting text is required.
@@ -1188,8 +1145,8 @@
       <span class="kw">let </span>expected = Tokens::new(lit);
       params.push(
         Parameter {
-          name: Cow::Borrowed(<span class="string">"Match"</span>),
-          spec: Cow::Owned(<span class="macro">s!</span>(<span class="string">"Match:{}"</span>, expected)),
+          name: arena::pin_static(<span class="string">"Match"</span>),
+          spec: arena::pin(<span class="macro">s!</span>(<span class="string">"Match:{expected}"</span>)),
           extra: <span class="macro">vec!</span>[expected],
           novalue: <span class="bool-val">true</span>,
           ..Parameter::default()
@@ -1759,38 +1716,7 @@
   Tokens::new(wv).untex()
 }
 
-<span class="comment">// sub orNull {
-//   return (grep { defined } @_) ? @_ : undef; }
-
-// # Should be a general utility?
-// sub stripBraces {
-//   my ($tokens) = @_;
-//   my @tokens = ($tokens ? $tokens-&gt;unlist : ());
-//   my @t = ();
-//   while (@tokens &amp;&amp; ($tokens[0]-&gt;getCatcode == CC_SPACE)) {    # Skip leading whitespace
-//     shift(@tokens); }
-//   # Balanced tokens until $delim
-//   my $ntopbraces = 0;
-//   while (@tokens) {
-//     if (Equals($tokens[0], T_BEGIN)) {                         # If top-level brace
-//       $ntopbraces++;
-//       my ($level, $t) = (0, undef);
-//       while (defined($t = shift(@tokens))) {                   # Read balanced
-//         my $cc = $t-&gt;getCatcode;
-//         $level++ if $cc == CC_BEGIN;
-//         $level-- if $cc == CC_END;
-//         push(@t, $t);
-//         last unless $level; } }
-//     else {
-//       push(@t, shift(@tokens)); } }
-//   while (@t &amp;&amp; ($t[-1]-&gt;getCatcode == CC_SPACE)) {             # pop off trailing spaces
-//     pop(@t); }
-//   # Strip outer braces if a single set encloses entire value and not just {}
-//   if ($ntopbraces == 1) {
-//     shift(@t); pop(@t); }
-//   return Tokens(@t); }
-
-</span><span class="doccomment">/// Support for Key / Value arguments.
+<span class="doccomment">/// Support for Key / Value arguments.
 </span><span class="comment">// The very basic form is
 //   RequiredKeyVals: $keyset
 //   OptionalKeyVals: $keyset
@@ -1837,42 +1763,42 @@
   <span class="kw">pub </span>star: bool,
   <span class="kw">pub </span>plus: bool,
   <span class="kw">pub </span>prefix: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>keysets: Vec&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt;,
-  <span class="kw">pub </span>skip: bool,
+  <span class="kw">pub </span>keysets: Vec&lt;String&gt;,
+  <span class="kw">pub </span>skip: Vec&lt;String&gt;,
 }
 <span class="kw">pub fn </span>keyvals_aux(
   until: <span class="prelude-ty">Option</span>&lt;Token&gt;,
-  <span class="kw-2">mut </span>spec: KVSpec,
+  spec: KVSpec,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;KeyVals&gt; {
+  <span class="kw">let </span>KVSpec {<span class="kw-2">mut </span>star, plus, <span class="kw-2">mut </span>prefix, <span class="kw-2">mut </span>keysets, skip} = spec;
   <span class="comment">// support both "keysets" and "prefix|keysets"
-  // unless (defined($keysets)) {
-  //   $keysets = $prefix;
-  //   $prefix  = undef;
-  // to emulate old behaviour, throw no errors
-  // when we have a single keyset and no prefix (or no keyset at all)
-  </span><span class="kw">if </span>spec.keysets.is_empty() {
-    spec.star = <span class="bool-val">true</span>;
-  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>prefix) = spec.prefix {
-    <span class="kw">if </span>prefix.find(<span class="string">','</span>).is_none() {
-      spec.star = <span class="bool-val">true</span>;
+  </span><span class="kw">if </span>keysets.is_empty() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(pfx) = prefix.take() {
+      keysets = <span class="macro">vec!</span>[pfx];
+    }
+
+    <span class="comment">// to emulate old behaviour, throw no errors
+    // when we have a single keyset and no prefix (or no keyset at all)
+    </span><span class="kw">if </span>keysets.is_empty() {
+      star = <span class="bool-val">true</span>;
     }
   }
 
   <span class="comment">// create a new set of Key-Value arguments
   </span><span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
     KeyvalsConfig {
-      prefix: spec.prefix,
-      <span class="comment">// keysets: spec.keysets, // TODO!
-      </span>keysets: Vec::new(),
-      set_all: spec.plus,
+      prefix,
+      keysets,
+      set_all: plus,
       set_internals: <span class="bool-val">true</span>,
-      skip: spec.skip,
-      skip_missing: spec.star,
+      skip,
+      skip_missing: <span class="kw">if </span>star { keyvals::SkipMissing::All } <span class="kw">else </span>{ keyvals::SkipMissing::None},
+      hook_missing: <span class="prelude-val">None</span>,
     },
   );
   <span class="comment">// and read it from the gullet
   </span><span class="kw">if let </span><span class="prelude-val">Some</span>(until_token) = until {
-    keyvals.read_from( until_token)<span class="question-mark">?</span>;
+    keyvals.read_from(until_token,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
   }
   <span class="comment">// we still want to make use of the hash
   </span><span class="prelude-val">Ok</span>(keyvals)
@@ -1947,7 +1873,7 @@
   align: <span class="kw-2">&amp;</span>str,
   class: <span class="kw-2">&amp;</span>str,
   document: <span class="kw-2">&amp;mut </span>Document,
-  props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;,
+  props: <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(body)) = props.get(<span class="string">"body"</span>) {
     <span class="comment">// Add class attribute to new nodes.

@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/keyval.rs`."><title>keyval.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (385fa9d84 2024-04-04)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/keyval.rs`."><title>keyval.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -453,6 +451,19 @@
 <a href="#451" id="451">451</a>
 <a href="#452" id="452">452</a>
 <a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Key-Value Definitions
 //!
 //! Provides an interface to define and access KeyVal definition.
@@ -463,23 +474,15 @@
 <span class="kw">use </span>std::borrow::Cow;
 
 <span class="kw">use </span><span class="kw">crate</span>::binding::def::dialect::{def_conditional, def_macro};
-<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::def_parser::parse_parameters;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
-<span class="comment">// use crate::common::font::Font;
-// use crate::common::locator::Locator;
-</span><span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
+<span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::ConditionalOptions;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{ExpansionBody, ExpansionClosure};
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameter;
-<span class="kw">use </span><span class="kw">crate</span>::state::State;
-<span class="comment">// use crate::definition::expandable::Expandable;
-// use crate::definition::Definition;
-// use crate::document::Document;
-// use crate::list::List;
-</span><span class="kw">use </span><span class="kw">crate</span>::mouth::tokenize;
-<span class="kw">use crate</span>::{state};
+<span class="kw">use </span><span class="kw">crate</span>::state;
+<span class="kw">use </span><span class="kw">crate</span>::mouth::tokenize;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 
@@ -531,21 +534,41 @@
   }
 }
 
-<span class="comment">// useful (only) for rtx_core::keyvals::KeyVals
-</span><span class="kw">fn </span>keyval_qname(prefix: <span class="kw-2">&amp;</span>str, keyset: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str) -&gt; String {
+<span class="comment">// semi-internals
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>keyval_qname(prefix: <span class="kw-2">&amp;</span>str, keyset: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">let </span>prefix = <span class="kw">if </span>prefix.is_empty() { <span class="string">"KV" </span>} <span class="kw">else </span>{ prefix };
   <span class="macro">s!</span>(<span class="string">"{prefix}@{keyset}@{key}"</span>)
 }
 
-<span class="kw">pub fn </span>keyval_get&lt;<span class="lifetime">'a</span>&gt;(qname: <span class="kw-2">&amp;</span>str, prop: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; {
-  state.lookup_value_sym(<span class="kw-2">&amp;</span>arena::pin(<span class="macro">s!</span>(<span class="string">"KEYVAL@{prop}@{qname}"</span>)))
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>keyval_get(qname: <span class="kw-2">&amp;</span>str, prop: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
+  state::lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"KEYVAL@{prop}@{qname}"</span>))
 }
 
-<span class="kw">pub fn </span>keyval_set(qname: <span class="kw-2">&amp;</span>str, prop: <span class="kw-2">&amp;</span>str, value: Stored) {
-  state::assign_value_sym(arena::pin(<span class="macro">s!</span>(<span class="string">"KEYVAL@{prop}@{qname}"</span>)), value, <span class="prelude-val">None</span>);
+<span class="doccomment">/// Using local assignments in the State to set keyvals, but that necessitates a
+/// cast of `ArgWrap`` to `State`` on set and `State` to `ArgWrap` on get.
+/// Certain values don't really work well with that, e.g. Stored::Bool ...
+/// The original Perl made no type casts, as there weren't any concrete types.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>keyval_set(qname: <span class="kw-2">&amp;</span>str, prop: <span class="kw-2">&amp;</span>str, value: Stored) {
+  state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"KEYVAL@{prop}@{qname}"</span>), value, <span class="prelude-val">None</span>);
 }
 
-<span class="comment">//======================================================================
+<span class="doccomment">/// check if a key-value pair is defined
+</span><span class="kw">pub fn </span>has_keyval(prefix: <span class="kw-2">&amp;</span>str, keyset: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
+  <span class="kw">let </span>qname = keyval_qname(prefix, keyset, key);
+  state::lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"KEYVAL@defined@{}"</span>,qname)).is_some() ||
+  state::lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{qname}"</span>))).is_some()
+}
+
+<span class="doccomment">/// disable a given key-val
+</span><span class="comment">// fn disable_keyval(prefix: &amp;str, keyset: &amp;str, key: &amp;str) -&gt; Result&lt;()&gt; {
+//   let qname = keyval_qname(prefix, keyset, key);
+//   keyval_set(&amp;qname, "disabled", true.into());
+//   // disable the key
+//   define_ordinary(&amp;qname, Some(ExpansionBody::Tokens(
+//     tokenize(&amp;s!("\\PackageWarning{{keyval}}{{`{key}' has been disabled. }}")))))
+// }
+
+//======================================================================
 // Key Definition
 //======================================================================
 </span><span class="attr">#[derive(Debug, Default, Clone)]
@@ -566,6 +589,7 @@
 }
 
 <span class="doccomment">/// (Re-)defines this Key of kind 'kind'.
+/// 
 ///Defines a keyword `key` used in keyval arguments for the set `keyset` and,
 ///and if the option `code` is given, defines appropriate macros
 ///when used with the `keyval` package (or extensions thereof).
@@ -602,16 +626,16 @@
 ///The kind parameter only takes effect when `code` is given, otherwise only
 ///meta-data is stored.
 </span><span class="kw">pub fn </span>define(options: KeyvalConfig) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">let </span>prefix = options.prefix;
-  <span class="kw">let </span>keyset = options.keyset;
-  <span class="kw">let </span>key = options.key;
-  <span class="kw">let </span>vtype = options.vtype;
-  <span class="kw">let </span>default_opt = options.default;
+  <span class="kw">let </span>KeyvalConfig {prefix , keyset, key,
+    vtype, default,kind,
+    code, macroprefix, mismatch, normalize,
+    bin, choices} = options;
+  
   <span class="kw">let </span>qname = keyval_qname(prefix, keyset, key);
 
   <span class="comment">// define that the key exists and is not disabled
-  </span>keyval_set(<span class="kw-2">&amp;</span>qname, <span class="string">"exists"</span>, <span class="number">1</span>.into());
-  keyval_set(<span class="kw-2">&amp;</span>qname, <span class="string">"disabled"</span>, <span class="number">0</span>.into());
+  </span>keyval_set(<span class="kw-2">&amp;</span>qname, <span class="string">"exists"</span>, <span class="bool-val">true</span>.into());
+  keyval_set(<span class="kw-2">&amp;</span>qname, <span class="string">"disabled"</span>, <span class="bool-val">false</span>.into());
   <span class="comment">// set the type
   </span><span class="kw">let </span>vtype = <span class="kw">if </span>vtype.is_empty() { <span class="string">"{}" </span>} <span class="kw">else </span>{ vtype };
   <span class="kw">let </span>paramlist_opt = parse_parameters(
@@ -640,18 +664,19 @@
       }
       keyval_set(
         <span class="kw-2">&amp;</span>qname,
-        vtype,
+        <span class="string">"type"</span>,
         paramlist.take_parameters().remove(<span class="number">0</span>).into(),
       );
     },
   };
   <span class="comment">// set the default
-  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(default) = default_opt {
-    <span class="kw">let </span>tdefault = tokenize(default);
+  // Question: Why was $default converted ToString ???
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(default_str) = default {
+    <span class="kw">let </span>default_tks = tokenize(default_str);
     keyval_set(
       <span class="kw-2">&amp;</span>qname,
       <span class="string">"default"</span>,
-      Stored::Tokens(<span class="macro">Tokens!</span>(tdefault.clone())),
+      Stored::Tokens(default_tks.clone()),
     );
     def_macro(
       <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{qname}@default"</span>)),
@@ -659,7 +684,7 @@
       ExpansionBody::Tokens(<span class="macro">Tokens!</span>(
         <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{qname}"</span>)),
         <span class="macro">T_BEGIN!</span>(),
-        tdefault,
+        default_tks,
         <span class="macro">T_END!</span>()
       )),
       <span class="prelude-val">None</span>,
@@ -667,31 +692,31 @@
   }
 
   <span class="comment">// figure out the kind of key-val parameter we are defining
-  </span><span class="kw">let </span>kind = options.kind.unwrap_or(<span class="string">"ordinary"</span>);
+  </span><span class="kw">let </span>kind = kind.unwrap_or(<span class="string">"ordinary"</span>);
   <span class="kw">match </span>kind {
-    <span class="string">"ordinary" </span>=&gt; define_ordinary(<span class="kw-2">&amp;</span>qname, options.code)<span class="question-mark">?</span>,
+    <span class="string">"ordinary" </span>=&gt; define_ordinary(<span class="kw-2">&amp;</span>qname, code)<span class="question-mark">?</span>,
     <span class="string">"command" </span>=&gt; {
-      <span class="kw">let </span>macroname = <span class="kw">if let </span><span class="prelude-val">Some</span>(mpfx) = options.macroprefix {
+      <span class="kw">let </span>macroname = <span class="kw">if let </span><span class="prelude-val">Some</span>(mpfx) = macroprefix {
         <span class="macro">s!</span>(<span class="string">"{mpfx}{key}"</span>)
       } <span class="kw">else </span>{
         <span class="macro">s!</span>(<span class="string">"cmd{qname}"</span>)
       };
-      define_command(<span class="kw-2">&amp;</span>qname, options.code, <span class="kw-2">&amp;</span>macroname)<span class="question-mark">?</span>;
+      define_command(<span class="kw-2">&amp;</span>qname, code, <span class="kw-2">&amp;</span>macroname)<span class="question-mark">?</span>;
     },
     <span class="string">"choice" </span>=&gt; define_choice(
       <span class="kw-2">&amp;</span>qname,
-      options.code,
-      options.mismatch,
-      options.choices,
-      options.normalize.unwrap_or(<span class="bool-val">false</span>),
-      options.bin,
+      code,
+      mismatch,
+      choices,
+      normalize.unwrap_or(<span class="bool-val">false</span>),
+      bin,
     )<span class="question-mark">?</span>,
     <span class="string">"boolean" </span>=&gt; {
       define_boolean(
         <span class="kw-2">&amp;</span>qname,
-        options.code,
-        options.mismatch,
-        <span class="kw-2">&amp;</span><span class="kw">if let </span><span class="prelude-val">Some</span>(mpfx) = options.macroprefix {
+        code,
+        mismatch,
+        <span class="kw-2">&amp;</span><span class="kw">if let </span><span class="prelude-val">Some</span>(mpfx) = macroprefix {
           Cow::Owned(<span class="macro">s!</span>(<span class="string">"{mpfx}{key}"</span>))
         } <span class="kw">else </span>{
           Cow::Borrowed(<span class="kw-2">&amp;</span>qname)
@@ -702,8 +727,7 @@
       <span class="string">"unknown"</span>,
       <span class="string">"undef"</span>,
       <span class="macro">s!</span>(
-        <span class="string">"Unknown KeyVals kind {kind} should be one of\
-     'ordinary', 'command', 'choice', 'boolean'. "
+        <span class="string">"Unknown KeyVals kind {kind} should be one of 'ordinary', 'command', 'choice', 'boolean'. "
       </span>)
     ),
   };

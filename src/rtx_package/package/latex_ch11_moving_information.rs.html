@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch11_moving_information.rs`."><title>latex_ch11_moving_information.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (385fa9d84 2024-04-04)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch11_moving_information.rs`."><title>latex_ch11_moving_information.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -592,7 +590,7 @@
     properties =&gt; sub[args] {
       <span class="macro">unpack_opt_ref!</span>(args =&gt; _star, label_opt);
       <span class="kw">let </span>label = label_opt.as_ref().unwrap().to_string();
-      <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(<span class="string">"label" </span>=&gt; Stored::String(arena::pin(clean_label(<span class="kw-2">&amp;</span>label, <span class="prelude-val">None</span>)))))
+      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"label" </span>=&gt; Stored::String(arena::pin(clean_label(<span class="kw-2">&amp;</span>label, <span class="prelude-val">None</span>)))))
   });
 
   <span class="comment">// "page" does not make sense in xml.  If the user really wants, they will need:
@@ -721,7 +719,7 @@
       // it seems to be allowable to omit the argument
       // It's ignorable for latexml anyway, so we'll just read it if its there.
       </span>gullet::skip_spaces()<span class="question-mark">?</span>;
-      <span class="kw">if </span>gullet::if_next(<span class="kw-2">&amp;</span>TOKEN_BEGIN)<span class="question-mark">? </span>{
+      <span class="kw">if </span>gullet::if_next(<span class="macro">T_BEGIN!</span>())<span class="question-mark">? </span>{
         gullet::read_arg()<span class="question-mark">?</span>;
       }
       begin_bibliography(whatsit)<span class="question-mark">?</span>;
@@ -789,7 +787,7 @@
       } <span class="kw">else </span>{ String::default() };
       <span class="kw">if let </span><span class="prelude-val">Some</span>(tag) = tag_opt {
         <span class="kw">let </span><span class="kw-2">mut </span>properties = <span class="macro">RefStepID!</span>(<span class="string">"@bibitem"</span>)<span class="question-mark">?</span>;
-        properties.insert(<span class="string">"key"</span>.to_string(), key.into());
+        properties.insert(<span class="string">"key"</span>, key.into());
         <span class="kw">let </span><span class="kw-2">mut </span>tag_tokens = <span class="macro">vec!</span>[
             <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\the@bibitem"</span>), <span class="macro">T_BEGIN!</span>()];
         tag_tokens.extend(<span class="macro">Revert!</span>(tag));
@@ -797,12 +795,12 @@
         tag_tokens.extend(
           <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@make@tags"</span>), <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"@bibitem"</span>)]).unlist());
         tag_tokens.push(<span class="macro">T_END!</span>());
-        properties.insert(<span class="string">"tags"</span>.to_string(),
+        properties.insert(<span class="string">"tags"</span>,
           stomach::digest(tag_tokens)<span class="question-mark">?</span>.into());
         whatsit.set_properties(properties);
       } <span class="kw">else </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>properties = <span class="macro">RefStepCounter!</span>(<span class="string">"@bibitem"</span>)<span class="question-mark">?</span>;
-        properties.insert(<span class="string">"key"</span>.to_string(), key.into());
+        properties.insert(<span class="string">"key"</span>, key.into());
         whatsit.set_properties(properties);
       }
     }
@@ -898,13 +896,13 @@
       yyseparator='#yyseparator'&gt;#3#4&lt;/ltx:bibref&gt;"</span>,
     properties =&gt; sub[args] {
       <span class="macro">unref!</span>(args =&gt; _show, keys, _phrase1, _phrase2);
-      <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(<span class="string">"bibrefs" </span>=&gt; clean_bib_key(<span class="kw-2">&amp;</span>keys.to_string()).into(),
+      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"bibrefs" </span>=&gt; clean_bib_key(<span class="kw-2">&amp;</span>keys.to_string()),
         <span class="string">"separator" </span>=&gt; <span class="kw">match </span>state::lookup_tokens(<span class="string">"CITE_SEPARATOR"</span>) {
-          <span class="prelude-val">Some</span>(sep) =&gt; stomach::digest(sep)<span class="question-mark">?</span>.to_string().into(),
-          <span class="prelude-val">None </span>=&gt; String::new().into() },
+          <span class="prelude-val">Some</span>(sep) =&gt; stomach::digest(sep)<span class="question-mark">?</span>.to_string(),
+          <span class="prelude-val">None </span>=&gt; String::new() },
         <span class="string">"yyseparator" </span>=&gt; <span class="kw">match </span>state::lookup_tokens(<span class="string">"CITE_YY_SEPARATOR"</span>) {
-          <span class="prelude-val">Some</span>(yysep) =&gt; stomach::digest(yysep)<span class="question-mark">?</span>.to_string().into(),
-          <span class="prelude-val">None </span>=&gt; String::new().into() }
+          <span class="prelude-val">Some</span>(yysep) =&gt; stomach::digest(yysep)<span class="question-mark">?</span>.to_string(),
+          <span class="prelude-val">None </span>=&gt; String::new() }
       ))
     }
   );

@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/parameter.rs`."><title>parameter.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (385fa9d84 2024-04-04)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/parameter.rs`."><title>parameter.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -588,16 +586,55 @@
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
 <a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>proc_macro2::TokenStream;
 <span class="kw">use </span>quote::{quote, ToTokens};
 <span class="kw">use </span>regex::Regex;
-<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>,EMPTY_SYM,SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure};
@@ -634,8 +671,8 @@
   <span class="kw">pub </span>novalue: bool,
   <span class="kw">pub </span>semiverbatim: <span class="prelude-ty">Option</span>&lt;Vec&lt;char&gt;&gt;,
   <span class="kw">pub </span>optional: bool,
-  <span class="kw">pub </span>name: Cow&lt;<span class="lifetime">'static</span>, str&gt;,
-  <span class="kw">pub </span>spec: Cow&lt;<span class="lifetime">'static</span>, str&gt;,
+  <span class="kw">pub </span>name: SymStr,
+  <span class="kw">pub </span>spec: SymStr,
   <span class="kw">pub </span>extra: Vec&lt;Tokens&gt;,
   <span class="kw">pub </span>inner: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
   <span class="kw">pub </span>reader: ReaderClosure,
@@ -650,8 +687,8 @@
       novalue: <span class="bool-val">false</span>,
       semiverbatim: <span class="prelude-val">None</span>,
       optional: <span class="bool-val">false</span>,
-      name: Cow::Borrowed(<span class="string">"parameter_default"</span>),
-      spec: Cow::Borrowed(<span class="string">""</span>),
+      name: arena::pin_static(<span class="string">"parameter_default"</span>),
+      spec: <span class="kw-2">*</span>EMPTY_SYM,
       extra: Vec::new(),
       inner: <span class="prelude-val">None</span>,
       reader: Rc::new(|_args, _extra| {
@@ -689,14 +726,16 @@
   }
 }
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Parameter {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.name) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { 
+    arena::with(<span class="self">self</span>.name,|name| 
+      <span class="macro">write!</span>(f, <span class="string">"{name}"</span>)) }
 }
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>Parameter {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Parameter) -&gt; bool { <span class="self">self</span>.name == other.name }
 }
 <span class="kw">impl </span>Object <span class="kw">for </span>Parameter {
-  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="self">self</span>.spec.to_string() }
+  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { arena::to_string(<span class="self">self</span>.spec) }
 
 }
 
@@ -704,10 +743,11 @@
 <span class="kw">static </span>SKIP_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^Skip(.+)$"</span>).unwrap());
 
 <span class="kw">impl </span>Parameter {
-  <span class="kw">pub fn </span>new(name: Cow&lt;<span class="lifetime">'static</span>, str&gt;, spec: Cow&lt;<span class="lifetime">'static</span>, str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+  <span class="kw">pub fn </span>new&lt;T: AsRef&lt;str&gt;&gt;(name: T, spec: T, extra:<span class="prelude-ty">Option</span>&lt;Vec&lt;Tokens&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     Parameter {
-      name,
-      spec,
+      name: arena::pin(name),
+      spec: arena::pin(spec),
+      extra: extra.unwrap_or_default(),
       ..Parameter::default()
     }
     .init()
@@ -716,25 +756,27 @@
     <span class="comment">// Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read&lt;Type&gt; accessible from LaTeXML::Package::Pool
     // is defined.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>descriptor: <span class="prelude-ty">Option</span>&lt;Rc&lt;Parameter&gt;&gt; = with_mapping(<span class="string">"PARAMETER_TYPES"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name, |looked_up_mapping|
+    </span><span class="kw">let </span><span class="kw-2">mut </span>descriptor: <span class="prelude-ty">Option</span>&lt;Rc&lt;Parameter&gt;&gt; = with_mapping_sym(arena::pin_static(<span class="string">"PARAMETER_TYPES"</span>), <span class="self">self</span>.name, |looked_up_mapping|
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) = looked_up_mapping {
         <span class="prelude-val">Some</span>(Rc::clone(d_lookup))
       } <span class="kw">else </span>{
         <span class="prelude-val">None
       </span>});
     <span class="kw">if </span>descriptor.is_none() {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(captures) = OPTIONAL_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
-        <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
-        descriptor = with_mapping(<span class="string">"PARAMETER_TYPES"</span>, basetype, |basetype_param_opt|
+      <span class="comment">// TODO: see discussion on line 168
+      </span><span class="kw">let </span>basetype_opt = arena::with(<span class="self">self</span>.name, |name| OPTIONAL_REGEX.captures(name).map(|captures|
+        captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string())).map(arena::pin);
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(basetype) = basetype_opt {
+        descriptor = with_mapping_sym(arena::pin_static(<span class="string">"PARAMETER_TYPES"</span>), basetype, |basetype_param_opt|
         <span class="kw">match </span>basetype_param_opt {
           <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(d_lookup.clone())),
-          <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Read{}"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)) {
+          <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span>arena::with(<span class="self">self</span>.name, |name| <span class="macro">s!</span>(<span class="string">"Read{name}"</span>))) {
             <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Rc::new(Parameter {
               reader,
               optional: <span class="bool-val">true</span>,
               ..Parameter::default()
             }))),
-            <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Read{}"</span>, basetype)) {
+            <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span>arena::with(basetype, |type_str| <span class="macro">s!</span>(<span class="string">"Read{type_str}"</span>))) {
               <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Rc::new(Parameter {
                 reader,
                 optional: <span class="bool-val">true</span>,
@@ -750,40 +792,52 @@
           },
         })<span class="question-mark">?</span>;
         <span class="self">self</span>.optional = <span class="bool-val">true</span>;
-      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = SKIP_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
-        <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
-        descriptor = with_mapping(<span class="string">"PARAMETER_TYPES"</span>, basetype, |basetype_param_opt|
-        <span class="kw">match </span>basetype_param_opt {
-          <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Some</span>(d_lookup.clone()),
-          <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
-            <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Rc::new(Parameter {
-              reader,
-              optional: <span class="bool-val">true</span>,
-              novalue: <span class="bool-val">true</span>,
-              ..Parameter::default()
-            })),
-            <span class="prelude-val">None </span>=&gt; Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Read{}"</span>, basetype)).map(|reader| {
-              Rc::new(Parameter {
+      } <span class="kw">else </span>{
+        <span class="comment">// TODO: This looks like a code smell. Do we need a new arena method?
+        // We start with a ticket, do a non-allocation operation on the underlying &amp;str,
+        // Then want to ping the newly acquired &amp;str slice in the arena. Clearly that is only possible
+        // *AFTER* the original &amp;str is released, but how do we avoid allocating? 
+        // Is this a use for unsafe{} or is there a more idiomatic way?
+        // Maybe, with_mut... which allows an inner pin?
+        </span><span class="kw">let </span>basetype_opt = arena::with(<span class="self">self</span>.name, |name|
+          SKIP_REGEX.captures(name).map(|captures|
+            captures.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()).to_string())).map(arena::pin);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(basetype) = basetype_opt {
+          descriptor = with_mapping_sym(arena::pin_static(<span class="string">"PARAMETER_TYPES"</span>), basetype, |basetype_param_opt|
+          <span class="kw">match </span>basetype_param_opt {
+            <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Some</span>(d_lookup.clone()),
+            <span class="kw">_ </span>=&gt; <span class="kw">match </span>arena::with(<span class="self">self</span>.name, |name| Parameter::check_reader_function(name)) {
+              <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Rc::new(Parameter {
                 reader,
                 optional: <span class="bool-val">true</span>,
                 novalue: <span class="bool-val">true</span>,
                 ..Parameter::default()
-              })
-            }),
-          },
-        });
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_desc) = descriptor {
-          <span class="self">self</span>.novalue = <span class="bool-val">true</span>;
-          <span class="self">self</span>.optional = <span class="bool-val">true</span>;
-        }
-      } <span class="kw">else </span>{
-        descriptor =
-          Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Read{}"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)).map(|reader| {
-            Rc::new(Parameter {
-              reader,
-              ..Parameter::default()
-            })
+              })),
+              <span class="prelude-val">None </span>=&gt; Parameter::check_reader_function(
+                <span class="kw-2">&amp;</span>arena::with(basetype,|type_str| <span class="macro">s!</span>(<span class="string">"Read{type_str}"</span>))).map(|reader| {
+                  Rc::new(Parameter {
+                    reader,
+                    optional: <span class="bool-val">true</span>,
+                    novalue: <span class="bool-val">true</span>,
+                    ..Parameter::default()
+                  })
+                }),
+            },
           });
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_desc) = descriptor {
+            <span class="self">self</span>.novalue = <span class="bool-val">true</span>;
+            <span class="self">self</span>.optional = <span class="bool-val">true</span>;
+          }
+        } <span class="kw">else </span>{
+          descriptor =
+            Parameter::check_reader_function(<span class="kw-2">&amp;</span>arena::with(<span class="self">self</span>.name, |name| <span class="macro">s!</span>(<span class="string">"Read{name}"</span>)))
+              .map(|reader| {
+              Rc::new(Parameter {
+                reader,
+                ..Parameter::default()
+              })
+            });
+        }
       }
     }
     <span class="kw">match </span>descriptor {
@@ -900,7 +954,7 @@
       <span class="comment">// Deyan: Special exception, which may motivate switching the reader type to Option&lt;Tokens&gt; in
       // the long-run        Until *may* have a value, but it also may *not*, both OK. So...
       // except it from the error message here
-      </span><span class="kw">if </span>!<span class="self">self</span>.name.starts_with(<span class="string">"Until"</span>) {
+      </span><span class="kw">if </span>!arena::with(<span class="self">self</span>.name,|name| name.starts_with(<span class="string">"Until"</span>)) {
         <span class="kw">let </span>fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
         <span class="macro">Error!</span>(
           <span class="string">"expected"</span>,
@@ -1008,8 +1062,31 @@
   /// where the argument may already have been tokenized before the KeyVals
   /// (and the parameter types for the keys) had a chance to properly parse.
   </span><span class="comment">// Yuck!
-  </span><span class="kw">pub fn </span>reparse(<span class="kw-2">&amp;</span><span class="self">self</span>, _value: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="macro">todo!</span>()
+  </span><span class="kw">pub fn </span>reparse(<span class="kw-2">&amp;</span><span class="self">self</span>, tokens: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt; {
+    <span class="comment">// Needs neutralization, since the keyvals may have been tokenized already???
+    // perhaps a better test would involve whether $tokens is, in fact, Tokens?
+    </span><span class="kw">if </span><span class="self">self</span>.name == arena::pin_static(<span class="string">"Plain"</span>) || <span class="self">self</span>.predigest.is_some() {    <span class="comment">// Gack!
+      </span><span class="prelude-val">Ok</span>(ArgWrap::Tokens(tokens)) }
+    <span class="kw">else if </span><span class="self">self</span>.semiverbatim.is_some() { <span class="comment">// Needs neutralization
+       // but maybe specific to catcodes
+       </span><span class="prelude-val">Ok</span>(ArgWrap::Tokens(
+        tokens.neutralize(<span class="self">self</span>.semiverbatim.as_ref().unwrap().as_slice())))
+    } <span class="kw">else </span>{
+      gullet::reading_from_mouth(Mouth::default(), || { <span class="comment">// start with empty mouth
+        </span><span class="kw">let </span><span class="kw-2">mut </span>tokens = tokens.unlist();
+        <span class="kw">if </span>!tokens.is_empty() <span class="comment">// Strip outer braces from dimensions &amp; friends
+          </span>&amp;&amp; arena::with(<span class="self">self</span>.name,|name| <span class="macro">matches!</span>(name, <span class="string">"Number"</span>|<span class="string">"Dimension"</span>|<span class="string">"Glue"</span>|<span class="string">"MuDimension"</span>|<span class="string">"MuGlue"</span>))
+          &amp;&amp; tokens.first().map(|t| t.get_catcode() == Catcode::BEGIN).unwrap_or(<span class="bool-val">false</span>) 
+          &amp;&amp; tokens.last().map(|t| t.get_catcode() == Catcode::END).unwrap_or(<span class="bool-val">false</span>) {
+          tokens.remove(<span class="number">0</span>);
+          tokens.pop(); 
+        }
+        gullet::unread_vec(tokens); <span class="comment">// but put back tokens to be read
+        </span><span class="kw">let </span>value = <span class="self">self</span>.read(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+        gullet::skip_spaces()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(value)
+      })
+    }
   }
 }
 
@@ -1039,7 +1116,6 @@
     }
     result
   }
-
 }
 
 <span class="kw">impl </span>Parameters {
@@ -1122,6 +1198,10 @@
       <span class="prelude-val">Ok</span>(values)
     })
   }
+
+  <span class="kw">pub fn </span>as_keysets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
+    <span class="self">self</span>.<span class="number">0</span>.iter().map(|p| p.stringify()).collect()
+  }
 }
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Parameters {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
@@ -1152,14 +1232,10 @@
 
 <span class="kw">impl </span>ToTokens <span class="kw">for </span>Parameter {
   <span class="kw">fn </span>to_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>, stream: <span class="kw-2">&amp;mut </span>TokenStream) {
-    <span class="kw">let </span>name = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.name {
-      Cow::Borrowed(v) =&gt; <span class="macro">quote!</span>(Cow::Borrowed(#v)),
-      Cow::Owned(v) =&gt; <span class="macro">quote!</span>(Cow::Borrowed(#v)),
-    };
-    <span class="kw">let </span>spec = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.spec {
-      Cow::Borrowed(v) =&gt; <span class="macro">quote!</span>(Cow::Borrowed(#v)),
-      Cow::Owned(v) =&gt; <span class="macro">quote!</span>(Cow::Borrowed(#v)),
-    };
+    <span class="kw">let </span>name = arena::with(<span class="self">self</span>.name,|name|
+      <span class="macro">quote!</span>(arena::pin_static(#name)));
+    <span class="kw">let </span>spec = arena::with(<span class="self">self</span>.spec,|spec|
+      <span class="macro">quote!</span>(arena::pin_static(#spec)));
     <span class="kw">let </span>extra = <span class="kw-2">&amp;</span><span class="self">self</span>.extra;
     <span class="kw">let </span>inner = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.inner {
       <span class="prelude-val">None </span>=&gt; <span class="macro">quote!</span>(<span class="prelude-val">None</span>),

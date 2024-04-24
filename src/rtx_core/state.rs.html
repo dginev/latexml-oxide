@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/state.rs`."><title>state.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (385fa9d84 2024-04-04)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/state.rs`."><title>state.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -2239,6 +2237,15 @@
 <a href="#2237" id="2237">2237</a>
 <a href="#2238" id="2238">2238</a>
 <a href="#2239" id="2239">2239</a>
+<a href="#2240" id="2240">2240</a>
+<a href="#2241" id="2241">2241</a>
+<a href="#2242" id="2242">2242</a>
+<a href="#2243" id="2243">2243</a>
+<a href="#2244" id="2244">2244</a>
+<a href="#2245" id="2245">2245</a>
+<a href="#2246" id="2246">2246</a>
+<a href="#2247" id="2247">2247</a>
+<a href="#2248" id="2248">2248</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
@@ -2247,10 +2254,9 @@
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt::{<span class="self">self</span>, Display};
 <span class="kw">use </span>std::rc::Rc;
-<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -2301,14 +2307,14 @@
 });
 
 <span class="doccomment">/// installation scope in the state_tables
-</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>Scope {
   <span class="doccomment">/// globally visible, does not expire
   </span>Global,
   <span class="doccomment">/// globally visible, but expires at the end of the current group
   </span>Local,
   <span class="doccomment">/// a named scope - visible only when explicitly activated
-  </span>Named(String),
+  </span>Named(SymStr),
 }
 
 <span class="doccomment">/// the kinds of tables bookkept in the State
@@ -2386,9 +2392,9 @@
 }
 
 <span class="doccomment">/// Ledger for stacked assignments
-</span><span class="kw">pub type </span>AssignmentCount = HashMap&lt;SymbolU32, usize&gt;;
+</span><span class="kw">pub type </span>AssignmentCount = HashMap&lt;SymStr, usize&gt;;
 <span class="doccomment">/// The `(table_name, key, value)` contents of a stored table of assignments
-</span><span class="kw">pub type </span>StashTable = Vec&lt;(TableName, SymbolU32, Stored)&gt;;
+</span><span class="kw">pub type </span>StashTable = Vec&lt;(TableName, SymStr, Stored)&gt;;
 <span class="attr">#[derive(Debug, Clone, Default)]
 </span><span class="doccomment">/// For each of several tables (being "value", "meaning", "catcode" or other space of names),
 /// each table maintains the bound values, and "undo" defines the stack frames
@@ -2450,7 +2456,7 @@
 ///  meaning: The definition assocated with `key`, usually a control-sequence.
 ///  stash &amp; stash_active: support named scopes
 ///      (see also activateScope &amp; deactivateScope)
-</span><span class="kw">pub type </span>Table = HashMap&lt;SymbolU32, VecDeque&lt;Stored&gt;&gt;;
+</span><span class="kw">pub type </span>Table = HashMap&lt;SymStr, VecDeque&lt;Stored&gt;&gt;;
 
 <span class="doccomment">/// The state efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
@@ -2474,8 +2480,8 @@
   </span>undo: VecDeque&lt;UndoFrame&gt;,
   <span class="comment">// stateful runtime - data structures
   </span><span class="doccomment">/// the schema-derived model used for the current document
-  </span>prefixes: HashMap&lt;SymbolU32, bool&gt;, <span class="comment">// ?
-  </span><span class="kw">pub </span>tag_properties: HashMap&lt;SymbolU32, TagOptions&gt;,
+  </span>prefixes: HashMap&lt;SymStr, bool&gt;, <span class="comment">// ?
+  </span><span class="kw">pub </span>tag_properties: HashMap&lt;SymStr, TagOptions&gt;,
   <span class="doccomment">/// an optional indirect model for long-distance relationships
   </span><span class="kw">pub </span>indirect_model: <span class="prelude-ty">Option</span>&lt;IndirectModel&gt;,
   <span class="doccomment">/// Document-related resources declared during core conversion, pending until XML is finalized
@@ -2739,7 +2745,7 @@
   <span class="kw">fn </span>assign_internal(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     table_name: TableName,
-    key: SymbolU32,
+    key: SymStr,
     value: Stored,
     <span class="kw-2">mut </span>scope_opt: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
   ) {
@@ -2833,26 +2839,25 @@
         </span>defs.push_front(value);
       },
       Scope::Named(scope_name) =&gt; {
-        <span class="kw">let </span>scope_sym = arena::pin(scope_name);
         <span class="comment">// initialize stash if empty
-        </span><span class="kw">let </span>needs_init = <span class="kw">match </span><span class="self">self</span>.stash.get(<span class="kw-2">&amp;</span>scope_sym) {
+        </span><span class="kw">let </span>needs_init = <span class="kw">match </span><span class="self">self</span>.stash.get(<span class="kw-2">&amp;</span>scope_name) {
           <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
           <span class="prelude-val">Some</span>(v) =&gt; v.is_empty(),
         };
         <span class="kw">if </span>needs_init {
           <span class="self">self</span>.assign_internal(
             TableName::Stash,
-            scope_sym,
+            scope_name,
             Stored::Stash(Vec::new()),
             <span class="prelude-val">Some</span>(Scope::Global),
           );
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Stash(<span class="kw-2">ref mut </span>stash)) =
-          <span class="self">self</span>.stash.get_mut(<span class="kw-2">&amp;</span>scope_sym).as_mut().unwrap().get_mut(<span class="number">0</span>)
+          <span class="self">self</span>.stash.get_mut(<span class="kw-2">&amp;</span>scope_name).as_mut().unwrap().get_mut(<span class="number">0</span>)
         {
           stash.push((table_name, key, value.clone()));
         }
-        <span class="kw">let </span>has_active = <span class="kw">match </span><span class="self">self</span>.stash_active.get(<span class="kw-2">&amp;</span>scope_sym) {
+        <span class="kw">let </span>has_active = <span class="kw">match </span><span class="self">self</span>.stash_active.get(<span class="kw-2">&amp;</span>scope_name) {
           <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
           <span class="prelude-val">Some</span>(v) =&gt; !v.is_empty(),
         };
@@ -2886,7 +2891,7 @@
       },
     }
   }
-  <span class="kw">pub fn </span>lookup_value_sym(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>SymbolU32) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt; {
+  <span class="kw">pub fn </span>lookup_value_sym(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt; {
     <span class="kw">match </span><span class="self">self</span>.value.get(key) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(vvec) =&gt; <span class="kw">match </span>vvec.front() {
@@ -2933,12 +2938,12 @@
     }
   }
 
-  <span class="kw">pub fn </span>lookup_mapping_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, map: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
+  <span class="kw">pub fn </span>lookup_mapping_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, map: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;SymStr&gt; {
     <span class="kw">let </span>map_sym = arena::pin(map);
     <span class="kw">match </span><span class="self">self</span>.value.get(<span class="kw-2">&amp;</span>map_sym) {
       <span class="prelude-val">None </span>=&gt; Vec::new(),
       <span class="prelude-val">Some</span>(map_vec) =&gt; <span class="kw">match </span>map_vec.front() {
-        <span class="prelude-val">Some</span>(Stored::HashStored(h)) =&gt; h.keys().map(String::as_str).collect(),
+        <span class="prelude-val">Some</span>(Stored::HashStored(h)) =&gt; h.keys().copied().collect(),
         <span class="kw">_ </span>=&gt; Vec::new(),
       },
     }
@@ -2956,7 +2961,7 @@
   <span class="kw">fn </span>lookup_definition_internal&lt;<span class="lifetime">'def</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'def </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">'def </span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>VecDeque&lt;Stored&gt;&gt; {
     <span class="kw">let </span>cc = key.get_catcode();
     <span class="kw">let </span>name = key.get_sym();
-    <span class="kw">let </span>lookupname: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; = <span class="kw">if </span>(cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
+    <span class="kw">let </span>lookupname: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = <span class="kw">if </span>(cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
       <span class="kw">if </span>name == <span class="kw-2">*</span>EMPTY_SYM {
         <span class="prelude-val">None
       </span>} <span class="kw">else </span>{
@@ -2972,7 +2977,7 @@
       <span class="prelude-val">None
     </span>}
   }
-  <span class="kw">pub fn </span>ensure_tag_property(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: SymbolU32) -&gt; <span class="kw-2">&amp;mut </span>TagOptions {
+  <span class="kw">pub fn </span>ensure_tag_property(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: SymStr) -&gt; <span class="kw-2">&amp;mut </span>TagOptions {
     <span class="self">self
     </span>.tag_properties
     .entry(tag)
@@ -3139,7 +3144,7 @@
 
 <span class="doccomment">/// assigns a `Stored` value at the given (arena ticket!) key and scope
 </span><span class="kw">pub fn </span>assign_value_sym&lt;T: Into&lt;Stored&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(
-  key: SymbolU32,
+  key: SymStr,
   value: T,
   scope: S,
 ) {
@@ -3276,9 +3281,9 @@
     <span class="prelude-val">Some</span>(v) =&gt; v.into(),
   }
 }
-<span class="doccomment">/// like `lookup_value`, but casts the entry into a SymbolU32 from the string interner
+<span class="doccomment">/// like `lookup_value`, but casts the entry into a SymStr from the string interner
 ///  (`EMPTY_SYM` if None)
-</span><span class="kw">pub fn </span>lookup_string_sym(key: <span class="kw-2">&amp;</span>str) -&gt; SymbolU32 {
+</span><span class="kw">pub fn </span>lookup_string_sym(key: <span class="kw-2">&amp;</span>str) -&gt; SymStr {
   <span class="kw">let </span>state = <span class="macro">state!</span>();
   <span class="kw">match </span>state.lookup_value(key) {
     <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>EMPTY_SYM,
@@ -3552,21 +3557,20 @@
     state.assign_internal(
       TableName::Value,
       map_sym,
-      Stored::HashStored(HashMap::default()),
+      Stored::HashStored(SymHashMap::default()),
       <span class="prelude-val">Some</span>(Scope::Global),
     );
   }
   <span class="kw">let </span>map_store = state.value.get_mut(<span class="kw-2">&amp;</span>map_sym).unwrap();
   <span class="comment">// TODO: What is the right abstraction here? this is hacky
-  </span><span class="kw">let </span><span class="kw-2">mut </span>stub_hash = HashMap::default();
+  </span><span class="kw">let </span><span class="kw-2">mut </span>stub_hash = SymHashMap::default();
   <span class="kw">let </span>mapping = <span class="kw">match </span><span class="kw-2">*</span>map_store.front_mut().unwrap() {
     Stored::HashStored(<span class="kw-2">ref mut </span>mapping) =&gt; mapping,
     <span class="kw">_ </span>=&gt; <span class="kw-2">&amp;mut </span>stub_hash,
   };
-
   <span class="kw">match </span>value {
     <span class="prelude-val">None </span>=&gt; mapping.remove(key),
-    <span class="prelude-val">Some</span>(v) =&gt; mapping.insert(key.to_string(), v.into()),
+    <span class="prelude-val">Some</span>(v) =&gt; mapping.insert(key, v.into()),
   };
 }
 
@@ -3627,7 +3631,7 @@
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
   }
 }
-<span class="kw">pub fn </span>lookup_mathcode_sym(key_sym: <span class="kw-2">&amp;</span>SymbolU32) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
+<span class="kw">pub fn </span>lookup_mathcode_sym(key_sym: <span class="kw-2">&amp;</span>SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
   <span class="kw">match </span><span class="macro">state!</span>().mathcode.get(key_sym) {
     <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
       <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
@@ -3959,8 +3963,9 @@
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
 </span><span class="kw">pub fn </span>get_frame_depth() -&gt; usize {
-  <span class="macro">state!</span>().undo.iter().filter(|frame| !frame.locked).count() - <span class="number">1
-</span>}
+  <span class="macro">state!</span>().undo.iter().filter(|frame| !frame.locked).count()
+    .saturating_sub(<span class="number">1</span>)
+}
 <span class="doccomment">/// begins a semiverbatim frame, neutralizing the usual + requested characters
 </span><span class="kw">pub fn </span>begin_semiverbatim(extraspecials: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[char]&gt;) {
   <span class="comment">// Is this a good/safe enough shorthand, or should we really be doing beginMode?
@@ -4046,7 +4051,7 @@
 
 <span class="comment">// #======================================================================
 </span><span class="doccomment">/// Activates all stashed definitions for the named scope. No-op if the scope is already active.
-</span><span class="kw">pub fn </span>activate_scope(scope: SymbolU32) {
+</span><span class="kw">pub fn </span>activate_scope(scope: SymStr) {
   <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
   <span class="comment">// do not re-activate if already active.
   </span><span class="kw">if let </span><span class="prelude-val">Some</span>(stash_active_entry) = state.stash_active.get(<span class="kw-2">&amp;</span>scope) {
@@ -4099,7 +4104,7 @@
 
 </span><span class="doccomment">/// Removes any definitions that were associated with the named `scope`.
 /// Normally not needed, since a scopes definitions are locally bound anyway.
-</span><span class="kw">pub fn </span>deactivate_scope(scope: SymbolU32) {
+</span><span class="kw">pub fn </span>deactivate_scope(scope: SymStr) {
   <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
   <span class="kw">let </span>scope_exists = <span class="kw">match </span>state.stash_active.get(<span class="kw-2">&amp;</span>scope) {
     <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
@@ -4166,11 +4171,11 @@
   }
 }
 <span class="doccomment">/// return all known named scopes
-</span><span class="kw">pub fn </span>get_known_scopes() -&gt; Vec&lt;SymbolU32&gt; {
+</span><span class="kw">pub fn </span>get_known_scopes() -&gt; Vec&lt;SymStr&gt; {
   <span class="macro">state!</span>().stash.keys().copied().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 }
 <span class="doccomment">/// return the currently activated named scopes
-</span><span class="kw">pub fn </span>get_active_scopes() -&gt; Vec&lt;SymbolU32&gt; {
+</span><span class="kw">pub fn </span>get_active_scopes() -&gt; Vec&lt;SymStr&gt; {
   <span class="macro">state!</span>().stash_active.keys().copied().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 }
 
@@ -4247,7 +4252,7 @@
 </span><span class="kw">pub fn </span>compute_indirect_model() -&gt; IndirectModel {
   <span class="kw">let </span><span class="kw-2">mut </span>imodel: IndirectModel = HashMap::default();
   <span class="comment">// Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-  </span><span class="kw">let </span><span class="kw-2">mut </span>openable: HashSet&lt;SymbolU32&gt; = HashSet::default();
+  </span><span class="kw">let </span><span class="kw-2">mut </span>openable: HashSet&lt;SymStr&gt; = HashSet::default();
   <span class="kw">for </span>tag <span class="kw">in </span>model::get_tags() {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = <span class="macro">state!</span>().tag_properties.get(<span class="kw-2">&amp;</span>tag) {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="bool-val">true</span>) = x.auto_open {
@@ -4257,12 +4262,12 @@
   }
 
   <span class="kw">for </span>tag <span class="kw">in </span>model::get_tags() {
-    <span class="kw">let </span><span class="kw-2">mut </span>desc: HashMap&lt;SymbolU32, HashMap&lt;SymbolU32, usize&gt;&gt; = HashMap::default();
+    <span class="kw">let </span><span class="kw-2">mut </span>desc: HashMap&lt;SymStr, HashMap&lt;SymStr, usize&gt;&gt; = HashMap::default();
     <span class="kw">crate</span>::common::model::compute_indirect_model_aux(tag, <span class="prelude-val">None</span>, <span class="number">1</span>, <span class="kw-2">&amp;mut </span>openable, <span class="kw-2">&amp;mut </span>desc);
-    <span class="kw">let </span>desc_keys: Vec&lt;SymbolU32&gt; = desc.keys().copied().collect();
+    <span class="kw">let </span>desc_keys: Vec&lt;SymStr&gt; = desc.keys().copied().collect();
     <span class="kw">for </span>kid <span class="kw">in </span>desc_keys {
       <span class="kw">let </span><span class="kw-2">mut </span>best = <span class="number">0</span>; <span class="comment">// Find best path to $kid.
-      </span><span class="kw">let </span>desc_kid_keys: Vec&lt;SymbolU32&gt; = desc
+      </span><span class="kw">let </span>desc_kid_keys: Vec&lt;SymStr&gt; = desc
         .entry(kid)
         .or_default()
         .keys()
@@ -4345,18 +4350,18 @@
 <span class="comment">// Ported from Perl's "local" declarations
 
 
-</span><span class="kw">pub fn </span>get_tag_property(tag: SymbolU32) -&gt; TagOptions {
+</span><span class="kw">pub fn </span>get_tag_property(tag: SymStr) -&gt; TagOptions {
   <span class="macro">state_mut!</span>().ensure_tag_property(tag).clone()
 }
-<span class="kw">pub fn </span>ensure_tag_property(tag: SymbolU32) {
+<span class="kw">pub fn </span>ensure_tag_property(tag: SymStr) {
   <span class="macro">state_mut!</span>().ensure_tag_property(tag);
 }
 
-<span class="kw">pub fn </span>with_tag_property&lt;R, FnR&gt;(tag: SymbolU32, caller: FnR) -&gt; R
+<span class="kw">pub fn </span>with_tag_property&lt;R, FnR&gt;(tag: SymStr, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>TagOptions&gt;) -&gt; R  {
     caller(<span class="macro">state!</span>().tag_properties.get(<span class="kw-2">&amp;</span>tag))
 }
-<span class="kw">pub fn </span>with_tag_property_mut&lt;R, FnR&gt;(tag: SymbolU32, caller: FnR) -&gt; R
+<span class="kw">pub fn </span>with_tag_property_mut&lt;R, FnR&gt;(tag: SymStr, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>TagOptions) -&gt; R  {
   ensure_tag_property(tag);
   caller(<span class="macro">state_mut!</span>().tag_properties.get_mut(<span class="kw-2">&amp;</span>tag).unwrap())
@@ -4390,7 +4395,7 @@
 <span class="kw">pub fn </span>reset_pending_resources() {
   <span class="macro">state_mut!</span>().pending_resources = Vec::new();
 }
-<span class="kw">pub fn </span>get_indirect_model_relationship(tag: SymbolU32, childtag: SymbolU32) -&gt; <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; {
+<span class="kw">pub fn </span>get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
   <span class="kw">match </span><span class="macro">state!</span>().indirect_model.as_ref().unwrap().get(<span class="kw-2">&amp;</span>tag) {
     <span class="prelude-val">Some</span>(sub_m) =&gt; sub_m.get(<span class="kw-2">&amp;</span>childtag).copied(),
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
@@ -4451,8 +4456,19 @@
   })
 }
 
+<span class="kw">pub fn </span>with_mapping_sym&lt;R,FnR&gt;(map: SymStr, key: SymStr, caller: FnR) -&gt; R
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;) -&gt; R {
+  caller(<span class="kw">match </span><span class="macro">state!</span>().value.get(<span class="kw-2">&amp;</span>map) {
+    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+    <span class="prelude-val">Some</span>(map_vec) =&gt; <span class="kw">match </span>map_vec.front() {
+      <span class="prelude-val">Some</span>(Stored::HashStored(h)) =&gt; h.get_sym(<span class="kw-2">&amp;</span>key),
+      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+    },
+  })
+}
+
 <span class="kw">pub fn </span>with_mapping_keys&lt;R,FnR&gt;(map: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(Vec&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; R {
+<span class="kw">where </span>FnR: FnOnce(Vec&lt;SymStr&gt;) -&gt; R {
   caller(<span class="macro">state!</span>().lookup_mapping_keys(map))
 }
 
@@ -4461,7 +4477,7 @@
    caller(<span class="macro">state!</span>().lookup_font_info(key))
 }
 
-<span class="kw">pub fn </span>get_input_encoding() -&gt; <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; {
+<span class="kw">pub fn </span>get_input_encoding() -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
   <span class="macro">state!</span>().input_encoding.as_ref().map(arena::pin)
 }
 <span class="kw">pub fn </span>set_input_encoding(val: <span class="prelude-ty">Option</span>&lt;String&gt;) {

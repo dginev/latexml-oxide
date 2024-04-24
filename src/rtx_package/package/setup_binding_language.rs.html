@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/setup_binding_language.rs`."><title>setup_binding_language.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (385fa9d84 2024-04-04)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/setup_binding_language.rs`."><title>setup_binding_language.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_package/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -2313,6 +2311,8 @@
 <a href="#2311" id="2311">2311</a>
 <a href="#2312" id="2312">2312</a>
 <a href="#2313" id="2313">2313</a>
+<a href="#2314" id="2314">2314</a>
+<a href="#2315" id="2315">2315</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LoadDefinitions {
   (<span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -2646,7 +2646,7 @@
     <span class="kw">let </span>closure : PrimitiveBody = PrimitiveBody::Closure(Rc::new(
       | _args: Vec&lt;ArgWrap&gt;| {
       Tbox::new(arena::pin_static(<span class="macro-nonterminal">$replacement</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-        <span class="macro">Tokens!</span>(), HashMap::default())
+        <span class="macro">Tokens!</span>(), SymHashMap::default())
         .into_digested_result()
     }));
     def_primitive(cs, params, <span class="prelude-val">Some</span>(closure), options)<span class="question-mark">?</span>;
@@ -2686,6 +2686,12 @@
         <span class="macro-nonterminal">$body</span>.into_digested_result()
       }));
     def_primitive(<span class="macro-nonterminal">$cs</span>, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(closure), options)<span class="question-mark">?</span>;
+  }};
+  <span class="comment">// Case: cs-noparams with replacement expr
+  </span>(<span class="macro-nonterminal">$cs</span>:expr, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$body</span>:literal, $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
+    <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {PrimitiveOptions,});
+    <span class="kw">let </span>pbody = PrimitiveBody::String(arena::pin_static(<span class="macro-nonterminal">$body</span>));
+    def_primitive(<span class="macro-nonterminal">$cs</span>, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(pbody), options)<span class="question-mark">?</span>;
   }};
   <span class="comment">// Case: no replacement
   </span>(<span class="macro-nonterminal">$proto</span>:literal, <span class="prelude-val">None </span>$(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
@@ -3164,7 +3170,7 @@
       assign_mapping(<span class="string">"accent_combiner_below"</span>, <span class="macro-nonterminal">$standalonechar</span>, <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$combiningchar</span>));
     }
     <span class="kw">let </span>plain_param = <span class="prelude-val">Some</span>(Parameters::new(<span class="macro">vec!</span>[Parameter {
-      name: Cow::Borrowed(<span class="string">"Plain"</span>), spec: Cow::Borrowed(<span class="string">"{}"</span>), ..Parameter::default()
+      name: arena::pin_static(<span class="string">"Plain"</span>), spec: arena::pin_static(<span class="string">"{}"</span>), ..Parameter::default()
       }.init()<span class="question-mark">?
     </span>]));
     def_macro(<span class="macro">T_CS!</span>(<span class="macro-nonterminal">$accent</span>), plain_param, ExpansionBody::Tokens(<span class="macro">Tokens!</span>(
@@ -3475,8 +3481,8 @@
   };
   <span class="comment">// the triple expr case should be near the end, as it matches too many cases.
   // It's an internal use of DefMacro e.g. with 3 variable name arguments
-  </span>(<span class="macro-nonterminal">$cs</span>:expr, <span class="macro-nonterminal">$replacement</span>:expr, <span class="macro-nonterminal">$expansion</span>:expr) =&gt; {{
-    def_macro(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$replacement</span>, <span class="macro-nonterminal">$expansion</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+  </span>(<span class="macro-nonterminal">$cs</span>:expr, <span class="macro-nonterminal">$parameters</span>:expr, <span class="macro-nonterminal">$expansion</span>:expr) =&gt; {{
+    def_macro(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$parameters</span>, <span class="macro-nonterminal">$expansion</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   }};
   <span class="comment">// The least-specified option-parsing cases come last due to the TT munchers accepting any inputs
   </span>(<span class="macro-nonterminal">$proto</span>:literal, <span class="prelude-val">None </span>$(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {
@@ -3578,7 +3584,7 @@
     <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {ConstructorOptions,});
     <span class="macro">DefEnvironmentIWO!</span>(<span class="macro-nonterminal">$proto</span>,
       <span class="prelude-val">Some</span>(Rc::new(|<span class="macro-nonterminal">$document</span>: <span class="kw-2">&amp;mut </span>Document, <span class="macro-nonterminal">$args</span>: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
-        <span class="macro-nonterminal">$props</span>: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;| <span class="macro-nonterminal">$body
+        <span class="macro-nonterminal">$props</span>: <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;| <span class="macro-nonterminal">$body
       </span>)),
       options);
   }};
@@ -3624,7 +3630,7 @@
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> DefParameterType {
   (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>)=&gt;(
-    <span class="macro">DefParameterTypeWO!</span>(<span class="macro-nonterminal">$name</span>, <span class="macro">NewDefault!</span>(Parameter, name =&gt; Cow::Borrowed(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)),
+    <span class="macro">DefParameterTypeWO!</span>(<span class="macro-nonterminal">$name</span>, <span class="macro">NewDefault!</span>(Parameter, name =&gt; arena::pin_static(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)),
     $(<span class="macro-nonterminal">$key</span>=&gt;<span class="macro-nonterminal">$value</span>),<span class="kw-2">*</span>)));
   <span class="comment">// with reader as explicit sub
   </span>(<span class="macro-nonterminal">$name</span>:ident, sub[<span class="macro-nonterminal">$inner</span>:ident, <span class="macro-nonterminal">$extra</span>:ident] <span class="macro-nonterminal">$body</span>:block) =&gt; (
@@ -3634,7 +3640,7 @@
   </span>(<span class="macro-nonterminal">$name</span>:ident, sub[<span class="macro-nonterminal">$inner</span>:ident, <span class="macro-nonterminal">$extra</span>:ident] <span class="macro-nonterminal">$body</span>:block, $(<span class="macro-nonterminal">$input</span>:tt)+) =&gt; (
       <span class="kw">let </span><span class="kw-2">mut </span>paramtype_options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {Parameter,});
       paramtype_options.reader = <span class="macro">reader!</span>(<span class="macro-nonterminal">$inner</span>, <span class="macro-nonterminal">$extra</span>, <span class="macro-nonterminal">$body</span>);
-      paramtype_options.name = Cow::Borrowed(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>));
+      paramtype_options.name = arena::pin_static(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>));
       <span class="macro">DefParameterTypeWO!</span>(<span class="macro-nonterminal">$name</span>, paramtype_options));
 }
 
@@ -3751,10 +3757,9 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> DefKeyVal {
   (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr) =&gt; {{
-    <span class="kw">let </span>prefix = <span class="string">"KV"</span>;
     ::rtx_core::keyval::define(
       KeyvalConfig {
-        prefix,
+        prefix: <span class="string">"KV"</span>,
         keyset: <span class="macro-nonterminal">$keyset</span>,
         key: <span class="macro-nonterminal">$key</span>,
         vtype: <span class="macro-nonterminal">$vtype</span>,
@@ -3763,26 +3768,23 @@
       })<span class="question-mark">?</span>;
   }};
   (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr, <span class="macro-nonterminal">$default</span>:expr) =&gt; {{
-    <span class="comment">// extract the prefix
-    // my $prefix = $options{prefix} || 'KV';
-    </span><span class="kw">let </span>prefix = <span class="string">"KV"</span>;
     ::rtx_core::keyval::define(
       KeyvalConfig {
-        prefix,
+        prefix: <span class="string">"KV"</span>,
         keyset: <span class="macro-nonterminal">$keyset</span>,
         key: <span class="macro-nonterminal">$key</span>,
         vtype: <span class="macro-nonterminal">$vtype</span>,
         default: <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$default</span>),
         ..KeyvalConfig::default()
-      },
-      st,
-    )<span class="question-mark">?</span>;
+      })<span class="question-mark">?</span>;
   }};
   (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr, <span class="macro-nonterminal">$default</span>:expr, <span class="macro-nonterminal">$options</span>:tt) =&gt; {
     <span class="comment">// TODO: explicit $options with prefix logic
-    // should we tokenize the code?
-    // let code_expansion = ExpansionBody::Tokens(tokenize(
-    // code.unwrap_or(""), Some()));
+    // TODO: extract the prefix
+    // my $prefix = $options{prefix} || 'KV';
+    // let prefix = "KV";
+    // delete $options{prefix};
+    // define($prefix, $keyset, $key, $vtype, $default, %options);
     </span><span class="macro">todo!</span>();
   };
 }

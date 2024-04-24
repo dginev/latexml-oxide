@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/dialect.rs`."><title>dialect.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (385fa9d84 2024-04-04)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1486,6 +1484,7 @@
 <a href="#1484" id="1484">1484</a>
 <a href="#1485" id="1485">1485</a>
 <a href="#1486" id="1486">1486</a>
+<a href="#1487" id="1487">1487</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1498,6 +1497,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::binding::counter::dialect::step_counter;
 <span class="kw">use </span><span class="kw">crate</span>::binding::def::traits::{IntoDigestedResult, IntoOption};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -1698,7 +1698,7 @@
     assign_mathcode(
       cs.with_str(|cstr| cstr.chars().next().unwrap()),
       <span class="number">0x8000u16</span>,
-      scope.clone(),
+      scope,
     );
   }
   <span class="kw">let </span>locked_key_opt = <span class="kw">if </span>options.locked {
@@ -1707,7 +1707,7 @@
     <span class="prelude-val">None
   </span>};
   <span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs, options.locked, options.scope.clone())<span class="question-mark">?
+    def_robust_cs(cs, options.locked, options.scope)<span class="question-mark">?
   </span>} <span class="kw">else </span>{
     cs
   };
@@ -1855,7 +1855,7 @@
   }
   <span class="comment">//  Not sure robust entirely makes sense for Primitives, other than LaTeXML vs LaTeX mismatch
   </span><span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs, options.locked, scope.clone())<span class="question-mark">?
+    def_robust_cs(cs, options.locked, scope)<span class="question-mark">?
   </span>} <span class="kw">else </span>{
     cs
   };
@@ -1892,7 +1892,7 @@
   <span class="kw">let </span>cont_cs = <span class="macro">T_CS!</span>(cont_cs_str);
   <span class="kw">let </span>pres_cs = <span class="macro">T_CS!</span>(pres_cs_str);
   <span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs, options.locked, options.scope.clone())<span class="question-mark">?
+    def_robust_cs(cs, options.locked, options.scope)<span class="question-mark">?
   </span>} <span class="kw">else </span>{
     cs
   };
@@ -1964,7 +1964,7 @@
         ..ExpandableOptions::default()
       }),
     )<span class="question-mark">?</span>,
-    options.scope.clone(),
+    options.scope,
   );
 
   <span class="comment">// Make the presentation macro.
@@ -1978,7 +1978,7 @@
         ..ExpandableOptions::default()
       }),
     )<span class="question-mark">?</span>,
-    options.scope.clone(),
+    options.scope,
   );
 
   <span class="comment">// content: Make the content constructor
@@ -1996,7 +1996,7 @@
         }
       }
       <span class="kw">for </span>key <span class="kw">in </span>MATH_CONSTRUCTOR_ATTRIBUTES {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="kw-2">*</span>key) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
           attrs.insert(key.to_string(), v.to_string());
         }
       }
@@ -2023,7 +2023,7 @@
         op_attrs.insert(<span class="string">"scriptpos"</span>.to_owned(), v.to_string());
       }
       <span class="kw">for </span>key <span class="kw">in </span>MATH_CONSTRUCTOR_ATTRIBUTES {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="kw-2">*</span>key) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
           op_attrs.insert(key.to_string(), v.to_string());
         }
       }
@@ -2045,7 +2045,7 @@
     replacement: <span class="prelude-val">Some</span>(content_closure),
     ..Constructor::default()
   };
-  <span class="kw">let </span>scope = options.scope.clone();
+  <span class="kw">let </span>scope = options.scope;
   transfer_common_constructor_options(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span>presentation, options, <span class="kw-2">&amp;mut </span>content_constructor);
   install_definition(content_constructor, scope);
   <span class="prelude-val">Ok</span>(())
@@ -2059,7 +2059,7 @@
   presentation: String,
   options: MathPrimitiveOptions,
 ) {
-  <span class="kw">let </span>scope = options.scope.clone();
+  <span class="kw">let </span>scope = options.scope;
   <span class="kw">let </span>reqfont_opt = options.font.clone();
   <span class="kw">let </span>moved_options = options.clone();
 
@@ -2115,7 +2115,7 @@
   //   None
   // };
   </span><span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs, options.locked, options.scope.clone())<span class="question-mark">?
+    def_robust_cs(cs, options.locked, options.scope)<span class="question-mark">?
   </span>} <span class="kw">else </span>{
     cs
   };
@@ -2164,7 +2164,7 @@
   <span class="kw">let </span>compiled_replacement: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="prelude-val">Some</span>(<span class="kw">if </span>nargs == <span class="number">0 </span>{
     <span class="comment">// If trivial presentation, allow it in Text
     </span>Rc::new(
-      <span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document, <span class="kw">_</span>, props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;| {
+      <span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document, <span class="kw">_</span>, props: <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;| {
         <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
         <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"role"</span>, <span class="string">"scriptpos"</span>, <span class="string">"stretchy"</span>] {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
@@ -2172,7 +2172,7 @@
           }
         }
         <span class="kw">for </span>key <span class="kw">in </span>MATH_CONSTRUCTOR_ATTRIBUTES {
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="kw-2">*</span>key) {
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
             attrs.insert(key.to_string(), v.to_string());
           }
         }
@@ -2199,7 +2199,7 @@
     Rc::new(
       <span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document,
             args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
-            props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;| {
+            props: <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;| {
         <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
         <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"role"</span>, <span class="string">"scriptpos"</span>, <span class="string">"stretchy"</span>] {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
@@ -2231,7 +2231,7 @@
           op_attrs.insert(String::from(<span class="string">"scriptpos"</span>), scriptpos.to_string());
         }
         <span class="kw">for </span>key <span class="kw">in </span>MATH_CONSTRUCTOR_ATTRIBUTES {
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(<span class="kw-2">*</span>key) {
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
             op_attrs.insert(key.to_string(), v.to_string());
           }
         }
@@ -2257,7 +2257,7 @@
     )
   });
   <span class="kw">let </span>sizer: <span class="prelude-ty">Option</span>&lt;SizingClosure&gt; = <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|<span class="kw">_</span>| {
-    <span class="prelude-val">Ok</span>(Font::math_default().compute_string_size(<span class="kw-2">&amp;</span>presentation_for_sizer, HashMap::default()))
+    <span class="prelude-val">Ok</span>(Font::math_default().compute_string_size(<span class="kw-2">&amp;</span>presentation_for_sizer, SymHashMap::default()))
   }));
 
   <span class="comment">// let mut prop_options = options.clone();
@@ -2272,7 +2272,7 @@
     // long
     </span>..Constructor::default()
   };
-  <span class="kw">let </span>scope = options.scope.clone();
+  <span class="kw">let </span>scope = options.scope;
   transfer_common_constructor_options(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span>presentation, options, <span class="kw-2">&amp;mut </span>constructor);
   install_definition(constructor, scope);
   <span class="prelude-val">Ok</span>(())
@@ -2534,7 +2534,7 @@
     reversion: options.reversion,
     alias: options.alias,
   });
-  install_definition(begin_name_constructor, options.scope.clone());
+  install_definition(begin_name_constructor, options.scope);
 
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_env = options.after_digest.clone();
   <span class="kw">let </span>name_clone = name.to_string();
@@ -2603,7 +2603,7 @@
     after_digest: after_digest_env,
     ..Constructor::default() <span class="comment">// TODO ? fill in missing ones
   </span>});
-  install_definition(end_envname_constructor, options.scope.clone());
+  install_definition(end_envname_constructor, options.scope);
 
   <span class="comment">// For the uncommon case opened by \csname env\endcsname
   </span><span class="kw">let </span>name_constructor = Rc::new(Constructor {
@@ -2628,7 +2628,7 @@
     // ), $options{scope});
     </span>..Constructor::default()
   });
-  install_definition(name_constructor, options.scope.clone());
+  install_definition(name_constructor, options.scope);
   <span class="kw">let </span>end_name = <span class="macro">s!</span>(<span class="string">"\\end{}"</span>, <span class="kw-2">&amp;</span>name);
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_end = options.after_digest;
   after_digest_end.push(<span class="macro">after_digest_simple!</span>( _whatsit, {
@@ -2914,7 +2914,7 @@
   cons.after_construct = options.after_construct;
   <span class="kw">let </span>presentation_for_font = presentation.to_owned();
   properties.insert(
-    String::from(<span class="string">"font"</span>),
+    <span class="string">"font"</span>,
     Stored::FontDirective(FontDirective::Closure(
       <span class="kw">if let </span><span class="prelude-val">Some</span>(mathstyle) = options.mathstyle {
         Rc::new(<span class="kw">move </span>|_whatsit| {
