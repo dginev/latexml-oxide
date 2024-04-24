@@ -38,16 +38,14 @@ pub struct KeyVals {
   skip: Vec<String>,
   set_all: bool,
   set_internals: bool,
-  skip_missing: bool,
+  skip_missing: SkipMissing,
   was_digested: bool,
   hook_missing: Option<Token>,
   // all the internal representations
   tuples: Vec<KVData>,
   cached_pairs: Vec<(String, ArgWrap)>,
   cached_hash: HashMap<String, Vec<ArgWrap>>,
-  // all the character tokens we used
-  punct: Vec<char>,
-  assign: Vec<char>,
+  cached_hash_digested: HashMap<String, Vec<Digested>>,
 }
 
 impl Default for KeyVals {
@@ -58,14 +56,13 @@ impl Default for KeyVals {
       skip: Vec::new(),
       set_all: false,
       set_internals: false,
-      skip_missing: false,
+      skip_missing: SkipMissing::None,
       was_digested: false,
       hook_missing: None,
       tuples: Vec::new(),
       cached_pairs: Vec::new(),
       cached_hash: HashMap::default(),
-      punct: Vec::new(),
-      assign: Vec::new(),
+      cached_hash_digested: HashMap::default(),
     }
   }
 }
@@ -110,7 +107,12 @@ impl Object for KeyVals {
         } else { None };
         tuple.digested_value = v;
       }
-    }   
+    }
+    // TODO: DG: KeyVals digestion feels very iffy while porting it over to Rust.
+    // had to add an explicit "rebuild" to cache the digested values in the new "cached_hash_digested"
+    // It feels like the entire object should be reorganized to leverage a little more of the well-typed
+    // capabilities we have here.
+    self.rebuild(None);
     self.was_digested = true;
     Ok(self.into())
   }
@@ -140,6 +142,16 @@ impl BoxOps for KeyVals {
     todo!() // TODO
   }
 }
+#[derive(Debug,Clone,Default,PartialEq)]
+pub enum SkipMissing {
+  #[default]
+  /// throw errors
+  None,
+  /// silently ignore all missing keys
+  All,
+  /// store all missing keys under the provided token
+  Store(Token)
+}
 
 #[derive(Default)]
 pub struct KeyvalsConfig {
@@ -147,8 +159,9 @@ pub struct KeyvalsConfig {
   pub keysets: Vec<String>,
   pub set_all: bool,
   pub set_internals: bool,
-  pub skip: bool,
-  pub skip_missing: bool,
+  pub skip: Vec<String>,
+  pub skip_missing: SkipMissing,
+  pub hook_missing: Option<Token>,
 }
 
 impl KeyVals {
@@ -162,42 +175,21 @@ impl KeyVals {
   ///**********************************************************************
   pub fn new(options: KeyvalsConfig) -> Self {
     // parse all the arguments
-    let prefix = options.prefix.unwrap_or_else(|| String::from("KV"));
-    let keysets = if options.keysets.is_empty() {
-      vec![String::from("_anonymous_")]
-    } else {
-      options.keysets
-    };
-    // $skip = [split(',', ToString(defined($options{skip}) ? $options{skip} : ''))] unless
-    // (ref($options{skip}) eq 'ARRAY'); my $set_all       = $options{set_all}       ? 1 : 0;
-    // my $set_internals = $options{set_internals} ? 1 : 0;
-    // my $skip_missing  = $options{skip_missing};
-    // my $hookMissing  = $options{hookMissing};
-    // // hook missing, if defined, must be a token
-    // if (defined($hookMissing) && $hookMissing) {
-    //   $hookMissing = ref($hookMissing) ? $hookMissing : T_CS(ToString($hookMissing)); }
-    // else { $hookMissing = undef; }
-    // // skip missing may be a token (=store all the missing macros there)
-    // unless (ref($skip_missing)) {
-    //   // may be undef or 0 (= throw errors)
-    //   unless (defined($skip_missing)) { $skip_missing = undef; }
-    //   elsif  ($skip_missing eq '0')   { $skip_missing = undef; }
-    //   // may be 1 (= ignore all missing keys)
-    //   elsif ($skip_missing eq '1') { $skip_missing = 1; }
-    //   // may be a string (= store all the missing keys there)
-    //   else { $skip_missing = T_CS($skip_missing); } }
-    // my %hash = ();
+    let KeyvalsConfig { prefix, mut keysets, set_all, set_internals, skip, skip_missing, hook_missing } = options;
+    let prefix = prefix.unwrap_or_else(|| String::from("KV"));
+    if keysets.is_empty() {
+      keysets = vec![String::from("_anonymous_")];
+    }
     KeyVals {
       prefix,
       keysets,
+      skip,
+      set_all,
+      set_internals,
+      skip_missing,
+      hook_missing,
       ..KeyVals::default()
     }
-    // skip        => $skip,        set_all      => $set_all, set_internals => $set_internals,
-    // skip_missing => $skip_missing, hookMissing => $hookMissing,
-    // // all the internal representations
-    // tuples => [], cachedPairs => [()], cachedHash => \%hash,
-    // // all the character tokens we used
-    // punct => $options{punct}, assign => $options{assign} },
   }
 
   //======================================================================
@@ -213,7 +205,7 @@ impl KeyVals {
     // Since we're not as obsessive about declaring ALL keys, we'll soften the blow
     if keysets.is_empty() {
       let all_joined = allkeysets.join(",");
-      if !self.skip_missing {
+      if self.skip_missing == SkipMissing::None {
         Info!("undefined", "Encountered unknown KeyVals key",
           s!("'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"));
       }
@@ -282,6 +274,16 @@ impl KeyVals {
       Some(value) => value.last(),
     }
   }
+  /// return the digested value of a given key. If multiple values are given, return the last one.
+  /// This call does *not* digest the value, and will return None if called pre-digestion
+  pub fn get_value_digested(&self, key: &str) -> Option<&Digested> {
+    // Since we (by default) accumulate lists of values when repeated,
+    // we need to provide the "common" thing: return the last value given.
+    match self.cached_hash_digested.get(key) {
+      None => None,
+      Some(value) => value.last(),
+    }
+  }
 
   /// return a list of values for a given key
   pub fn get_values(&self, key: &str) -> Option<&Vec<ArgWrap>> { self.cached_hash.get(key) }
@@ -298,12 +300,28 @@ impl KeyVals {
     }
     flat_hash
   }
-  /// consume KeyVals and return the cached HashMap
+  /// consume KeyVals and return the cached HashMap of input values
   pub fn as_hash(self) -> HashMap<String, Vec<ArgWrap>> { self.cached_hash }
+  /// consume KeyVals and return the cached HashMap of digested values
+  pub fn as_hash_digested(self) -> HashMap<String, Vec<Digested>> { self.cached_hash_digested }
   /// returns a key => ToString(value)
   pub fn get_hash(&self) -> HashMap<String, String> {
     let mut hashed = HashMap::default();
     for (k, v) in &self.cached_hash {
+      hashed.insert(
+        k.to_string(),
+        v.iter()
+          .map(ToString::to_string)
+          .collect::<Vec<String>>()
+          .join(""),
+      );
+    }
+    hashed
+  }
+  /// returns a key => ToString(value)
+  pub fn get_hash_digested(&self) -> HashMap<String, String> {
+    let mut hashed = HashMap::default();
+    for (k, v) in &self.cached_hash_digested {
       hashed.insert(
         k.to_string(),
         v.iter()
@@ -474,25 +492,30 @@ impl KeyVals {
     let mut newtuples: Vec<KVData> = Vec::new();
     let mut pairs = Vec::new();
     let mut hash: HashMap<String, Vec<ArgWrap>> = HashMap::default();
+    let mut hash_digested: HashMap<String, Vec<Digested>> = HashMap::default();
 
     for tuple in self.tuples.drain(..) {
       // take all the elements we need from the stack
       let KVData {key, value, use_default, primary_keyset, keysets, digested_value} = tuple;
       // if we want to skip some values, we need to store new tuples
       let key_str = key.as_str();
-      if Some(key_str) == skip_opt {
-        continue;
+      if let Some(skip) = skip_opt {
+        if skip == key_str {
+          continue;
+        }
       }
       if let Some(v) = value.as_ref() {
         // push key / value into the pair
         pairs.push((key.to_string(), v.clone()));
 
-        // if we do not have a value yet, set it
+        // we always use Vec<ArgWrap> storage, just push the new value in
         let entry = hash.entry(key.to_string()).or_default();
-
-        // If we get a third value, push into an array
-        // This is unlikely to be what the caller expects!! But what else?
         entry.push(v.clone());
+      }
+      // if we have a digested value, push that in the Vec<Digested> hash storage
+      if let Some(ref dvalue) = digested_value {
+        let entry = hash_digested.entry(key.to_string()).or_default();
+        entry.push(dvalue.clone());
       }
       
       // Record.
@@ -505,13 +528,11 @@ impl KeyVals {
         digested_value
       });
     }
-
     // store all of the values
     self.cached_pairs = pairs;
     self.cached_hash = hash;
-    if skip_opt.is_some() {
-      self.tuples = newtuples;
-    }
+    self.cached_hash_digested = hash_digested;
+    self.tuples = newtuples;   
   }
 
   //======================================================================
@@ -523,12 +544,12 @@ impl KeyVals {
   // parsing after the fact), since some values may have special catcode needs.
 
   pub fn read_from(&mut self, until: Token, silence_missing: bool) -> Result<()> {
-    // if we want to force skipMissing keys, we set it up here
-    let skip_missing = self.skip_missing;
+    // if we want to force skip_missing keys, we set it up here
+    let skip_missing = self.skip_missing.clone();
     let hook_missing = self.hook_missing;
     // if we want to silence all missing errors, store them in a hook
     if silence_missing {
-      self.skip_missing = true;
+      self.skip_missing = SkipMissing::All;
       self.hook_missing = None; 
     }    
 
@@ -567,7 +588,7 @@ impl KeyVals {
 
       // if we have a non-empty key
       if !key.is_empty() {        
-        let mut value = Tokens!();
+        let mut value = ArgWrap::None;
         // if we have an '=', we explcity assign a value
         let is_explicit = delim_opt == Some(T_OTHER!("="));
         if is_explicit {
@@ -604,10 +625,12 @@ impl KeyVals {
           }
           // reparse (and expand) the tokens representing the value
           if !toks.is_empty() {
-            value = Tokens::new(toks).strip_braces();
-            if !value.is_empty() {
+            let stripped_toks = Tokens::new(toks).strip_braces();
+            if !stripped_toks.is_empty() {
               if let Some(Stored::Parameter(ref keytype)) = keytype_opt {
-                value = keytype.reparse(value)?;
+                value = keytype.reparse(stripped_toks)?;
+              } else {
+                value = ArgWrap::Tokens(stripped_toks);
               }
             }
           }
@@ -618,7 +641,7 @@ impl KeyVals {
         }
         // and store our value please
         if !silence_missing || self.can_resolve_keyval_for(key) {
-          self.add_value(key, ArgWrap::Tokens(value), !is_explicit, false)?;
+          self.add_value(key, value, !is_explicit, false)?;
         }
       }
 

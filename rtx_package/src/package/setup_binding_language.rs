@@ -372,6 +372,12 @@ macro_rules! DefPrimitive {
       }));
     def_primitive($cs, None, Some(closure), options)?;
   }};
+  // Case: cs-noparams with replacement expr
+  ($cs:expr, None, $body:literal, $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
+    let pbody = PrimitiveBody::String(arena::pin_static($body));
+    def_primitive($cs, None, Some(pbody), options)?;
+  }};
   // Case: no replacement
   ($proto:literal, None $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});

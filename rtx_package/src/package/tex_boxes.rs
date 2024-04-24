@@ -88,7 +88,7 @@ LoadDefinitions!({
     predigest => sub[key] {
       if !key.is_empty() {
         let mut keyvals = KeyVals::new(
-          KeyvalsConfig{skip_missing: true, ..KeyvalsConfig::default()});
+          KeyvalsConfig{skip_missing: keyvals::SkipMissing::All, ..KeyvalsConfig::default()});
         let dim = gullet::read_dimension()?;
         keyvals.set_value(&key.owned_tokens().unwrap().to_string(), dim.into(), false)?;
         keyvals.into()
@@ -232,7 +232,7 @@ LoadDefinitions!({
 
   DefParameterType!(RuleSpecification, sub[_inner, _extra] {
       let mut keyvals = KeyVals::new(
-        KeyvalsConfig{ skip_missing: true, .. KeyvalsConfig::default()});
+        KeyvalsConfig{ skip_missing: keyvals::SkipMissing::All, .. KeyvalsConfig::default()});
       while let Some(key) = gullet::read_keyword(&["width", "height", "depth"])? {
         keyvals.set_value(&key, ArgWrap::Dimension(gullet::read_dimension()?), false)?;
       }
