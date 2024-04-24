@@ -10,20 +10,24 @@ LoadDefinitions!({
   // if the mark is not simple, we add it to the content of the note
   // otherwise, to the attribute.
   DefConstructor!("\\footnote{}{}",
-    "^<ltx:note role='footnote' ?#mark(mark='#mark')()>?#prenote(#prenote )()#2</ltx:note>");
-    // TODO:
-    // mode         => "text", bounded => 1,
-    // before_digest => sub { reenterTextMode(1); neutralizeFont(); },
-    // after_digest  => sub {
-    //   my ($stomach, $whatsit) = @_;
-    //   my $mark   = $whatsit->getArg(1);
-    //   my $change = 0;
-    //   foreach my $token (Revert($mark)) {
-    //     unless ($token->getCatcode == CC_LETTER || $token->getCatcode == CC_SPACE ||
-    //       $token->getCatcode == CC_OTHER) {
-    //       $change = 1; last; } }
-    //   $whatsit->setProperty(($change ? "prenote' : "mark') => $mark);
-    //   return; });
+    "^<ltx:note role='footnote' ?#mark(mark='#mark')()>?#prenote(#prenote )()#2</ltx:note>",
+    mode => "text", bounded => true,
+    before_digest => sub { reenter_text_mode(true); neutralize_font(); },
+    after_digest => sub[whatsit] {
+      let mark_clone = whatsit.get_arg(1).cloned();
+      if let Some(mark) = mark_clone {
+        let mark_tks = mark.revert()?.unlist();
+        let mut change = false;
+        for token in mark_tks {
+          if !matches!(token.get_catcode(), Catcode::LETTER | Catcode::SPACE | Catcode::OTHER) {
+            change = true;
+            break;
+          }
+        }
+        whatsit.set_property(if change { "prenote" } else {"mark"}, mark);
+      }
+    }
+  );
 
   // Until we can do the "v" properly:
   DefMacro!("\\vfootnote", "\\footnote");
