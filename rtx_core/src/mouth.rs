@@ -319,7 +319,7 @@ impl Mouth {
           Ok(count) => count,
           Err(e) => {
             let message = s!("BufReader::read_to_end returned an error: {:?}", e);
-            Warn!("mouth", "io", message);
+            Warn!("mouth", "io", message,"","",self.get_location());
             0
           },
         };
@@ -335,20 +335,19 @@ impl Mouth {
           // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable
           // chars to space(?).
           todo!();
-          //let message = s!("input isn't valid under encoding {}", encoding);
-          //Info!("misdefined", encoding, message);
-          //unsafe { str::from_utf8_unchecked(&line_bytes).to_owned() }
         } else {
           // no encoding, interpret as unicode!
-          let file_str = match str::from_utf8(&file_bytes) {
-            Ok(fstr) => fstr,
+          match str::from_utf8(&file_bytes) {
+            Ok(file_str) => {
+              self.buffer = Mouth::split_lines(file_str);
+            },
             Err(e) => {
               let message = s!("input isn't valid under encoding utf8: {:?}", e);
-              Info!("misdefined", "utf8", message);
-              unsafe { str::from_utf8_unchecked(&file_bytes) }
+              Info!("misdefined", "utf8", message, "","",self.get_location());
+              let file_str = String::from_utf8_lossy(&file_bytes);
+              self.buffer = Mouth::split_lines(&file_str);
             },
           };
-          self.buffer = Mouth::split_lines(file_str);
         }
       }
     }
@@ -799,6 +798,11 @@ impl Mouth {
   }
 
   pub fn at_eof(&self) -> bool { self.at_eof }
+
+  pub fn get_location(&self) -> String {
+    let loc = self.get_locator();
+    s!("at {}", loc)
+  }
 }
 
 pub fn tokenize(text: &str) -> Tokens {

@@ -89,14 +89,14 @@ macro_rules! Debug {
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!(target: &s!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, -1))
+      $crate::generate_message!($message))
   }};
  ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!(target: &s!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, -1, $($details),*))
+      $crate::generate_message!($message, $($details),*))
   }};
   ($($simple:expr),*) => {{
     $crate::common::error::note_status(
@@ -114,14 +114,14 @@ macro_rules! Info {
       $crate::common::error::LogStatus::Info, None);
     use log::info;
     info!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, -1))
+      $crate::generate_message!($message))
   }};
  ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
   $crate::common::error::note_status(
     $crate::common::error::LogStatus::Info, None);
     use log::info;
     info!(target: &format!("{}:{}", $category, $object), "{}",
-    $crate::generate_message!($message, -1, $($details),*))
+    $crate::generate_message!($message, $($details),*))
   }};
   ($($simple:expr),*) => {{
     $crate::common::error::note_status(
@@ -139,14 +139,14 @@ macro_rules! Warn {
       $crate::common::error::LogStatus::Warning, None);
     use log::warn;
     warn!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, -1))
+      $crate::generate_message!($message))
   }};
  ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
     use log::warn;
     warn!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, -1, $($details),*))
+      $crate::generate_message!($message, $($details),*))
   }}
 }
 
@@ -160,7 +160,7 @@ macro_rules! Error {
       $crate::common::error::LogStatus::Error, None);
     use log::error;
     error!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, -1, $($details),*));
+      $crate::generate_message!($message, $($details),*));
     let maxerrors = 100; //TODO: ($state::? $state->lookupValue('MAX_ERRORS') : 100);
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
       Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
@@ -194,7 +194,7 @@ macro_rules! fatal {
 
 #[macro_export]
 macro_rules! generate_message {
-  ($message:expr, $level:literal) => {
+  ($message:expr) => {
     format!(
       "{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
@@ -204,7 +204,7 @@ macro_rules! generate_message {
       column!()
     )
   };
-  ($message:expr, $level:literal, $detail:expr) => {
+  ($message:expr, $detail:expr) => {
     format!(
       "{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
@@ -215,11 +215,35 @@ macro_rules! generate_message {
       column!()
     )
   };
-  ($message:expr, $level:literal, $detail:expr, $detail2:expr) => {
+  ($message:expr, $detail:expr, $detail2:expr) => {
     format!(
       "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
       $crate::gullet::get_location(),
+      $detail,
+      $detail2,
+      file!(),
+      line!(),
+      column!()
+    )
+  };
+  ($message:expr, $detail:expr, $detail2:expr) => {
+    format!(
+      "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
+      $message,
+      $crate::gullet::get_location(),
+      $detail,
+      $detail2,
+      file!(),
+      line!(),
+      column!()
+    )
+  };
+  ($message:expr, $detail:expr, $detail2:expr, $location:expr) => {
+    format!(
+      "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
+      $message,
+      $location,
       $detail,
       $detail2,
       file!(),
