@@ -197,29 +197,19 @@ LoadDefinitions!({
   DefMacro!("\\leftline Undigested",   r"\ltx@leftline{\hbox{#1}}");
   DefMacro!("\\rightline Undigested",  r"\ltx@rightline{\hbox{#1}}");
   DefMacro!("\\centerline Undigested", r"\ltx@centerline{\hbox{#1}}");
-  // TODO:
-  //   DefConstructor('\ltx@leftline{}', sub {
-  //     alignLine($_[0], $_[1], 'left'); },
-  //   alias   => '\leftline',
-  //   bounded => 1);
-  // DefConstructor('\ltx@rightline{}', sub {
-  //     alignLine($_[0], $_[1], 'right'); },
-  //   alias   => '\rightline',
-  //   bounded => 1);
-  // DefConstructor('\ltx@centerline{}', sub {
-  //     alignLine($_[0], $_[1], 'center'); },
-  //   alias   => '\centerline',
-  //   bounded => 1);
-  // sub alignLine {
-  //   my ($document, $line, $alignment) = @_;
-  //   if ($document->isOpenable('ltx:p')) {
-  //     $document->insertElement('ltx:p', $line, class => 'ltx_align_' . $alignment); }
-  //   elsif ($document->isOpenable('ltx:text')) {
-  //     $document->insertElement('ltx:text', $line, class => 'ltx_align_' . $alignment);
-  //     $document->insertElement('ltx:break'); }
-  //   else {
-  //     $document->absorb($line); }
-  //   return; }
+  DefConstructor!("\\ltx@leftline{}", sub[doc,args,_props] {
+      align_line(doc,args,"left")?;
+    },
+    alias => "\\leftline", bounded => true);
+  DefConstructor!("\\ltx@rightline{}", sub[doc,args,_props] {
+      align_line(doc,args,"right")?;
+    },
+    alias => "\\rightline", bounded => true);
+  DefConstructor!("\\ltx@centerline{}", sub[doc,args,_props] {
+      align_line(doc,args,"center")?;
+    },
+    alias => "\\centerline", bounded => true);
+  
 
   // These should be 0 width, but perhaps also shifted?
   DefMacro!("\\llap{}", r"\hbox to 0pt{\hss#1}");
@@ -253,3 +243,19 @@ LoadDefinitions!({
   DefMacro!("\\narrower", r"\advance\leftskip by\parindent\advance\rightskip by\parindent");
 
 });
+
+fn align_line(document: &mut Document, line:&[Option<Digested>], alignment:&str) -> Result<()> {
+  if document.is_openable("ltx:p") {
+    let line_content = line.iter().filter_map(|c| c.as_ref()).collect();
+    document.insert_element("ltx:p", line_content, Some(string_map!(
+      "class" => s!("ltx_align_{alignment}"))))?; 
+  } else if document.is_openable("ltx:text") {
+    let line_content = line.iter().filter_map(|c| c.as_ref()).collect();
+    document.insert_element("ltx:text", line_content, Some(string_map!(
+      "class" => s!("ltx_align_{alignment}"))))?;
+    document.insert_element("ltx:break",Vec::new(),None)?;
+  } else if let Some(Some(line_content)) = line.first() {
+    document.absorb(line_content, None)?;
+  }
+  Ok(())
+}
