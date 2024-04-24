@@ -852,11 +852,16 @@ LoadDefinitions!({
   //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 
   pub fn required_key_vals(
-    star:bool, plus:bool, keysets_opt: Option<&Parameters>) -> Result<KeyVals> {
+    star:bool, plus:bool, _inner: Option<&Parameters>, extra:&[Tokens]) -> Result<KeyVals> {
     if gullet::if_next(T_BEGIN!())? {
-      let keysets = keysets_opt.map(|ps| ps.as_keysets()).unwrap_or_default();
+      let mut extra_iter = extra.iter();
+      // subtle!!! The first extra is the prefix, according to the Perl use.
+      let prefix = extra_iter.next().map(ToString::to_string);
+      // TODO: is the last extra field actually a "skip" ? Example?
+      let keysets = extra_iter.map(ToString::to_string).collect();
       keyvals_aux( Some(T_END!()), KVSpec {
         star, plus,
+        prefix,
         keysets,
         ..KVSpec::default()
       })
@@ -866,26 +871,26 @@ LoadDefinitions!({
     }
   }
 
-  DefParameterType!(RequiredKeyVals, sub[inner, _extra] {
-      required_key_vals(false, false, inner)
+  DefParameterType!(RequiredKeyVals, sub[inner, extra] {
+      required_key_vals(false, false, inner, extra)
     },
     reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
-  DefParameterType!(RequiredKeyValsStar, sub[inner, _extra] {
-      required_key_vals(true, false, inner)
+  DefParameterType!(RequiredKeyValsStar, sub[inner, extra] {
+      required_key_vals(true, false, inner, extra)
     },
     reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
-  DefParameterType!(RequiredKeyValsPlus, sub[inner, _extra] {
-      required_key_vals(false, true, inner)
+  DefParameterType!(RequiredKeyValsPlus, sub[inner, extra] {
+      required_key_vals(false, true, inner, extra)
     },
     reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
-  DefParameterType!(RequiredKeyValsStarPlus, sub[inner, _extra] {
-      required_key_vals(true, true, inner)
+  DefParameterType!(RequiredKeyValsStarPlus, sub[inner, extra] {
+      required_key_vals(true, true, inner, extra)
     }, reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
@@ -893,15 +898,21 @@ LoadDefinitions!({
   pub fn optional_key_vals(
     star: bool,
     plus: bool,
-    keysets_opt: Option<&Parameters>,
+    _inner: Option<&Parameters>,
+    extra: &[Tokens]
   ) -> Result<Option<KeyVals>> {
     if gullet::if_next(T_OTHER!("["))? {
-      let keysets = keysets_opt.map(|ps| ps.as_keysets()).unwrap_or_default();
+      let mut extra_iter = extra.iter();
+      // subtle!!! The first extra is the prefix, according to the Perl use.
+      let prefix = extra_iter.next().map(ToString::to_string);
+      // TODO: is the last extra field actually a "skip" ? Example?
+      let keysets = extra_iter.map(ToString::to_string).collect();
       let kvs: KeyVals = keyvals_aux(
         Some(T_OTHER!("]")),
         KVSpec {
           star,
           plus,
+          prefix,
           keysets,
           ..KVSpec::default()
         },
@@ -912,26 +923,26 @@ LoadDefinitions!({
     }
   }
 
-  DefParameterType!(OptionalKeyVals, sub[inner, _extra] {
-    optional_key_vals(false, false, inner)
+  DefParameterType!(OptionalKeyVals, sub[inner, extra] {
+    optional_key_vals(false, false, inner, extra)
   }, optional=>true,
   reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
   });
-  DefParameterType!(OptionalKeyValsStar, sub[inner, _extra] {
-    optional_key_vals(true, false, inner)
+  DefParameterType!(OptionalKeyValsStar, sub[inner, extra] {
+    optional_key_vals(true, false, inner, extra)
   }, optional=>true,
   reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
   });
-  DefParameterType!(OptionalKeyValsPlus, sub[inner, _extra] {
-    optional_key_vals(false, true, inner)
+  DefParameterType!(OptionalKeyValsPlus, sub[inner, extra] {
+    optional_key_vals(false, true, inner, extra)
   }, optional=>true,
   reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
   });
-  DefParameterType!(OptionalKeyValsPlusStar, sub[inner, _extra] {
-    optional_key_vals(true, true, inner)
+  DefParameterType!(OptionalKeyValsPlusStar, sub[inner, extra] {
+    optional_key_vals(true, true, inner, extra)
   }, optional=>true,
   reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))

@@ -435,8 +435,31 @@ impl Parameter {
   /// where the argument may already have been tokenized before the KeyVals
   /// (and the parameter types for the keys) had a chance to properly parse.
   // Yuck!
-  pub fn reparse(&self, _value: Tokens) -> Result<Tokens> {
-    todo!()
+  pub fn reparse(&self, tokens: Tokens) -> Result<ArgWrap> {
+    // Needs neutralization, since the keyvals may have been tokenized already???
+    // perhaps a better test would involve whether $tokens is, in fact, Tokens?
+    if self.name == arena::pin_static("Plain") || self.predigest.is_some() {    // Gack!
+      Ok(ArgWrap::Tokens(tokens)) }
+    else if self.semiverbatim.is_some() { // Needs neutralization
+       // but maybe specific to catcodes
+       Ok(ArgWrap::Tokens(
+        tokens.neutralize(self.semiverbatim.as_ref().unwrap().as_slice())))
+    } else {
+      gullet::reading_from_mouth(Mouth::default(), || { // start with empty mouth
+        let mut tokens = tokens.unlist();
+        if !tokens.is_empty() // Strip outer braces from dimensions & friends
+          && arena::with(self.name,|name| matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"))
+          && tokens.first().map(|t| t.get_catcode() == Catcode::BEGIN).unwrap_or(false) 
+          && tokens.last().map(|t| t.get_catcode() == Catcode::END).unwrap_or(false) {
+          tokens.remove(0);
+          tokens.pop(); 
+        }
+        gullet::unread_vec(tokens); // but put back tokens to be read
+        let value = self.read(None)?;
+        gullet::skip_spaces()?;
+        Ok(value)
+      })
+    }
   }
 }
 

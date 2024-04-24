@@ -16,11 +16,11 @@ LoadDefinitions!({
     "\\_",
     "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi"
   );
-  DefMacro!(T_CS!("\\lx@text@hash"), None, T_OTHER!("#"),  alias => "\\#");
-  DefMacro!(T_CS!("\\lx@text@amp"), None, T_OTHER!("&"),  alias => "\\&");
-  DefMacro!(T_CS!("\\lx@text@percent"), None, T_OTHER!("%"),  alias => "\\%");
-  DefMacro!(T_CS!("\\lx@text@dollar"), None,  T_OTHER!("$"), alias => "\\$");
-  DefMacro!(T_CS!("\\lx@text@underscore"), None, T_OTHER!("_"),  alias => "\\_");
+  DefPrimitive!(T_CS!("\\lx@text@hash"), None, "#",  alias => "\\#");
+  DefPrimitive!(T_CS!("\\lx@text@amp"), None, "&",  alias => "\\&");
+  DefPrimitive!(T_CS!("\\lx@text@percent"), None, "%",  alias => "\\%");
+  DefPrimitive!(T_CS!("\\lx@text@dollar"), None,  "$", alias => "\\$");
+  DefPrimitive!(T_CS!("\\lx@text@underscore"), None, "_",  alias => "\\_");
 
   DefMath!("\\lx@math@hash",  None, "#", alias => "\\#");
   DefMath!("\\lx@math@amp",   None, "&", role  => "ADDOP", meaning => "and", alias => "\\&");

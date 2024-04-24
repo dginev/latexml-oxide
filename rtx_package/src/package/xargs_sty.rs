@@ -4,16 +4,19 @@ LoadDefinitions!({
 
   DefKeyVal!("xargs", "usedefault", "", "");
 
-  DefParameterType!(XArgsOptional, sub[inner, extra] {
-      // TODO: how to handle the argument pattern?
-      // my ($gullet, $default, $usedefault, $inner) = @_;
-      let value = gullet::read_optional(None);
-      // if (($usedefault && ToString($value) eq ToString($usedefault)) ||
-      //   (!defined $usedefault && ToString($value) eq '')) {
-      //   $value = $default; }
+  DefParameterType!(XArgsOptional, sub[_inner, extra] {
+    let no_tks = &NO_TOKENS;
+    let default = extra.first().unwrap_or(no_tks);
+    let usedefault = extra.get(1).unwrap_or(no_tks);
+    let value = gullet::read_optional(None)?.unwrap_or(Tokens!());
+    if (!usedefault.is_empty() && value.to_string() == usedefault.to_string()) ||
+        usedefault.is_empty() && value.to_string().is_empty() {
+      default.clone()
+    } else {
       value
-    },
-    optional => true);
+    }
+  },
+  optional => true);
 
   // Macros
 
@@ -27,7 +30,8 @@ LoadDefinitions!({
       let nargs = if let Some(nargs_tks) = nargs_opt {
         nargs_tks.to_string().parse::<usize>()?
       } else {0};
-      DefMacro!(cs, convert_xargs_args(nargs, defaults.as_ref())?, body, scope => scope);
+      let cargs = convert_xargs_args(nargs, defaults.as_ref())?;
+      DefMacro!(cs, cargs, body, scope => scope);
     }
   });
 

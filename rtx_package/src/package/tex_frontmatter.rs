@@ -41,37 +41,54 @@ LoadDefinitions!({
   //   ifnew   (only add if no previous entry)//
 
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
-    sub[(_keys_tks,tag,attrs_opt,tokens)] {
+    sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
     // Digest this as if we're already in the document body!
-    let inpreamble = LookupBool!("inPreamble");
-    AssignValue!("inPreamble", false);
-
+    let inpreamble = lookup_bool("inPreamble");
+    assign_value("inPreamble", false, None);
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
     // So, we append this entry before digesting
-
-    // TODO: Port over keys handling from TeX.pool
+    let tag = tag_tks.to_string();
+    if let Some(keys) = keys_opt {
+      let known_key = if let Some(Stored::HashTagData(ref mut frnt)) = lookup_value("frontmatter") {
+        frnt.contains_key(&tag)
+      } else { false }; 
+      // if replace and previous entries
+      // remove previous entries
+      if known_key && keys.has_key("replace") {
+        state::with_value_mut("frontmatter", |val_opt| {
+          if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+            frnt.insert(tag.clone(), Vec::new());
+          }
+        });
+      }
+      // if ifnew and previous entries
+      // skip this one.
+      if known_key && keys.has_key("ifnew") {
+        return Ok(Vec::new());
+      }
+    }
+    
     let attrs_digested = if let Some(attr_kvs) = attrs_opt {
       if let DigestedData::KeyVals(digested) = attr_kvs.be_digested()?.data() {
-        Some(digested.get_hash())
+        Some(digested.get_hash_digested())
       } else {
         None
       }
     } else {
       None
     };
-    // WAS:  $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
     let mut wrapped_tokens = vec![T_BEGIN!()];
     wrapped_tokens.extend(tokens.unlist());
     wrapped_tokens.push(T_END!());
     let digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))?;
-    let entry = (tag.to_string(), attrs_digested, digested_tokens);
-    with_value_mut("frontmatter", |val_opt| {
+    let entry = (tag.clone(), attrs_digested, digested_tokens);
+    state::with_value_mut("frontmatter", |val_opt| {
       let frontmatter = match val_opt {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
         _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
       };
-      let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
+      let f_entry = frontmatter.entry(tag).or_insert_with(Vec::new);
       f_entry.push(entry);
       Ok(())
     })?;

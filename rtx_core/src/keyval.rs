@@ -94,13 +94,13 @@ pub fn has_keyval(prefix: &str, keyset: &str, key: &str) -> bool {
 }
 
 /// disable a given key-val
-fn disable_keyval(prefix: &str, keyset: &str, key: &str) -> Result<()> {
-  let qname = keyval_qname(prefix, keyset, key);
-  keyval_set(&qname, "disabled", true.into());
-  // disable the key
-  define_ordinary(&qname, Some(ExpansionBody::Tokens(
-    tokenize(&s!("\\PackageWarning{{keyval}}{{`{key}' has been disabled. }}")))))
-}
+// fn disable_keyval(prefix: &str, keyset: &str, key: &str) -> Result<()> {
+//   let qname = keyval_qname(prefix, keyset, key);
+//   keyval_set(&qname, "disabled", true.into());
+//   // disable the key
+//   define_ordinary(&qname, Some(ExpansionBody::Tokens(
+//     tokenize(&s!("\\PackageWarning{{keyval}}{{`{key}' has been disabled. }}")))))
+// }
 
 //======================================================================
 // Key Definition
@@ -160,7 +160,10 @@ pub struct KeyvalConfig<'a> {
 ///The kind parameter only takes effect when `code` is given, otherwise only
 ///meta-data is stored.
 pub fn define(options: KeyvalConfig) -> Result<()> {
-  let KeyvalConfig {prefix , keyset, key, vtype, default,kind, code, macroprefix, mismatch, normalize, bin, choices} = options;
+  let KeyvalConfig {prefix , keyset, key,
+    vtype, default,kind,
+    code, macroprefix, mismatch, normalize,
+    bin, choices} = options;
   
   let qname = keyval_qname(prefix, keyset, key);
 
@@ -223,11 +226,11 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   }
 
   // figure out the kind of key-val parameter we are defining
-  let kind = options.kind.unwrap_or("ordinary");
+  let kind = kind.unwrap_or("ordinary");
   match kind {
     "ordinary" => define_ordinary(&qname, code)?,
     "command" => {
-      let macroname = if let Some(mpfx) = options.macroprefix {
+      let macroname = if let Some(mpfx) = macroprefix {
         s!("{mpfx}{key}")
       } else {
         s!("cmd{qname}")
@@ -258,8 +261,7 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
       "unknown",
       "undef",
       s!(
-        "Unknown KeyVals kind {kind} should be one of\
-     'ordinary', 'command', 'choice', 'boolean'. "
+        "Unknown KeyVals kind {kind} should be one of 'ordinary', 'command', 'choice', 'boolean'. "
       )
     ),
   };
