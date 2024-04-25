@@ -316,7 +316,7 @@ pub fn fenced(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => open_opt, arg_opt, close_opt);
-  let arg = arg_opt.unwrap();
+  let mut arg = arg_opt.unwrap();
   let open = open_opt.unwrap();
   let close = close_opt.unwrap();
   // let xmrefs = create_xmrefs(&[&arg], ctxt)?.remove(0);
@@ -327,8 +327,23 @@ pub fn fenced(
   // ))
   let o = open.get_value(ctxt.nodes)?;
   let c = close.get_value(ctxt.nodes)?;
-  let op = xnew(format!("delimited-{}{}", o, c));
-  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+  let op_name = format!("delimited-{}{}", o, c);
+  
+  // TODO: We need a method to figure out how many arguments are nested inside <arg>
+  // for now assume 1
+  // if arg.len() == 1 &&
+  if op_name == "delimited-()" { // Hopefully, can just ignore the parens?
+    let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
+    Ok(Some(XM::Dual( 
+      Box::new(arg_xmrefs.remove(0)),
+      Box::new(XM::Wrap(vec![open,arg,close], XProps::default(), Meta::default())),
+      XProps::default(),
+      Meta::default() 
+    )))
+  } else {
+    let op = xnew(op_name);
+    interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+  }
 }
 
 /// This is similar, but "interprets" a delimited list as being the
