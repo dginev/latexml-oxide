@@ -519,7 +519,7 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
   let (c_ctr, c_un_ctr, ctr_id) =
     ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{ctr}@ID")));
   state::assign_register(&c_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
-  if ctr.with_str(|cstr| !cstr.starts_with("UN")) { // but not UN
+  if !ctr.with_str(|cstr| cstr.starts_with("UN")) { // but not UN
     state::assign_register(&c_un_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
   }
   def_macro(
@@ -532,9 +532,10 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
     }),
   )?;
   // and reset any within counters!
-  let nested = state::lookup_tokens(&s!("\\cl@{ctr}")).unwrap_or_default();
-  for c in nested.unlist() {
-    reset_counter(&c)?;
+  if let Some(nested) = state::lookup_tokens(&s!("\\cl@{ctr}")) {
+    for c in nested.unlist() {
+      reset_counter(&c)?;
+    }
   }
   Ok(())
 }
@@ -644,6 +645,7 @@ pub fn begin_itemize(
   counter: Option<&str>,
   options: BeginItemizeOptions,
   ) -> Result<HashMap<Stored>> {
+  // The list-type and level of the *containing* list (if any!)
   let outercounter = state::lookup_string("itemcounter");
   let outerlevel = if !outercounter.is_empty() {
     lookup_int(&s!("{outercounter}level"))
@@ -701,12 +703,12 @@ pub fn begin_itemize(
 
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(&listcounter)];
-    let cs_name = s!("\\cl@{outerusecounter}");
-    if let Some(Stored::Tokens(tks)) = lookup_value(&cs_name) {
+    let cl_name = s!("\\cl@{outerusecounter}");
+    if let Some(Stored::Tokens(tks)) = lookup_value(&cl_name) {
       cl_toks.extend(tks.unlist());
     }
     state::assign_value(
-      &cs_name,
+      &cl_name,
       Stored::Tokens(Tokens::new(cl_toks)),
       Some(Scope::Global),
     );
