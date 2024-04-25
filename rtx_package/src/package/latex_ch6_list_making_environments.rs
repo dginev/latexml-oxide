@@ -33,13 +33,10 @@ LoadDefinitions!({
   DefMacro!("\\@item", "\\item"); // Hopefully no circles...
   DefMacro!("\\@itemlabel", ""); // Maybe needs to be same as \item will be using?
 
-  // These counters are only used for id's of the various itemize, enumerate, etc elements
+  // These counters are ONLY used for id's of ALL the various itemize, enumerate, etc elements
+  // Only create the 1st level (so that binding style can start numbering 'within' appropriately)
+  // Additional ones created by need.
   NewCounter!("@itemizei",   "section",      idprefix => "I");
-  NewCounter!("@itemizeii",  "@itemizei",   idprefix => "I");
-  NewCounter!("@itemizeiii", "@itemizeii",  idprefix => "I");
-  NewCounter!("@itemizeiv",  "@itemizeiii", idprefix => "I");
-  NewCounter!("@itemizev",   "@itemizeiv",  idprefix => "I");
-  NewCounter!("@itemizevi",  "@itemizev",   idprefix => "I");
 
   // id, but NO refnum (et.al) attributes on itemize \\item ...
   // unless the optional tag argument was given!
