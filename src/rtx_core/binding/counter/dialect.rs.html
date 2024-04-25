@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (244da22fa 2024-04-23)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (ef8b9dcf2 2024-04-24)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -764,7 +764,6 @@
 <a href="#764" id="764">764</a>
 <a href="#765" id="765">765</a>
 <a href="#766" id="766">766</a>
-<a href="#767" id="767">767</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Counters
 //!
 //! This is modelled on LaTeX's counter mechanisms, but since it also
@@ -822,39 +821,35 @@
   within: <span class="kw-2">&amp;</span>str,
   options_opt: <span class="prelude-ty">Option</span>&lt;NewCounterOptions&gt;,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">let </span>unctr = <span class="macro">s!</span>(<span class="string">"UN{}"</span>, ctr); <span class="comment">// UNctr is counter for generating ID's for UN-numbered items.
-  </span><span class="kw">let </span>cctr = <span class="macro">s!</span>(<span class="string">"\\c@{}"</span>, ctr);
-  <span class="kw">let </span>clctr = <span class="macro">s!</span>(<span class="string">"\\cl@{}"</span>, ctr);
-  <span class="kw">let </span>cunctr = <span class="macro">s!</span>(<span class="string">"\\c@{}"</span>, unctr);
-  <span class="kw">let </span>clunctr = <span class="macro">s!</span>(<span class="string">"\\cl@{}"</span>, unctr);
-  <span class="kw">if </span>!within.is_empty() &amp;&amp; within != <span class="string">"document" </span>&amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\c@{within}"</span>)))<span class="question-mark">?</span>.is_none() {
+  <span class="kw">let </span>unctr = <span class="macro">s!</span>(<span class="string">"UN{ctr}"</span>); <span class="comment">// UNctr is counter for generating ID's for UN-numbered items.
+  </span><span class="kw">if </span>!within.is_empty() &amp;&amp; within != <span class="string">"document" </span>&amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\c@{within}"</span>)))<span class="question-mark">?</span>.is_none() {
     new_counter(within, <span class="string">""</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   }
-
+  <span class="kw">let </span>cctr = <span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>);
+  <span class="kw">let </span>clctr = <span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>);
+  <span class="kw">let </span>cunctr = <span class="macro">s!</span>(<span class="string">"\\c@{unctr}"</span>);
+  <span class="kw">let </span>clunctr = <span class="macro">s!</span>(<span class="string">"\\cl@{unctr}"</span>);
   def_register(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cctr), <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>),
     <span class="prelude-val">Some</span>(RegisterOptions{allocate: <span class="prelude-val">Some</span>(String::from(<span class="string">"\\count"</span>)), ..RegisterOptions::default()}))<span class="question-mark">?</span>;
-  state::assign_value(<span class="kw-2">&amp;</span>cctr, Number::new(<span class="number">0</span>), <span class="prelude-val">Some</span>(Scope::Global));
   after_assignment();
   <span class="kw">if </span>!has_value(<span class="kw-2">&amp;</span>clctr) {
     state::assign_value(<span class="kw-2">&amp;</span>clctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
   }
-
   def_register(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cunctr), <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-  state::assign_value(<span class="kw-2">&amp;</span>cunctr, Number::new(<span class="number">0</span>), <span class="prelude-val">Some</span>(Scope::Global));
   <span class="kw">if </span>!has_value(<span class="kw-2">&amp;</span>clunctr) {
     state::assign_value(<span class="kw-2">&amp;</span>clunctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
   }
 
   <span class="kw">if </span>!within.is_empty() {
-    <span class="kw">let </span>clwithin = <span class="macro">s!</span>(<span class="string">"\\cl@{}"</span>, within);
-    <span class="kw">let </span>clunwithin = <span class="macro">s!</span>(<span class="string">"\\cl@UN{}"</span>, within);
-    <span class="kw">let </span><span class="kw-2">mut </span>x = <span class="kw">if let </span><span class="prelude-val">Some</span>(cl) = state::lookup_tokens(<span class="kw-2">&amp;</span>clwithin) {
+    <span class="kw">let </span>clwithin = <span class="macro">s!</span>(<span class="string">"\\cl@{within}"</span>);
+    <span class="kw">let </span>clunwithin = <span class="macro">s!</span>(<span class="string">"\\cl@UN{within}"</span>);
+    <span class="kw">let </span>x = <span class="kw">if let </span><span class="prelude-val">Some</span>(cl) = state::lookup_tokens(<span class="kw-2">&amp;</span>clwithin) {
       cl.unlist()
     } <span class="kw">else </span>{
       Vec::new()
     };
     <span class="kw">let </span><span class="kw-2">mut </span>clwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(ctr), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>unctr)];
-    clwithin_tokens.append(<span class="kw-2">&amp;mut </span>x);
+    clwithin_tokens.extend(x);
     state::assign_value(
       <span class="kw-2">&amp;</span>clwithin,
       Stored::Tokens(Tokens::new(clwithin_tokens)),
@@ -1264,7 +1259,7 @@
   <span class="kw">let </span>unctr = <span class="macro">s!</span>(<span class="string">"UN{ctr}"</span>);
   step_counter(<span class="kw-2">&amp;</span>unctr, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
   maybe_preempt_refnum(<span class="kw-2">&amp;</span>ctr, <span class="bool-val">true</span>);
-  <span class="kw">let </span>cunctr_val = lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{unctr}"</span>)).unwrap().value_of();
+  <span class="kw">let </span>cunctr_val = lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{unctr}"</span>)).unwrap_or_default().value_of();
   def_macro(
     <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>)),
     <span class="prelude-val">None</span>,
@@ -1286,7 +1281,7 @@
   <span class="kw">let </span>(c_ctr, c_un_ctr, ctr_id) =
     ctr.with_str(|ctr| (<span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>), <span class="macro">s!</span>(<span class="string">"\\c@UN{ctr}"</span>), <span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>)));
   state::assign_register(<span class="kw-2">&amp;</span>c_ctr, Number::new(<span class="number">0</span>).into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
-  <span class="kw">if </span>ctr.with_str(|cstr| !cstr.starts_with(<span class="string">"UN"</span>)) { <span class="comment">// but not UN
+  <span class="kw">if </span>!ctr.with_str(|cstr| cstr.starts_with(<span class="string">"UN"</span>)) { <span class="comment">// but not UN
     </span>state::assign_register(<span class="kw-2">&amp;</span>c_un_ctr, Number::new(<span class="number">0</span>).into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
   }
   def_macro(
@@ -1299,9 +1294,10 @@
     }),
   )<span class="question-mark">?</span>;
   <span class="comment">// and reset any within counters!
-  </span><span class="kw">let </span>nested = state::lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>)).unwrap_or_default();
-  <span class="kw">for </span>c <span class="kw">in </span>nested.unlist() {
-    reset_counter(<span class="kw-2">&amp;</span>c)<span class="question-mark">?</span>;
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(nested) = state::lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>)) {
+    <span class="kw">for </span>c <span class="kw">in </span>nested.unlist() {
+      reset_counter(<span class="kw-2">&amp;</span>c)<span class="question-mark">?</span>;
+    }
   }
   <span class="prelude-val">Ok</span>(())
 }
@@ -1411,7 +1407,8 @@
   counter: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
   options: BeginItemizeOptions,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;Stored&gt;&gt; {
-  <span class="kw">let </span>outercounter = state::lookup_string(<span class="string">"itemcounter"</span>);
+  <span class="comment">// The list-type and level of the *containing* list (if any!)
+  </span><span class="kw">let </span>outercounter = state::lookup_string(<span class="string">"itemcounter"</span>);
   <span class="kw">let </span>outerlevel = <span class="kw">if </span>!outercounter.is_empty() {
     lookup_int(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{outercounter}level"</span>))
   } <span class="kw">else </span>{
@@ -1419,8 +1416,9 @@
   </span>};
   <span class="kw">let </span>counter = counter.unwrap_or(<span class="string">"@item"</span>);
   <span class="kw">let </span>listlevel = lookup_int(<span class="string">"itemization_level"</span>) + <span class="number">1</span>; <span class="comment">// level for this list overall
-  </span><span class="kw">let </span>level = lookup_int(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{counter}level"</span>)) + <span class="number">1</span>; <span class="comment">// level for lists of specific type
-  </span><span class="macro">AssignRegister!</span>(
+  </span><span class="kw">let </span>level = lookup_int(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{counter}level"</span>)) + <span class="comment">// level for lists of specific type
+    </span>(<span class="kw">if </span>options.nolevel { <span class="number">0 </span>} <span class="kw">else </span>{ <span class="number">1 </span>});
+  <span class="macro">AssignRegister!</span>(
     <span class="string">"\\itemsep"</span>,
     lookup_dimension(<span class="string">"\\lx@default@itemsep"</span>)
       .unwrap_or_default()
@@ -1468,12 +1466,12 @@
 
     <span class="comment">// AND reset this list's counter when the outer item is stepped
     </span><span class="kw">let </span><span class="kw-2">mut </span>cl_toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>listcounter)];
-    <span class="kw">let </span>cs_name = <span class="macro">s!</span>(<span class="string">"\\cl@{outerusecounter}"</span>);
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Tokens(tks)) = lookup_value(<span class="kw-2">&amp;</span>cs_name) {
+    <span class="kw">let </span>cl_name = <span class="macro">s!</span>(<span class="string">"\\cl@{outerusecounter}"</span>);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Tokens(tks)) = lookup_value(<span class="kw-2">&amp;</span>cl_name) {
       cl_toks.extend(tks.unlist());
     }
     state::assign_value(
-      <span class="kw-2">&amp;</span>cs_name,
+      <span class="kw-2">&amp;</span>cl_name,
       Stored::Tokens(Tokens::new(cl_toks)),
       <span class="prelude-val">Some</span>(Scope::Global),
     );
