@@ -55,39 +55,35 @@ pub fn new_counter(
   within: &str,
   options_opt: Option<NewCounterOptions>,
   ) -> Result<()> {
-  let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
-  let cctr = s!("\\c@{}", ctr);
-  let clctr = s!("\\cl@{}", ctr);
-  let cunctr = s!("\\c@{}", unctr);
-  let clunctr = s!("\\cl@{}", unctr);
+  let unctr = s!("UN{ctr}"); // UNctr is counter for generating ID's for UN-numbered items.
   if !within.is_empty() && within != "document" && lookup_definition(&T_CS!(s!("\\c@{within}")))?.is_none() {
     new_counter(within, "", None)?;
   }
-
+  let cctr = s!("\\c@{ctr}");
+  let clctr = s!("\\cl@{ctr}");
+  let cunctr = s!("\\c@{unctr}");
+  let clunctr = s!("\\cl@{unctr}");
   def_register(T_CS!(&cctr), None, Number::new(0),
     Some(RegisterOptions{allocate: Some(String::from("\\count")), ..RegisterOptions::default()}))?;
-  state::assign_value(&cctr, Number::new(0), Some(Scope::Global));
   after_assignment();
   if !has_value(&clctr) {
     state::assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
-
   def_register(T_CS!(&cunctr), None, Number::new(0), None)?;
-  state::assign_value(&cunctr, Number::new(0), Some(Scope::Global));
   if !has_value(&clunctr) {
     state::assign_value(&clunctr, Tokens!(), Some(Scope::Global));
   }
 
   if !within.is_empty() {
-    let clwithin = s!("\\cl@{}", within);
-    let clunwithin = s!("\\cl@UN{}", within);
-    let mut x = if let Some(cl) = state::lookup_tokens(&clwithin) {
+    let clwithin = s!("\\cl@{within}");
+    let clunwithin = s!("\\cl@UN{within}");
+    let x = if let Some(cl) = state::lookup_tokens(&clwithin) {
       cl.unlist()
     } else {
       Vec::new()
     };
     let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(&unctr)];
-    clwithin_tokens.append(&mut x);
+    clwithin_tokens.extend(x);
     state::assign_value(
       &clwithin,
       Stored::Tokens(Tokens::new(clwithin_tokens)),
@@ -497,7 +493,7 @@ pub fn ref_step_id(
   let unctr = s!("UN{ctr}");
   step_counter(&unctr, false)?;
   maybe_preempt_refnum(&ctr, true);
-  let cunctr_val = lookup_number(&s!("\\c@{unctr}")).unwrap().value_of();
+  let cunctr_val = lookup_number(&s!("\\c@{unctr}")).unwrap_or_default().value_of();
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),
     None,
@@ -654,7 +650,8 @@ pub fn begin_itemize(
   };
   let counter = counter.unwrap_or("@item");
   let listlevel = lookup_int("itemization_level") + 1; // level for this list overall
-  let level = lookup_int(&s!("{counter}level")) + 1; // level for lists of specific type
+  let level = lookup_int(&s!("{counter}level")) + // level for lists of specific type
+    (if options.nolevel { 0 } else { 1 });
   AssignRegister!(
     "\\itemsep",
     lookup_dimension("\\lx@default@itemsep")
