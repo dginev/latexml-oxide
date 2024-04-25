@@ -12,13 +12,10 @@ LoadDefinitions!({
   DefMacro!("\\@listctr", "");
   DefPrimitive!("\\usecounter{}", sub[(counter)] {
     let counter = Expand!(counter).to_string();
-    if counter.is_empty() {
-      begin_itemize("list", None, BeginItemizeOptions::default())?;
-    } else {
-      begin_itemize("list", Some(&counter), BeginItemizeOptions {
-        nolevel:true,
-        ..BeginItemizeOptions::default() })?;
-    }
+    let counter_opt = if counter.is_empty() { None } else { Some(counter.as_str()) };
+    begin_itemize("list", counter_opt, BeginItemizeOptions {
+      nolevel: !counter.is_empty(),
+      ..BeginItemizeOptions::default() })?;
   });
 
   DefMacro!(
