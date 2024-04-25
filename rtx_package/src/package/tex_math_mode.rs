@@ -7,10 +7,6 @@ LoadDefinitions!({
   //======================================================================
   // Decide whether we're going into or out of math, inline or display.
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
-  // Since the arXMLiv folks keep wanting ids on all math, let's try this!
-  Tag!("ltx:Math", after_open => sub[document, node] {
-    document.generate_id(node, "m")?;
-  });
 
   DefPrimitive!(
     T_MATH!(),
