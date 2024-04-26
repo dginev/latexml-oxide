@@ -300,7 +300,75 @@ LoadDefinitions!({
   //======================================================================
   // Handled in article,report or book.
   DefMacro!("\\appendixname", "Appendix");
-  DefMacro!("\\appendixesname", "Appendixes");
+  DefMacro!("\\appendixesname", "Appendixes");  
+  // TODO: add the rest...
+  DefMacro!("\\@@appendix", "\\@startsection{appendix}{0}{}{}{}{}");
+
+  //======================================================================
+  // C.4.3 Table of Contents
+  //======================================================================
+  // Insert stubs that will be filled in during post processing.
+  DefMacro!("\\contentsname", "Contents");
+  DefConstructor!("\\tableofcontents",
+    "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
+    properties => {
+      let mut td = CounterValue!("tocdepth").value_of() as usize + 1;
+      let s  = ["ltx:part", "ltx:chapter", "ltx:section", "ltx:subsection", "ltx:subsubsection",
+          "ltx:paragraph", "ltx:subparagraph"];
+      let max_level = s.len()-1;
+      td = std::cmp::min(td,max_level);
+      let mut s_depth : Vec<&'static str> = s.into_iter().take(td+1).collect();
+      if !s_depth.is_empty() {
+        s_depth.push("ltx:appendix");
+        s_depth.push("ltx:index");
+        s_depth.push("ltx:bibliography");
+      }
+      
+      Ok(stored_map!("select" => s_depth.join(" | "),
+        "name" => digest(T_CS!("\\contentsname"))?))
+    }
+  );
+  
+  DefMacro!("\\listfigurename", "List of Figures");
+  DefConstructor!("\\listoffigures",
+    "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
+    properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listfigurename"))?)) });
+  
+  DefMacro!("\\listtablename", "List of Tables");
+  DefConstructor!("\\listoftables",
+    "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
+    properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listtablename"))?)) });
+  
+  DefPrimitive!("\\numberline{}{}", None);
+  DefPrimitive!("\\addtocontents{}{}", None);
+  
+  DefConstructor!("\\addcontentsline{}{}{}", sub[document,args] {
+      if let [inlist,_vtype,_title @ ..] = args.as_slice() {
+        // Note that the node can be inlist $inlist.
+        // Could conceivably want to add $title as toctitle???
+        if let Some(savenode) = document.float_to_label() {
+          // DG: The Document+Node mutability API is strange 
+          //     w.r.t the original Perl ergonomics.
+          // if we use `.get_node_mut()` we can no longer `doc.set_attribute(node)`,
+          // as it induces TWO simultaneous mutable pointers into document. 
+          // cloning Node is now cheap enough (as the Node data lives in C's libxml)
+          // but it's not yet an idiomatic Rust interface. Something to ponder...
+          let mut node  = document.get_node().clone();
+          let inlist_str = inlist.as_ref().map(|v|v.to_string()).unwrap_or_default();
+          let inlist_v = if let Some(lists) = node.get_attribute("inlist") {
+            if !lists.is_empty() {
+              s!("{lists} {inlist_str}")
+            } else { inlist_str }
+          } else {
+            inlist_str
+          };
+          document.set_attribute(&mut node, "inlist", &inlist_v)?;
+          document.set_node(&savenode); 
+        }
+      }     
+    }
+  );
+  
 
   //======================================================================
   // C.4.4 Style registers
