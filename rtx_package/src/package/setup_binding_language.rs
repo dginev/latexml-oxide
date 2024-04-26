@@ -1589,7 +1589,8 @@ macro_rules! DeclareOption {
   (None, $(sub)? $body:block) => {
     let cs = String::from("\\default@ds");
     // block case, create a primitive
-    let code: PrimitiveBody = PrimitiveBody::Closure(Rc::new(move |_args| $body.into_digested_result()));
+    let code: PrimitiveBody = PrimitiveBody::Closure(
+      Rc::new(move |_args| $body.into_digested_result()));
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
   };
   ($option:expr, $tex:literal) => {
@@ -1610,7 +1611,8 @@ macro_rules! DeclareOption {
     state::push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
-    let code: PrimitiveClosure = Rc::new(move |_args| $body.into_digested_result());
+    let code: PrimitiveBody = PrimitiveBody::Closure(
+      Rc::new(move |_args| $body.into_digested_result()));
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
   }
 }

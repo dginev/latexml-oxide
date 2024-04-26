@@ -459,6 +459,7 @@ macro_rules! AssignRegister {
 
 #[macro_export]
 macro_rules! SetCounter {
+  ($ctr:expr => $value:expr) => { SetCounter!($ctr,$value) };
   ($ctr:expr, $value:expr) => {
     state::assign_register(&s!("\\c@{}",$ctr), $value.into(), Some(Scope::Global), Vec::new())?;
     after_assignment();
