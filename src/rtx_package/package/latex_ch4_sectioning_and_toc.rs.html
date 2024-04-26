@@ -307,6 +307,74 @@
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
 </pre></div><pre class="rust"><code><span class="comment">//**********************************************************************
 // C.4 Sectioning and Table of Contents
 //**********************************************************************
@@ -609,7 +677,75 @@
   //======================================================================
   // Handled in article,report or book.
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\appendixname"</span>, <span class="string">"Appendix"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixesname"</span>, <span class="string">"Appendixes"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixesname"</span>, <span class="string">"Appendixes"</span>);  
+  <span class="comment">// TODO: add the rest...
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@@appendix"</span>, <span class="string">"\\@startsection{appendix}{0}{}{}{}{}"</span>);
+
+  <span class="comment">//======================================================================
+  // C.4.3 Table of Contents
+  //======================================================================
+  // Insert stubs that will be filled in during post processing.
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\contentsname"</span>, <span class="string">"Contents"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\tableofcontents"</span>,
+    <span class="string">"&lt;ltx:TOC lists='toc' scope='global' select='#select'&gt;&lt;ltx:title&gt;#name&lt;/ltx:title&gt;&lt;/ltx:TOC&gt;"</span>,
+    properties =&gt; {
+      <span class="kw">let </span><span class="kw-2">mut </span>td = <span class="macro">CounterValue!</span>(<span class="string">"tocdepth"</span>).value_of() <span class="kw">as </span>usize + <span class="number">1</span>;
+      <span class="kw">let </span>s  = [<span class="string">"ltx:part"</span>, <span class="string">"ltx:chapter"</span>, <span class="string">"ltx:section"</span>, <span class="string">"ltx:subsection"</span>, <span class="string">"ltx:subsubsection"</span>,
+          <span class="string">"ltx:paragraph"</span>, <span class="string">"ltx:subparagraph"</span>];
+      <span class="kw">let </span>max_level = s.len()-<span class="number">1</span>;
+      td = std::cmp::min(td,max_level);
+      <span class="kw">let </span><span class="kw-2">mut </span>s_depth : Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = s.into_iter().take(td+<span class="number">1</span>).collect();
+      <span class="kw">if </span>!s_depth.is_empty() {
+        s_depth.push(<span class="string">"ltx:appendix"</span>);
+        s_depth.push(<span class="string">"ltx:index"</span>);
+        s_depth.push(<span class="string">"ltx:bibliography"</span>);
+      }
+      
+      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"select" </span>=&gt; s_depth.join(<span class="string">" | "</span>),
+        <span class="string">"name" </span>=&gt; digest(<span class="macro">T_CS!</span>(<span class="string">"\\contentsname"</span>))<span class="question-mark">?</span>))
+    }
+  );
+  
+  <span class="macro">DefMacro!</span>(<span class="string">"\\listfigurename"</span>, <span class="string">"List of Figures"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\listoffigures"</span>,
+    <span class="string">"&lt;ltx:TOC lists='lof' scope='global'&gt;&lt;ltx:title&gt;#name&lt;/ltx:title&gt;&lt;/ltx:TOC&gt;"</span>,
+    properties =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; stomach::digest(<span class="macro">T_CS!</span>(<span class="string">"\\listfigurename"</span>))<span class="question-mark">?</span>)) });
+  
+  <span class="macro">DefMacro!</span>(<span class="string">"\\listtablename"</span>, <span class="string">"List of Tables"</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\listoftables"</span>,
+    <span class="string">"&lt;ltx:TOC lists='lot' scope='global'&gt;&lt;ltx:title&gt;#name&lt;/ltx:title&gt;&lt;/ltx:TOC&gt;"</span>,
+    properties =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; stomach::digest(<span class="macro">T_CS!</span>(<span class="string">"\\listtablename"</span>))<span class="question-mark">?</span>)) });
+  
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\numberline{}{}"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\addtocontents{}{}"</span>, <span class="prelude-val">None</span>);
+  
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\addcontentsline{}{}{}"</span>, sub[document,args] {
+      <span class="kw">if let </span>[inlist,_vtype,_title @ ..] = args.as_slice() {
+        <span class="comment">// Note that the node can be inlist $inlist.
+        // Could conceivably want to add $title as toctitle???
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(savenode) = document.float_to_label() {
+          <span class="comment">// DG: The Document+Node mutability API is strange 
+          //     w.r.t the original Perl ergonomics.
+          // if we use `.get_node_mut()` we can no longer `doc.set_attribute(node)`,
+          // as it induces TWO simultaneous mutable pointers into document. 
+          // cloning Node is now cheap enough (as the Node data lives in C's libxml)
+          // but it's not yet an idiomatic Rust interface. Something to ponder...
+          </span><span class="kw">let </span><span class="kw-2">mut </span>node  = document.get_node().clone();
+          <span class="kw">let </span>inlist_str = inlist.as_ref().map(|v|v.to_string()).unwrap_or_default();
+          <span class="kw">let </span>inlist_v = <span class="kw">if let </span><span class="prelude-val">Some</span>(lists) = node.get_attribute(<span class="string">"inlist"</span>) {
+            <span class="kw">if </span>!lists.is_empty() {
+              <span class="macro">s!</span>(<span class="string">"{lists} {inlist_str}"</span>)
+            } <span class="kw">else </span>{ inlist_str }
+          } <span class="kw">else </span>{
+            inlist_str
+          };
+          document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"inlist"</span>, <span class="kw-2">&amp;</span>inlist_v)<span class="question-mark">?</span>;
+          document.set_node(<span class="kw-2">&amp;</span>savenode); 
+        }
+      }     
+    }
+  );
+  
 
   <span class="comment">//======================================================================
   // C.4.4 Style registers
