@@ -182,10 +182,12 @@ pub mod amssymb_sty;
 pub mod amsthm_sty;
 pub mod fullpage_sty;
 pub mod article_cls;
+pub mod book_cls;
 pub mod cite_sty;
 pub mod comment_sty;
 pub mod etoolbox_sty;
 pub mod fontenc_sty;
+pub mod fancyhdr_sty;
 pub mod nameref_sty;
 pub mod hyperref_sty;
 pub mod ieeetran_cls;
@@ -215,12 +217,14 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "latexml.sty" => latexml_sty::load_definitions(),
     "article.cls" => article_cls::load_definitions(),
     "alltt.sty" => alltt_sty::load_definitions(),
+    "book.cls" => book_cls::load_definitions(),
     "amsmath.sty" => amsmath_sty::load_definitions(),
     "amsfonts.sty" => amsfonts_sty::load_definitions(),
     "amssymb.sty" => amssymb_sty::load_definitions(),
     "amsthm.sty" => amsthm_sty::load_definitions(),
     "amsbsy.sty" => amsbsy_sty::load_definitions(),
     "amsgen.sty" => amsgen_sty::load_definitions(),
+    "fancyhdr.sty" => fancyhdr_sty::load_definitions(),
     "fullpage.sty" => fullpage_sty::load_definitions(),
     "comment.sty" => comment_sty::load_definitions(),
     "endnotes.sty" => endnotes_sty::load_definitions(),
