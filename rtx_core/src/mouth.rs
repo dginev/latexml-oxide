@@ -55,7 +55,7 @@ impl FoodType {
 }
 
 #[thread_local]
-static mut LASTID: u32 = 0;
+static mut LASTID: usize = 0;
 
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
 static LOWERHEX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[0-9a-f]$").unwrap());
@@ -760,10 +760,10 @@ impl Mouth {
     self.chars = v.into_iter().collect();
   }
 
-  fn gid() -> String {
+  fn gid() -> usize {
     unsafe {
       LASTID += 1;
-      LASTID.to_string()
+      LASTID
     }
   }
 
