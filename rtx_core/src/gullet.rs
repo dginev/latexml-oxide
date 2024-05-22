@@ -80,86 +80,77 @@ macro_rules! runtime_mut {
   () => ((*GULLET).borrow_mut().runtime.as_mut())
 }
 
-impl Gullet {
-  /// Initialize (or reset, if reentrant) a Gullet to its default empty state
-  pub fn initialize(&mut self) {
-    self.runtime = None;
-    self.mouthstack = VecDeque::new();
-    self.pending_comments = VecDeque::new();
-  }
-  /// User feedback for where something (error?) occurred.
-  pub fn get_locator(&self) -> Locator {
-    let mut runtime_opt = self.runtime.as_ref();
-    let mut mouthstack_iter = self.mouthstack.iter();
-    while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
-      runtime_opt = mouthstack_iter.next();
-    }
-    if let Some(runtime) = runtime_opt {
-      // First exit condition: we found a mouth with a source, and asked it for a locator
-      runtime.mouth.get_locator()
-    } else if let Some(runtime) = self.mouthstack.front() {
-      // Backup strategy: return the first locator in the mouthstack:
-      runtime.mouth.get_locator()
-    } else {
-      // Final backup -- the default locator
-      // TODO: Or should this be None?
-      Locator::default()
-    }
-  }
-  pub fn get_location(&self) -> String {
-    let loc = self.get_locator();
-    s!("at {}", loc)
-  }
+/// Initialize (or reset, if reentrant) a Gullet to its default empty state
+pub fn initialize_gullet() {
+  let mut gullet = gullet_mut!();
+  gullet.runtime = None;
+  gullet.mouthstack = VecDeque::new();
+  gullet.pending_comments = VecDeque::new();
+}
 
-  pub fn get_mouth(&self) -> Option<&Mouth> {
-    match self.runtime {
-      None => None,
-      Some(ref runtime) => Some(&runtime.mouth),
-    }
+/// Get the current location of input getting read
+pub fn get_locator() -> Locator {
+  let gullet = gullet!();
+  let mut runtime_opt = gullet.runtime.as_ref();
+  let mut mouthstack_iter = gullet.mouthstack.iter();
+  while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
+    runtime_opt = mouthstack_iter.next();
   }
+  if let Some(runtime) = runtime_opt {
+    // First exit condition: we found a mouth with a source, and asked it for a locator
+    runtime.mouth.get_locator()
+  } else if let Some(runtime) = gullet.mouthstack.front() {
+    // Backup strategy: return the first locator in the mouthstack:
+    runtime.mouth.get_locator()
+  } else {
+    // Final backup -- the default locator
+    // TODO: Or should this be None?
+    Locator::default()
+  }
+}
+  
+/// Comment-oriented location string, based on `get_locator`
+pub fn get_location() -> String {
+  let loc = get_locator();
+  s!("at {}", loc)
+}
 
-  pub fn get_mouth_mut(&mut self) -> Option<&mut Mouth> {
-    match self.runtime {
-      None => None,
-      Some(ref mut runtime) => Some(&mut runtime.mouth),
+pub fn mouth_is_open(mouth: &Mouth) -> bool {
+  let gullet = gullet!();
+  if let Some(ref runtime) = gullet.runtime {
+    if mouth == &runtime.mouth {
+      return true;
     }
   }
+  gullet.mouthstack.iter().any(|runtime| &runtime.mouth == mouth)
+}
+  
 
-  pub fn mouth_is_open(&self, mouth: &Mouth) -> bool {
-    if let Some(ref runtime) = self.runtime {
-      if mouth == &runtime.mouth {
-        return true;
-      }
-    }
-    self.mouthstack.iter().any(|runtime| &runtime.mouth == mouth)
-  }
-  /// Push the `tokens` back into the input stream to be re-read.
-  pub fn unread(&mut self, tokens: Tokens) {
-    self.unread_vec(tokens.unlist());
-  }
-  /// same as `unread`, but drains the `tokens` from its contents
-  pub fn unread_mut(&mut self, tokens: &mut Tokens) {
-    if let Some(ref mut runtime) = self.runtime {
-      for token in tokens.unlist_mut().drain(..).rev() {
-        runtime.pushback.push_front(token);
-      }
-    };
-  }
-  /// same as `unread`, but only for a single `Token`
-  pub fn unread_one(&mut self, token: Token) {
-    if let Some(ref mut runtime) = self.runtime {
+/// Push the `tokens` back into the input stream to be re-read.
+pub fn unread(tokens: Tokens) {
+  unread_vec(tokens.unlist());
+}
+/// Variant of `unread`, but drains the contents of `tokens` without taking ownership.
+pub fn unread_mut(tokens: &mut Tokens) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    for token in tokens.unlist_mut().drain(..).rev() {
       runtime.pushback.push_front(token);
-    };
-  }
-  /// same as `unread`, but does not require the Tokens wrapper
-  pub fn unread_vec(&mut self, tokens: Vec<Token>) {
-    if let Some(ref mut runtime) = self.runtime {
-      for token in tokens.into_iter().rev() {
-        runtime.pushback.push_front(token);
-      }
+    }
+  };
+}
+/// Unreads a single `Token` to the start of the token stream
+pub fn unread_one(token: Token) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    runtime.pushback.push_front(token);
+  };
+}
+/// Unreads a `Vec<Token>` to the start of the token stream
+pub fn unread_vec(tokens: Vec<Token>) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    for token in tokens.into_iter().rev() {
+      runtime.pushback.push_front(token);
     }
   }
-
 }
 
 //**********************************************************************
@@ -1537,7 +1528,7 @@ pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
     _ => None,
   }
 }
-
+/// Handle a marker token, by updating the current alignment group count
 fn handle_marker(marker_token: Token) {
   marker_token.with_str(|arg| match arg {
     "before-column" => {
@@ -1614,6 +1605,7 @@ where
   Ok(results)
 }
 
+/// Check if there is more input to be read from the current mouth
 pub fn has_more_input() -> bool {
   match runtime!() {
     Some(ref mut runtime) => runtime.mouth.has_more_input(),
@@ -1641,33 +1633,13 @@ pub fn flush() {
   g.mouthstack = VecDeque::new();
 }
 
-pub fn unread(tokens: Tokens) {
-  gullet_mut!().unread(tokens)
-}
-/// same as `unread`, but drains the `tokens` from its contents
-pub fn unread_mut(tokens: &mut Tokens) {
-  gullet_mut!().unread_mut(tokens)
-}
-/// same as `unread`, but only for a single `Token`
-pub fn unread_one(token: Token) {
-  gullet_mut!().unread_one(token)
-}
-/// same as `unread`, but does not require the Tokens wrapper
-pub fn unread_vec(tokens: Vec<Token>) {
-  gullet_mut!().unread_vec(tokens)
-}
-
-pub fn initialize_gullet() {
-  gullet_mut!().initialize()
-}
-pub fn get_locator() -> Locator {
-  gullet!().get_locator()
-}
-pub fn get_location() -> String {
-  gullet!().get_location()
-}
-
+/// Execute a function with a mutable reference to the current mouth
 pub fn with_mouth_mut<FnR,R>(caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Mouth>) -> R {
-  caller(gullet_mut!().get_mouth_mut())
+  let mut gullet = gullet_mut!();
+  let mouth_opt = match gullet.runtime {
+    None => None,
+    Some(ref mut runtime) => Some(&mut runtime.mouth),
+  };
+  caller(mouth_opt)
 }
