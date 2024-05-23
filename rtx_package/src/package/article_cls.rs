@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!( {
   LoadPool!("LaTeX");

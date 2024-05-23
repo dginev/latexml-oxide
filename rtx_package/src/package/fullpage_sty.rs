@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 LoadDefinitions!( {
   // Ignore the options
   for option in ["in","cm","plain", "empty", "headings", "myheadings"] {

@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 
 LoadDefinitions!({
   DefConditional!("\\iflatexml", { true });

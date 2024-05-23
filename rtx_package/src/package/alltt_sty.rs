@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 
 LoadDefinitions!({
   DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",

@@ -1,4 +1,4 @@
-use rtx_package::package::*;
+use rtx_package::prelude::*;
 
 LoadDefinitions!({
   // Don't need to respect source newlines

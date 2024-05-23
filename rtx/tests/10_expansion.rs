@@ -12,7 +12,6 @@ use std::rc::Rc;
 
 use rtx::tex_tests;
 use rtx_core::common::error::Result;
-use rtx_package::package;
 
 use phf::phf_map;
 static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
@@ -25,7 +24,7 @@ pub fn expansion_tests_dispatch(
   match filename {
     "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions()),
     "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions()),
-    other => package::dispatch(other),
+    other => rtx_package::dispatch(other),
   }
 }
 

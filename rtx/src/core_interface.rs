@@ -24,8 +24,8 @@ use rtx_core::util::pathname::PathnameFindOptions;
 use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
-use rtx_package::{
-  input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions,
+use rtx_package::prelude::{
+  input_content, input_definitions, InputDefinitionOptions, InputOptions,
 };
 
 static CLS_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.cls$").unwrap());

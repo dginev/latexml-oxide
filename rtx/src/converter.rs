@@ -7,7 +7,6 @@ use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
 use rtx_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut};
-use rtx_package::package;
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
@@ -46,7 +45,7 @@ impl Converter {
   }
   pub fn initialize_session(&mut self) -> Result<()> {
     // Add default package bindings
-    set_bindings_dispatch(Rc::new(package::dispatch));
+    set_bindings_dispatch(Rc::new(rtx_package::dispatch));
     // Add additional binding definitions if any
     if let Some(closure) = &self.opts.extra_bindings_dispatch {
       set_extra_bindings_dispatch(closure.clone());

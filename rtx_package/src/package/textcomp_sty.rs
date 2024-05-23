@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 LoadDefinitions!({
   DefPrimitive!("\\textlangle", "\u{27E8}",
     bounded => true, font => { encoding => "TS1" });

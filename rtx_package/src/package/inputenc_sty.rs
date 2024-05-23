@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 
 //**********************************************************************
 fn set_input_encoding(encoding: &str) -> Result<()> {

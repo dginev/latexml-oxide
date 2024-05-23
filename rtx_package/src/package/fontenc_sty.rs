@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 
 fn setup_cyrillic() -> Result<()> {
   DefMacro!("\\cyra", "\u{0430}");

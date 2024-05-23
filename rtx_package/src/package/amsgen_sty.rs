@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 LoadDefinitions!({
 
   DefMacro!("\\@saveprimitive{}{}", "\\let#2#1");
