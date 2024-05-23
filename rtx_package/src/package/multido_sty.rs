@@ -1,6 +1,6 @@
 static DNIR_REX: Lazy<Regex> = Lazy::new(|| Regex::new("^\\\\((?i)[dnir])").unwrap());
 
-use crate::package::*;
+use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   DefRegister!("\\multido@count" => Number::new(0));

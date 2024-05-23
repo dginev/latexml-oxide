@@ -1,4 +1,4 @@
-use rtx_package::package::*;
+use rtx_package::prelude::*;
 
 //**********************************************************************
 // LaTeXML Declaration for David Carlisle's xii.tex

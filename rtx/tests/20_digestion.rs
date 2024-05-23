@@ -15,14 +15,13 @@ use std::rc::Rc;
 
 use rtx::tex_tests;
 use rtx_core::common::error::Result;
-use rtx_package::package;
 
 fn digestion_tests_dispatch(
   filename: &str,
   ) -> Option<Result<()>> {
   match filename {
     "rebox.tex" => Some(helpers::rebox_tex::load_definitions()),
-    other => package::dispatch(other),
+    other => rtx_package::dispatch(other),
   }
 }
 

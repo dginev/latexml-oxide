@@ -2,7 +2,6 @@
 extern crate rtx_core;
 use rtx::converter::Converter;
 use rtx_core::common::{Config, DataSize, OutputFormat};
-use rtx_package::package;
 use std::env;
 use std::error::Error;
 use std::fs::File;
@@ -45,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     preamble: None,
     postamble: None,
     mode: None,
-    bindings_dispatch: Some(Rc::new(package::dispatch)),
+    bindings_dispatch: Some(Rc::new(rtx_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(rtx_contrib::dispatch)),
   };
   let mut converter = Converter::from_config(opts.clone());

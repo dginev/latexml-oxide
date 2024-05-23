@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 
 LoadDefinitions!({
   // Ignore the resorting of citations

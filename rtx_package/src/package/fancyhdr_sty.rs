@@ -4,7 +4,7 @@
 // Released under the Gnu Public License                               
 // Released to the Public Domain                                       
 
-use crate::package::*;
+use crate::prelude::*;
 
 LoadDefinitions!({
   DefMacro!("\\fancyhead[]{}", "");

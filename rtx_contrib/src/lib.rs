@@ -1,4 +1,6 @@
 #[macro_use]
+extern crate rtx_package;
+#[macro_use]
 extern crate rtx_codegen;
 use rtx_core::common::error::*;
 

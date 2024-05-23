@@ -1,4 +1,4 @@
-use crate::package::*;
+use crate::prelude::*;
 use crate::package::url_sty::LEADING_BACKSLASH_RE;
 
 LoadDefinitions!({

@@ -1,4 +1,4 @@
-use rtx_package::*;
+use rtx_package::prelude::*;
 
 LoadDefinitions!({
   DefMacro!("\\where", "Section 1",           scope => "section:1");

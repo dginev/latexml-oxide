@@ -1,0 +1,460 @@
+use crate::prelude::*;
+
+static FONT_TOKEN_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap());
+
+LoadDefinitions!({
+  // <font> = <fontdef token> | \font | <family member>
+  // <family member> = <font range><4bit>
+  // <font range> = \textfont | \scriptfont | \scriptscriptfont
+
+  // Doubtful that we can do anything useful with these.
+  // These look essentially like Registers, although Knuth doesn't call them that.
+  // NOTE: These should just point to a CS token, right????
+  // (although it SHOULD be one defined to be a font switch??)
+  // NOTE: These should NOT be global(?)
+  DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
+  getter => sub[args] {
+    let fam = args.remove(0).expect_number().value_of();
+    lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
+  },
+  setter => sub[font,scope,args] {
+    let fam = args.remove(0).expect_number().value_of();
+    state::assign_value(&s!("textfont_{fam}"), font, scope);
+  });
+
+  DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
+  getter => sub[args] {
+    let fam = args.remove(0).expect_number().value_of();
+    lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
+  },
+  setter => sub[font,scope,args] {
+    let fam = args.remove(0).expect_number().value_of();
+    state::assign_value(&s!("scriptfont_{fam}"), font, scope);
+  });
+
+  DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
+  getter => sub[args] {
+    let fam = args.remove(0).expect_number().value_of();
+    lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
+  },
+  setter => sub[font,scope,args] {
+    let fam = args.remove(0).expect_number().value_of();
+    state::assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
+  });
+
+  // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
+  // #    | <dimendef token> | \dimen<8bit> | <box dimension><8bit> | \fontdimen<number><font>
+
+  DefRegister!("\\lastkern" => Dimension::new(0), readonly => true);
+
+  // # <box dimension> = \ht | \wd | \dp
+  DefRegister!("\\ht Number", Dimension::new(0),
+  getter => sub[args] {
+    let n = args.remove(0).expect_number();
+    with_value(&format!("box{}", n.value_of()), |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
+      thebox.get_height()
+    } else {
+      Some(RegisterValue::Dimension(Dimension::default()))
+    })},
+  setter => sub[value,_scope,args] {
+    let n = args.remove(0).expect_number();
+    let boxkey = format!("box{}", n.value_of());
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
+      thebox.set_height(value);
+    })});
+
+  DefRegister!("\\wd Number", Dimension::default(),
+  getter => sub[args] {
+    let n = args.remove(0).expect_number();
+    let boxid = format!("box{}", n.value_of());
+    let mut stuff = checkout_value(&boxid);
+    let result = {if let Some(Stored::Digested(ref mut thebox)) = stuff {
+      match thebox.get_width(None) {
+        Ok(v) => v,
+        Err(e) => {
+          let err = || {Error!("method", "get_width", format!("{e}")); Ok(()) };
+          err().ok();
+          None
+        }
+      }
+    } else {
+      Some(RegisterValue::Dimension(Dimension::default()))
+    }};
+    if let Some(thebox) = stuff {
+      checkin_value(&boxid, thebox);
+    }
+    result
+  },
+  setter => sub[value,_scope,args] {
+    let n = args.remove(0).expect_number();
+    let boxkey = format!("box{}", n.value_of());
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
+      thebox.set_width(value);
+    })});
+
+  DefRegister!("\\dp Number", Dimension::new(0),
+  getter => sub[args] {
+    let n = args.remove(0).expect_number();
+    with_value(&format!("box{}", n.value_of()),|val_opt|
+      if let Some(Stored::Digested(thebox)) = val_opt {
+        thebox.get_depth()
+      } else {
+        Some(RegisterValue::Dimension(Dimension::default()))
+      })},
+setter => sub[value,_scope,args] {
+    let n = args.remove(0).expect_number();
+    let boxkey = format!("box{}", n.value_of());
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
+      thebox.set_depth(value);
+    })});
+
+  // # 2nd arg is <font> = <fontdef token> | \font | <family member>
+  // #  <family member> = <font range><4bit number>
+  // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
+  DefParameterType!(FontToken, sub[_inner, _extra] {
+    let token = gullet::read_token()?.unwrap();
+    if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
+      gullet::read_number()?;
+    }
+    token
+  }); // ?
+  DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
+    getter => sub[args] {
+      let p = args.remove(0).expect_number().value_of();
+      match p {
+        2 => Dimension::from_str("0.5em").ok()?,    // interword space
+        5 => Dimension::from_str("1ex").ok()?,      // x-height
+        6 => Dimension::from_str("1em").ok()?,      // quad width
+        _ => Dimension::new(0)
+      }
+    }
+  );
+
+  // Could be handled by setting dimensions whenever the box itself is set?
+
+  // <internal glue> = <glue parameter> | \lastskip | <skipdef token> | \skip<8bit>
+
+  DefRegister!("\\lastskip", Glue::new(0), readonly => true);
+
+  // <internal muglue> = <muglue parameter> | \lastskip | <muskipdef token> | \muskip<8bit>
+
+  // <family assignment> = <family member><equals><font>
+  // <shape assignment> = \parshape<equals><number><shape dimensions>
+  //  <shape dimensions> is 2n <dimen>
+
+  // <global assignment> = <font assignment> | <hyphenation assignment>
+  //   | <box size assignment> | <interaction mode assignment>
+  //   | <intimate assignment>
+  // <font assignment> = \fontdimen <number><font><equals><dimen>
+  //   | \hyphenchar<font><equals><number> | \skewchar<font><equals><number>
+  // <hyphenation assignment> = \hyphenation<general text>
+  //   | \patterns<general text>
+  // <box size assignment> = <box dimension><8bit><equals><dimen>
+  // <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
+  // These are no-ops; Basically, LaTeXML runs in scrollmode
+  DefPrimitive!(T_CS!("\\errorstopmode"), None, None);
+  DefPrimitive!(T_CS!("\\scrollmode"), None, None);
+  DefPrimitive!(T_CS!("\\nonstopmode"), None, None);
+  DefPrimitive!(T_CS!("\\batchmode"), None, None);
+
+  // <intimate assignment> = <special integer><equals><number>
+  //   | <special dimension><equals><dimen>
+
+  DefMacro!("\\fontencoding{}", "\\@@@fontencoding{#1}");
+
+  DefPrimitive!("\\@@@fontencoding{}", sub[(encoding)] {
+    let encoding = Expand!(encoding).to_string();
+    if load_font_map(&encoding).is_some() {
+      MergeFont!(encoding => encoding);
+    } else {
+      Info!("missing_font_encoding", encoding,
+        "Couldn't find font encoding, falling back to OT1");
+      // Default to OT1 encoding if no map found
+      MergeFont!(encoding => "OT1");
+    }
+    Ok(Vec::new())
+  });
+
+  DefMacro!("\\f@encoding", {
+    ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap())
+  });
+  DefMacro!("\\cf@encoding", {
+    ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap())
+  });
+
+  // Used for SemiVerbatim text
+  DeclareFontMap!(
+    "ASCII",
+    mixrc![
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+      None, None, ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A',
+      'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+      'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', '`', 'a', 'b', 'c', 'd', 'e',
+      'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
+      'x', 'y', 'z', '{', '|', '}', '~', None
+    ]
+  );
+
+  // Note that several entries are used for accents, and in practice will actually
+  // be used in something like an m:mover; thus they needn't (shouldn't?) be "small"
+  // There are also some questions about which choices are best
+  // grave & acute accents (entry 0x12 & 0x13) (often typed using 0x60 & 0x27)
+  //   are probably best using U+60(grave accent) & U+B4(acute accent)
+  //   but could be U+2035 (reversed prime) & U+2032 (prime).  (particularly for math?)
+  //   [we do use these for \prime, however!]
+  //   or U+02CB (modifier letter grave accent) & U+02CA (modifier letter acute accent)
+  // Similarly, hat & tilde (entries 0x5E & 0x7E)
+  //   typed using ^ 0x5E circumflex accent) & ~ 0x7E  tilde
+  //   are probably best just sticking with U+5E & U+7E
+  //   but could be U+02C6 (modifier letter circumflex accent) U+02DC (small tilde)
+  // [Note that generally we're using codepoints characterized as "modifier letter"
+  // only when no other spacing point is available.]
+  DeclareFontMap!(
+    "OT1",
+    mixrc![
+      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
+      '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{FB00}', '\u{FB01}', '\u{FB02}',
+      '\u{FB03}', '\u{FB04}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}',
+      '\u{02D8}', '\u{00AF}', '\u{02DA}', '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}',
+      '\u{00F8}', '\u{00C6}', '\u{0152}', '\u{00D8}', '\u{0335}', '!', '\u{201D}', '#', '$', '%',
+      '&', '\u{2019}', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6',
+      '7', '8', '9', ':', ';', '\u{00A1}', '=', '\u{00BF}', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F',
+      'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+      'Y', 'Z', '[', '\u{201C}', ']', '^', '\u{02D9}', '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f',
+      'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+      'y', 'z', '\u{2013}', '\u{2014}', '\u{02DD}', '\u{007E}', '\u{00A8}'
+    ]
+  ); // TODO: do we really need '\u{00A0}'\x{0335} as a single entry?
+
+  DeclareFontMap!(
+    "OT1",
+    mixrc![
+      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
+      '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{2191}', '\u{2193}', '\'', '\u{00A1}',
+      '\u{00BF}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}', '\u{02D8}',
+      '\u{00AF}', '\u{02DA}', '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}', '\u{00F8}',
+      '\u{00C6}', '\u{152}', '\u{00D8}', '\u{2423}', '!', '"', '#', '$', '%', '&', '\u{2019}', '(',
+      ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':',
+      ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+      'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^',
+      '_', '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+      'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '\u{00A8}'
+    ],
+    "typewriter"
+  );
+  #[rustfmt::skip]
+  DeclareFontMap!(
+    "OML",
+    mixrc![
+      // \Gamma     \Delta      \Theta      \Lambda      \Xi         \Pi         \Sigma \Upsilon
+      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
+      '\u{03A5}',
+      // \Phi       \Psi        \Omega      alpha        beta gamma       delta       epsilon
+      '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{03B1}', '\u{03B2}', '\u{03B3}', '\u{03B4}',
+      '\u{03F5}', // zeta       eta         theta iota         kappa      lambda       mu nu
+      '\u{03B6}', '\u{03B7}', '\u{03B8}', '\u{03B9}', '\u{03BA}', '\u{03BB}', '\u{03BC}',
+      '\u{03BD}', // xi         pi          rho         sigma       tau         upsilon     phi chi
+      '\u{03BE}', '\u{03C0}', '\u{03C1}', '\u{03C3}', '\u{03C4}', '\u{03C5}', '\u{03D5}',
+      '\u{03C7}',
+      // psi        omega       varepsilon  vartheta    varpi       varrho  varsigma    varphi
+      '\u{03C8}', '\u{03C9}', '\u{03B5}', '\u{03D1}', '\u{03D6}', '\u{03F1}', '\u{03C2}',
+      '\u{03C6}',
+      // l.harp.up  l.harp.dn   r.harp.up   r.harp.dnlhook       rhook       rt.tri     lf.tri
+      '\u{21BC}', '\u{21BD}', '\u{21C0}', '\u{21C1}', '\u{2E26}', '\u{2E27}', '\u{25B7}',
+      '\u{25C1}',
+      // old style numerals! (no separate codepoints ?)
+      // 0          1           2           3             4           5          6           7
+      '0', '1', '2', '3', '4', '5', '6',
+      '7', /* 8          9           .           ,             <           /          >
+            * star */
+      '8', '9', '.', ',', '\u{003C}', '\u{002F}', '\u{003E}',
+      '\u{22C6}', /* partial    A           B           C             D           E          F
+                   * G */
+      '\u{2202}', 'A', 'B', 'C', 'D', 'E', 'F',
+      'G', // H          I           J           K             L           M          N           O
+      'H', 'I', 'J', 'K', 'L', 'M', 'N',
+      'O', // P          Q           R           S             T           U          V           W
+      'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+      'W', /* X          Y           Z           flat          natural     sharp      smile
+            * frown */
+      'X', 'Y', 'Z', '\u{266D}', '\u{266E}', '\u{266F}', '\u{2323}',
+      '\u{2322}', /* ell        a           b           c             d           e          f
+                   * g */
+      '\u{2113}', 'a', 'b', 'c', 'd', 'e', 'f',
+      'g', // h          i           j           k             l           m          n           o
+      'h', 'i', 'j', 'k', 'l', 'm', 'n',
+      'o', // p          q           r           s             t           u          v           w
+      'p', 'q', 'r', 's', 't', 'u', 'v',
+      'w', // x          y           z           dotless i    dotless j    weier-p    arrow
+      // acc.inv.breve
+      'x', 'y', 'z', '\u{0131}', 'j', '\u{2118}', '\u{2192}', '\u{0311}'
+    ]
+  ); // TODO: '\u{00A0}' .'\u{0311}'
+
+  #[rustfmt::skip]
+  DeclareFontMap!(
+    "OMS",
+    mixrc![
+    // minus     dot         times       ast          divide      diamond    plus-minus minus-plus
+    '-',        '\u{22C5}', '\u{00D7}', '\u{2217}', '\u{00F7}', '\u{22C4}', '\u{00B1}', '\u{2213}',
+    // oplus      ominus      otimes      oslash       odot        bigcirc circ        bullet
+    '\u{2295}', '\u{2296}', '\u{2297}', '\u{2298}', '\u{2299}', '\u{25CB}', '\u{2218}', '\u{2219}',
+    // asymp      equiv       subseteq    supseteq leq         geq         preceq      succeq
+    '\u{224D}', '\u{2261}', '\u{2286}', '\u{2287}', '\u{2264}', '\u{2265}', '\u{2AAF}', '\u{2AB0}',
+    // sim        approx      subset      supset       ll          gg   prec        succ
+    '\u{223C}', '\u{2248}', '\u{2282}', '\u{2283}', '\u{226A}', '\u{226B}', '\u{227A}', '\u{227B}',
+    // leftarrow  rightarrow  uparrow     downarrow    leftrightar nearrow     searrow     simeq
+    '\u{2190}', '\u{2192}', '\u{2191}', '\u{2193}', '\u{2194}', '\u{2197}', '\u{2198}', '\u{2243}',
+    // Leftarrow  Rightarrow  Uparrow Downarrow    Leftrightar nwarrow     swarrow propto
+    '\u{21D0}', '\u{21D2}', '\u{21D1}', '\u{21D3}', '\u{21D4}', '\u{2196}', '\u{2199}', '\u{221D}',
+    // prime      infty       in          ni           bigtri.up   bigtri.dn   slash       mapsto
+    '\u{2032}', '\u{221E}', '\u{2208}', '\u{220B}', '\u{25B3}', '\u{25BD}', '/', '\u{21A6}',
+    // forall     exists      not         emptyset  Re          Im          top         bot
+    '\u{2200}', '\u{2203}', '\u{00AC}', '\u{2205}', '\u{211C}', '\u{2111}', '\u{22A4}', '\u{22A5}',
+    // aleph      cal A       cal B       cal    C        cal D       cal E       cal F  cal G
+    '\u{2135}', '\u{1D49C}', '\u{212C}', '\u{1D49E}', '\u{1D49F}', '\u{2130}', '\u{2131}', '\u{1D4A2}',
+    // cal H      cal I       cal J       cal K        cal L      cal M       cal N       cal O
+    '\u{210B}', '\u{2110}', '\u{1D4A5}', '\u{1D4A6}', '\u{2112}', '\u{2133}', '\u{1D4A9}', '\u{1D4AA}',
+    // cal P      cal Q       cal R cal S        cal T       cal U       cal V   cal W
+    '\u{1D4AB}','\u{1D4AC}','\u{211B}','\u{1D4AE}','\u{1D4AF}','\u{1D4B0}','\u{1D4B1}','\u{1D4B2}',
+    // cal X      cal Y       cal Z       cup          cap       uplus       wedge       vee
+    '\u{1D4B3}','\u{1D4B4}','\u{1D4B5}','\u{222A}','\u{2229}','\u{228C}','\u{2227}','\u{2228}',
+    // vdash      dashv       lfloor    rfloor       lceil       rceil       lbrace       rbrace
+    '\u{22A2}', '\u{22A3}', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}',  '{',         '}',
+    // langle     rangle       |          \|  updownarrow Updownarrow backslash   wr
+    '\u{27E8}', '\u{27E9}', '|', '\u{2225}', '\u{2195}', '\u{21D5}', '\u{005C}', '\u{2240}',
+    // surd       amalg       nabla      int          sqcup      sqcap      sqsubseteq  sqsupseteq
+    '\u{221A}', '\u{2210}', '\u{2207}', '\u{222B}', '\u{2294}', '\u{2293}', '\u{2291}', '\u{2292}',
+    // section    dagger      ddagger     para         clubsuit  diam.suit   heartsuit  spadesuit
+    '\u{00A7}', '\u{2020}', '\u{2021}', '\u{00B6}', '\u{2663}', '\u{2662}', '\u{2661}', '\u{2660}'
+    ]
+  );
+
+  #[rustfmt::skip]
+  DeclareFontMap!(
+    "OMX",
+    mixrc![
+      // (          )           [           ]             lfloor      rfloor      lceil rceil
+      '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}',
+      '\u{2309}', /* lbrace      rbrace      langle      rangle        |           ||          /
+                   * \ */
+      '{', '}', '\u{27E8}', '\u{27E9}', '|', '\u{2225}', '/', '\u{005C}', '(', ')', '(', ')', '[',
+      ']', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}', '{', '}', '\u{27E8}', '\u{27E9}', '/',
+      '\u{005C}', '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}', '{', '}',
+      '\u{27E8}', '\u{27E9}', '/', '\u{005C}', '/', '\u{005C}',
+      // next two rows are just fragments
+      // l.up.paren r.up.paren  l.up.brak   r.up.brak    l.bot.brak  r.bot.brak  l.brak.ext
+      // r.brak.ext
+      '\u{239B}', '\u{239E}', '\u{23A1}', '\u{23A4}', '\u{23A3}', '\u{23A6}', '\u{23A2}',
+      '\u{23A5}', /* l.up.brace r.up.brace  l.bot.brace r.bot.brace  l.brace.mid r.brace.mid
+                   * brace.ext  v.arrow.ext */
+      '\u{23A7}', '\u{23AB}', '\u{23A9}', '\u{23AD}', '\u{23A8}', '\u{23AC}', '\u{23AA}',
+      '\u{23D0}', // l.bot.paren r.bot.paren l.paren.ext     r.paren.ext
+      '\u{239D}', '\u{23A0}', '\u{239C}', '\u{239F}', '\u{27E8}', '\u{27E9}', '\u{2294}',
+      '\u{2294}', '\u{222E}', '\u{222E}', '\u{2299}', '\u{2299}', '\u{2295}', '\u{2295}',
+      '\u{2297}', '\u{2297}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}', '\u{22C2}',
+      '\u{228C}', '\u{2227}', '\u{2228}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}',
+      '\u{22C2}', '\u{228C}', '\u{2227}', '\u{2228}', '\u{2210}', '\u{2210}', '\u{005E}',
+      '\u{005E}', '\u{005E}', '\u{007E}', '\u{007E}', '\u{007E}', '[', ']', '\u{230A}', '\u{230B}',
+      '\u{2308}', '\u{2309}', '{', '}',
+      // [missing rad frags]     double arrow ext.
+      '\u{23B7}', '\u{23B7}', '\u{23B7}', '\u{23B7}', '\u{23B7}', None, None,
+      None, //                        [missing tips for horizontal curly braces]
+      '\u{2191}', '\u{2193}', None, None, None, None, '\u{21D1}', '\u{21D3}'
+    ]
+  );
+
+  DefPrimitive!("\\char Number", sub[(number)] {
+    let number_tks = number.revert().unwrap_or_default().unlist();
+    let decoded = match font::decode(number.value_of() as u8, None, false) {
+      None => *EMPTY_SYM,
+      Some(c) => arena::pin_char(c)
+    };
+    Tbox::new(
+     decoded,
+     None,
+     None,
+     Tokens!(T_CS!("\\char"), number_tks, T_RELAX!()),
+     SymHashMap::default())
+  });
+
+  // Almost like a register (and \countdef), but different...
+  // (including the preassignment to \relax!)
+  DefPrimitive!("\\chardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
+    // Let w/o AfterAssignment
+    let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+    state::assign_meaning(&newcs, relax_meaning, None);
+    let value = gullet::read_number()?;
+    state::install_definition(
+      Register::new_chardef(newcs, Some(value.into()), None, None), None);
+    state::after_assignment();
+    Ok(Vec::new())
+  });
+
+  DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
+    sizer       => "#1",
+    after_digest => sub[whatsit] {
+      let n = whatsit.get_arg(1).unwrap().value_of();
+      let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
+      if let Some(glyph) = glyph_opt {
+        whatsit.set_property("glyph", glyph);
+        whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
+      }
+      if let Some(role) = role_opt {
+        whatsit.set_property("role", role);
+      }
+      Ok(Vec::new())
+    }
+  );
+
+  DefConstructor!("\\delimiter Number",
+  "?#glyph(?#isMath(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)(#glyph))",
+  sizer       => "#glyph",
+  after_digest => sub[whatsit] {
+    let mut n = whatsit.get_arg(1).unwrap().value_of();
+    n >>= 12;    // Ignore 3 rightmost digits and treat as \mathchar
+    let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
+    if let Some(glyph) = glyph_opt {
+      whatsit.set_property("glyph",glyph);
+      whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
+    }
+    if let Some(role) = role_opt {
+      whatsit.set_property("role", role);
+    }
+    Ok(Vec::new())
+  });
+
+  // Almost like a register, but different...
+  DefPrimitive!("\\mathchardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
+    // Let w/o AfterAssignment
+    let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
+    assign_meaning(&newcs, means_relax, None);
+    let value  = gullet::read_number().unwrap_or_default();
+    let (role, glyph) = decode_math_char(value.value_of() as u16)?;
+    // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
+    state::install_definition(Register::new_chardef(newcs,Some(value.into()), glyph, role.map(arena::pin)), None);
+    state::after_assignment();
+  });
+
+  DefConstructor!("\\mathaccent Number Digested",
+  "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
+  sizer => "#1",    // Close enough?
+  after_digest => sub[whatsit] {
+    let n = whatsit.get_arg(1).unwrap().value_of();
+    let (_role, glyph_opt) = decode_math_char(n as u16)?;
+    if let Some(glyph) = glyph_opt {
+      whatsit.set_property("glyph", glyph);
+
+      let mut glyph_buf: [u8; 4] = [0; 4];
+      let glyph_str: &str = glyph.encode_utf8(&mut glyph_buf);
+      whatsit.set_property("font", lookup_font().unwrap().specialize(glyph_str));
+    }
+  });
+});

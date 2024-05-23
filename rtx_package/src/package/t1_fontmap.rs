@@ -1,5 +1,5 @@
 //! t1 font encoding
-use crate::package::*;
+use crate::prelude::*;
 
 LoadDefinitions!({
   DeclareFontMap!(
