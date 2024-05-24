@@ -1,112 +1,32 @@
+//! Base Parameter Types
+//! 
+//! Core TeX Implementation for LaTeXML
+
 use crate::prelude::*;
 
+// ======================================================================
+// Define parsers for standard parameter types.
 LoadDefinitions!({
-  RegisterNamespace!("ltx", "http://dlmf.nist.gov/LaTeXML");
-  RegisterNamespace!("svg", "http://www.w3.org/2000/svg");
-  // Needed for SVG
-  RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink");
-  // Not directly used, but let's stake out the ground
-  RegisterNamespace!("m", "http://www.w3.org/1998/Math/MathML");
-  RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml");
-  // Namespace for arbitrary data attributes (mapped to data-xxx in html5)
-  RegisterNamespace!("data" => "http://dlmf.nist.gov/LaTeXML/data");
-
-  DefMacro!("\\@empty", None);
-
-  //======================================================================
-  // Core ID functionality.
-  //======================================================================
-  // DOCUMENTID is the ID of the document
-  // AND prefixes IDs on all other elements.
-  let doc_id = state::lookup_string("DOCUMENTID");
-  if !doc_id.is_empty() {
-    // Wrap in T_OTHER so funny chars don't screw up (no space!)
-    let doc_id_token = T_OTHER!(doc_id);
-    DefMacro!(T_CS!("\\thedocument@ID"), None, doc_id_token);
-  } else {
-    Let!("\\thedocument@ID", "\\@empty");
-  }
-  NewCounter!("@XMARG", "document", idprefix => "XM");
-
-  //======================================================================
-  Tag!("ltx:document",
-  after_open => sub[document, _node] {
-    document.process_pending_resources()?;
-  });
-  RequireResource!("LaTeXML.css");
-
-  //======================================================================
-  // The default "initial context" for XML+RDFa specifies some default
-  // terms and prefixes, but no default vocabulary.
-  // Ought to have a default for @vocab, but settable?
-  // can we detect use of simple "term"s in attributes so we know whether we need @vocab?
-  // Ought to have a default set of prefixes from RDFa Core,
-  // but allow prefixes to be added.
-  // Probably ought to scan rdf attributes for all uses of prefixes,
-  // and include them in @prefix
-  // The following prefixes are listed in http://www.w3.org/2011/rdfa-context/rdfa-1.1
-  let rdf_prefixes = map!(
-    "cc"      => "http://creativecommons.org/ns#",
-    "ctag"    => "http://commontag.org/ns#",
-    "dc"      => "http://purl.org/dc/terms/",
-    "dcterms" => "http://purl.org/dc/terms/",
-    "ical"    => "http://www.w3.org/2002/12/cal/icaltzd#",
-    "foaf"    => "http://xmlns.com/foaf/0.1/",
-    "gr"      => "http://purl.org/goodrelations/v1#",
-    "grddl"   => "http://www.w3.org/2003/g/data-view#",
-    "ma"      => "http://www.w3.org/ns/ma-ont#",
-    "og"      => "http://ogp.me/ns#",
-    "owl"     => "http://www.w3.org/2002/07/owl#",
-    "rdf"     => "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "rdfa"    => "http://www.w3.org/ns/rdfa#",
-    "rdfs"    => "http://www.w3.org/2000/01/rdf-schema#",
-    "rev"     => "http://purl.org/stuff/rev#",
-    "rif"     => "http://www.w3.org/2007/rif#",
-    "rr"      => "http://www.w3.org/ns/r2rml#",
-    "schema"  => "http://schema.org/",
-    "sioc"    => "http://rdfs.org/sioc/ns#",
-    "skos"    => "http://www.w3.org/2004/02/skos/core#",
-    "skosxl"  => "http://www.w3.org/2008/05/skos-xl#",
-    "v"       => "http://rdf.data-vocabulary.org/#",
-    "vcard"   => "http://www.w3.org/2006/vcard/ns#",
-    "void"    => "http://rdfs.org/ns/void#",
-    "xhv"     => "http://www.w3.org/1999/xhtml/vocab#",
-    "xml"     => "http://www.w3.org/XML/1998/namespace",
-    "xsd"     => "http://www.w3.org/2001/XMLSchema#",
-    "wdr"     => "http://www.w3.org/2007/05/powder#",
-    "wdrs"    => "http://www.w3.org/2007/05/powder-s#"
-  );
-
-  for (k, v) in rdf_prefixes.iter() {
-    AssignMapping!("RDFa_prefixes", k => *v);
-  }
-
-  //**********************************************************************
-  // CORE TeX; Built-in commands.
-  //**********************************************************************
-
-  // ======================================================================
-  // Define parsers for standard parameter types.
   DefParameterType!(Plain, sub[inner, _extra] {
-      let mut value = ArgWrap::Tokens(gullet::read_arg()?);
-      if let Some(inner_ps) = inner {
-        // TODO: How many arguments can we expect back? One? Many?
-        //       Currently only passing through the first
-        value = inner_ps.reparse_argument(value)?.remove(0);
-      }
-      Ok(value)
-    },
-    reversion => sub[arg, inner, _extra] {
-      // let mut reverted_inner;
-      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
-      read_tokens.extend(if let Some(inner_ps) = inner {
-        inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
-      } else {
-        arg.iter().map(|t| t.revert()).collect()
-      });
-      read_tokens.push(T_END!());
-      Ok(Tokens::new(read_tokens))
+    let mut value = ArgWrap::Tokens(gullet::read_arg()?);
+    if let Some(inner_ps) = inner {
+      // TODO: How many arguments can we expect back? One? Many?
+      //       Currently only passing through the first
+      value = inner_ps.reparse_argument(value)?.remove(0);
+    }
+    Ok(value)
+  },
+  reversion => sub[arg, inner, _extra] {
+    // let mut reverted_inner;
+    let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+    read_tokens.extend(if let Some(inner_ps) = inner {
+      inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
+    } else {
+      arg.iter().map(|t| t.revert()).collect()
     });
+    read_tokens.push(T_END!());
+    Ok(Tokens::new(read_tokens))
+  });
 
   DefParameterType!(DefPlain, sub[inner, _extra] {
       let mut value = ArgWrap::Tokens(gullet::read_balanced(false, true, true)?);
@@ -116,15 +36,15 @@ LoadDefinitions!({
       Ok(value)
     },
     reversion => sub[arg, inner, _extra] {
-     // let mut reverted_inner;
-     let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
-     read_tokens.extend(if let Some(inner_ps) = inner {
+    // let mut reverted_inner;
+    let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+    read_tokens.extend(if let Some(inner_ps) = inner {
       inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
-     } else {
-       arg.iter().map(|t| t.revert()).collect()
-     });
-     read_tokens.push(T_END!());
-     Ok(Tokens::new(read_tokens))
+    } else {
+      arg.iter().map(|t| t.revert()).collect()
+    });
+    read_tokens.push(T_END!());
+    Ok(Tokens::new(read_tokens))
     });
 
   DefParameterType!(Optional, sub[inner, default] {
@@ -353,14 +273,14 @@ LoadDefinitions!({
     semiverbatim => Some(Vec::new()),
     optional => true,
     reversion => sub[arg, _inner, _extra] {
-     if !arg.is_empty() {
-       let mut read_tokens = vec![T_OTHER!(s!("["))];
-       read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
-       read_tokens.push(T_OTHER!(s!("]")));
-       Ok(Tokens::new(read_tokens))
-     } else {
-       Ok(Tokens!())
-     }
+    if !arg.is_empty() {
+      let mut read_tokens = vec![T_OTHER!(s!("["))];
+      read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      read_tokens.push(T_OTHER!(s!("]")));
+      Ok(Tokens::new(read_tokens))
+    } else {
+      Ok(Tokens!())
+    }
     }
   );
 
@@ -368,7 +288,7 @@ LoadDefinitions!({
   // Also, note that non-typewriter fonts will mess up some chars on digestion!
   DefParameterType!(Verbatim, sub[_inner, _extra] {
       gullet::read_until(&Tokens!(T_BEGIN!()))?;
-     begin_semiverbatim(Some(&['%', '\\']));
+    begin_semiverbatim(Some(&['%', '\\']));
       let arg = gullet::read_balanced(false,false,false)?;
       end_semiverbatim()?;
       Ok(arg)
@@ -391,7 +311,7 @@ LoadDefinitions!({
   // Read Verbatim, but allows expanding command sequences
   DefParameterType!(HyperVerbatim, sub[_inner, _extra] {
       gullet::read_until(&Tokens!(T_BEGIN!()))?;
-     begin_semiverbatim(Some(&['%']));
+    begin_semiverbatim(Some(&['%']));
       DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
@@ -1036,18 +956,5 @@ LoadDefinitions!({
       Ok(Tokens::new(reverted))
     });
 
-  //**********************************************************************
-  // LaTeX has a very particular notion of "Undefined",
-  // so let's get that squared away at the outset; it's useful for TeX, too!
-  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as
-  // \relax
-  DefMacro!("\\@ifundefined{}{}{}", sub[(name, if_token, else_token)] {
-    let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
-    if IsDefined!(&cs) {
-      Ok(else_token)
-    } else {
-      state::let_i(&cs, &T_RELAX!(), None); // Yuck, but traditional!
-      Ok(if_token)
-    }
-  });
+
 });

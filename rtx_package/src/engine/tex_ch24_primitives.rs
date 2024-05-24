@@ -98,38 +98,6 @@ LoadDefinitions!({
   // DefPrimitive('\shipout ??
   DefPrimitive!("\\ignorespaces SkipSpaces", None);
 
-  DefPrimitive!("\\lx@ignorehardspaces", {
-    let mut boxes = Vec::new();
-    while let Some(token) = gullet::read_x_token(None, false)? {
-      boxes = stomach::invoke_token(&token)?;
-      if boxes.is_empty() {
-        break;
-      }
-      while !boxes.is_empty() {
-        let is_space = if let Some(space_val) = boxes[0].get_property("isSpace") {
-          match space_val {
-            Cow::Borrowed(Stored::Bool(space_bool)) => *space_bool,
-            Cow::Owned(Stored::Bool(ref space_bool))  => *space_bool,
-            _ => false
-          }
-        } else {
-          false
-        };
-
-        if is_space {
-          boxes = boxes[1..].to_vec();
-        } else {
-          break;
-        }
-      }
-
-      if !boxes.is_empty() {
-        break;
-      }
-    }
-    Ok(boxes)
-  });
-
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
   DefPrimitive!("\\afterassignment Token", sub[(t)] {
     assign_value("afterAssignment", t, Some(Scope::Global));

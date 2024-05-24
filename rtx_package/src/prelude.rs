@@ -88,5 +88,6 @@ pub use rtx_core::binding::def::traits::*;
 pub mod setup_binding_language;
 
 // Export the package-level API
-pub use crate::engine::*;
+pub use crate::engine::base_functions::*;
+pub use crate::engine::latex_functions::*;
 pub use crate::package::*;

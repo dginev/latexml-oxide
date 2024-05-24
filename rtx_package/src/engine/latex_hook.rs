@@ -1,24 +1,6 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
-  //**********************************************************************
-  // LaTeX Hook
-  //**********************************************************************
-  // This is used for plain TeX, but needs to be undone for LaTeX (or...)!
-  RelaxNGSchema!("LaTeXML");
-  Tag!("ltx:section", auto_close => true);
-  Tag!("ltx:document", auto_close => true, auto_open => true);
-  Tag!("ltx:document", after_open => sub[document,root] {
-    let mut bg_to_set = None;
-    if let Some(bg) = document.get_node_font(root).get_background() {
-      if bg != "white" {
-        bg_to_set = Some(bg.clone().into_owned());
-      }
-    }
-    if let Some(bg) = bg_to_set {
-      document.set_attribute(root, "backgroundcolor", &bg)?;
-    }
-  });
 
   // No, \documentclass isn't really a primitive -- It's not even TeX!
   // But we define a number of stubs here that will automatically load

@@ -6,6 +6,8 @@ LoadDefinitions!({
   // Apparently LaTeX does NOT define \magnification,
   // and babel uses that to determine whether we're runing LaTeX!!!
   Let!("\\magnification", "\\@undefined");
+  Let!("\\@empty",        "\\lx@empty");
+  Let!("\\@ifundefined",  "\\lx@ifundefined");
   //**********************************************************************
   // Basic \documentclass & \documentstyle
 
