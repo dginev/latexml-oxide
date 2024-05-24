@@ -1,16 +1,7 @@
-//----------------------------------------------------------------------
-// General support for Front Matter.
-// Not (yet) used by TeX (finish plain?)
-// But provides support for LaTeX (and other formats?) for handling frontmatter.
-//
-// The idea is to accumulate any frontmatter material (title, author,...)
-// rather than directly drop it into the digested stream.
-// When we begin constructing the document, all accumulated material is output.
-// See LaTeX.ltxml for usage.
-// Note: could be circumstances where you'd want modular frontmatter?
-// (ie. frontmatter for each sectional unit)
+//! Base Utilities
+//! 
+//! Core TeX Implementation for LaTeXML
 
-use crate::prelude::*;
 use rustc_hash::FxHashSet as HashSet;
 const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:title",
@@ -23,8 +14,66 @@ const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:classification",
   "ltx:acknowledgements",
 ];
-#[rustfmt::skip]
+use crate::prelude::*;
+
 LoadDefinitions!({
+  //======================================================================
+  // LaTeX has a very particular, but useful, notion of "Undefined",
+  //    so let's get that squared away at the outset; it's useful for TeX, too!
+  //
+  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
+  DefMacro!("\\lx@ifundefined{}{}{}", sub[(name, if_token, else_token)] {
+    let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
+    if IsDefined!(&cs) {
+      Ok(else_token)
+    } else {
+      state::assign_meaning(&cs, state::lookup_meaning(&TOKEN_RELAX), None);  // Let w/o AfterAssign
+      Ok(if_token)
+    }
+  }, locked=>true);
+
+  DefPrimitive!("\\lx@ignorehardspaces", {
+    let mut boxes = Vec::new();
+    while let Some(token) = gullet::read_x_token(None, false)? {
+      boxes = stomach::invoke_token(&token)?;
+      if boxes.is_empty() {
+        break;
+      }
+      while !boxes.is_empty() {
+        if match boxes[0].get_property("isSpace") {
+          Some(Cow::Borrowed(Stored::Bool(space_bool))) => *space_bool,
+          Some(Cow::Owned(Stored::Bool(ref space_bool)))  => *space_bool,
+          _ => false
+        } {
+          boxes = boxes[1..].to_vec();
+        } else {
+          break;
+        }
+      }
+      if !boxes.is_empty() {
+        break;
+      }
+    }
+    Ok(boxes)
+  });
+
+
+  DefConstructor!("\\@ADDCLASS Semiverbatim", sub[document,args] {
+      document.add_class(&mut document.get_element().unwrap(), 
+        &args[0].as_ref().unwrap().to_string())?; 
+    }, sizer => 0);
+
+  //======================================================================
+  // General support for Front Matter.
+  // Not (yet) used by TeX (finish plain?)
+  // But provides support for LaTeX (and other formats?) for handling frontmatter.
+  //
+  // The idea is to accumulate any frontmatter material (title, author,...)
+  // rather than directly drop it into the digested stream.
+  // When we begin constructing the document, all accumulated material is output.
+  // See LaTeX.ltxml for usage.
+  // Note: could be circumstances where you'd want modular frontmatter?
+  // (ie. frontmatter for each sectional unit)
   AssignValue!(
     "frontmatter",
     Stored::HashTagData(HashMap::default()),
@@ -127,6 +176,8 @@ LoadDefinitions!({
   // This is called by afterOpen (by default on <ltx:document>) to
   // output any frontmatter that was accumulated.
 
+  // TODO: Porting confusion at this point -- is this now to be phased out in favor of insert_frontmatter ?
+  // original latexml may have moved here...
   Tag!("ltx:document", after_open_late => sub[document, _node] {
     // this happens only once per conversion, so not a big deal to keep it in the closure
     let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
@@ -163,13 +214,19 @@ LoadDefinitions!({
     }
   });
 
+  // Add FrontMatter at document begin, unless deferred to a better position.
+  Tag!("ltx:document", after_open_late => sub[document,_root] {
+    if !lookup_bool("frontmatter_deferred") {
+      insert_frontmatter(document)?;
+    }
+  });
+
   // Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
     after_digest => { state::assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
 
-  // TeX.pool.ltxml, line 5421
-  // Maintain a list of classes that apply to the document root.
+    // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
   Tag!("ltx:document", after_open_late => sub[document, root] {
     let classes = with_mapping_keys("DOCUMENT_CLASSES", |keys| arena::join(&keys," "));
@@ -177,27 +234,6 @@ LoadDefinitions!({
       document.add_class(root, &classes)?;
     }
   });
-
-  // If folks start using plain TeX macros, and never load LaTeX.pool,
-  // they might benefit from a ltx-plain.css?
-  DefMacro!("\\beginsection Until:\\par", r"\@beginsection{{\bf #1}}");
-  DefConstructor!("\\@beginsection {}",
-    "<ltx:section><ltx:title>#1</ltx:title>");
-
-
-  // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
-  //  If so, how do know when the theorem ends?
-  DefMacro!(T_CS!("\\proclaim"), 
-    parse_def_parameters(&T_CS!("\\proclaim"), Tokenize!("#1. #2\\par"))?,
-    Some(r"\@proclaim{{\bf #1}}{{\sl #2}}".into()));
-  DefConstructor!("\\@proclaim{}{}",
-    "<ltx:theorem><ltx:title font='#titlefont' _force_font='true' >#title</ltx:title>#2",
-    after_construct => sub[doc,_args] { doc.maybe_close_element("ltx:theorem")?; },
-    properties     => sub[args] {
-      if let Some(ref title) = args[0] {
-        Ok(stored_map!("title" => title, "titlefont" => title.get_font()?)) 
-      } else { Ok(SymHashMap::default()) }
-    });
 
   //======================================================================
   // Tags & Titles
@@ -410,10 +446,62 @@ LoadDefinitions!({
 
   // NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
   // This would be useful for the titles in links; thus can be plain (unicode) text.
+
+  //======================================================================
+  // Normally definitions disappear; the macros are expanded or have their expected effect.
+  // But in a few cases (eg tabular column definitions, or LaTeX \Declarexxxx)
+  // they will need declarations in the (La)TeX preamble to allow (La)TeX to process snippets
+  // (eg. math) in order to create images.
+  // Returning a call to this utility from Primitives will add a preamble Processing Instruction
+
+  // TODO
+  // sub AddToPreamble {
+  //   my ($cs, @args) = @_;
+  //   return Digest(Invocation(T_CS('\lx@add@Preamble@PI'), Invocation((ref $cs ? $cs : T_CS($cs)),
+  // @args))); }
+
+  DefConstructor!(
+    "\\lx@add@Preamble@PI Undigested",
+    "<?latexml preamble='#1'?>"
+  );
+
 });
 
-
+/// Insert FrontMatter into document, if not already added
 pub fn insert_frontmatter(_document: &mut Document) -> Result<()> {
-  // TODO: update and port over
-  todo!();
+  
+  if lookup_bool("frontmatter_done") { return Ok(()); }
+  // TODO: Continue
+  // if let Some(frontmatter) = lookup_value("frontmatter");
+  // my @set_keys    = $frontmatter ? (keys %$frontmatter) : ();
+  // # if doc ONLY has abstract as frontmatter, defer until abstract's document location
+  // if ((scalar(@set_keys) == 1) && ($set_keys[0] eq 'ltx:abstract') &&
+  //   !LookupValue('frontmatter_deferred')) {
+  //   AssignValue(frontmatter_deferred => 1, 'global');
+  //   return; }
+  // AssignValue(frontmatter_done => 1, 'global');    # OK, we're placing FrontMatter here, now.
+  // foreach my $key (@frontmatter_elements, grep { !$frontmatter_elements{$_} } @set_keys) {
+  //   if (my $list = $$frontmatter{$key}) {
+  //     # Dubious, but assures that frontmatter appears in text mode...
+  //     local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
+  //     foreach my $item (@$list) {
+  //       my ($tag, $attr, @stuff) = @$item;
+  //       # add a dedicated class for frontmatter notes,
+  //       # in the case we want to style those uniformly.
+  //       if ($tag eq 'ltx:note') {
+  //         $attr ||= {};
+  //         $$attr{class} = ($$attr{class} ? $$attr{class} . ' ' : '') . 'ltx_note_frontmatter'; }
+  //       $document->openElement($tag, ($attr ? %$attr : ()),
+  //         (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
+  //           ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
+  //       map { $document->absorb($_) } @stuff;
+  //       my $completed_node = $document->closeElement($tag);
+  //       # At this time, the frontmatter element should really carry the actual literal values intended.
+  //       # Thus, if we see an empty element, something went wrong -- including our bindings are too verbose,
+  //       # as e.g. \preprint{} always generates a ltx:note element.
+  //       #
+  //       # To solve this in a single location: prune here!
+  //       if (($tag ne "ltx:rdf") && !scalar($completed_node->childNodes)) {
+  //         $document->removeNode($completed_node); } } } }
+  Ok(())
 }

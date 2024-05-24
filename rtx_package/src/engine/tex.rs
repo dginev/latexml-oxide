@@ -1,12 +1,14 @@
 use crate::prelude::*;
 LoadDefinitions!({
   // port of TeX.pool.ltxml
-  // commit 6b748e367af3b15c11f41454bfe79bfc27763577
-  // Author: Deyan Ginev <deyan.ginev@gmail.com>
-  // Date:   Wed May 10 16:36:04 2023 -0400
+  // commit 4cd73e7584c5f0422293ba38f9b757332584afec
+  // Author: Bruce Miller <nebconinc@gmail.com>
+  // Date:   Thu May 9 13:19:32 2024 -0400
+  
+  InnerPool!(base_schema);
+  InnerPool!(base_parameter_types);
+  InnerPool!(base_utilities);
 
-  // lines 1-758
-  InnerPool!(tex_setup);
   // lines 758-1075
   InnerPool!(tex_expandable_primitives);
   // lines 1076-1216
@@ -37,8 +39,6 @@ LoadDefinitions!({
   InnerPool!(tex_appendix_b_to_p349);
   // lines 5042-5290
   InnerPool!(tex_appendix_b_p350_to_p355);
-  // lines 5291-5620
-  InnerPool!(tex_frontmatter);
   // lines 5621-5655
   InnerPool!(tex_appendix_b_p356);
   // lines 5656-5783
@@ -78,8 +78,6 @@ LoadDefinitions!({
   InnerPool!(tex_special_chars);
   // lines 7141-7203
   InnerPool!(latex_hook);
-  // lines 7204-7221
-  InnerPool!(tex_rtx_specific);
   // lines 7222-7544
   InnerPool!(rtx_math_macros);
   // lines 7545-7720
@@ -88,4 +86,9 @@ LoadDefinitions!({
   // lines 7721 - 7725
   InnerPool!(etex);
   InnerPool!(pdftex);
+
+  // should we port the deprecations to rust? postpone for now.
+  //InnerPool!(base_deprecated);
+  InnerPool!(plain);
+
 });

@@ -1,9 +1,10 @@
-// At the very end, declare the pool
-pub use self::latex_functions::*;
-pub use self::tex_functions::*;
-
 // TeX Pool
 pub mod tex;
+mod base_schema;
+mod base_parameter_types;
+mod base_utilities;
+mod plain;
+
 mod tex_accents;
 mod tex_alignment;
 mod tex_appendix_b_p350_to_p355;
@@ -23,8 +24,7 @@ mod tex_ch24_primitives;
 mod tex_ch25_primitives;
 mod tex_expandable_primitives;
 mod tex_fonts;
-mod tex_frontmatter;
-pub mod tex_functions; // auxiliary functions
+pub mod base_functions; // auxiliary functions
 mod tex_math_accents;
 mod tex_math_mode;
 mod tex_math_fork;
@@ -32,10 +32,8 @@ mod tex_math_style;
 mod tex_misc_tweaks;
 mod tex_para;
 mod tex_registers;
-mod tex_rtx_specific;
 mod rtx_math_macros;
 mod tex_scripts;
-mod tex_setup;
 mod tex_special_chars;
 mod tex_stray_math_style;
 

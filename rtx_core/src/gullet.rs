@@ -354,16 +354,20 @@ pub fn read_token() -> Result<Option<Token>> {
 }
 
 /// Read the next non-expandable token (expanding tokens until there's a non-expandable one).
+///
 /// Note that most tokens pass through here, so be Fast & Clean! readToken is folded in.
-/// `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
-///  will step to the next input stream (Mouth) if one is available,
-/// `toplevel` is doing TWO distinct things. When true:
-///  * If a mouth is exhausted, move on to the containing mouth to continue reading
-///  * expand even protected defns, essentially this means expand "for execution"
+///    `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
+///     will step to the next input stream (Mouth) if one is available,
+///     `toplevel` is doing TWO distinct things. When true:
+/// * If a mouth is exhausted, move on to the containing mouth to continue reading
+/// * expand even protected defns, essentially this means expand "for execution"
+/// 
 /// Note that, unlike readBalanced, this does NOT defer expansion of \the & friends.
+/// 
 /// Also, \noexpand'd tokens effectively act ilke \relax
+/// 
 /// For arguments to \if,\ifx, etc use `for_conditional` true,
-/// which handles \noexpand and CS which have been \let to tokens specially.
+///    which handles \noexpand and CS which have been \let to tokens specially.
 pub fn read_x_token(
   toplevel_opt: Option<bool>,
   for_conditional: bool,

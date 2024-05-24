@@ -1174,11 +1174,11 @@ pub fn def_environment(
 // Perhaps it would be better to use a label(-like) indirection here,
 // so all ID's can stay in the desired format?
 pub fn get_xmarg_id() -> Result<Tokens> {
-  step_counter("@XMARG", false)?;
+  step_counter("@lx@xmarg", false)?;
   def_macro(
-    T_CS!("\\@@XMARG@ID"),
+    T_CS!("\\@@lx@xmarg@ID"),
     None,
-    Tokens!(Explode!(lookup_register("\\c@@XMARG", Vec::new())?
+    Tokens!(Explode!(lookup_register("\\c@@lx@xmarg", Vec::new())?
       .unwrap()
       .value_of())),
     Some(ExpandableOptions {
@@ -1186,7 +1186,7 @@ pub fn get_xmarg_id() -> Result<Tokens> {
       ..ExpandableOptions::default()
     })
   )?;
-  gullet::do_expand(T_CS!("\\the@XMARG@ID"))
+  gullet::do_expand(T_CS!("\\the@lx@xmarg@ID"))
 }
 
 type ArgsUnpacked = Vec<Option<Tokens>>;

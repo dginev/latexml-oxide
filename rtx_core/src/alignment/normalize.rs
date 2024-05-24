@@ -12,23 +12,30 @@ use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 
 /// Normalize an alignment before construction
+/// 
 /// * consolodating column & row spanning information
 /// * scanning for empty rows & columns and collapsing them (while accounting for spanning, and
 ///   copying borders appropriately)
+/// 
 /// Note that a trailing \\ in allignment (often needed to effect \hline)
-/// causes an empty row at the end. Other fancy layout fine-tuning often
-/// involves adding extra rows & columsn for spacing.  HTML's table model
-/// is more forgiving that TeX's, so we don't need these extras
-/// and, in fact, they often mess up the html layout!
+///    causes an empty row at the end. Other fancy layout fine-tuning often
+///    involves adding extra rows & columsn for spacing.  HTML's table model
+///    is more forgiving that TeX's, so we don't need these extras
+///    and, in fact, they often mess up the html layout!
+/// 
 /// However, math alignments, and those with expected structure (eg. eqnarray)
-/// should generally NOT have rows & columns collapsed --- except the last row!
+///    should generally NOT have rows & columns collapsed --- except the last row!
 ///
 /// Also note the inconsistency between TeX & HTML's table models regarding spans.
+/// 
 /// \multicolumn creates a cell that covers a certain number of columns
-/// which are then omitted from the LaTeX AND the HTML.
+///     which are then omitted from the LaTeX AND the HTML.
+/// 
 /// OTOH, \multirow creates a cell which overlaps following rows!
+/// 
 /// The & is still needed to allocate the cells in those rows.
 /// And in fact they need not even be empty! TeX will just pile them up!
+/// 
 /// However, in HTML the spanned rows ARE omitted!
 pub fn normalize_alignment(alignment: &mut Alignment) -> Result<()> {
   if !alignment.is_normalized {
