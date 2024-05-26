@@ -85,17 +85,6 @@ LoadDefinitions!({
     whatsit.set_property("transform", transform);
   });
 
-  // \unhbox<8bit>, \unhcopy<8bit>
-  // DefPrimitive('\unhbox Number', sub {
-  //     my $box   = 'box' . $_[1]->valueOf;
-  //     my $stuff = LookupValue($box);
-  //     AssignValue($box, undef);
-  //     (defined $stuff ? $stuff->unlist : ()); });
-  // DefPrimitive('\unhcopy Number', sub {
-  //     my $box   = 'box' . $_[1]->valueOf;
-  //     my $stuff = LookupValue($box);
-  //     (defined $stuff ? $stuff->unlist : ()); });
-
   // Implement ???
   // DefMacro('\vrule','\relax');
   DefMacro!("\\valign", None);

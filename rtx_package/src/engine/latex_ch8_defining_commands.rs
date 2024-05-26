@@ -157,6 +157,15 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
   DefPrimitive!("\\DeclareTextAccentDefault{}{}", None);
 
+  DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}");
+  DefMacro!("\\f@encoding", {
+    ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap())
+  });
+  DefMacro!("\\cf@encoding", {
+    ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap())
+  });
+
+
   // #------------------------------------------------------------
   DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None);
   // sub { ignoredDefinition("DeclareTextComposite", $_[1]); });

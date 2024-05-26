@@ -56,20 +56,9 @@ LoadDefinitions!({
 
   Let!("\\:", "\\>");
 
-  DefPrimitive!("\\ ", {
-    Tbox::new(arena::pin_static("\u{00A0}"), None, None, Tokens!(T_CS!("\\ ")),
-      stored_map!("name" => "space", "isSpace" => true,
-      "width" => Dimension::from_str("0.5em")?))
-  });
 
   DefPrimitive!("\\\t", {
     Tbox::new(arena::pin_static("\u{00A0}"), None, None, Tokens!(T_CS!("\\\t")),
       stored_map!("isSpace" => true, "width" => Dimension::from_str("1em")?))
   });
-
-  DefPrimitive!("\\/", {
-    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\/")),
-      stored_map!("isSpace" => true, "name" => "italiccorr", "width" => Dimension::default()))
-  });
-
 });

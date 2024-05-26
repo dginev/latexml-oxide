@@ -273,30 +273,6 @@ pub fn decode_math_char(
   Ok((role_opt, font_opt))
 }
 
-// Risky: I think this needs to be digested as a body to work like TeX (?)
-// but parameter think's it's just parsing from gullet...
-pub fn read_box_contents(
-  everybox_opt: Option<Tokens>,
-) -> Result<Tokens> {
-  while let Some(t) = gullet::read_token()? {
-    if t.get_catcode() == Catcode::BEGIN {
-      break;
-    } // Skip till { or \bgroup
-  }
-  // Now, insert some extra tokens, if any, possibly from \afterassignment
-  match state::remove_value("BeforeNextBox") {
-    Some(Stored::Tokens(tokens)) => gullet::unread(tokens),
-    Some(Stored::Token(token)) => gullet::unread_one(token),
-    None | Some(Stored::None) => {},
-    Some(other) => panic!("afterAssignment should be a token, got: {}", other),
-  };
-  // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
-  if let Some(everybox) = everybox_opt {
-    gullet::unread(everybox);
-  }
-  Ok(Tokens!())
-}
-
 /// Reading a Box's content is crucially dependent on invoking the "{" token and obtaining a
 /// digested result Hence it is *always* needed to pair `read_box_contents` with its stomach-level
 /// counterpart, `predigest_box_contents`
@@ -982,4 +958,33 @@ pub fn in_svg(document: &Document) -> bool {
     document::with_node_qname(&context,
       |qname| qname.starts_with("svg:"))
   } else { false }
+}
+
+pub fn adjust_box_color(tbox: &Digested) -> Result<()> {
+  let color_opt = lookup_font().and_then(|f| f.get_color()
+    .map(|c| c.clone().into_owned()));
+  if let Some(color) = color_opt {
+    if color != "black" {
+       adjust_box_color_rec(&color, HashMap::default(), tbox);
+    }
+  }
+  Ok(())
+}
+
+fn adjust_box_color_rec(_color: &str, _props: HashMap<String,String>, _tbox: &Digested) {
+  todo!();
+}
+
+// Hmm... I wonder, should getString itself be dealing with escapechar?
+pub fn escapechar() -> String {
+  let code: i64 = match state::lookup_register("\\escapechar", Vec::new()).unwrap() {
+    Some(RegisterValue::Number(v)) => v.value_of(),
+    _ => -1,
+  };
+  if (0..=255).contains(&code) {
+    let char_code = (code as u8) as char;
+    char_code.to_string()
+  } else {
+    String::new()
+  }
 }

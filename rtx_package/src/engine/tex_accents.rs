@@ -1,47 +1,4 @@
 use crate::prelude::*;
-use unicode_normalization::char::compose;
-use unicode_normalization::UnicodeNormalization;
-
-static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
-
-// Create a box applying an accent to a letter
-// Hopefully, we'll get a Box from digestion with a plain string.
-// Then we can apply combining accents to it.
-pub fn apply_accent(
-  letter: Tokens,
-  combiningchar: char,
-  standalonechar: &str,
-  reversion: Option<Tokens>,
-) -> Result<Tbox> {
-  let letter_box = stomach::digest(letter)?;
-  let locator = letter_box.get_locator();
-  let font = letter_box.get_font()?.map(|f| Rc::new((*f).clone()));
-
-  let mut string: String = letter_box.to_string();
-  string = string.replace('\u{0131}', "i").replace('\u{0237}', "j");
-  string = SPACE_RE.replace_all(&string, " ").into_owned();
-  let text = if string.chars().all(|l| l.is_whitespace()) {
-    standalonechar.to_string()
-  } else {
-    let mut letters = string.chars();
-    let lead_letter = letters.next().unwrap();
-    let mut combined_str = compose(lead_letter, combiningchar)
-      .map(|c| c.to_string())
-      .unwrap_or_else(|| format!("{lead_letter}{combiningchar}"));
-    for rest in letters {
-      combined_str.push(rest);
-    }
-    combined_str.nfc().collect::<String>()
-  };
-  Ok(Tbox::new(
-    arena::pin(text),
-    font,
-    Some(locator),
-    reversion.unwrap_or(Tokens!()),
-    SymHashMap::default(),
-  ))
-}
-
 LoadDefinitions!({
   //----------------------------------------------------------------------
   // Accents.  LaTeX Table 3.1, p.38
@@ -53,14 +10,6 @@ LoadDefinitions!({
   // work (via mozilla !?) best when the combining char is after the 1st char.
   // Further, the accents \d and \b seem to center the under dot or bar under multiple
   // chars --- how should this be handled in Unicode?
-
-  DefPrimitive!("\\lx@applyaccent DefToken Token Token {}",
-  sub[(accent, combiningchar, standalonechar, letter)] {
-    let combiningchar = combiningchar.to_string().chars().next().unwrap();
-    let standalonechar = standalonechar.to_string();
-    apply_accent(letter.clone(), combiningchar, &standalonechar, Some(
-      Tokens!(T_CS!(accent.to_string()),T_BEGIN!(),letter,T_END!())))
-  }, mode => "text");
 
   // Since people sometimes try to get fancy by using an empty argument,
   // for each, I'm providing the combining code and an equivalent(?) spacing one.

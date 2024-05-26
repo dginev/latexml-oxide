@@ -1,0 +1,222 @@
+//! TeX Character
+//! 
+//! Core TeX Implementation for LaTeXML
+
+use crate::prelude::*;
+use unicode_normalization::char::compose;
+use unicode_normalization::UnicodeNormalization;
+
+static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
+
+LoadDefinitions!({
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Character Family of primitive control sequences
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+  //======================================================================
+  // \ (ctrl space)    c  inserts a control space.
+  // \char           c  provides access to one of the 256 characters in a font.
+  //----------------------------------------------------------------------
+  DefPrimitive!("\\ ", {
+    Tbox::new(arena::pin_static("\u{00A0}"), None, None, Tokens!(T_CS!("\\ ")),
+      stored_map!("name" => "space", "isSpace" => true,
+      "width" => Dimension::from_str("0.5em")?))
+  });
+
+  DefPrimitive!("\\char Number", sub[(number)] {
+    let number_tks = number.revert().unwrap_or_default().unlist();
+    let decoded = match font::decode(number.value_of() as u8, None, false) {
+      None => *EMPTY_SYM,
+      Some(c) => arena::pin_char(c)
+    };
+    Tbox::new(
+     decoded,
+     None,
+     None,
+     Tokens!(T_CS!("\\char"), number_tks, T_RELAX!()),
+     SymHashMap::default())
+  });
+
+  DefPrimitive!("\\lx@applyaccent DefToken Token Token {}",
+  sub[(accent, combiningchar, standalonechar, letter)] {
+    let combiningchar = combiningchar.to_string().chars().next().unwrap();
+    let standalonechar = standalonechar.to_string();
+    apply_accent(letter.clone(), combiningchar, &standalonechar, Some(
+      Tokens!(T_CS!(accent.to_string()),T_BEGIN!(),letter,T_END!())))
+  }, mode => "text");
+
+  // # This will fail if there really are "assignments" after the number!
+  // # We're given a number pointing into the font, from which we can derive the standalone char.
+  // # From that, we want to figure out the combining character, but there could be one for
+  // # both the above & below cases!  We'll prefer the above case.
+  // DefPrimitive('\accent Number {}', sub {
+  //     my ($stomach, $num, $letter) = @_;
+  //     my $n        = $num->valueOf;
+  //     my $fontinfo = lookupFontinfo(LookupValue('textfont_0'));
+  //     my $acc      = ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : chr($n));
+  //     my $reversion = Invocation(T_CS('\accent'), $num, $letter);
+  //     # NOTE: REVERSE LOOKUP in above accent list for the non-spacing accent char
+  //     # BUT, \accent always (?) makes an above type accent... doesn't it?
+  //     if (my $combiner = LookupMapping('accent_combiner_above', $acc)
+  //       || LookupMapping('accent_combiner_below', $acc)) {
+  //       applyAccent($stomach, $letter, $combiner, $acc, $reversion); }
+  //     else {
+  //       Warn('unexpected', "accent$n", $stomach, "Accent '$n' not recognized");
+  //       Box(ToString($letter), undef, undef, $reversion); } });
+
+
+  //======================================================================
+  // \chardef        iq provides an alternate way to define a control sequence that returns a character.
+  //----------------------------------------------------------------------
+
+  // Almost like a register (and \countdef), but different...
+  // (including the preassignment to \relax!)
+  DefPrimitive!("\\chardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
+    // Let w/o AfterAssignment
+    let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+    state::assign_meaning(&newcs, relax_meaning, None);
+    let value = gullet::read_number()?;
+    state::install_definition(
+      Register::new_chardef(newcs, Some(value.into()), None, None), None);
+    state::after_assignment();
+    Ok(Vec::new())
+  });
+
+  //======================================================================
+  // Upper/Lowercase
+  //----------------------------------------------------------------------
+  // \lowercase      c  converts tokens to lowercase.
+  // \uppercase      c  converts tokens to uppercase.
+  // \uppercase<general text>, \lowercase<general text>
+
+  // Note that these are NOT expandable, even though the "return" tokens!
+  DefPrimitive!("\\uppercase GeneralText", sub[(tokens)] {
+    gullet::unread_vec(
+      tokens.unlist().into_iter()
+        .map(uppercase_token)
+        .collect());
+  });
+  DefPrimitive!("\\lowercase GeneralText", sub[(tokens)] {
+    gullet::unread_vec(
+      tokens.unlist().into_iter()
+        .map(lowercase_token)
+        .collect::<Vec<Token>>());
+  });
+
+  //======================================================================
+  // Converting things to strings (tokens, really)
+  //----------------------------------------------------------------------
+  // \number         c  produces the decimal equivalent of numbers.
+  // \romannumeral   c  converts a number to lowercase roman numerals.
+  // \string         c  converts a control sequence to characters.
+
+  DefMacro!("\\number Number", sub[(num)] { Explode!(num.value_of()) });
+  DefMacro!("\\romannumeral Number", sub[(num)] { roman!(num.value_of()) });
+  // 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
+  // suggests all characters except spaces are returned in category code Other, i.e. Explode()
+  DefMacro!("\\string Token", sub[(token)] {
+    let mut s = token.to_string();
+    if s.starts_with('\\') {
+      s = escapechar() + &s[1..];
+    }
+    Explode!(s)
+  });
+
+  //======================================================================
+  // Character properties
+  //----------------------------------------------------------------------
+  // \catcode        iq holds the category code for a character.
+  // \lccode                 iq holds the lowercase value for a character.
+  // \sfcode                 iq holds the space factor value for a character.
+  // \uccode                 iq holds the uppercase value for a character.
+  DefRegister!("\\catcode Number", Number::new(0),
+    getter => sub[args] {
+      unpack_opt!(args => num);
+      let refchar = (num.expect_number().value_of() as u8) as char;
+      let code = lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
+      Number::from(code)
+    },
+    setter => sub[value, scope, args] {
+      unpack_opt!(args => num);
+      let c_char = (num.expect_number().value_of() as u8) as char;
+      let c_code : Catcode = From::from(value.value_of() as u8);
+      assign_catcode(c_char, c_code, scope);
+    }
+  );
+  DefRegister!("\\sfcode Number", Number::new(0),
+  getter=> sub[args] {
+  let code = lookup_sfcode(args[0].value_of() as u8 as char);
+    Number::new(code.unwrap_or_default() as i64)
+  },
+  setter => sub[value, scope, args] {
+    assign_sfcode(args[0].value_of() as u8 as char,
+      value.value_of() as u16, scope); });
+  DefRegister!("\\lccode Number", Number::new(0),
+  getter=> sub[args] {
+    let code = lookup_lccode(args[0].value_of() as u8 as char);
+    Number::new(code.unwrap_or_default() as i64)
+  },
+  setter => sub[value, scope, args] {
+    assign_lccode(args[0].value_of() as u8 as char,
+      value.value_of() as u16, scope);
+  });
+  DefRegister!("\\uccode Number", Number::new(0),
+  getter=> sub[args] {
+    let code = lookup_uccode(args[0].value_of() as u8 as char);
+    Number::new(code.unwrap_or_default() as i64)
+  },
+  setter => sub[value, scope, args] {
+    assign_uccode(args[0].value_of() as u8 as char,
+      value.value_of() as u16, scope);
+  });
+
+  //======================================================================
+  // Special character codes
+  //----------------------------------------------------------------------
+  // \endlinechar    pi is the character added to the end of input lines.
+  // \escapechar     pi is the character used for category 0 characters when outputting control sequences.
+  // \newlinechar    pi is the character which begins a new line of output.
+  DefRegister!("\\endlinechar", Number!(13));
+  DefRegister!("\\escapechar", Number!(92));
+  DefRegister!("\\newlinechar", Number!(-1));
+
+});
+
+
+// Create a box applying an accent to a letter
+// Hopefully, we'll get a Box from digestion with a plain string.
+// Then we can apply combining accents to it.
+pub fn apply_accent(
+  letter: Tokens,
+  combiningchar: char,
+  standalonechar: &str,
+  reversion: Option<Tokens>,
+) -> Result<Tbox> {
+  let letter_box = stomach::digest(letter)?;
+  let locator = letter_box.get_locator();
+  let font = letter_box.get_font()?.map(|f| Rc::new((*f).clone()));
+
+  let mut string: String = letter_box.to_string();
+  string = string.replace('\u{0131}', "i").replace('\u{0237}', "j");
+  string = SPACE_RE.replace_all(&string, " ").into_owned();
+  let text = if string.chars().all(|l| l.is_whitespace()) {
+    standalonechar.to_string()
+  } else {
+    let mut letters = string.chars();
+    let lead_letter = letters.next().unwrap();
+    let mut combined_str = compose(lead_letter, combiningchar)
+      .map(|c| c.to_string())
+      .unwrap_or_else(|| format!("{lead_letter}{combiningchar}"));
+    for rest in letters {
+      combined_str.push(rest);
+    }
+    combined_str.nfc().collect::<String>()
+  };
+  Ok(Tbox::new(
+    arena::pin(text),
+    font,
+    Some(locator),
+    reversion.unwrap_or(Tokens!()),
+    SymHashMap::default(),
+  ))
+}

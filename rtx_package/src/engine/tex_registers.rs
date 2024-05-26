@@ -11,17 +11,9 @@ use chrono::prelude::*;
 LoadDefinitions!({
   //======================================================================
   // Integer registers; TeXBook p. 272-273
-  DefRegister!("\\tracingmacros", Number!(0),
-    getter => { LookupNumber!("TRACINGMACROS") },
-    setter => sub[value, scope, _args] { AssignValue!("TRACINGMACROS" => value.value_of(), scope); });
-  DefRegister!("\\tracingcommands", Number!(0),
-    getter => { LookupNumber!("TRACINGCOMMANDS") },
-    setter => sub[value, scope, _args] { AssignValue!("TRACINGCOMMANDS" => value.value_of(), scope); });
 
   DefRegister!("\\pretolerance", Number!(100));
   DefRegister!("\\tolerance", Number!(200));
-  DefRegister!("\\hbadness", Number!(1000));
-  DefRegister!("\\vbadness", Number!(1000));
   DefRegister!("\\linepenalty", Number!(10));
   DefRegister!("\\hyphenpenalty", Number!(50));
   DefRegister!("\\exhyphenpenalty", Number!(50));
@@ -40,15 +32,8 @@ LoadDefinitions!({
   DefRegister!("\\finalhyphendemerits", Number!(5000));
   DefRegister!("\\adjdemerits", Number!(10000));
   DefRegister!("\\looseness", Number!(0));
-  DefRegister!("\\pausing", Number!(0));
+  
   DefRegister!("\\holdinginserts", Number!(0));
-  DefRegister!("\\tracingonline", Number!(0));
-  DefRegister!("\\tracingstats", Number!(0));
-  DefRegister!("\\tracingparagraphs", Number!(0));
-  DefRegister!("\\tracingpages", Number!(0));
-  DefRegister!("\\tracingoutput", Number!(0));
-  DefRegister!("\\tracinglostchars", Number!(1));
-  DefRegister!("\\tracingrestores", Number!(0));
   DefRegister!("\\language", Number!(0));
   DefRegister!("\\uchyph", Number!(1));
   DefRegister!("\\lefthyphenmin", Number!(0));
@@ -56,9 +41,6 @@ LoadDefinitions!({
   DefRegister!("\\globaldefs", Number!(0));
   DefRegister!("\\defaulthyphenchar", Number!(45));
   DefRegister!("\\defaultskewchar", Number!(-1));
-  DefRegister!("\\escapechar", Number!(92));
-  DefRegister!("\\endlinechar", Number!(13));
-  DefRegister!("\\newlinechar", Number!(-1));
   DefRegister!("\\maxdeadcycles", Number!(0));
   DefRegister!("\\hangafter", Number!(0));
   DefRegister!("\\fam", Number!(-1));
@@ -69,9 +51,6 @@ LoadDefinitions!({
   DefRegister!("\\day", Number!(0));
   DefRegister!("\\month", Number!(0));
   DefRegister!("\\year", Number!(0));
-  DefRegister!("\\showboxbreadth", Number!(5));
-  DefRegister!("\\showboxdepth", Number!(3));
-  DefRegister!("\\errorcontextlines", Number!(5));
 
   // Most of these are ignored, but...
   DefMacro!(
@@ -94,7 +73,7 @@ LoadDefinitions!({
 
   // Read-only Integer registers
   DefRegister!("\\lastpenalty",Number!(0), readonly => true);
-  DefRegister!("\\badness",Number!(0), readonly => true);
+
 
   // Special integer registers (?)
   // <special integer> = \spacefactor | \prevgraf | \deadcycles | \insertpenalties
@@ -105,15 +84,12 @@ LoadDefinitions!({
 
   // ======================================================================
   // Dimen registers; TeXBook p. 274
-  DefRegister!("\\hfuzz", Dimension!("0.1pt"));
-  DefRegister!("\\vfuzz", Dimension!("0.1pt"));
-  DefRegister!("\\overfullrule", Dimension!("5pt"));
   DefRegister!("\\emergencystretch", Dimension!("0"));
   DefRegister!("\\hsize", Dimension!("6.5in"));
   DefRegister!("\\vsize", Dimension!("8.9in"));
   DefRegister!("\\maxdepth", Dimension!("4pt"));
   DefRegister!("\\splitmaxdepth", Dimension!("16383.99999pt"));
-  DefRegister!("\\boxmaxdepth", Dimension!("16383.99999pt"));
+
   DefRegister!("\\lineskiplimit", Dimension!("0"));
   DefRegister!("\\delimitershortfall", Dimension!("5pt"));
   DefRegister!("\\nulldelimiterspace", Dimension!("1.2pt"));
@@ -130,7 +106,6 @@ LoadDefinitions!({
   // Special dimension registers (?)
   // <special dimen> = \prevdepth | \pagegoal | \pagetotal | \pagestretch | \pagefilstretch
   //    | \pagefillstretch | \pagefilllstretch | pageshrink | \pagedepth
-  DefRegister!("\\prevdepth", Dimension::new(0));
   DefRegister!("\\pagegoal", Dimension::new(0));
   DefRegister!("\\pagetotal", Dimension::new(0));
   DefRegister!("\\pagestretch", Dimension::new(0));
@@ -165,13 +140,10 @@ LoadDefinitions!({
   DefRegister!("\\thickmuskip", Glue!("5mu plus 5mu"));
   //======================================================================
   // Token registers; TeXBook p.275
-  DefRegister!("\\output", Tokens!());
   DefRegister!("\\everypar", Tokens!());
   DefRegister!("\\everymath", Tokens!());
   DefRegister!("\\everydisplay", Tokens!());
   DefRegister!("\\everyjob", Tokens!());
   DefRegister!("\\everycr", Tokens!());
   DefRegister!("\\everyhelp", Tokens!());
-  DefRegister!("\\everyhbox", Tokens!());
-  DefRegister!("\\everyvbox", Tokens!());
 });
