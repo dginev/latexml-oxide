@@ -8,6 +8,28 @@ LoadDefinitions!({
   InnerPool!(base_schema);
   InnerPool!(base_parameter_types);
   InnerPool!(base_utilities);
+  InnerPool!(base_xmath);
+  InnerPool!(tex_box);
+  InnerPool!(tex_character);
+  InnerPool!(tex_debugging);
+  InnerPool!(tex_file_io);
+  InnerPool!(tex_fonts);
+  // -- CONTINUE HERE:
+  InnerPool!(tex_glue);
+  InnerPool!(tex_hyphenation);
+  InnerPool!(tex_inserts);
+  // InnerPool!("tex_Job");
+  InnerPool!(tex_kern);
+  // InnerPool!(tex_logic);
+  // InnerPool!(tex_macro);
+  // InnerPool!(tex_marks);
+  InnerPool!(tex_math);
+  // InnerPool!(tex_page);
+  // InnerPool!(tex_paragraph);
+  // InnerPool!(tex_penalties);
+  // InnerPool!(tex_registers);
+  // InnerPool!(tex_tables);
+
 
   // lines 758-1075
   InnerPool!(tex_expandable_primitives);
@@ -15,10 +37,6 @@ LoadDefinitions!({
   InnerPool!(tex_registers);
   // lines 1217-1524
   InnerPool!(tex_assignment);
-  // lines 1524-1888
-  InnerPool!(tex_fonts);
-  // lines 1889-2416
-  InnerPool!(tex_boxes);
   // lines 2417-2785
   InnerPool!(tex_ch24_primitives);
   // lines 2786-3523
@@ -78,8 +96,6 @@ LoadDefinitions!({
   InnerPool!(tex_special_chars);
   // lines 7141-7203
   InnerPool!(latex_hook);
-  // lines 7222-7544
-  InnerPool!(rtx_math_macros);
   // lines 7545-7720
   InnerPool!(tex_misc_tweaks);
 

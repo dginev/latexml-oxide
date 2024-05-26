@@ -63,33 +63,6 @@ LoadDefinitions!({
   // <at clause> = at <dimen> | scaled <number> | <optional spaces>
   // <code assignment> = <codename><8bit><equals><number>
 
-  // Need to handle "at" too!!!
-  DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
-  sub[(cs, name_arg)] {
-    let name = name_arg.to_string();
-    let props_opt = if let Some(mut props) = font::decode_fontname(&name,
-      gullet::read_keyword(&["at"])?
-        .map(|_| gullet::read_dimension().unwrap().pt_value(None)),
-      gullet::read_keyword(&["scaled"])?
-        .map(|_| gullet::read_number().unwrap().value_of() as f64 / 1000.0)) {
-      props.name = Some(Cow::Owned(name));
-      Some(props)
-    } else { // Failed?
-      let message = s!("Unrecognized font name {:?} Font switch macro {:?}
-      will have no effect", name, cs.stringify());
-      Info!("unexpected", name, message);
-      None
-    };
-    gullet::skip_spaces()?;
-    if let Some(ref props) = props_opt {
-      AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
-    }
-    DefPrimitive!(cs, None, None, font => props_opt);
-  });
-
-  // Not sure what this should be...
-  DefPrimitive!("\\nullfont", None, font => {family => "nullfont"});
-
   DefRegister!("\\count Number"  => Number::new(0));
   DefRegister!("\\dimen Number"  => Dimension::new(0));
   DefRegister!("\\skip Number"   => Glue::new(0));
@@ -224,7 +197,6 @@ LoadDefinitions!({
 
   // \parshape !?!??
   DefPrimitive!("\\parshape SkipMatch:= Number", sub[(n)] {
-
     for _ in 0..n.value_of() {
       gullet::read_dimension()?;
       gullet::read_dimension()?;
@@ -233,27 +205,10 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefRegister!("\\inputlineno",Number!(0), readonly => true, getter=> {
-    Number::new(gullet::get_locator().from_line as i64)
-  });
-
   DefRegister!("\\badness", Number::new(0), readonly => true);
 
   // <codename> = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
-  DefRegister!("\\catcode Number", Number::new(0),
-    getter => sub[args] {
-      unpack_opt!(args => num);
-      let refchar = (num.expect_number().value_of() as u8) as char;
-      let code = lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
-      Number::from(code)
-    },
-    setter => sub[value, scope, args] {
-      unpack_opt!(args => num);
-      let c_char = (num.expect_number().value_of() as u8) as char;
-      let c_code : Catcode = From::from(value.value_of() as u8);
-      assign_catcode(c_char, c_code, scope);
-    }
-  );
+
 
   // Only used for active math characters, so far
   DefRegister!("\\mathcode Number", Number::new(0),
@@ -273,34 +228,6 @@ LoadDefinitions!({
     }
   );
 
-  DefRegister!("\\sfcode Number", Number::new(0),
-    getter=> sub[args] {
-    let code = lookup_sfcode(args[0].value_of() as u8 as char);
-      Number::new(code.unwrap_or_default() as i64)
-    },
-    setter => sub[value, scope, args] {
-      assign_sfcode(args[0].value_of() as u8 as char,
-        value.value_of() as u16, scope); });
-
-  DefRegister!("\\lccode Number", Number::new(0),
-  getter=> sub[args] {
-    let code = lookup_lccode(args[0].value_of() as u8 as char);
-    Number::new(code.unwrap_or_default() as i64)
-  },
-  setter => sub[value, scope, args] {
-    assign_lccode(args[0].value_of() as u8 as char,
-      value.value_of() as u16, scope);
-  });
-
-  DefRegister!("\\uccode Number", Number::new(0),
-  getter=> sub[args] {
-    let code = lookup_uccode(args[0].value_of() as u8 as char);
-    Number::new(code.unwrap_or_default() as i64)
-  },
-  setter => sub[value, scope, args] {
-    assign_uccode(args[0].value_of() as u8 as char,
-      value.value_of() as u16, scope);
-  });
 
   // Not used anywhere (yet)
   DefRegister!("\\delcode Number", Number::new(0),

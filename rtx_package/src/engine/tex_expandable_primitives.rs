@@ -1,8 +1,5 @@
 use crate::prelude::*;
-static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
-static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
-static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> =
-  Lazy::new(|| Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap());
+
 //=======================
 // -- Main Definitions --
 //=======================
@@ -67,163 +64,10 @@ LoadDefinitions!({
   // Acts like \relax, but isn't equal to it.
   DefPrimitive!(T_CS!("\\special_relax"), None, { });
 
-  DefMacro!("\\number Number", sub[(num)] { Explode!(num.value_of()) });
-
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  DefMacro!("\\romannumeral Number", sub[(num)] { roman!(num.value_of()) });
-
-  // 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
-  // suggests all characters except spaces are returned in category code Other, i.e. Explode()
-  DefMacro!("\\string Token", sub[(token)] {
-    let mut s = token.to_string();
-    if s.starts_with('\\') {
-      s = escapechar() + &s[1..];
-    }
-    Explode!(s)
-  });
-
   DefMacro!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
-
-  DefMacro!(
-    T_CS!("\\fontname"),
-    None,
-    Tokens::new(Explode!("fontname not implemented"))
-  );
-
-  // Not sure about this yet...
-  // NOTE: Lots of back-and-forth mangle with definition vs cs; don't do that!
-  DefMacro!("\\meaning Token", sub[(token)] {
-    let mut meaning = String::from("undefined");
-    if let Some(definition) = if token == T_ALIGN!() {
-      Some(Stored::Token(token))
-    } else {
-      lookup_meaning(&token)
-    } {
-      // First, if this definition is a primitive|conditional|constructor,
-      // check to see if it has an alias, which would allow us to work with a token
-      let definition : Stored = match definition {
-        Stored::Primitive(primitive) =>
-          Stored::Token(primitive.get_cs_or_alias().into_owned()),
-        Stored::Constructor(constructor) =>
-          Stored::Token(constructor.get_cs_or_alias().into_owned()),
-        Stored::Conditional(cond) =>
-          Stored::Token(cond.get_cs_or_alias().into_owned()),
-        other => other
-      };
-      // TODO: Also check for fontinfo_ when implemented
-
-      // Now that we've tried to obtain an expandable definition, do the TeX dance:
-      match definition {
-        Stored::Token(t) => {
-          let cc = t.get_catcode();
-          let text = if cc == Catcode::SPACE {
-            String::from(" ")
-          } else {
-            t.to_string()
-          };
-          meaning = String::from(cc.meaning());
-          if !meaning.is_empty() {
-            meaning.push(' ');
-          }
-          meaning.push_str(&text);
-        },
-        Stored::Register(register) => {
-          meaning = register.get_address().to_string();
-        },
-        Stored::Expandable(expandable) => {
-          // short-circuit some troublesome discrepancies with TeX, which end up macros on our end,
-          // but \meaning expects as primitives in the CTAN ecosystem.
-          let cs = expandable.get_cs_or_alias().to_string();
-          // These exceptions could be extended further, as we add more .sty/.cls support
-          if EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(&cs) {
-            return Ok(Tokens::new(Explode!(cs)));
-          }
-          let params = match expandable.get_parameters() {
-            Some(ps) => ps.get_parameters(),
-            None => Vec::new()
-          };
-          let mut spec_parts : Vec<SymStr> = Vec::new();
-          let mut p_trailer = "";
-          // params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
-          let mut arg_index = 0;
-          for param in params.iter() {
-            let mut p_spec = *EMPTY_SYM;
-            let mut continue_flag = false;
-            // TODO: avoiding the allocation is quite painful here, since arena gets into mutability
-            // locking
-            let spec = arena::to_string(param.spec);
-            match spec.as_str() {
-              "RequireBrace" => {
-                // tex's \meaning prints out the required braces for "\def\a#{}" variants
-                p_trailer = "{";
-                p_spec    = arena::pin_static("{");
-              },
-              "UntilBrace" => {
-                p_trailer = "{";
-                arg_index+=1;
-                p_spec = arena::pin(
-                  arena::with(p_spec, |p_str| format!("#{arg_index}{p_str}")));
-              }
-              other if other.starts_with("Match:") => {
-                // just match, don't increment arg index
-                p_spec = arena::pin(LEAD_W_COLON_RE.replace(other,""));
-              },
-              other if UNTIL_SPEC.is_match(other) => {
-                // implied argument at this slot
-                p_spec = arena::pin(LEAD_W_COLON_RE.replace(other,""));
-                arg_index +=1 ;
-                p_spec = arena::pin(
-                  arena::with(p_spec, |p_str| s!("#{arg_index}{p_str}")));
-              },
-              _other => { // regular parameter, increment
-              // skip the latexml-only requirement params, but only here,
-              // since Match also have "novalue" set.
-                if param.novalue {
-                  continue_flag = true;
-                } else {
-                  arg_index+=1;
-                  p_spec = arena::pin(&s!("#{arg_index}"));
-                }
-              }
-            }
-            if !continue_flag { 
-              spec_parts.push(p_spec);
-            }
-          }
-          let mut spec : String = arena::join(&spec_parts,"");
-          spec = spec.replace("{}","");
-          spec = spec.replace("Token","");
-
-          let mut prefixes = String::new();
-          if expandable.is_protected {
-            prefixes.push_str("\\protected");
-          }
-          if expandable.is_long {
-            prefixes.push_str("\\long");
-          }
-          if expandable.is_outer {
-            prefixes.push_str("\\outer");
-          }
-          if !prefixes.is_empty() {
-            prefixes.push(' ');
-          }
-          let expansion = match expandable.get_expansion() {
-            None => String::new(),
-            // TODO: How to print closures? This follows Perl's raw pointer format
-            Some(ExpansionBody::Closure(exp)) => format!("CODE({:p})", Rc::as_ptr(exp)),
-            Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks)
-          };
-          meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");
-        },
-        e => { // are there other cases that could occur here? should we handle them?
-          panic!("this may be a missing case in \\meaning's implementation: {e}");
-        }
-      }
-    }
-    ExplodeChars!(meaning)
-  });
 
   //======================================================================
 
@@ -316,34 +160,6 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\splitfirstmark"), None, Tokens!());
   DefMacro!(T_CS!("\\splitbotmark"), None, Tokens!());
 
-  // using input() from DefMacro is actually an incredible ordeal.
-  // I tried several variations of arranging the types, but Rust is quite strict
-  // about avoiding multiple borrows that relate to "state::
-  // when mutability is involved.
-  // For now I have changed to DefPrimitive, so that there is a clear access to the
-  // stomach, but we may require some special-case treatment in other pieces of code...
-  DefMacro!("\\input", "\\ltx@input");
-  DefPrimitive!("\\ltx@input TeXFileName", sub[(name)] {
-    let mut tks = name.unlist();
-    // If given a LaTeX-style argument, strip braces
-    if tks.len() > 1 && tks.first().unwrap().get_catcode() == Catcode::BEGIN
-      && tks.last().unwrap().get_catcode() == Catcode::END {
-      tks.remove(0);
-      tks.pop();
-      // and load LaTeX.pool if not already
-      if !lookup_bool("LaTeX.pool_loaded") {
-        LoadPool!("LaTeX");
-      }
-    }
-    let reloadable_opts = InputOptions { reloadable: true, ..InputOptions::default() };
-    input(&Tokens::new(tks).to_string(), reloadable_opts)?;
-  });
-
-  // Note that TeX doesn't actually close the mouth;
-  // it just flushes it so that it will close the next time it's read!
-  DefMacro!(T_CS!("\\endinput"), None, {
-    gullet::flush_mouth();
-  });
 
   // \the<internal quantity>
   DefMacro!("\\the Register", sub[args] {
@@ -371,20 +187,6 @@ LoadDefinitions!({
     }
   });
 });
-
-// Hmm... I wonder, should getString itself be dealing with escapechar?
-fn escapechar() -> String {
-  let code: i64 = match state::lookup_register("\\escapechar", Vec::new()).unwrap() {
-    Some(RegisterValue::Number(v)) => v.value_of(),
-    _ => -1,
-  };
-  if (0..=255).contains(&code) {
-    let char_code = (code as u8) as char;
-    char_code.to_string()
-  } else {
-    String::new()
-  }
-}
 
 fn compare(u: i64, rel: Token, v: i64) -> bool {
   // NOTE: One would expect this to be best written as an advanced match state::ent

@@ -1,117 +1,24 @@
+//! TeX Fonts
+//! 
+//! Core TeX Implementation for LaTeXML
+
 use crate::prelude::*;
 
 static FONT_TOKEN_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap());
 
 LoadDefinitions!({
-  // <font> = <fontdef token> | \font | <family member>
-  // <family member> = <font range><4bit>
-  // <font range> = \textfont | \scriptfont | \scriptscriptfont
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Fonts Family of primitive control sequences
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  // Doubtful that we can do anything useful with these.
-  // These look essentially like Registers, although Knuth doesn't call them that.
-  // NOTE: These should just point to a CS token, right????
-  // (although it SHOULD be one defined to be a font switch??)
-  // NOTE: These should NOT be global(?)
-  DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
-  getter => sub[args] {
-    let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
-  },
-  setter => sub[font,scope,args] {
-    let fam = args.remove(0).expect_number().value_of();
-    state::assign_value(&s!("textfont_{fam}"), font, scope);
-  });
-
-  DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
-  getter => sub[args] {
-    let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
-  },
-  setter => sub[font,scope,args] {
-    let fam = args.remove(0).expect_number().value_of();
-    state::assign_value(&s!("scriptfont_{fam}"), font, scope);
-  });
-
-  DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
-  getter => sub[args] {
-    let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
-  },
-  setter => sub[font,scope,args] {
-    let fam = args.remove(0).expect_number().value_of();
-    state::assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
-  });
-
-  // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
-  // #    | <dimendef token> | \dimen<8bit> | <box dimension><8bit> | \fontdimen<number><font>
-
-  DefRegister!("\\lastkern" => Dimension::new(0), readonly => true);
-
-  // # <box dimension> = \ht | \wd | \dp
-  DefRegister!("\\ht Number", Dimension::new(0),
-  getter => sub[args] {
-    let n = args.remove(0).expect_number();
-    with_value(&format!("box{}", n.value_of()), |val_opt|
-    if let Some(Stored::Digested(thebox)) = val_opt {
-      thebox.get_height()
-    } else {
-      Some(RegisterValue::Dimension(Dimension::default()))
-    })},
-  setter => sub[value,_scope,args] {
-    let n = args.remove(0).expect_number();
-    let boxkey = format!("box{}", n.value_of());
-    with_value_mut(&boxkey, |val_opt|
-    if let Some(Stored::Digested(thebox)) = val_opt {
-      thebox.set_height(value);
-    })});
-
-  DefRegister!("\\wd Number", Dimension::default(),
-  getter => sub[args] {
-    let n = args.remove(0).expect_number();
-    let boxid = format!("box{}", n.value_of());
-    let mut stuff = checkout_value(&boxid);
-    let result = {if let Some(Stored::Digested(ref mut thebox)) = stuff {
-      match thebox.get_width(None) {
-        Ok(v) => v,
-        Err(e) => {
-          let err = || {Error!("method", "get_width", format!("{e}")); Ok(()) };
-          err().ok();
-          None
-        }
-      }
-    } else {
-      Some(RegisterValue::Dimension(Dimension::default()))
-    }};
-    if let Some(thebox) = stuff {
-      checkin_value(&boxid, thebox);
-    }
-    result
-  },
-  setter => sub[value,_scope,args] {
-    let n = args.remove(0).expect_number();
-    let boxkey = format!("box{}", n.value_of());
-    with_value_mut(&boxkey, |val_opt|
-    if let Some(Stored::Digested(thebox)) = val_opt {
-      thebox.set_width(value);
-    })});
-
-  DefRegister!("\\dp Number", Dimension::new(0),
-  getter => sub[args] {
-    let n = args.remove(0).expect_number();
-    with_value(&format!("box{}", n.value_of()),|val_opt|
-      if let Some(Stored::Digested(thebox)) = val_opt {
-        thebox.get_depth()
-      } else {
-        Some(RegisterValue::Dimension(Dimension::default()))
-      })},
-setter => sub[value,_scope,args] {
-    let n = args.remove(0).expect_number();
-    let boxkey = format!("box{}", n.value_of());
-    with_value_mut(&boxkey, |val_opt|
-    if let Some(Stored::Digested(thebox)) = val_opt {
-      thebox.set_depth(value);
-    })});
+  //======================================================================
+  // Font declaration
+  //----------------------------------------------------------------------
+  // \font             iq loads information about a font into TeX's memory.
+  // \fontname         c  returns the system file name for a font.
+  // \fontdimen        iq holds font parameters.
+  // \nullfont         iq is a predefined font with no characters.
 
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
@@ -122,7 +29,32 @@ setter => sub[value,_scope,args] {
       gullet::read_number()?;
     }
     token
-  }); // ?
+  });
+
+  DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
+  sub[(cs, name_arg)] {
+    let name = name_arg.to_string();
+    let props_opt = if let Some(mut props) = font::decode_fontname(&name,
+      gullet::read_keyword(&["at"])?
+        .map(|_| gullet::read_dimension().unwrap().pt_value(None)),
+      gullet::read_keyword(&["scaled"])?
+        .map(|_| gullet::read_number().unwrap().value_of() as f64 / 1000.0)) {
+      props.name = Some(Cow::Owned(name));
+      Some(props)
+    } else { // Failed?
+      let message = s!("Unrecognized font name {:?} Font switch macro {:?}
+      will have no effect", name, cs.stringify());
+      Info!("unexpected", name, message);
+      None
+    };
+    gullet::skip_spaces()?;
+    if let Some(ref props) = props_opt {
+      AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
+    }
+    DefPrimitive!(cs, None, None, font => props_opt);
+  });
+
+  DefMacro!(T_CS!("\\fontname"), None,Tokens::new(Explode!("fontname not implemented")));
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
     getter => sub[args] {
       let p = args.remove(0).expect_number().value_of();
@@ -134,40 +66,18 @@ setter => sub[value,_scope,args] {
       }
     }
   );
+  // Not sure what this should be...
+  DefPrimitive!("\\nullfont", None, font => {family => "nullfont"});
 
-  // Could be handled by setting dimensions whenever the box itself is set?
-
-  // <internal glue> = <glue parameter> | \lastskip | <skipdef token> | \skip<8bit>
-
-  DefRegister!("\\lastskip", Glue::new(0), readonly => true);
-
-  // <internal muglue> = <muglue parameter> | \lastskip | <muskipdef token> | \muskip<8bit>
-
-  // <family assignment> = <family member><equals><font>
-  // <shape assignment> = \parshape<equals><number><shape dimensions>
-  //  <shape dimensions> is 2n <dimen>
-
-  // <global assignment> = <font assignment> | <hyphenation assignment>
-  //   | <box size assignment> | <interaction mode assignment>
-  //   | <intimate assignment>
-  // <font assignment> = \fontdimen <number><font><equals><dimen>
-  //   | \hyphenchar<font><equals><number> | \skewchar<font><equals><number>
-  // <hyphenation assignment> = \hyphenation<general text>
-  //   | \patterns<general text>
-  // <box size assignment> = <box dimension><8bit><equals><dimen>
-  // <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
-  // These are no-ops; Basically, LaTeXML runs in scrollmode
-  DefPrimitive!(T_CS!("\\errorstopmode"), None, None);
-  DefPrimitive!(T_CS!("\\scrollmode"), None, None);
-  DefPrimitive!(T_CS!("\\nonstopmode"), None, None);
-  DefPrimitive!(T_CS!("\\batchmode"), None, None);
-
-  // <intimate assignment> = <special integer><equals><number>
-  //   | <special dimension><equals><dimen>
-
-  DefMacro!("\\fontencoding{}", "\\@@@fontencoding{#1}");
-
-  DefPrimitive!("\\@@@fontencoding{}", sub[(encoding)] {
+  //======================================================================
+  // Italic correction
+  //----------------------------------------------------------------------
+  // / (italic corr.)  c  inserts an italic correction.
+  DefPrimitive!("\\/", {
+    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\/")),
+      stored_map!("isSpace" => true, "name" => "italiccorr", "width" => Dimension::default()))
+  });
+  DefPrimitive!("\\lx@fontencoding{}", sub[(encoding)] {
     let encoding = Expand!(encoding).to_string();
     if load_font_map(&encoding).is_some() {
       MergeFont!(encoding => encoding);
@@ -179,14 +89,6 @@ setter => sub[value,_scope,args] {
     }
     Ok(Vec::new())
   });
-
-  DefMacro!("\\f@encoding", {
-    ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap())
-  });
-  DefMacro!("\\cf@encoding", {
-    ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap())
-  });
-
   // Used for SemiVerbatim text
   DeclareFontMap!(
     "ASCII",
@@ -371,90 +273,4 @@ setter => sub[value,_scope,args] {
     ]
   );
 
-  DefPrimitive!("\\char Number", sub[(number)] {
-    let number_tks = number.revert().unwrap_or_default().unlist();
-    let decoded = match font::decode(number.value_of() as u8, None, false) {
-      None => *EMPTY_SYM,
-      Some(c) => arena::pin_char(c)
-    };
-    Tbox::new(
-     decoded,
-     None,
-     None,
-     Tokens!(T_CS!("\\char"), number_tks, T_RELAX!()),
-     SymHashMap::default())
-  });
-
-  // Almost like a register (and \countdef), but different...
-  // (including the preassignment to \relax!)
-  DefPrimitive!("\\chardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
-    // Let w/o AfterAssignment
-    let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
-    state::assign_meaning(&newcs, relax_meaning, None);
-    let value = gullet::read_number()?;
-    state::install_definition(
-      Register::new_chardef(newcs, Some(value.into()), None, None), None);
-    state::after_assignment();
-    Ok(Vec::new())
-  });
-
-  DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
-    sizer       => "#1",
-    after_digest => sub[whatsit] {
-      let n = whatsit.get_arg(1).unwrap().value_of();
-      let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
-      if let Some(glyph) = glyph_opt {
-        whatsit.set_property("glyph", glyph);
-        whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
-      }
-      if let Some(role) = role_opt {
-        whatsit.set_property("role", role);
-      }
-      Ok(Vec::new())
-    }
-  );
-
-  DefConstructor!("\\delimiter Number",
-  "?#glyph(?#isMath(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)(#glyph))",
-  sizer       => "#glyph",
-  after_digest => sub[whatsit] {
-    let mut n = whatsit.get_arg(1).unwrap().value_of();
-    n >>= 12;    // Ignore 3 rightmost digits and treat as \mathchar
-    let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
-    if let Some(glyph) = glyph_opt {
-      whatsit.set_property("glyph",glyph);
-      whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
-    }
-    if let Some(role) = role_opt {
-      whatsit.set_property("role", role);
-    }
-    Ok(Vec::new())
-  });
-
-  // Almost like a register, but different...
-  DefPrimitive!("\\mathchardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
-    // Let w/o AfterAssignment
-    let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
-    assign_meaning(&newcs, means_relax, None);
-    let value  = gullet::read_number().unwrap_or_default();
-    let (role, glyph) = decode_math_char(value.value_of() as u16)?;
-    // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
-    state::install_definition(Register::new_chardef(newcs,Some(value.into()), glyph, role.map(arena::pin)), None);
-    state::after_assignment();
-  });
-
-  DefConstructor!("\\mathaccent Number Digested",
-  "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
-  sizer => "#1",    // Close enough?
-  after_digest => sub[whatsit] {
-    let n = whatsit.get_arg(1).unwrap().value_of();
-    let (_role, glyph_opt) = decode_math_char(n as u16)?;
-    if let Some(glyph) = glyph_opt {
-      whatsit.set_property("glyph", glyph);
-
-      let mut glyph_buf: [u8; 4] = [0; 4];
-      let glyph_str: &str = glyph.encode_utf8(&mut glyph_buf);
-      whatsit.set_property("font", lookup_font().unwrap().specialize(glyph_str));
-    }
-  });
 });

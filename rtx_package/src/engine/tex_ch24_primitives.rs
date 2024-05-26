@@ -1,8 +1,6 @@
 use crate::prelude::*;
 // use super::tex_boxes::adjust_box_color;
 
-static PSFILE_REGEX : Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpsfile=(.+?)(?:\s|\})").unwrap());
-
 //**********************************************************************
 // Primitives
 // See The TeXBook, Chapter 24, Summary of Vertical Mode
@@ -19,55 +17,6 @@ LoadDefinitions!({
 
   // These define the handler for { } (or anything of catcode BEGIN, END)
 
-  // These are actually TeX primitives, but we treat them as a Whatsit so they
-  // remain in the constructed tree.
-  DefPrimitive!("{", {
-    bgroup();
-    let open = Tbox::new(*EMPTY_SYM, None, None,
-        Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true));
-    let mode = Some(if lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
-    let body = stomach::digest_next_body(None)?;
-    let mut boxes = vec![Digested::from(open)];
-    boxes.extend(body);
-    let mut font = None;
-    for abox in boxes.iter().rev() {
-      if let Some(boxfont) = abox.get_font()? {
-        font = Some(boxfont.into_owned());
-        break;
-      }
-    }
-    List {
-      boxes,
-      mode,
-      font,
-      locator: Locator::default(),
-      properties: SymHashMap::default()
-    }
-  });
-
-  DefPrimitive!("}", {
-    let f = LookupFont!();
-    egroup()?;
-    Tbox::new(*EMPTY_SYM, f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true))
-  });
-
-  // These are for those screwy cases where you need to create a group like box,
-  // more than just bgroup, egroup,
-  // BUT you DON'T want extra {, } showing up in any untex-ing.
-  DefConstructor!("\\@hidden@bgroup", "#body",
-    before_digest => { bgroup(); },
-    capture_body => true,
-    reversion=> sub[whatsit,_args] {
-      if let Some(body) = whatsit.get_body()? {
-        body.revert()
-      } else { Ok(Tokens!()) }
-    }
-  );
-  DefConstructor!("\\@hidden@egroup", "",
-    after_digest => { egroup()?; },
-    reversion => ""
-  );
-
   DefPrimitive!(
   "\\begingroup", {
     begingroup();
@@ -76,24 +25,6 @@ LoadDefinitions!({
   "\\endgroup", {
     endgroup()?;
   });
-
-  // Debugging aids; Ignored!
-  DefPrimitive!("\\show Token", sub[(arg)] {
-    let lhs = if arg.get_catcode() == Catcode::CS {
-      s!("{arg}=")
-    } else { String::new() };
-    let stuff = Invocation!(T_CS!("\\meaning"), vec![arg]);
-    let rhs = writable_tokens(&Expand!(stuff));
-    // TODO: add+use `Note!` instead of `eprintln`
-    eprintln!("> {lhs}{rhs}");
-    eprintln!("{}",gullet::get_locator());
-  });
-  DefPrimitive!("\\showbox Number", sub[(arg)] {
-    let n     = arg.value_of();
-    Debug!("Box {n} = {:?}", lookup_value(&s!("box{n}")));
-  });
-  DefPrimitive!("\\showlists", None);
-  DefPrimitive!("\\showthe Token", None);
 
   // DefPrimitive('\shipout ??
   DefPrimitive!("\\ignorespaces SkipSpaces", None);
@@ -108,103 +39,6 @@ LoadDefinitions!({
     push_value("afterGroup", t)
   });
 
-  // \uppercase<general text>, \lowercase<general text>
-
-  // Note that these are NOT expandable, even though the "return" tokens!
-  DefPrimitive!("\\uppercase GeneralText", sub[(tokens)] {
-    gullet::unread_vec(
-      tokens.unlist().into_iter()
-        .map(uppercase_token)
-        .collect());
-  });
-  DefPrimitive!("\\lowercase GeneralText", sub[(tokens)] {
-    gullet::unread_vec(
-      tokens.unlist().into_iter()
-        .map(lowercase_token)
-        .collect::<Vec<Token>>());
-  });
-
-  DefPrimitive!("\\message{}", sub [(message)] {
-    if lookup_int("VERBOSITY") > -1 {
-      eprintln!("{}", writable_tokens(&do_expand(message)?));
-    }
-  });
-
-  DefRegister!("\\errhelp", Tokens!());
-  DefPrimitive!("\\errmessage{}", sub[(args)] {
-
-    let message = Expand!(args);
-    let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
-    eprintln!("{}: {}", message, help);
-  });
-
-  // TeX I/O primitives
-  DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName",
-  sub[(port, filename)] {
-    let port = port.to_string();
-    let filename = filename.to_string();
-    // possibly should close $port if it's already been opened?
-    // Rely on FindFile to enforce any access restrictions
-    if let Some(path) = find_file(&filename, Some(
-      FindFileOptions {forbid_ltxml: true, ..FindFileOptions::default()})) {
-      let content_str = LookupString!(&s!("{}_contents",path));
-      let content = if content_str.is_empty() {
-        None
-      } else {
-        Some(content_str)
-      };
-      let mouth = Mouth::create(&path, MouthOptions {
-        content,
-        .. MouthOptions::default()
-      })?;
-      AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global));
-    }
-  });
-
-  DefPrimitive!("\\closein Number", sub[(port)] {
-    let file_key = s!("input_file:{}", port);
-    let mut finished = false;
-    //   close the mouth (if any) and clear the variable
-    with_value(&file_key, |mouth_opt|
-      if let Some(Stored::Mouth(ref mouth)) = mouth_opt {
-        mouth.borrow_mut().finish();
-        finished = true;
-      });
-    if finished {
-      AssignValue!(&file_key, false, Some(Scope::Global));
-    }
-  });
-
-  DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token",
-    sub[(port, token)] {
-    let mouth_opt = if let Some(Stored::Mouth(mouth_stored)) = lookup_value(&format!("input_file:{port}")) {
-      Some(mouth_stored)
-    } else { None };
-    if let Some(mouth_obj) = mouth_opt {
-      bgroup();
-      AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
-      AssignValue!("INCLUDE_COMMENTS", false);
-      let mut tokens = Vec::new();
-      let mut level = 0;
-      let mut mouth = mouth_obj.borrow_mut();
-      while let Some(t) = mouth.read_token() {
-        let cc = t.get_catcode();
-        if cc != Catcode::MARKER {
-          tokens.push(t);
-        }
-        match cc {
-          Catcode::BEGIN => {level += 1},
-          Catcode::END => {level -= 1},
-          _ => {}
-        };
-        if level == 0 && mouth.is_eol() {
-          break;
-        }
-      }
-      egroup()?;
-      DefMacro!(token, None, Tokens::new(tokens), nopack_parameters => true);
-    }
-  });
 
   DefConditional!("\\ifeof Number", sub[(port)] {
     with_value(&s!("input_file:{}", port), |val_opt|
@@ -215,131 +49,9 @@ LoadDefinitions!({
       })
   });
 
-  // For output files, we'll write the data to a cached internal copy
-  // rather than to the actual file system.
-  DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName",
-    sub[(port, filename)] {
-    let port = port.to_string();
-    let filename = filename.to_string();
-    let contents_key = &s!("{}_contents",filename);
-    AssignValue!(&s!("output_file:{}",port)  => filename,  Some(Scope::Global));
-    AssignValue!(contents_key => "",  Some(Scope::Global));
-  });
-
-  DefPrimitive!("\\closeout Number", sub[(port)] {
-    AssignValue!(&s!("output_file:{}",port), false, Some(Scope::Global));
-  });
-
-  DefPrimitive!("\\write Number {}", sub[(port, tokens)] {
-    let handle = with_value(&s!("output_file:{}", port), |val_opt|
-    if let Some(filename) = val_opt {
-       s!("{}_contents",filename)
-    } else { String::new() });
-    if !handle.is_empty() {
-      let mut contents : String = LookupString!(&handle);
-      contents.push_str(&Expand!(tokens).untex());
-      contents.push('\n');
-      AssignValue!(&handle => contents, Some(Scope::Global));
-    } else {
-      println_stderr!("{}", Expand!(tokens).untex());
-    }
-  });
-
-  // Since we don't paginate, we're effectively always "shipping out",
-  // so all operations are \immediate
-  DefPrimitive!("\\immediate", None);
-
   //======================================================================
   // Remaining semi- Vertical Mode primitives in Ch.24, pp.280--281
 
-  DefPrimitive!("\\special {}", sub[(arg)] {
-    let special_str = arg.to_string();
-    // recognize one special graphics inclusion case
-    if let Some(cap) = PSFILE_REGEX.captures(&special_str) {
-      let graphic = cap.get(1).unwrap().as_str();
-      RequirePackage!("graphicx", searchpaths_only => true);
-      let mut kv = Vec::new();
-      for prop in ["voffset","hoffset","hscale","vscale","hsize","vsize","angle"] {
-        let prop_regex = Regex::new(&s!("\\b{prop}=(.+?)(?:\\s|\\}})")).unwrap();
-        if let Some(cap) = prop_regex.captures(&special_str) {
-          let prop_val = cap.get(1).unwrap().as_str();
-          if !kv.is_empty() {
-            kv.push(T_OTHER!(","));
-          }
-          kv.push(T_OTHER!(prop));
-          kv.push(T_OTHER!("="));
-          kv.push(T_OTHER!(prop_val));
-        }
-      }
-      if !kv.is_empty() {
-        let mut wrapped = vec![T_OTHER!("[")];
-        wrapped.extend(kv);
-        wrapped.push(T_OTHER!("]"));
-        kv = wrapped;
-      }
-
-      gullet::unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
-      gullet::unread_vec(kv);
-      gullet::unread_one(T_CS!("\\ltx@special@graphics"));
-    } else {
-      Info!("ignored", "special", s!("Unrecognized TeX Special: {arg}"));
-    }
-  });
-
-  // # adapted from graphicx.sty.ltxml
-  // DefKeyVal('SpecialPS', 'angle',   '');
-  // DefKeyVal('SpecialPS', 'voffset', '');
-  // DefKeyVal('SpecialPS', 'hoffset', '');
-  // DefKeyVal('SpecialPS', 'hsize',   '');
-  // DefKeyVal('SpecialPS', 'vsize',   '');
-  // DefKeyVal('SpecialPS', 'hscale',  '');
-  // DefKeyVal('SpecialPS', 'vscale',  '');
-  // DefConstructor('\ltx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim',
-  //   "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
-  //   sizer      => \&image_graphicx_sizer,
-  //   properties => sub {
-  //     my ($stomach, $kv, $path) = @_;
-  //     $path = ToString($path); $path =~ s/^\s+//; $path =~ s/\s+$//;
-  //     $path =~ s/("+)(.+)\g1/$2/;
-  //     my $searchpaths = LookupValue('GRAPHICSPATHS');
-  //     my @candidates  = pathname_findall($path, types => ['*'], paths => $searchpaths);
-  //     if (my $base = LookupValue('SOURCEDIRECTORY')) {
-  //       @candidates = map { pathname_relative($_, $base) } @candidates; }
-  //     my $options = '';
-  //     if ($kv) {    # remap psfile options to includegraphics options:
-  //       if (my $hscale = $kv->getValue('hscale')) {
-  //         $hscale = $hscale && int(ToString($hscale)) / 100;
-  //         $options .= ',' if $options;
-  //         $options .= "xscale=$hscale"; }
-  //       if (my $vscale = $kv->getValue('vscale')) {
-  //         $vscale = $vscale && int(ToString($vscale)) / 100;
-  //         $options .= ',' if $options;
-  //         $options .= "yscale=$vscale"; }
-  //       if (my $hsize = $kv->getValue('hsize')) {
-  //         $hsize = ToString($hsize);
-  //         $options .= ',' if $options;
-  //         $options .= "width=$hsize"; }
-  //       if (my $vsize = $kv->getValue('vsize')) {
-  //         $vsize = ToString($vsize);
-  //         $options .= ',' if $options;
-  //         $options .= "height=$vsize"; }
-  //       if (my $angle = $kv->getValue('angle')) {
-  //         $angle = ToString($angle);
-  //         $options .= ',' if $options;
-  //         $options .= "angle=$angle"; }
-  //       my $voffset = $kv->getValue('voffset') || 0;
-  //       $voffset = $voffset && int(ToString($voffset));
-  //       my $hoffset = $kv->getValue('hoffset') || 0;
-  //       $hoffset = $hoffset && int(ToString($hoffset));
-  //       if ($voffset || $hoffset) {
-  //         my $left   = -$hoffset;
-  //         my $bottom = -$voffset;
-  //         $options .= "," if $options;
-  //         $options .= "trim=$left $bottom 0 0,clip=true"; } }
-  //     (options => $options, path => $path, candidates => join(',', @candidates)); },
-  //   mode => 'text');
-  // # Since these ultimately generate external resources, it can be useful to have a handle on them.
-  // Tag('ltx:graphics', afterOpen => sub { GenerateID(@_, 'g'); });
 
   DefPrimitive!("\\penalty Number", None);
   // \kern is heavily used by xy.
@@ -407,9 +119,6 @@ LoadDefinitions!({
   DefPrimitive!("\\vfill", None);
   DefPrimitive!("\\vss", None);
   DefPrimitive!("\\vfilneg", None);
-  DefPrimitive!("\\leaders", None);
-  DefPrimitive!("\\cleaders", None);
-  DefPrimitive!("\\xleaders", None);
 
   // \moveleft<dimen><box>, \moveright<dimen><box>
   DefConstructor!("\\moveleft Dimension MoveableBox",
@@ -424,24 +133,6 @@ LoadDefinitions!({
       if let Some(dimension) = whatsit.get_arg(1) {
         whatsit.set_property("x", dimension.clone());
       }});
-
-  // DG: TODO: We need tests+examples here, a bit lost in the typing interface...
-  //
-  // # \unvbox<8bit>, \unvcopy<8bit>
-  // DefPrimitive!("\\unvbox Number", sub[(number)] {
-  //   let box_key   = s!("box{}",number.value_of());
-  //   let stuff = state!().lookup_tokens(&box_key);
-  //   adjust_box_color(stuff);
-  //   AssignValue!(&box_key, None);
-  //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
-  // });
-  // DefPrimitive!("\\unvcopy Number", sub[(number)] {
-  //   let box_key   = s!("box{}",number.value_of());
-  //   let stuff = state!().lookup_tokens(&box_key);
-  //   adjust_box_color(stuff);
-  //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
-  // });
-
 
   //======================================================================
   // If this is the right solution...
