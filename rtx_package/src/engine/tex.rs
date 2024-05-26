@@ -14,11 +14,11 @@ LoadDefinitions!({
   InnerPool!(tex_debugging);
   InnerPool!(tex_file_io);
   InnerPool!(tex_fonts);
-  // -- CONTINUE HERE:
   InnerPool!(tex_glue);
   InnerPool!(tex_hyphenation);
+  // -- CONTINUE HERE:
   InnerPool!(tex_inserts);
-  // InnerPool!("tex_Job");
+  InnerPool!(tex_job);
   InnerPool!(tex_kern);
   // InnerPool!(tex_logic);
   // InnerPool!(tex_macro);
@@ -94,11 +94,6 @@ LoadDefinitions!({
   InnerPool!(tex_stray_math_style);
   // lines 7037-7140
   InnerPool!(tex_special_chars);
-  // lines 7141-7203
-  InnerPool!(latex_hook);
-  // lines 7545-7720
-  InnerPool!(tex_misc_tweaks);
-
   // lines 7721 - 7725
   InnerPool!(etex);
   InnerPool!(pdftex);
@@ -106,5 +101,49 @@ LoadDefinitions!({
   // should we port the deprecations to rust? postpone for now.
   //InnerPool!(base_deprecated);
   InnerPool!(plain);
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Orphans?
+  //======================================================================
+  
+  // This is LaTeX, but used a little in the Primitives?
+  // define it here (only approxmiately), since it's already useful.
+  
+  Let!("\\protect", "\\relax");
+  DefRegister!("\\everyhelp", Tokens!());
+  DefMacro!("\\hiderel{}", "#1");    // Just ignore, for now...
+  // TODO: revisit organization for hooks
+  InnerPool!(latex_hook);
+  
+  // DefRewrite(xpath => 'descendant-or-self::ltx:XMWrap[count(child::*)=1]',
+  //   replace => sub { my ($document, $wrap) = @_;
+  //     if (my $node = $document->getFirstChildElement($wrap)) {
+  //       # Copy attributes but NOT internal ones,
+  //       # NOR xml:id, else we get clashes
+  //       foreach my $attribute ($wrap->attributes) {
+  //         if ($attribute->nodeType == XML_ATTRIBUTE_NODE) {
+  //           my $attr = $document->getNodeQName($attribute);
+  //           $document->setAttribute($node, $attr => $attribute->getValue)
+  //             unless ($attr eq 'xml:id') || $attr =~ /^_/;
+  //           if    ($attr =~ /^_/) { }
+  //           elsif ($attr eq 'xml:id') {
+  //             my $id = $attribute->getValue;
+  //             if (my $previd = $node->getAttribute('xml:id')) {    # Keep original id
+  //                   # but swap any references to the one on the wrapper!
+  //               foreach my $ref ($document->findnodes("//*[\@idref='$id']")) {
+  //                 $ref->setAttribute(idref => $previd); }
+  //               $wrap->removeAttribute('xml"id');
+  //               $document->unRecordID($id); }
+  //             else {
+  //               $wrap->removeAttribute('xml:id');
+  //               $document->unRecordID($id);
+  //               $document->setAttribute($node, 'xml:id' => $id); } }
+  //           else {
+  //             $document->setAttribute($node, $attr => $attribute->getValue); } } }
+  //       # But keep $node's font from being overwritten.
+  //       $document->setNodeFont($wrap, $document->getNodeFont($node));
+  //       ## WHY THIS????
+  //       $document->getNode->appendChild($node);
+  // } });
 
 });

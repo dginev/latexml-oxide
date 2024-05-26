@@ -105,20 +105,7 @@ LoadDefinitions!({
   DefPrimitive!("\\vadjust {}", sub[(arg)] { push_tokens("vAdjust", arg); });
 
   //======================================================================
-  // Remaining Vertical Mode primitives in Ch.24, pp.281--283
-  // \vskip<glue>, \vfil, \vfill, \vss, \vfilneg
-  // <leaders> = \leaders | \cleaders | \xleaders
-  // <box or rule> = <box> | <vertical rule> | <horizontal rule>
-  // <vertical rule> = \vrule<rule specification>
-  // <horizontal rule> = \hrule<rule specification>
-  // <rule specification> = <optional spaces> | <rule dimension><rule specification>
-  // <rule dimension> = width <dimen> | height <dimen> | depth <dimen>
 
-  // Stuff to ignore for now...
-  DefPrimitive!("\\vfil", None);
-  DefPrimitive!("\\vfill", None);
-  DefPrimitive!("\\vss", None);
-  DefPrimitive!("\\vfilneg", None);
 
   // \moveleft<dimen><box>, \moveright<dimen><box>
   DefConstructor!("\\moveleft Dimension MoveableBox",
@@ -134,21 +121,5 @@ LoadDefinitions!({
         whatsit.set_property("x", dimension.clone());
       }});
 
-  //======================================================================
-  // If this is the right solution...
-  // then we also should put the desired spacing on a style attribute?!?!?!
-  DefConstructor!("\\vskip Glue", sub[document, args, _props] {
-    unref!(args => length);
-    let length = length.pt_value(None);
 
-    if length > 10.0 {    // Or what!?!?!?!
-      if document.is_closeable("ltx:para").is_some() {
-        document.close_element("ltx:para")?;
-      } else if document.is_openable("ltx:break") {
-        document.insert_element("ltx:break", Vec::new(), None)?;
-      }
-    }},
-     // TODO: "height" property
-    properties => {stored_map!("isSpace" => true, "isVerticalSpace" => true, "isBreak" => true)}
-  );
 });

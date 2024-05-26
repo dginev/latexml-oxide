@@ -12,24 +12,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\noboundary", None);
 
-  // \hskip handled similarly to \kern
-  // \hskip can be ignored in certain situations...
 
-  // DefConstructor!("\\hskip Glue", sub[document, (length)] {
-  //     let parent = document.get_node();
-  //     if ($document->getNodeQName($parent) eq 'svg:g') {
-  //       if (my $x = $length->pxValue) {
-  //         # HACK HACK HACK
-  //         my $transform = $parent->getAttribute('transform');
-  //         $parent->setAttribute(transform => ($transform ? $transform . ' ' : '') . "translate($x,0)");
-  //     } }
-  //     elsif (inSVG()) {
-  //       Warn('unexpected', 'kern', $_[0], "Lost hskip in SVG " . ToString($length)); }
-  //     else {
-  //       $document->absorb(DimensionToSpaces($length)); } },
-  //   properties => sub {
-  //     my ($stomach, $length) = @_;
-  //     (width => $length, isSpace => 1); });
 
   // DefPrimitive('\mskip MuGlue', sub {
   //     my ($stomach, $length) = @_;
@@ -41,15 +24,6 @@ LoadDefinitions!({
   //     my $s = DimensionToSpaces($length);
   //     Box($s, undef, undef, Invocation(T_CS('\mkern'), $length),
   //       width => $length, isSpace => 1); });
-
-  DefPrimitive!("\\hss", None);
-  DefPrimitive!("\\hfilneg", None);
-  DefPrimitive!("\\hfil", {
-    Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfil")),
-    stored_map!("isSpace" => true, "isFill" => true))});
-  DefPrimitive!("\\hfill", {
-    Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfill")),
-    stored_map!("isSpace" => true, "isFill" => true)) });
 
   // \lower <dimen> <box>
   // \raise <dimen> <box>
@@ -92,7 +66,4 @@ LoadDefinitions!({
   DefMacro!("\\vspace{}", "\\vskip#1\\relax");
   // \indent, \noindent, \par; see above.
 
-  DefMacro!("\\discretionary{}{}{}", "#3"); // No hyphenation here!
-  DefPrimitive!("\\-", None);
-  DefPrimitive!("\\setlanguage Number", None);
 });

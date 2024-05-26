@@ -64,9 +64,6 @@ LoadDefinitions!({
   // Acts like \relax, but isn't equal to it.
   DefPrimitive!(T_CS!("\\special_relax"), None, { });
 
-  // define it here (only approxmiately), since it's already useful.
-  Let!("\\protect", "\\relax");
-
   DefMacro!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
 
   //======================================================================
