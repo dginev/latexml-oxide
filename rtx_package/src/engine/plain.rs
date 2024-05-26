@@ -23,4 +23,6 @@ LoadDefinitions!({
       } else { Ok(SymHashMap::default()) }
     });
 
+
+  Let!("\\empty", "\\lx@empty");
 });

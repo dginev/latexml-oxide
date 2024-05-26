@@ -34,12 +34,7 @@ LoadDefinitions!({
   DefRegister!("\\looseness", Number!(0));
   
   DefRegister!("\\holdinginserts", Number!(0));
-  DefRegister!("\\language", Number!(0));
-  DefRegister!("\\uchyph", Number!(1));
-  DefRegister!("\\lefthyphenmin", Number!(0));
-  DefRegister!("\\righthyphenmin", Number!(0));
   DefRegister!("\\globaldefs", Number!(0));
-  DefRegister!("\\defaulthyphenchar", Number!(45));
   DefRegister!("\\defaultskewchar", Number!(-1));
   DefRegister!("\\maxdeadcycles", Number!(0));
   DefRegister!("\\hangafter", Number!(0));
@@ -145,5 +140,4 @@ LoadDefinitions!({
   DefRegister!("\\everydisplay", Tokens!());
   DefRegister!("\\everyjob", Tokens!());
   DefRegister!("\\everycr", Tokens!());
-  DefRegister!("\\everyhelp", Tokens!());
 });

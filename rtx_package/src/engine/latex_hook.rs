@@ -74,7 +74,7 @@ LoadDefinitions!({
       \gdef\@currnamestack{#4}"
   );
   DefMacro!(T_CS!("\\@currnamestack"), None, Tokens!());
-  Let!("\\@currname", "\\@empty");
-  Let!("\\@currext",  "\\@empty");
+  Let!("\\@currname", "\\lx@empty");
+  Let!("\\@currext",  "\\lx@empty");
 
 });

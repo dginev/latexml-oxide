@@ -252,11 +252,8 @@ LoadDefinitions!({
   }
 
   // Stub definitions ???
-  DefRegister!("\\hyphenchar{}", Number::new(b'-' as i64));
+  
   DefRegister!("\\skewchar{}", Number::new(0)); // no idea what the default is here
-
-  DefMacro!("\\hyphenation GeneralText", None);
-  DefMacro!("\\patterns{}", None);
 });
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!

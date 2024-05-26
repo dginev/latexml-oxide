@@ -82,7 +82,7 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\space"), None, T_SPACE!());
   DefMacro!(T_CS!("\\lq"), None, T_OTHER!("`"));
   DefMacro!(T_CS!("\\rq"), None, T_OTHER!("'"));
-  Let!("\\empty", "\\@empty");
+  
   DefMacro!("\\null", "\\hbox{}");
   Let!("\\bgroup", T_BEGIN!());
   Let!("\\egroup", T_END!());
