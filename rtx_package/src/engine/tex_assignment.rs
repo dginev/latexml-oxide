@@ -7,40 +7,6 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   //======================================================================
-  // Macros
-  // See Chapter 24, p.275-276
-  // <macro assignment> = <definition> | <prefix><macro assignment>
-  // <definition> = <def><control sequence><definition text>
-  // <def> = \def | \gdef | \edef | \xdef
-  // <definition text> = <register text><left brace><balanced text><right brace>
-  DefPrimitive!("\\def SkipSpaces Token UntilBrace DefPlain",
-    sub[(cs,params,body)] {
-      do_def(false,cs,params,body)?;
-    },
-    locked => true);
-  DefPrimitive!("\\gdef SkipSpaces Token UntilBrace DefPlain",
-    sub[(cs,params,body)] {
-      do_def(true,cs,params,body)?;
-    },
-    locked => true);
-  DefPrimitive!("\\edef SkipSpaces Token UntilBrace DefExpanded",
-    sub[(cs,params,body)] {
-      do_def(false,cs,params,body)?;
-    },
-    locked => true);
-  DefPrimitive!("\\xdef SkipSpaces Token UntilBrace DefExpanded",
-    sub[(cs,params,body)] {
-      do_def(true,cs,params,body)?;
-    },
-    locked => true);
-
-  // <prefix> = \global | \long | \outer
-  // See Stomach.pm & Stomach.pm
-  DefPrimitive!("\\global",{ state::set_prefix("global"); }, is_prefix => true);
-  DefPrimitive!("\\long",  { state::set_prefix("long");   }, is_prefix => true);
-  DefPrimitive!("\\outer", { state::set_prefix("outer");  }, is_prefix => true);
-
-  //======================================================================
   // Non-Macro assignments; TeXBook Ch.24, pp 276--277
   // <non-macro assignment> = <simple assignment> | \global <non-macro assignment>
 
@@ -144,18 +110,6 @@ LoadDefinitions!({
       let message = s!("\\divide expected a Variable argument, but got nothing.");
       Error!("expected","variable", message);
     }
-  });
-
-  // <let assignment> = \futurelet <control sequence><token><token>
-  //  | \let<control sequence><equals><one optional space><token>
-  DefPrimitive!("\\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token", sub[(token1, token2)] {
-    Let!(token1, token2);
-  });
-
-  DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {
-    // NOT expandable, but puts tokens back
-    gullet::unread(Tokens!(token1,token2));
-    Let!(cs, token2);
   });
 
   // <shorthand definition> = \chardef<control sequence><equals><8bit>

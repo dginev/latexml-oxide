@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use chrono::prelude::*;
 
 //======================================================================
 // Registers & Parameters
@@ -33,20 +32,13 @@ LoadDefinitions!({
   DefRegister!("\\adjdemerits", Number!(10000));
   DefRegister!("\\looseness", Number!(0));
   
-  DefRegister!("\\holdinginserts", Number!(0));
-  DefRegister!("\\globaldefs", Number!(0));
+  
   DefRegister!("\\defaultskewchar", Number!(-1));
-  DefRegister!("\\maxdeadcycles", Number!(0));
   DefRegister!("\\hangafter", Number!(0));
   DefRegister!("\\fam", Number!(-1));
-  DefRegister!("\\mag", Number!(1000));
   DefRegister!("\\magnification", Number!(1000));
   DefRegister!("\\delimiterfactor", Number!(0));
-  DefRegister!("\\time", Number!(0));
-  DefRegister!("\\day", Number!(0));
-  DefRegister!("\\month", Number!(0));
-  DefRegister!("\\year", Number!(0));
-
+  
   // Most of these are ignored, but...
   DefMacro!(
     "\\tracingall",
@@ -56,15 +48,7 @@ LoadDefinitions!({
   DefMacro!("\\tracingnone", None);
   DefMacro!("\\hideoutput", None);
 
-  let dt = Local::now();
-  AssignValue!("\\day", Number!(dt.day()), Scope::Global);
-  AssignValue!("\\month", Number!(dt.month()), Scope::Global);
-  AssignValue!("\\year", Number!(dt.year()), Scope::Global);
-  AssignValue!(
-    "\\time",
-    Number!(60 * dt.hour() + dt.minute()),
-    Scope::Global
-  );
+
 
   // Read-only Integer registers
   DefRegister!("\\lastpenalty",Number!(0), readonly => true);
@@ -74,8 +58,6 @@ LoadDefinitions!({
   // <special integer> = \spacefactor | \prevgraf | \deadcycles | \insertpenalties
   DefRegister!("\\spacefactor", Number!(0));
   DefRegister!("\\prevgraf", Number!(0));
-  DefRegister!("\\deadcycles", Number!(0));
-  DefRegister!("\\insertpenalties", Number!(0));
 
   // ======================================================================
   // Dimen registers; TeXBook p. 274
@@ -83,7 +65,6 @@ LoadDefinitions!({
   DefRegister!("\\hsize", Dimension!("6.5in"));
   DefRegister!("\\vsize", Dimension!("8.9in"));
   DefRegister!("\\maxdepth", Dimension!("4pt"));
-  DefRegister!("\\splitmaxdepth", Dimension!("16383.99999pt"));
 
   DefRegister!("\\lineskiplimit", Dimension!("0"));
   DefRegister!("\\delimitershortfall", Dimension!("5pt"));
@@ -122,7 +103,6 @@ LoadDefinitions!({
   DefRegister!("\\leftskip", Glue!("0"));
   DefRegister!("\\rightskip", Glue!("0"));
   DefRegister!("\\topskip", Glue!("10pt"));
-  DefRegister!("\\splittopskip", Glue!("10pt"));
   DefRegister!("\\tabskip", Glue!("0"));
   DefRegister!("\\spaceskip", Glue!("0"));
   DefRegister!("\\xspaceskip", Glue!("0"));
@@ -138,6 +118,6 @@ LoadDefinitions!({
   DefRegister!("\\everypar", Tokens!());
   DefRegister!("\\everymath", Tokens!());
   DefRegister!("\\everydisplay", Tokens!());
-  DefRegister!("\\everyjob", Tokens!());
+  
   DefRegister!("\\everycr", Tokens!());
 });

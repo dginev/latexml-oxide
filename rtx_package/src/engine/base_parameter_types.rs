@@ -485,25 +485,17 @@ LoadDefinitions!({
 
   DefParameterType!(TeXFileName, sub[_inner, _extra] {
     use Catcode::*;
+    gullet::skip_spaces()?;
     let mut tokens = Vec::new();
-    let mut token_opt;
-    loop {
-      token_opt = gullet::read_x_token(Some(false), false)?;
-      if let Some(ref token) = token_opt {
-        if matches!(token.get_catcode(), SPACE | EOL | COMMENT | CS) {
-          break
-        }
-      } else { break; }
-      if let Some(token) = token_opt {
-        tokens.push(token);
-      }
-    }
-
-    if let Some(token) = token_opt {
+    while let Some(token) = gullet::read_x_token(Some(false), false)? {
       let cc = token.get_catcode();
-      if ! matches!(cc, SPACE | EOL | COMMENT) {
-        gullet::unread_one(token);
+      if matches!(cc, SPACE | EOL | COMMENT | CS) {
+        if matches!(cc, CS) {
+          gullet::unread_one(token);
+        }
+        break
       }
+      tokens.push(token);
     }
     // Strip outer "" ???
     let quote = T_OTHER!("\"");

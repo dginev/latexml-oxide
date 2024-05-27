@@ -11,7 +11,6 @@ use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;
 use rtx_core::{s, Core, CoreOptions, state};
 use rtx_math_parser::node_to_grammar_lexemes;
-use rtx_package::{load_model};
 use rtx_codegen::LoadModel;
 
 pub fn rtx_tests(
