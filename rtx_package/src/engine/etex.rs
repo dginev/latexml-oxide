@@ -88,11 +88,11 @@ LoadDefinitions!({
   // # but since we don't manage Pages...
 
   DefPrimitive!("\\marks Number GeneralText", None);
-  DefMacro!("\\topmarks Number", {});
-  DefMacro!("\\firstmarks Number", {});
-  DefMacro!("\\botmarks Number", {});
-  DefMacro!("\\splitfirstmarks Number", {});
-  DefMacro!("\\splitbotmarks Number", {});
+  DefMacro!("\\topmarks Number", None);
+  DefMacro!("\\firstmarks Number", None);
+  DefMacro!("\\botmarks Number", None);
+  DefMacro!("\\splitfirstmarks Number", None);
+  DefMacro!("\\splitbotmarks Number", None);
 
   // #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives

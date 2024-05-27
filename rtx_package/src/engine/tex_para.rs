@@ -109,6 +109,4 @@ LoadDefinitions!({
       document.trim_node_whitespace(node)?;
   });
 
-  // \dump ???
-  DefPrimitive!("\\end", { gullet::flush(); });
 });

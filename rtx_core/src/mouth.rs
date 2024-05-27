@@ -521,11 +521,9 @@ impl Mouth {
         //  but I had to port the Perl logic without going crazy...
         // tokenizer/verb.tex depends on it.
         while let Some((_, ncc)) = self.get_next_char() {
+          cc = Some(ncc);
           if ncc != Catcode::SPACE {
-            cc = Some(ncc);
             break;
-          } else {
-            cc = None;
           }
         }
         if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {

@@ -19,6 +19,7 @@ use crate::definition::register::Register;
 use crate::state;
 use crate::tokens::Tokens;
 use crate::Digested;
+use crate::definition::Definition;
 
 static CONTROLNAME: &[&str] = &[
   "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO",
@@ -356,6 +357,12 @@ pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
 #[thread_local]
 pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\relax"),
+  code: Catcode::CS
+});
+/// constant for T_CS("\expandafter")
+#[thread_local]
+pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin_static("\\expandafter"),
   code: Catcode::CS
 });
 
@@ -698,7 +705,7 @@ impl Token {
   /// neutralize really should only retroactively imitate what Semiverbatim would have done.
   /// So, it needs to neutralize those in SPECIALS
   /// NOTE that although '%' gets it's catcode changed in Semiverbatim,
-  /// I'm pretty sure we do NOT want to neutralize comments (turn them into CC_OTHER)
+  /// I'm pretty sure we do NOT want to neutralize comments (turn them into Catcode::OTHER)
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the
   /// stream.
   pub fn neutralize(self, extraspecials: &[char]) -> Token {
@@ -820,6 +827,36 @@ impl Token {
 
   pub fn be_digested(self) -> Result<Digested> {
     crate::stomach::digest(Tokens::new(vec![self]))
+  }
+
+  /// Check whether the current token is defined as `other`.
+  /// That is, whether it is equal to `other`, or \let to `other`.
+  /// `other` is is presumed to be some "constant", explicit token,
+  /// such as  `T_SPACE` or `T_CS!("\\endcsname")`.
+  pub fn defined_as(&self, other: &Token) -> bool {
+    let cc = self.code;
+    let occ = other.get_catcode();
+    if (cc == occ) && ((occ == Catcode::SPACE) || (self.text == other.get_sym())) {
+      return true;
+    }
+    if matches!(cc, Catcode::CS | Catcode::ACTIVE) {
+      if let Some(defn) = state::lookup_meaning(self) {
+        let letto = match defn {
+          Stored::Token(t) => t,
+          Stored::Expandable(inner) => inner.get_cs().into_owned(),
+          Stored::Primitive(inner) => inner.get_cs().into_owned(),
+          Stored::MathPrimitive(inner) => inner.get_cs().into_owned(),
+          Stored::Register(inner) => inner.get_cs().into_owned(),
+          Stored::Conditional(inner) => inner.get_cs().into_owned(),
+          Stored::Constructor(inner) => inner.get_cs().into_owned(),
+          oops => panic!("unexpected definition {oops:?} for {self:?}")
+        };
+        if (letto.get_catcode() == occ) && ((occ == Catcode::SPACE) || letto.get_sym() == other.get_sym()) {
+          return true;
+        }
+      }
+    }
+    false 
   }
 }
 

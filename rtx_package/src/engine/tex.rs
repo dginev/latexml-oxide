@@ -16,13 +16,13 @@ LoadDefinitions!({
   InnerPool!(tex_fonts);
   InnerPool!(tex_glue);
   InnerPool!(tex_hyphenation);
-  // -- CONTINUE HERE:
   InnerPool!(tex_inserts);
   InnerPool!(tex_job);
   InnerPool!(tex_kern);
-  // InnerPool!(tex_logic);
-  // InnerPool!(tex_macro);
-  // InnerPool!(tex_marks);
+  InnerPool!(tex_logic);
+  InnerPool!(tex_macro);
+  InnerPool!(tex_marks);
+  // -- CONTINUE HERE:
   InnerPool!(tex_math);
   // InnerPool!(tex_page);
   // InnerPool!(tex_paragraph);
@@ -30,10 +30,6 @@ LoadDefinitions!({
   // InnerPool!(tex_registers);
   // InnerPool!(tex_tables);
 
-
-  // lines 758-1075
-  InnerPool!(tex_expandable_primitives);
-  // lines 1076-1216
   InnerPool!(tex_registers);
   // lines 1217-1524
   InnerPool!(tex_assignment);
