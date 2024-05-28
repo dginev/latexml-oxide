@@ -23,6 +23,12 @@ pub fn compile_tests_at(input: DeriveInput) -> TokenStream {
   let test_functions: Vec<_> = glob(&format!("rtx/{directory}/*.tex"))
     .unwrap()
     .flatten()
+    .filter(|pb| {
+      // ensure there is an XML target
+      let mut xml_pb = pb.to_owned();
+      xml_pb.set_extension("xml");
+      xml_pb.is_file()
+    })
     .map(|pb| {
       let filebase = pb.file_stem().unwrap().to_string_lossy();
       let file = pb.strip_prefix("rtx/").unwrap().to_string_lossy();
