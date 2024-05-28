@@ -265,19 +265,6 @@ LoadDefinitions!({
       .unset_in_tabular_head();
   }});
 
-  //======================================================================
-  // Math mode in alignment
-  // Special forms for $ appearing within alignments.
-  // Note that $ within a math alignment (eg array environment),
-  // switches to text mode! There's no $$ for display math.
-  //
-  // This is the "normal" case: $ appearing with an alignment that is in text mode.
-  // It's just like regular $, except it doesn't look for $$ (no display math).
-  DefPrimitive!("\\@dollar@in@textmode", {
-    let mathcs = if lookup_bool("IN_MATH") { T_CS!("\\@@ENDINLINEMATH") }
-      else {T_CS!("\\@@BEGININLINEMATH") };
-    stomach::invoke_token(&mathcs)
-  });
 
   DefMacro!("\\@row@before", None);
   DefMacro!("\\@row@after", None);
@@ -391,9 +378,9 @@ pub fn alignment_bindings(
   state::let_i(
     &T_MATH!(),
     &if is_math {
-      T_CS!("\\@dollar@in@mathmode")
+      T_CS!("\\lx@dollar@in@mathmode")
     } else {
-      T_CS!("\\@dollar@in@textmode")
+      T_CS!("\\lx@dollar@in@textmode")
     },
     None
   );

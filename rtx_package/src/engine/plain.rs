@@ -1,6 +1,23 @@
+//! plain TeX
+//! 
+//! Core TeX Implementation for LaTeXML
+
 use crate::prelude::*;
 LoadDefinitions!({
-
+  //**********************************************************************
+  // Plain;  Extracted from Appendix B.
+  //**********************************************************************
+  
+  // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
+  {
+    for letter in b'A'..=b'Z' {
+      //FYI: 0x20 == 32
+      assign_lccode(letter, letter + 32, Some(Scope::Global));
+      assign_uccode(letter, letter, Some(Scope::Global));
+      assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
+      assign_uccode(letter + 32, letter, Some(Scope::Global));
+    }
+  }
 
   // If folks start using plain TeX macros, and never load LaTeX.pool,
   // they might benefit from a ltx-plain.css?

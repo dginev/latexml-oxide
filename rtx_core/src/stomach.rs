@@ -505,6 +505,7 @@ pub fn invoke_token<'a>(
   let mut result: Vec<Digested> = Vec::new();
   // INVOKE:
   while maybe_token.is_some() {
+    // TODO: This is silly, switch to an owned input_token (it is Copy as of recently).
     let token = maybe_token.take().unwrap().into_owned();
     // info!(target:"invoke_token", "{:?}", token);
     local_current_token(token);

@@ -50,12 +50,12 @@ fn before_equation() -> Result<()> {
     );
   }
   state::let_i(
-    &T_CS!("\\@@ENDDISPLAYMATH"),
+    &T_CS!("\\lx@end@display@math"),
     &T_CS!("\\lx@eDM@in@equation"),
     None
   );
   state::let_i(
-    &T_CS!("\\@@BEGINDISPLAYMATH"),
+    &T_CS!("\\lx@begin@display@math"),
     &T_CS!("\\lx@bDM@in@equation"),
     None
   );
@@ -144,7 +144,7 @@ LoadDefinitions!({
   DefMacro!("\\fnum@equation", "\\@eqnnum");
 
   // Redefined from TeX.pool, since with LaTeX we presumably have a more complete numbering system
-  DefConstructor!("\\@@BEGINDISPLAYMATH", "<ltx:equation xml:id='#id'>\
+  DefConstructor!("\\lx@begin@display@math", "<ltx:equation xml:id='#id'>\
   <ltx:Math mode='display'>\
   <ltx:XMath>#body</ltx:XMath>\
   </ltx:Math>\
@@ -192,10 +192,10 @@ LoadDefinitions!({
     },
     locked => true);
 
-  DefMacro!("\\[", "\\@@BEGINDISPLAYMATH");
-  DefMacro!("\\]", "\\@@ENDDISPLAYMATH");
-  DefMacro!("\\(", "\\@@BEGININLINEMATH");
-  DefMacro!("\\)", "\\@@ENDINLINEMATH");
+  DefMacro!("\\[", "\\lx@begin@display@math");
+  DefMacro!("\\]", "\\lx@end@display@math");
+  DefMacro!("\\(", "\\lx@begin@inline@math");
+  DefMacro!("\\)", "\\lx@end@inline@math");
 
   // Keep from expanding too early, if in alignments, or such.
   DefMacro!(
