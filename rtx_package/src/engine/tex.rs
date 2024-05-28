@@ -42,8 +42,6 @@ LoadDefinitions!({
   InnerPool!(tex_para);
   // lines 3661-3783
   InnerPool!(tex_ch25_primitives);
-  // lines 4007-4279
-  InnerPool!(tex_math_fork);
   // lines 4511-4688
   InnerPool!(tex_math_style);
   // lines 4689-5041
