@@ -44,7 +44,6 @@ mod tex_ch24_primitives;
 mod tex_ch25_primitives;
 pub mod base_functions; // auxiliary functions
 mod tex_math_accents;
-mod tex_math_fork;
 mod tex_math_style;
 mod tex_para;
 mod tex_registers;
