@@ -35,7 +35,6 @@ LoadDefinitions!({
   
   DefRegister!("\\defaultskewchar", Number!(-1));
   DefRegister!("\\hangafter", Number!(0));
-  DefRegister!("\\fam", Number!(-1));
   DefRegister!("\\magnification", Number!(1000));
   DefRegister!("\\delimiterfactor", Number!(0));
   
@@ -115,9 +114,6 @@ LoadDefinitions!({
   DefRegister!("\\thickmuskip", Glue!("5mu plus 5mu"));
   //======================================================================
   // Token registers; TeXBook p.275
-  DefRegister!("\\everypar", Tokens!());
-  DefRegister!("\\everymath", Tokens!());
-  DefRegister!("\\everydisplay", Tokens!());
-  
+  DefRegister!("\\everypar", Tokens!());  
   DefRegister!("\\everycr", Tokens!());
 });

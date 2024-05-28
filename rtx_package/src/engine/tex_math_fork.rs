@@ -34,7 +34,7 @@ LoadDefinitions!({
         || t == T_CS!("\\cr")
         // see arXiv:math/0001062, for one example
         || t == T_CS!("\\hidden@cr")
-        || t == T_CS!("\\@@ENDDISPLAYMATH")
+        || t == T_CS!("\\lx@end@display@math")
         || t == T_CS!("\\begingroup") // Totally wrong, but to catch expanded environments
         // any sort of environ begin or end???
         || t.with_str(|tstr| tstr.starts_with("\\begin{") || tstr.starts_with("\\end{"))

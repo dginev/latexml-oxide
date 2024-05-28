@@ -33,24 +33,6 @@ LoadDefinitions!({
   // INVISIBLE TIMES (or MULTIPLICATION SIGN = 00D7)
   DefMath!("\\*", None, "\u{2062}", role => "MULOP", name => "", meaning => "times");
 
-  // These 3 should have some `name' assigned ... but what???
-
-  // Is XMWrap the right thing to wrap with (instead of XMArg)?
-  // We can't really assume that the stuff inside is sensible math.
-  // NOTE that \mathord and \mathbin aren't really right here.
-  // We need a finer granularity than TeX does: an ORD could be several things,
-  // a BIN could be a MULOP or ADDOP.
-  // AND, rarely, they're empty.... Is it wrong to drop them?
-  DefConstructor!("\\mathord{}", "?#1(<ltx:XMWrap role='ID'   >#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathop{}", "?#1(<ltx:XMWrap role='BIGOP' scriptpos='#scriptpos'>#1</ltx:XMWrap>)()",
-    bounded => true); // TODO: , properties => { scriptpos => \&doScriptpos });
-  DefConstructor!("\\mathbin{}", "?#1(<ltx:XMWrap role='BINOP'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathrel{}", "?#1(<ltx:XMWrap role='RELOP'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathopen{}", "?#1(<ltx:XMWrap role='OPEN' >#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathclose{}", "?#1(<ltx:XMWrap role='CLOSE'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathpunct{}", "?#1(<ltx:XMWrap role='PUNCT'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathinner{}", "?#1(<ltx:XMWrap role='ATOM'>#1</ltx:XMWrap>)()",  bounded => true);
-
   // If an XMWrap (presumably from \mathop, \mathbin, etc)
   // has multiple children, ALL are XMTok, within a restricted set of roles,
   // we want to concatenate the text content into a single XMTok.

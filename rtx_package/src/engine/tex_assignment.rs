@@ -164,46 +164,6 @@ LoadDefinitions!({
   // <codename> = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
 
 
-  // Only used for active math characters, so far
-  DefRegister!("\\mathcode Number", Number::new(0),
-    getter => sub[args] {
-      let ch_code   = args.remove(0).expect_number().value_of() as u8;
-      let ch : char = ch_code as char;
-      let code = match lookup_mathcode(&ch.to_string()) {
-        None => ch_code,
-        Some(code) => code as u8
-      };
-      Number!(code)
-    },    // defaults to the char's code itself(?)
-    setter => sub[value, scope, args] {
-      let ch = args.remove(0).expect_number().value_of() as u8;
-      let ch : char = ch as char;
-      assign_mathcode(ch, value.value_of() as u16, scope);
-    }
-  );
-
-
-  // Not used anywhere (yet)
-  DefRegister!("\\delcode Number", Number::new(0),
-  getter=> sub[args] {
-    let code = lookup_delcode(args[0].value_of() as u8 as char);
-    Number::new(code.unwrap_or_default() as i64)
-  },
-  setter => sub[value, scope, args] {
-    assign_delcode(args[0].value_of() as u8 as char,
-      value.value_of() as u16, scope);
-  });
-
-  // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
-  {
-    for letter in b'A'..=b'Z' {
-      //FYI: 0x20 == 32
-      assign_lccode(letter, letter + 32, Some(Scope::Global));
-      assign_uccode(letter, letter, Some(Scope::Global));
-      assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
-      assign_uccode(letter + 32, letter, Some(Scope::Global));
-    }
-  }
 
   // Stub definitions ???
   

@@ -24,6 +24,7 @@ LoadDefinitions!({
   InnerPool!(tex_marks);
   // -- CONTINUE HERE:
   InnerPool!(tex_math);
+  InnerPool!(tex_scripts);
   // InnerPool!(tex_page);
   // InnerPool!(tex_paragraph);
   // InnerPool!(tex_penalties);
@@ -41,12 +42,8 @@ LoadDefinitions!({
   InnerPool!(tex_para);
   // lines 3661-3783
   InnerPool!(tex_ch25_primitives);
-  // lines 3784-4006
-  InnerPool!(tex_math_mode);
   // lines 4007-4279
   InnerPool!(tex_math_fork);
-  // lines 4280-4510
-  InnerPool!(tex_scripts);
   // lines 4511-4688
   InnerPool!(tex_math_style);
   // lines 4689-5041

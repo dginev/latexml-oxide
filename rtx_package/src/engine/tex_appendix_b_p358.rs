@@ -199,24 +199,6 @@ LoadDefinitions!({
   //   meaning   => "symmetric"difference',
   //   mathstyle => \&doVariablesizeOp,
   //   font      => { size => "Big" });
-  // DefConstructor('\limits', undef, sub {
-  //     my $node = $_[0]->getElement;
-  //     $_[0]->setAttribute($_[0]->getLastChildElement($node) || $node, scriptpos => "mid"); });
-  // DefConstructor('\nolimits', undef, sub {
-  //     my $node = $_[0]->getElement;
-  //     $node = $_[0]->getLastChildElement($node) || $node;
-  //     $node->removeAttribute('scriptpos'); });    # default is 'post', so we can just remove the
-  // attrib.
-  //
-  // DefConstructor('\displaylimits', undef, sub {
-  //     my ($document, %props) = @_;
-  //     my $node = $_[0]->getElement;
-  //     $node = $_[0]->getLastChildElement($node) || $node;
-  //     if (($props{mathstyle} || 'text') eq 'display') {
-  //       $document->setAttribute($node, scriptpos => "mid"); }
-  //     else {
-  //       $node->removeAttribute('scriptpos'); } },
-  //   properties => sub { (mathstyle => LookupValue('font')->getMathstyle); });
 
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.4. Binary Operation Symbols, p.42

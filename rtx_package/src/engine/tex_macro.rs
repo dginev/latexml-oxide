@@ -205,19 +205,23 @@ LoadDefinitions!({
   // \the              c  returns character tokens for an internal quantity's or parameter's current value.
   
   // \the<internal quantity>
-
-  // \the<internal quantity>
   DefMacro!("\\the Register", sub[args] {
     let [rdef] : [_; 1] = args.try_into().unwrap();
     if let ArgWrap::RegisterDefinition(dbox) = rdef {
       let (rtoken, inner) = *dbox;
-      // let register_type = defn.borrow().register_type;
-      //     if (!$type) {
-      //       my $cs = ToString($defn->getCS);
-      //       Error('unexpected', "\\the$cs", $gullet,
-      //     "You can't use $cs after \\the"); return (); }
       let defn = rtoken.to_register()
         .expect("if a Register parameter provides a token, it must have a Register definition.");
+      // TODO: Is this still applicable?
+      //     if (!$type) {
+      // // maybe ported as:  
+      // if defn.get_cs().with_str(|cs| cs == "\\font") {
+      //   //what to do here?
+      //   return Ok(Tokens!(T_CS!("\\tenrm")));
+      // } else {
+      //   let thecs = format!("\\the{cs}")
+      //   Error!("unexpected", thecs, $gullet, "You can't use $cs after \\the"); 
+      //   return Ok(Tokens!()); 
+      // }
       let value = defn.value_of(inner)
         .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
       // In all cases, these should be OTHER, except for space. (!?)
