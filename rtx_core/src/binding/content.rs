@@ -1096,6 +1096,11 @@ pub fn digest_if(
   }
 }
 
+/// Creates a single `Tokens` representing a TeX invocation of the lead `token` over a list of arguments.
+/// 
+/// Note: currently this is near the `Mouth` representation of data, and deals purely with tokens.
+/// A more generic version of this method may be able to support `ArgWrap` for the argument list.
+/// Indeed, the return type may also be lifted to a new generic ArgWrap::Invocation, if there was benefit.
 pub fn build_invocation<T: Into<Token>>(
   token: T,
   args: Vec<Option<Tokens>>

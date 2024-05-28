@@ -7,18 +7,6 @@ use crate::prelude::*;
 // Note that in TeX, all 4 args get digested(!)
 // and the choice is made when absorbing!
 LoadDefinitions!({
-  DefConstructor!("\\mathchoice Digested Digested Digested Digested", sub[_doc,_args] {
-    Err(unported!())?;
-    //   my ($document, $d, $t, $s, $ss, %props) = @_;
-    //   my $style  = $props{mathstyle};
-    //   my $choice = ($style eq 'display' ? $d
-    //     : ($style eq 'text' ? $t
-    //       : ($style eq 'script' ? $s
-    //         : $ss)));
-    //   $document->absorb($choice); },
-    // properties => { mathstyle => sub { LookupValue('font')->getMathstyle; } });
-  });
-
   DefMacro!("\\mathpalette{}{}", r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}");
 
   DefConstructor!("\\phantom{}",

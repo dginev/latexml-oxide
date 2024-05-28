@@ -82,7 +82,7 @@ LoadDefinitions!({
   //======================================================================
 
   DefPrimitive!("\\hspace OptionalMatch:* {Dimension}", sub[(_star,length)] {
-    let s = dimension_to_spaces(&length);
+    let s = dimension_to_spaces(length);
     if !s.is_empty() {
       let length_tokens = length.revert()?;
 

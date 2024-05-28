@@ -160,14 +160,6 @@ LoadDefinitions!({
   });
 
   DefRegister!("\\badness", Number::new(0), readonly => true);
-
-  // <codename> = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
-
-
-
-  // Stub definitions ???
-  
-  DefRegister!("\\skewchar{}", Number::new(0)); // no idea what the default is here
 });
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!

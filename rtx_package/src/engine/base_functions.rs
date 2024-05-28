@@ -836,7 +836,7 @@ fn either_case_token(token: Token, is_upper: bool) -> Token {
 }
 
 /// a candidate for use by \hskip, \hspace, etc... ?
-pub fn dimension_to_spaces(dimen: &Dimension) -> Cow<'static, str> {
+pub fn dimension_to_spaces<T:NumericOps>(dimen: T) -> Cow<'static, str> {
   let fs = lookup_font().unwrap().get_size(); // 1 em
   let pt = dimen.pt_value(None);
   let ems = pt / fs.unwrap();

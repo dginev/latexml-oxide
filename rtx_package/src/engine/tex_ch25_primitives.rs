@@ -13,19 +13,6 @@ LoadDefinitions!({
   DefPrimitive!("\\noboundary", None);
 
 
-
-  // DefPrimitive('\mskip MuGlue', sub {
-  //     my ($stomach, $length) = @_;
-  //     my $s = DimensionToSpaces($length);
-  //     Box($s, undef, undef, Invocation(T_CS('\mskip'), $length),
-  //       width => $length, isSpace => 1); });
-  // DefPrimitive('\mkern MuGlue', sub {
-  //     my ($stomach, $length) = @_;
-  //     my $s = DimensionToSpaces($length);
-  //     Box($s, undef, undef, Invocation(T_CS('\mkern'), $length),
-  //       width => $length, isSpace => 1); });
-
-
   // Implement ???
   // DefMacro('\vrule','\relax');
   DefMacro!("\\valign", None);

@@ -16,14 +16,10 @@ LoadDefinitions!({
   DefRegister!("\\linepenalty", Number!(10));
   DefRegister!("\\hyphenpenalty", Number!(50));
   DefRegister!("\\exhyphenpenalty", Number!(50));
-  DefRegister!("\\binoppenalty", Number!(700));
-  DefRegister!("\\relpenalty", Number!(500));
   DefRegister!("\\clubpenalty", Number!(150));
   DefRegister!("\\widowpenalty", Number!(150));
-  DefRegister!("\\displaywidowpenalty", Number!(50));
+
   DefRegister!("\\brokenpenalty", Number!(100));
-  DefRegister!("\\predisplaypenalty", Number!(10000));
-  DefRegister!("\\postdisplaypenalty", Number!(0));
   DefRegister!("\\interlinepenalty", Number!(0));
   DefRegister!("\\floatingpenalty", Number!(0));
   DefRegister!("\\outputpenalty", Number!(0));
@@ -32,11 +28,8 @@ LoadDefinitions!({
   DefRegister!("\\adjdemerits", Number!(10000));
   DefRegister!("\\looseness", Number!(0));
   
-  
-  DefRegister!("\\defaultskewchar", Number!(-1));
   DefRegister!("\\hangafter", Number!(0));
   DefRegister!("\\magnification", Number!(1000));
-  DefRegister!("\\delimiterfactor", Number!(0));
   
   // Most of these are ignored, but...
   DefMacro!(
@@ -66,13 +59,6 @@ LoadDefinitions!({
   DefRegister!("\\maxdepth", Dimension!("4pt"));
 
   DefRegister!("\\lineskiplimit", Dimension!("0"));
-  DefRegister!("\\delimitershortfall", Dimension!("5pt"));
-  DefRegister!("\\nulldelimiterspace", Dimension!("1.2pt"));
-  DefRegister!("\\scriptspace", Dimension!("0.5pt"));
-  DefRegister!("\\mathsurround", Dimension!("0"));
-  DefRegister!("\\predisplaysize", Dimension!("0"));
-  DefRegister!("\\displaywidth", Dimension!("0"));
-  DefRegister!("\\displayindent", Dimension!("0"));
   DefRegister!("\\parindent", Dimension!("20pt"));
   DefRegister!("\\hangindent", Dimension!("0"));
   DefRegister!("\\hoffset", Dimension!("0"));
@@ -95,10 +81,6 @@ LoadDefinitions!({
   DefRegister!("\\baselineskip", Glue!("12pt"));
   DefRegister!("\\lineskip", Glue!("1pt"));
   DefRegister!("\\parskip", Glue!("0pt plus 1pt"));
-  DefRegister!("\\abovedisplayskip", Glue!("12pt plus 3pt minus 9pt"));
-  DefRegister!("\\abovedisplayshortskip", Glue!("0pt plus 3pt"));
-  DefRegister!("\\belowdisplayskip", Glue!("12pt plus 3pt minus 9pt"));
-  DefRegister!("\\belowdisplayshortskip", Glue!("0pt plus 3pt"));
   DefRegister!("\\leftskip", Glue!("0"));
   DefRegister!("\\rightskip", Glue!("0"));
   DefRegister!("\\topskip", Glue!("10pt"));
@@ -106,12 +88,6 @@ LoadDefinitions!({
   DefRegister!("\\spaceskip", Glue!("0"));
   DefRegister!("\\xspaceskip", Glue!("0"));
   DefRegister!("\\parfillskip", Glue!("0pt plus 1fil"));
-
-  //======================================================================
-  // MuGlue registers; TeXBook p.274
-  DefRegister!("\\thinmuskip", Glue!("3mu"));
-  DefRegister!("\\medmuskip", Glue!("4mu plus 2mu minus 4mu"));
-  DefRegister!("\\thickmuskip", Glue!("5mu plus 5mu"));
   //======================================================================
   // Token registers; TeXBook p.275
   DefRegister!("\\everypar", Tokens!());  

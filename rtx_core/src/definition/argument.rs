@@ -231,6 +231,22 @@ impl ArgWrap {
       Err(e) => panic!("{e}"),
     }
   }
+  pub fn try_to_mu_dimension(self) -> Result<MuDimension> {
+    use ArgWrap::*;
+    match self {
+      // Number(v) => Ok(v.into()), // ???
+      MuDimension(v) => Ok(v),
+      Token(t) => Ok(t.to_mu_dimension()),
+      Tokens(tks) => Ok(tks.to_mu_dimension()),
+      _ => Err(format!("ArgWrap::to_dimension not (yet?) defined on {:?}", self).into()),
+    }
+  }
+  pub fn expect_mu_dimension(self) -> MuDimension {
+    match self.try_to_mu_dimension() {
+      Ok(d) => d,
+      Err(e) => panic!("{e}"),
+    }
+  }
 
   pub fn try_to_glue(self) -> Result<Glue> {
     use ArgWrap::*;
@@ -490,6 +506,18 @@ impl TryFrom<ArgWrap> for Number {
 impl TryFrom<ArgWrap> for Dimension {
   type Error = crate::common::error::Error;
   fn try_from(aw: ArgWrap) -> Result<Dimension> { aw.try_to_dimension() }
+}
+impl TryFrom<ArgWrap> for MuDimension {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<MuDimension> { aw.try_to_mu_dimension() }
+}
+impl TryFrom<ArgWrap> for Glue {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<Glue> { aw.try_to_glue() }
+}
+impl TryFrom<ArgWrap> for MuGlue {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<MuGlue> { aw.try_to_mu_glue() }
 }
 impl TryFrom<ArgWrap> for Float {
   type Error = crate::common::error::Error;

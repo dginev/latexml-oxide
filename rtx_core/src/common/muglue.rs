@@ -2,7 +2,8 @@ use super::glue::{glue_string, new_setup, spec_setup, FillCode};
 use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::RegisterType;
-use crate::{Object};
+use crate::tokens::Tokens;
+use crate::Object;
 use std::fmt;
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
@@ -126,4 +127,11 @@ impl MuGlue {
     }
     string
   }
+}
+
+impl From<MuGlue> for Option<Tokens> {
+  fn from(v: MuGlue) -> Option<Tokens> { Some(v.into()) }
+}
+impl From<MuGlue> for Tokens {
+  fn from(v: MuGlue) -> Tokens { v.revert().expect("MuGlue should always be revertable to Tokens.") }
 }
