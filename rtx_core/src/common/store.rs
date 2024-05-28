@@ -748,6 +748,12 @@ impl From<Number> for Stored {
 impl From<Dimension> for Stored {
   fn from(value: Dimension) -> Self { Stored::Dimension(value) }
 }
+impl From<MuDimension> for Stored {
+  fn from(value: MuDimension) -> Self { Stored::MuDimension(value) }
+}
+impl From<MuGlue> for Stored {
+  fn from(value: MuGlue) -> Self { Stored::MuGlue(value) }
+}
 
 impl<'a> From<&'a Token> for Stored {
   fn from(value: &'a Token) -> Self { Stored::Token(*value) }

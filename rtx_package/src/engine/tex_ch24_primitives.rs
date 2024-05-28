@@ -17,10 +17,6 @@ LoadDefinitions!({
   // Remaining semi- Vertical Mode primitives in Ch.24, pp.280--281
   DefPrimitive!("\\penalty Number", None);
 
-  DefMacro!(
-    "\\mkern MuGlue",
-    "\\ifmmode\\@math@mskip #1\\relax\\else\\@text@mskip #1\\relax\\fi"
-  );
   DefPrimitive!("\\unpenalty", None);
   
   // Worrisome, but...

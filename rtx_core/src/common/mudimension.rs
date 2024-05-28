@@ -5,7 +5,7 @@ use std::fmt;
 use super::dimension::fixedformat;
 use crate::common::numeric_ops::{fixpoint, kround, NumericOps, UNITY_F64};
 use crate::definition::register::RegisterType;
-use crate::{Object};
+use crate::Object;
 
 static MUDIM_SPEC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap());
 

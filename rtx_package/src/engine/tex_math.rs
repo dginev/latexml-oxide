@@ -490,7 +490,358 @@ LoadDefinitions!({
     state::assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
   });
 
+  //======================================================================
+  // Math script styles
+  //----------------------------------------------------------------------
+  // \displaystyle           c  selects display style: D or D'.
+  // \scriptscriptstyle      c  selects scriptscript style: SS or SS'.
+  // \scriptstyle            c  selects script style: S or S'.
+  // \textstyle              c  selects text style: T or T'.
   
+  // Also record that this explicitly sets the mathstyle (support for \over, etal)
+  DefPrimitive!("\\displaystyle", {
+    MergeFont!(mathstyle => "display");
+    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\displaystyle")),
+      stored_map!("explicit_mathstyle" => true)) });
+  DefPrimitive!("\\textstyle", {
+    MergeFont!(mathstyle => "text");
+    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\textstyle")),
+      stored_map!("explicit_mathstyle" => true)) });
+  DefPrimitive!("\\scriptstyle", {
+    MergeFont!(mathstyle => "script");
+    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\scriptstyle")),
+      stored_map!("explicit_mathstyle" => true)) });
+  DefPrimitive!("\\scriptscriptstyle", {
+    MergeFont!(mathstyle => "scriptscript");
+    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\scriptscriptstyle")),
+      stored_map!("explicit_mathstyle" => true)) });
+
+  //======================================================================
+  //
+  //----------------------------------------------------------------------
+  // \mathchoice             c  specifies specific subformulas for the 4 main styles.
+  // \vcenter                c  centers material with respect to the axis.
+
+  // Note that in TeX, all 4 args get digested(!)
+  // and the choice is made when absorbing!
+  DefConstructor!("\\mathchoice Digested Digested Digested Digested", sub[_doc,_args] {
+    Err(unported!())?;
+    //   my ($document, $d, $t, $s, $ss, %props) = @_;
+    //   my $style  = $props{mathstyle};
+    //   my $choice = ($style eq 'display' ? $d
+    //     : ($style eq 'text' ? $t
+    //       : ($style eq 'script' ? $s
+    //         : $ss)));
+    //   $document->absorb($choice); },
+    // properties => { mathstyle => sub { LookupValue('font')->getMathstyle; } });
+  });
+  // THIS IS WRONG!!!!
+  Let!("\\vcenter", "\\vbox");
+  //======================================================================
+  //
+  //----------------------------------------------------------------------
+  // \overline               c  puts a line over the following character or subformula.
+  // \underline              c  puts a line under the following character or subformula.
+  DefMath!("\\overline Digested", "\u{00AF}",  operator_role => "OVERACCENT");    // MACRON
+  DefMath!("\\lx@math@underline{}", "\u{00AF}", operator_role => "UNDERACCENT",
+    name => "underline", alias => "\\underline");
+  DefConstructor!("\\lx@text@underline{}", "<ltx:text framed='underline' _noautoclose='true'>#1</ltx:text>");
+  DefMath!("\\lx@math@overrightarrow{}", "\u{2192}", operator_role => "OVERACCENT",
+    name => "overrightarrow", alias => "\\overrightarrow");
+  DefMath!("\\lx@math@overleftarrow{}", "\u{2190}", operator_role => "OVERACCENT",
+    name => "overleftarrow", alias => "\\overleftarrow");
+
+  // Careful: Use \protect so that it doesn"t expand too early in alignments, etc.
+  DefMacro!("\\underline{}", r"\protect\ifmmode\lx@math@underline{#1}\else\lx@text@underline{#1}\fi");
+
+  //======================================================================
+  // fraction-like things
+  //----------------------------------------------------------------------
+  // \above                  d  is equivalent to `\abovewithdelims..'.
+  // \abovewithdelims        c  is a generalized fraction command.
+  // \atop                   d  is equivalent to `\atopwithdelims..'.
+  // \atopwithdelims         d  is a generalized fraction command with an invisible fraction bar.
+  // \over                   d  is equivalent to `\overwithdelims..'.
+  // \overwithdelims         d  is a generalized fraction command with preset fraction bar thickness.
+  // After digesting the \choose (or whatever), grab the previous and following material
+  // and store as args in the whatsit.
+
+  // Increment the mathstyle stored in any boxes & whatsits.
+  // The tricky part is to know when NOT to increment!
+  // \displaystyle, constructors that set their own specific style,...
+  // And, any collateral adjustments that had been done in digestion depending on mathstyle
+  // WONT be adjusted!
+  // We don't have a clear API to find the displayable Boxes within;
+  // and we don't have a good handle on grouping...
+
+    // # ARGH!!!!!!!!! RETHINK!!!!!!
+  // sub adjustMathstyle {
+  //   my ($outerstyle, $adjusted, @boxes) = @_;
+  //   foreach my $box (@boxes) {
+  //     next unless defined $box;
+  //     next if $$adjusted{$box};    # since we do args AND props, be careful not to adjust twice!
+  //     $$adjusted{$box} = 1;
+  //     my $r = ref $box;
+  //     next unless $r && ($r !~ /(?:SCALAR|HASH|ARRAY|CODE|REF|GLOB|LVALUE)/) && $r->isaBox;
+  //     return if $box->getProperty('explicit_mathstyle');
+  //     next   if $box->getProperty('own_mathstyle');
+
+  //     if ($r eq 'LaTeXML::Core::Box') {
+  //       adjustMathStyle_internal($outerstyle, $box); }
+  //     elsif ($r eq 'LaTeXML::Core::List') {
+  //       adjustMathstyle($outerstyle, $adjusted, $box->unlist); }
+  //     elsif ($r eq 'LaTeXML::Core::Whatsit') {
+  //       my $style = adjustMathStyle_internal($outerstyle, $box) || $outerstyle;
+  //       # now recurse on contained boxes (args AND properties!)
+  //       adjustMathstyle($style, $adjusted, $box->getArgs);
+  //       adjustMathstyle($style, $adjusted, values %{ $box->getPropertiesRef }); } }
+  //   return; }
+
+  // # Heursitic;
+  // # we're wanting to adjust the style AS IF the numerator had been already in the next mathstyle
+  // # This isn't the same as just shifting the mathstyle!
+  // # we're sorta trying to infer WHY the box has a given style...?
+  // our %mathstyle_adjust_map = (
+  //   display => { display => 'text', text => 'script', script => 'script', scriptscript => 'scriptscript' },
+  //   text => { display => 'text', text => 'script', script => 'scriptscript', scriptscript => 'scriptscript' },
+  //   script => { display => 'display', text => 'text', script => 'scriptscript', scriptscript => 'scriptscript' },
+  //   scriptscript => { display => 'display', text => 'text', script => 'scriptscript', scriptscript => 'scriptscript' });
+
+  // sub adjustMathStyle_internal {
+  //   my ($outerstyle, $box) = @_;
+  //   $outerstyle = 'display' unless $outerstyle;
+  //   if (my $font = $box->getFont) {
+  //     my $origstyle = $font->getMathstyle || 'display';
+  //     my $newstyle  = $mathstyle_adjust_map{$outerstyle}{$origstyle};
+  //     $box->setFont($font->merge(mathstyle => $newstyle));
+  //     if (my $recstyle = $box->getProperty('mathstyle')) {    # And adjust here, if recorded.
+  //       $box->setProperty(mathstyle => $newstyle);
+  //       return $newstyle; } }
+  //   return; }
+
+  // sub fracSizer {
+  //   my ($numerator, $denominator) = @_;
+  //   my $w = $numerator->getWidth->larger($denominator->getWidth);
+  //   my $d = $denominator->getTotalHeight->multiply(0.5);
+  //   my $h = $numerator->getTotalHeight->add($d);
+  //   return ($w, $h, $d); }
+
+  // # \lx@generalized@over{reversion}{keyvals}{top}{bottom}
+  // # keyvals: role,meaning, left,right, thickness
+  // DefConstructor('\lx@generalized@over Undigested RequiredKeyVals',
+  //   "?#needXMDual("
+  //     . "<ltx:XMDual>"
+  //     . "<ltx:XMApp>"
+  //     . "<ltx:XMRef _xmkey='#xmkey0'/>"
+  //     . "<ltx:XMRef _xmkey='#xmkey1'/>"
+  //     . "<ltx:XMRef _xmkey='#xmkey2'/>"
+  //     . "</ltx:XMApp>"
+  //     . "<ltx:XMWrap>"
+  //     . "#left)()"
+  //     . "<ltx:XMApp>"
+  //     . "<ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/>"
+  //     . "<ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg>"
+  //     . "<ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg>"
+  //     . "</ltx:XMApp>"
+  //     . "?#needXMDual(#right"
+  //     . "</ltx:XMWrap>"
+  //     . "</ltx:XMDual>)()",
+  //   afterDigest => sub {
+  //     my ($stomach, $whatsit) = @_;
+  //     my $kv = $whatsit->getArg(2);
+  //     # Really, we want the mathstyle that was in effect BEFORE the group starting the numerator!
+  //     # (there could be a \displaystyle INSIDE the numerator, but that's not the one we want)
+  //     # Of course the group that started the numerator may be the start of the Math, itself!
+  //     # AND, the numerator, which was already digested, needs it's mathstyle ADJUSTED
+  //     my $font = ($state->isValueBound('MODE', 0)    # Last stack frame was a mode switch!?!?!
+  //       ? $state->lookupValue('font')                # then just use whatever font we've got
+  //       : ($state->isValueBound('font', 0)           # else if font was set in numerator
+  //           && $state->valueInFrame('font', 1))
+  //         || $state->lookupValue('font')             # then just use whatever font we've got
+  //     );
+  //     my $style     = $font->getMathstyle;
+  //     my $role      = ToString($kv->getValue('role'));
+  //     my $meaning   = ToString($kv->getValue('meaning'));
+  //     my $thickness = ToString($kv->getValue('thickness'));
+  //     $role    = 'FRACOP' unless $role;
+  //     $meaning = 'divide' if (!$meaning) && ($thickness ne '0pt');
+  //     # Unfortunately, the numerator's already digested! We have to adjust it's mathstyle
+  //     my @top = $stomach->regurgitate;
+  //     # really have to pass +/-1, +/-2 etc..!
+  //     adjustMathstyle($style, {}, @top);
+  //     MergeFont(fraction => 1);
+  //     my @bot     = $stomach->digestNextBody();
+  //     my $closing = pop(@bot);    # We'll leave whatever closed the list (endmath, endgroup...)
+  //     $whatsit->setProperties(
+  //       top       => List(@top, mode => 'math'),
+  //       bottom    => List(@bot, mode => 'math'),
+  //       role      => $role,
+  //       meaning   => $meaning,
+  //       thickness => $thickness,
+  //       mathstyle => $style);
+  //     if ($kv->getValue('left') || $kv->getValue('right')) {
+  //       $whatsit->setProperties(needXMDual => 1,
+  //         xmkey0 => LaTeXML::Package::getXMArgID(),
+  //         xmkey1 => LaTeXML::Package::getXMArgID(),
+  //         xmkey2 => LaTeXML::Package::getXMArgID()); }
+  //     return $closing; },    # and leave the closing bit, whatever it is.
+  //   properties => sub { %{ $_[2]->getKeyVals }; },
+  //   sizer      => sub { fracSizer($_[0]->getProperty('top'), $_[0]->getProperty('bottom')); },
+  //   reversion  => sub {
+  //     my ($whatsit) = @_;
+  //     (Revert($whatsit->getProperty('top')),
+  //       $whatsit->getArg(1)->unlist,
+  //       Revert($whatsit->getProperty('bottom'))); });
+
+  // DefMacro('\above Dimension',
+  //   '\lx@generalized@over{\above #1}{meaning=divide,thickness=#1}');
+  // DefMacro('\abovewithdelims Token Token Dimension',
+  // '\lx@generalized@over{\abovewithdelims #1 #2 #3}{left={\@left#1},right={\@right#2},meaning=divide,thickness=#3}');
+  // DefMacro('\atop',
+  //   '\lx@generalized@over{\atop}{thickness=0pt}');
+  // DefMacro('\atopwithdelims Token Token',
+  //   '\lx@generalized@over{\atopwithdelims #1 #2}{thickness=0pt,left={\@left#1},right={\@right#2}}');
+  // DefMacro('\over',
+  //   '\lx@generalized@over{\over}{meaning=divide}');
+  // DefMacro('\overwithdelims Token Token',
+  //   '\lx@generalized@over{\overwithdelims #1 #2}{left={\@left#1},right={\@right#2},meaning=divide}');
+  // // My thinking was that this is a "fraction" providing the dimension is > 0!
+
+  //======================================================================
+  //
+  //----------------------------------------------------------------------
+  // \mkern                  c  adds a math kern item to the current math list.
+  // \mskip                  c  adds math glue to the current math list.
+  // \thinmuskip             pm is ``thin'' math glue inserted into formulas.
+  // \medmuskip              pm is ``medium'' math glue inserted into formulas.
+  // \thickmuskip            pm is ``thick'' math glue inserted into formulas.
+  // \abovedisplayskip       pg is normal glue placed before a displayed equation.
+  // \abovedisplayshortskip  pg is alternate glue placed before a displayed equation.
+  // \belowdisplayskip       pg is normal glue placed after a displayed equation.
+  // \belowdisplayshortskip  pg is alternate glue placed after a displayed equation.
+
+  DefPrimitive!("\\mkern MuGlue", sub[(length)] {
+    let s = dimension_to_spaces(length);
+    Tbox::new(arena::pin(s), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
+      stored_map!("width" => length, "isSpace" => true)) });
+  DefPrimitive!("\\mskip MuGlue", sub[(length)] {
+    let s = dimension_to_spaces(length);
+    Tbox::new(arena::pin(s), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
+      stored_map!("width" => length, "isSpace" => true)) });
+
+  // MuGlue registers; TeXBook p.274
+  DefRegister!("\\thinmuskip", Glue!("3mu"));
+  DefRegister!("\\medmuskip", Glue!("4mu plus 2mu minus 4mu"));
+  DefRegister!("\\thickmuskip", Glue!("5mu plus 5mu"));
+
+  DefRegister!("\\abovedisplayskip", Glue!("12pt plus 3pt minus 9pt"));
+  DefRegister!("\\abovedisplayshortskip", Glue!("0pt plus 3pt"));
+  DefRegister!("\\belowdisplayskip", Glue!("12pt plus 3pt minus 9pt"));
+  DefRegister!("\\belowdisplayshortskip", Glue!("0pt plus 3pt"));
+  //======================================================================
+  //
+  //----------------------------------------------------------------------
+  // \binoppenalty           pi is the penalty for a line break after a binary operation.
+  // \postdisplaypenalty     pi is the penalty added immediately after a math display.
+  // \predisplaypenalty      pi is the penalty added immediately before a math display.
+  // \relpenalty             pi is the penalty for a line break after a relation.
+  // \displaywidowpenalty    pi is the penalty added after the penultimate line immediately preceeding a display.
+  // \skewchar               iq is -1 or the character used to fine-tune the positioning of math accents     .
+  // \defaultskewchar        pi is -1 or the \skewchar value for a font when it is loaded.
+  // \delimitershortfall     pd is the second parameter used to compute the size of delimeters required by \left and \right.
+  // \displayindent          pd is the amount to shift a line holding a displayed equation.
+  // \displaywidth           pd is the width of the line holding a displayed equation.
+  // \mathsurround           pd is extra space added when switching in and out of math mode.
+  // \nulldelimiterspace     pd is the width of a null or missing delimiter.
+  // \predisplaysize         pd is the effective width of the line preceeding a displayed equation.
+  // \scriptspace            pd is extra space added after a subscript or a superscript.
+  // \delimiterfactor        pi is the first parameter used to compute the size of delimeters required by \left and \right.
+  DefRegister!("\\binoppenalty", Number!(700));
+  DefRegister!("\\relpenalty", Number!(500));
+  DefRegister!("\\displaywidowpenalty", Number!(50));
+  DefRegister!("\\predisplaypenalty", Number!(10000));
+  DefRegister!("\\postdisplaypenalty", Number!(0));
+
+  DefRegister!("\\skewchar{}", Number::new(0));
+  // TODO:
+  //  getter => sub {
+  //     my ($font) = @_;
+  //     my $info = lookupFontinfo($font);
+  //     return ($info && $$info{skewchar}) || Number(0); },
+  //   setter => sub {
+  //     my ($value, $scope, $font) = @_;
+  //     if (my $info = lookupFontinfo($font)) {
+  //       $$info{skewchar} = $value; } }
+  // );
+  DefRegister!("\\defaultskewchar", Number!(-1));
+  
+  // Dimen registers; TeXBook p. 274
+  DefRegister!("\\delimitershortfall", Dimension!("5pt"));
+  DefRegister!("\\nulldelimiterspace", Dimension!("1.2pt"));
+  DefRegister!("\\scriptspace", Dimension!("0.5pt"));
+  DefRegister!("\\mathsurround", Dimension!("0"));
+  DefRegister!("\\predisplaysize", Dimension!("0"));
+  DefRegister!("\\displaywidth", Dimension!("0"));
+  DefRegister!("\\displayindent", Dimension!("0"));
+  DefRegister!("\\delimiterfactor", Number!(0));
+
+  //======================================================================
+  // Equation numbers
+  //----------------------------------------------------------------------
+  // \eqno                   c  puts an equation number at the right-hand margin.
+  // \leqno                  c  puts an equation number at the left-hand margin.
+
+  // \eqno & \leqno are really bizzare.
+  // They should seemingly digest until $ (or while still in math mode),
+  // and use that stuff as the reference number.
+  // However, since people abuse this, and we're really not quite TeX,
+  // we really can't do it Right.
+  // Even a \begin{array} ends up expanding into a $ !!!
+  DefMacro!("\\eqno", {
+    // my $locator  = $gullet->getLocator;
+    let mut stuff    = Vec::new();
+    // This is risky!!!
+
+    while let Some(t) = gullet::read_x_token(Some(false), false)? {
+      if t == T_BEGIN!() {
+        stuff.push(t);
+        let balanced_arg = gullet::read_balanced(false,false,false)?;
+        if !balanced_arg.is_empty() {
+          stuff.extend(balanced_arg.unlist());
+        }
+        stuff.push(T_END!());
+      }
+      // What do I need to explicitly list here!?!?!? UGGH!
+      else if  t == T_MATH!()
+        || t == T_CS!("\\]")
+        // UGH from 2022: also don"t jump over rows
+        || t == T_CS!("\\cr")
+        // see arXiv:math/0001062, for one example
+        || t == T_CS!("\\hidden@cr")
+        || t == T_CS!("\\lx@end@display@math")
+        || t == T_CS!("\\begingroup") // Totally wrong, but to catch expanded environments
+        // any sort of environ begin or end???
+        || t.with_str(|tstr| tstr.starts_with("\\begin{") || tstr.starts_with("\\end{"))
+        // This seems needed within AmSTeX environs
+      {
+        let mut invoked = Invocation!(T_CS!("\\@@eqno"), vec![Tokens::new(stuff)]).unlist();
+        invoked.push(t);
+        return Ok(Tokens::new(invoked));
+      } else {
+        stuff.push(t);
+      }
+    }
+    Error!("unexpected", "\\eqno", "Fell of the end reading tag for \\eqno!");
+      // s!("started {locator}"));
+    Tokens::new(stuff)
+  });
+
+  Let!("\\leqno", "\\eqno");
+  // Revert to nothing, since it really doesn't belong in the TeX string(?)
+  DefConstructor!("\\@@eqno{}",
+    "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
+    reversion => "");
+
 });
 
 /// A shorthand data structure for delimiter metadata
