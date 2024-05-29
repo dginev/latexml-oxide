@@ -8,7 +8,7 @@
 //!
 //! An Alignment object is a sort of fake Whatsit;
 //! It takes some magic to sneak it into the Digestion stream
-//! (see TeX.pool \@start@alignment), but it needs to be created
+//! (see TeX.pool \lx@begin@alignment), but it needs to be created
 //! BEFORE the contents of the alignment are digested,
 //! since we stuff a lot of information into it
 //! (row, column boxes, borders, spacing, etc...)
@@ -291,7 +291,7 @@ impl Alignment {
     if let Some(column) = self.current_column() {
       if !column.omitted {
         Tokens!(
-          T_CS!("\\@column@before"),
+          T_CS!("\\lx@alignment@column@before"),
           column.before.clone().unwrap_or_default().unlist()
         )
       } else {
@@ -305,10 +305,10 @@ impl Alignment {
   pub fn get_column_after(&mut self) -> Tokens {
     if let Some(column) = self.current_column() {
       if !column.omitted {
-        // Possible \@@eat@space ??? (if LaTeX style???)
+        // Possible \lx@column@trimright ??? (if LaTeX style???)
         Tokens!(
           column.after.clone().unwrap().unlist(),
-          T_CS!("\\@column@after")
+          T_CS!("\\lx@alignment@column@after")
         )
       } else {
         Tokens!()
@@ -339,7 +339,7 @@ impl Alignment {
     if pseudorow {
       self.current_row_mut().unwrap().set_pseudo()
     } else {
-      let row_before = stomach::digest(T_CS!("\\@row@before"))?;
+      let row_before = stomach::digest(T_CS!("\\lx@alignment@row@before"))?;
       push_box_list(row_before);
     }
     self.in_row = true;
@@ -355,7 +355,7 @@ impl Alignment {
       egroup()?; // Grouping around ROW!
       self.in_row = false;
     }
-    Ok(()) //  Digest(T_CS('\@row@after'));
+    Ok(()) //  Digest(T_CS('\lx@alignment@row@after'));
   }
 
   pub fn start_column(

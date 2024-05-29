@@ -50,6 +50,17 @@ LoadDefinitions!({
      // TODO: "height" property
     properties => {stored_map!("isSpace" => true, "isVerticalSpace" => true, "isBreak" => true)}
   );
+
+  DefPrimitive!("\\unskip", {
+    // pop until a non-empty box is found
+    while let Some(last_box) = pop_box_list() {
+      if !last_box.is_empty()? {
+        push_box_list(last_box);
+        break;
+      }
+    }
+  });
+  
   //======================================================================
   // Horizontal skips
   //----------------------------------------------------------------------

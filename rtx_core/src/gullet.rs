@@ -42,9 +42,9 @@ static DEFERRED_COMMANDS: Lazy<HashSet<SymbolU32>> = Lazy::new(||
 static COLUMN_ENDS : Lazy<[(Token,&'static str, bool); 6]> = Lazy::new(|| [    // besides T_ALIGN
   (T_CS!("\\cr"),           "cr",     false),
   (T_CS!("\\crcr"),         "crcr",   false),
-  (T_CS!("\\hidden@cr"),    "cr",     true),
-  (T_CS!("\\hidden@crcr"),  "crcr",   true),
-  (T_CS!("\\hidden@align"), "insert", true),
+  (T_CS!("\\lx@hidden@cr"),    "cr",     true),
+  (T_CS!("\\lx@hidden@crcr"),  "crcr",   true),
+  (T_CS!("\\lx@hidden@align"), "insert", true),
   (T_CS!("\\span"),         "span",   false)]);
 
 #[derive(PartialEq, Debug)]
@@ -236,9 +236,9 @@ fn handle_template(
   local_current_token(token);
   let post = alignment.get_column_after();
   set_align_group_count(1000000);
-  // ### NOTE: Truly fishy smuggling w/ \hidden@cr
+  // ### NOTE: Truly fishy smuggling w/ \lx@hidden@cr
   let arg_opt = if (vtype == "cr") && hidden {
-    // \hidden@cr gets an argument as payload!!!!!
+    // \lx@hidden@cr gets an argument as payload!!!!!
     Some(read_arg()?)
   } else {
     None
@@ -251,7 +251,7 @@ fn handle_template(
       .map(|v| v.is_pseudo())
       .unwrap_or(false)
   {
-    unread_one(T_CS!("\\@row@after"));
+    unread_one(T_CS!("\\lx@alignment@row@after"));
   }
   if let Some(arg) = arg_opt {
     // slippery - to unread {arg} we first unread } then arg then {, as we push to the front.

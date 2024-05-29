@@ -817,7 +817,7 @@ LoadDefinitions!({
         // UGH from 2022: also don"t jump over rows
         || t == T_CS!("\\cr")
         // see arXiv:math/0001062, for one example
-        || t == T_CS!("\\hidden@cr")
+        || t == T_CS!("\\lx@hidden@cr")
         || t == T_CS!("\\lx@end@display@math")
         || t == T_CS!("\\begingroup") // Totally wrong, but to catch expanded environments
         // any sort of environ begin or end???

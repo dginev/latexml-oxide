@@ -1,7 +1,6 @@
 use crate::prelude::*;
 
 static SEMIVERBATIM_CHARS: [char;4] = ['%', '\\', '{', '}'];
-static T_OTHER_STAR: Lazy<Token> = Lazy::new(|| T_OTHER!("*"));
 
 //======================================================================
 // C.6.4 Verbatim
@@ -73,7 +72,7 @@ LoadDefinitions!({
     }
     let mut starred = false;
     if let Some(ref init_token) = init {
-      if *init_token == *T_OTHER_STAR && !skipped_space {
+      if *init_token == T_OTHER!("*") && !skipped_space {
         starred = true;
         while let Some(maybe_init) =  gullet::read_token()? {
           if maybe_init.get_sym() != space_sym {

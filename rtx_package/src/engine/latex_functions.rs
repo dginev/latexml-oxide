@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::engine::tex_alignment::alignment_bindings;
+use crate::engine::tex_tables::alignment_bindings;
 
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
