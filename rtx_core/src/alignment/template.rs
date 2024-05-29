@@ -253,12 +253,12 @@ impl Template {
     new.extend(current_sb);
     self.save_before = new; // NOTE: goes all the way to front!
   }
-  // NOTE: \@@eat@space should ONLY be added to LaTeX tabular style templates!!!!
+  // NOTE: \lx@column@trimright should ONLY be added to LaTeX tabular style templates!!!!
   // NOT \halign style templates!
   pub fn add_after_column(&mut self, new: Vec<Token>) {
     if let Some(current_column) = self.columns.last_mut() {
       let current_after = current_column.after.clone().unwrap_or_default().unlist();
-      current_column.after = Some(Tokens!(T_CS!("\\@@eat@space"), new, current_after));
+      current_column.after = Some(Tokens!(T_CS!("\\lx@column@trimright"), new, current_after));
     }
   }
 
@@ -288,7 +288,7 @@ impl Template {
     } else {
       None
     };
-    let mut after = vec![T_CS!("\\@@eat@space")];
+    let mut after = vec![T_CS!("\\lx@column@trimright")];
     if let Some(prop_after) = col.after {
       after.extend(prop_after.unlist());
     }

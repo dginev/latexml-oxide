@@ -438,7 +438,7 @@ LoadDefinitions!({
   DefRegister!("\\hfuzz", Dimension!("0.1pt"));
   DefRegister!("\\vfuzz", Dimension!("0.1pt"));
   DefRegister!("\\overfullrule", Dimension!("5pt"));
-  DefRegister!("\\badness",Number!(0), readonly => true);
+  DefRegister!("\\badness", Number::new(0), readonly => true);
   DefRegister!("\\hbadness", Number!(1000), readonly => true);
   DefRegister!("\\vbadness", Number!(1000));
 

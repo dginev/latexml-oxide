@@ -1,13 +1,51 @@
+//! TeX Tables
+//! 
+//! Core TeX Implementation for LaTeXML
+
 use crate::prelude::*;
 use rtx_core::alignment::read_alignment_template;
 use std::cell::{RefCell, RefMut};
-//======================================================================
-// Basic alignment support needed by most environments & commands.
-//======================================================================
+
 LoadDefinitions!({
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Tables Family of primitive control sequences
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  //----------------------------------------------------------------------
   DefParameterType!(AlignmentTemplate, sub[_inner, _extra] {
     read_alignment_template()
   });
+
+  // This is where ALL alignments start & finish
+  // This creates the object representing the entire alignment!
+  DefConstructor!("\\lx@begin@alignment SkipSpaces", "#alignment",
+    reversion => sub[whatsit,_args] {
+      if let Some(Stored::Digested(alignment)) = whatsit.get_property("alignment").as_deref() {
+        if let DigestedData::Alignment(data) = alignment.data() {
+          data.borrow().revert()
+        } else {
+          Ok(Tokens!())
+        }
+      } else {
+        Ok(Tokens!())
+      }},
+    sizer => "#alignment",
+    after_digest => sub[whatsit] {
+      bgroup();
+      if let Some(alignment) = lookup_alignment() {
+        whatsit.set_property("alignment", Stored::Digested(alignment));
+        digest_alignment_body(whatsit)?;
+      }
+      egroup()?;
+    }
+  );
+
+  // Seems odd to need both end markers here...
+  DefMacro!("\\lx@end@alignment", r"\lx@hidden@crcr\lx@close@alignment");
+  DefPrimitive!("\\lx@close@alignment", None);
+  
+  // & gives an error except within the right context
+  // (which should redefine it!)
+  DefConstructor!("&", { Error!("unexpected", "&", "Stray alignment \"&\""); });
 
   Tag!("ltx:td", after_close => sub[doc, node] { doc.trim_node_whitespace(node)?; });
 
@@ -55,54 +93,37 @@ LoadDefinitions!({
     with_current_build_template(|template_opt| template_opt.unwrap().add_between_column(filler.unlist()));
   });
 
-  // ----------------------------------------------------------------------
-  //  This is where ALL(?) alignments start & finish
-  //  This creates the object representing the entire alignment!
-  DefConstructor!("\\@start@alignment SkipSpaces", "#alignment",
-    reversion => sub[whatsit,_args] {
-      if let Some(Stored::Digested(alignment)) = whatsit.get_property("alignment").as_deref() {
-        if let DigestedData::Alignment(data) = alignment.data() {
-          data.borrow().revert()
-        } else {
-          Ok(Tokens!())
-        }
-      } else {
-        Ok(Tokens!())
-      }},
-    sizer => "#alignment",
-    after_digest => sub[whatsit] {
-      bgroup();
-      if let Some(alignment) = lookup_alignment() {
-        whatsit.set_property("alignment", Stored::Digested(alignment));
-        digest_alignment_body(whatsit)?;
-      }
-      egroup()?;
-    }
-  );
-
-  // Seems odd to need both end markers here...
-  DefMacro!("\\@finish@alignment", r"\hidden@crcr\@close@alignment");
-  DefPrimitive!("\\@close@alignment", None);
-
   //======================================================================
-  // Low-level bits that appear within alignments or \halign
-
+  // Table Line endings
+  //----------------------------------------------------------------------
+  // \cr               c  is a visible command which ends one row in a table.
+  // \crcr             c  is an alternate to \cr.
+  // \everycr          pt holds tokens inserted after every \cr or nonredundent \crcr.
+  //\tabskip          pg is optional glue put between columns in a table.
   DefConstructor!("\\cr", "\n");
   DefConstructor!("\\crcr", "\n");
   // These are useful for reversion of higher-level macros that use alignment
   // internally, but don't use explicit &,\cr in the user markup
-  DefConstructor!("\\hidden@cr",    "\n", alias => "");
-  DefConstructor!("\\hidden@crcr",  "\n", alias => "");
-  DefConstructor!("\\hidden@align", "",   alias => "");
+  DefConstructor!("\\lx@hidden@cr",    "\n", alias => "");
+  DefConstructor!("\\lx@hidden@crcr",  "\n", alias => "");
+  DefConstructor!("\\lx@hidden@align", "",   alias => "");
 
-  // Handled directly in alignments, but must be defined as non-macros
+  DefRegister!("\\everycr", Tokens!());
+  DefRegister!("\\tabskip", Glue!("0"));
+
+  //======================================================================
+  // Aligment exceptions
+  //----------------------------------------------------------------------
+  // \noalign          c  inserts vertical mode material after a \cr in a table.
+  // \omit             c  is used in the body of a table to change an entry's template from the one in the preamble.
+  // \span             c  combines adjacent entries in a table into a single entry.
   DefPrimitive!("\\noalign", {
-      bgroup();
-      Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
-      Let!(&T_ALIGN!(),          T_RELAX!());
-      Let!(&T_CS!("\\noalign"), T_RELAX!());
-      Let!(&T_CS!("\\omit"),    T_RELAX!());
-      Let!(&T_CS!("\\span"),    T_RELAX!()); });
+    bgroup();
+    Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
+    Let!(&T_ALIGN!(),          T_RELAX!());
+    Let!(&T_CS!("\\noalign"), T_RELAX!());
+    Let!(&T_CS!("\\omit"),    T_RELAX!());
+    Let!(&T_CS!("\\span"),    T_RELAX!()); });
   DefPrimitive!("\\omit", {
       Error!("unexpected", "\\omit", "\\omit cannot be used here");
       bgroup();
@@ -118,45 +139,63 @@ LoadDefinitions!({
       Let!(&T_CS!("\\omit"),    T_RELAX!());
       Let!(&T_CS!("\\span"),    T_RELAX!()); });
 
-  // #######
-  // Support for \\[dim] .... TO BE WORKED OUT!
-  // NOTE that this does NOT skip spaces before * or []!!!!!
-  //  As if: \@alignment@newline OptionalMatch:* [Dimension]
-  // Read arguments for \\, namely * and/or [Dimension]
-  // BUT optionally do it while skipping spaces (latex style) or not (ams style)
-  fn read_newline_args(
+  //======================================================================
+  // Horizontal alignments
+  //----------------------------------------------------------------------
+  // \halign           c  begins the horizontal alignment of material (i.e., makes a table containing rows).
+  
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Now, for \halign itself
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // See \lxX@noalign for some \noalign cases
+  // See \lx@alignment@multicolumn for cases of \span,\omit
+  // See alignmentBindings for default bindings
+  // But also see others for different handling of (eg) open@row, etc.
+  // Probably we have to handle these cases by more generic default code
+  // and appropriate tweaks of alignment data????
+  
+  // Algorithm:
+  //   open@alignment
+  //     Loop while read_column
+  //======================================================================
 
-    skipspaces: bool,
-  ) -> Result<(bool, Option<Tokens>)> {
-    if lookup_alignment().is_some() {
-      local_align_group_count(1000000);
-      if skipspaces {
-        gullet::skip_spaces()?;
-      }
-      let (mut star, mut optional) = (false, None);
-      let mut next_opt = gullet::read_token()?;
-      if next_opt == Some(T_OTHER!("*")) {
-        star = true;
-        if skipspaces {
-          gullet::skip_spaces()?;
-        }
-        next_opt = gullet::read_token()?;
-      }
-      if next_opt == Some(T_OTHER!("[")) {
-        optional = Some(gullet::read_until(&Tokens!(T_OTHER!("]")))?);
-        next_opt = None;
-      }
-      if let Some(next) = next_opt {
-        gullet::unread_one(next);
-      }
-      expire_align_group_count();
-      Ok((star, optional))
-    } else {
-      Err(
-        "read_newline_args should only be called with a proper 'Alignment' active in state".into(),
-      )
-    }
-  }
+  // TODO:
+  //   DefConstructor('\halign BoxSpecification',
+  // "#alignment",
+  // reversion => sub {
+  //   my ($whatsit, $spec) = @_;
+  //   my $template  = $whatsit->getProperty('template');
+  //   my $alignment = $whatsit->getProperty('alignment');
+  //   Tokens(T_CS('\halign'), Revert($spec), T_BEGIN, Revert($template), T_CS('\cr'),
+  //     Revert($alignment), T_END); },
+  // bounded => 1,
+  // #  sizer       => '#1',
+  // sizer       => sub { $_[0]->getProperty('alignment')->getSize; },
+  // afterDigest => sub {
+  //   my ($stomach, $whatsit) = @_;
+  //   $stomach->bgroup;    # This will be closed by the \halign's closing }  (or will it?)
+  //   my $template = parseHAlignTemplate($stomach->getGullet, $whatsit);
+  //   my $spec     = $whatsit->getArg(1);
+  //   alignmentBindings($template, undef,
+  //     attributes => { width => orNull(GetKeyVal($spec, 'to')) });
+  //   digestAlignmentBody($stomach, $whatsit);
+  //   $stomach->egroup;
+  //   $LaTeXML::ALIGN_STATE--;    # Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+  //   return; });
+
+  DefMacro!("\\lx@alignment@row@before", None);
+  DefMacro!("\\lx@alignment@row@after", None);
+  DefMacro!("\\lx@alignment@column@before", None);
+  DefMacro!("\\lx@alignment@column@after", None);
+
+  //======================================================================
+  // Vertical alignments
+  //----------------------------------------------------------------------
+  // \valign           c  begins the vertical alignment of material (i.e., makes a table containing columns).
+
+  // Implement ???
+  // DefMacro('\vrule','\relax');
+  DefMacro!("\\valign", None);
 
   // VERY tricky (and mostly Wrong).
   // The issue is for \\ to look ahead for * and [],
@@ -169,46 +208,44 @@ LoadDefinitions!({
   // But we're not there (yet)
 
   // This is the internal macro for \\[dim] used by LaTeX for various arrays, tabular, etc
-  DefMacro!("\\@alignment@newline", {
+  DefMacro!("\\lx@alignment@newline", {
     let (_star, optional) = read_newline_args(true)?;
-    let mut tokens = vec![T_CS!("\\hidden@cr"), T_BEGIN!()];
+    let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
     if let Some(opt_tks) = optional {
-      tokens.push(T_CS!("\\@alignment@newline@markertall"));
+      tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
       tokens.push(T_BEGIN!());
       tokens.extend(opt_tks.unlist());
       tokens.push(T_END!());
     } else {
-      tokens.push(T_CS!("\\@alignment@newline@marker"));
+      tokens.push(T_CS!("\\lx@alignment@newline@marker"));
     }
     tokens.push(T_END!());
     Tokens::new(tokens)
   });
-
   // However, the above will skip spaces --AND a newline! -- looking for [],
   // which is kinda weird in math, since there may be a reasonable math [ in the 1st column!
   // AMS kindly avoids that, by using a special version of \\
-  DefMacro!("\\@alignment@newline@noskip", {
+  DefMacro!("\\lx@alignment@newline@noskip", {
     let (_star, optional) = read_newline_args(false)?;
-    let mut tokens = vec![T_CS!("\\hidden@cr"), T_BEGIN!()];
+    let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
     if let Some(opt_tks) = optional {
-      tokens.push(T_CS!("\\@alignment@newline@markertall"));
+      tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
       tokens.push(T_BEGIN!());
       tokens.extend(opt_tks.unlist());
       tokens.push(T_END!());
     } else {
-      tokens.push(T_CS!("\\@alignment@newline@marker"));
+      tokens.push(T_CS!("\\lx@alignment@newline@marker"));
       tokens.push(T_END!());
     }
     tokens.push(T_END!());
     Tokens::new(tokens)
   });
-
   // These are the markers that produce \\ in the reversion,
   // and (eventually will) add vertical space to the row!
-  DefConstructor!("\\@alignment@newline@marker", "",
+  DefConstructor!("\\lx@alignment@newline@marker", "",
     reversion => Tokens!(T_CS!("\\\\"), T_CR!()));
   // AND add the spacing to the alignment!!!
-  DefConstructor!("\\@alignment@newline@markertall {Dimension}", "",
+  DefConstructor!("\\lx@alignment@newline@markertall {Dimension}", "",
   after_digest => sub[whatsit] {
   if let Some(alignment) = lookup_alignment() {
     let mut alignment_mut = alignment.alignment_cell().unwrap().borrow_mut();
@@ -225,13 +262,36 @@ LoadDefinitions!({
     Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), reverted, T_OTHER!("]"), T_CR!()))
   });
 
-  DefMacro!("\\tabularnewline", "\\cr"); // ???
-
+  // TODO:
+  // # \lx@intercol is our replacement for LaTeX's \@acol which places intercolumn space in tabular
+  // # (but NOT used by TeX's \halign!)
+  // DefMacro('\lx@intercol', '');
+  // # Candidates for binding \lx@intercol for LaTeX tabular or math arrays
+  // # These provide "padding" of half tabcolsep, since added before & after columns
+  // # [these could be \hskip\tabcolsep, but the expansion confounds trimColumnSpec]
+  // DefConstructor('\lx@text@intercol', sub {
+  //     my ($document, %props) = @_;
+  //     $document->absorb(DimensionToSpaces($props{width})); },
+  //   reversion  => '\lx@intercol',
+  //   properties => sub {
+  //     my $defn;
+  //     my $w = (($defn = $STATE->lookupDefinition(T_CS('\tabcolsep'))) && $defn->isRegister
+  //       ? $defn->valueOf : Dimension(0));
+  //     (width => $w, isSpace => 1); });
+  // DefConstructor('\lx@math@intercol', "",    # mspace ???
+  //   reversion  => '\lx@intercol',
+  //   properties => sub {
+  //     my $defn;
+  //     my $w = (($defn = $STATE->lookupDefinition(T_CS('\arraycolsep'))) && $defn->isRegister
+  //       ? $defn->valueOf : Dimension(0));
+  //     (width => $w, isSpace => 1); });
+  
   //======================================================================
   // Various decorations within alignments, rules, headers, etc
+
   // Like \noalign, takes an arg; handled within alignment processing.
   // But doesn't create a pseudo-row (??? Or does it?; is it still needed?)
-  DefConstructor!("\\hidden@noalign{}", "#1",
+  DefConstructor!("\\lx@hidden@noalign{}", "#1",
     reversion  => "",
     properties =>  sub[args] {
       // Sometimes, we"re smuggling stuff that needs to be carried into the XML.
@@ -242,7 +302,7 @@ LoadDefinitions!({
         props.insert("alignmentPreserve", preserve.as_ref().unwrap().into());
       }
       Ok(props) });
-
+  
   DefMacro!("\\hline", "\\noalign{\\@@alignment@hline}");
   DefConstructor!("\\@@alignment@hline", "",
     after_digest => sub[_whatsit] {
@@ -265,19 +325,8 @@ LoadDefinitions!({
       .unset_in_tabular_head();
   }});
 
-
-  DefMacro!("\\@row@before", None);
-  DefMacro!("\\@row@after", None);
-  DefMacro!("\\@column@before", None);
-  DefMacro!("\\@column@after", None);
-
   //======================================================================
   // Multicolumn support
-  // DefMacro('\multispan{Number}', sub {
-  //     my ($gullet, $span) = @_;
-  //     $span = $span->valueOf;
-  //     (T_CS('\omit'), map { (T_CS('\span'), T_CS('\omit')) } 1 .. $span - 1); });
-
   // DefRegisterI('\@alignment@ncolumns', undef, Dimension(0),
   //   getter => sub {
   //     if (my $alignment = LookupValue('Alignment')) {
@@ -300,16 +349,17 @@ LoadDefinitions!({
   //       $tokens->unlist,
   //       ($column ? afterCellUnlist($$column{after}) : ())); });
 
-  DefConditional!("\\if@in@alignment", { lookup_alignment().is_some() });
+  DefConditional!("\\if@in@lx@alignment", { lookup_alignment().is_some() });
 
+  // TODO:
   // DefPrimitive('\@alignment@bindings AlignmentTemplate []', sub {
   //     my ($stomach, $template, $mode) = @_;
   //     alignmentBindings($template, $mode); });
-
+  
   // This removes trailing whitespace from the current digested list.
   // It is useful as the 1st thing in the rhs template of things like {tabular}.
   // But note that \halign does NOT remove this trailing space!
-  DefPrimitive!("\\@@eat@space", {
+  DefPrimitive!("\\lx@column@trimright", {
     let mut save = Vec::new();
     while let Some(tbox) = pop_box_list() {
       if tbox.get_property_bool("alignmentSkippable")
@@ -325,6 +375,7 @@ LoadDefinitions!({
     }
     Ok(Vec::new())
   });
+
 });
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -434,7 +485,7 @@ pub fn digest_alignment_body(
     }
     lastwascr = false;
     if (vtype.is_none() || vtype.as_ref().unwrap().is_empty())
-      && (next.is_none() || next == Some(T_END!()) || next == Some(T_CS!("\\@close@alignment")))
+      && (next.is_none() || next == Some(T_END!()) || next == Some(T_CS!("\\lx@close@alignment")))
     {
       // End of alignment
       alignment_cell.borrow_mut().end_row()?;
@@ -508,7 +559,7 @@ pub fn digest_alignment_column(
       // Skip leading space. Skip \par or blank line(?). Or \crcr following a \cr
       if *token == T_SPACE!()
         || *token == T_CS!("\\par")
-        || (lastwascr && (*token == T_CS!("\\crcr") || *token == T_CS!("\\hidden@crcr")))
+        || (lastwascr && (*token == T_CS!("\\crcr") || *token == T_CS!("\\lx@hidden@crcr")))
       {
       } else if *token == T_CS!("\\omit") {
         // \omit removes template for this column.
@@ -532,7 +583,7 @@ pub fn digest_alignment_column(
         expire_local_box_list();
         return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole
                                                                        // row???
-      } else if *token == T_CS!("\\hidden@noalign") {
+      } else if *token == T_CS!("\\lx@hidden@noalign") {
         // \puts something in vertical list
         //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
         let invoked = stomach::invoke_token(token)?;
@@ -545,7 +596,7 @@ pub fn digest_alignment_column(
     // $LaTeXML::DEBUG{halign};
     if last_token.is_none()
       || last_token == Some(T_END!())
-      || last_token == Some(T_CS!("\\@close@alignment"))
+      || last_token == Some(T_CS!("\\lx@close@alignment"))
     {
       expire_local_box_list();
       return Ok((None, last_token, None, false));
@@ -589,7 +640,7 @@ pub fn digest_alignment_column(
       // DG: Note this block is commented out as clippy warned it has the exact identical logic
       // as the "all other cases" else that follows it
       //
-      // } else if token == T_CS!("\\hidden@noalign") { //  \puts something in vertical list
+      // } else if token == T_CS!("\\lx@hidden@noalign") { //  \puts something in vertical list
       //   // Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
       //   let invoked = stomach.invoke_token(&token)?;
       //   stomach.box_list.extend(invoked.into_iter());
@@ -754,4 +805,44 @@ pub fn extract_alignment_column(
   //   Debug("Halign $alignment: INSTALL column " . join(',', map { $_ . "=" .
   // ToString($$colspec{$_}); } sort keys %$colspec)) if $LaTeXML::DEBUG{halign};
   Ok(digested_out)
+}
+
+// #######
+// Support for \\[dim] .... TO BE WORKED OUT!
+// NOTE that this does NOT skip spaces before * or []!!!!!
+//  As if: \lx@alignment@newline OptionalMatch:* [Dimension]
+// Read arguments for \\, namely * and/or [Dimension]
+// BUT optionally do it while skipping spaces (latex style) or not (ams style)
+fn read_newline_args(
+
+  skipspaces: bool,
+) -> Result<(bool, Option<Tokens>)> {
+  if lookup_alignment().is_some() {
+    local_align_group_count(1000000);
+    if skipspaces {
+      gullet::skip_spaces()?;
+    }
+    let (mut star, mut optional) = (false, None);
+    let mut next_opt = gullet::read_token()?;
+    if next_opt == Some(T_OTHER!("*")) {
+      star = true;
+      if skipspaces {
+        gullet::skip_spaces()?;
+      }
+      next_opt = gullet::read_token()?;
+    }
+    if next_opt == Some(T_OTHER!("[")) {
+      optional = Some(gullet::read_until(&Tokens!(T_OTHER!("]")))?);
+      next_opt = None;
+    }
+    if let Some(next) = next_opt {
+      gullet::unread_one(next);
+    }
+    expire_align_group_count();
+    Ok((star, optional))
+  } else {
+    Err(
+      "read_newline_args should only be called with a proper 'Alignment' active in state".into(),
+    )
+  }
 }

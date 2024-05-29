@@ -24,7 +24,7 @@ pub fn expansion_tests_dispatch(
   match filename {
     "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions()),
     "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions()),
-    other => rtx_package::dispatch(other),
+    _ => None
   }
 }
 

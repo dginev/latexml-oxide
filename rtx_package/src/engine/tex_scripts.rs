@@ -74,9 +74,9 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     let mut nscripts = 0;
 
     let mut cs = if cc == Catcode::SUPER {
-      "\\@@FLOATINGSUPERSCRIPT"
+      "\\lx@floating@superscript"
     } else {
-      "\\@@FLOATINGSUBSCRIPT"
+      "\\lx@floating@subscript"
     };
     let mut prevscript = None;
     let mut prevspace = false;
@@ -110,9 +110,9 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
             );
           }
           cs = if cc == Catcode::SUPER {
-            "\\@@FLOATINGSUPERSCRIPT"
+            "\\lx@floating@superscript"
           } else {
-            "\\@@FLOATINGSUBSCRIPT"
+            "\\lx@floating@subscript"
           };
           break;
         } else {
@@ -120,9 +120,9 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
           prevscript = Some(prev.clone()); // we'll overlap the width of the previous.
           putback.push_front(prev);
           cs = if cc == Catcode::SUPER {
-            "\\@@POSTSUPERSCRIPT"
+            "\\lx@post@superscript"
           } else {
-            "\\@@POSTSUBSCRIPT"
+            "\\lx@post@subscript"
           };
         }
         // if we hit a FLOATING script, terminate, as the floating empty group avoids double scripts
@@ -138,9 +138,9 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         base = Some(prev.clone());
         putback.push_front(prev);
         cs = if cc == Catcode::SUPER {
-          "\\@@POSTSUPERSCRIPT"
+          "\\lx@post@superscript"
         } else {
-          "\\@@POSTSUBSCRIPT"
+          "\\lx@post@subscript"
         };
         break;
       }
@@ -219,7 +219,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
 // and either has braces, or is something that results in a single box.
 // When we revert these, we DON'T want to wrap extra braces around, because they'll accumulate;
 // at the least they're ugly; in some applications they affect "round trip" processing.
-// OTOH, direct use of \@@POSTSUPERSCRIPT, etal, MAY need to have extra braces around them.
+// OTOH, direct use of \lx@post@superscript, etal, MAY need to have extra braces around them.
 // So, when reverting, we're going to a bit of extra trouble to make sure we have ONE set
 // of braces, but no extras!!  [Worry about lists of lists...]
 pub fn revert_script(script: &Digested) -> Result<Vec<Token>> {
@@ -350,7 +350,7 @@ LoadDefinitions!({
   )?;
 
   // NOTE: The When reverting these, the
-  DefConstructor!("\\@@POSTSUPERSCRIPT InScriptStyle",r###"
+  DefConstructor!("\\lx@post@superscript InScriptStyle",r###"
   <ltx:XMApp role="POSTSUPERSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
     <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
   </ltx:XMApp>
@@ -363,7 +363,7 @@ LoadDefinitions!({
         w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "post") }
   );
 
-  DefConstructor!("\\@@POSTSUBSCRIPT InScriptStyle",r###"
+  DefConstructor!("\\lx@post@subscript InScriptStyle",r###"
   <ltx:XMApp role="POSTSUBSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
     <ltx:XMArg rule="Subscript">#1</ltx:XMArg>
   </ltx:XMApp>
@@ -377,7 +377,7 @@ LoadDefinitions!({
         w.get_property("prevscript").as_deref(), "SUBSCRIPT", "post") }
   );
 
-  DefConstructor!("\\@@FLOATINGSUPERSCRIPT InScriptStyle",r###"
+  DefConstructor!("\\lx@floating@superscript InScriptStyle",r###"
   <ltx:XMApp role="FLOATSUPERSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
     <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
   </ltx:XMApp>
@@ -388,7 +388,7 @@ LoadDefinitions!({
     sizer => sub[w] {
       script_sizer(w.get_arg(1).unwrap(), None, None, "SUPERSCRIPT", "post") }
   );
-  DefConstructor!("\\@@FLOATINGSUBSCRIPT InScriptStyle",r###"
+  DefConstructor!("\\lx@floating@subscript InScriptStyle",r###"
   <ltx:XMApp role="FLOATSUBSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
     <ltx:XMArg rule="Subscript">#1</ltx:XMArg>
   </ltx:XMApp>
@@ -400,50 +400,4 @@ LoadDefinitions!({
         script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post") }
   );
 
-  DefMacro!(T_ACTIVE!('\''), None, {
-    let mut sup = vec![T_CS!("\\prime")];
-    // Collect up all ', convering to \prime
-
-    while gullet::if_next(T_OTHER!("'"))? {
-      gullet::read_token()?;
-      sup.push(T_CS!("\\prime"));
-    }
-    // Combine with any following superscript!
-    // However, this is semantically screwed up!
-    // We really need to set up separate superscripts, but at same level!
-    if gullet::if_next(T_SUPER!())? {
-      gullet::read_token()?;
-      sup.extend(gullet::read_arg()?.unlist());
-    }
-    Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END!())
-  },
-  mathactive => true); // Only in math!
-
-  DefMacro!("\\active@math@prime", {
-    let mut sup = vec![T_CS!("\\prime")];
-    // Collect up all ', convering to \prime
-    let prime_token = T_OTHER!("\'");
-
-    while gullet::if_next(prime_token)? {
-      gullet::read_token()?;
-      sup.push(T_CS!("\\prime"));
-    }
-    // Combine with any following superscript!
-    // However, this is semantically screwed up!
-    // We really need to set up separate superscripts, but at same level!
-    if gullet::if_next(T_SUPER!())? {
-      gullet::read_token()?;
-      let arg = gullet::read_arg()?;
-      let arg_tks = arg.unlist();
-      sup.extend(arg_tks);
-    }
-    let mut activated = vec![T_SUPER!(), T_BEGIN!()];
-    activated.extend(sup);
-    activated.push(T_END!());
-    activated
-  },
-  locked => true);    // Only in math!
-  // TODO
-  // AssignMathcode!("'" => 0x8000);
-  Let!("'", "\\active@math@prime");
 });

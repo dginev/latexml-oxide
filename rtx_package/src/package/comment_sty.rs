@@ -65,4 +65,5 @@ LoadDefinitions!({
   DefPrimitive!("\\excludecomment{}", Some(PrimitiveBody::Closure(define_excluded)));
   DefPrimitive!("\\specialcomment{}{}{}", Some(define_included));
   DefPrimitive!("\\processcomment{}{}{}{}", None);
+  DefMacro!("\\csarg{}{}", r"\expandafter#1\csname#2\endcsname");
 });

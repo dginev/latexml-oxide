@@ -55,7 +55,7 @@ pub fn initialize_stomach() {
 
   assign_value("MODE", "text", Some(Scope::Global));
   assign_value("IN_MATH", false, Some(Scope::Global));
-  assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
+  assign_value("PRESERVE_NEWLINES", 1, Some(Scope::Global));
   assign_value(
     "afterGroup",
     Stored::VecDequeStored(VecDeque::new()),
@@ -421,8 +421,8 @@ pub fn digest_next_body(
       && !stomach!().box_list.is_empty()
       && (token == T_ALIGN!()
         || token == T_CS!("\\cr")
-        || token == T_CS!("\\hidden@cr")
-        || token == T_CS!("\\hidden@crcr"))
+        || token == T_CS!("\\lx@hidden@cr")
+        || token == T_CS!("\\lx@hidden@crcr"))
     {
       // at least \over calls in here without the intent to passing through the alignment.
       // So if we already have some digested boxes available, return them here.

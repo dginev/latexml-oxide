@@ -21,7 +21,7 @@ fn digestion_tests_dispatch(
   ) -> Option<Result<()>> {
   match filename {
     "rebox.tex" => Some(helpers::rebox_tex::load_definitions()),
-    other => rtx_package::dispatch(other),
+    _ => None
   }
 }
 

@@ -671,14 +671,14 @@ LoadDefinitions!({
   //           : (repeated => [{@colspec}]))),
   //       'math',
   //       (keys %attributes ? (attributes => {%attributes}) : ()));    # });
-  //     Let("\\\\", '\@alignment@newline');
+  //     Let("\\\\", '\lx@alignment@newline');
   // });
 
   DefPrimitive!("\\lx@end@gen@matrix", { egroup()?; });
 
   DefMacro!("\\lx@gen@plain@matrix{}{}",
     "\\lx@gen@matrix@bindings{#1}\
-      \\lx@gen@plain@matrix@{#1}{\\@start@alignment#2\\@finish@alignment}\\lx@end@gen@matrix");
+      \\lx@gen@plain@matrix@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}\\lx@end@gen@matrix");
 
   // # The delimiters on a matrix are presumably just for notation or readability (not an operator);
   // # the array data itself is the matrix.
@@ -743,18 +743,18 @@ LoadDefinitions!({
   //           { before => Tokens($style), after => Tokens(T_CS('\hfil')) },
   //           { before => Tokens($style,
   //               ($condtext ? (T_CS('\lx@cases@condition')) : ())),
-  //             after => Tokens(T_CS('\@@eat@space'),
+  //             after => Tokens(T_CS('\lx@column@trimright'),
   //               ($condtext ? (T_CS('\lx@cases@end@condition')) : ()),
   //               T_CS('\hfil')) }]),
   //       'math');
-  //     Let("\\\\", '\@alignment@newline');
-  //     DefMacro('\@row@before', '');    # Don't inherit counter stepping from containing environments
-  //     DefMacro('\@row@after',  '');
+  //     Let("\\\\", '\lx@alignment@newline');
+  //     DefMacro('\lx@alignment@row@before', '');    # Don't inherit counter stepping from containing environments
+  //     DefMacro('\lx@alignment@row@after',  '');
   // });
 
   DefMacro!("\\lx@gen@plain@cases{}{}",
     "\\lx@gen@cases@bindings{#1}\
-      \\lx@gen@plain@cases@{#1}{\\@start@alignment#2\\@finish@alignment}
+      \\lx@gen@plain@cases@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}
       \\lx@end@gen@cases");
   DefPrimitive!("\\lx@end@gen@cases", { egroup()?; });
 

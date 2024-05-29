@@ -29,8 +29,8 @@ LoadDefinitions!({
   //======================================================================
   DefRegister!("\\tabbingsep" => Dimension::new(0));
   
-  DefMacro!("\\tabbing", r"\par\@tabbing@bindings\@@tabbing\@start@alignment");
-  DefMacro!("\\endtabbing", r"\@finish@alignment\@end@tabbing\par");
+  DefMacro!("\\tabbing", r"\par\@tabbing@bindings\@@tabbing\lx@begin@alignment");
+  DefMacro!("\\endtabbing", r"\lx@end@alignment\@end@tabbing\par");
   DefPrimitive!("\\@end@tabbing", { stomach::egroup() });
   DefConstructor!("\\@@tabbing SkipSpaces DigestedBody",
     "#1",

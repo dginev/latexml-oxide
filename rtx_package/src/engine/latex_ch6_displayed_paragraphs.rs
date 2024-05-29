@@ -12,8 +12,8 @@ LoadDefinitions!({
     Ok(())
   },   // aligning will take care of \\\\ "rows"
   before_digest => {
-    Let!("\\par", "\\inner@par");
-    Let!("\\\\", "\\inner@par");
+    Let!("\\par", "\\lx@normal@par");
+    Let!("\\\\", "\\lx@normal@par");
   });
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
@@ -23,14 +23,14 @@ LoadDefinitions!({
   //     $_[0]->maybeCloseElement('ltx:p');    # this starts a new vertical block
   //     aligningEnvironment('left', 'ltx_align_left', @_); },
   //   beforeDigest => sub {
-  //     Let('\par', '\inner@par');
-  //     Let('\\\\', '\inner@par'); });
+  //     Let('\par', '\lx@normal@par');
+  //     Let('\\\\', '\lx@normal@par'); });
   // DefEnvironment('{flushright}', sub {
   //     $_[0]->maybeCloseElement('ltx:p');    # this starts a new vertical block
   //     aligningEnvironment('right', 'ltx_align_right', @_); },
   //   beforeDigest => sub {
-  //     Let('\par', '\inner@par');
-  //     Let('\\\\', '\inner@par'); });
+  //     Let('\par', '\lx@normal@par');
+  //     Let('\\\\', '\lx@normal@par'); });
 
   // # These add an operation to be carried out on the current node & following siblings, when the
   // current group ends. # These operators will add alignment (class) attributes to each "line" in

@@ -24,7 +24,6 @@ use crate::tokens::{Tokens, NO_TOKENS};
 use crate::util::pathname;
 use crate::util::text::trim_end_in_place;
 
-static CS_ENDLINECHAR: Lazy<Token> = Lazy::new(|| T_CS!("\\endlinechar"));
 static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
 
 const READLINE_PROGRESS_QUANTUM: usize = 25;
@@ -430,7 +429,7 @@ impl Mouth {
         let line_opt = self.get_next_line();
         // For \read, we have to return something for EOL, and handle implicit final newline
         let read_mode = lookup_int("PRESERVE_NEWLINES") > 1;
-        let eolch = if let Some(defn) = lookup_definition(&CS_ENDLINECHAR).unwrap() {
+        let eolch = if let Some(defn) = lookup_definition(&T_CS!("\\endlinechar")).unwrap() {
           if defn.is_register() {
             if let Some(eol) = defn.value_of(Vec::new()) {
               let eol = eol.value_of() as i16;
@@ -514,8 +513,8 @@ impl Mouth {
           )));
         }
       }
+      // In state::S, skip spaces
       if self.skipping_spaces {
-        // In state::S, skip spaces
         let mut cc = None;
         // This is very awkward as a loop,
         //  but I had to port the Perl logic without going crazy...
@@ -575,18 +574,10 @@ impl Mouth {
   pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
     let mut line = String::new();
     if self.colno < self.nchars {
-      // DG: Can't slice a VecDeque really? Oh well...
-      // Please refactor if you know a better way!
-      for (index, c) in self.chars.iter().enumerate() {
-        if self.colno <= index && index < self.nchars {
-          line.push(*c);
-        }
-      }
+      line = self.chars.iter().skip(self.colno).collect();
       // End lines with \n, not CR, since the result will be treated as strings
       self.colno = self.nchars;
-    } else if noread {
-      line = String::new();
-    } else {
+    } else if !noread {
       match self.get_next_line() {
         None => {
           // We've exhausted this mouth
@@ -679,7 +670,7 @@ impl Mouth {
     // Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     self.colno = self.nchars; // Ignore any remaining characters after EOL
-    if lookup_int("PRESERVE_NEWLINES") > 0 {
+    if lookup_int("PRESERVE_NEWLINES") != 0 {
       Token!("\n", Catcode::SPACE)
     } else {
       T_SPACE!()

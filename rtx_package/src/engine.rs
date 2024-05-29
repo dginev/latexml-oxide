@@ -18,38 +18,20 @@ mod tex_logic;
 mod tex_macro;
 mod tex_marks;
 mod tex_math;
-// mod tex_page;
-// mod tex_paragraph;
-// mod tex_penalties;
-// mod tex_registers;
-// mod tex_tables;
-
-mod plain;
-
-mod tex_accents;
-mod tex_alignment;
-mod tex_appendix_b_p350_to_p355;
-mod tex_appendix_b_p356;
-mod tex_appendix_b_p357;
-mod tex_appendix_b_p358;
-mod tex_appendix_b_p359;
-mod tex_appendix_b_p360;
-mod tex_appendix_b_p361;
-mod tex_appendix_b_p362;
-mod tex_appendix_b_p363;
-mod tex_appendix_b_p364;
-mod tex_appendix_b_to_p349;
-mod tex_assignment;
-mod tex_ch24_primitives;
-mod tex_ch25_primitives;
-pub mod base_functions; // auxiliary functions
-mod tex_math_accents;
-mod tex_math_style;
-mod tex_para;
+mod tex_page;
+mod tex_paragraph;
+mod tex_penalties;
 mod tex_registers;
+mod tex_tables;
+
+pub mod base_functions; // auxiliary functions
 mod tex_scripts;
-mod tex_special_chars;
-mod tex_stray_math_style;
+// eTeX Pool
+pub mod etex;
+// pdfTeX Pool
+pub mod pdftex;
+// plain TeX Pool
+mod plain;
 
 // LaTeX Pool
 pub mod latex;
@@ -89,15 +71,8 @@ mod latex_ch8_numbering;
 mod latex_ch8_theoremlike_environments;
 mod latex_ch9_figures_and_tables;
 mod latex_ch9_marginal_notes;
-mod latex_delimiters;
 pub mod latex_functions; // auxiliary functions
 mod latex_hook;
 mod latex_other_in_appendices;
 mod latex_semi_undocumented;
 mod latex_tables_3;
-
-// eTeX Pool
-pub mod etex;
-
-// pdfTeX Pool
-pub mod pdftex;

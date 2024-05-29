@@ -16,7 +16,7 @@ LoadDefinitions!({
   DefRegister!("\\lx@default@tabcolsep", Dimension!("6pt"));
   DefRegister!("\\tabcolsep", Dimension!("6pt"));
   DefMacro!("\\arraystretch", None, T_OTHER!("1"));
-  Let!("\\@tabularcr", "\\@alignment@newline");
+  Let!("\\@tabularcr", "\\lx@alignment@newline");
   if ! has_value("GUESS_TABULAR_HEADERS") {
     AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
   }
@@ -47,9 +47,9 @@ LoadDefinitions!({
 
   // The Core alignment support is in LaTeXML::Core::Alignment and in TeX.ltxml
   DefMacro!("\\tabular[]{}",
-    r"\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\@start@alignment\@tabular@before",
+    r"\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\lx@begin@alignment\@tabular@before",
     locked => true);
-  DefMacro!("\\endtabular", r"\@tabular@after\@finish@alignment\@end@tabular",
+  DefMacro!("\\endtabular", r"\@tabular@after\lx@end@alignment\@end@tabular",
     locked => true);
   DefPrimitive!("\\@end@tabular", { egroup()?; });
   DefConstructor!("\\@@tabular[] Undigested DigestedBody",
@@ -72,9 +72,9 @@ LoadDefinitions!({
     mode   => "text");
 
   // DefMacro!(T_CS!("tabular*"),"{Dimension}[]{}",
-  //   r"\@tabular@bindings{#3}[width=#1,vattach=#2]\@@tabular@{#1}[#2]{#3}\@start@alignment");
+  //   r"\@tabular@bindings{#3}[width=#1,vattach=#2]\@@tabular@{#1}[#2]{#3}\lx@begin@alignment");
   // DefMacro!(T_CS!("endtabular*"),
-  //   r"\@finish@alignment\@end@tabular@");
+  //   r"\lx@end@alignment\@end@tabular@");
   // DefConstructor!("\\@@tabular@{Dimension}[] Undigested DigestedBody",
   //   "#4",
   //   before_digest => { stomach.bgroup(); },
@@ -161,15 +161,15 @@ LoadDefinitions!({
   //   $$attr{rowsep} = Dimension(($str - 1) . 'em'); }
   // alignmentBindings($template, 'math', attributes => $attr);
   // MergeFont(mathstyle => 'text');
-  // Let("\\\\", '\@alignment@newline');
+  // Let("\\\\", '\lx@alignment@newline');
 
   // });
 
   DefMacro!(
     "\\array[]{}",
-    r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\@start@alignment"
+    r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
   );
-  DefMacro!("\\endarray", None, r"\@finish@alignment\@end@array");
+  DefMacro!("\\endarray", None, r"\lx@end@alignment\@end@array");
   DefPrimitive!("\\@end@array", { egroup()?; });
   DefConstructor!("\\@@array[] Undigested DigestedBody",
     "#3",

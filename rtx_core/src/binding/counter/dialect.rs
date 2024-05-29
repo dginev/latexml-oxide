@@ -671,7 +671,7 @@ pub fn begin_itemize(
     state::let_i(&T_CS!("\\item"), &itype_cs, None);
   }
   // In case within odd environment.
-  state::let_i(&T_CS!("\\par"), &T_CS!("\\normal@par"), None);
+  state::let_i(&T_CS!("\\par"), &T_CS!("\\lx@normal@par"), None);
   def_macro(
     T_CS!("\\@listctr"),
     None,
