@@ -26,7 +26,6 @@ pub const LTX_NAMESPACE: &str = "http://dlmf.nist.gov/LaTeXML";
 pub type IndirectModel = HashMap<SymbolU32, HashMap<SymbolU32, SymbolU32>>;
 
 static PREFIXED_LOCALNAME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
-static CAPTURE_TAG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(.*?:)?_Capture_$").unwrap());
 static TAG_MODEL_LINE_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
 static CLASS_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:=]+):=(.*?)$").unwrap());
@@ -634,6 +633,10 @@ pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
 // to submodel, in case it can evolve to more precision?
 // However, it would need more context to do that.
 
+/// TODO: This is a major code smell, experimental prototyping to see how to interoperate 
+/// strings with the inerned arena.
+/// `can_contain` and `can_contain_sym` should be implemented once, and one should be an 
+/// interning-only helper.
 pub fn can_contain_sym(tag: SymbolU32, child: SymbolU32) -> bool {
   // Handle obvious cases explicitly.
   if tag == *H_PCDATA_SYM
@@ -644,8 +647,9 @@ pub fn can_contain_sym(tag: SymbolU32, child: SymbolU32) -> bool {
   } else if tag == *WILD_CARD_SYM {
     return true;
   };
-  if arena::with(tag, |tag_str| CAPTURE_TAG_RE.is_match(tag_str))
-    || arena::with(child, |child_str| CAPTURE_TAG_RE.is_match(child_str))
+  if arena::with(tag, |tag_str| tag_str.ends_with("_Capture_"))
+    || arena::with(child, |child_str| child_str.ends_with("_Capture_") ||
+      child_str.ends_with("_CaptureBlock_"))
   {
     // with or without namespace prefix
     return true;
@@ -684,7 +688,8 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
     "_WildCard_" => return true,
     _ => {},
   };
-  if CAPTURE_TAG_RE.is_match(tag) || CAPTURE_TAG_RE.is_match(child) {
+  if tag.ends_with("_Capture_") || child.ends_with("_Capture_") || 
+     tag.ends_with("_CaptureBlock_") {
     // with or without namespace prefix
     return true;
   }
@@ -712,7 +717,7 @@ pub fn can_have_attribute(tag: SymbolU32, attrib: SymbolU32) -> bool {
   if let Some(early_choice) = arena::with(tag, |tag_str| match tag_str {
     "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => Some(false),
     "_WildCard_" => Some(true),
-    other if CAPTURE_TAG_RE.is_match(other) => Some(true),
+    other if other.ends_with("_Capture_") => Some(true),
     _ => None,
   }) {
     return early_choice;
