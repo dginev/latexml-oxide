@@ -310,145 +310,129 @@ where T: Sized + Object {
   result
 }
 
+/// Struct named handlers for block insertion, to manage a very complex conditional.
+#[derive(Debug)]
+enum InsertBlockHandler {
+  Remove,
+  Unwrap,
+  RenameBySchema,
+  RenameWithFiller,
+  Fallback,
+}
+
 /// This attempts to be a generalize vbox construction;
-/// It tries to figure out whether an ltx:inline-block or ltx:para is needed,
-/// and attempts to figure out whether sequences of the inserted content
-/// need to be explicitly wrapped in some kind of block element (presumably ltx:p).
-/// It returns the inserted inner blocks,
-/// whether or not they got wrapped by that ltx:inline-block; which it DOESN'T TELL YOU ABOUT!
+/// The idea is to receeive block-like material, possibly wrapped in appropriate
+/// container which gets attributes.
+/// The contents are constructed in an ltx:_CaptureBlock_ element,
+/// designed to accept all reasonable block material from several levels,
+/// and then determine which container element is most apprpriate for both the conent & context
+/// from block, logical-block or sectional-block, or the inline- variants.
 pub fn insert_block(
   document: &mut Document,
   contents: &Digested,
-  mut blockattr: HashMap<String, String>,
+  block_attr: HashMap<String, String>,
 ) -> Result<Vec<Node>> {
   // Create something like:
   // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
-  let context = document.get_element().unwrap(); // Where we originally start inserting.
-
-  let mut blocktag = "ltx:block";
-  let mut iblocktag = "ltx:inline-block";
-  if blockattr.remove("para").is_some() {
-    blocktag = "ltx:para";
-    iblocktag = "ltx:inline-para";
+  let context_opt = document.get_element();  // Where we originally start inserting.
+  if context_opt.is_none() {
+    // edge case: if we start the doc with a block, the context is empty
+    document.absorb(contents, None)?;
+    return Ok(Vec::new());
   }
-  // Generally, we're going to need some sort of container to hold the contents of the block.
-  // Particularly if we're: setting various size & positioning attributes;
-  // or can't currently open an ltx:p; or if the current point accepts plain text (#PCDATA).
-  // If we're in an inline context, we'll need a ltx:inline-block,  otherwise ltx:block.
-  // [Or maybe an ltx:para... when does that happen?]
-  let mut newblock: Option<Node> = None;
-  let mut remove = Vec::new();
-  // drop all empty values
-  for (key, val) in &blockattr {
-    if val.is_empty() {
-      remove.push(key.to_string())
-    }
+  let mut context = context_opt.unwrap();
+  let mut context_tag = document::get_node_qname(&context);
+  // svg is slightly tricky
+  let (is_svg,is_xmath, is_xmtext) = arena::with(context_tag, |tag| (tag.starts_with("svg:"), tag.starts_with("ltx:XM"), tag == "ltx:XMText"));
+  let ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
+  if is_xmath && !is_xmtext { // but math always needs this
+    context = document.open_element("ltx:XMText", None, None)?;
+    context_tag =  document::get_node_qname(&context);
   }
-  for key in remove {
-    blockattr.remove(&key);
-  }
-  let hasattr = !blockattr.is_empty();
-  if hasattr
-    || !document::can_contain_node_somehow(&context, "ltx:p")
-    || document::can_contain(&context, "#PCDATA")
-  {
-    let tag = if document::can_contain(&context, blocktag) {
-      blocktag
-    } else {
-      iblocktag
-    };
-    let mut attr_arg = blockattr.clone();
-    attr_arg.insert("_autoclose".to_string(), "true".to_string());
-    newblock = Some(document.open_element(tag, Some(attr_arg), None)?);
-  }
-  // Insert the content for the block, and reduce
-  document.set_attribute(
-    &mut document.get_element().unwrap(),
-    "_vertical_mode_",
-    "true",
-  )?; // HACK!!!! (see \hbox)
-
+  let mut container_attr = block_attr.clone();
+  container_attr.insert("_vertical_mode_".to_string(), "true".to_string());
+  let mut container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
   document.absorb(contents, None)?;
-  let absorbed: Vec<Node> = document.get_constructed_nodes().to_vec();
-  let mut nodes = VecDeque::from(document.filter_children(document.filter_deletions(absorbed)));
-
-  // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
-  let mut newnodes = Vec::new();
-  while !nodes.is_empty() {
-    let qname = document::get_node_qname(&nodes[0]);
-    if qname == arena::pin_static("ltx:break") {
-      // ltx:break are superflous, now, unless we're transporting a figure/float
-      let bp_name = document::get_node_qname(&nodes[0].get_parent().unwrap());
-      if bp_name != arena::pin_static("ltx:figure") && bp_name != arena::pin_static("ltx:float") {
-        document.remove_node(&mut nodes.pop_front().unwrap());
-        continue;
+  
+  let mut nodes = container.get_child_nodes();
+  let node_tags = nodes.iter().map(document::get_node_qname)
+    .collect::<Vec<_>>();
+  let nnodes = nodes.len();
+  document.close_to_node(&container, true)?;
+  document.close_node(&container)?;
+  document.close_to_node(&context, true)?;
+  // Refactoring a somewhat involved "if waterfall" from Perl, needs some intermediate flags
+  let mut handler = None;
+  if nnodes < 1 { // Insertion came up empty?
+    handler = Some(InsertBlockHandler::Remove);
+    document.remove_node(&mut container); // then remove the new block entirely
+  } else if ignorable_attr && node_tags.iter().all(|tag|  
+    document::can_contain_qsym(context_tag, *tag)) { 
+      // No attributes, contents allowed in context?
+      handler = Some(InsertBlockHandler::Unwrap);
+      container = document.unwrap_nodes(container)?; // No container needed, at all.
+  } else if nnodes==1 {
+    if document::can_contain_qsym(context_tag, node_tags[0])
+      && (ignorable_attr || block_attr.keys().all(|key| document::sym_can_have_attribute(node_tags[0], arena::pin(key)))) {
+        // IF: Single node, allowed in context & accepts attributes
+        // THEN: Add attributes and unwrap the single node
+        handler = Some(InsertBlockHandler::Unwrap);
+        for (k,v) in block_attr.iter() {
+          document.set_attribute(&mut nodes[0], k, v)?;
+        }
+        container = document.unwrap_nodes(container)?;
+    } else if let Some(newcontainer) = document::sym_can_contain_somehow(context_tag, node_tags[0]) {
+      if ignorable_attr || block_attr.keys().all(|key| newcontainer.map(|nc| document::sym_can_have_attribute(nc, arena::pin(key))).unwrap_or(false)) {
+        if let Some(nc) = newcontainer {
+          // rename the capture to that container
+          handler = Some(InsertBlockHandler::RenameBySchema);
+          arena::with(nc, |ncstr|
+            document.rename_node(&mut container, ncstr, true))?;
+        }
       }
     }
-    let mut inline = Vec::new(); // Collect up sequences of Inline
-    while !nodes.is_empty() && model::is_node_in_schema_class("Inline", &nodes[0]) {
-      inline.push(nodes.pop_front().unwrap());
+  }
+  // This is a "code smell", due to the difficulty of refactoring the in-conditional-assignments from Perl.
+  if handler.is_none() {
+    // Otherwise, rename the capture
+    // MAY need foreignObject wrapper
+    let is_inline = is_svg || document::can_contain(&context, "#PCDATA");
+    if is_svg && node_tags.iter().any(|tag| arena::with(*tag, |tag_str| 
+      tag_str.starts_with("ltx:"))) {
+      context     = document.wrap_nodes("svg:foreignObject", vec![container.clone()])?
+        .expect("foreign object wrap should always succeed in SVG");
+      context_tag = document::get_node_qname(&context);
     }
-    if !inline.is_empty() {
-      if let Some(wrapped) = document.wrap_nodes("ltx:p", inline)? {
-        newnodes.push(wrapped);
-      }
+    let candidates = if is_inline {
+      ["ltx:inline-block","ltx:inline-logical-block","ltx:inline-sectional-block"]
+        .map(arena::pin_static).to_vec()
     } else {
-      newnodes.push(nodes.pop_front().unwrap());
-    }
-  }
-
-  // If we've inserted a wrapper element, close all open elements up to it's parent
-  // It may have auto-opened some element to contain it, but leave that open for following material
-  // Otherwise, close everything back up to the originally open element (but only if still open!)
-  if let Some(ref blocknode) = newblock {
-    let block_parent = blocknode.get_parent();
-    document.close_to_node(block_parent.as_ref().unwrap(), true)?;
-  } else {
-    document.close_to_node(&context, true)?;
-  }
-  // Check if the ltx:inline-block container is really needed.
-  if let Some(mut blocknode) = newblock {
-    let mut rows = blocknode.get_child_nodes();
-    let mut crows = match rows.first() {
-      None => VecDeque::new(),
-      Some(n) => VecDeque::from(n.get_child_nodes()),
+      ["ltx:block","ltx:logical-block", "ltx:sectional-block", "ltx:figure"]
+        .map(arena::pin_static).to_vec()
     };
-    if rows.is_empty() {
-      // Insertion came up empty?
-      document.remove_node(&mut blocknode); // then remove the new block entirely
-    } else if rows.len() == 1
-      && crows.len() == 1
-      && model::with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
-      && document::node_can_contain_sym(
-        &blocknode.get_parent().unwrap(),
-        model::get_node_qname(&crows[0]),
-          )
-    // TODO: && (!hasattr || blockattr.keys().any(...
-    {
-      // Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
-      let mut cfirst = crows.pop_front().unwrap();
-      for (key, val) in blockattr {
-        document.set_attribute(&mut cfirst, &key, &val)?;
-      }
-      document.unwrap_nodes(rows.remove(0))?;
-      document.unwrap_nodes(blocknode)?;
-    } else if rows.len() == 1
-      && document::node_can_contain_sym(
-        &blocknode.get_parent().unwrap(),
-        model::get_node_qname(&rows[0]),
-          )
-    // if allowed.
-    // TODO: && (!hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr)))
-    {
-      let mut first = rows.remove(0);
-      for (key, val) in blockattr {
-        document.set_attribute(&mut first, &key, &val)?;
-      }
-      document.unwrap_nodes(blocknode)?;
+    let filtered_candidates = candidates.into_iter().filter(|candidate|
+      node_tags.iter().all(|tag| document::sym_can_contain_somehow(*candidate, *tag).is_some())).collect::<Vec<_>>();
+      // and are allowed in the context
+    let allowed_candidates = filtered_candidates.iter()
+      .filter(|candidate| document::can_contain_qsym(context_tag, **candidate))
+      .copied()
+      .collect::<Vec<_>>();
+    if let Some(final_tag) = allowed_candidates.first().map_or(filtered_candidates.first(), Some) {
+      // Rename the capture to the correct container
+      handler = Some(InsertBlockHandler::RenameWithFiller);
+      arena::with(*final_tag, |tag_str| 
+        document.rename_node(&mut container, tag_str, true))?;
+    } else {  // // we didn't know what to do?
+      handler = Some(InsertBlockHandler::Fallback);
+      let message = arena::with(context_tag, |ctxt_str| 
+        s!("Did not find a block-like candidate in {} (with attributes ({})", ctxt_str, block_attr.iter()
+        .map(|(k,v)| s!("{k}={v}")).collect::<Vec<_>>().join(";")));
+      Warn!("malformed", "_CaptureBlock_", message);
+      document.rename_node(&mut container, "ltx:block", true)?;
     }
   }
-  // And return the list of "rows" in the box (in case they need attributes....)
-  Ok(newnodes)
+  dbg!(handler);
+  Ok(nodes)
 }
 
 pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
@@ -550,7 +534,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
       .is_empty()
   {
     // Replace XMText by XMWrap/*  (this should preserve the parse?)
-    document.rename_node(&mut text_node, "ltx:XMWrap")?; // text_node =
+    document.rename_node(&mut text_node, "ltx:XMWrap", false)?; // text_node =
     let first_child = children.pop().unwrap();
     let first_granchildren = first_child.get_child_nodes();
     document.replace_node(

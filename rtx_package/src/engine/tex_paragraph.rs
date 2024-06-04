@@ -38,7 +38,7 @@ LoadDefinitions!({
       let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
-      } else if document::sym_can_contain_somehow(tag,para_tag) {
+      } else if document::sym_can_contain_somehow(tag,para_tag).is_some() {
         // Used in a position where a paragraph can be started, start
         document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None)?;
       }
@@ -51,7 +51,7 @@ LoadDefinitions!({
       let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_noindent")?;
-      } else if document::sym_can_contain_somehow(tag, para_tag ) {
+      } else if document::sym_can_contain_somehow(tag, para_tag ).is_some() {
         // Used in a position where a paragraph can be started, start
         document.open_element("ltx:para", Some(string_map!("class"=>"ltx_noindent")), None)?;
       }

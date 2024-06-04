@@ -725,7 +725,7 @@ impl Document {
     let test_sym = arena::pin(test_qname);
     while let Some(node) = node_opt {
       let node_qname = get_node_qname(&node);
-      if sym_can_contain_somehow(node_qname, test_sym) {
+      if sym_can_contain_somehow(node_qname, test_sym).is_some() {
         return true;
       } else if !can_auto_close(&node) {
         return false; // could close, then check if parent can contain
@@ -1727,7 +1727,7 @@ impl Document {
           None => *EMPTY_SYM,
           Some(ref p) => get_node_qname(p),
         };
-        if sym_can_contain_somehow(parent_name, qsym) {
+        if sym_can_contain_somehow(parent_name, qsym).is_some() {
           close_to = Some(node);
           break;
         }
@@ -2830,13 +2830,13 @@ impl Document {
 
   // initially since $node->setNodeName was broken in XML::LibXML 1.58
   // but this can provide for more options & correctness?
-  pub fn rename_node(&mut self, _node: &mut Node, _newname: &str) -> Result<Node> {
+  pub fn rename_node(&mut self, _node: &mut Node, _newname: &str, _reinsert: bool) -> Result<Node> {
     todo!();
-    // my ($self, $node, $newname) = @_;
+    // my ($self, $node, $newname, $reinsert) = @_;
     // my $model = $$self{model};
     // my ($ns, $tag) = $model->decodeQName($newname);
     // my $parent = $node->parentNode;
-    // my $new = $self->openElement_internal($parent, $ns, $tag);
+    // my $new    = openElement_internal($self, $parent, $ns, $tag);
     // my $id;
     // # Move to the position AFTER $node
     // $parent->insertAfter($new, $node);
@@ -2845,20 +2845,32 @@ impl Document {
     //   my $key   = $attr->getName;
     //   my $value = $node->getAttribute($key);
     //   $id = $value if $key eq 'xml:id';    # Save to register after removal of old node.
-    //   $new->setAttribute($key, $value); }
+    //   $new->setAttribute($key, $value) if $model->canHaveAttribute($newname, $key); }
     // # AND move all content from $node to $newnode
-    // foreach my $child ($node->childNodes) {
-    //   $new->appendChild($child); }
+    // if (!$reinsert) {
+    //   foreach my $child ($node->childNodes) {
+    //     $new->appendChild($child); } }
+    // else {
+    //   my $savenode = $$self{node};
+    //   $$self{node} = $new;
+    //   foreach my $child ($node->childNodes) {
+    //     if ($child->nodeType == XML_TEXT_NODE) {
+    //       openText_internal($self, $child->data);
+    //       closeText_internal($self); }
+    //     else {
+    //       my $point = find_insertion_point($self, getNodeQName($self, $child));
+    //       $point->appendChild($child); } }
+    //   $$self{node} = $savenode; }
     // ## THEN call afterOpen... ?
     // # It would normally be called before children added,
     // # but how can we know if we're duplicated auto-added stuff?
-    // $self->afterOpen($new);
-    // $self->afterClose($new);
+    // afterOpen($self, $new);
+    // afterClose($self, $new);
     // # Finally, remove the old node
-    // $self->removeNode($node);
+    // removeNode($self, $node);
     // # and FINALLY, we can register the new node under the id.
     // if ($id) {
-    //   my $newid = $self->recordID($id, $new);
+    //   my $newid = recordID($self, $id, $new);
     //   $new->setAttribute('xml:id' => $newid) if $newid ne $id; }
     // return $new; }
   }
@@ -2953,7 +2965,7 @@ impl Document {
         //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
         return Ok(Some(savenode));
       }
-    } else if !can_contain_node_somehow(&self.node, qname) {
+    } else if can_contain_node_somehow(&self.node, qname).is_some() {
         Warn!("malformed", qname, s!("No open node can contain element '{}'", qname));
         // self.get_insertion_context())
     }
@@ -3259,6 +3271,12 @@ pub fn can_contain(node: &Node, child: &str) -> bool {
   model::can_contain_sym(tag, arena::pin(child))
 }
 
+pub fn can_contain_node(node: &Node, child: &Node) -> bool {
+  let tag = model::get_node_qname(node);
+  let child_tag = model::get_node_qname(child);
+  model::can_contain_sym(tag, child_tag)
+}
+
 pub fn can_contain_qname(tag: &str, child: &str) -> bool {
   model::can_contain(tag, child)
 }
@@ -3289,7 +3307,7 @@ pub fn can_contain_indirect(
   state::get_indirect_model_relationship(tag,childtag)
 }
 
-pub fn can_contain_node_somehow(node: &Node, child: &str) -> bool {
+pub fn can_contain_node_somehow(node: &Node, child: &str) -> Option<Option<SymbolU32>> {
   let child_sym = arena::pin(child);
   sym_can_contain_somehow(model::get_node_qname(node), child_sym)
 }
@@ -3297,15 +3315,26 @@ pub fn can_contain_node_somehow(node: &Node, child: &str) -> bool {
 pub fn can_contain_somehow(tag: &str, child: &str) -> bool {
   let tag_sym = arena::pin(tag);
   let child_sym = arena::pin(child);
-  sym_can_contain_somehow(tag_sym, child_sym)
+  sym_can_contain_somehow(tag_sym, child_sym).is_some()
 }
 
+/// The return type of this method is somewhat artisinal, as we have a three-way semantics:
+/// - `None`: There is no known structure that allows `child` as a descendant of `tag`
+/// - `Some(None)`: `child` is directly allowed inside `tag`
+/// - `Some(Some(inter_tag))`: `child` is allowed inside `inter_tag`, which is allowed in `tag`
+/// 
+/// This could also (maybe more naturally?) be represented with a custom 3-valued enum.
+/// That said, I think it may be wiser to refactor the method entirely, always requiring a `bool`
+/// check, followed by an explicit request for the `inner_tag` name, which can be `Option<SymbolU32>`.
 pub fn sym_can_contain_somehow(
   tag: SymbolU32,
   child: SymbolU32,
-) -> bool {
-  model::can_contain_sym(tag, child)
-    || can_contain_indirect(tag, child).is_some()
+) -> Option<Option<SymbolU32>> {
+  match model::can_contain_sym(tag, child) {
+    true => Some(None),
+    false => can_contain_indirect(tag, child)
+      .map(Some)
+  }
 }
 
 pub fn can_node_have_attribute(node: &Node, attrib: &str) -> bool {
