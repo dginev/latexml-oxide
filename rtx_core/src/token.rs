@@ -3,9 +3,8 @@ use std::fmt::Display;
 use std::rc::Rc;
 use std::borrow::Cow;
 use once_cell::sync::Lazy;
-use string_interner::symbol::SymbolU32;
 
-use crate::common::arena;
+use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -259,7 +258,7 @@ impl Catcode {
 #[derive(Copy, Clone)]
 pub struct Token {
   /// an arena id the character content for this token
-  pub text: SymbolU32,
+  pub text: SymStr,
   /// a TeX catcode
   pub code: Catcode,
 }
@@ -611,7 +610,7 @@ impl Token {
 
   /// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
-  pub fn get_cs_name(&self) -> SymbolU32 {
+  pub fn get_cs_name(&self) -> SymStr {
     if self.code.is_primitive() {
       arena::pin_static(self.code.name())
     } else {
@@ -632,7 +631,7 @@ impl Token {
   }
 
   /// artificial, but avoids the data race
-  pub fn pin_cs_name(&self) -> SymbolU32 {
+  pub fn pin_cs_name(&self) -> SymStr {
     if self.code.is_primitive() {
       arena::pin_static(self.code.name())
     } else {
@@ -673,7 +672,7 @@ impl Token {
   }
 
   /// Use the ticket representing the interned "text" of the token
-  pub fn get_sym(&self) -> SymbolU32 { self.text }
+  pub fn get_sym(&self) -> SymStr { self.text }
   /// Use the interned &str "text" of the token
   /// use `to_string` instead for an owned String with simpler
   pub fn with_str<R, FnR>(&self, caller: FnR) -> R

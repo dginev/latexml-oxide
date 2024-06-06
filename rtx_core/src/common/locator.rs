@@ -1,9 +1,8 @@
 use crate::common::object::Object;
-use crate::common::arena;
+use crate::common::arena::{self, SymStr};
 use crate::util::pathname;
 use std::fmt;
 use std::fmt::Write as _;
-use string_interner::symbol::SymbolU32;
 
 // TODO: This will require a large refactor, but
 // switching the source from an owned String to a &str reference
@@ -17,7 +16,7 @@ use string_interner::symbol::SymbolU32;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Locator {
-  pub source: SymbolU32,
+  pub source: SymStr,
   pub from_line: u32,
   pub to_line: u32,
   pub from_column: u32,
@@ -118,7 +117,7 @@ impl Locator {
       }
     })
   }
-  pub fn get_source(&self) -> SymbolU32 { self.source }
+  pub fn get_source(&self) -> SymStr { self.source }
 
   pub fn get_from_locator(&self) -> Locator {
     Locator {

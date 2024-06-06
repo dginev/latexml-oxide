@@ -5,15 +5,12 @@ use std::num::{ParseFloatError, ParseIntError};
 use std::result;
 use std::cell::RefCell;
 use once_cell::sync::Lazy;
-use crate::common::arena::{self,EMPTY_SYM};
-
-use rustc_hash::FxHashMap as HashMap;
-use string_interner::symbol::SymbolU32;
+use crate::common::arena::SymHashMap;
 
 #[derive(Debug,Clone,Default)]
 pub struct LogState {
-  pub undefined: HashMap<SymbolU32,usize>,
-  pub missing: HashMap<SymbolU32,usize>,
+  pub undefined: SymHashMap<usize>,
+  pub missing: SymHashMap<usize>,
   pub debug: usize,
   pub info: usize,
   pub warning: usize,
@@ -53,12 +50,12 @@ pub fn note_status(status: LogStatus, what:Option<&str>) {
     Fatal => {report.fatal = true},
     Undefined => {
       let entry = report.undefined.entry(
-        what.map(arena::pin).unwrap_or(*EMPTY_SYM)).or_insert(0);
+        what.unwrap_or_default()).or_insert(0);
       *entry +=1;
     },
     Missing => {
       let entry = report.missing.entry(
-        what.map(arena::pin).unwrap_or(*EMPTY_SYM)).or_insert(0);
+        what.unwrap_or_default()).or_insert(0);
       *entry +=1;
     },
   }

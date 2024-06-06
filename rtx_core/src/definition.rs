@@ -8,7 +8,6 @@ pub mod primitive;
 pub mod register;
 
 use libxml::tree::Node;
-use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
@@ -18,8 +17,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::arena;
-use crate::common::arena::SymHashMap;
+use crate::common::arena::{self,SymHashMap,SymStr};
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};
@@ -110,7 +108,7 @@ impl PartialEq for ExpansionBody {
 #[derive(Clone)]
 pub enum PrimitiveBody {
   Closure(PrimitiveClosure),
-  String(SymbolU32)
+  String(SymStr)
 }
 impl From<char> for PrimitiveBody {
   fn from(c: char) -> Self {

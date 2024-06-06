@@ -1,5 +1,5 @@
 use crate::binding::content::{load_font_map, preload_font_map};
-use crate::common::arena::{self, EMPTY_SYM, SymHashMap};
+use crate::common::arena::{self, EMPTY_SYM, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::state::*;
@@ -18,7 +18,6 @@ use std::cmp::max;
 use std::fmt;
 use std::rc::Rc;
 use std::hash::{BuildHasher, Hash, Hasher};
-use string_interner::symbol::SymbolU32;
 
 mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
@@ -1144,10 +1143,10 @@ pub fn decode(
 }
 
 pub fn decode_string(
-  string: SymbolU32,
+  string: SymStr,
   encoding_opt: Option<&str>,
   implicit: bool,
-  ) -> SymbolU32 {
+  ) -> SymStr {
   let empty_sym = *EMPTY_SYM;
   if string == empty_sym {
     return empty_sym;

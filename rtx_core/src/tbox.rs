@@ -2,10 +2,9 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
-use string_interner::symbol::SymbolU32;
 
 use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, EMPTY_SYM, MATH_SYM, TEXT_SYM};
+use crate::common::arena::{self, SymStr, EMPTY_SYM, MATH_SYM, TEXT_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -23,7 +22,7 @@ use crate::{BoxOps, Digested};
 #[derive(Debug, Clone)]
 pub struct Tbox {
   /// plain-text content
-  pub text: SymbolU32,
+  pub text: SymStr,
   /// associated font for `text`
   pub font: Rc<Font>,
   /// source location where the box originated
@@ -70,7 +69,7 @@ impl Tbox {
   /// be empty, which contributes nothing to the generated document,
   /// but does record the TeX code (in the tokens).
   pub fn new(
-    text: SymbolU32,
+    text: SymStr,
     font_opt: Option<Rc<Font>>,
     locator_opt: Option<Locator>,
     tokens_opt: Tokens,

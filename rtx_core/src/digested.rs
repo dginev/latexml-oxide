@@ -4,11 +4,10 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
-use string_interner::symbol::SymbolU32;
 
 use crate::alignment::Alignment;
 use crate::comment::Comment;
-use crate::common::arena;
+use crate::common::arena::{self, SymStr};
 use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -159,12 +158,12 @@ impl From<String> for Digested {
     )))))
   }
 }
-impl From<SymbolU32> for Digested {
-  fn from(sym: SymbolU32) -> Digested {
-    let allocated = arena::to_string(sym);
-    Digested(Rc::new(DigestedData::Postponed(Tokens::new(ExplodeText!(
+impl From<SymStr> for Digested {
+  fn from(sym: SymStr) -> Digested {
+    let tks = arena::with(sym, |allocated| ExplodeText!(
       allocated
-    )))))
+    ));
+    Digested(Rc::new(DigestedData::Postponed(Tokens::new(tks))))
   }
 }
 

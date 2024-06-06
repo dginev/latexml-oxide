@@ -5,9 +5,8 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use string_interner::symbol::SymbolU32;
 
-use crate::common::arena::{self, ANY_SYM};
+use crate::common::arena::{self, ANY_SYM, SymStr};
 use crate::common::error::*;
 use crate::common::relaxng::Relaxng;
 use crate::common::xml::XML_NS;
@@ -16,14 +15,13 @@ use crate::util::pathname;
 use libxml::tree::Node;
 
 use super::arena::{
-  DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM,
-  RELAXNG_SYM, WILD_CARD_SYM,
+  SymHashMap, DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM, RELAXNG_SYM, WILD_CARD_SYM
 };
 
 // use common::font::*;
 
 pub const LTX_NAMESPACE: &str = "http://dlmf.nist.gov/LaTeXML";
-pub type IndirectModel = HashMap<SymbolU32, HashMap<SymbolU32, SymbolU32>>;
+pub type IndirectModel = SymHashMap<SymHashMap<SymStr>>;
 
 static PREFIXED_LOCALNAME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
 static TAG_MODEL_LINE_RE: Lazy<Regex> =
@@ -33,8 +31,8 @@ static NAMESPACE_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)
 
 #[derive(Default, Debug)]
 pub struct TagFrame {
-  model: HashSet<SymbolU32>,
-  attributes: HashSet<SymbolU32>,
+  model: HashSet<SymStr>,
+  attributes: HashSet<SymStr>,
 }
 
 static DEFAULT_TAG_FRAME: Lazy<TagFrame> = Lazy::new(TagFrame::default);
@@ -42,19 +40,19 @@ static DEFAULT_TAG_FRAME: Lazy<TagFrame> = Lazy::new(TagFrame::default);
 #[derive(Default, Debug)]
 pub struct Model {
   pub schema: Option<Relaxng>,
-  pub schema_data: Option<Vec<SymbolU32>>,
-  pub schema_class: HashMap<SymbolU32, HashSet<SymbolU32>>,
-  pub code_namespace_prefixes: HashMap<SymbolU32, SymbolU32>,
-  pub code_namespaces: HashMap<SymbolU32, SymbolU32>,
-  pub document_namespace_prefixes: HashMap<SymbolU32, SymbolU32>,
-  pub document_namespaces: HashMap<SymbolU32, SymbolU32>,
-  // doctype_namespaces: HashMap<SymbolU32, SymbolU32>,
+  pub schema_data: Option<Vec<SymStr>>,
+  pub schema_class: HashMap<SymStr, HashSet<SymStr>>,
+  pub code_namespace_prefixes: HashMap<SymStr, SymStr>,
+  pub code_namespaces: HashMap<SymStr, SymStr>,
+  pub document_namespace_prefixes: HashMap<SymStr, SymStr>,
+  pub document_namespaces: HashMap<SymStr, SymStr>,
+  // doctype_namespaces: HashMap<SymStr, SymStr>,
   // namespace_errors: usize,
   pub permissive: bool,
   pub no_compiled: bool,
   pub debug_mode: bool,
   pub namespace_errors: u8,
-  pub tagprop: HashMap<SymbolU32, TagFrame>,
+  pub tagprop: HashMap<SymStr, TagFrame>,
 }
 
 #[thread_local]
@@ -99,8 +97,8 @@ impl Model {
   }
   pub fn register_namespace_sym(
     &mut self,
-    codeprefix: SymbolU32,
-    namespace_opt: Option<SymbolU32>,
+    codeprefix: SymStr,
+    namespace_opt: Option<SymStr>,
   ) {
     // double-check empty strings are None
     let namespace_opt_checked = namespace_opt.filter(|val| *val != *EMPTY_SYM);
@@ -221,7 +219,7 @@ impl Model {
     }
   }
 
-  pub fn set_schema_class(&mut self, classname: &str, content: HashSet<SymbolU32>) {
+  pub fn set_schema_class(&mut self, classname: &str, content: HashSet<SymStr>) {
     self.schema_class.insert(arena::pin(classname), content);
   }
   pub fn describe_model(&self) {}
@@ -367,7 +365,7 @@ pub fn get_document_namespace_prefix(
   namespace: &str,
   forattribute: bool,
   probe: bool,
-) -> Option<SymbolU32> {
+) -> Option<SymStr> {
   // Get the prefix associated with the namespace url, noting that for elements, it might by
   // "#default", but for attributes would never be.
   // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
@@ -453,8 +451,8 @@ pub fn get_namespace_prefix(
   namespace: &str,
   _forattribute: bool,
   probe: bool,
-) -> Option<SymbolU32> {
-  let mut codeprefix: Option<SymbolU32> = None;
+) -> Option<SymStr> {
+  let mut codeprefix: Option<SymStr> = None;
   let ns_sym = arena::pin(namespace);
   let mut model = model_mut!();
   if !namespace.is_empty() {
@@ -483,9 +481,9 @@ pub fn get_namespace_prefix(
   codeprefix
 }
 
-pub fn get_namespace(codeprefix: &str, probe: bool) -> Result<Option<SymbolU32>> {
+pub fn get_namespace(codeprefix: &str, probe: bool) -> Result<Option<SymStr>> {
   let mut model = model_mut!();
-  let mut ns: Option<SymbolU32> = model.code_namespaces.get(&arena::pin(codeprefix)).copied();
+  let mut ns: Option<SymStr> = model.code_namespaces.get(&arena::pin(codeprefix)).copied();
   if ns.is_none() && !probe {
     model.namespace_errors += 1;
     let example_namespace = s!(
@@ -507,7 +505,7 @@ pub fn get_namespace(codeprefix: &str, probe: bool) -> Result<Option<SymbolU32>>
 /// Get the node's qualified name in standard form
 /// Ie. using the registered (code) prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
-pub fn get_node_qname(node: &Node) -> SymbolU32 {
+pub fn get_node_qname(node: &Node) -> SymStr {
   use libxml::tree::NodeType::*;
   let node_type = node.get_type();
   if node_type.is_none() {
@@ -558,7 +556,7 @@ where FnR: FnOnce(&str) -> R {
 }
 
 /// Same as get_node_qname, but using the Document namespace prefixes
-pub fn get_node_document_qname(node: &Node) -> SymbolU32 {
+pub fn get_node_document_qname(node: &Node) -> SymStr {
   use libxml::tree::NodeType::*;
   let node_type = node.get_type();
   if node_type.is_none() {
@@ -626,6 +624,13 @@ pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
   }
 }
 
+/// TODO: We need a proper data model to deal with the Symbol - String distinction.
+/// For now let's allocate strings and release the arena, but this is a CODE SMELL!
+pub fn decode_qname_sym(sym: SymStr) -> Result<(Option<String>, String)> {
+  let codetag = arena::to_string(sym);
+  decode_qname(&codetag)
+}
+
 //**********************************************************************
 // Document Structure Queries
 //**********************************************************************
@@ -637,7 +642,7 @@ pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
 /// strings with the inerned arena.
 /// `can_contain` and `can_contain_sym` should be implemented once, and one should be an 
 /// interning-only helper.
-pub fn can_contain_sym(tag: SymbolU32, child: SymbolU32) -> bool {
+pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
   // Handle obvious cases explicitly.
   if tag == *H_PCDATA_SYM
     || tag == *H_COMMENT_SYM
@@ -712,7 +717,7 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
   model.contains(&ANY_SYM) || model.contains(&arena::pin(child))
 }
 
-pub fn can_have_attribute(tag: SymbolU32, attrib: SymbolU32) -> bool {
+pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
   // Handle obvious cases explicitly.
   if let Some(early_choice) = arena::with(tag, |tag_str| match tag_str {
     "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => Some(false),
@@ -740,7 +745,7 @@ pub fn is_node_in_schema_class(class_name: &str, tag: &Node) -> bool {
   let tag = get_node_qname(tag);
   is_in_schema_class(&arena::pin(class_name), &tag)
 }
-pub fn is_in_schema_class(class_name: &SymbolU32, tag: &SymbolU32) -> bool {
+pub fn is_in_schema_class(class_name: &SymStr, tag: &SymStr) -> bool {
   if let Some(class) = model!().schema_class.get(class_name) {
     class.contains(tag)
   } else {
@@ -752,9 +757,9 @@ pub fn is_in_schema_class(class_name: &SymbolU32, tag: &SymbolU32) -> bool {
 // Accessors
 //**********************************************************************
 
-pub fn get_tags() -> Vec<SymbolU32> { model!().tagprop.keys().copied().collect() }
+pub fn get_tags() -> Vec<SymStr> { model!().tagprop.keys().copied().collect() }
 
-pub fn get_tag_contents(tag: &SymbolU32) -> Vec<SymbolU32> {
+pub fn get_tag_contents(tag: &SymStr) -> Vec<SymStr> {
   match model!().tagprop.get(tag) {
     Some(h) => h.model.iter().copied().collect(),
     None => Vec::new(),
@@ -769,14 +774,14 @@ pub fn is_permissive() -> bool {
 }
 
 pub fn with_schema_data<FnR,R>(caller: FnR) -> R
-where FnR: FnOnce(Option<&Vec<SymbolU32>>) -> R {
+where FnR: FnOnce(Option<&Vec<SymStr>>) -> R {
   caller(model!().schema_data.as_ref())
 }
 pub fn set_schema(schema: Relaxng) {
   let mut model = model_mut!();
   model.schema = Some(schema);
 }
-pub fn set_schema_class(classname: &str, content: HashSet<SymbolU32>) {
+pub fn set_schema_class(classname: &str, content: HashSet<SymStr>) {
   model_mut!().set_schema_class(classname, content)
 }
 pub fn add_tag_content(tag: &str, elements: Vec<&str>) {
@@ -787,11 +792,11 @@ pub fn add_tag_attribute(tag: &str, attributes: Vec<&str>) {
 }
 
 pub(crate) fn compute_indirect_model_aux(
-  tag: SymbolU32,
-  start_opt: Option<SymbolU32>,
+  tag: SymStr,
+  start_opt: Option<SymStr>,
   desirability: usize,
-  openable: &mut HashSet<SymbolU32>,
-  desc: &mut HashMap<SymbolU32, HashMap<SymbolU32, usize>>,
+  openable: &mut HashSet<SymStr>,
+  desc: &mut SymHashMap<SymHashMap<usize>>,
 ) {
   let start = match start_opt {
     Some(s) => s,
@@ -801,22 +806,22 @@ pub(crate) fn compute_indirect_model_aux(
   // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
   // move ownership of the tag strings into the tag_contents vector.
   // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-  let tag_contents: Vec<SymbolU32> = get_tag_contents(&tag);
+  let tag_contents: Vec<SymStr> = get_tag_contents(&tag);
 
   for kid in tag_contents {
     if desc
-      .entry(kid)
+      .entry_sym(kid)
       .or_default()
-      .contains_key(&start)
+      .contains_key_sym(&start)
     {
       continue;
     } // Already solved
 
     if start != *EMPTY_SYM {
       desc
-        .entry(kid)
+        .entry_sym(kid)
         .or_default()
-        .insert(start, desirability);
+        .insert_sym(start, desirability);
     }
 
     if kid != *H_PCDATA_SYM && openable.contains(&kid) {
@@ -838,6 +843,6 @@ pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
 }
 
 pub fn with_code_namespaces<FnR,R>(caller: FnR) -> R
-where FnR: FnOnce(&HashMap<SymbolU32, SymbolU32>) -> R {
+where FnR: FnOnce(&HashMap<SymStr, SymStr>) -> R {
   caller(&model!().code_namespaces)
 }

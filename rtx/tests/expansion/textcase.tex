@@ -25,12 +25,13 @@ Text \cite{bbb} and \cite{ccc}}}
 \MakeTextUppercase{%
 Text \NoCaseChange{More Text} yet more text}
 
-% \subsection{NoCaseChange and tabular}
-% \MakeTextUppercase{%
-% Text \NoCaseChange{\begin{tabular}{ll}}%
-% table&stuff\\goes&here
-% \NoCaseChange{\end{tabular}}
-% More text}
+\subsection{NoCaseChange and tabular}
+
+\MakeTextUppercase{%
+Text \NoCaseChange{\begin{tabular}{ll}}%
+table&stuff\\goes&here
+\NoCaseChange{\end{tabular}}
+More text}
 
 \subsection{Nested brace groups}
 

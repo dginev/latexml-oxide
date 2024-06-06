@@ -6,31 +6,24 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   DefEnvironment!("{center}", sub[document, _args, props] {
-    document.maybe_close_element("ltx:p")?;
-    // this starts a new vertical block
+    document.maybe_close_element("ltx:p")?; // this starts a new vertical block
+    // aligning will take care of \\\\ "rows"
     aligning_environment("center", "ltx_centering", document, props)?;
     Ok(())
-  },   // aligning will take care of \\\\ "rows"
-  before_digest => {
-    Let!("\\par", "\\lx@normal@par");
-    Let!("\\\\", "\\lx@normal@par");
   });
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
   DefMacro!("\\endcenter", None);
-
-  // DefEnvironment('{flushleft}', sub {
-  //     $_[0]->maybeCloseElement('ltx:p');    # this starts a new vertical block
-  //     aligningEnvironment('left', 'ltx_align_left', @_); },
-  //   beforeDigest => sub {
-  //     Let('\par', '\lx@normal@par');
-  //     Let('\\\\', '\lx@normal@par'); });
-  // DefEnvironment('{flushright}', sub {
-  //     $_[0]->maybeCloseElement('ltx:p');    # this starts a new vertical block
-  //     aligningEnvironment('right', 'ltx_align_right', @_); },
-  //   beforeDigest => sub {
-  //     Let('\par', '\lx@normal@par');
-  //     Let('\\\\', '\lx@normal@par'); });
+  DefEnvironment!("{flushleft}", sub[document, _args, props] {
+    document.maybe_close_element("ltx:p")?; // this starts a new vertical block
+    aligning_environment("center", "ltx_align_left", document, props)?;
+    Ok(())
+  });
+  DefEnvironment!("{flushright}", sub[document, _args, props] {
+    document.maybe_close_element("ltx:p")?; // this starts a new vertical block
+    aligning_environment("center", "ltx_align_right", document, props)?;
+    Ok(())
+  });
 
   // # These add an operation to be carried out on the current node & following siblings, when the
   // current group ends. # These operators will add alignment (class) attributes to each "line" in

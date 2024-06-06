@@ -1,9 +1,12 @@
+use rustc_hash::FxHashMap as HashMap;
 use std::fmt;
+use std::ops::Index;
 use std::iter::IntoIterator;
 use std::collections::hash_map::{Keys,Iter,IterMut,IntoIter, Entry};
 
 use string_interner::symbol::SymbolU32;
-use rustc_hash::FxHashMap as HashMap;
+use string_interner::Symbol;
+use std::any::type_name;
 
 use crate::common::arena;
 
@@ -16,8 +19,14 @@ pub type SymStr = SymbolU32;
 /// typically used for `HashMap<String,Stored>` states.
 /// The goal is to support both a string interface, as well as the interned tickets interface,
 /// while avoiding String allocations internally.
-#[derive(Clone,Default)]
+#[derive(Clone)]
 pub struct SymHashMap<T>(pub HashMap<SymStr, T>);
+
+impl<T> Default for SymHashMap<T> {
+  fn default() -> Self {
+    SymHashMap(HashMap::default())
+  }
+}
 
 impl<T> SymHashMap<T> {
   #[inline]
@@ -127,8 +136,35 @@ impl<T:fmt::Debug> fmt::Debug for SymHashMap<T> {
       arena::with(*k,|key|
         write!(f, "{key}")
       )?;
-      write!(f,": {:?}",v)?;
+      // very temporary hack to get the full trace
+      if type_name::<T>() == "string_interner::symbol::SymbolU32" {
+        let symstr = format!("{:?}",v);
+        // "SymbolU32 { value: 28104 }"
+        let mut symiter = symstr.split(' ');
+        symiter.next(); symiter.next(); symiter.next(); 
+        let sym_v_str = symiter.next().unwrap();
+        let sym_val = sym_v_str.parse::<usize>().unwrap();
+        let sym = Symbol::try_from_usize(sym_val-1).unwrap();
+        let vstr = arena::to_string(sym);
+        write!(f,": {vstr}")?;
+      } else {
+        write!(f,": [{:?}]",v)?;
+      }
+      // write!(f,": {:?}",v)?;
     }
     write!(f,"]")
   }
+}
+
+impl<T> Index<&SymStr> for SymHashMap<T> {
+    type Output = T;
+    /// Returns a reference to the value corresponding to the supplied key.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the key is not present in the `HashMap`.
+    #[inline]
+    fn index(&self, key: &SymStr) -> &T {
+      &self.0[key]
+    }
 }

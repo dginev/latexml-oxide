@@ -10,7 +10,6 @@ pub use std::collections::VecDeque;
 pub use std::rc::Rc;
 pub use std::sync::Arc;
 pub use std::str::FromStr;
-pub use string_interner::symbol::SymbolU32;
 
 pub use rtx_core::alignment::cell::Cell;
 pub use rtx_core::alignment::template::{Align, Template};
