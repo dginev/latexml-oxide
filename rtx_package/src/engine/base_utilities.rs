@@ -261,7 +261,7 @@ LoadDefinitions!({
     let mut tags = Vec::new();
     if let Some(Stored::HashStored(formatters)) =
       lookup_value("type_tag_formatter") {
-      let keys_sym : Vec<SymbolU32> = formatters.keys().copied().collect();
+      let keys_sym : Vec<_> = formatters.keys().copied().collect();
       let mut sorted_keys : Vec<String> = arena::with_many(&keys_sym, |keys| {
         keys.into_iter().map(str::to_owned).collect()
       });
@@ -293,10 +293,10 @@ LoadDefinitions!({
 
   // Remove the last closed node, if it's empty.
   let remove_empty_element: Vec<ConstructionClosure> = construct!(document, _whatsit,{
-    if let Some(mut node) = document.get_node().get_last_child() {
+    if let Some(node) = document.get_node().get_last_child() {
       // This should be the wrapper just added.
       if node.get_child_nodes().is_empty() {
-        document.remove_node(&mut node);
+        document.remove_node(node);
       }
     }
   });

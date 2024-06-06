@@ -165,7 +165,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   } else {
     ("\\end{verbatim}", ' ')
   };
-  let mut lines : Vec<SymbolU32> = Vec::new();
+  let mut lines : Vec<_> = Vec::new();
   while let Some(next_line) = gullet::read_raw_line() {
     let mut line = next_line.as_str();
     let mut exiting = false;

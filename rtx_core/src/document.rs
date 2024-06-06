@@ -10,7 +10,6 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 use rustc_hash::FxHashSet as HashSet;
-use string_interner::symbol::SymbolU32;
 
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -19,7 +18,7 @@ use std::rc::Rc;
 
 use crate::common::arena::{
   self, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, XML_ID_SYM,
-  SymHashMap,
+  SymHashMap,SymStr
 };
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
@@ -85,11 +84,11 @@ pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 pub static MATH_HINT_NAME: &str = "ltx:XMHint";
 
 #[thread_local]
-pub static FONT_ELEMENT_SYM: Lazy<SymbolU32> = Lazy::new(|| arena::pin_static("ltx:text"));
+pub static FONT_ELEMENT_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:text"));
 #[thread_local]
-pub static MATH_TOKEN_SYM: Lazy<SymbolU32> = Lazy::new(|| arena::pin_static("ltx:XMTok"));
+pub static MATH_TOKEN_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:XMTok"));
 #[thread_local]
-pub static MATH_HINT_SYM: Lazy<SymbolU32> = Lazy::new(|| arena::pin_static("ltx:XMHint"));
+pub static MATH_HINT_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:XMHint"));
 
 pub struct Document {
   pub document: XmlDoc,
@@ -267,8 +266,8 @@ impl Document {
       }
     }
 
-    let mut keys_to_remove: Vec<SymbolU32> = Vec::new();
-    let mut attrs_to_set: Vec<(SymbolU32, SymbolU32)> = Vec::new();
+    let mut keys_to_remove: Vec<SymStr> = Vec::new();
+    let mut attrs_to_set: Vec<(SymStr, SymStr)> = Vec::new();
     let mut pending_declaration = HashMap::default();
 
     if self.has_node_font(node) {
@@ -741,7 +740,7 @@ impl Document {
   /// returning the last Some(node) that would be closed if it is possible,
   /// otherwise None
   pub fn is_closeable<T: IntoVDQS>(&self, tags: T) -> Option<Node> {
-    let mut tags: VecDeque<SymbolU32> = tags.into_vdqs();
+    let mut tags: VecDeque<SymStr> = tags.into_vdqs();
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
     } else {
@@ -912,7 +911,7 @@ impl Document {
   /// get the actions that should be performed on afterOpen or afterClose
   pub fn get_tag_action_list(
     &self,
-    tag: SymbolU32,
+    tag: SymStr,
     when: TagOptionName,
   ) -> Vec<TagConstructionClosure> {
     use self::tag::TagOptionName::*;
@@ -1137,7 +1136,7 @@ impl Document {
   }
 
   // Internals
-  fn set_rdfa_prefixes(&mut self, _prefixes: Option<SymbolU32>) {}
+  fn set_rdfa_prefixes(&mut self, _prefixes: Option<SymStr>) {}
 
   pub fn insert_math_token(
     &mut self,
@@ -1388,17 +1387,17 @@ impl Document {
           })
         && !c[0].has_attribute("_force_font")
       {
-        let mut c_first = c.pop().unwrap();
+        let c_first = c.pop().unwrap();
         let c_first_font = self.get_node_font(&c_first).clone();
         self.set_node_font(node, &c_first_font)?;
-        self.remove_node(&mut c_first);
         for mut gc in c_first.get_child_nodes().into_iter() {
           gc.unlink();
           node.add_child(&mut gc)?;
-          // self.record_node_ids(&node); // TODO
+          self.record_node_ids(node)?;
         }
         // Merge the attributes from the child onto $node
-        self.merge_attributes(c_first, node, None)?;
+        self.merge_attributes(&c_first, node, None)?;
+        self.remove_node(c_first);
       }
     }
     Ok(())
@@ -1406,7 +1405,7 @@ impl Document {
 
   pub fn merge_attributes(
     &mut self,
-    from: Node,
+    from: &Node,
     to: &mut Node,
     _force: Option<HashSet<&'static str>>,
   ) -> Result<()> {
@@ -1555,9 +1554,9 @@ impl Document {
       boxes.push_front(self.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(&newstring)?;
       for _idx in 0..nmatched - 1 {
-        let mut remove = node.get_prev_sibling().unwrap();
+        let remove = node.get_prev_sibling().unwrap();
         boxes.push_front(self.get_node_box(&remove).unwrap());
-        self.remove_node(&mut remove);
+        self.remove_node(remove);
       }
       // This fragment replaces the node's box by the composite boxes it replaces
       // HOWEVER, this gets things out of sync because parent lists of boxes still
@@ -1674,15 +1673,23 @@ impl Document {
     Ok(path)
   }
 
-  /// Find the node where an element with qualified name $qname can be inserted.
+  /// Find the node where an element with qualified name `qname` can be inserted.
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
   pub fn find_insertion_point(
     &mut self,
     qname: &str,
-    has_opened_opt: Option<SymbolU32>,
+    has_opened_opt: Option<SymStr>,
   ) -> Result<Node> {
     let qsym = arena::pin(qname);
+    self.find_insertion_point_qsym(qsym, has_opened_opt)
+  }
+
+  pub fn find_insertion_point_qsym(
+    &mut self,
+    qsym: SymStr,
+    has_opened_opt: Option<SymStr>,
+  ) -> Result<Node> {
     self.close_text_internal()?; // Close any current text node.
     let cur_qname = get_node_qname(&self.node);
     // If `qname` is allowed at the current point, we're done.
@@ -1696,13 +1703,12 @@ impl Document {
         let node_font = self.get_node_font(&self.node).clone();
         // TODO: avoid this clone?
         let inter_string = arena::to_string(inter);
-        self.open_element(&inter_string, None, Some(&node_font))?;
-
-        return self.find_insertion_point(qname, Some(inter)); // And retry insertion (should
-                                                                     // work now).
+        self.open_element(&inter_string, Some(string_map!("_autoopened" => "true")),
+         Some(&node_font))?;
+        // And retry insertion (should work now).
+        return self.find_insertion_point_qsym(qsym, Some(inter)); 
       }
-    }
-
+    } 
     if let Some(has_opened) = has_opened_opt {
       // out of options if already inside an auto-open chain
       let message: String = arena::with2(has_opened, cur_qname,|has_opened_str,cur_qname_str|
@@ -1714,7 +1720,7 @@ impl Document {
             self.get_insertion_context(None)?
           ))
       )?;
-      Error!("malformed", qname, message);
+      Error!("malformed", arena::to_string(qsym), message);
       Ok(self.node.clone()) // But we'll do it anyway, unless Error => Fatal.
     } else {
       // Now we're getting more desparate...
@@ -1738,15 +1744,14 @@ impl Document {
       }
       if let Some(close_to_node) = close_to {
         self.close_node_internal(&close_to_node)?; // Close the auto closeable nodes.
-        self.find_insertion_point(qname, None) // Then retry, possibly w/auto open's
+        self.find_insertion_point_qsym(qsym, None) // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
-        let message = arena::with(cur_qname, |cur_qname_str| {
+        let message = arena::with2(cur_qname, qsym, |cur_qname_str, qname| {
           s!("{:?} isn't allowed in <{}>\n{}", qname, cur_qname_str,Backtrace::capture())
         });
         //"Currently in " self.getInsertionContext());
-        Error!("malformed", qname, message);
-        
+        Error!("malformed", arena::to_string(qsym), message);
 
         // But we'll do it anyway, unless Error => Fatal.
         Ok(self.node.clone())
@@ -2174,7 +2179,7 @@ impl Document {
     // RE-mark visibility!
     self.mark_xmnode_visibility()?;
     // will reversing keep from problems removing nodes from trees that already have been removed?
-    for mut dual in self
+    for dual in self
       .findnodes("descendant-or-self::ltx:XMDual", None)
       .into_iter()
       .rev()
@@ -2191,7 +2196,7 @@ impl Document {
         .is_none()
       {
         // content never seen
-        self.collapse_xmdual(&mut dual, presentation)?;
+        self.collapse_xmdual(dual, presentation)?;
       } else if self
         .findnode(
           "descendant-or-self::*[@_pvis or @_cvis]",
@@ -2200,7 +2205,7 @@ impl Document {
         .is_none()
       {
         // pres.
-        self.collapse_xmdual(&mut dual, content)?;
+        self.collapse_xmdual(dual, content)?;
       } else {
         // compact aligned structures, where possible
         self.compact_xmdual(dual, content, Some(presentation))?;
@@ -2271,7 +2276,7 @@ impl Document {
   /// Replace an XMDual with one of its branches
   fn collapse_xmdual(
     &mut self,
-    dual: &mut Node,
+    dual: Node,
     mut branch: Node,
   ) -> Result<()> {
     // The other branch is not visible, nor referenced,
@@ -2415,8 +2420,8 @@ impl Document {
   //   return $$self{node_fonts}{$fontid} || LaTeXML::Common::Font->textDefault(); }
 
   // Remove a node from the document (from it's parent)
-  pub fn remove_node(&mut self, node: &mut Node) {
-    let mut chopped: bool = self.node == *node; // Note if we're removing insertion point
+  pub fn remove_node(&mut self, mut node: Node) {
+    let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
       if let Some(id) = node.get_attribute_ns("id", xml::XML_NS) {
@@ -2426,12 +2431,13 @@ impl Document {
         chopped = chopped || self.remove_node_aux(child);
       }
     }
-    let parent = node.get_parent().unwrap();
-    if chopped {
-      // Don't remove insertion point!
-      self.set_node(&parent);
+    if let Some(parent) = node.get_parent() {
+      if chopped {
+        // Don't remove insertion point!
+        self.set_node(&parent);
+      }
+      node.unlink();
     }
-    node.unlink(); // TODO: How is this different from parent.remove_child(node) ???
   }
 
   fn remove_node_aux(&mut self, node: Node) -> bool {
@@ -2804,13 +2810,15 @@ impl Document {
   }
 
   /// Unwrap the children of $node, by replacing $node by its children.
-  pub fn unwrap_nodes(&mut self, node: Node) -> Result<Node> {
+  pub fn unwrap_nodes(&mut self, node: Node) -> Result<()> {
     let children = node.get_child_nodes();
     self.replace_node(node, children)
   }
 
-  // Replace $node by `nodes` (presumably descendants of some kind?)
-  pub fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<Node> {
+  /// Replace `node` by `nodes` (presumably descendants of some kind?)
+  // DG: Don't return the replaced `node`, as it is groudns for memory management trouble
+  //     with the low-level libxml layer. I've encountered segfaults here.
+  pub fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<()> {
     if let Some(_parent) = node.get_parent() {
       let mut c0_opt: Option<Node> = None;
       for mut with_node in with.into_iter() {
@@ -2823,56 +2831,74 @@ impl Document {
         }
         c0_opt = Some(with_node);
       }
-      self.remove_node(&mut node);
+      self.remove_node(node);
     }
-    Ok(node)
+    Ok(())
   }
 
   // initially since $node->setNodeName was broken in XML::LibXML 1.58
   // but this can provide for more options & correctness?
-  pub fn rename_node(&mut self, _node: &mut Node, _newname: &str, _reinsert: bool) -> Result<Node> {
-    todo!();
-    // my ($self, $node, $newname, $reinsert) = @_;
-    // my $model = $$self{model};
-    // my ($ns, $tag) = $model->decodeQName($newname);
-    // my $parent = $node->parentNode;
-    // my $new    = openElement_internal($self, $parent, $ns, $tag);
-    // my $id;
-    // # Move to the position AFTER $node
-    // $parent->insertAfter($new, $node);
-    // # Copy ALL attributes from $node to $newnode
-    // foreach my $attr ($node->attributes) {
-    //   my $key   = $attr->getName;
-    //   my $value = $node->getAttribute($key);
-    //   $id = $value if $key eq 'xml:id';    # Save to register after removal of old node.
-    //   $new->setAttribute($key, $value) if $model->canHaveAttribute($newname, $key); }
-    // # AND move all content from $node to $newnode
-    // if (!$reinsert) {
-    //   foreach my $child ($node->childNodes) {
-    //     $new->appendChild($child); } }
-    // else {
-    //   my $savenode = $$self{node};
-    //   $$self{node} = $new;
-    //   foreach my $child ($node->childNodes) {
-    //     if ($child->nodeType == XML_TEXT_NODE) {
-    //       openText_internal($self, $child->data);
-    //       closeText_internal($self); }
-    //     else {
-    //       my $point = find_insertion_point($self, getNodeQName($self, $child));
-    //       $point->appendChild($child); } }
-    //   $$self{node} = $savenode; }
-    // ## THEN call afterOpen... ?
-    // # It would normally be called before children added,
-    // # but how can we know if we're duplicated auto-added stuff?
-    // afterOpen($self, $new);
-    // afterClose($self, $new);
-    // # Finally, remove the old node
-    // removeNode($self, $node);
-    // # and FINALLY, we can register the new node under the id.
-    // if ($id) {
-    //   my $newid = recordID($self, $id, $new);
-    //   $new->setAttribute('xml:id' => $newid) if $newid ne $id; }
-    // return $new; }
+  pub fn rename_node(&mut self, node: Node, newname: &str, reinsert: bool) -> Result<Node> {
+    let (ns,tag) = model::decode_qname(newname)?;
+    let newsym = arena::pin(newname);
+    self.rename_node_internal(node, newsym, ns, tag, reinsert)
+  }
+  pub fn rename_node_qsym(&mut self, node: Node, newsym: SymStr, reinsert: bool) -> Result<Node> {
+    let (ns,tag) = model::decode_qname_sym(newsym)?;
+    self.rename_node_internal(node, newsym, ns, tag, reinsert)
+  }
+  fn rename_node_internal(&mut self, mut node: Node, newname: SymStr, ns:Option<String>, tag: String, reinsert: bool) -> Result<Node> {
+    let mut parent = node.get_parent().expect("rename should never be called on an orphan or root node.");
+    let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
+    // Move to the position AFTER node
+    node.add_next_sibling(&mut new)?;
+    // Copy ALL attributes from `node` to `newnode`
+    let mut id = None;
+    for (key,value) in node.get_attributes() {
+      if model::can_have_attribute(newname, arena::pin(&key)) {
+        new.set_attribute(&key, &value)?;
+      }
+      if key == "xml:id" {
+        id = Some(value); // Save to register after removal of old node.
+      }
+    }
+    // AND move all content from `node` to `newnode`
+    if !reinsert {
+      for mut child in node.get_child_nodes() {
+        child.unbind();
+        new.add_child(&mut child)?;
+      }
+    } else {
+      std::mem::swap(&mut self.node, &mut new);
+      for mut child in node.get_child_nodes() {
+        child.unbind();
+        if child.get_type() == Some(NodeType::TextNode) {
+          self.open_text_internal(&child.get_content())?;
+          self.close_text_internal()?; 
+        } else {
+          let mut point = self.find_insertion_point_qsym(get_node_qname(&child), None)?;
+          point.add_child(&mut child)?;
+        } 
+      }
+      std::mem::swap(&mut self.node, &mut new);
+    }
+    // THEN call afterOpen... ?
+    //   It would normally be called before children added,
+    //   but how can we know if we're duplicated auto-added stuff?
+    self.after_open(&mut new)?;
+    self.after_close(&mut new)?;
+    // Finally, remove the old node
+    self.remove_node(node);
+
+    // and FINALLY, we can register the new node under the id.
+    if let Some(id) = id {
+      let newid = self.record_id_with_node(&id, &new);
+      if newid != id {
+        new.set_attribute("xml:id", &newid)?;
+      }
+    }
+
+    Ok(new)
   }
 
   pub fn trim_node_whitespace(&mut self, node: &Node) -> Result<()> {
@@ -3120,12 +3146,12 @@ impl Document {
   pub fn replace_tree(
     &mut self,
     new: Node,
-    old: &mut Node,
+    old: Node,
   ) -> Result<Option<Node>> {
     if let Some(mut parent) = old.get_parent() {
       let mut following = VecDeque::new(); // Collect the matching and following nodes
       while let Some(mut sib) = parent.get_last_child() {
-        if sib == *old {
+        if sib == old {
           break;
         }
         // parent.remove_child(sib); // We're putting these back, in a moment!
@@ -3241,26 +3267,26 @@ fn trim_node_right_whitespace(node: &Node) -> Result<()> {
 }
 
 pub trait IntoVDQS {
-  fn into_vdqs(self) -> VecDeque<SymbolU32>
+  fn into_vdqs(self) -> VecDeque<SymStr>
   where Self: Sized;
 }
-impl IntoVDQS for SymbolU32 {
-  fn into_vdqs(self) -> VecDeque<SymbolU32> {
+impl IntoVDQS for SymStr {
+  fn into_vdqs(self) -> VecDeque<SymStr> {
     let mut vdq = VecDeque::new();
     vdq.push_front(self);
     vdq
   }
 }
 impl IntoVDQS for &str {
-  fn into_vdqs(self) -> VecDeque<SymbolU32> {
+  fn into_vdqs(self) -> VecDeque<SymStr> {
     let mut vdq = VecDeque::new();
     vdq.push_front(arena::pin(self));
     vdq
   }
 }
 
-impl IntoVDQS for VecDeque<SymbolU32> {
-  fn into_vdqs(self) -> VecDeque<SymbolU32> { self }
+impl IntoVDQS for VecDeque<SymStr> {
+  fn into_vdqs(self) -> VecDeque<SymStr> { self }
 }
 
 
@@ -3281,11 +3307,11 @@ pub fn can_contain_qname(tag: &str, child: &str) -> bool {
   model::can_contain(tag, child)
 }
 
-pub fn node_can_contain_sym(node: &Node, child: SymbolU32) -> bool {
+pub fn node_can_contain_sym(node: &Node, child: SymStr) -> bool {
   let tag = model::get_node_qname(node);
   model::can_contain_sym(tag, child)
 }
-pub fn can_contain_qsym(tag: SymbolU32, child: SymbolU32) -> bool {
+pub fn can_contain_qsym(tag: SymStr, child: SymStr) -> bool {
   model::can_contain_sym(tag, child)
 }
 
@@ -3293,9 +3319,9 @@ pub fn can_contain_qsym(tag: SymbolU32, child: SymbolU32) -> bool {
 /// That is, by openning some number of autoOpen'able tags?
 /// And if so, return the tag to open.
 pub fn can_contain_indirect(
-  tag: SymbolU32,
-  childtag: SymbolU32,
-) -> Option<SymbolU32> {
+  tag: SymStr,
+  child: SymStr,
+) -> Option<SymStr> {
   // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
   // node. $child = $model->getNodeQName($child) if ref $child;    // In case
   // child is a node.
@@ -3303,11 +3329,10 @@ pub fn can_contain_indirect(
     let i_model = state::compute_indirect_model();
     state::set_indirect_model(i_model);
   }
-
-  state::get_indirect_model_relationship(tag,childtag)
+  state::get_indirect_model_relationship(tag,child)
 }
 
-pub fn can_contain_node_somehow(node: &Node, child: &str) -> Option<Option<SymbolU32>> {
+pub fn can_contain_node_somehow(node: &Node, child: &str) -> Option<Option<SymStr>> {
   let child_sym = arena::pin(child);
   sym_can_contain_somehow(model::get_node_qname(node), child_sym)
 }
@@ -3325,11 +3350,11 @@ pub fn can_contain_somehow(tag: &str, child: &str) -> bool {
 /// 
 /// This could also (maybe more naturally?) be represented with a custom 3-valued enum.
 /// That said, I think it may be wiser to refactor the method entirely, always requiring a `bool`
-/// check, followed by an explicit request for the `inner_tag` name, which can be `Option<SymbolU32>`.
+/// check, followed by an explicit request for the `inner_tag` name, which can be `Option<SymStr>`.
 pub fn sym_can_contain_somehow(
-  tag: SymbolU32,
-  child: SymbolU32,
-) -> Option<Option<SymbolU32>> {
+  tag: SymStr,
+  child: SymStr,
+) -> Option<Option<SymStr>> {
   match model::can_contain_sym(tag, child) {
     true => Some(None),
     false => can_contain_indirect(tag, child)
@@ -3345,8 +3370,8 @@ pub fn can_have_attribute(tag: &str, attrib: &str) -> bool {
   model::can_have_attribute(arena::pin(tag), arena::pin(attrib))
 }
 pub fn sym_can_have_attribute(
-  tag: SymbolU32,
-  attrib: SymbolU32,
+  tag: SymStr,
+  attrib: SymStr,
 ) -> bool {
   model::can_have_attribute(tag, attrib)
 }
@@ -3387,7 +3412,7 @@ pub fn can_auto_close(node: &Node) -> bool {
 /// Ie. using the registered prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
 /// NOTE: Should Deprecate! (use model)
-pub fn get_node_qname(node: &Node) -> SymbolU32 {
+pub fn get_node_qname(node: &Node) -> SymStr {
   model::get_node_qname(node)
 }
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R

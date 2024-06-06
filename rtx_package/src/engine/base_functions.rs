@@ -310,16 +310,6 @@ where T: Sized + Object {
   result
 }
 
-/// Struct named handlers for block insertion, to manage a very complex conditional.
-#[derive(Debug)]
-enum InsertBlockHandler {
-  Remove,
-  Unwrap,
-  RenameBySchema,
-  RenameWithFiller,
-  Fallback,
-}
-
 /// This attempts to be a generalize vbox construction;
 /// The idea is to receeive block-like material, possibly wrapped in appropriate
 /// container which gets attributes.
@@ -349,11 +339,12 @@ pub fn insert_block(
     context = document.open_element("ltx:XMText", None, None)?;
     context_tag =  document::get_node_qname(&context);
   }
+  let is_inline = is_svg || document::can_contain(&context, "#PCDATA");
   let mut container_attr = block_attr.clone();
   container_attr.insert("_vertical_mode_".to_string(), "true".to_string());
-  let mut container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
+  let container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
   document.absorb(contents, None)?;
-  
+
   let mut nodes = container.get_child_nodes();
   let node_tags = nodes.iter().map(document::get_node_qname)
     .collect::<Vec<_>>();
@@ -361,77 +352,72 @@ pub fn insert_block(
   document.close_to_node(&container, true)?;
   document.close_node(&container)?;
   document.close_to_node(&context, true)?;
-  // Refactoring a somewhat involved "if waterfall" from Perl, needs some intermediate flags
-  let mut handler = None;
+
   if nnodes < 1 { // Insertion came up empty?
-    handler = Some(InsertBlockHandler::Remove);
-    document.remove_node(&mut container); // then remove the new block entirely
+    document.remove_node(container); // then remove the new block entirely
+    return Ok(nodes);
   } else if ignorable_attr && node_tags.iter().all(|tag|  
     document::can_contain_qsym(context_tag, *tag)) { 
       // No attributes, contents allowed in context?
-      handler = Some(InsertBlockHandler::Unwrap);
-      container = document.unwrap_nodes(container)?; // No container needed, at all.
+      document.unwrap_nodes(container)?; // No container needed, at all.
+      return Ok(nodes);
   } else if nnodes==1 {
     if document::can_contain_qsym(context_tag, node_tags[0])
       && (ignorable_attr || block_attr.keys().all(|key| document::sym_can_have_attribute(node_tags[0], arena::pin(key)))) {
         // IF: Single node, allowed in context & accepts attributes
         // THEN: Add attributes and unwrap the single node
-        handler = Some(InsertBlockHandler::Unwrap);
         for (k,v) in block_attr.iter() {
           document.set_attribute(&mut nodes[0], k, v)?;
         }
-        container = document.unwrap_nodes(container)?;
-    } else if let Some(newcontainer) = document::sym_can_contain_somehow(context_tag, node_tags[0]) {
+        document.unwrap_nodes(container)?;
+        return Ok(nodes);
+    } else if let Some(newcontainer) = document::sym_can_contain_somehow(context_tag,node_tags[0]) {
       if ignorable_attr || block_attr.keys().all(|key| newcontainer.map(|nc| document::sym_can_have_attribute(nc, arena::pin(key))).unwrap_or(false)) {
         if let Some(nc) = newcontainer {
           // rename the capture to that container
-          handler = Some(InsertBlockHandler::RenameBySchema);
-          arena::with(nc, |ncstr|
-            document.rename_node(&mut container, ncstr, true))?;
+          document.rename_node_qsym(container, nc, true)?;
+          return Ok(nodes);
         }
       }
     }
   }
-  // This is a "code smell", due to the difficulty of refactoring the in-conditional-assignments from Perl.
-  if handler.is_none() {
-    // Otherwise, rename the capture
-    // MAY need foreignObject wrapper
-    let is_inline = is_svg || document::can_contain(&context, "#PCDATA");
-    if is_svg && node_tags.iter().any(|tag| arena::with(*tag, |tag_str| 
-      tag_str.starts_with("ltx:"))) {
-      context     = document.wrap_nodes("svg:foreignObject", vec![container.clone()])?
-        .expect("foreign object wrap should always succeed in SVG");
-      context_tag = document::get_node_qname(&context);
-    }
-    let candidates = if is_inline {
-      ["ltx:inline-block","ltx:inline-logical-block","ltx:inline-sectional-block"]
-        .map(arena::pin_static).to_vec()
-    } else {
-      ["ltx:block","ltx:logical-block", "ltx:sectional-block", "ltx:figure"]
-        .map(arena::pin_static).to_vec()
-    };
-    let filtered_candidates = candidates.into_iter().filter(|candidate|
-      node_tags.iter().all(|tag| document::sym_can_contain_somehow(*candidate, *tag).is_some())).collect::<Vec<_>>();
-      // and are allowed in the context
-    let allowed_candidates = filtered_candidates.iter()
-      .filter(|candidate| document::can_contain_qsym(context_tag, **candidate))
-      .copied()
-      .collect::<Vec<_>>();
-    if let Some(final_tag) = allowed_candidates.first().map_or(filtered_candidates.first(), Some) {
-      // Rename the capture to the correct container
-      handler = Some(InsertBlockHandler::RenameWithFiller);
-      arena::with(*final_tag, |tag_str| 
-        document.rename_node(&mut container, tag_str, true))?;
-    } else {  // // we didn't know what to do?
-      handler = Some(InsertBlockHandler::Fallback);
-      let message = arena::with(context_tag, |ctxt_str| 
-        s!("Did not find a block-like candidate in {} (with attributes ({})", ctxt_str, block_attr.iter()
-        .map(|(k,v)| s!("{k}={v}")).collect::<Vec<_>>().join(";")));
-      Warn!("malformed", "_CaptureBlock_", message);
-      document.rename_node(&mut container, "ltx:block", true)?;
-    }
+  // This jagged conditional is a "code smell", due to the difficulty of refactoring
+  // the in-conditional-assignments from Perl.
+
+  // Otherwise, rename the capture
+  // MAY need foreignObject wrapper
+  if is_svg && node_tags.iter().any(|tag| arena::with(*tag, |tag_str| 
+    tag_str.starts_with("ltx:"))) {
+    context     = document.wrap_nodes("svg:foreignObject", vec![container.clone()])?
+      .expect("foreign object wrap should always succeed in SVG");
+    context_tag = document::get_node_qname(&context);
   }
-  dbg!(handler);
+  let candidates = if is_inline {
+    ["ltx:inline-block","ltx:inline-logical-block","ltx:inline-sectional-block"]
+      .map(arena::pin_static).to_vec()
+  } else {
+    ["ltx:block","ltx:logical-block", "ltx:sectional-block", "ltx:figure"]
+      .map(arena::pin_static).to_vec()
+  };
+  let filtered_candidates = candidates.into_iter().filter(|candidate|
+    node_tags.iter().all(|tag| document::sym_can_contain_somehow(*candidate, *tag).is_some())).collect::<Vec<_>>();
+    // and are allowed in the context
+  let allowed_candidates = filtered_candidates.iter()
+    .filter(|candidate| document::can_contain_qsym(context_tag, **candidate))
+    .copied()
+    .collect::<Vec<_>>();
+  if let Some(final_tag) = allowed_candidates.first().map_or(filtered_candidates.first(), Some) {
+    // Rename the capture to the correct container
+    // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free where Symbol tickets and &str
+    // are equally intuitive to use without runtime panics from arena mutability exceptions.
+    document.rename_node(container, &arena::to_string(*final_tag), true)?;
+  } else { // we didn't know what to do?
+    let message = arena::with(context_tag, |ctxt_str| 
+      s!("Did not find a block-like candidate in {} (with attributes ({})", ctxt_str, block_attr.iter()
+      .map(|(k,v)| s!("{k}={v}")).collect::<Vec<_>>().join(";")));
+    Warn!("malformed", "_CaptureBlock_", message);
+    document.rename_node( container, "ltx:block", true)?;
+  }
   Ok(nodes)
 }
 
@@ -534,7 +520,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
       .is_empty()
   {
     // Replace XMText by XMWrap/*  (this should preserve the parse?)
-    document.rename_node(&mut text_node, "ltx:XMWrap", false)?; // text_node =
+    document.rename_node(text_node, "ltx:XMWrap", false)?; // text_node =
     let first_child = children.pop().unwrap();
     let first_granchildren = first_child.get_child_nodes();
     document.replace_node(

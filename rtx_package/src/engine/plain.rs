@@ -1169,8 +1169,8 @@ LoadDefinitions!({
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         let idref_xpath = format!("descendant-or-self::ltx:XMRef[@idref='{id}']");
-        for mut n in document.findnodes(&idref_xpath, None) {
-          document.remove_node(&mut n);
+        for n in document.findnodes(&idref_xpath, None) {
+          document.remove_node(n);
         }
       }   // ? Hopefully this is safe.
     }

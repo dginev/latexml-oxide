@@ -1,5 +1,4 @@
 use libxml::tree::Node;
-use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
@@ -13,7 +12,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
-use crate::common::arena;
+use crate::common::arena::{SymStr, self};
 use crate::common::arena::SymHashMap as HashMap;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
@@ -431,7 +430,7 @@ pub struct Register {
   /// the unicode corresponding to the \mathchar of `value` (for chardef)
   pub mathglyph: Option<char>,
   /// TODO: what does this do for CharDef ?
-  pub role: Option<SymbolU32>,
+  pub role: Option<SymStr>,
   /// the source point of origin for this register definition
   pub locator: Locator,
 }
@@ -618,7 +617,7 @@ impl Register {
   /// You can't assign it; when you invoke the control sequence, it returns
   /// the result of evaluating the character (more like a regular primitive).
   /// When `mathglyph` is provided, it is the unicode corresponding to the `\mathchar` of `value`
-  pub fn new_chardef(cs: Token, value: Option<RegisterValue>, mathglyph:Option<char>, role:Option<SymbolU32>) -> Self {
+  pub fn new_chardef(cs: Token, value: Option<RegisterValue>, mathglyph:Option<char>, role:Option<SymStr>) -> Self {
     Register {
       cs,
       parameters: None,

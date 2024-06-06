@@ -5,10 +5,9 @@ use std::cell::{RefCell,RefMut};
 use std::collections::VecDeque;
 // use std::mem;
 // use std::rc::Rc;
-use string_interner::symbol::SymbolU32;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self,DONT_EXPAND_SYM};
+use crate::common::arena::{self,DONT_EXPAND_SYM, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -33,7 +32,7 @@ static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 #[thread_local]
-static DEFERRED_COMMANDS: Lazy<HashSet<SymbolU32>> = Lazy::new(||
+static DEFERRED_COMMANDS: Lazy<HashSet<SymStr>> = Lazy::new(||
   set!(arena::pin_static("\\the"), arena::pin_static("\\showthe"),
     arena::pin_static("\\unexpanded"), arena::pin_static("\\detokenize")));
 

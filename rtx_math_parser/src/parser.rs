@@ -4,13 +4,12 @@ use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::io::Cursor;
-use string_interner::symbol::SymbolU32;
 
-use rtx_core::common::arena;
+use rtx_core::common::arena::{self, SymHashMap};
 use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
 use rtx_core::common::xml::*;
 use rtx_core::document::{get_node_qname,sym_can_have_attribute,with_node_qname,Document};
-use rtx_core::{map, raw_map, s, static_map, Error, Fatal, fatal};
+use rtx_core::{map, sym_map, s, static_map, Error, Fatal, fatal};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -53,13 +52,13 @@ pub struct MathParser {
   engine: Parser,
   pub expert_pragmatics: Vec<ValidationPragmatics>,
   pub student_pragmatics: Vec<ValidationPragmatics>,
-  passed: HashMap<SymbolU32, usize>,
-  failed: HashMap<SymbolU32, usize>,
-  unknowns: HashMap<SymbolU32, usize>,
+  passed: SymHashMap<usize>,
+  failed: SymHashMap<usize>,
+  unknowns: SymHashMap<usize>,
   // punctuation: HashMap<String, usize>,
   // lostnodes: HashMap<String, Node>,
   // idrefs: Vec<(String, Node)>,
-  maybe_functions: HashMap<SymbolU32, usize>,
+  maybe_functions: SymHashMap<usize>,
   n_parsed: usize,
   // strict: bool,
   // warned: bool,
@@ -75,10 +74,10 @@ impl Default for MathParser {
       builder,
       expert_pragmatics: ValidationPragmatics::expert_defaults(),
       student_pragmatics: ValidationPragmatics::student_defaults(),
-      passed: HashMap::default(),
-      failed: HashMap::default(),
-      unknowns: HashMap::default(),
-      maybe_functions: HashMap::default(),
+      passed: SymHashMap::default(),
+      failed: SymHashMap::default(),
+      unknowns: SymHashMap::default(),
+      maybe_functions: SymHashMap::default(),
       // punctuation: HashMap::default(),
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
@@ -181,13 +180,10 @@ impl MathParser {
 
   // ================================================================================
   pub fn clear(&mut self) {
-    self.passed = raw_map!(arena::pin_static("ltx:XMath") => 0, arena::pin_static("ltx:XMArg") => 0,
-      arena::pin_static("ltx:XMWrap") => 0);
-    self.failed = raw_map!(arena::pin_static("ltx:XMath") => 0,
-      arena::pin_static("ltx:XMArg") => 0,
-      arena::pin_static("ltx:XMWrap") => 0 );
-    self.unknowns = HashMap::default();
-    self.maybe_functions = HashMap::default();
+    self.passed = sym_map!("ltx:XMath" => 0, "ltx:XMArg" => 0, "ltx:XMWrap" => 0);
+    self.failed = sym_map!("ltx:XMath" => 0,"ltx:XMArg" => 0, "ltx:XMWrap" => 0 );
+    self.unknowns = SymHashMap::default();
+    self.maybe_functions = SymHashMap::default();
     self.n_parsed = 0;
   }
   // our %EXCLUDED_PRETTYNAME_ATTRIBUTES = (fontsize => 1, opacity => 1);
@@ -242,14 +238,15 @@ impl MathParser {
   // Then, this information could be used when parsing the parent.
   // In fact, this could work the other way too; parsing the parent could tell
   // us something about what the child must be....
-  fn parse(&mut self, mut xnode: Node, document: &mut Document) -> Result<()> {
+  fn parse(&mut self, xnode: Node, document: &mut Document) -> Result<()> {
     // This bit for debugging....
     // foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]",
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
     //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
-    if let Some(result) = self.parse_rec(&mut xnode, "Anything,", document)? {
+    let mut p = xnode.get_parent().unwrap();
+    if let Some(result) = self.parse_rec(xnode, "Anything,", document)? {
       // Add text representation to the containing Math element.
-      let mut p = xnode.get_parent().unwrap();
+      
       // This is a VERY screwy situation? How can the parent be a document fragment??
       // This has got to be a LibXML bug???
       if p.get_type() == Some(NodeType::DocumentFragNode) {
@@ -294,18 +291,18 @@ impl MathParser {
   // by first parsing any structured children, then it's content.
   fn parse_rec(
     &mut self,
-    node: &mut Node,
+    mut node: Node,
     rule_opt: &str,
     document: &mut Document,
   ) -> Result<Option<Node>> {
-    self.parse_children(node, document)?;
+    self.parse_children(&node, document)?;
     // This will only handle 1 layer nesting (successfully?)
     // Note that this would have been found by the top level xpath,
     // but we've got to worry about node identity: the parent is being rebuilt
-    for nested in document.findnodes("descendant::ltx:XMath", Some(node)) {
+    for nested in document.findnodes("descendant::ltx:XMath", Some(&node)) {
       self.parse(nested, document)?;
     }
-    let tag = get_node_qname(node);
+    let tag = get_node_qname(&node);
     let rule = if let Some(requested_rule) = node.get_attribute("rule") {
       requested_rule
     } else {
@@ -313,15 +310,15 @@ impl MathParser {
     };
 
     if rule == "kludge" {
-      self.parse_kludge(node, document);
+      self.parse_kludge(&mut node, document);
       Ok(None)
-    } else if let Some(mut result) = self.parse_single(node, document, &rule)? {
-      *self.passed.entry(tag).or_insert(0) += 1;
+    } else if let Some(mut result) = self.parse_single(&mut node, document, &rule)? {
+      *self.passed.entry_sym(tag).or_insert(0) += 1;
       if tag == arena::pin_static("ltx:XMath") {
         // Replace the content of XMath with parsed result
         self.n_parsed += 1;
         note_progress(&s!("[{}]", self.n_parsed));
-        for el_node in element_nodes(node) {
+        for el_node in element_nodes(&node) {
           document.unrecord_node_ids(&el_node);
         }
         // unbindNode followed by (append|replace)Tree (which removes ID's) should
@@ -329,8 +326,8 @@ impl MathParser {
         for mut child in node.get_child_nodes() {
           child.unbind_node();
         }
-        document.append_tree(node, vec![result])?;
-        let mut new_element_children = element_nodes(node);
+        document.append_tree(&mut node, vec![result])?;
+        let mut new_element_children = element_nodes(&node);
         result = new_element_children.remove(0);
       } else {
         // Replace the whole node for XMArg, XMWrap; preserve some attributes
@@ -407,10 +404,10 @@ impl MathParser {
     node: &Node,
     document: &mut Document,
   ) -> Result<()> {
-    for mut child in element_nodes(node) {
+    for child in element_nodes(node) {
       let tag = get_node_qname(&child);
       if tag == arena::pin_static("ltx:XMArg") || tag == arena::pin_static("ltx:XMWrap") {
-        self.parse_rec(&mut child, "Anything", document)?;
+        self.parse_rec( child, "Anything", document)?;
       } else if tag == arena::pin_static("ltx:XMApp")
         || tag == arena::pin_static("ltx:XMArray")
         || tag == arena::pin_static("ltx:XMRow")

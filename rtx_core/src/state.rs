@@ -8,7 +8,7 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self, SymStr, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
+use crate::common::arena::{self, SymStr, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -16,7 +16,7 @@ use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
-use crate::common::model;
+use crate::common::model::{self,compute_indirect_model_aux};
 use crate::common::numeric_ops::NumericOps;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
@@ -1995,14 +1995,19 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
 //   return $code; }
 // #======================================================================
 
+
+// TODO: Continue here -- need to diagnoze why the indirect model is not returning
+// an intermediate "ltx:p" when asking for "#PCDATA" inside "ltx:_CaptureBlock_",
+// instead getting an intermediate "ltx:para".
+
 /// The indirect model includes all elements allowed as direct children,
-/// and all descendents of a node that can be inserted after
-/// auto_open-ing intermediate elements.
+/// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
 /// This model therefor includes information from the Schema, as well as
-/// auto_open information that may be introduced in binding files.
-// [Thus it should NOT be modifying the Model object, which may cover several documents]
+/// `auto_open` information that may be introduced in binding files.
+// [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]
+// `imodel[tag][child] => inter` means if in `tag`, to open `child`, we must first open `inter`
 pub fn compute_indirect_model() -> IndirectModel {
-  let mut imodel: IndirectModel = HashMap::default();
+  let mut imodel: IndirectModel = SymHashMap::default();
   // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
   let mut openable: HashSet<SymStr> = HashSet::default();
   for tag in model::get_tags() {
@@ -2014,30 +2019,35 @@ pub fn compute_indirect_model() -> IndirectModel {
   }
 
   for tag in model::get_tags() {
-    let mut desc: HashMap<SymStr, HashMap<SymStr, usize>> = HashMap::default();
-    crate::common::model::compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
+    let mut desc: SymHashMap<SymHashMap<usize>> = SymHashMap::default();
+    compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
     let desc_keys: Vec<SymStr> = desc.keys().copied().collect();
     for kid in desc_keys {
-      let mut best = 0; // Find best path to $kid.
-      let desc_kid_keys: Vec<SymStr> = desc
-        .entry(kid)
+      // Find best path to `kid`.
+      let mut best = 0;
+      let mut desc_kid_keys: Vec<SymStr> = desc
+        .entry_sym(kid)
         .or_default()
         .keys()
         .copied()
         .collect();
-      // desc_kid_keys.sort(); // TODO: why sort?
+      // TODO: why sort?
+      // Update: it appears that "ltx:p" and "ltx:para" in ltx:_CaptureBlock_ is one reason!!!
+      desc_kid_keys.sort_by(|a,b| arena::with2(*a,*b,|astr,bstr| astr.cmp(bstr))); 
       for start in desc_kid_keys {
-        let start_entry = {
-          let kid_entry = desc.entry(kid).or_default();
-          *kid_entry.entry(start.to_owned()).or_insert(0)
-        };
-        if start_entry > best {
-          imodel
-            .entry(tag)
-            .or_default()
-            .insert(kid, start.to_owned());
-          {
-            best = desc[&kid][&start];
+        if tag != kid && tag != start {
+          let start_entry = {
+            let kid_entry = desc.entry_sym(kid).or_default();
+            *kid_entry.entry_sym(start.to_owned()).or_insert(0)
+          };
+          if start_entry > best {
+            imodel
+              .entry_sym(tag)
+              .or_default()
+              .insert_sym(kid, start.to_owned());
+            {
+              best = start_entry;
+            }
           }
         }
       }
@@ -2047,9 +2057,9 @@ pub fn compute_indirect_model() -> IndirectModel {
   if model::is_permissive() {
     // !!! Alarm!!!
     imodel
-      .entry(arena::pin_static("#Document"))
+      .entry("#Document")
       .or_default()
-      .insert(*H_PCDATA_SYM, *LTX_P_SYM);
+      .insert("#PCDATA", arena::pin_static("ltx:p"));
   }
 
   imodel
@@ -2148,8 +2158,8 @@ pub fn reset_pending_resources() {
   state_mut!().pending_resources = Vec::new();
 }
 pub fn get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -> Option<SymStr> {
-  match state!().indirect_model.as_ref().unwrap().get(&tag) {
-    Some(sub_m) => sub_m.get(&childtag).copied(),
+  match state!().indirect_model.as_ref().unwrap().get_sym(&tag) {
+    Some(sub_m) => sub_m.get_sym(&childtag).copied(),
     None => None,
   }
 }

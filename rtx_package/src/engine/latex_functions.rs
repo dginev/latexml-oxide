@@ -207,7 +207,7 @@ pub fn tabular_bindings(
     "@column@before",
     "@column@after",
   ] {
-    let cs = T_CS!(s!("\\{name}"));
+    let cs = T_CS!(s!("\\lx@alignment{name}"));
     let cs_def = lookup_definition(&cs)?.unwrap();
     let mut expansion = cs_def.get_expansion().cloned().unwrap_or_default();
     expansion.push(T_CS!(s!("\\@tabular{name}")));

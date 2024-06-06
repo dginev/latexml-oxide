@@ -1273,6 +1273,15 @@ macro_rules! DefEnvironment {
       )),
       options);
   }};
+  ($proto:literal, sub[$document:ident, $args:ident, $props:ident]
+    $body:block) => {{
+    let options = ConstructorOptions::default();
+    DefEnvironmentIWO!($proto,
+      Some(Rc::new(|$document: &mut Document, $args: &Vec<Option<Digested>>,
+        $props: &SymHashMap<Stored>| $body
+      )),
+      options);
+  }};
   ($proto:literal, $replacement:expr) => {
     DefEnvironmentWO!($proto, $replacement, ConstructorOptions::default());
   };
