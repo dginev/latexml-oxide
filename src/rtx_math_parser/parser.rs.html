@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_math_parser/src/parser.rs`."><title>parser.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (3a36386dc 2024-04-25)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_math_parser/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_math_parser/src/parser.rs`."><title>parser.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (98489f248 2024-06-06)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -881,22 +881,18 @@
 <a href="#881" id="881">881</a>
 <a href="#882" id="882">882</a>
 <a href="#883" id="883">883</a>
-<a href="#884" id="884">884</a>
-<a href="#885" id="885">885</a>
-<a href="#886" id="886">886</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::io::Cursor;
-<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
-<span class="kw">use </span>rtx_core::common::arena;
+<span class="kw">use </span>rtx_core::common::arena::{<span class="self">self</span>, SymHashMap};
 <span class="kw">use </span>rtx_core::common::error::{note_begin, note_end, note_progress, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>rtx_core::common::xml::<span class="kw-2">*</span>;
 <span class="kw">use </span>rtx_core::document::{get_node_qname,sym_can_have_attribute,with_node_qname,Document};
-<span class="kw">use </span>rtx_core::{map, raw_map, s, static_map, Error, Fatal, fatal};
+<span class="kw">use </span>rtx_core::{map, sym_map, s, static_map, Error, Fatal, fatal};
 
 <span class="kw">use </span><span class="kw">crate</span>::grammar::builder::init_grammar;
 <span class="kw">use </span><span class="kw">crate</span>::pragmatics::ValidationPragmatics;
@@ -939,13 +935,13 @@
   engine: Parser,
   <span class="kw">pub </span>expert_pragmatics: Vec&lt;ValidationPragmatics&gt;,
   <span class="kw">pub </span>student_pragmatics: Vec&lt;ValidationPragmatics&gt;,
-  passed: HashMap&lt;SymbolU32, usize&gt;,
-  failed: HashMap&lt;SymbolU32, usize&gt;,
-  unknowns: HashMap&lt;SymbolU32, usize&gt;,
+  passed: SymHashMap&lt;usize&gt;,
+  failed: SymHashMap&lt;usize&gt;,
+  unknowns: SymHashMap&lt;usize&gt;,
   <span class="comment">// punctuation: HashMap&lt;String, usize&gt;,
   // lostnodes: HashMap&lt;String, Node&gt;,
   // idrefs: Vec&lt;(String, Node)&gt;,
-  </span>maybe_functions: HashMap&lt;SymbolU32, usize&gt;,
+  </span>maybe_functions: SymHashMap&lt;usize&gt;,
   n_parsed: usize,
   <span class="comment">// strict: bool,
   // warned: bool,
@@ -961,10 +957,10 @@
       builder,
       expert_pragmatics: ValidationPragmatics::expert_defaults(),
       student_pragmatics: ValidationPragmatics::student_defaults(),
-      passed: HashMap::default(),
-      failed: HashMap::default(),
-      unknowns: HashMap::default(),
-      maybe_functions: HashMap::default(),
+      passed: SymHashMap::default(),
+      failed: SymHashMap::default(),
+      unknowns: SymHashMap::default(),
+      maybe_functions: SymHashMap::default(),
       <span class="comment">// punctuation: HashMap::default(),
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
@@ -1067,13 +1063,10 @@
 
   // ================================================================================
   </span><span class="kw">pub fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-    <span class="self">self</span>.passed = <span class="macro">raw_map!</span>(arena::pin_static(<span class="string">"ltx:XMath"</span>) =&gt; <span class="number">0</span>, arena::pin_static(<span class="string">"ltx:XMArg"</span>) =&gt; <span class="number">0</span>,
-      arena::pin_static(<span class="string">"ltx:XMWrap"</span>) =&gt; <span class="number">0</span>);
-    <span class="self">self</span>.failed = <span class="macro">raw_map!</span>(arena::pin_static(<span class="string">"ltx:XMath"</span>) =&gt; <span class="number">0</span>,
-      arena::pin_static(<span class="string">"ltx:XMArg"</span>) =&gt; <span class="number">0</span>,
-      arena::pin_static(<span class="string">"ltx:XMWrap"</span>) =&gt; <span class="number">0 </span>);
-    <span class="self">self</span>.unknowns = HashMap::default();
-    <span class="self">self</span>.maybe_functions = HashMap::default();
+    <span class="self">self</span>.passed = <span class="macro">sym_map!</span>(<span class="string">"ltx:XMath" </span>=&gt; <span class="number">0</span>, <span class="string">"ltx:XMArg" </span>=&gt; <span class="number">0</span>, <span class="string">"ltx:XMWrap" </span>=&gt; <span class="number">0</span>);
+    <span class="self">self</span>.failed = <span class="macro">sym_map!</span>(<span class="string">"ltx:XMath" </span>=&gt; <span class="number">0</span>,<span class="string">"ltx:XMArg" </span>=&gt; <span class="number">0</span>, <span class="string">"ltx:XMWrap" </span>=&gt; <span class="number">0 </span>);
+    <span class="self">self</span>.unknowns = SymHashMap::default();
+    <span class="self">self</span>.maybe_functions = SymHashMap::default();
     <span class="self">self</span>.n_parsed = <span class="number">0</span>;
   }
   <span class="comment">// our %EXCLUDED_PRETTYNAME_ATTRIBUTES = (fontsize =&gt; 1, opacity =&gt; 1);
@@ -1128,15 +1121,16 @@
   // Then, this information could be used when parsing the parent.
   // In fact, this could work the other way too; parsing the parent could tell
   // us something about what the child must be....
-  </span><span class="kw">fn </span>parse(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>xnode: Node, document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">fn </span>parse(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xnode: Node, document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// This bit for debugging....
     // foreach my $n ($document-&gt;findnodes("descendant-or-self::*[\@xml:id]",
     // $xnode)) {     my $id = $n-&gt;getAttribute('xml:id');
     //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(result) = <span class="self">self</span>.parse_rec(<span class="kw-2">&amp;mut </span>xnode, <span class="string">"Anything,"</span>, document)<span class="question-mark">? </span>{
+    </span><span class="kw">let </span><span class="kw-2">mut </span>p = xnode.get_parent().unwrap();
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(result) = <span class="self">self</span>.parse_rec(xnode, <span class="string">"Anything,"</span>, document)<span class="question-mark">? </span>{
       <span class="comment">// Add text representation to the containing Math element.
-      </span><span class="kw">let </span><span class="kw-2">mut </span>p = xnode.get_parent().unwrap();
-      <span class="comment">// This is a VERY screwy situation? How can the parent be a document fragment??
+      
+      // This is a VERY screwy situation? How can the parent be a document fragment??
       // This has got to be a LibXML bug???
       </span><span class="kw">if </span>p.get_type() == <span class="prelude-val">Some</span>(NodeType::DocumentFragNode) {
         <span class="kw">let </span>child_nodes = p.get_child_nodes();
@@ -1180,18 +1174,18 @@
   // by first parsing any structured children, then it's content.
   </span><span class="kw">fn </span>parse_rec(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    node: <span class="kw-2">&amp;mut </span>Node,
+    <span class="kw-2">mut </span>node: Node,
     rule_opt: <span class="kw-2">&amp;</span>str,
     document: <span class="kw-2">&amp;mut </span>Document,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
-    <span class="self">self</span>.parse_children(node, document)<span class="question-mark">?</span>;
+    <span class="self">self</span>.parse_children(<span class="kw-2">&amp;</span>node, document)<span class="question-mark">?</span>;
     <span class="comment">// This will only handle 1 layer nesting (successfully?)
     // Note that this would have been found by the top level xpath,
     // but we've got to worry about node identity: the parent is being rebuilt
-    </span><span class="kw">for </span>nested <span class="kw">in </span>document.findnodes(<span class="string">"descendant::ltx:XMath"</span>, <span class="prelude-val">Some</span>(node)) {
+    </span><span class="kw">for </span>nested <span class="kw">in </span>document.findnodes(<span class="string">"descendant::ltx:XMath"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node)) {
       <span class="self">self</span>.parse(nested, document)<span class="question-mark">?</span>;
     }
-    <span class="kw">let </span>tag = get_node_qname(node);
+    <span class="kw">let </span>tag = get_node_qname(<span class="kw-2">&amp;</span>node);
     <span class="kw">let </span>rule = <span class="kw">if let </span><span class="prelude-val">Some</span>(requested_rule) = node.get_attribute(<span class="string">"rule"</span>) {
       requested_rule
     } <span class="kw">else </span>{
@@ -1199,15 +1193,15 @@
     };
 
     <span class="kw">if </span>rule == <span class="string">"kludge" </span>{
-      <span class="self">self</span>.parse_kludge(node, document);
+      <span class="self">self</span>.parse_kludge(<span class="kw-2">&amp;mut </span>node, document);
       <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>result) = <span class="self">self</span>.parse_single(node, document, <span class="kw-2">&amp;</span>rule)<span class="question-mark">? </span>{
-      <span class="kw-2">*</span><span class="self">self</span>.passed.entry(tag).or_insert(<span class="number">0</span>) += <span class="number">1</span>;
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>result) = <span class="self">self</span>.parse_single(<span class="kw-2">&amp;mut </span>node, document, <span class="kw-2">&amp;</span>rule)<span class="question-mark">? </span>{
+      <span class="kw-2">*</span><span class="self">self</span>.passed.entry_sym(tag).or_insert(<span class="number">0</span>) += <span class="number">1</span>;
       <span class="kw">if </span>tag == arena::pin_static(<span class="string">"ltx:XMath"</span>) {
         <span class="comment">// Replace the content of XMath with parsed result
         </span><span class="self">self</span>.n_parsed += <span class="number">1</span>;
         note_progress(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"[{}]"</span>, <span class="self">self</span>.n_parsed));
-        <span class="kw">for </span>el_node <span class="kw">in </span>element_nodes(node) {
+        <span class="kw">for </span>el_node <span class="kw">in </span>element_nodes(<span class="kw-2">&amp;</span>node) {
           document.unrecord_node_ids(<span class="kw-2">&amp;</span>el_node);
         }
         <span class="comment">// unbindNode followed by (append|replace)Tree (which removes ID's) should
@@ -1215,8 +1209,8 @@
         </span><span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>node.get_child_nodes() {
           child.unbind_node();
         }
-        document.append_tree(node, <span class="macro">vec!</span>[result])<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>new_element_children = element_nodes(node);
+        document.append_tree(<span class="kw-2">&amp;mut </span>node, <span class="macro">vec!</span>[result])<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>new_element_children = element_nodes(<span class="kw-2">&amp;</span>node);
         result = new_element_children.remove(<span class="number">0</span>);
       } <span class="kw">else </span>{
         <span class="comment">// Replace the whole node for XMArg, XMWrap; preserve some attributes
@@ -1293,10 +1287,10 @@
     node: <span class="kw-2">&amp;</span>Node,
     document: <span class="kw-2">&amp;mut </span>Document,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>element_nodes(node) {
+    <span class="kw">for </span>child <span class="kw">in </span>element_nodes(node) {
       <span class="kw">let </span>tag = get_node_qname(<span class="kw-2">&amp;</span>child);
       <span class="kw">if </span>tag == arena::pin_static(<span class="string">"ltx:XMArg"</span>) || tag == arena::pin_static(<span class="string">"ltx:XMWrap"</span>) {
-        <span class="self">self</span>.parse_rec(<span class="kw-2">&amp;mut </span>child, <span class="string">"Anything"</span>, document)<span class="question-mark">?</span>;
+        <span class="self">self</span>.parse_rec( child, <span class="string">"Anything"</span>, document)<span class="question-mark">?</span>;
       } <span class="kw">else if </span>tag == arena::pin_static(<span class="string">"ltx:XMApp"</span>)
         || tag == arena::pin_static(<span class="string">"ltx:XMArray"</span>)
         || tag == arena::pin_static(<span class="string">"ltx:XMRow"</span>)

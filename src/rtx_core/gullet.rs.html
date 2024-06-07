@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/gullet.rs`."><title>gullet.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (3a36386dc 2024-04-25)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/gullet.rs`."><title>gullet.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (98489f248 2024-06-06)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1646,31 +1646,6 @@
 <a href="#1646" id="1646">1646</a>
 <a href="#1647" id="1647">1647</a>
 <a href="#1648" id="1648">1648</a>
-<a href="#1649" id="1649">1649</a>
-<a href="#1650" id="1650">1650</a>
-<a href="#1651" id="1651">1651</a>
-<a href="#1652" id="1652">1652</a>
-<a href="#1653" id="1653">1653</a>
-<a href="#1654" id="1654">1654</a>
-<a href="#1655" id="1655">1655</a>
-<a href="#1656" id="1656">1656</a>
-<a href="#1657" id="1657">1657</a>
-<a href="#1658" id="1658">1658</a>
-<a href="#1659" id="1659">1659</a>
-<a href="#1660" id="1660">1660</a>
-<a href="#1661" id="1661">1661</a>
-<a href="#1662" id="1662">1662</a>
-<a href="#1663" id="1663">1663</a>
-<a href="#1664" id="1664">1664</a>
-<a href="#1665" id="1665">1665</a>
-<a href="#1666" id="1666">1666</a>
-<a href="#1667" id="1667">1667</a>
-<a href="#1668" id="1668">1668</a>
-<a href="#1669" id="1669">1669</a>
-<a href="#1670" id="1670">1670</a>
-<a href="#1671" id="1671">1671</a>
-<a href="#1672" id="1672">1672</a>
-<a href="#1673" id="1673">1673</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
@@ -1678,10 +1653,9 @@
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="comment">// use std::mem;
 // use std::rc::Rc;
-</span><span class="kw">use </span>string_interner::symbol::SymbolU32;
 
-<span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>,DONT_EXPAND_SYM};
+</span><span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>,DONT_EXPAND_SYM, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
@@ -1706,7 +1680,7 @@
 <span class="kw">static </span>OCT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"[0-7]"</span>).unwrap());
 <span class="kw">static </span>HEX_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"[0-9A-F]"</span>).unwrap());
 <span class="attr">#[thread_local]
-</span><span class="kw">static </span>DEFERRED_COMMANDS: Lazy&lt;HashSet&lt;SymbolU32&gt;&gt; = Lazy::new(||
+</span><span class="kw">static </span>DEFERRED_COMMANDS: Lazy&lt;HashSet&lt;SymStr&gt;&gt; = Lazy::new(||
   <span class="macro">set!</span>(arena::pin_static(<span class="string">"\\the"</span>), arena::pin_static(<span class="string">"\\showthe"</span>),
     arena::pin_static(<span class="string">"\\unexpanded"</span>), arena::pin_static(<span class="string">"\\detokenize"</span>)));
 
@@ -1715,9 +1689,9 @@
 </span><span class="kw">static </span>COLUMN_ENDS : Lazy&lt;[(Token,<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, bool); <span class="number">6</span>]&gt; = Lazy::new(|| [    <span class="comment">// besides T_ALIGN
   </span>(<span class="macro">T_CS!</span>(<span class="string">"\\cr"</span>),           <span class="string">"cr"</span>,     <span class="bool-val">false</span>),
   (<span class="macro">T_CS!</span>(<span class="string">"\\crcr"</span>),         <span class="string">"crcr"</span>,   <span class="bool-val">false</span>),
-  (<span class="macro">T_CS!</span>(<span class="string">"\\hidden@cr"</span>),    <span class="string">"cr"</span>,     <span class="bool-val">true</span>),
-  (<span class="macro">T_CS!</span>(<span class="string">"\\hidden@crcr"</span>),  <span class="string">"crcr"</span>,   <span class="bool-val">true</span>),
-  (<span class="macro">T_CS!</span>(<span class="string">"\\hidden@align"</span>), <span class="string">"insert"</span>, <span class="bool-val">true</span>),
+  (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@cr"</span>),    <span class="string">"cr"</span>,     <span class="bool-val">true</span>),
+  (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@crcr"</span>),  <span class="string">"crcr"</span>,   <span class="bool-val">true</span>),
+  (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@align"</span>), <span class="string">"insert"</span>, <span class="bool-val">true</span>),
   (<span class="macro">T_CS!</span>(<span class="string">"\\span"</span>),         <span class="string">"span"</span>,   <span class="bool-val">false</span>)]);
 
 <span class="attr">#[derive(PartialEq, Debug)]
@@ -1753,86 +1727,77 @@
   () =&gt; ((<span class="kw-2">*</span>GULLET).borrow_mut().runtime.as_mut())
 }
 
-<span class="kw">impl </span>Gullet {
-  <span class="doccomment">/// Initialize (or reset, if reentrant) a Gullet to its default empty state
-  </span><span class="kw">pub fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-    <span class="self">self</span>.runtime = <span class="prelude-val">None</span>;
-    <span class="self">self</span>.mouthstack = VecDeque::new();
-    <span class="self">self</span>.pending_comments = VecDeque::new();
-  }
-  <span class="doccomment">/// User feedback for where something (error?) occurred.
-  </span><span class="kw">pub fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Locator {
-    <span class="kw">let </span><span class="kw-2">mut </span>runtime_opt = <span class="self">self</span>.runtime.as_ref();
-    <span class="kw">let </span><span class="kw-2">mut </span>mouthstack_iter = <span class="self">self</span>.mouthstack.iter();
-    <span class="kw">while </span>runtime_opt.is_some() &amp;&amp; runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
-      runtime_opt = mouthstack_iter.next();
-    }
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(runtime) = runtime_opt {
-      <span class="comment">// First exit condition: we found a mouth with a source, and asked it for a locator
-      </span>runtime.mouth.get_locator()
-    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(runtime) = <span class="self">self</span>.mouthstack.front() {
-      <span class="comment">// Backup strategy: return the first locator in the mouthstack:
-      </span>runtime.mouth.get_locator()
-    } <span class="kw">else </span>{
-      <span class="comment">// Final backup -- the default locator
-      // TODO: Or should this be None?
-      </span>Locator::default()
-    }
-  }
-  <span class="kw">pub fn </span>get_location(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-    <span class="kw">let </span>loc = <span class="self">self</span>.get_locator();
-    <span class="macro">s!</span>(<span class="string">"at {}"</span>, loc)
-  }
+<span class="doccomment">/// Initialize (or reset, if reentrant) a Gullet to its default empty state
+</span><span class="kw">pub fn </span>initialize_gullet() {
+  <span class="kw">let </span><span class="kw-2">mut </span>gullet = <span class="macro">gullet_mut!</span>();
+  gullet.runtime = <span class="prelude-val">None</span>;
+  gullet.mouthstack = VecDeque::new();
+  gullet.pending_comments = VecDeque::new();
+}
 
-  <span class="kw">pub fn </span>get_mouth(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Mouth&gt; {
-    <span class="kw">match </span><span class="self">self</span>.runtime {
-      <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>runtime) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>runtime.mouth),
-    }
+<span class="doccomment">/// Get the current location of input getting read
+</span><span class="kw">pub fn </span>get_locator() -&gt; Locator {
+  <span class="kw">let </span>gullet = <span class="macro">gullet!</span>();
+  <span class="kw">let </span><span class="kw-2">mut </span>runtime_opt = gullet.runtime.as_ref();
+  <span class="kw">let </span><span class="kw-2">mut </span>mouthstack_iter = gullet.mouthstack.iter();
+  <span class="kw">while </span>runtime_opt.is_some() &amp;&amp; runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
+    runtime_opt = mouthstack_iter.next();
   }
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(runtime) = runtime_opt {
+    <span class="comment">// First exit condition: we found a mouth with a source, and asked it for a locator
+    </span>runtime.mouth.get_locator()
+  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(runtime) = gullet.mouthstack.front() {
+    <span class="comment">// Backup strategy: return the first locator in the mouthstack:
+    </span>runtime.mouth.get_locator()
+  } <span class="kw">else </span>{
+    <span class="comment">// Final backup -- the default locator
+    // TODO: Or should this be None?
+    </span>Locator::default()
+  }
+}
+  
+<span class="doccomment">/// Comment-oriented location string, based on `get_locator`
+</span><span class="kw">pub fn </span>get_location() -&gt; String {
+  <span class="kw">let </span>loc = get_locator();
+  <span class="macro">s!</span>(<span class="string">"at {}"</span>, loc)
+}
 
-  <span class="kw">pub fn </span>get_mouth_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Mouth&gt; {
-    <span class="kw">match </span><span class="self">self</span>.runtime {
-      <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-      <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>runtime.mouth),
+<span class="kw">pub fn </span>mouth_is_open(mouth: <span class="kw-2">&amp;</span>Mouth) -&gt; bool {
+  <span class="kw">let </span>gullet = <span class="macro">gullet!</span>();
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>runtime) = gullet.runtime {
+    <span class="kw">if </span>mouth == <span class="kw-2">&amp;</span>runtime.mouth {
+      <span class="kw">return </span><span class="bool-val">true</span>;
     }
   }
+  gullet.mouthstack.iter().any(|runtime| <span class="kw-2">&amp;</span>runtime.mouth == mouth)
+}
+  
 
-  <span class="kw">pub fn </span>mouth_is_open(<span class="kw-2">&amp;</span><span class="self">self</span>, mouth: <span class="kw-2">&amp;</span>Mouth) -&gt; bool {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>runtime) = <span class="self">self</span>.runtime {
-      <span class="kw">if </span>mouth == <span class="kw-2">&amp;</span>runtime.mouth {
-        <span class="kw">return </span><span class="bool-val">true</span>;
-      }
-    }
-    <span class="self">self</span>.mouthstack.iter().any(|runtime| <span class="kw-2">&amp;</span>runtime.mouth == mouth)
-  }
-  <span class="doccomment">/// Push the `tokens` back into the input stream to be re-read.
-  </span><span class="kw">pub fn </span>unread(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: Tokens) {
-    <span class="self">self</span>.unread_vec(tokens.unlist());
-  }
-  <span class="doccomment">/// same as `unread`, but drains the `tokens` from its contents
-  </span><span class="kw">pub fn </span>unread_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: <span class="kw-2">&amp;mut </span>Tokens) {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="self">self</span>.runtime {
-      <span class="kw">for </span>token <span class="kw">in </span>tokens.unlist_mut().drain(..).rev() {
-        runtime.pushback.push_front(token);
-      }
-    };
-  }
-  <span class="doccomment">/// same as `unread`, but only for a single `Token`
-  </span><span class="kw">pub fn </span>unread_one(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: Token) {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="self">self</span>.runtime {
+<span class="doccomment">/// Push the `tokens` back into the input stream to be re-read.
+</span><span class="kw">pub fn </span>unread(tokens: Tokens) {
+  unread_vec(tokens.unlist());
+}
+<span class="doccomment">/// Variant of `unread`, but drains the contents of `tokens` without taking ownership.
+</span><span class="kw">pub fn </span>unread_mut(tokens: <span class="kw-2">&amp;mut </span>Tokens) {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="macro">gullet_mut!</span>().runtime {
+    <span class="kw">for </span>token <span class="kw">in </span>tokens.unlist_mut().drain(..).rev() {
       runtime.pushback.push_front(token);
-    };
-  }
-  <span class="doccomment">/// same as `unread`, but does not require the Tokens wrapper
-  </span><span class="kw">pub fn </span>unread_vec(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: Vec&lt;Token&gt;) {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="self">self</span>.runtime {
-      <span class="kw">for </span>token <span class="kw">in </span>tokens.into_iter().rev() {
-        runtime.pushback.push_front(token);
-      }
+    }
+  };
+}
+<span class="doccomment">/// Unreads a single `Token` to the start of the token stream
+</span><span class="kw">pub fn </span>unread_one(token: Token) {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="macro">gullet_mut!</span>().runtime {
+    runtime.pushback.push_front(token);
+  };
+}
+<span class="doccomment">/// Unreads a `Vec&lt;Token&gt;` to the start of the token stream
+</span><span class="kw">pub fn </span>unread_vec(tokens: Vec&lt;Token&gt;) {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="macro">gullet_mut!</span>().runtime {
+    <span class="kw">for </span>token <span class="kw">in </span>tokens.into_iter().rev() {
+      runtime.pushback.push_front(token);
     }
   }
-
 }
 
 <span class="comment">//**********************************************************************
@@ -1918,9 +1883,9 @@
   </span>local_current_token(token);
   <span class="kw">let </span>post = alignment.get_column_after();
   set_align_group_count(<span class="number">1000000</span>);
-  <span class="comment">// ### NOTE: Truly fishy smuggling w/ \hidden@cr
+  <span class="comment">// ### NOTE: Truly fishy smuggling w/ \lx@hidden@cr
   </span><span class="kw">let </span>arg_opt = <span class="kw">if </span>(vtype == <span class="string">"cr"</span>) &amp;&amp; hidden {
-    <span class="comment">// \hidden@cr gets an argument as payload!!!!!
+    <span class="comment">// \lx@hidden@cr gets an argument as payload!!!!!
     </span><span class="prelude-val">Some</span>(read_arg()<span class="question-mark">?</span>)
   } <span class="kw">else </span>{
     <span class="prelude-val">None
@@ -1933,7 +1898,7 @@
       .map(|v| v.is_pseudo())
       .unwrap_or(<span class="bool-val">false</span>)
   {
-    unread_one(<span class="macro">T_CS!</span>(<span class="string">"\\@row@after"</span>));
+    unread_one(<span class="macro">T_CS!</span>(<span class="string">"\\lx@alignment@row@after"</span>));
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = arg_opt {
     <span class="comment">// slippery - to unread {arg} we first unread } then arg then {, as we push to the front.
@@ -2036,16 +2001,20 @@
 }
 
 <span class="doccomment">/// Read the next non-expandable token (expanding tokens until there's a non-expandable one).
+///
 /// Note that most tokens pass through here, so be Fast &amp; Clean! readToken is folded in.
-/// `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
-///  will step to the next input stream (Mouth) if one is available,
-/// `toplevel` is doing TWO distinct things. When true:
-///  * If a mouth is exhausted, move on to the containing mouth to continue reading
-///  * expand even protected defns, essentially this means expand "for execution"
+///    `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
+///     will step to the next input stream (Mouth) if one is available,
+///     `toplevel` is doing TWO distinct things. When true:
+/// * If a mouth is exhausted, move on to the containing mouth to continue reading
+/// * expand even protected defns, essentially this means expand "for execution"
+/// 
 /// Note that, unlike readBalanced, this does NOT defer expansion of \the &amp; friends.
+/// 
 /// Also, \noexpand'd tokens effectively act ilke \relax
+/// 
 /// For arguments to \if,\ifx, etc use `for_conditional` true,
-/// which handles \noexpand and CS which have been \let to tokens specially.
+///    which handles \noexpand and CS which have been \let to tokens specially.
 </span><span class="kw">pub fn </span>read_x_token(
   toplevel_opt: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   for_conditional: bool,
@@ -3210,8 +3179,8 @@
     <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
   }
 }
-
-<span class="kw">fn </span>handle_marker(marker_token: Token) {
+<span class="doccomment">/// Handle a marker token, by updating the current alignment group count
+</span><span class="kw">fn </span>handle_marker(marker_token: Token) {
   marker_token.with_str(|arg| <span class="kw">match </span>arg {
     <span class="string">"before-column" </span>=&gt; {
       <span class="comment">// Were in before-column template
@@ -3287,7 +3256,8 @@
   <span class="prelude-val">Ok</span>(results)
 }
 
-<span class="kw">pub fn </span>has_more_input() -&gt; bool {
+<span class="doccomment">/// Check if there is more input to be read from the current mouth
+</span><span class="kw">pub fn </span>has_more_input() -&gt; bool {
   <span class="kw">match </span><span class="macro">runtime!</span>() {
     <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; runtime.mouth.has_more_input(),
     <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
@@ -3314,34 +3284,14 @@
   g.mouthstack = VecDeque::new();
 }
 
-<span class="kw">pub fn </span>unread(tokens: Tokens) {
-  <span class="macro">gullet_mut!</span>().unread(tokens)
-}
-<span class="doccomment">/// same as `unread`, but drains the `tokens` from its contents
-</span><span class="kw">pub fn </span>unread_mut(tokens: <span class="kw-2">&amp;mut </span>Tokens) {
-  <span class="macro">gullet_mut!</span>().unread_mut(tokens)
-}
-<span class="doccomment">/// same as `unread`, but only for a single `Token`
-</span><span class="kw">pub fn </span>unread_one(token: Token) {
-  <span class="macro">gullet_mut!</span>().unread_one(token)
-}
-<span class="doccomment">/// same as `unread`, but does not require the Tokens wrapper
-</span><span class="kw">pub fn </span>unread_vec(tokens: Vec&lt;Token&gt;) {
-  <span class="macro">gullet_mut!</span>().unread_vec(tokens)
-}
-
-<span class="kw">pub fn </span>initialize_gullet() {
-  <span class="macro">gullet_mut!</span>().initialize()
-}
-<span class="kw">pub fn </span>get_locator() -&gt; Locator {
-  <span class="macro">gullet!</span>().get_locator()
-}
-<span class="kw">pub fn </span>get_location() -&gt; String {
-  <span class="macro">gullet!</span>().get_location()
-}
-
-<span class="kw">pub fn </span>with_mouth_mut&lt;FnR,R&gt;(caller: FnR) -&gt; R
+<span class="doccomment">/// Execute a function with a mutable reference to the current mouth
+</span><span class="kw">pub fn </span>with_mouth_mut&lt;FnR,R&gt;(caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Mouth&gt;) -&gt; R {
-  caller(<span class="macro">gullet_mut!</span>().get_mouth_mut())
+  <span class="kw">let </span><span class="kw-2">mut </span>gullet = <span class="macro">gullet_mut!</span>();
+  <span class="kw">let </span>mouth_opt = <span class="kw">match </span>gullet.runtime {
+    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+    <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>runtime.mouth),
+  };
+  caller(mouth_opt)
 }
 </code></pre></div></section></main></body></html>

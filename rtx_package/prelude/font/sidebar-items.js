@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MATH_FONTS","TEXT_FONTS"],"fn":["decode","decode_fontname","decode_string","lookup_font_family","lookup_font_series","lookup_font_shape","rationalize_font_size","relative_font_size"],"static":["FONT_TEXT_DEFAULT"],"struct":["Font"],"type":["Fontmap"]};

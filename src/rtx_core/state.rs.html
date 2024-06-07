@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/state.rs`."><title>state.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (3a36386dc 2024-04-25)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/state.rs`."><title>state.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (98489f248 2024-06-06)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -2246,6 +2246,16 @@
 <a href="#2246" id="2246">2246</a>
 <a href="#2247" id="2247">2247</a>
 <a href="#2248" id="2248">2248</a>
+<a href="#2249" id="2249">2249</a>
+<a href="#2250" id="2250">2250</a>
+<a href="#2251" id="2251">2251</a>
+<a href="#2252" id="2252">2252</a>
+<a href="#2253" id="2253">2253</a>
+<a href="#2254" id="2254">2254</a>
+<a href="#2255" id="2255">2255</a>
+<a href="#2256" id="2256">2256</a>
+<a href="#2257" id="2257">2257</a>
+<a href="#2258" id="2258">2258</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
@@ -2256,7 +2266,7 @@
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -2264,7 +2274,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::model::{IndirectModel, Model};
 <span class="kw">use </span><span class="kw">crate</span>::common::muglue::MuGlue;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
-<span class="kw">use </span><span class="kw">crate</span>::common::model;
+<span class="kw">use </span><span class="kw">crate</span>::common::model::{<span class="self">self</span>,compute_indirect_model_aux};
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">pub use </span><span class="kw">crate</span>::common::store::Stored; <span class="comment">// reexport for convenience
 </span><span class="kw">use </span><span class="kw">crate</span>::common::BindingDispatcher;
@@ -4243,14 +4253,19 @@
 //   return $code; }
 // #======================================================================
 
+
+// TODO: Continue here -- need to diagnoze why the indirect model is not returning
+// an intermediate "ltx:p" when asking for "#PCDATA" inside "ltx:_CaptureBlock_",
+// instead getting an intermediate "ltx:para".
+
 </span><span class="doccomment">/// The indirect model includes all elements allowed as direct children,
-/// and all descendents of a node that can be inserted after
-/// auto_open-ing intermediate elements.
+/// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
 /// This model therefor includes information from the Schema, as well as
-/// auto_open information that may be introduced in binding files.
-</span><span class="comment">// [Thus it should NOT be modifying the Model object, which may cover several documents]
+/// `auto_open` information that may be introduced in binding files.
+</span><span class="comment">// [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]
+// `imodel[tag][child] =&gt; inter` means if in `tag`, to open `child`, we must first open `inter`
 </span><span class="kw">pub fn </span>compute_indirect_model() -&gt; IndirectModel {
-  <span class="kw">let </span><span class="kw-2">mut </span>imodel: IndirectModel = HashMap::default();
+  <span class="kw">let </span><span class="kw-2">mut </span>imodel: IndirectModel = SymHashMap::default();
   <span class="comment">// Determine any indirect paths to each descendent via an `autoOpen-able' tag.
   </span><span class="kw">let </span><span class="kw-2">mut </span>openable: HashSet&lt;SymStr&gt; = HashSet::default();
   <span class="kw">for </span>tag <span class="kw">in </span>model::get_tags() {
@@ -4262,30 +4277,35 @@
   }
 
   <span class="kw">for </span>tag <span class="kw">in </span>model::get_tags() {
-    <span class="kw">let </span><span class="kw-2">mut </span>desc: HashMap&lt;SymStr, HashMap&lt;SymStr, usize&gt;&gt; = HashMap::default();
-    <span class="kw">crate</span>::common::model::compute_indirect_model_aux(tag, <span class="prelude-val">None</span>, <span class="number">1</span>, <span class="kw-2">&amp;mut </span>openable, <span class="kw-2">&amp;mut </span>desc);
+    <span class="kw">let </span><span class="kw-2">mut </span>desc: SymHashMap&lt;SymHashMap&lt;usize&gt;&gt; = SymHashMap::default();
+    compute_indirect_model_aux(tag, <span class="prelude-val">None</span>, <span class="number">1</span>, <span class="kw-2">&amp;mut </span>openable, <span class="kw-2">&amp;mut </span>desc);
     <span class="kw">let </span>desc_keys: Vec&lt;SymStr&gt; = desc.keys().copied().collect();
     <span class="kw">for </span>kid <span class="kw">in </span>desc_keys {
-      <span class="kw">let </span><span class="kw-2">mut </span>best = <span class="number">0</span>; <span class="comment">// Find best path to $kid.
-      </span><span class="kw">let </span>desc_kid_keys: Vec&lt;SymStr&gt; = desc
-        .entry(kid)
+      <span class="comment">// Find best path to `kid`.
+      </span><span class="kw">let </span><span class="kw-2">mut </span>best = <span class="number">0</span>;
+      <span class="kw">let </span><span class="kw-2">mut </span>desc_kid_keys: Vec&lt;SymStr&gt; = desc
+        .entry_sym(kid)
         .or_default()
         .keys()
         .copied()
         .collect();
-      <span class="comment">// desc_kid_keys.sort(); // TODO: why sort?
-      </span><span class="kw">for </span>start <span class="kw">in </span>desc_kid_keys {
-        <span class="kw">let </span>start_entry = {
-          <span class="kw">let </span>kid_entry = desc.entry(kid).or_default();
-          <span class="kw-2">*</span>kid_entry.entry(start.to_owned()).or_insert(<span class="number">0</span>)
-        };
-        <span class="kw">if </span>start_entry &gt; best {
-          imodel
-            .entry(tag)
-            .or_default()
-            .insert(kid, start.to_owned());
-          {
-            best = desc[<span class="kw-2">&amp;</span>kid][<span class="kw-2">&amp;</span>start];
+      <span class="comment">// TODO: why sort?
+      // Update: it appears that "ltx:p" and "ltx:para" in ltx:_CaptureBlock_ is one reason!!!
+      </span>desc_kid_keys.sort_by(|a,b| arena::with2(<span class="kw-2">*</span>a,<span class="kw-2">*</span>b,|astr,bstr| astr.cmp(bstr))); 
+      <span class="kw">for </span>start <span class="kw">in </span>desc_kid_keys {
+        <span class="kw">if </span>tag != kid &amp;&amp; tag != start {
+          <span class="kw">let </span>start_entry = {
+            <span class="kw">let </span>kid_entry = desc.entry_sym(kid).or_default();
+            <span class="kw-2">*</span>kid_entry.entry_sym(start.to_owned()).or_insert(<span class="number">0</span>)
+          };
+          <span class="kw">if </span>start_entry &gt; best {
+            imodel
+              .entry_sym(tag)
+              .or_default()
+              .insert_sym(kid, start.to_owned());
+            {
+              best = start_entry;
+            }
           }
         }
       }
@@ -4295,9 +4315,9 @@
   </span><span class="kw">if </span>model::is_permissive() {
     <span class="comment">// !!! Alarm!!!
     </span>imodel
-      .entry(arena::pin_static(<span class="string">"#Document"</span>))
+      .entry(<span class="string">"#Document"</span>)
       .or_default()
-      .insert(<span class="kw-2">*</span>H_PCDATA_SYM, <span class="kw-2">*</span>LTX_P_SYM);
+      .insert(<span class="string">"#PCDATA"</span>, arena::pin_static(<span class="string">"ltx:p"</span>));
   }
 
   imodel
@@ -4396,8 +4416,8 @@
   <span class="macro">state_mut!</span>().pending_resources = Vec::new();
 }
 <span class="kw">pub fn </span>get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
-  <span class="kw">match </span><span class="macro">state!</span>().indirect_model.as_ref().unwrap().get(<span class="kw-2">&amp;</span>tag) {
-    <span class="prelude-val">Some</span>(sub_m) =&gt; sub_m.get(<span class="kw-2">&amp;</span>childtag).copied(),
+  <span class="kw">match </span><span class="macro">state!</span>().indirect_model.as_ref().unwrap().get_sym(<span class="kw-2">&amp;</span>tag) {
+    <span class="prelude-val">Some</span>(sub_m) =&gt; sub_m.get_sym(<span class="kw-2">&amp;</span>childtag).copied(),
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
   }
 }

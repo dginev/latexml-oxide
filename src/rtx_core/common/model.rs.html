@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/model.rs`."><title>model.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (3a36386dc 2024-04-25)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/model.rs`."><title>model.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (98489f248 2024-06-06)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -836,6 +836,16 @@
 <a href="#836" id="836">836</a>
 <a href="#837" id="837">837</a>
 <a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
@@ -843,9 +853,8 @@
 <span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::io::BufRead;
 <span class="kw">use </span>std::io::BufReader;
-<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, ANY_SYM};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, ANY_SYM, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::relaxng::Relaxng;
 <span class="kw">use </span><span class="kw">crate</span>::common::xml::XML_NS;
@@ -854,17 +863,15 @@
 <span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">super</span>::arena::{
-  DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM,
-  RELAXNG_SYM, WILD_CARD_SYM,
+  SymHashMap, DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM, RELAXNG_SYM, WILD_CARD_SYM
 };
 
 <span class="comment">// use common::font::*;
 
 </span><span class="kw">pub const </span>LTX_NAMESPACE: <span class="kw-2">&amp;</span>str = <span class="string">"http://dlmf.nist.gov/LaTeXML"</span>;
-<span class="kw">pub type </span>IndirectModel = HashMap&lt;SymbolU32, HashMap&lt;SymbolU32, SymbolU32&gt;&gt;;
+<span class="kw">pub type </span>IndirectModel = SymHashMap&lt;SymHashMap&lt;SymStr&gt;&gt;;
 
 <span class="kw">static </span>PREFIXED_LOCALNAME_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^([^:]+):(.+)$"</span>).unwrap());
-<span class="kw">static </span>CAPTURE_TAG_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"(.*?:)?_Capture_$"</span>).unwrap());
 <span class="kw">static </span>TAG_MODEL_LINE_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r"^([^\{]+)\{(.*?)\}\((.*?)\)$"</span>).unwrap());
 <span class="kw">static </span>CLASS_MODEL_LINE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^([^:=]+):=(.*?)$"</span>).unwrap());
@@ -872,8 +879,8 @@
 
 <span class="attr">#[derive(Default, Debug)]
 </span><span class="kw">pub struct </span>TagFrame {
-  model: HashSet&lt;SymbolU32&gt;,
-  attributes: HashSet&lt;SymbolU32&gt;,
+  model: HashSet&lt;SymStr&gt;,
+  attributes: HashSet&lt;SymStr&gt;,
 }
 
 <span class="kw">static </span>DEFAULT_TAG_FRAME: Lazy&lt;TagFrame&gt; = Lazy::new(TagFrame::default);
@@ -881,19 +888,19 @@
 <span class="attr">#[derive(Default, Debug)]
 </span><span class="kw">pub struct </span>Model {
   <span class="kw">pub </span>schema: <span class="prelude-ty">Option</span>&lt;Relaxng&gt;,
-  <span class="kw">pub </span>schema_data: <span class="prelude-ty">Option</span>&lt;Vec&lt;SymbolU32&gt;&gt;,
-  <span class="kw">pub </span>schema_class: HashMap&lt;SymbolU32, HashSet&lt;SymbolU32&gt;&gt;,
-  <span class="kw">pub </span>code_namespace_prefixes: HashMap&lt;SymbolU32, SymbolU32&gt;,
-  <span class="kw">pub </span>code_namespaces: HashMap&lt;SymbolU32, SymbolU32&gt;,
-  <span class="kw">pub </span>document_namespace_prefixes: HashMap&lt;SymbolU32, SymbolU32&gt;,
-  <span class="kw">pub </span>document_namespaces: HashMap&lt;SymbolU32, SymbolU32&gt;,
-  <span class="comment">// doctype_namespaces: HashMap&lt;SymbolU32, SymbolU32&gt;,
+  <span class="kw">pub </span>schema_data: <span class="prelude-ty">Option</span>&lt;Vec&lt;SymStr&gt;&gt;,
+  <span class="kw">pub </span>schema_class: HashMap&lt;SymStr, HashSet&lt;SymStr&gt;&gt;,
+  <span class="kw">pub </span>code_namespace_prefixes: HashMap&lt;SymStr, SymStr&gt;,
+  <span class="kw">pub </span>code_namespaces: HashMap&lt;SymStr, SymStr&gt;,
+  <span class="kw">pub </span>document_namespace_prefixes: HashMap&lt;SymStr, SymStr&gt;,
+  <span class="kw">pub </span>document_namespaces: HashMap&lt;SymStr, SymStr&gt;,
+  <span class="comment">// doctype_namespaces: HashMap&lt;SymStr, SymStr&gt;,
   // namespace_errors: usize,
   </span><span class="kw">pub </span>permissive: bool,
   <span class="kw">pub </span>no_compiled: bool,
   <span class="kw">pub </span>debug_mode: bool,
   <span class="kw">pub </span>namespace_errors: u8,
-  <span class="kw">pub </span>tagprop: HashMap&lt;SymbolU32, TagFrame&gt;,
+  <span class="kw">pub </span>tagprop: HashMap&lt;SymStr, TagFrame&gt;,
 }
 
 <span class="attr">#[thread_local]
@@ -938,8 +945,8 @@
   }
   <span class="kw">pub fn </span>register_namespace_sym(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    codeprefix: SymbolU32,
-    namespace_opt: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt;,
+    codeprefix: SymStr,
+    namespace_opt: <span class="prelude-ty">Option</span>&lt;SymStr&gt;,
   ) {
     <span class="comment">// double-check empty strings are None
     </span><span class="kw">let </span>namespace_opt_checked = namespace_opt.filter(|val| <span class="kw-2">*</span>val != <span class="kw-2">*</span>EMPTY_SYM);
@@ -1060,7 +1067,7 @@
     }
   }
 
-  <span class="kw">pub fn </span>set_schema_class(<span class="kw-2">&amp;mut </span><span class="self">self</span>, classname: <span class="kw-2">&amp;</span>str, content: HashSet&lt;SymbolU32&gt;) {
+  <span class="kw">pub fn </span>set_schema_class(<span class="kw-2">&amp;mut </span><span class="self">self</span>, classname: <span class="kw-2">&amp;</span>str, content: HashSet&lt;SymStr&gt;) {
     <span class="self">self</span>.schema_class.insert(arena::pin(classname), content);
   }
   <span class="kw">pub fn </span>describe_model(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
@@ -1206,7 +1213,7 @@
   namespace: <span class="kw-2">&amp;</span>str,
   forattribute: bool,
   probe: bool,
-) -&gt; <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; {
+) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
   <span class="comment">// Get the prefix associated with the namespace url, noting that for elements, it might by
   // "#default", but for attributes would never be.
   // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
@@ -1292,8 +1299,8 @@
   namespace: <span class="kw-2">&amp;</span>str,
   _forattribute: bool,
   probe: bool,
-) -&gt; <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; {
-  <span class="kw">let </span><span class="kw-2">mut </span>codeprefix: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; = <span class="prelude-val">None</span>;
+) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
+  <span class="kw">let </span><span class="kw-2">mut </span>codeprefix: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = <span class="prelude-val">None</span>;
   <span class="kw">let </span>ns_sym = arena::pin(namespace);
   <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
   <span class="kw">if </span>!namespace.is_empty() {
@@ -1322,9 +1329,9 @@
   codeprefix
 }
 
-<span class="kw">pub fn </span>get_namespace(codeprefix: <span class="kw-2">&amp;</span>str, probe: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SymbolU32&gt;&gt; {
+<span class="kw">pub fn </span>get_namespace(codeprefix: <span class="kw-2">&amp;</span>str, probe: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
-  <span class="kw">let </span><span class="kw-2">mut </span>ns: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; = model.code_namespaces.get(<span class="kw-2">&amp;</span>arena::pin(codeprefix)).copied();
+  <span class="kw">let </span><span class="kw-2">mut </span>ns: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = model.code_namespaces.get(<span class="kw-2">&amp;</span>arena::pin(codeprefix)).copied();
   <span class="kw">if </span>ns.is_none() &amp;&amp; !probe {
     model.namespace_errors += <span class="number">1</span>;
     <span class="kw">let </span>example_namespace = <span class="macro">s!</span>(
@@ -1346,7 +1353,7 @@
 <span class="doccomment">/// Get the node's qualified name in standard form
 /// Ie. using the registered (code) prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
-</span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymbolU32 {
+</span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr {
   <span class="kw">use </span>libxml::tree::NodeType::<span class="kw-2">*</span>;
   <span class="kw">let </span>node_type = node.get_type();
   <span class="kw">if </span>node_type.is_none() {
@@ -1397,7 +1404,7 @@
 }
 
 <span class="doccomment">/// Same as get_node_qname, but using the Document namespace prefixes
-</span><span class="kw">pub fn </span>get_node_document_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymbolU32 {
+</span><span class="kw">pub fn </span>get_node_document_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr {
   <span class="kw">use </span>libxml::tree::NodeType::<span class="kw-2">*</span>;
   <span class="kw">let </span>node_type = node.get_type();
   <span class="kw">if </span>node_type.is_none() {
@@ -1465,6 +1472,13 @@
   }
 }
 
+<span class="doccomment">/// TODO: We need a proper data model to deal with the Symbol - String distinction.
+/// For now let's allocate strings and release the arena, but this is a CODE SMELL!
+</span><span class="kw">pub fn </span>decode_qname_sym(sym: SymStr) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, String)&gt; {
+  <span class="kw">let </span>codetag = arena::to_string(sym);
+  decode_qname(<span class="kw-2">&amp;</span>codetag)
+}
+
 <span class="comment">//**********************************************************************
 // Document Structure Queries
 //**********************************************************************
@@ -1472,7 +1486,11 @@
 // to submodel, in case it can evolve to more precision?
 // However, it would need more context to do that.
 
-</span><span class="kw">pub fn </span>can_contain_sym(tag: SymbolU32, child: SymbolU32) -&gt; bool {
+</span><span class="doccomment">/// TODO: This is a major code smell, experimental prototyping to see how to interoperate 
+/// strings with the inerned arena.
+/// `can_contain` and `can_contain_sym` should be implemented once, and one should be an 
+/// interning-only helper.
+</span><span class="kw">pub fn </span>can_contain_sym(tag: SymStr, child: SymStr) -&gt; bool {
   <span class="comment">// Handle obvious cases explicitly.
   </span><span class="kw">if </span>tag == <span class="kw-2">*</span>H_PCDATA_SYM
     || tag == <span class="kw-2">*</span>H_COMMENT_SYM
@@ -1482,8 +1500,9 @@
   } <span class="kw">else if </span>tag == <span class="kw-2">*</span>WILD_CARD_SYM {
     <span class="kw">return </span><span class="bool-val">true</span>;
   };
-  <span class="kw">if </span>arena::with(tag, |tag_str| CAPTURE_TAG_RE.is_match(tag_str))
-    || arena::with(child, |child_str| CAPTURE_TAG_RE.is_match(child_str))
+  <span class="kw">if </span>arena::with(tag, |tag_str| tag_str.ends_with(<span class="string">"_Capture_"</span>))
+    || arena::with(child, |child_str| child_str.ends_with(<span class="string">"_Capture_"</span>) ||
+      child_str.ends_with(<span class="string">"_CaptureBlock_"</span>))
   {
     <span class="comment">// with or without namespace prefix
     </span><span class="kw">return </span><span class="bool-val">true</span>;
@@ -1522,7 +1541,8 @@
     <span class="string">"_WildCard_" </span>=&gt; <span class="kw">return </span><span class="bool-val">true</span>,
     <span class="kw">_ </span>=&gt; {},
   };
-  <span class="kw">if </span>CAPTURE_TAG_RE.is_match(tag) || CAPTURE_TAG_RE.is_match(child) {
+  <span class="kw">if </span>tag.ends_with(<span class="string">"_Capture_"</span>) || child.ends_with(<span class="string">"_Capture_"</span>) || 
+     tag.ends_with(<span class="string">"_CaptureBlock_"</span>) {
     <span class="comment">// with or without namespace prefix
     </span><span class="kw">return </span><span class="bool-val">true</span>;
   }
@@ -1545,12 +1565,12 @@
   model.contains(<span class="kw-2">&amp;</span>ANY_SYM) || model.contains(<span class="kw-2">&amp;</span>arena::pin(child))
 }
 
-<span class="kw">pub fn </span>can_have_attribute(tag: SymbolU32, attrib: SymbolU32) -&gt; bool {
+<span class="kw">pub fn </span>can_have_attribute(tag: SymStr, attrib: SymStr) -&gt; bool {
   <span class="comment">// Handle obvious cases explicitly.
   </span><span class="kw">if let </span><span class="prelude-val">Some</span>(early_choice) = arena::with(tag, |tag_str| <span class="kw">match </span>tag_str {
     <span class="string">"#PCDATA" </span>| <span class="string">"#Comment" </span>| <span class="string">"#Document" </span>| <span class="string">"#ProcessingInstruction" </span>| <span class="string">"#DTD" </span>=&gt; <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
     <span class="string">"_WildCard_" </span>=&gt; <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
-    other <span class="kw">if </span>CAPTURE_TAG_RE.is_match(other) =&gt; <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
+    other <span class="kw">if </span>other.ends_with(<span class="string">"_Capture_"</span>) =&gt; <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
     <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
   }) {
     <span class="kw">return </span>early_choice;
@@ -1573,7 +1593,7 @@
   <span class="kw">let </span>tag = get_node_qname(tag);
   is_in_schema_class(<span class="kw-2">&amp;</span>arena::pin(class_name), <span class="kw-2">&amp;</span>tag)
 }
-<span class="kw">pub fn </span>is_in_schema_class(class_name: <span class="kw-2">&amp;</span>SymbolU32, tag: <span class="kw-2">&amp;</span>SymbolU32) -&gt; bool {
+<span class="kw">pub fn </span>is_in_schema_class(class_name: <span class="kw-2">&amp;</span>SymStr, tag: <span class="kw-2">&amp;</span>SymStr) -&gt; bool {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(class) = <span class="macro">model!</span>().schema_class.get(class_name) {
     class.contains(tag)
   } <span class="kw">else </span>{
@@ -1585,9 +1605,9 @@
 // Accessors
 //**********************************************************************
 
-</span><span class="kw">pub fn </span>get_tags() -&gt; Vec&lt;SymbolU32&gt; { <span class="macro">model!</span>().tagprop.keys().copied().collect() }
+</span><span class="kw">pub fn </span>get_tags() -&gt; Vec&lt;SymStr&gt; { <span class="macro">model!</span>().tagprop.keys().copied().collect() }
 
-<span class="kw">pub fn </span>get_tag_contents(tag: <span class="kw-2">&amp;</span>SymbolU32) -&gt; Vec&lt;SymbolU32&gt; {
+<span class="kw">pub fn </span>get_tag_contents(tag: <span class="kw-2">&amp;</span>SymStr) -&gt; Vec&lt;SymStr&gt; {
   <span class="kw">match </span><span class="macro">model!</span>().tagprop.get(tag) {
     <span class="prelude-val">Some</span>(h) =&gt; h.model.iter().copied().collect(),
     <span class="prelude-val">None </span>=&gt; Vec::new(),
@@ -1602,14 +1622,14 @@
 }
 
 <span class="kw">pub fn </span>with_schema_data&lt;FnR,R&gt;(caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;SymbolU32&gt;&gt;) -&gt; R {
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;SymStr&gt;&gt;) -&gt; R {
   caller(<span class="macro">model!</span>().schema_data.as_ref())
 }
 <span class="kw">pub fn </span>set_schema(schema: Relaxng) {
   <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
   model.schema = <span class="prelude-val">Some</span>(schema);
 }
-<span class="kw">pub fn </span>set_schema_class(classname: <span class="kw-2">&amp;</span>str, content: HashSet&lt;SymbolU32&gt;) {
+<span class="kw">pub fn </span>set_schema_class(classname: <span class="kw-2">&amp;</span>str, content: HashSet&lt;SymStr&gt;) {
   <span class="macro">model_mut!</span>().set_schema_class(classname, content)
 }
 <span class="kw">pub fn </span>add_tag_content(tag: <span class="kw-2">&amp;</span>str, elements: Vec&lt;<span class="kw-2">&amp;</span>str&gt;) {
@@ -1620,11 +1640,11 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>compute_indirect_model_aux(
-  tag: SymbolU32,
-  start_opt: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt;,
+  tag: SymStr,
+  start_opt: <span class="prelude-ty">Option</span>&lt;SymStr&gt;,
   desirability: usize,
-  openable: <span class="kw-2">&amp;mut </span>HashSet&lt;SymbolU32&gt;,
-  desc: <span class="kw-2">&amp;mut </span>HashMap&lt;SymbolU32, HashMap&lt;SymbolU32, usize&gt;&gt;,
+  openable: <span class="kw-2">&amp;mut </span>HashSet&lt;SymStr&gt;,
+  desc: <span class="kw-2">&amp;mut </span>SymHashMap&lt;SymHashMap&lt;usize&gt;&gt;,
 ) {
   <span class="kw">let </span>start = <span class="kw">match </span>start_opt {
     <span class="prelude-val">Some</span>(s) =&gt; s,
@@ -1634,22 +1654,22 @@
   <span class="comment">// A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
   // move ownership of the tag strings into the tag_contents vector.
   // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-  </span><span class="kw">let </span>tag_contents: Vec&lt;SymbolU32&gt; = get_tag_contents(<span class="kw-2">&amp;</span>tag);
+  </span><span class="kw">let </span>tag_contents: Vec&lt;SymStr&gt; = get_tag_contents(<span class="kw-2">&amp;</span>tag);
 
   <span class="kw">for </span>kid <span class="kw">in </span>tag_contents {
     <span class="kw">if </span>desc
-      .entry(kid)
+      .entry_sym(kid)
       .or_default()
-      .contains_key(<span class="kw-2">&amp;</span>start)
+      .contains_key_sym(<span class="kw-2">&amp;</span>start)
     {
       <span class="kw">continue</span>;
     } <span class="comment">// Already solved
 
     </span><span class="kw">if </span>start != <span class="kw-2">*</span>EMPTY_SYM {
       desc
-        .entry(kid)
+        .entry_sym(kid)
         .or_default()
-        .insert(start, desirability);
+        .insert_sym(start, desirability);
     }
 
     <span class="kw">if </span>kid != <span class="kw-2">*</span>H_PCDATA_SYM &amp;&amp; openable.contains(<span class="kw-2">&amp;</span>kid) {
@@ -1671,7 +1691,7 @@
 }
 
 <span class="kw">pub fn </span>with_code_namespaces&lt;FnR,R&gt;(caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;SymbolU32, SymbolU32&gt;) -&gt; R {
+<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;SymStr, SymStr&gt;) -&gt; R {
   caller(<span class="kw-2">&amp;</span><span class="macro">model!</span>().code_namespaces)
 }
 </code></pre></div></section></main></body></html>

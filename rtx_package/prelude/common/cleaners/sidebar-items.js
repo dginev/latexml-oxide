@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["clean_bib_key","clean_id","clean_label","clean_url","compose_url","roman_aux"]};

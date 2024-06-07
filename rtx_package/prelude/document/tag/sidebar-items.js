@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TagOptionName"],"struct":["TagOptions"],"type":["TagConstructionClosure","TagData"]};

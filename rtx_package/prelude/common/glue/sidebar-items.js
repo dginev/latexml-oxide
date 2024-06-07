@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FillCode"],"fn":["glue_string","new_setup","spec_setup"],"struct":["Glue"]};

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/document.rs`."><title>document.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (3a36386dc 2024-04-25)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rtx_core/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/document.rs`."><title>document.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (98489f248 2024-06-06)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -3365,6 +3365,60 @@
 <a href="#3365" id="3365">3365</a>
 <a href="#3366" id="3366">3366</a>
 <a href="#3367" id="3367">3367</a>
+<a href="#3368" id="3368">3368</a>
+<a href="#3369" id="3369">3369</a>
+<a href="#3370" id="3370">3370</a>
+<a href="#3371" id="3371">3371</a>
+<a href="#3372" id="3372">3372</a>
+<a href="#3373" id="3373">3373</a>
+<a href="#3374" id="3374">3374</a>
+<a href="#3375" id="3375">3375</a>
+<a href="#3376" id="3376">3376</a>
+<a href="#3377" id="3377">3377</a>
+<a href="#3378" id="3378">3378</a>
+<a href="#3379" id="3379">3379</a>
+<a href="#3380" id="3380">3380</a>
+<a href="#3381" id="3381">3381</a>
+<a href="#3382" id="3382">3382</a>
+<a href="#3383" id="3383">3383</a>
+<a href="#3384" id="3384">3384</a>
+<a href="#3385" id="3385">3385</a>
+<a href="#3386" id="3386">3386</a>
+<a href="#3387" id="3387">3387</a>
+<a href="#3388" id="3388">3388</a>
+<a href="#3389" id="3389">3389</a>
+<a href="#3390" id="3390">3390</a>
+<a href="#3391" id="3391">3391</a>
+<a href="#3392" id="3392">3392</a>
+<a href="#3393" id="3393">3393</a>
+<a href="#3394" id="3394">3394</a>
+<a href="#3395" id="3395">3395</a>
+<a href="#3396" id="3396">3396</a>
+<a href="#3397" id="3397">3397</a>
+<a href="#3398" id="3398">3398</a>
+<a href="#3399" id="3399">3399</a>
+<a href="#3400" id="3400">3400</a>
+<a href="#3401" id="3401">3401</a>
+<a href="#3402" id="3402">3402</a>
+<a href="#3403" id="3403">3403</a>
+<a href="#3404" id="3404">3404</a>
+<a href="#3405" id="3405">3405</a>
+<a href="#3406" id="3406">3406</a>
+<a href="#3407" id="3407">3407</a>
+<a href="#3408" id="3408">3408</a>
+<a href="#3409" id="3409">3409</a>
+<a href="#3410" id="3410">3410</a>
+<a href="#3411" id="3411">3411</a>
+<a href="#3412" id="3412">3412</a>
+<a href="#3413" id="3413">3413</a>
+<a href="#3414" id="3414">3414</a>
+<a href="#3415" id="3415">3415</a>
+<a href="#3416" id="3416">3416</a>
+<a href="#3417" id="3417">3417</a>
+<a href="#3418" id="3418">3418</a>
+<a href="#3419" id="3419">3419</a>
+<a href="#3420" id="3420">3420</a>
+<a href="#3421" id="3421">3421</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -3377,7 +3431,6 @@
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
-<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
@@ -3386,7 +3439,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::{
   <span class="self">self</span>, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, XML_ID_SYM,
-  SymHashMap,
+  SymHashMap,SymStr
 };
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::{Font, FONT_TEXT_DEFAULT};
@@ -3452,11 +3505,11 @@
 <span class="kw">pub static </span>MATH_HINT_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"ltx:XMHint"</span>;
 
 <span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>FONT_ELEMENT_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| arena::pin_static(<span class="string">"ltx:text"</span>));
+</span><span class="kw">pub static </span>FONT_ELEMENT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| arena::pin_static(<span class="string">"ltx:text"</span>));
 <span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>MATH_TOKEN_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| arena::pin_static(<span class="string">"ltx:XMTok"</span>));
+</span><span class="kw">pub static </span>MATH_TOKEN_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| arena::pin_static(<span class="string">"ltx:XMTok"</span>));
 <span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>MATH_HINT_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| arena::pin_static(<span class="string">"ltx:XMHint"</span>));
+</span><span class="kw">pub static </span>MATH_HINT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| arena::pin_static(<span class="string">"ltx:XMHint"</span>));
 
 <span class="kw">pub struct </span>Document {
   <span class="kw">pub </span>document: XmlDoc,
@@ -3634,8 +3687,8 @@
       }
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>keys_to_remove: Vec&lt;SymbolU32&gt; = Vec::new();
-    <span class="kw">let </span><span class="kw-2">mut </span>attrs_to_set: Vec&lt;(SymbolU32, SymbolU32)&gt; = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>keys_to_remove: Vec&lt;SymStr&gt; = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>attrs_to_set: Vec&lt;(SymStr, SymStr)&gt; = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>pending_declaration = HashMap::default();
 
     <span class="kw">if </span><span class="self">self</span>.has_node_font(node) {
@@ -4092,7 +4145,7 @@
     <span class="kw">let </span>test_sym = arena::pin(test_qname);
     <span class="kw">while let </span><span class="prelude-val">Some</span>(node) = node_opt {
       <span class="kw">let </span>node_qname = get_node_qname(<span class="kw-2">&amp;</span>node);
-      <span class="kw">if </span>sym_can_contain_somehow(node_qname, test_sym) {
+      <span class="kw">if </span>sym_can_contain_somehow(node_qname, test_sym).is_some() {
         <span class="kw">return </span><span class="bool-val">true</span>;
       } <span class="kw">else if </span>!can_auto_close(<span class="kw-2">&amp;</span>node) {
         <span class="kw">return </span><span class="bool-val">false</span>; <span class="comment">// could close, then check if parent can contain
@@ -4108,7 +4161,7 @@
   /// returning the last Some(node) that would be closed if it is possible,
   /// otherwise None
   </span><span class="kw">pub fn </span>is_closeable&lt;T: IntoVDQS&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, tags: T) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>tags: VecDeque&lt;SymbolU32&gt; = tags.into_vdqs();
+    <span class="kw">let </span><span class="kw-2">mut </span>tags: VecDeque&lt;SymStr&gt; = tags.into_vdqs();
     <span class="kw">let </span><span class="kw-2">mut </span>node_opt = <span class="kw">if </span><span class="self">self</span>.node.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
       <span class="self">self</span>.node.get_parent()
     } <span class="kw">else </span>{
@@ -4279,7 +4332,7 @@
   <span class="doccomment">/// get the actions that should be performed on afterOpen or afterClose
   </span><span class="kw">pub fn </span>get_tag_action_list(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    tag: SymbolU32,
+    tag: SymStr,
     when: TagOptionName,
   ) -&gt; Vec&lt;TagConstructionClosure&gt; {
     <span class="kw">use </span><span class="self">self</span>::tag::TagOptionName::<span class="kw-2">*</span>;
@@ -4504,7 +4557,7 @@
   }
 
   <span class="comment">// Internals
-  </span><span class="kw">fn </span>set_rdfa_prefixes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _prefixes: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt;) {}
+  </span><span class="kw">fn </span>set_rdfa_prefixes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _prefixes: <span class="prelude-ty">Option</span>&lt;SymStr&gt;) {}
 
   <span class="kw">pub fn </span>insert_math_token(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -4755,17 +4808,17 @@
           })
         &amp;&amp; !c[<span class="number">0</span>].has_attribute(<span class="string">"_force_font"</span>)
       {
-        <span class="kw">let </span><span class="kw-2">mut </span>c_first = c.pop().unwrap();
+        <span class="kw">let </span>c_first = c.pop().unwrap();
         <span class="kw">let </span>c_first_font = <span class="self">self</span>.get_node_font(<span class="kw-2">&amp;</span>c_first).clone();
         <span class="self">self</span>.set_node_font(node, <span class="kw-2">&amp;</span>c_first_font)<span class="question-mark">?</span>;
-        <span class="self">self</span>.remove_node(<span class="kw-2">&amp;mut </span>c_first);
         <span class="kw">for </span><span class="kw-2">mut </span>gc <span class="kw">in </span>c_first.get_child_nodes().into_iter() {
           gc.unlink();
           node.add_child(<span class="kw-2">&amp;mut </span>gc)<span class="question-mark">?</span>;
-          <span class="comment">// self.record_node_ids(&amp;node); // TODO
-        </span>}
+          <span class="self">self</span>.record_node_ids(node)<span class="question-mark">?</span>;
+        }
         <span class="comment">// Merge the attributes from the child onto $node
-        </span><span class="self">self</span>.merge_attributes(c_first, node, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+        </span><span class="self">self</span>.merge_attributes(<span class="kw-2">&amp;</span>c_first, node, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.remove_node(c_first);
       }
     }
     <span class="prelude-val">Ok</span>(())
@@ -4773,7 +4826,7 @@
 
   <span class="kw">pub fn </span>merge_attributes(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    from: Node,
+    from: <span class="kw-2">&amp;</span>Node,
     to: <span class="kw-2">&amp;mut </span>Node,
     _force: <span class="prelude-ty">Option</span>&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;&gt;,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -4922,9 +4975,9 @@
       boxes.push_front(<span class="self">self</span>.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(<span class="kw-2">&amp;</span>newstring)<span class="question-mark">?</span>;
       <span class="kw">for </span>_idx <span class="kw">in </span><span class="number">0</span>..nmatched - <span class="number">1 </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>remove = node.get_prev_sibling().unwrap();
+        <span class="kw">let </span>remove = node.get_prev_sibling().unwrap();
         boxes.push_front(<span class="self">self</span>.get_node_box(<span class="kw-2">&amp;</span>remove).unwrap());
-        <span class="self">self</span>.remove_node(<span class="kw-2">&amp;mut </span>remove);
+        <span class="self">self</span>.remove_node(remove);
       }
       <span class="comment">// This fragment replaces the node's box by the composite boxes it replaces
       // HOWEVER, this gets things out of sync because parent lists of boxes still
@@ -5041,15 +5094,23 @@
     <span class="prelude-val">Ok</span>(path)
   }
 
-  <span class="doccomment">/// Find the node where an element with qualified name $qname can be inserted.
+  <span class="doccomment">/// Find the node where an element with qualified name `qname` can be inserted.
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
   </span><span class="kw">pub fn </span>find_insertion_point(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     qname: <span class="kw-2">&amp;</span>str,
-    has_opened_opt: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt;,
+    has_opened_opt: <span class="prelude-ty">Option</span>&lt;SymStr&gt;,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
     <span class="kw">let </span>qsym = arena::pin(qname);
+    <span class="self">self</span>.find_insertion_point_qsym(qsym, has_opened_opt)
+  }
+
+  <span class="kw">pub fn </span>find_insertion_point_qsym(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    qsym: SymStr,
+    has_opened_opt: <span class="prelude-ty">Option</span>&lt;SymStr&gt;,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
     <span class="self">self</span>.close_text_internal()<span class="question-mark">?</span>; <span class="comment">// Close any current text node.
     </span><span class="kw">let </span>cur_qname = get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.node);
     <span class="comment">// If `qname` is allowed at the current point, we're done.
@@ -5063,13 +5124,12 @@
         </span><span class="kw">let </span>node_font = <span class="self">self</span>.get_node_font(<span class="kw-2">&amp;</span><span class="self">self</span>.node).clone();
         <span class="comment">// TODO: avoid this clone?
         </span><span class="kw">let </span>inter_string = arena::to_string(inter);
-        <span class="self">self</span>.open_element(<span class="kw-2">&amp;</span>inter_string, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node_font))<span class="question-mark">?</span>;
-
-        <span class="kw">return </span><span class="self">self</span>.find_insertion_point(qname, <span class="prelude-val">Some</span>(inter)); <span class="comment">// And retry insertion (should
-                                                                     // work now).
-      </span>}
-    }
-
+        <span class="self">self</span>.open_element(<span class="kw-2">&amp;</span>inter_string, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"_autoopened" </span>=&gt; <span class="string">"true"</span>)),
+         <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node_font))<span class="question-mark">?</span>;
+        <span class="comment">// And retry insertion (should work now).
+        </span><span class="kw">return </span><span class="self">self</span>.find_insertion_point_qsym(qsym, <span class="prelude-val">Some</span>(inter)); 
+      }
+    } 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(has_opened) = has_opened_opt {
       <span class="comment">// out of options if already inside an auto-open chain
       </span><span class="kw">let </span>message: String = arena::with2(has_opened, cur_qname,|has_opened_str,cur_qname_str|
@@ -5081,7 +5141,7 @@
             <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>)<span class="question-mark">?
           </span>))
       )<span class="question-mark">?</span>;
-      <span class="macro">Error!</span>(<span class="string">"malformed"</span>, qname, message);
+      <span class="macro">Error!</span>(<span class="string">"malformed"</span>, arena::to_string(qsym), message);
       <span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone()) <span class="comment">// But we'll do it anyway, unless Error =&gt; Fatal.
     </span>} <span class="kw">else </span>{
       <span class="comment">// Now we're getting more desparate...
@@ -5094,7 +5154,7 @@
           <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>EMPTY_SYM,
           <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>p) =&gt; get_node_qname(p),
         };
-        <span class="kw">if </span>sym_can_contain_somehow(parent_name, qsym) {
+        <span class="kw">if </span>sym_can_contain_somehow(parent_name, qsym).is_some() {
           close_to = <span class="prelude-val">Some</span>(node);
           <span class="kw">break</span>;
         }
@@ -5105,15 +5165,14 @@
       }
       <span class="kw">if let </span><span class="prelude-val">Some</span>(close_to_node) = close_to {
         <span class="self">self</span>.close_node_internal(<span class="kw-2">&amp;</span>close_to_node)<span class="question-mark">?</span>; <span class="comment">// Close the auto closeable nodes.
-        </span><span class="self">self</span>.find_insertion_point(qname, <span class="prelude-val">None</span>) <span class="comment">// Then retry, possibly w/auto open's
+        </span><span class="self">self</span>.find_insertion_point_qsym(qsym, <span class="prelude-val">None</span>) <span class="comment">// Then retry, possibly w/auto open's
       </span>} <span class="kw">else </span>{
         <span class="comment">// Didn't find a legit place.
-        </span><span class="kw">let </span>message = arena::with(cur_qname, |cur_qname_str| {
+        </span><span class="kw">let </span>message = arena::with2(cur_qname, qsym, |cur_qname_str, qname| {
           <span class="macro">s!</span>(<span class="string">"{:?} isn't allowed in &lt;{}&gt;\n{}"</span>, qname, cur_qname_str,Backtrace::capture())
         });
         <span class="comment">//"Currently in " self.getInsertionContext());
-        </span><span class="macro">Error!</span>(<span class="string">"malformed"</span>, qname, message);
-        
+        </span><span class="macro">Error!</span>(<span class="string">"malformed"</span>, arena::to_string(qsym), message);
 
         <span class="comment">// But we'll do it anyway, unless Error =&gt; Fatal.
         </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone())
@@ -5541,7 +5600,7 @@
     <span class="comment">// RE-mark visibility!
     </span><span class="self">self</span>.mark_xmnode_visibility()<span class="question-mark">?</span>;
     <span class="comment">// will reversing keep from problems removing nodes from trees that already have been removed?
-    </span><span class="kw">for </span><span class="kw-2">mut </span>dual <span class="kw">in </span><span class="self">self
+    </span><span class="kw">for </span>dual <span class="kw">in </span><span class="self">self
       </span>.findnodes(<span class="string">"descendant-or-self::ltx:XMDual"</span>, <span class="prelude-val">None</span>)
       .into_iter()
       .rev()
@@ -5558,7 +5617,7 @@
         .is_none()
       {
         <span class="comment">// content never seen
-        </span><span class="self">self</span>.collapse_xmdual(<span class="kw-2">&amp;mut </span>dual, presentation)<span class="question-mark">?</span>;
+        </span><span class="self">self</span>.collapse_xmdual(dual, presentation)<span class="question-mark">?</span>;
       } <span class="kw">else if </span><span class="self">self
         </span>.findnode(
           <span class="string">"descendant-or-self::*[@_pvis or @_cvis]"</span>,
@@ -5567,7 +5626,7 @@
         .is_none()
       {
         <span class="comment">// pres.
-        </span><span class="self">self</span>.collapse_xmdual(<span class="kw-2">&amp;mut </span>dual, content)<span class="question-mark">?</span>;
+        </span><span class="self">self</span>.collapse_xmdual(dual, content)<span class="question-mark">?</span>;
       } <span class="kw">else </span>{
         <span class="comment">// compact aligned structures, where possible
         </span><span class="self">self</span>.compact_xmdual(dual, content, <span class="prelude-val">Some</span>(presentation))<span class="question-mark">?</span>;
@@ -5638,7 +5697,7 @@
   <span class="doccomment">/// Replace an XMDual with one of its branches
   </span><span class="kw">fn </span>collapse_xmdual(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    dual: <span class="kw-2">&amp;mut </span>Node,
+    dual: Node,
     <span class="kw-2">mut </span>branch: Node,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// The other branch is not visible, nor referenced,
@@ -5782,8 +5841,8 @@
   //   return $$self{node_fonts}{$fontid} || LaTeXML::Common::Font-&gt;textDefault(); }
 
   // Remove a node from the document (from it's parent)
-  </span><span class="kw">pub fn </span>remove_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node) {
-    <span class="kw">let </span><span class="kw-2">mut </span>chopped: bool = <span class="self">self</span>.node == <span class="kw-2">*</span>node; <span class="comment">// Note if we're removing insertion point
+  </span><span class="kw">pub fn </span>remove_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: Node) {
+    <span class="kw">let </span><span class="kw-2">mut </span>chopped: bool = <span class="self">self</span>.node == node; <span class="comment">// Note if we're removing insertion point
     </span><span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
       <span class="comment">// If an element, do ID bookkeeping.
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(id) = node.get_attribute_ns(<span class="string">"id"</span>, xml::XML_NS) {
@@ -5793,13 +5852,14 @@
         chopped = chopped || <span class="self">self</span>.remove_node_aux(child);
       }
     }
-    <span class="kw">let </span>parent = node.get_parent().unwrap();
-    <span class="kw">if </span>chopped {
-      <span class="comment">// Don't remove insertion point!
-      </span><span class="self">self</span>.set_node(<span class="kw-2">&amp;</span>parent);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = node.get_parent() {
+      <span class="kw">if </span>chopped {
+        <span class="comment">// Don't remove insertion point!
+        </span><span class="self">self</span>.set_node(<span class="kw-2">&amp;</span>parent);
+      }
+      node.unlink();
     }
-    node.unlink(); <span class="comment">// TODO: How is this different from parent.remove_child(node) ???
-  </span>}
+  }
 
   <span class="kw">fn </span>remove_node_aux(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: Node) -&gt; bool {
     <span class="kw">let </span><span class="kw-2">mut </span>chopped = <span class="self">self</span>.node == node;
@@ -6171,13 +6231,15 @@
   }
 
   <span class="doccomment">/// Unwrap the children of $node, by replacing $node by its children.
-  </span><span class="kw">pub fn </span>unwrap_nodes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: Node) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+  </span><span class="kw">pub fn </span>unwrap_nodes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>children = node.get_child_nodes();
     <span class="self">self</span>.replace_node(node, children)
   }
 
-  <span class="comment">// Replace $node by `nodes` (presumably descendants of some kind?)
-  </span><span class="kw">pub fn </span>replace_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: Node, with: Vec&lt;Node&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+  <span class="doccomment">/// Replace `node` by `nodes` (presumably descendants of some kind?)
+  </span><span class="comment">// DG: Don't return the replaced `node`, as it is groudns for memory management trouble
+  //     with the low-level libxml layer. I've encountered segfaults here.
+  </span><span class="kw">pub fn </span>replace_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: Node, with: Vec&lt;Node&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(_parent) = node.get_parent() {
       <span class="kw">let </span><span class="kw-2">mut </span>c0_opt: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
       <span class="kw">for </span><span class="kw-2">mut </span>with_node <span class="kw">in </span>with.into_iter() {
@@ -6190,45 +6252,75 @@
         }
         c0_opt = <span class="prelude-val">Some</span>(with_node);
       }
-      <span class="self">self</span>.remove_node(<span class="kw-2">&amp;mut </span>node);
+      <span class="self">self</span>.remove_node(node);
     }
-    <span class="prelude-val">Ok</span>(node)
+    <span class="prelude-val">Ok</span>(())
   }
 
   <span class="comment">// initially since $node-&gt;setNodeName was broken in XML::LibXML 1.58
   // but this can provide for more options &amp; correctness?
-  </span><span class="kw">pub fn </span>rename_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _node: <span class="kw-2">&amp;mut </span>Node, _newname: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
-    <span class="macro">todo!</span>();
-    <span class="comment">// my ($self, $node, $newname) = @_;
-    // my $model = $$self{model};
-    // my ($ns, $tag) = $model-&gt;decodeQName($newname);
-    // my $parent = $node-&gt;parentNode;
-    // my $new = $self-&gt;openElement_internal($parent, $ns, $tag);
-    // my $id;
-    // # Move to the position AFTER $node
-    // $parent-&gt;insertAfter($new, $node);
-    // # Copy ALL attributes from $node to $newnode
-    // foreach my $attr ($node-&gt;attributes) {
-    //   my $key   = $attr-&gt;getName;
-    //   my $value = $node-&gt;getAttribute($key);
-    //   $id = $value if $key eq 'xml:id';    # Save to register after removal of old node.
-    //   $new-&gt;setAttribute($key, $value); }
-    // # AND move all content from $node to $newnode
-    // foreach my $child ($node-&gt;childNodes) {
-    //   $new-&gt;appendChild($child); }
-    // ## THEN call afterOpen... ?
-    // # It would normally be called before children added,
-    // # but how can we know if we're duplicated auto-added stuff?
-    // $self-&gt;afterOpen($new);
-    // $self-&gt;afterClose($new);
-    // # Finally, remove the old node
-    // $self-&gt;removeNode($node);
-    // # and FINALLY, we can register the new node under the id.
-    // if ($id) {
-    //   my $newid = $self-&gt;recordID($id, $new);
-    //   $new-&gt;setAttribute('xml:id' =&gt; $newid) if $newid ne $id; }
-    // return $new; }
-  </span>}
+  </span><span class="kw">pub fn </span>rename_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: Node, newname: <span class="kw-2">&amp;</span>str, reinsert: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+    <span class="kw">let </span>(ns,tag) = model::decode_qname(newname)<span class="question-mark">?</span>;
+    <span class="kw">let </span>newsym = arena::pin(newname);
+    <span class="self">self</span>.rename_node_internal(node, newsym, ns, tag, reinsert)
+  }
+  <span class="kw">pub fn </span>rename_node_qsym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: Node, newsym: SymStr, reinsert: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+    <span class="kw">let </span>(ns,tag) = model::decode_qname_sym(newsym)<span class="question-mark">?</span>;
+    <span class="self">self</span>.rename_node_internal(node, newsym, ns, tag, reinsert)
+  }
+  <span class="kw">fn </span>rename_node_internal(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: Node, newname: SymStr, ns:<span class="prelude-ty">Option</span>&lt;String&gt;, tag: String, reinsert: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>parent = node.get_parent().expect(<span class="string">"rename should never be called on an orphan or root node."</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_internal(<span class="kw-2">&amp;mut </span>parent, ns, <span class="kw-2">&amp;</span>tag)<span class="question-mark">?</span>;
+    <span class="comment">// Move to the position AFTER node
+    </span>node.add_next_sibling(<span class="kw-2">&amp;mut </span>new)<span class="question-mark">?</span>;
+    <span class="comment">// Copy ALL attributes from `node` to `newnode`
+    </span><span class="kw">let </span><span class="kw-2">mut </span>id = <span class="prelude-val">None</span>;
+    <span class="kw">for </span>(key,value) <span class="kw">in </span>node.get_attributes() {
+      <span class="kw">if </span>model::can_have_attribute(newname, arena::pin(<span class="kw-2">&amp;</span>key)) {
+        new.set_attribute(<span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span>value)<span class="question-mark">?</span>;
+      }
+      <span class="kw">if </span>key == <span class="string">"xml:id" </span>{
+        id = <span class="prelude-val">Some</span>(value); <span class="comment">// Save to register after removal of old node.
+      </span>}
+    }
+    <span class="comment">// AND move all content from `node` to `newnode`
+    </span><span class="kw">if </span>!reinsert {
+      <span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>node.get_child_nodes() {
+        child.unbind();
+        new.add_child(<span class="kw-2">&amp;mut </span>child)<span class="question-mark">?</span>;
+      }
+    } <span class="kw">else </span>{
+      std::mem::swap(<span class="kw-2">&amp;mut </span><span class="self">self</span>.node, <span class="kw-2">&amp;mut </span>new);
+      <span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>node.get_child_nodes() {
+        child.unbind();
+        <span class="kw">if </span>child.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
+          <span class="self">self</span>.open_text_internal(<span class="kw-2">&amp;</span>child.get_content())<span class="question-mark">?</span>;
+          <span class="self">self</span>.close_text_internal()<span class="question-mark">?</span>; 
+        } <span class="kw">else </span>{
+          <span class="kw">let </span><span class="kw-2">mut </span>point = <span class="self">self</span>.find_insertion_point_qsym(get_node_qname(<span class="kw-2">&amp;</span>child), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+          point.add_child(<span class="kw-2">&amp;mut </span>child)<span class="question-mark">?</span>;
+        } 
+      }
+      std::mem::swap(<span class="kw-2">&amp;mut </span><span class="self">self</span>.node, <span class="kw-2">&amp;mut </span>new);
+    }
+    <span class="comment">// THEN call afterOpen... ?
+    //   It would normally be called before children added,
+    //   but how can we know if we're duplicated auto-added stuff?
+    </span><span class="self">self</span>.after_open(<span class="kw-2">&amp;mut </span>new)<span class="question-mark">?</span>;
+    <span class="self">self</span>.after_close(<span class="kw-2">&amp;mut </span>new)<span class="question-mark">?</span>;
+    <span class="comment">// Finally, remove the old node
+    </span><span class="self">self</span>.remove_node(node);
+
+    <span class="comment">// and FINALLY, we can register the new node under the id.
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(id) = id {
+      <span class="kw">let </span>newid = <span class="self">self</span>.record_id_with_node(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>new);
+      <span class="kw">if </span>newid != id {
+        new.set_attribute(<span class="string">"xml:id"</span>, <span class="kw-2">&amp;</span>newid)<span class="question-mark">?</span>;
+      }
+    }
+
+    <span class="prelude-val">Ok</span>(new)
+  }
 
   <span class="kw">pub fn </span>trim_node_whitespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     trim_node_left_whitespace(node)<span class="question-mark">?</span>;
@@ -6320,7 +6412,7 @@
         //   if ($$savenode ne $$n) &amp;&amp; $LaTeXML::DEBUG{document};
         </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(savenode));
       }
-    } <span class="kw">else if </span>!can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>.node, qname) {
+    } <span class="kw">else if </span>can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>.node, qname).is_some() {
         <span class="macro">Warn!</span>(<span class="string">"malformed"</span>, qname, <span class="macro">s!</span>(<span class="string">"No open node can contain element '{}'"</span>, qname));
         <span class="comment">// self.get_insertion_context())
     </span>}
@@ -6475,12 +6567,12 @@
   </span><span class="kw">pub fn </span>replace_tree(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     new: Node,
-    old: <span class="kw-2">&amp;mut </span>Node,
+    old: Node,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>parent) = old.get_parent() {
       <span class="kw">let </span><span class="kw-2">mut </span>following = VecDeque::new(); <span class="comment">// Collect the matching and following nodes
       </span><span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>sib) = parent.get_last_child() {
-        <span class="kw">if </span>sib == <span class="kw-2">*</span>old {
+        <span class="kw">if </span>sib == old {
           <span class="kw">break</span>;
         }
         <span class="comment">// parent.remove_child(sib); // We're putting these back, in a moment!
@@ -6596,26 +6688,26 @@
 }
 
 <span class="kw">pub trait </span>IntoVDQS {
-  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymbolU32&gt;
+  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt;
   <span class="kw">where </span><span class="self">Self</span>: Sized;
 }
-<span class="kw">impl </span>IntoVDQS <span class="kw">for </span>SymbolU32 {
-  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymbolU32&gt; {
+<span class="kw">impl </span>IntoVDQS <span class="kw">for </span>SymStr {
+  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>vdq = VecDeque::new();
     vdq.push_front(<span class="self">self</span>);
     vdq
   }
 }
 <span class="kw">impl </span>IntoVDQS <span class="kw">for </span><span class="kw-2">&amp;</span>str {
-  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymbolU32&gt; {
+  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>vdq = VecDeque::new();
     vdq.push_front(arena::pin(<span class="self">self</span>));
     vdq
   }
 }
 
-<span class="kw">impl </span>IntoVDQS <span class="kw">for </span>VecDeque&lt;SymbolU32&gt; {
-  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymbolU32&gt; { <span class="self">self </span>}
+<span class="kw">impl </span>IntoVDQS <span class="kw">for </span>VecDeque&lt;SymStr&gt; {
+  <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; { <span class="self">self </span>}
 }
 
 
@@ -6626,15 +6718,21 @@
   model::can_contain_sym(tag, arena::pin(child))
 }
 
+<span class="kw">pub fn </span>can_contain_node(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>Node) -&gt; bool {
+  <span class="kw">let </span>tag = model::get_node_qname(node);
+  <span class="kw">let </span>child_tag = model::get_node_qname(child);
+  model::can_contain_sym(tag, child_tag)
+}
+
 <span class="kw">pub fn </span>can_contain_qname(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
   model::can_contain(tag, child)
 }
 
-<span class="kw">pub fn </span>node_can_contain_sym(node: <span class="kw-2">&amp;</span>Node, child: SymbolU32) -&gt; bool {
+<span class="kw">pub fn </span>node_can_contain_sym(node: <span class="kw-2">&amp;</span>Node, child: SymStr) -&gt; bool {
   <span class="kw">let </span>tag = model::get_node_qname(node);
   model::can_contain_sym(tag, child)
 }
-<span class="kw">pub fn </span>can_contain_qsym(tag: SymbolU32, child: SymbolU32) -&gt; bool {
+<span class="kw">pub fn </span>can_contain_qsym(tag: SymStr, child: SymStr) -&gt; bool {
   model::can_contain_sym(tag, child)
 }
 
@@ -6642,9 +6740,9 @@
 /// That is, by openning some number of autoOpen'able tags?
 /// And if so, return the tag to open.
 </span><span class="kw">pub fn </span>can_contain_indirect(
-  tag: SymbolU32,
-  childtag: SymbolU32,
-) -&gt; <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; {
+  tag: SymStr,
+  child: SymStr,
+) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
   <span class="comment">// $tag = $model-&gt;getNodeQName($tag) if ref $tag;          // In case tag is a
   // node. $child = $model-&gt;getNodeQName($child) if ref $child;    // In case
   // child is a node.
@@ -6652,11 +6750,10 @@
     <span class="kw">let </span>i_model = state::compute_indirect_model();
     state::set_indirect_model(i_model);
   }
-
-  state::get_indirect_model_relationship(tag,childtag)
+  state::get_indirect_model_relationship(tag,child)
 }
 
-<span class="kw">pub fn </span>can_contain_node_somehow(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<span class="kw">pub fn </span>can_contain_node_somehow(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
   <span class="kw">let </span>child_sym = arena::pin(child);
   sym_can_contain_somehow(model::get_node_qname(node), child_sym)
 }
@@ -6664,15 +6761,26 @@
 <span class="kw">pub fn </span>can_contain_somehow(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
   <span class="kw">let </span>tag_sym = arena::pin(tag);
   <span class="kw">let </span>child_sym = arena::pin(child);
-  sym_can_contain_somehow(tag_sym, child_sym)
+  sym_can_contain_somehow(tag_sym, child_sym).is_some()
 }
 
-<span class="kw">pub fn </span>sym_can_contain_somehow(
-  tag: SymbolU32,
-  child: SymbolU32,
-) -&gt; bool {
-  model::can_contain_sym(tag, child)
-    || can_contain_indirect(tag, child).is_some()
+<span class="doccomment">/// The return type of this method is somewhat artisinal, as we have a three-way semantics:
+/// - `None`: There is no known structure that allows `child` as a descendant of `tag`
+/// - `Some(None)`: `child` is directly allowed inside `tag`
+/// - `Some(Some(inter_tag))`: `child` is allowed inside `inter_tag`, which is allowed in `tag`
+/// 
+/// This could also (maybe more naturally?) be represented with a custom 3-valued enum.
+/// That said, I think it may be wiser to refactor the method entirely, always requiring a `bool`
+/// check, followed by an explicit request for the `inner_tag` name, which can be `Option&lt;SymStr&gt;`.
+</span><span class="kw">pub fn </span>sym_can_contain_somehow(
+  tag: SymStr,
+  child: SymStr,
+) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
+  <span class="kw">match </span>model::can_contain_sym(tag, child) {
+    <span class="bool-val">true </span>=&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>),
+    <span class="bool-val">false </span>=&gt; can_contain_indirect(tag, child)
+      .map(<span class="prelude-val">Some</span>)
+  }
 }
 
 <span class="kw">pub fn </span>can_node_have_attribute(node: <span class="kw-2">&amp;</span>Node, attrib: <span class="kw-2">&amp;</span>str) -&gt; bool {
@@ -6683,8 +6791,8 @@
   model::can_have_attribute(arena::pin(tag), arena::pin(attrib))
 }
 <span class="kw">pub fn </span>sym_can_have_attribute(
-  tag: SymbolU32,
-  attrib: SymbolU32,
+  tag: SymStr,
+  attrib: SymStr,
 ) -&gt; bool {
   model::can_have_attribute(tag, attrib)
 }
@@ -6725,7 +6833,7 @@
 /// Ie. using the registered prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
 /// NOTE: Should Deprecate! (use model)
-</span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymbolU32 {
+</span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr {
   model::get_node_qname(node)
 }
 <span class="kw">pub fn </span>with_node_qname&lt;R, FnR&gt;(node: <span class="kw-2">&amp;</span>Node, caller: FnR) -&gt; R

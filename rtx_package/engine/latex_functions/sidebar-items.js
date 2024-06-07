@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["begin_appendices","end_appendices","make_note_tags","only_preamble","relocate_footnote","start_appendices","tabular_bindings"]};
