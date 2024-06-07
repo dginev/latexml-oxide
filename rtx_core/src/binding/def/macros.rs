@@ -367,7 +367,7 @@ macro_rules! count_unpack_ref {
   };
 }
 
-/// Try to efficiently unwrap a Vec<T> into a [T;n] for `$arg1`...`$argn`
+/// Try to efficiently unwrap a `Vec<T>` into a `[T;n]` for `$arg1`...`$argn`
 #[macro_export]
 macro_rules! unpack_opt {
   ($args:ident => $arg1:ident) => {
@@ -387,7 +387,7 @@ macro_rules! unpack_opt {
   };
 }
 
-/// Try to efficiently unwrap a &Vec<T> into a &[T;n] for `$arg1`...`$argn`
+/// Try to efficiently unwrap a `&Vec<T>` into a `&[T;n]` for `$arg1`...`$argn`
 #[macro_export]
 macro_rules! unpack_opt_ref {
   ($args:ident => $arg1:ident) => {

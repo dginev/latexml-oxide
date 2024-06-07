@@ -76,7 +76,7 @@ pub enum Stored {
   // Collections (boxed)
   /// boxed [char]
   Chars(Box<[char]>),
-  /// boxed [Option<char>]
+  /// boxed `[Option<char>]`
   Fontmap(Rc<[Option<char>]>),
   /// boxed collection
   Strings(Rc<[String]>),

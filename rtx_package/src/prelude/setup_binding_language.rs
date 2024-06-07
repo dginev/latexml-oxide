@@ -779,8 +779,9 @@ macro_rules! Expand {
   }
 }
 
-/// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
-/// arguments
+/// Builds a representation of a single command sequence invoked on a
+/// `Vec<Token>` of its arguments.
+/// A leading string argument is interpreted as `T_CS`.
 #[macro_export]
 macro_rules! Invocation {
   ($csname:literal) => {{
@@ -1073,10 +1074,10 @@ macro_rules! MergeFont {
 // DefMacro,  and we have a several places where we get compile-time speedups by pre-tokenizing into
 // Rust Tokens objects / Replacement closures
 
-/// A `$prototype` will be parsed into a command sequence and a list of parameters.
+/// A `prototype` will be parsed into a command sequence and a list of parameters.
 /// Any macro arguments will be substituted for parameter indicators (eg #1)
-/// in the I<tokens> or tokenized I<string> and the result is used as the expansion
-/// of the control sequence. If I<code> is used, it is called at expansion time
+/// in the `Tokens` or tokenized string and the result is used as the expansion
+/// of the control sequence. If a closure is used, it is called at expansion time
 /// and should return a list of tokens as its result.
 #[rustfmt::skip]
 #[macro_export]

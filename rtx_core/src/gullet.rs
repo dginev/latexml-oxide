@@ -862,10 +862,10 @@ pub fn read_arg() -> Result<Tokens> {
       }
   }
 }
-/// Read and return a LaTeX optional argument; returns C<$default> if there is no '[',
-/// otherwise the contents of the [].
-/// Note that this returns an empty array if [] is present,
-/// i.e. "[contents]" in TeX will lead to Tokens(contents), otherwise returns None
+/// Read and return a LaTeX optional argument; returns `default` if there is no '[',
+/// otherwise the contents of the array.
+/// Note that this returns an empty array if `[]` is present,
+/// i.e. `[contents]` in TeX will lead to `Tokens(contents)`, otherwise returns `None`
 pub fn read_optional(
   default: Option<Tokens>,
 ) -> Result<Option<Tokens>> {
@@ -995,12 +995,14 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
   Ok(None)
 }
 
-///======================================================================
-/// Integer, Number
-///======================================================================
-/// <number> = <optional signs><unsigned number>
-/// <unsigned number> = <normal integer> | <coerced integer>
-/// <coerced integer> = <internal dimen> | <internal glue>
+//======================================================================
+// Integer, Number
+//======================================================================
+// ```
+// <number> = <optional signs><unsigned number>
+// <unsigned number> = <normal integer> | <coerced integer>
+// <coerced integer> = <internal dimen> | <internal glue>
+// ```
 pub fn read_number() -> Result<Number> {
   let is_negative = read_optional_signs()?;
   let s = if is_negative { -1 } else { 1 };
@@ -1029,9 +1031,11 @@ pub fn read_number() -> Result<Number> {
   }
 }
 
+/// ```bnf
 /// <normal integer> = <internal integer> | <integer constant>
 ///   | '<octal constant><one optional space> | "<hexadecimal constant><one optional space>
 ///   | `<character token><one optional space>
+/// ```
 pub fn read_normal_integer() -> Result<Option<Number>> {
   match read_x_token(None, false)? {
     None => Ok(None),
@@ -1126,9 +1130,11 @@ fn read_internal_glue() -> Result<Option<Glue>> {
 //======================================================================
 // Dimensions
 //======================================================================
+// ```
 // <dimen> = <optional signs><unsigned dimen>
 // <unsigned dimen> = <normal dimen> | <coerced dimen>
 // <coerced dimen> = <internal glue>
+// ```
 pub fn read_dimension() -> Result<Dimension> {
   let is_negative = read_optional_signs()?;
   if let Some(d) = read_internal_dimension()? {
@@ -1163,11 +1169,13 @@ pub fn read_dimension() -> Result<Dimension> {
   }
 }
 
+// ```
 // <unit of measure> = <optional spaces><internal unit>
 //     | <optional true><physical unit><one optional space>
 // <internal unit> = em <one optional space> | ex <one optional space>
 //     | <internal integer> | <internal dimen> | <internal glue>
 // <physical unit> = pt | pc | in | bp | cm | mm | dd | cc | sp
+// ```
 
 /// Read a unit, returning the equivalent number of scaled points,
 fn read_unit() -> Result<Option<f64>> {
@@ -1363,7 +1371,7 @@ fn read_internal_mu_glue() -> Result<Option<MuGlue>> {
   }
 }
 
-/// Apparent behaviour of a token value (ie \toks#=<arg>)
+/// Apparent behaviour of a token value (ie `\toks#=<arg>`)
 pub fn read_tokens_value() -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
@@ -1460,9 +1468,11 @@ fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
   Ok(result)
 }
 
+// ```
 // <factor> = <normal integer> | <decimal constant>
 // <decimal constant> = . | , | <digit><decimal constant> | <decimal constant><digit>
-// Return a number (Rust f64 number)
+// ```
+/// Return a number (Rust f64 number)
 fn read_factor() -> Result<Option<f64>> {
   let mut factor = read_digits(&DIGIT_RE, false)?;
   let mut token_opt = read_x_token(None, false)?;
