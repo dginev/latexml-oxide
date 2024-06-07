@@ -238,7 +238,7 @@
   ($(<span class="macro-nonterminal">$arg </span>: tt )<span class="kw-2">*</span>) =&gt; {<span class="macro">format!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>)};
 }
 
-<span class="doccomment">/// The `some!` macro transforms data in type S to Option&lt;Into&lt;T&gt;&gt; (always wrapping with Some)
+<span class="doccomment">/// The `some!` macro transforms data in type `S` to `Option&lt;Into&lt;T&gt;&gt;` (always wrapping with `Some`)
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> some {
   (<span class="macro-nonterminal">$arg</span>:expr) =&gt; {
@@ -285,7 +285,7 @@
 }
 
 <span class="doccomment">/// Simple generic helper for `HashSet&lt;K,V&gt;` creation
-/// Source: https://riptutorial.com/rust/example/4149/create-a-hashset-macro
+/// Source: &lt;https://riptutorial.com/rust/example/4149/create-a-hashset-macro&gt;
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> set {
     ( $( <span class="macro-nonterminal">$x</span>:expr ),* ) =&gt; {  <span class="comment">// Match zero or more comma delimited items

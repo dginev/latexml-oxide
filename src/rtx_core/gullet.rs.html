@@ -1646,6 +1646,16 @@
 <a href="#1646" id="1646">1646</a>
 <a href="#1647" id="1647">1647</a>
 <a href="#1648" id="1648">1648</a>
+<a href="#1649" id="1649">1649</a>
+<a href="#1650" id="1650">1650</a>
+<a href="#1651" id="1651">1651</a>
+<a href="#1652" id="1652">1652</a>
+<a href="#1653" id="1653">1653</a>
+<a href="#1654" id="1654">1654</a>
+<a href="#1655" id="1655">1655</a>
+<a href="#1656" id="1656">1656</a>
+<a href="#1657" id="1657">1657</a>
+<a href="#1658" id="1658">1658</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
@@ -2510,10 +2520,10 @@
       }
   }
 }
-<span class="doccomment">/// Read and return a LaTeX optional argument; returns C&lt;$default&gt; if there is no '[',
-/// otherwise the contents of the [].
-/// Note that this returns an empty array if [] is present,
-/// i.e. "[contents]" in TeX will lead to Tokens(contents), otherwise returns None
+<span class="doccomment">/// Read and return a LaTeX optional argument; returns `default` if there is no '[',
+/// otherwise the contents of the array.
+/// Note that this returns an empty array if `[]` is present,
+/// i.e. `[contents]` in TeX will lead to `Tokens(contents)`, otherwise returns `None`
 </span><span class="kw">pub fn </span>read_optional(
   default: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
@@ -2643,12 +2653,14 @@
   <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 }
 
-<span class="doccomment">///======================================================================
-/// Integer, Number
-///======================================================================
-/// &lt;number&gt; = &lt;optional signs&gt;&lt;unsigned number&gt;
-/// &lt;unsigned number&gt; = &lt;normal integer&gt; | &lt;coerced integer&gt;
-/// &lt;coerced integer&gt; = &lt;internal dimen&gt; | &lt;internal glue&gt;
+<span class="comment">//======================================================================
+// Integer, Number
+//======================================================================
+// ```
+// &lt;number&gt; = &lt;optional signs&gt;&lt;unsigned number&gt;
+// &lt;unsigned number&gt; = &lt;normal integer&gt; | &lt;coerced integer&gt;
+// &lt;coerced integer&gt; = &lt;internal dimen&gt; | &lt;internal glue&gt;
+// ```
 </span><span class="kw">pub fn </span>read_number() -&gt; <span class="prelude-ty">Result</span>&lt;Number&gt; {
   <span class="kw">let </span>is_negative = read_optional_signs()<span class="question-mark">?</span>;
   <span class="kw">let </span>s = <span class="kw">if </span>is_negative { -<span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">1 </span>};
@@ -2677,9 +2689,11 @@
   }
 }
 
-<span class="doccomment">/// &lt;normal integer&gt; = &lt;internal integer&gt; | &lt;integer constant&gt;
+<span class="doccomment">/// ```bnf
+/// &lt;normal integer&gt; = &lt;internal integer&gt; | &lt;integer constant&gt;
 ///   | '&lt;octal constant&gt;&lt;one optional space&gt; | "&lt;hexadecimal constant&gt;&lt;one optional space&gt;
 ///   | `&lt;character token&gt;&lt;one optional space&gt;
+/// ```
 </span><span class="kw">pub fn </span>read_normal_integer() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Number&gt;&gt; {
   <span class="kw">match </span>read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
@@ -2774,9 +2788,11 @@
 <span class="comment">//======================================================================
 // Dimensions
 //======================================================================
+// ```
 // &lt;dimen&gt; = &lt;optional signs&gt;&lt;unsigned dimen&gt;
 // &lt;unsigned dimen&gt; = &lt;normal dimen&gt; | &lt;coerced dimen&gt;
 // &lt;coerced dimen&gt; = &lt;internal glue&gt;
+// ```
 </span><span class="kw">pub fn </span>read_dimension() -&gt; <span class="prelude-ty">Result</span>&lt;Dimension&gt; {
   <span class="kw">let </span>is_negative = read_optional_signs()<span class="question-mark">?</span>;
   <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = read_internal_dimension()<span class="question-mark">? </span>{
@@ -2811,11 +2827,13 @@
   }
 }
 
-<span class="comment">// &lt;unit of measure&gt; = &lt;optional spaces&gt;&lt;internal unit&gt;
+<span class="comment">// ```
+// &lt;unit of measure&gt; = &lt;optional spaces&gt;&lt;internal unit&gt;
 //     | &lt;optional true&gt;&lt;physical unit&gt;&lt;one optional space&gt;
 // &lt;internal unit&gt; = em &lt;one optional space&gt; | ex &lt;one optional space&gt;
 //     | &lt;internal integer&gt; | &lt;internal dimen&gt; | &lt;internal glue&gt;
 // &lt;physical unit&gt; = pt | pc | in | bp | cm | mm | dd | cc | sp
+// ```
 
 </span><span class="doccomment">/// Read a unit, returning the equivalent number of scaled points,
 </span><span class="kw">fn </span>read_unit() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;f64&gt;&gt; {
@@ -3011,7 +3029,7 @@
   }
 }
 
-<span class="doccomment">/// Apparent behaviour of a token value (ie \toks#=&lt;arg&gt;)
+<span class="doccomment">/// Apparent behaviour of a token value (ie `\toks#=&lt;arg&gt;`)
 </span><span class="kw">pub fn </span>read_tokens_value() -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   <span class="kw">match </span>read_non_space()<span class="question-mark">? </span>{
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()),
@@ -3108,9 +3126,11 @@
   <span class="prelude-val">Ok</span>(result)
 }
 
-<span class="comment">// &lt;factor&gt; = &lt;normal integer&gt; | &lt;decimal constant&gt;
+<span class="comment">// ```
+// &lt;factor&gt; = &lt;normal integer&gt; | &lt;decimal constant&gt;
 // &lt;decimal constant&gt; = . | , | &lt;digit&gt;&lt;decimal constant&gt; | &lt;decimal constant&gt;&lt;digit&gt;
-// Return a number (Rust f64 number)
+// ```
+</span><span class="doccomment">/// Return a number (Rust f64 number)
 </span><span class="kw">fn </span>read_factor() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;f64&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>factor = read_digits(<span class="kw-2">&amp;</span>DIGIT_RE, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>token_opt = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;

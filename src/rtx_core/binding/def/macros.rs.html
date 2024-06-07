@@ -838,7 +838,7 @@
   };
 }
 
-<span class="doccomment">/// Try to efficiently unwrap a Vec&lt;T&gt; into a [T;n] for `$arg1`...`$argn`
+<span class="doccomment">/// Try to efficiently unwrap a `Vec&lt;T&gt;` into a `[T;n]` for `$arg1`...`$argn`
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> unpack_opt {
   (<span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$arg1</span>:ident) =&gt; {
@@ -858,7 +858,7 @@
   };
 }
 
-<span class="doccomment">/// Try to efficiently unwrap a &amp;Vec&lt;T&gt; into a &amp;[T;n] for `$arg1`...`$argn`
+<span class="doccomment">/// Try to efficiently unwrap a `&amp;Vec&lt;T&gt;` into a `&amp;[T;n]` for `$arg1`...`$argn`
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> unpack_opt_ref {
   (<span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$arg1</span>:ident) =&gt; {

@@ -4400,7 +4400,7 @@
     </span><span class="self">self</span>.serialize_aux(<span class="kw-2">&amp;</span><span class="self">self</span>.document.as_node(), <span class="number">0</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>)
   }
 
-  <span class="doccomment">/// We ought to try for something close to C14N (http://www.w3.org/TR/xml-c14n),
+  <span class="doccomment">/// We ought to try for something close to C14N (&lt;http://www.w3.org/TR/xml-c14n&gt;),
   /// but keep XML declaration, comments and don't convert empty elements.
   </span><span class="kw">pub fn </span>serialize_aux(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -6510,10 +6510,10 @@
   </span><span class="doccomment">/// This function computes an xml:id for a node, if it hasn't already got one.
   /// It is suitable for use in Tag afterOpen as
   ///  `Tag('ltx:para',afterOpen=&gt;sub { GenerateID(@_,'p'); });`
-  /// It generates an id of the form &lt;parentid&gt;.&lt;prefix&gt;&lt;number&gt;
-  /// The parent node (the one with ID=&lt;parentid&gt;) also maintains a counter
+  /// It generates an id of the form `&lt;parentid&gt;.&lt;prefix&gt;&lt;number&gt;`
+  /// The parent node (the one with `ID=&lt;parentid&gt;`) also maintains a counter
   /// stored in an attribute `_ID_counter_&lt;prefix&gt;` recording the last used
-  /// &lt;number&gt; for &lt;prefix&gt; amongst its descendents.
+  /// `number` for `prefix` amongst its descendents.
   </span><span class="kw">pub fn </span>generate_id(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     node: <span class="kw-2">&amp;mut </span>Node,

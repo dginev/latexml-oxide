@@ -2324,6 +2324,7 @@
 <a href="#2324" id="2324">2324</a>
 <a href="#2325" id="2325">2325</a>
 <a href="#2326" id="2326">2326</a>
+<a href="#2327" id="2327">2327</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LoadDefinitions {
   (<span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -3105,8 +3106,9 @@
   </span>}
 }
 
-<span class="doccomment">/// Invocation(&lt;list of Token&gt;); builds a representation of a command sequence invoked on its
-/// arguments
+<span class="doccomment">/// Builds a representation of a single command sequence invoked on a
+/// `Vec&lt;Token&gt;` of its arguments.
+/// A leading string argument is interpreted as `T_CS`.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> Invocation {
   (<span class="macro-nonterminal">$csname</span>:literal) =&gt; {{
@@ -3399,10 +3401,10 @@
 // DefMacro,  and we have a several places where we get compile-time speedups by pre-tokenizing into
 // Rust Tokens objects / Replacement closures
 
-</span><span class="doccomment">/// A `$prototype` will be parsed into a command sequence and a list of parameters.
+</span><span class="doccomment">/// A `prototype` will be parsed into a command sequence and a list of parameters.
 /// Any macro arguments will be substituted for parameter indicators (eg #1)
-/// in the I&lt;tokens&gt; or tokenized I&lt;string&gt; and the result is used as the expansion
-/// of the control sequence. If I&lt;code&gt; is used, it is called at expansion time
+/// in the `Tokens` or tokenized string and the result is used as the expansion
+/// of the control sequence. If a closure is used, it is called at expansion time
 /// and should return a list of tokens as its result.
 </span><span class="attr">#[rustfmt::skip]
 #[macro_export]
