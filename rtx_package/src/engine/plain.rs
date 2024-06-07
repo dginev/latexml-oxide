@@ -911,8 +911,7 @@ LoadDefinitions!({
     activated
   },
   locked => true);    // Only in math!
-  // TODO
-  // AssignMathcode!("'" => 0x8000);
+  assign_mathcode('\'', 0x8000u16, None);
   Let!("'", "\\active@math@prime");
 
   //----------------------------------------------------------------------
