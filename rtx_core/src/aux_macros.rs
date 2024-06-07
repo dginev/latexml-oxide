@@ -87,7 +87,7 @@ macro_rules! s {
   ($($arg : tt )*) => {format!($($arg)*)};
 }
 
-/// The `some!` macro transforms data in type S to Option<Into<T>> (always wrapping with Some)
+/// The `some!` macro transforms data in type `S` to `Option<Into<T>>` (always wrapping with `Some`)
 #[macro_export]
 macro_rules! some {
   ($arg:expr) => {
@@ -134,7 +134,7 @@ macro_rules! fontmap {
 }
 
 /// Simple generic helper for `HashSet<K,V>` creation
-/// Source: https://riptutorial.com/rust/example/4149/create-a-hashset-macro
+/// Source: <https://riptutorial.com/rust/example/4149/create-a-hashset-macro>
 #[macro_export]
 macro_rules! set {
     ( $( $x:expr ),* ) => {  // Match zero or more comma delimited items

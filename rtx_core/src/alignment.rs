@@ -1,8 +1,8 @@
 //! # Representation of aligned structures
 //! An "Alignment" is an array/tabular construct as:
-//!   <tabular><tr><td>...
+//!  `<tabular><tr><td>...`
 //! or, for math mode
-//!   <XMArray><XMRow><XMCell>...
+//!   `<XMArray><XMRow><XMCell>...`
 //! (where initially, each XMCell will contain an XMArg to indicate
 //! individual parsing of each cell's content is desired)
 //!

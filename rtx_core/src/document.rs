@@ -979,7 +979,7 @@ impl Document {
     self.serialize_aux(&self.document.as_node(), 0, false, false)
   }
 
-  /// We ought to try for something close to C14N (http://www.w3.org/TR/xml-c14n),
+  /// We ought to try for something close to C14N (<http://www.w3.org/TR/xml-c14n>),
   /// but keep XML declaration, comments and don't convert empty elements.
   pub fn serialize_aux(
     &self,
@@ -3089,10 +3089,10 @@ impl Document {
   /// This function computes an xml:id for a node, if it hasn't already got one.
   /// It is suitable for use in Tag afterOpen as
   ///  `Tag('ltx:para',afterOpen=>sub { GenerateID(@_,'p'); });`
-  /// It generates an id of the form <parentid>.<prefix><number>
-  /// The parent node (the one with ID=<parentid>) also maintains a counter
+  /// It generates an id of the form `<parentid>.<prefix><number>`
+  /// The parent node (the one with `ID=<parentid>`) also maintains a counter
   /// stored in an attribute `_ID_counter_<prefix>` recording the last used
-  /// <number> for <prefix> amongst its descendents.
+  /// `number` for `prefix` amongst its descendents.
   pub fn generate_id(
     &mut self,
     node: &mut Node,

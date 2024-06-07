@@ -19,7 +19,7 @@ use crate::token::*;
 use crate::whatsit::Whatsit;
 use crate::*;
 
-/// A trait for auto-wrapping a generic type T into Option<Y>,
+/// A trait for auto-wrapping a generic type `T` into `Option<Y>`,
 /// where Y can be inferred from context.
 /// (useful in macro helpers, such as `NewDefaultV!`)
 pub trait IntoOption<T>: Sized {
