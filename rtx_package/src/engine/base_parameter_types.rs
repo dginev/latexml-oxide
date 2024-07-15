@@ -172,13 +172,12 @@ LoadDefinitions!({
 
   // Yet another special case: Require a { but do not read it!!!
   DefParameterType!(RequireBrace, sub[_inner, _extra] {
-    gullet::read_token()?.map(|tok| {
+    gullet::read_token()?.inspect(|&tok| {
       gullet::unread_one(tok);
       if tok.get_catcode() != Catcode::BEGIN {
         let err = || {Error!("expected","{","Expected a {{ here."); Ok(())};
         err().ok();
       }
-      tok
     })
   },
   novalue => true);

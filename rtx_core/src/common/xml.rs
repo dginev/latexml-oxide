@@ -58,10 +58,7 @@ impl XPath {
   }
 
   pub fn findvalue(&mut self, xpath: &str, node: Option<&Node>) -> String {
-    match self.context.findvalue(xpath, node) {
-      Ok(v) => v,
-      _ => String::new(),
-    }
+    self.context.findvalue(xpath, node).unwrap_or_default()
   }
 }
 

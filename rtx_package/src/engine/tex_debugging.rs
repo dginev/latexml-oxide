@@ -153,7 +153,7 @@ LoadDefinitions!({
                   continue_flag = true;
                 } else {
                   arg_index+=1;
-                  p_spec = arena::pin(&s!("#{arg_index}"));
+                  p_spec = arena::pin(s!("#{arg_index}"));
                 }
               }
             }
