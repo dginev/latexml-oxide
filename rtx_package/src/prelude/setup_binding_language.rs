@@ -421,13 +421,15 @@ macro_rules! TypedPrimitive {
     move |args: Vec<ArgWrap>| {
       let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
       $(
-          let $var: parameter_rust_type!($ptype) = match $var.try_into() {
-            Ok(v) => v,
-            Err(e) => {
-              Error!("expected", "argument", e);
-              <parameter_rust_type!($ptype)>::default()
-            }
-          };
+        // TODO: How do we fine-tune the match body based on whether we have an Infallible try_into?
+        #[allow(warnings)]
+        let $var: parameter_rust_type!($ptype) = match $var.try_into() {
+          Ok(v) => v,
+          Err(e) => {
+            Error!("expected", "argument", e);
+            <parameter_rust_type!($ptype)>::default()
+          }
+        };
       )*
       $body.into_digested_result()
     }));
@@ -1192,6 +1194,8 @@ macro_rules! TypedMacro {
       move |args: Vec<ArgWrap>| {
         let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
         $(
+          // TODO: How do we fine-tune the match body based on whether we have an Infallible try_into?
+          #[allow(warnings)]
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
@@ -1391,6 +1395,8 @@ macro_rules! TypedColumntype {
       move |args: Vec<ArgWrap>| {
         let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
         $(
+          // TODO: How do we fine-tune the match body based on whether we have an Infallible try_into?
+          #[allow(warnings)]
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
