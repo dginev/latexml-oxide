@@ -160,9 +160,7 @@ impl From<String> for Digested {
 }
 impl From<SymStr> for Digested {
   fn from(sym: SymStr) -> Digested {
-    let tks = arena::with(sym, |allocated| ExplodeText!(
-      allocated
-    ));
+    let tks = SymExplodeText!(sym);
     Digested(Rc::new(DigestedData::Postponed(Tokens::new(tks))))
   }
 }

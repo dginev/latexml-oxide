@@ -584,6 +584,23 @@ macro_rules! ExplodeText(
   ).collect::<Vec<Token>>()
 }));
 
+#[macro_export]
+macro_rules! SymExplodeText(
+  ($sym:expr) => ({
+  use $crate::token::{Catcode,Token};
+  let chars : Vec<char> = arena::with($sym, |text| text.chars().collect());
+  chars.into_iter().map(|c|
+    if c==' ' { T_SPACE!() }
+    else {
+      let mut tmp = [0u8; 4];
+      let s = c.encode_utf8(&mut tmp);
+      if c.is_alphabetic() {
+      T_LETTER!(s) }
+    else { T_OTHER!(s) }}
+  ).collect::<Vec<Token>>()
+}));
+
+
 // static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 
 impl Default for Token {
