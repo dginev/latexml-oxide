@@ -442,11 +442,13 @@ pub fn get_document_namespace(docprefix: &str, probe: bool) -> Option<String> {
   }
 }
 
+/// Get the (code) prefix associated with $namespace,
+/// creating a dummy prefix and signalling an error if none has been registered.
+///
 /// In the following:
 /// $forattribute is 1 if the namespace is for an attribute (in which case, there must be a
 /// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
-/// if missing. Get the (code) prefix associated with $namespace,
-/// creating a dummy prefix and signalling an error if none has been registered.
+/// if missing. 
 pub fn get_namespace_prefix(
   namespace: &str,
   _forattribute: bool,
@@ -638,6 +640,8 @@ pub fn decode_qname_sym(sym: SymStr) -> Result<(Option<String>, String)> {
 // to submodel, in case it can evolve to more precision?
 // However, it would need more context to do that.
 
+/// A check for allowed direct element containment, using ticket-based `SymStr` names.
+/// 
 /// TODO: This is a major code smell, experimental prototyping to see how to interoperate 
 /// strings with the inerned arena.
 /// `can_contain` and `can_contain_sym` should be implemented once, and one should be an 

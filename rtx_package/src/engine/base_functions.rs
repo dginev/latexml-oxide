@@ -273,8 +273,11 @@ pub fn decode_math_char(
   Ok((role_opt, font_opt))
 }
 
+/// Stomach-level counterpart to `read_box_contents`.
+/// 
 /// Reading a Box's content is crucially dependent on invoking the "{" token and obtaining a
-/// digested result Hence it is *always* needed to pair `read_box_contents` with its stomach-level
+/// digested result.
+/// Hence it is *always* needed to pair `read_box_contents` with its stomach-level
 /// counterpart, `predigest_box_contents`
 pub fn predigest_box_contents(
   _tokens: ArgWrap,
@@ -311,8 +314,10 @@ where T: Sized + Object {
 }
 
 /// This attempts to be a generalize vbox construction;
+/// 
 /// The idea is to receeive block-like material, possibly wrapped in appropriate
 /// container which gets attributes.
+/// 
 /// The contents are constructed in an ltx:_CaptureBlock_ element,
 /// designed to accept all reasonable block material from several levels,
 /// and then determine which container element is most apprpriate for both the conent & context
@@ -645,7 +650,8 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
     .collect()
 }
 
-/// Converts $tokens to a string in the fashion of \message and others:
+/// Converts tokens to a string in the fashion of \message and others
+/// 
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
 /// [This could be a $tokens->unpackParameters, but for the curious space treatment]
@@ -908,10 +914,11 @@ pub fn make_generic_message(
   Ok(())
 }
 
-/// Utility, not really TeX, but used by LaTeX, AmSTeX...
 /// Convert a vertical positioning, optional argument.
+/// 
 ///  t = "top", b = "bottom"; default is "middle".
 /// Note that the default for vattach attribute is "baseline".
+/// Utility, not really TeX, but used by LaTeX, AmSTeX.
 pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
   //implementor note:
   //  T: AsRef<str> would be more efficient than allocating a string every time

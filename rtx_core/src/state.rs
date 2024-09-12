@@ -199,7 +199,10 @@ impl UndoFrame {
   }
 }
 
-/// There are tables for
+/// The type of values that are storable by the different namespaced "tables" in State.
+/// 
+/// There are tables for:
+/// 
 ///  catcode: keys are char;
 ///     Also, `math:char` =1 when `char` is active in math.
 ///  mathcode, sfcode, lccode, uccode, delcode : are similar to catcode but store
@@ -210,8 +213,9 @@ impl UndoFrame {
 ///      (see also activateScope & deactivateScope)
 pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 
-/// The state efficiently maintain the bindings in a TeX-like fashion.
-/// bindings associate data with keys (eg definitions with macro names)
+/// The state efficiently bookkeeps the bindings in a TeX-like fashion.
+/// 
+/// Bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
 /// until the current group (opened by \bgroup) is closed (by \egroup).
 pub struct State {
@@ -654,7 +658,7 @@ impl State {
   }
 
   /// mutably borrows a Stored value at the given key, from the Value table
-  pub fn lookup_value_mut<'lv>(&'lv mut self, key: &'lv str) -> Option<&mut Stored> {
+  pub fn lookup_value_mut(&mut self, key: &str) -> Option<&mut Stored> {
     match self.value.get_mut(&arena::pin(key)) {
       None => None,
       Some(vvec) => match vvec.front_mut() {
@@ -664,7 +668,7 @@ impl State {
     }
   }
   /// like `lookup_value` but only recognizes `Stored::VecDequeStored`
-  pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
+  pub fn lookup_vecdeque(&self, key: &str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
       Some(v) => v.into(),
@@ -710,7 +714,7 @@ impl State {
     }
   }
 
-  fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
+  fn lookup_definition_internal(&self, key: &Token) -> Option<&VecDeque<Stored>> {
     let cc = key.get_catcode();
     let name = key.get_sym();
     let lookupname: Option<SymStr> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
@@ -1578,9 +1582,10 @@ pub fn lookup_definition(key: &Token) -> Result<Option<Rc<dyn Definition>>> {Ok(
   })
 }
 
-/// Returns a definition as `Stored` so that one can call `.read_arguments`,
-/// which can't be specialized during compile-time over a trait object
-/// Instead we'll dispatch via `Stored` at runtime, to allow generic calls
+/// Returns a definition as `Stored` so that one can call `.read_arguments`
+/// 
+/// This can't be specialized during compile-time over a trait object?
+/// Instead we'll dispatch via `Stored` at runtime, to allow generic calls.
 pub fn lookup_definition_stored(key: &Token) -> Result<Option<Stored>> {Ok(
   match state!().lookup_definition_internal(key) {
     Some(defs) => match defs.front() {
@@ -1711,7 +1716,9 @@ pub fn pop_frame() -> Result<()> {
   Ok(())
 }
 
-/// Determine depth of group nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
+/// Determine depth of group nesting.
+/// 
+/// nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
 pub fn get_frame_depth() -> usize {
@@ -2002,6 +2009,7 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
 
 /// The indirect model includes all elements allowed as direct children,
 /// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
+/// 
 /// This model therefor includes information from the Schema, as well as
 /// `auto_open` information that may be introduced in binding files.
 // [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]

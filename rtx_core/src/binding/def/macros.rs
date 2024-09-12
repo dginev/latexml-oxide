@@ -41,6 +41,8 @@ macro_rules! NewDefaultV {
 // Useful shorthand macros, to brainstorm ergonomics ideas,
 // and to aid binding development
 
+/// Transfers a mutable pointer to a hashmap entry, or fills in with a default if missing.
+///
 /// Assumption: `$receiver` is HashMap<String,String>.
 /// If, and only if, `$has_receiver` does not have a value at slot `$val`,
 /// and `$struct_source` has a set value at `$val`,

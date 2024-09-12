@@ -524,8 +524,9 @@ pub fn read_x_non_space() -> Result<Option<Token>> {
   }
 }
 
-/// `read_balanced` approximates TeX's scan_toks (but doesn't parse \def parameter lists)
+/// Approximates TeX's scan_toks (but doesn't parse \def parameter lists)
 /// and only optionally requires the openning "{".
+/// 
 /// It may return comments in the token lists.
 /// it optionally (`do_expand`) expands while reading, but deferring \the and related.
 /// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
@@ -714,6 +715,7 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
 }
 
 /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
+/// 
 /// Note that Braces on input hides the contents from matching,
 /// so this assumes there wont be braces in $delim!
 /// But, see readUntilBrace for that case.
@@ -862,8 +864,9 @@ pub fn read_arg() -> Result<Tokens> {
       }
   }
 }
-/// Read and return a LaTeX optional argument; returns `default` if there is no '[',
-/// otherwise the contents of the array.
+/// Read and return a LaTeX optional argument
+/// 
+/// returns `default` if there is no '[', otherwise the contents of the array.
 /// Note that this returns an empty array if `[]` is present,
 /// i.e. `[contents]` in TeX will lead to `Tokens(contents)`, otherwise returns `None`
 pub fn read_optional(
@@ -1559,6 +1562,7 @@ fn handle_marker(marker_token: Token) {
 }
 
 /// Do something, while reading tokens from a specific Mouth.
+/// 
 /// This reads ONLY from that mouth (or any mouth openned by code in that source),
 /// and the mouth should end up empty afterwards, and only be closed here.
 pub fn reading_from_mouth<R, FnR>(

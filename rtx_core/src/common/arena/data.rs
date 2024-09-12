@@ -16,6 +16,7 @@ pub type SymStr = SymbolU32;
 // is there performance overhead from the extra wrap? It seems borderline usable...
 
 /// A convenience abstraction over a String-keyed HashMap
+/// 
 /// typically used for `HashMap<String,Stored>` states.
 /// The goal is to support both a string interface, as well as the interned tickets interface,
 /// while avoiding String allocations internally.

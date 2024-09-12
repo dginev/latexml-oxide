@@ -397,9 +397,10 @@ pub struct InputOptions {
   pub file_type: Option<String>,
 }
 
-/// used for cases when the file (or data)
+/// Input for cases when the file (or data)
 /// is plain TeX material that is expected to contribute content
 /// to the document (as opposed to pure definitions).
+/// 
 /// A Mouth is opened onto the file, and subsequent reading
 /// and/or digestion will pull Tokens from that Mouth until it is
 /// exhausted, or closed.
@@ -423,7 +424,8 @@ pub fn input_content(
   }
 }
 
-/// This is essentially the `\input` equivalent;
+/// This is essentially the `\input` equivalent
+/// 
 /// we are most likely expecting to get actual content,
 /// (possibly with definitions included, as well)
 /// but might actually be getting pure definitions,
@@ -787,6 +789,8 @@ impl Default for RequireOptions {
   }
 }
 
+/// An opinionated binding for \RequirePackage.
+///
 /// This (and `FindFile`) needs to evolve a bit to support reading raw .sty (.def, etc) files from
 /// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find`
 /// ???) Another potentially useful option might be that if we are reading a raw file,

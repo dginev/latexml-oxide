@@ -29,9 +29,9 @@ pub const UNTEX_LINELENGTH: usize = 78;
 pub const NO_TOKENS: Tokens = Tokens(Vec::new());
 pub const NO_BORROWED_TOKENS: &Tokens = &NO_TOKENS;
 /// Tokens are a thin wrapper over a vector of Token objects
-/// usually read from a `Mouth`.
-/// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`
-/// for access to the underlying data.
+/// 
+/// They are usually read from a `Mouth` and treated as an immutable interface.
+/// For access to the inner Token contents, use one of the `unlist` methods.
 #[derive(Debug, Clone, Default)]
 pub struct Tokens(Vec<Token>);
 

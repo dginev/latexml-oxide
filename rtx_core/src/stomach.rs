@@ -233,7 +233,8 @@ pub fn endgroup() -> Result<()> {
 // Mode (minimal so far; math vs text)
 // Could (should?) be taken up by Stomach by building horizontal, vertical or math lists ?
 
-/// This sets the mode without doing any grouping (NOR does it stack the modes!!)
+/// Sets the mode without doing any grouping (NOR does it stack the modes!!)
+/// 
 /// Useful for environments, where the group has already been established.
 /// (presumably, in the long run, modes & groups should be much less coupled)
 pub fn set_mode(mode: &str) -> Result<()> {
@@ -492,7 +493,8 @@ pub fn raw_tex(text: &str) -> Result<()> {
   Ok(())
 }
 
-/// Invoke a token;
+/// Invoke a token
+/// 
 /// If it is a primitive or constructor, the definition will be invoked,
 /// possibly arguments will be parsed from the Gullet.
 /// Otherwise, the token is simply digested: turned into an appropriate box.
@@ -736,7 +738,9 @@ pub fn clone_box_list() -> Vec<Digested> {
 
 /// get the current boxing level
 pub fn get_boxing_level() -> usize { stomach!().boxing.len() }
+
 /// ScriptLevel is similar to boxing level, but relative to current Math mode's level
+///
 /// This is used for the scriptpos attribute to recognize overlapping sccripts.
 /// Making it relative to the math's level avoids unnecessary changes
 pub fn get_script_level() -> usize {

@@ -295,10 +295,13 @@ pub fn step_counter(
 }
 
 /// Analog of `\refstepcounter`, steps the counter and returns a hash
-/// containing the keys `refnum` and `id`.  This makes it
+/// containing the keys `refnum` and `id`.
+/// 
+/// This makes it
 /// suitable for use in a `properties` option to constructors.
 /// The `id` is generated in parallel with the reference number
 /// to assist debugging.
+// TODO: Maybe these should be specialized types in Rust, rather than hashmaps?
 pub fn ref_step_counter(
   ctype: &str,
   noreset: bool,

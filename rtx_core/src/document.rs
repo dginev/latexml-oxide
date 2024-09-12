@@ -3408,7 +3408,8 @@ pub fn can_auto_close(node: &Node) -> bool {
     _ => false,
   }
 }
-/// Get the node's qualified name in standard form
+/// Get the node's qualified name in standard form.
+/// 
 /// Ie. using the registered prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
 /// NOTE: Should Deprecate! (use model)

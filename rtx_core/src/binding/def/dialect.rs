@@ -106,8 +106,10 @@ pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 //======================================================================
 // Defining Conditional Control Sequences.
 //======================================================================
-/// Define a conditional control sequence. Its processing takes place in
-/// the Gullet.  The test is applied to the arguments (if any),
+/// Define a conditional control sequence. 
+/// 
+/// Its processing takes place in the Gullet.
+/// The test is applied to the arguments (if any),
 /// which determines which branch is executed.
 /// If the test is undefined, the conditional is a "user defined" one;
 /// Two additional primitives are defined \footrue and \foofalse;
@@ -193,7 +195,9 @@ pub fn def_conditional(
   Ok(())
 }
 
-/// Defines the macro expansion for a `cs`: a macro control sequence that reads parameters
+/// Defines the macro expansion for a command sequence.
+/// 
+/// A macro control sequence that reads parameters
 /// as specified by `paramlist` and is expanded during macro expansion time in the `Gullet`.
 /// See `ExpansionBody` for the possible kinds of `expansion` material.
 pub fn def_macro<T: Into<Option<ExpansionBody>>>(
@@ -249,7 +253,8 @@ pub struct RegisterOptions {
   pub allocate: Option<String>
 }
 
-/// Defines a register with `value` as the initial value
+/// Defines a register with an initial value.
+/// 
 /// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
 /// Usually, the `prototype` is just the control sequence,
 /// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
@@ -301,7 +306,9 @@ pub fn def_register<T: Into<RegisterValue>>(
   Ok(())
 }
 
-/// Defines a primitive control sequence; a primitive is processed during
+/// Defines a primitive control sequence
+/// 
+/// A primitive is processed during
 /// digestion (in the  `Stomach`), after macro expansion but before Construction time.
 /// Primitive control sequences generate Boxes or Lists, generally
 /// containing basic Unicode content, rather than structured XML.
@@ -822,6 +829,8 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token>
   Ok(return_cs)
 }
 
+/// Binding definition connecting a TeX command sequence with a structured XML output.
+/// 
 /// The Constructor is where LaTeXML really starts getting interesting;
 /// invoking the control sequence will generate an arbitrary XML
 /// fragment in the document tree.  More specifically: during digestion, the arguments
@@ -931,6 +940,7 @@ pub fn def_constructor(
 }
 
 /// Defines an Environment that generates a specific XML fragment.
+/// 
 /// `compiled_replacement` is of the same form as for DefConstructor, but will generally include
 /// reference to the `#body` property.
 /// Upon encountering a `\begin{env}`:  the mode is switched, if needed, else a new group is opened;
@@ -1190,18 +1200,21 @@ pub fn get_xmarg_id() -> Result<Tokens> {
 }
 
 type ArgsUnpacked = Vec<Option<Tokens>>;
+/// Flesh out two dual (mathematical) forms of a given list of arguments.
+///
 /// Given a list of Tokens (to be expanded into mathematical objects)
-/// return two lists:
+/// return two lists
 ///   (1) The Tokens' wrapped in an XMAarg, with an ID added
 ///   (2) a corresponding list of Tokens creating XMRef's to those IDs
-// Ah, but there are complications!!!
-// On the one hand, arguments may be hidden, never appearing on the presentation side
-// (all will be passed to the content side); This argues for putting the XMArg's on the content
-// side. OTOH, they ought to be on the presentation side, so that they can be expanded & digested in
-// the proper context they will be presented, and pick up all the styling (font size,
-// displaystyle..) I don't know how to work around the latter, so we'll put args on the presentation
-// side, UNLESS they are hidden, in which case they'll be on the content side.
-// So, how do we know if they're hidden? We'll scan the presentation for #\d, that's how!
+/// 
+/// Ah, but there are complications!!!
+/// On the one hand, arguments may be hidden, never appearing on the presentation side
+/// (all will be passed to the content side); This argues for putting the XMArg's on the content
+/// side. OTOH, they ought to be on the presentation side, so that they can be expanded & digested in
+/// the proper context they will be presented, and pick up all the styling (font size,
+/// displaystyle..) I don't know how to work around the latter, so we'll put args on the presentation
+/// side, UNLESS they are hidden, in which case they'll be on the content side.
+/// So, how do we know if they're hidden? We'll scan the presentation for #\d, that's how!
 pub fn dualize_arglist(
   presentation: &str,
   args: Vec<Option<Tokens>>,
@@ -1270,6 +1283,7 @@ pub fn dualize_arglist(
 }
 
 /// Define a Mathematical symbol or function.
+/// 
 /// There are two sets of cases:
 ///  (1) If the presentation appears to be TeX code, we create an XMDual,
 /// since the presentation may end up with structure, etc.

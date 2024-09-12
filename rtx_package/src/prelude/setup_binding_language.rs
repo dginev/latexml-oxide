@@ -1076,6 +1076,8 @@ macro_rules! MergeFont {
 // DefMacro,  and we have a several places where we get compile-time speedups by pre-tokenizing into
 // Rust Tokens objects / Replacement closures
 
+/// Defines a macro, a binding analog to `\def`
+///
 /// A `prototype` will be parsed into a command sequence and a list of parameters.
 /// Any macro arguments will be substituted for parameter indicators (eg #1)
 /// in the `Tokens` or tokenized string and the result is used as the expansion
@@ -1212,6 +1214,7 @@ macro_rules! TypedMacro {
 }
 
 /// Defines a register with `value` as the initial value
+/// 
 /// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
 /// Usually, the `prototype` is just the control sequence,
 /// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
