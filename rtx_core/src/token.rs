@@ -785,15 +785,7 @@ impl Token {
     }
   }
 
-  pub fn pack_parameters(self) -> Self { self }
-
-  ///======================================================================
-  /// Note that this converts the string to a more `user readable' form using `standard' chars for
-  /// catcodes. We'll need to be careful about using string instead of reverting for internal
-  /// purposes where the
-  /// actual character is needed.
-
-  // A Token reverts to itself
+  /// A Token reverts to itself
   pub fn revert(self) -> Token { self }
 
   /// A string form which is primarily used for error-reporting

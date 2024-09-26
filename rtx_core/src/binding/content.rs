@@ -408,7 +408,6 @@ pub struct InputOptions {
 /// In some circumstances it may be useful to provide a string containing
 /// the TeX material explicitly, rather than referencing a file.
 /// In this case, the `literal` pseudo-protocal may be used.
-
 pub fn input_content(
   request: &str,
   options: InputOptions,

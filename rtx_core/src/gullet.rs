@@ -220,7 +220,6 @@ pub fn get_pending_comment() -> Option<Token> {
 
 /// Note that every char (token) comes through here (maybe even twice, through args parsing),
 /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
-
 fn handle_template(
   mut alignment: RefMut<Alignment>,
   token: Token,

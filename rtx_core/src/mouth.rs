@@ -308,7 +308,6 @@ impl Mouth {
   /// I am thinking that when we deal with unicode this may be the most correct way?
   /// If it's not the way XeTeX does it, perhaps, it must be that ALL combining chars
   /// have to be converted to the proper accent control sequences!
-
   fn get_next_line(&mut self) -> Option<String> {
     if self.buffer.is_empty() {
       if let Some(ref mut reader) = self.reader {
