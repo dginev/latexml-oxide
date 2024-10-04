@@ -575,7 +575,7 @@ impl From<bool> for Stored {
   fn from(value: bool) -> Self { Stored::Bool(value) }
 }
 
-impl<'a> From<bool> for &'a Stored {
+impl From<bool> for &Stored {
   fn from(value: bool) -> Self {
     if value {
       &STORED_TRUE
@@ -738,7 +738,7 @@ impl From<Font> for Stored {
   fn from(value: Font) -> Self { Rc::new(value).into() }
 }
 
-impl<'a> From<Cow<'a, Font>> for Stored {
+impl From<Cow<'_, Font>> for Stored {
   fn from(value: Cow<Font>) -> Self { Rc::new((*value).clone()).into() }
 }
 
@@ -867,7 +867,7 @@ impl From<Option<&Stored>> for Stored {
 // Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where
 // impossible
 
-impl<'a> From<&'a Stored> for bool {
+impl From<&Stored> for bool {
   fn from(value: &Stored) -> bool {
     match value {
       Stored::Bool(b) => *b,
@@ -876,7 +876,7 @@ impl<'a> From<&'a Stored> for bool {
   }
 }
 
-impl<'a> From<&'a Stored> for String {
+impl From<&Stored> for String {
   fn from(value: &Stored) -> String {
     match value {
       Stored::String(v) => arena::to_string(*v),

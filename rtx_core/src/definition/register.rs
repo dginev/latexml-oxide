@@ -69,7 +69,7 @@ impl From<Token> for RegisterValue {
 impl From<Tokens> for RegisterValue {
   fn from(n: Tokens) -> RegisterValue { RegisterValue::Tokens(n) }
 }
-impl<'a> From<&'a RegisterValue> for RegisterType {
+impl From<&RegisterValue> for RegisterType {
   fn from(v: &RegisterValue) -> RegisterType {
     match *v {
       RegisterValue::Number(_) => RegisterType::Number,
@@ -214,7 +214,7 @@ impl NumericOps for RegisterValue {
   }
 }
 
-impl<'a> From<&'a RegisterValue> for Number {
+impl From<&RegisterValue> for Number {
   fn from(v: &RegisterValue) -> Number {
     match v {
       RegisterValue::Number(n) => *n,
@@ -262,7 +262,7 @@ impl From<RegisterValue> for Tokens {
   fn from(v: RegisterValue) -> Tokens { Tokens!(T_OTHER!(v.value_of().to_string())) }
 }
 
-impl<'a> From<&'a RegisterValue> for Dimension {
+impl From<&RegisterValue> for Dimension {
   fn from(v: &RegisterValue) -> Dimension {
     match v {
       RegisterValue::Dimension(n) => *n,
@@ -285,7 +285,7 @@ impl<'a> From<&'a RegisterValue> for Dimension {
     }
   }
 }
-impl<'a> From<&'a RegisterValue> for Glue {
+impl From<&RegisterValue> for Glue {
   fn from(v: &RegisterValue) -> Glue {
     match v {
       RegisterValue::Glue(n) => *n,
@@ -306,7 +306,7 @@ impl<'a> From<&'a RegisterValue> for Glue {
   }
 }
 
-impl<'a> From<&'a RegisterValue> for MuGlue {
+impl From<&RegisterValue> for MuGlue {
   fn from(v: &RegisterValue) -> MuGlue {
     match v {
       RegisterValue::MuGlue(n) => *n,

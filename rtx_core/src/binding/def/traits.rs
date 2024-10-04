@@ -27,7 +27,7 @@ pub trait IntoOption<T>: Sized {
   fn into_option(self) -> T;
 }
 
-impl<'a> IntoOption<Option<String>> for &'a str {
+impl IntoOption<Option<String>> for &str {
   fn into_option(self) -> Option<String> { Some(self.to_string()) }
 }
 
