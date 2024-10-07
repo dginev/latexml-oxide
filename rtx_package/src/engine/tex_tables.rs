@@ -504,7 +504,7 @@ pub fn digest_alignment_body(
         reversion.push(next.unwrap());
         creversion.push(next.unwrap());
       } else if vtype.as_deref() == Some("cr") {
-        let arg_toks = gullet::read_arg()?;
+        let arg_toks = gullet::read_arg(ExpansionLevel::Off)?;
         let arg = stomach::digest(arg_toks)?;
         reversion.extend(p_revert(arg.clone())?.unlist());
         creversion.extend(c_revert(arg)?.unlist());
@@ -552,7 +552,7 @@ pub fn digest_alignment_column(
   loop {
     // Outer loop; collects 1 column (possibly multiple spans) return from within!
     // Scan till we get something NOT \omit, \noalign
-    while let Some(xtoken) = gullet::read_x_token(Some(false), false)?
+    while let Some(xtoken) = gullet::read_x_token(Some(false), false, None)?
     {
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();
@@ -577,7 +577,7 @@ pub fn digest_alignment_column(
         }
         alignment.borrow_mut().start_column(true)?;
         alignment.borrow_mut().last_column();
-        let next_arg = gullet::read_arg()?;
+        let next_arg = gullet::read_arg(ExpansionLevel::Off)?;
         let r = stomach::digest(next_arg)?;
         alignment.borrow_mut().end_row()?;
         expire_local_box_list();
@@ -616,7 +616,7 @@ pub fn digest_alignment_column(
     );
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     gullet::unread(to_unread);
-    while let Some(token) = gullet::read_x_token(Some(false), false)?
+    while let Some(token) = gullet::read_x_token(Some(false), false, None)?
     {
       if let Some((_atoken, vtype, hidden)) = gullet::is_column_end(&token) {
         if vtype == "span" {

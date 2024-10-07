@@ -28,7 +28,7 @@ LoadDefinitions!({
   // \ifx              c  tests if two tokens are the same.
   // \ifcat            c  tests if two tokens have the same category codes (i.e., values 0-16).
   DefParameterType!(ExpandedIfToken, sub[_inner, _extra] {
-    let token_opt = gullet::read_x_token(Some(false), true)?;
+    let token_opt = gullet::read_x_token(Some(false), true, None)?;
     match token_opt {
       Some(t) => t,
       None => {

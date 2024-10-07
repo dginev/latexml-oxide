@@ -296,7 +296,7 @@ LoadDefinitions!({
       None
     };
     clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
-    let mut rest = if let Some(xtoken) = gullet::read_x_token(None, false)? {
+    let mut rest = if let Some(xtoken) = gullet::read_x_token(None, false, None)? {
         stomach::invoke_token(&xtoken)?
     } else { Vec::new() };
     let stuff = if !rest.is_empty() {

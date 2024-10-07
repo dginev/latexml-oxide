@@ -802,10 +802,10 @@ LoadDefinitions!({
     let mut stuff    = Vec::new();
     // This is risky!!!
 
-    while let Some(t) = gullet::read_x_token(Some(false), false)? {
+    while let Some(t) = gullet::read_x_token(Some(false), false, None)? {
       if t == T_BEGIN!() {
         stuff.push(t);
-        let balanced_arg = gullet::read_balanced(false,false,false)?;
+        let balanced_arg = gullet::read_balanced(ExpansionLevel::Off,false,false)?;
         if !balanced_arg.is_empty() {
           stuff.extend(balanced_arg.unlist());
         }

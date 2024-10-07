@@ -189,40 +189,35 @@ LoadDefinitions!({
   // );
 
   AssignValue!("SAVEBOX", 100);
-  // DefPrimitive!("\\newsavebox DefToken", sub {
-  //     my $n = LookupValue('SAVEBOX') + 1;
-  //     AssignValue(SAVEBOX => $n, 'global');
-  //     DefRegisterI($_[1], undef, Number($n));
-  //     AssignValue('box' . $n, List()); });
-
-  // DefPrimitive!("\\sbox {Register} {}", sub {
-  //     my ($defn) = @{ $_[1] };
-  //     my $value;
-  //     if ($defn && ref $defn) {
-  //       $value = $defn->valueOf();
-  //       if (ref $value) {
-  //         $value = $value->valueOf;
-  //       }
-  //     } else {
-  //       Error('expected', '<definition>', undef, "\\sbox expected a definition, was missing");
-  //     }
-  //     my $contents = Digest($_[2]);
-  //     AssignValue('box' . $value, $contents); return; });
-
-  DefMacro!(
-    "\\savebox{}",
-    "\\@ifnextchar({\\pic@savebox#1}{\\@savebox#1}"
-  );
-  // DefPrimitive!("\\@savebox DefToken[][]{}", sub {
-  //     my ($defn, @args) = @{ LookupDefinition($_[1]) };
-  //     my $value = $defn->valueOf(@args);
-  //     AssignValue('box' . $value, Digest($_[4])); return; });
-  // DefPrimitive!("\\@savebox Register [][]{}", sub {
-  //     my ($defn)   = @{ $_[1] };
-  //     my $value    = $defn->valueOf()->valueOf;
-  //     my $contents = Digest($_[4]);
-  //     #    AssignValue('box' . $value, Digest($_[4])); return; });
-  //     AssignValue('box' . $value, $contents); return; });
+  TeX!(r#"""\def\newsavebox#1{\@ifdefinable{#1}{\newbox#1}}
+  \DeclareRobustCommand\savebox[1]{%
+    \@ifnextchar(%)
+      {\@savepicbox#1}{\@ifnextchar[{\@savebox#1}{\sbox#1}}}%
+  \DeclareRobustCommand\sbox[2]{\setbox#1\hbox{%
+    \color@setgroup#2\color@endgroup}}
+  \def\@savebox#1[#2]{%
+    \@ifnextchar [{\@isavebox#1[#2]}{\@isavebox#1[#2][c]}}
+  \long\def\@isavebox#1[#2][#3]#4{%
+    \sbox#1{\@imakebox[#2][#3]{#4}}}
+  \def\@savepicbox#1(#2,#3){%
+    \@ifnextchar[%]
+      {\@isavepicbox#1(#2,#3)}{\@isavepicbox#1(#2,#3)[]}}
+  \long\def\@isavepicbox#1(#2,#3)[#4]#5{%
+    \sbox#1{\@imakepicbox(#2,#3)[#4]{#5}}}
+  \def\lrbox#1{%
+    \edef\reserved@a{%
+      \endgroup
+      \setbox#1\hbox{%
+        \begingroup\aftergroup}%
+          \def\noexpand\@currenvir{\@currenvir}%
+          \def\noexpand\@currenvline{\on@line}}%
+    \reserved@a
+      \@endpefalse
+      \color@setgroup
+        \ignorespaces}
+  \def\endlrbox{\unskip\color@endgroup}
+  \DeclareRobustCommand\usebox[1]{\leavevmode\copy #1\relax}
+  """#);
 
   // DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
   // DefPrimitive!("\\end{lrbox}", primtiveproc!( args, {stomach.egroup()?; }));

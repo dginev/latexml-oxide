@@ -1198,7 +1198,8 @@ pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<Regi
   })
 }
 
-pub fn lookup_expandable(token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {
+pub fn lookup_expandable(token: &Token, toplevel_opt: Option<bool>) -> Result<Option<Rc<dyn Definition>>> {
+  let toplevel = toplevel_opt.unwrap_or(true); // Default, for full expansion, same as read_x_token
   // Can only be a token or definition; we want defns!
   // is this the right logic here? don't expand unless digesting?
   Ok(lookup_definition(token)?

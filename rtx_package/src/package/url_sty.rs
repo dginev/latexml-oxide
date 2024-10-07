@@ -46,7 +46,7 @@ LoadDefinitions!({
     let url = if open.get_catcode() == Catcode::BEGIN {
       open = T_OTHER!("{");
       close = T_OTHER!("}");
-      gullet::read_balanced(false,false,false)?.unwrap_or_default()
+      gullet::read_balanced(ExpansionLevel::Off,false,false)?.unwrap_or_default()
     } else {
       open = open.as_other();
       close = open;

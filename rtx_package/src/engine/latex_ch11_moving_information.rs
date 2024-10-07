@@ -199,7 +199,7 @@ LoadDefinitions!({
       // It's ignorable for latexml anyway, so we'll just read it if its there.
       gullet::skip_spaces()?;
       if gullet::if_next(T_BEGIN!())? {
-        gullet::read_arg()?;
+        gullet::read_arg(ExpansionLevel::Off)?;
       }
       begin_bibliography(whatsit)?;
     },

@@ -364,6 +364,12 @@ pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\expandafter"),
   code: Catcode::CS
 });
+/// constant for T_CS("\endcsname")
+#[thread_local]
+pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin_static("\\endcsname"),
+  code: Catcode::CS
+});
 
 #[macro_export]
 /// macro for a BEGIN "{" token
