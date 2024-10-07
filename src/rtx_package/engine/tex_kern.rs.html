@@ -105,7 +105,56 @@
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Kern
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Kern
 //! 
 //! Core TeX Implementation for LaTeXML
 
@@ -125,13 +174,14 @@
   // \kern is heavily used by xy.
   // Completely HACK version for the moment
   // Note that \kern should add vertical spacing in vertical modes!
-  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\kern Dimension"</span>, sub[document,args] {
-    <span class="kw">let </span>length = <span class="kw">if let </span>DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\kern Dimension"</span>, sub[document,args, props] {
+    <span class="comment">// TODO: We definitely need a cleaner Dimension cast here.
+    </span><span class="kw">let </span>length : Dimension = <span class="kw">if let </span>DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
       args[<span class="number">0</span>].as_ref().unwrap().data() {
         <span class="kw-2">*</span>d
       } <span class="kw">else </span>{ Dimension::default() };
-      <span class="kw">let </span>is_svg_g = document::with_node_qname(document.get_node(),
-        |qname| qname == <span class="string">"svg:g"</span>);
+    <span class="kw">let </span>is_svg_g = document::with_node_qname(document.get_node(),
+      |qname| qname == <span class="string">"svg:g"</span>);
     <span class="kw">let </span>parent = document.get_node_mut();
     <span class="kw">if </span>is_svg_g {
       <span class="kw">let </span>x = length.px_value(<span class="prelude-val">None</span>);
@@ -146,10 +196,58 @@
       }
     } <span class="kw">else if </span>in_svg(document) {
       <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"kern"</span>, <span class="macro">s!</span>(<span class="string">"Lost kern in SVG {length}"</span>));
+    } <span class="kw">else if </span>props.get(<span class="string">"isMath"</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)) {
+      <span class="comment">// TODO: Reconsider if the insert_element API needs to be based around
+      // Stored map values, rather than String map values.
+      </span>document.insert_element(<span class="string">"ltx:XMHint"</span>, Vec::new(), <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">"width" </span>=&gt; length.to_string())))<span class="question-mark">?</span>; 
+    } <span class="kw">else </span>{ 
+      <span class="comment">// Add space to document?
+      </span>document.absorb_string(<span class="kw-2">&amp;</span>dimension_to_spaces(length), <span class="kw-2">&amp;</span>SymHashMap::default())<span class="question-mark">?</span>;
+    }
+  }, properties =&gt; sub[args] {
+    <span class="macro">unref!</span>(args =&gt; length);
+    <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"width" </span>=&gt; length, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"isKern" </span>=&gt; <span class="bool-val">true</span>))
+  });
+
+  <span class="comment">// Remove kern, if last on LIST
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\unkern"</span>, {
+    <span class="kw">let </span><span class="kw-2">mut </span>comments = Vec::new();
+    <span class="comment">// Scan past any Comment boxes
+    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(last_box) = pop_box_list() {
+      <span class="kw">if </span><span class="macro">matches!</span>(last_box.data(), DigestedData::Comment(<span class="kw">_</span>)) {
+        comments.push(last_box);
+      } <span class="kw">else </span>{
+        <span class="kw">if </span>!last_box.get_property_bool(<span class="string">"isKern"</span>) {
+          push_box_list(last_box);
+        }
+        <span class="kw">break</span>;
+      }
+    }
+    <span class="kw">let </span>comments_rev_iter = comments.into_iter().rev();
+    <span class="kw">for </span>comment <span class="kw">in </span>comments_rev_iter {
+      push_box_list(comment);
     }
   });
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\unkern"</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefRegister!</span>(<span class="string">"\\lastkern" </span>=&gt; Dimension::new(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
+  <span class="comment">// Get kern, if last on LIST
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\lastkern" </span>=&gt; Dimension::new(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>, 
+  getter =&gt; {
+    stomach::with_box_list(|stomach_box_list| {
+      <span class="kw">let </span>box_iter = stomach_box_list.iter().rev();
+      <span class="kw">for </span>box_in_list <span class="kw">in </span>box_iter {
+        <span class="kw">if </span>box_in_list.get_property_bool(<span class="string">"isKern"</span>) {
+          <span class="kw">let </span>width_stored = box_in_list.get_property(<span class="string">"width"</span>).unwrap(); 
+          <span class="kw">if let </span>Stored::Dimension(<span class="kw-2">ref </span>width_d) = <span class="kw-2">*</span>width_stored {
+            <span class="kw">return </span><span class="kw-2">*</span>width_d;
+          } <span class="kw">else </span>{
+            <span class="macro">panic!</span>(<span class="string">"Unexpected type of \"width\" value in State: {width_stored:?}"</span>);
+          }
+        }
+      }
+      Dimension::new(<span class="number">0</span>)
+    })
+  });
+
+    
 
   <span class="comment">//======================================================================
   // Moving Vertically

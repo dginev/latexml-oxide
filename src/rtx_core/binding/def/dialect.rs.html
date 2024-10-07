@@ -1499,7 +1499,8 @@
 <a href="#1498" id="1498">1498</a>
 <a href="#1499" id="1499">1499</a>
 <a href="#1500" id="1500">1500</a>
-<a href="#1501" id="1501">1501</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#1501" id="1501">1501</a>
+<a href="#1502" id="1502">1502</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::rc::Rc;
@@ -1586,6 +1587,7 @@
       Stored::Expandable(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
       Stored::Primitive(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
       Stored::Constructor(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
+      Stored::Register(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
       other =&gt; <span class="macro">panic!</span>(<span class="string">"TODO: unexpected case for is_defined_token, got: {other:?}"</span>)
     },
     <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
