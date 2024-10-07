@@ -85,6 +85,7 @@ pub fn is_defined_token(cs: &Token) -> bool {
       Stored::Expandable(ref m) => m.get_cs_name() != "\\relax",
       Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",
       Stored::Constructor(ref m) => m.get_cs_name() != "\\relax",
+      Stored::Register(ref m) => m.get_cs_name() != "\\relax",
       other => panic!("TODO: unexpected case for is_defined_token, got: {other:?}")
     },
     _ => false,

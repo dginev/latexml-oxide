@@ -91,13 +91,19 @@ LoadDefinitions!({
       }
     }},
      // TODO: "height" property
-    properties => {stored_map!("isSpace" => true, "isVerticalSpace" => true, "isBreak" => true)}
+    properties => {stored_map!("isSpace" => true, "isSkip"=>true,
+      "isVerticalSpace" => true, "isBreak" => true) }
   );
-
+  // Remove skip, if last on LIST
   DefPrimitive!("\\unskip", {
-    // pop until a non-empty box is found
+    let mut comments = Vec::new();
     while let Some(last_box) = pop_box_list() {
-      if !last_box.is_empty()? {
+      // Scan past any Comment boxes
+      if matches!(last_box.data(), DigestedData::Comment(_)) {
+        comments.push(last_box);
+      } else if last_box.get_property_bool("isSkip") {
+        break;
+      } else { // return a non-skip box to the list.
         push_box_list(last_box);
         break;
       }
@@ -139,5 +145,21 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \lastskip         iq is 0.0 pt or the last glue or muglue on the current list.
 
-  DefRegister!("\\lastskip", Glue::new(0), readonly => true);
+  DefRegister!("\\lastskip", Dimension::new(0), readonly => true, getter => {
+    stomach::with_box_list(|stomach_box_list| {
+      let box_iter = stomach_box_list.iter().rev();
+      for box_in_list in box_iter {
+        if box_in_list.get_property_bool("isSkip") {
+          let width_stored = box_in_list.get_property("width").unwrap(); 
+          if let Stored::Dimension(ref width_d) = *width_stored {
+            return *width_d;
+          } else {
+            panic!("Unexpected type of \"width\" value in State: {width_stored:?}");
+          }
+        }
+      }
+      Dimension::new(0)
+    })
+  });
+
 });

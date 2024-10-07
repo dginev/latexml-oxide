@@ -18,13 +18,14 @@ LoadDefinitions!({
   // \kern is heavily used by xy.
   // Completely HACK version for the moment
   // Note that \kern should add vertical spacing in vertical modes!
-  DefConstructor!("\\kern Dimension", sub[document,args] {
-    let length = if let DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
+  DefConstructor!("\\kern Dimension", sub[document,args, props] {
+    // TODO: We definitely need a cleaner Dimension cast here.
+    let length : Dimension = if let DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
       args[0].as_ref().unwrap().data() {
         *d
       } else { Dimension::default() };
-      let is_svg_g = document::with_node_qname(document.get_node(),
-        |qname| qname == "svg:g");
+    let is_svg_g = document::with_node_qname(document.get_node(),
+      |qname| qname == "svg:g");
     let parent = document.get_node_mut();
     if is_svg_g {
       let x = length.px_value(None);
@@ -39,10 +40,58 @@ LoadDefinitions!({
       }
     } else if in_svg(document) {
       Warn!("unexpected", "kern", s!("Lost kern in SVG {length}"));
+    } else if props.get("isMath") == Some(&Stored::Bool(true)) {
+      // TODO: Reconsider if the insert_element API needs to be based around
+      // Stored map values, rather than String map values.
+      document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_string())))?; 
+    } else { 
+      // Add space to document?
+      document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;
+    }
+  }, properties => sub[args] {
+    unref!(args => length);
+    Ok(stored_map!("width" => length, "isSpace" => true, "isKern" => true))
+  });
+
+  // Remove kern, if last on LIST
+  DefPrimitive!("\\unkern", {
+    let mut comments = Vec::new();
+    // Scan past any Comment boxes
+    while let Some(last_box) = pop_box_list() {
+      if matches!(last_box.data(), DigestedData::Comment(_)) {
+        comments.push(last_box);
+      } else {
+        if !last_box.get_property_bool("isKern") {
+          push_box_list(last_box);
+        }
+        break;
+      }
+    }
+    let comments_rev_iter = comments.into_iter().rev();
+    for comment in comments_rev_iter {
+      push_box_list(comment);
     }
   });
-  DefPrimitive!("\\unkern", None);
-  DefRegister!("\\lastkern" => Dimension::new(0), readonly => true);
+  // Get kern, if last on LIST
+  DefRegister!("\\lastkern" => Dimension::new(0), readonly => true, 
+  getter => {
+    stomach::with_box_list(|stomach_box_list| {
+      let box_iter = stomach_box_list.iter().rev();
+      for box_in_list in box_iter {
+        if box_in_list.get_property_bool("isKern") {
+          let width_stored = box_in_list.get_property("width").unwrap(); 
+          if let Stored::Dimension(ref width_d) = *width_stored {
+            return *width_d;
+          } else {
+            panic!("Unexpected type of \"width\" value in State: {width_stored:?}");
+          }
+        }
+      }
+      Dimension::new(0)
+    })
+  });
+
+    
 
   //======================================================================
   // Moving Vertically
