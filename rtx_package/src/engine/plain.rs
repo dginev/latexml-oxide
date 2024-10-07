@@ -1036,8 +1036,8 @@ LoadDefinitions!({
   DefMath!("\\diamond",         None, "\u{22C4}", role => "ADDOP");
   DefMath!("\\bigtriangleup",   None, "\u{25B3}", role => "ADDOP");
   DefMath!("\\bigtriangledown", None, "\u{25BD}", role => "ADDOP");
-  DefMath!("\\triangleleft",    None, "\u{25C1}", role => "ADDOP");
-  DefMath!("\\triangleright",   None, "\u{25B7}", role => "ADDOP");
+  DefMath!("\\triangleleft",    None, "\u{22B2}", role => "ADDOP");
+  DefMath!("\\triangleright",   None, "\u{22B3}", role => "ADDOP");
   DefMath!("\\lhd",           None, "\u{22B2}", role => "ADDOP", meaning => "subgroup-of");
   DefMath!("\\rhd",           None, "\u{22B3}", role => "ADDOP", meaning => "contains-as-subgroup");
   DefMath!("\\unlhd", None, "\u{22B4}", role => "ADDOP", meaning => "subgroup-of-or-equals");
