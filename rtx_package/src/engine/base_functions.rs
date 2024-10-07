@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use rtx_core::common::xml::content_nodes;
 use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 
 pub fn reenter_text_mode(vertical_mode: bool) {
@@ -350,7 +351,7 @@ pub fn insert_block(
   let container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
   document.absorb(contents, None)?;
 
-  let mut nodes = container.get_child_nodes();
+  let mut nodes = content_nodes(&container);
   let node_tags = nodes.iter().map(document::get_node_qname)
     .collect::<Vec<_>>();
   let nnodes = nodes.len();

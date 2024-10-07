@@ -93,7 +93,17 @@ pub fn element_nodes(node: &Node) -> Vec<Node> {
   node
     .get_child_nodes()
     .into_iter()
-    .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+    .filter(|n| matches!(n.get_type(), Some(NodeType::ElementNode)))
+    .collect()
+}
+
+/// obtains all content children of `node` (`Element` and `Text`), ignoring all other node types
+pub fn content_nodes(node: &Node) -> Vec<Node> {
+  node
+    .get_child_nodes()
+    .into_iter()
+    .filter(|n| matches!(n.get_type(), 
+        Some(NodeType::ElementNode) | Some(NodeType::TextNode)))
     .collect()
 }
 
