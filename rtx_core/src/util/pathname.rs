@@ -29,7 +29,7 @@ static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
 // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
-static KPSE: Lazy<Mutex<Kpaths>> = Lazy::new(|| Mutex::new(Kpaths::new().unwrap()));
+static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new().ok()));
 
 // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
 //     Ok(exe_path) => {
@@ -330,9 +330,11 @@ pub fn extension(pathname: &str) -> String {
 /// search for a list of candidate names via the external `kpsewhich` utility
 /// returning the first path that is found
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
-  for candidate in candidates {
-    if let Some(path) = KPSE.lock().unwrap().find_file(candidate) {
-      return Some(path);
+  if let Some(ref kpse) = *KPSE.lock().unwrap() {
+    for candidate in candidates {
+      if let Some(path) = kpse.find_file(candidate) {
+        return Some(path);
+      }
     }
   }
   None
