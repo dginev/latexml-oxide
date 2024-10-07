@@ -9,7 +9,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::gullet;
+use crate::gullet::{self, ExpansionLevel};
 use crate::definition::argument::ArgWrap;
 use crate::document::Document;
 use crate::token::{Catcode, Token};
@@ -244,7 +244,7 @@ impl KeyVals {
     gullet::skip_spaces()?;
     
     let mut last_token = None;
-    while let Some(token) = gullet::read_x_token(None, false)? {
+    while let Some(token) = gullet::read_x_token(None, false, None)? {
       // skip to the next iteration if we have a paragraph
       if token == T_CS!("\\par") {
         continue;
@@ -566,7 +566,7 @@ impl KeyVals {
       gullet::skip_spaces()?;
       if gullet::if_next(T_BEGIN!())? { // Protect against redundant {} wrapping
         gullet::read_token()?;
-        gullet::unread(gullet::read_balanced(false,false,false)?.strip_braces());
+        gullet::unread(gullet::read_balanced(ExpansionLevel::Off,false,false)?.strip_braces());
         gullet::skip_spaces()?; 
       }
       // Read a single keyword, get a delimiter and a set of keyword tokens
@@ -613,7 +613,7 @@ impl KeyVals {
               // Copy next token to args
               toks.push(tok);
               if tok.get_catcode() == Catcode::BEGIN {
-                let balanced_arg = gullet::read_balanced(false,false,false)?;
+                let balanced_arg = gullet::read_balanced(ExpansionLevel::Off,false,false)?;
                 if !balanced_arg.is_empty() {
                   toks.extend(balanced_arg.unlist());
                 }

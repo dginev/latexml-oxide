@@ -40,7 +40,8 @@ use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::state::*;
 use crate::stomach::*;
-use crate::{BoxOps,gullet,stomach};
+use crate::gullet::{self, ExpansionLevel};
+use crate::{BoxOps,stomach};
 
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
@@ -666,11 +667,11 @@ pub fn read_alignment_template() -> Result<Template> {
         break;
       }
       gullet::unread_one(last_op);
-    } else if let Some(defn) = lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
+    } else if let Some(defn) = lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), None)? {
       let invoked = defn.invoke(true)?;
       gullet::unread(invoked);
     } else if cc == Catcode::BEGIN {
-      let balanced_arg = gullet::read_balanced(false,false,false)?;
+      let balanced_arg = gullet::read_balanced(ExpansionLevel::Off,false,false)?;
       if !balanced_arg.is_empty() {
         gullet::unread(balanced_arg);
       }

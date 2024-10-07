@@ -235,11 +235,9 @@ impl Parameter {
       None => fatal!(
         Parameter,
         Unknown,
-        s!(
+        arena::with2(self.name, self.spec, |name, spec| s!(
           "Unrecognized parameter type with name {:?}, spec {:?}",
-          self.name,
-          self.spec
-        )
+          name, spec))
       ),
     }
     // Last but not least, initialize any "inner" parameters
@@ -361,7 +359,7 @@ impl Parameter {
               loop {
                 match gullet::get_pending_comment() {
                   Some(token) => tokens.push(token),
-                  None => match gullet::read_x_token(Some(true), false) {
+                  None => match gullet::read_x_token(Some(true), false, None) {
                     Ok(token_opt) => match token_opt {
                       Some(token) => tokens.push(token),
                       None => break,

@@ -8,7 +8,7 @@ use crate::prelude::*;
 // Define parsers for standard parameter types.
 LoadDefinitions!({
   DefParameterType!(Plain, sub[inner, _extra] {
-    let mut value = ArgWrap::Tokens(gullet::read_arg()?);
+    let mut value = ArgWrap::Tokens(gullet::read_arg(ExpansionLevel::Off)?);
     if let Some(inner_ps) = inner {
       // TODO: How many arguments can we expect back? One? Many?
       //       Currently only passing through the first
@@ -29,7 +29,7 @@ LoadDefinitions!({
   });
 
   DefParameterType!(DefPlain, sub[inner, _extra] {
-      let mut value = ArgWrap::Tokens(gullet::read_balanced(false, true, true)?);
+      let mut value = ArgWrap::Tokens(gullet::read_balanced(ExpansionLevel::Off, true, true)?);
       if let Some(inner_ps) = inner {
         value = inner_ps.reparse_argument( value)?.remove(0);
       }
@@ -86,10 +86,10 @@ LoadDefinitions!({
   // however, <filler> does get expanded while searching for the initial {
   // which IS required in contrast to a general argument; ie a single token is not correct.
   DefParameterType!(GeneralText, sub[_inner, _extra] {
-    if let Some(t) = gullet::read_x_token(None, false)? {
+    if let Some(t) = gullet::read_x_token(None, false, Some(true))? {
       gullet::unread_one(t);  // Force expansion to skip <filler> before required {
     }
-    gullet::read_balanced(false,false,true)
+    gullet::read_balanced(ExpansionLevel::Off,false,true)
   });
 
   DefParameterType!(Until, sub[_inner, until_extra] {
@@ -129,7 +129,7 @@ LoadDefinitions!({
 
   // Read the next token, after expanding any expandable ones.
   DefParameterType!(XToken, sub[_inner, _extra] {
-    if let Some(t) = gullet::read_x_token(None, false)? {
+    if let Some(t) = gullet::read_x_token(None, false, None)? {
       Ok(ArgWrap::Token(t))
     } else {
       Error!("expected","XToken", "Paramater <XToken> found None.");
@@ -186,12 +186,12 @@ LoadDefinitions!({
     // Make sure it's a single token!!!
     let until : Token = untils.first().expect("XUntil needs a token Extra.").into();
     let mut tokens : Vec<Token> = Vec::new();
-    while let Some(token) = gullet::read_x_token(Some(false), false)? {
+    while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
       if token == until {
         break;
       } else if token.get_catcode() == Catcode::BEGIN {
         tokens.push(token);
-        tokens.extend(gullet::read_balanced(false,false,false)?.unlist());
+        tokens.extend(gullet::read_balanced(ExpansionLevel::Off,false,false)?.unlist());
         tokens.push(T_END!());
       } else if let Some(defn) = lookup_definition_stored(&token)? {
         let args = defn.read_arguments()?;
@@ -206,7 +206,22 @@ LoadDefinitions!({
   //  This reads a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once.
   DefParameterType!(Expanded, sub[_inner, _untils] {
-    gullet::read_balanced(true,false,true)
+    gullet::read_arg(ExpansionLevel::Full)
+  },
+  reversion => sub[arg, _inner, _extra] {
+    // TODO: Consider a briefer syntax, maybe flat_vec ?
+    // https://docs.rs/flat_vec/latest/flat_vec/macro.flat_vec.html
+    let mut tks = vec![T_BEGIN!()];
+    tks.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+    tks.push(T_END!());
+    Ok(Tokens::new(tks))
+  });
+
+
+  // Like Expanded, but defers \protected, and \the expanded only once.
+  // Similar to when \edef is used.
+  DefParameterType!(ExpandedPartially, sub[_inner, _untils] {
+    gullet::read_arg(ExpansionLevel::Partial)
   },
   reversion => sub[arg, _inner, _extra] {
     // TODO: Consider a briefer syntax, maybe flat_vec ?
@@ -222,9 +237,9 @@ LoadDefinitions!({
   // but expanding \the-like commands only once,
   // and also packing # parameters
   DefParameterType!(DefExpanded, sub[_inner, _extra] {
-      gullet::read_balanced(true, true, true)
+      gullet::read_balanced(ExpansionLevel::Partial, true, true)
     },
-    reversion      => sub[arg, _inner, _extra] {
+    reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) }
   );
 
@@ -247,12 +262,12 @@ LoadDefinitions!({
 
   // Read balanced material (?)
   DefParameterType!(Balanced, sub[_inner, _extra] {
-    gullet::read_balanced(false,false,false)
+    gullet::read_balanced(ExpansionLevel::Off,false,false)
   });
 
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   DefParameterType!(Semiverbatim,
-    sub[_inner, _extra] { gullet::read_arg() },
+    sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
     reversion => sub[arg, inner, _extra] {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
@@ -288,7 +303,7 @@ LoadDefinitions!({
   DefParameterType!(Verbatim, sub[_inner, _extra] {
       gullet::read_until(&Tokens!(T_BEGIN!()))?;
     begin_semiverbatim(Some(&['%', '\\']));
-      let arg = gullet::read_balanced(false,false,false)?;
+      let arg = gullet::read_balanced(ExpansionLevel::Off,false,false)?;
       end_semiverbatim()?;
       Ok(arg)
     },
@@ -321,7 +336,7 @@ LoadDefinitions!({
       state::let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
       state::let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
       // Having prepared, read in the argument, expanding as we go
-      let arg = gullet::read_balanced(true,false,false)?;
+      let arg = gullet::read_balanced(ExpansionLevel::Partial,false,false)?;
       end_semiverbatim()?;
       arg
     },
@@ -338,7 +353,7 @@ LoadDefinitions!({
     }
   );
   // Read an argument that will not be digested.
-  DefParameterType!(Undigested, sub[_inner, _extra] { gullet::read_arg()},
+  DefParameterType!(Undigested, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off)},
   predigest => sub[arg]{ Ok(arg.undigested()) }
   reversion => sub[arg, _inner, _extra] {
     if arg.is_empty() {
@@ -369,10 +384,10 @@ LoadDefinitions!({
 
   // Read a keyword value (KeyVals), that will not be digested.
   DefParameterType!(UndigestedKey, sub[_inner, _extra] {
-    gullet::read_arg() },
+    gullet::read_arg(ExpansionLevel::Off) },
   predigest => sub[arg]{ Ok(arg.undigested()) });
   DefParameterType!(UndigestedDefKey, sub[_inner, _extra] {
-    gullet::read_arg()?.pack_parameters() },
+    gullet::read_arg(ExpansionLevel::Off)?.pack_parameters() },
   predigest => sub[arg]{ Ok(arg.undigested()) });
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
@@ -380,7 +395,7 @@ LoadDefinitions!({
     let mut token_opt = gullet::read_token()?;
     while let Some(token) = token_opt {
       if token.get_catcode() != Catcode::BEGIN { break; }
-      let mut toks : Vec<Token> = gullet::read_balanced(false,false,false)?
+      let mut toks : Vec<Token> = gullet::read_balanced(ExpansionLevel::Off,false,false)?
         .unlist().into_iter().filter(|t| {
           let cc = t.get_catcode();
           cc != Catcode::SPACE && cc != Catcode::COMMENT
@@ -410,7 +425,7 @@ LoadDefinitions!({
 
   // Read a variable, ie. a token (after expansion) that is a writable register.
   DefParameterType!(Variable, sub[_inner, _extra] {
-    let token_opt = gullet::read_x_token(None, false)?;
+    let token_opt = gullet::read_x_token(None, false, None)?;
     let defn_opt = match token_opt {
       Some(ref token) => state::lookup_register_definition(token),
       None => None
@@ -449,44 +464,11 @@ LoadDefinitions!({
     // Ok(Tokens::new(reverted))
   });
 
-  // Same, but not necessarily writable
-  DefParameterType!(Register, sub[_inner, _extra] {
-    let token = gullet::read_x_token(None, false)?;
-    let defn = match token {
-      None => None,
-      Some(ref t) => state::lookup_register_definition(t)
-    };
-    match defn {
-      Some(register) => {
-        let args = register.read_arguments()?;
-        Ok(ArgWrap::RegisterDefinition(Box::new((token.unwrap(), args))))
-      },
-      None => {
-        let message = s!("A <register> was supposed to be here. Got {:?}", token);
-        Error!("expected","<register>", message);
-        if let Some(t) = token {
-          if is_definable(&t) {
-            def_register(t, None, Tokens!(), None)?;
-          }
-        }
-        Ok(ArgWrap::Tokens(Tokens!()))
-      }
-    }
-  },
-  // TODO: If we want to revert "arg" in an honest manner, it needs to be an ArgWrap type.
-  reversion => sub[_arg, _inner, _extra] {
-    // my ($var) = @_;
-    // my ($defn, @args) = @$var;
-    // my $params = $defn->getParameters;
-    // return Tokens($defn->getCS, ($params ? $params->revertArguments(@args) : ()));
-    Ok(Tokens!())
-  });
-
   DefParameterType!(TeXFileName, sub[_inner, _extra] {
     use Catcode::*;
     gullet::skip_spaces()?;
     let mut tokens = Vec::new();
-    while let Some(token) = gullet::read_x_token(Some(false), false)? {
+    while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
       let cc = token.get_catcode();
       if matches!(cc, SPACE | EOL | COMMENT | CS) {
         if matches!(cc, CS) {
@@ -542,7 +524,7 @@ LoadDefinitions!({
   // as part of the reader???
   DefParameterType!(MoveableBox, sub[_inner, _extra] {
     gullet::skip_spaces()?;
-    if let Some(xtoken) = gullet::read_x_token(None, false)? {
+    if let Some(xtoken) = gullet::read_x_token(None, false, None)? {
       Tokens!(xtoken)
     } else {
       Tokens!()
@@ -574,7 +556,7 @@ LoadDefinitions!({
   // Read a parenthesis delimited argument.
   // Note that this does NOT balance () within the argument.
   DefParameterType!(BalancedParen, sub[_inner, _extra] {
-    let tok_opt = gullet::read_x_token(None,false)?;
+    let tok_opt = gullet::read_x_token(None,false, None)?;
     let is_paren = match tok_opt {
       Some(ref t) => t.with_str(|ts| ts == "("),
       _ => false
@@ -602,6 +584,9 @@ LoadDefinitions!({
   // It is useful when the content would usually need to have been \protect'd
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
+
+
+  //TODO: Refactor and add TeXDelimiter
   DefParameterType!(Digested, sub[_inner, _extra] {
       gullet::skip_spaces()?;
       Ok(Tokens!())
@@ -610,7 +595,7 @@ LoadDefinitions!({
       let ismath = lookup_bool("IN_MATH");
       let mut list = Vec::new();
       let mut next_token = None;
-      while let Some(token) = gullet::read_x_token(Some(false), false )? {
+      while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
         let is_last = token.get_catcode() != Catcode::SPACE && token != T_RELAX!();
         next_token = Some(token);
         if is_last {
@@ -861,7 +846,7 @@ LoadDefinitions!({
 
   // Not sure that this is the most elegant solution, but...
   // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
-  DefParameterType!(DisplayStyle, sub[_inner, _extra] { gullet::read_arg() },
+  DefParameterType!(DisplayStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
     before_digest => {
       bgroup();
       MergeFont!(mathstyle => "display");
@@ -898,7 +883,7 @@ LoadDefinitions!({
   // # Perverse naming convention: not script style, but in the style of a script relative to
   // current.
   DefParameterType!(InScriptStyle, sub[_inner, _extra] {
-      gullet::read_arg() },
+      gullet::read_arg(ExpansionLevel::Off) },
     before_digest => {
       bgroup();
       MergeFont!(scripted => true);
@@ -931,7 +916,7 @@ LoadDefinitions!({
       }
     });
   DefParameterType!(InFractionStyle, sub[_inner, _extra] {
-      gullet::read_arg()
+      gullet::read_arg(ExpansionLevel::Off)
     },
     before_digest => {
       bgroup();

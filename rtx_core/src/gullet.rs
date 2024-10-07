@@ -25,7 +25,7 @@ use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
 use crate::definition::Definition;
 use crate::mouth::Mouth;
-use crate::token::{Catcode, Token};
+use crate::token::{Catcode, Token, TOKEN_ENDCSNAME, TOKEN_RELAX};
 use crate::tokens::Tokens;
 
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
@@ -237,11 +237,11 @@ fn handle_template(
   // ### NOTE: Truly fishy smuggling w/ \lx@hidden@cr
   let arg_opt = if (vtype == "cr") && hidden {
     // \lx@hidden@cr gets an argument as payload!!!!!
-    Some(read_arg()?)
+    Some(read_arg(ExpansionLevel::Off)?)
   } else {
     None
   };
-  // eprintln!("Halign: column after {post}");// . ToString($post)) if $LaTeXML::DEBUG{halign};
+  // eprintln!("Halign: column after {post}");// . ToString($post) if $LaTeXML::DEBUG{halign};
   if (vtype == "cr" || vtype == "crcr")
     && alignment.is_in_row()
     && !alignment
@@ -356,8 +356,9 @@ pub fn read_token() -> Result<Option<Token>> {
 /// Note that most tokens pass through here, so be Fast & Clean! readToken is folded in.
 ///    `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
 ///     will step to the next input stream (Mouth) if one is available,
-///     `toplevel` is doing TWO distinct things. When true:
+///     `toplevel` when true:
 /// * If a mouth is exhausted, move on to the containing mouth to continue reading
+///   `fully_expand` when true, OR when None but `toplevel` is true
 /// * expand even protected defns, essentially this means expand "for execution"
 /// 
 /// Note that, unlike readBalanced, this does NOT defer expansion of \the & friends.
@@ -369,11 +370,12 @@ pub fn read_token() -> Result<Option<Token>> {
 pub fn read_x_token(
   toplevel_opt: Option<bool>,
   for_conditional: bool,
+  fully_expand_opt: Option<bool>,
 ) -> Result<Option<Token>> {
   // toplevel should be true by default
   let toplevel = toplevel_opt.unwrap_or(true);
   let autoclose = toplevel;
-  let for_evaluation = toplevel;
+  let fully_expand = fully_expand_opt.unwrap_or(toplevel);
   loop {
     // internal low-level reader that extracts a token from a mouth,
     // but always keeps comment tokens pending.
@@ -439,7 +441,7 @@ pub fn read_x_token(
         Some(typed_defn) => {
           let defn = typed_defn.to_definition()
             .expect("token expansion requires the Stored item to implement trait Definition");
-          if !defn.is_expandable() || (defn.is_protected() && !for_evaluation) {
+          if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
             return Ok(Some(token));
           } else {
             local_current_token(token);
@@ -512,7 +514,7 @@ pub fn read_non_space() -> Result<Option<Token>> {
 /// Read a single expanded, non-space, token
 pub fn read_x_non_space() -> Result<Option<Token>> {
   loop {
-    match read_x_token(Some(false), false)? {
+    match read_x_token(Some(false), false, None)? {
       None => return Ok(None),
       Some(t) => {
         if t.get_catcode() != Catcode::SPACE {
@@ -523,14 +525,26 @@ pub fn read_x_non_space() -> Result<Option<Token>> {
   }
 }
 
+/// A directive describing to what degree a gullet reader should perform TeX's expansion
+#[derive(Copy, Debug, Clone, PartialEq, Default)]
+pub enum ExpansionLevel {
+  // No expansion, reads currently present tokens
+  #[default]
+  Off,
+  /// Expands while reading, but deferring `\the` and `\protected`
+  Partial,
+  /// Expands completely while reading
+  Full
+}
+
 /// Approximates TeX's scan_toks (but doesn't parse \def parameter lists)
 /// and only optionally requires the openning "{".
 /// 
 /// It may return comments in the token lists.
-/// it optionally (`do_expand`) expands while reading, but deferring \the and related.
 /// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
 /// If `require_open` is true, the opening T_BEGIN has not yet been read, and is required.
-pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> Result<Tokens> {
+pub fn read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require_open:bool) -> Result<Tokens> {
+  use ExpansionLevel::*;
   if !require_open {
     decrement_align_group_count();
   }
@@ -538,7 +552,7 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
   // let startloc = if lookup_verbosity() > 0 { Some(get_locator()) } else { None };
   // Do we need to expand to get the { ???
   if require_open {
-    let token_opt = if do_expand { read_x_token(Some(false),false)? }
+    let token_opt = if expansion_level != Off { read_x_token(Some(false),false, None)? }
     else { read_token()? };
     let is_open = match token_opt {
       None => false,
@@ -618,10 +632,10 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
             }
           }
           // Note: use general-purpose lookup, since we may reexamine $defn below
-          if do_expand && cc.is_active_or_cs() {
+          if expansion_level != Off && cc.is_active_or_cs() {
             let meaning_opt = lookup_meaning(&token);
             if let Some(defn) = meaning_opt.as_ref().and_then(|item| item.to_definition()) {
-              if defn.is_expandable() && !defn.is_protected() {
+              if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full){
                 local_current_token(token);
                 let expansion = defn.invoke(false)?;
                 if expansion.is_empty() {
@@ -630,7 +644,7 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
                 }
                 // If a special \the type command, push the expansion directly into the result
                 // Well, almost directly: handle any MARKER tokens now, and possibly un-pack T_PARAM
-                if DEFERRED_COMMANDS.contains(&defn.get_cs().text) {
+                if expansion_level!=Full && DEFERRED_COMMANDS.contains(&defn.get_cs().text) {
                   for t in expansion.unlist() {
                     match t.get_catcode() {
                       Catcode::MARKER => handle_marker(t),
@@ -691,7 +705,7 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
     let mut to_match: VecDeque<char> = keyword.to_uppercase().chars().collect();
     let mut matched = Vec::new();
     while !to_match.is_empty() {
-      if let Some(tok) = read_x_token(Some(false), false)? {
+      if let Some(tok) = read_x_token(Some(false), false, None)? {
         let cmp_tok = tok.with_str(|s| s.to_uppercase());
         matched.push(tok);
         if cmp_tok == to_match[0].to_string() {
@@ -748,7 +762,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
           // And if it's a BEGIN, copy till balanced END
           nbraces += 1;
           tokens.push(token);
-          let balanced_arg = read_balanced(false,false,false)?;
+          let balanced_arg = read_balanced(ExpansionLevel::Off,false,false)?;
           if !balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
@@ -779,7 +793,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
             tokens.push(r_token);
           }
           tokens.push(token);
-          let balanced_arg = read_balanced(false,false,false)?;
+          let balanced_arg = read_balanced(ExpansionLevel::Off,false,false)?;
           if !balanced_arg.is_empty() {
             tokens.append(&mut balanced_arg.unlist());
           }
@@ -837,6 +851,38 @@ pub fn read_until_brace() -> Result<Option<Tokens>> {
     Ok(Some(tks))
   }
 }
+
+pub fn read_cs_name() -> Result<Token> {
+  // TeX does NOT store the csname with the leading `\`, BUT stores active chars with a flag
+  // However, so long as the Mouth's CS and \string properly respect \escapechar, all's well!
+
+  let mut cs = String::from("\\");
+  // keep newlines from having \n inside!
+  while let Some(token) = read_x_token(Some(true), false, None)? {
+    if token.defined_as(&TOKEN_ENDCSNAME) {
+      break;
+    }
+    match token.get_catcode() {
+      Catcode::CS => {
+        if lookup_definition(&token)?.is_some() {
+          let message =
+            s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
+              token);
+          Error!("unexpected", token, message);
+        } else {
+          let message = s!("The token {:?} is not defined", token);
+          Error!("undefined", token, message);
+        }
+      },
+      Catcode::SPACE => cs.push(' '),  // Keep newlines from having \n!
+      _ => {
+        token.with_str(|s| cs.push_str(s));
+      }
+    };
+  }
+  Ok(T_CS!(cs))
+}
+
 /// reads and discards tokens, until it encounters a conditional, if any
 pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
   while let Some(token) = read_token()? {
@@ -853,11 +899,11 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
 /// Higher-level readers: Read various types of things from the input:
 ///  tokens, non-expandable tokens, args, Numbers, ...
 ///**********************************************************************
-pub fn read_arg() -> Result<Tokens> {
+pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
     Some(token) => if token.get_catcode() == Catcode::BEGIN {
-        read_balanced(false,false,false)
+        read_balanced(expansion_level,false,false)
       } else {
         Ok(Tokens!(token))
       }
@@ -882,6 +928,18 @@ pub fn read_optional(
       }
     },
   }
+}
+
+/// <filler> = <optional spaces> | <filler>\relax<optional spaces>
+/// TeX Book p.276 "<left brace> can be implicit", and experimentation, indicate Expansion!!!
+pub fn skip_filler() -> Result<()> {
+  while let Some(tok) = read_x_non_space()? {
+    if !tok.defined_as(&TOKEN_RELAX) {
+      unread_one(tok);
+      break;
+    }
+  }
+  Ok(())
 }
 
 pub fn if_next(token: Token) -> Result<bool> {
@@ -911,14 +969,14 @@ pub fn read_value(
     // TODO: unwrap should be a proper error, value is expected
     RegisterType::Token => Ok(read_token()?.unwrap().into()),
     RegisterType::CharDef => Ok(read_number()?.into()),
-    RegisterType::Any => Ok(read_arg()?.into()),
+    RegisterType::Any => Ok(read_arg(ExpansionLevel::Off)?.into()),
   }
 }
 
 pub fn read_register_value(
   value_type: RegisterType,
 ) -> Result<Option<RegisterValue>> {
-  match read_x_token(None, false)? {
+  match read_x_token(None, false, None)? {
     None => Ok(None),
     Some(token) => {
       if let Some(defn) = lookup_register_definition(&token) {
@@ -1039,7 +1097,7 @@ pub fn read_number() -> Result<Number> {
 ///   | `<character token><one optional space>
 /// ```
 pub fn read_normal_integer() -> Result<Option<Number>> {
-  match read_x_token(None, false)? {
+  match read_x_token(None, false, None)? {
     None => Ok(None),
     Some(token) => {
       let cc = token.get_catcode();
@@ -1083,10 +1141,10 @@ pub fn read_float() -> Result<Float> {
   let is_negative = read_optional_signs()?;
   let s = if is_negative { -1.0 } else { 1.0 };
   let mut string = read_digits(&DIGIT_RE, true)?;
-  let mut token = read_x_token(None, false)?;
+  let mut token = read_x_token(None, false, None)?;
   if token.is_some() && token.as_ref().unwrap().get_sym() == arena::pin_static(".") {
     string = s!("{string}.{}", read_digits(&DIGIT_RE, true)?);
-    token = read_x_token(None, false)?;
+    token = read_x_token(None, false, None)?;
   }
   let n_opt: Option<f64> = if !string.is_empty() {
     if let Some(t) = token {
@@ -1379,7 +1437,7 @@ pub fn read_tokens_value() -> Result<Tokens> {
     None => Ok(Tokens!()),
     Some(token) => {
       if token.get_catcode() == Catcode::BEGIN {
-        Ok(read_balanced(false,false,false)?)
+        Ok(read_balanced(ExpansionLevel::Off,false,false)?)
       } else if let Some(defn) = lookup_register_definition(&token) {
         match defn.register_type() {
           Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
@@ -1436,7 +1494,7 @@ pub fn skip_one_space() -> Result<()> {
 // returns false if None, or positive, true if negative
 fn read_optional_signs() -> Result<bool> {
   let mut sign = false;
-  while let Some(t) = read_x_token(None, false)? {
+  while let Some(t) = read_x_token(None, false, None)? {
     let sym = t.get_sym();
     if sym == arena::pin_static("-") {
       sign = !sign;
@@ -1450,7 +1508,7 @@ fn read_optional_signs() -> Result<bool> {
 
 fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
   let mut result = String::new();
-  while let Some(token) = read_x_token(None, false)? {
+  while let Some(token) = read_x_token(None, false, None)? {
     let digit_opt = token.with_str(|s| {
       if s.len() == 1 && range_regex.is_match(s) {
         s.chars().next()
@@ -1477,12 +1535,12 @@ fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
 /// Return a number (Rust f64 number)
 fn read_factor() -> Result<Option<f64>> {
   let mut factor = read_digits(&DIGIT_RE, false)?;
-  let mut token_opt = read_x_token(None, false)?;
+  let mut token_opt = read_x_token(None, false, None)?;
   if let Some(ref token) = token_opt {
     let sym = token.get_sym();
     if sym == arena::pin_static(".") || sym == arena::pin_static(",") {
       factor = s!("{}.{}", factor, read_digits(&DIGIT_RE, false)?);
-      token_opt = read_x_token(None, false)?;
+      token_opt = read_x_token(None, false, None)?;
     }
   }
 
@@ -1513,7 +1571,7 @@ pub fn do_expand<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
     move || -> Result<Tokens> {
       { unread(tokens); }
       let mut expanded = Vec::new();
-      while let Some(t) = read_x_token(Some(false), false)? {
+      while let Some(t) = read_x_token(Some(false), false, None)? {
         expanded.push(t);
       }
       Ok(Tokens::new(expanded))

@@ -34,7 +34,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\lx@ignorehardspaces", {
     let mut boxes = Vec::new();
-    while let Some(token) = gullet::read_x_token(None, false)? {
+    while let Some(token) = gullet::read_x_token(None, false, None)? {
       boxes = stomach::invoke_token(&token)?;
       if boxes.is_empty() {
         break;

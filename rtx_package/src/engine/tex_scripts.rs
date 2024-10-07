@@ -149,7 +149,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     MergeFont!(scripted => true);
     // Now, get following boxes (may have to process several tokens!)
     let mut stuff = Vec::new();
-    while let Some(tok) = gullet::read_x_token(Some(false), false)?
+    while let Some(tok) = gullet::read_x_token(Some(false), false, None)?
     {
       stuff = stomach::invoke_token(&tok)?;
       if !stuff.is_empty() {

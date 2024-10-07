@@ -364,7 +364,7 @@ pub fn digest<T: Into<Tokens>>(
     new_local_box_list();
     while let Some(token) = match gullet::get_pending_comment() {
       Some(comment) => Some(comment),
-      None => gullet::read_x_token(Some(true), false)?
+      None => gullet::read_x_token(Some(true), false, None)?
     }
     {
       // Done if we run out of tokens
@@ -412,7 +412,7 @@ pub fn digest_next_body(
   // try reading a executable token
   while let Some(token) = match gullet::get_pending_comment() {
     Some(comment) => Some(comment),
-    None => gullet::read_x_token(Some(true), false)?
+    None => gullet::read_x_token(Some(true), false, None)?
   }
   {
     // done if we run out of tokens
@@ -481,7 +481,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
     }),
   )?;
   gullet::reading_from_mouth(raw_tex_mouth, || -> Result<()> {
-    while let Some(token) = gullet::read_x_token(Some(false), false)? {
+    while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
       if token.get_catcode() != Catcode::SPACE {
         invoke_token(&token)?;
       }
@@ -564,7 +564,7 @@ pub fn invoke_token<'a>(
           { gullet::unread(invoked_meaning); }
         }
         // replace the token by it's expansion!!!
-        maybe_token = gullet::read_x_token(None, false)?
+        maybe_token = gullet::read_x_token(None, false, None)?
           .map(Cow::Owned);
         { stomach_mut!().token_stack.pop(); }
         expire_current_token();
@@ -574,7 +574,7 @@ pub fn invoke_token<'a>(
         // Conditionals are "expandable", use the regular invoke.
         let invoked_meaning = meaning.invoke(false)?;
         gullet::unread(invoked_meaning);
-        maybe_token = gullet::read_x_token(None, false)?
+        maybe_token = gullet::read_x_token(None, false, None)?
             .map(Cow::Owned);
         { stomach_mut!().token_stack.pop(); }
         expire_current_token();

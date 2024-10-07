@@ -259,7 +259,13 @@ impl From<Number> for MuGlue {
 // TODO: Does this successfully emulate the behavior in latexml?
 //   see example use in gullet::read_tokens_value
 impl From<RegisterValue> for Tokens {
-  fn from(v: RegisterValue) -> Tokens { Tokens!(T_OTHER!(v.value_of().to_string())) }
+  fn from(v: RegisterValue) -> Tokens { 
+    match v {
+      RegisterValue::Tokens(tks) => tks,
+      RegisterValue::Token(t) => Tokens!(t),
+      _ => Tokens!(T_OTHER!(v.value_of().to_string())) 
+    }
+  }
 }
 
 impl From<&RegisterValue> for Dimension {
@@ -487,7 +493,7 @@ impl Definition for Register {
   fn invoke(&self, _once_only: bool) -> Result<Tokens> {
     todo!()
   }
-  fn get_parameters(&self) -> Option<&Parameters> { todo!() }
+  fn get_parameters(&self) -> Option<&Parameters> { self.parameters.as_ref() }
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }

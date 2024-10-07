@@ -901,7 +901,7 @@ LoadDefinitions!({
     // We really need to set up separate superscripts, but at same level!
     if gullet::if_next(T_SUPER!())? {
       gullet::read_token()?;
-      let arg = gullet::read_arg()?;
+      let arg = gullet::read_arg(ExpansionLevel::Off)?;
       let arg_tks = arg.unlist();
       sup.extend(arg_tks);
     }
@@ -1186,7 +1186,7 @@ LoadDefinitions!({
     gullet::skip_spaces()?;
     if let Some(_left) = pop_box_list() {
       let mut stuff = Vec::new();
-      while let Some(tok) = gullet::read_x_token(Some(false),false)? {
+      while let Some(tok) = gullet::read_x_token(Some(false),false, None)? {
         stuff = stomach::invoke_token(&tok)?;
         if !stuff.is_empty() {
           break;
@@ -1226,7 +1226,7 @@ LoadDefinitions!({
       //   my $role = (scalar(keys %roles) == 1 ? [keys %roles]->[0] : ($roles{ARROW} ? 'ARROW' : 'RELOP'));
       //   map { $node->removeChild($_) } @rels;
       //   $document->insertElement('ltx:XMTok', [map { $_->textContent } @rels], role => $role);
-    // }
+    // } }
     },
     reversion => "#1\\joinrel #2");
 

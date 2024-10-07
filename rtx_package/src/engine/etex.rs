@@ -203,7 +203,7 @@ LoadDefinitions!({
     };
     let mut value = if token == T_OTHER!("(") {
       let i_value = etex_readexpr_i( rtype, 0)?;
-      let close = gullet::read_x_token(None, false)?;
+      let close = gullet::read_x_token(None, false, None)?;
       // close parenthesis should have terminated recursive call
       if close.is_none() || close != Some(T_OTHER!(")")) {
         todo!();

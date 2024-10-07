@@ -43,36 +43,7 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \csname           c  forms a control sequence name from the characters making up a collection of tokens.
   // \endcsname        c  is used with \csname to make a control sequence name.
-  DefParameterType!(CSName, reader => reader!( _inner, _extra, {
-    let mut cs = escapechar();
-    let endcsname_token = T_CS!("\\endcsname");
-    // keep newlines from having \n inside!
-    while let Some(token) = gullet::read_x_token(Some(true), true)? {
-      if token == endcsname_token {
-        break;
-      }
-      match token.get_catcode() {
-        Catcode::CS => {
-          if lookup_definition(&token)?.is_some() {
-            let message =
-              s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
-                token);
-            Error!("unexpected", token, message);
-          } else {
-            let message = s!("The token {:?} is not defined", token);
-            Error!("undefined", token, message);
-          }
-        },
-        Catcode::SPACE => {  // Keep newlines from having \n!
-          cs.push(' ');
-        },
-        _ => {
-          token.with_str(|s| cs.push_str(s));
-        }
-      };
-    }
-    T_CS!(cs)
-  }));
+  DefParameterType!(CSName, reader => reader!( _inner, _extra, { read_cs_name() }));
   DefMacro!("\\csname CSName", sub[(token)] {
     if lookup_meaning(&token).is_none() {
       let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
@@ -161,7 +132,7 @@ LoadDefinitions!({
         Error!("expected", "expandafter", "\\expandafter wrongly used without 2 arguments.");
       }
     }
-    if let Some(defn) = lookup_expandable(&xtok, false)? {
+    if let Some(defn) = lookup_expandable(&xtok, None)? {
       state::local_current_token(xtok);
       let invoked = defn.invoke(true)?;
       if !invoked.is_empty() {
@@ -203,36 +174,49 @@ LoadDefinitions!({
   // \the
   //----------------------------------------------------------------------
   // \the              c  returns character tokens for an internal quantity's or parameter's current value.
-  
-  // \the<internal quantity>
-  DefMacro!("\\the Register", sub[args] {
-    let [rdef] : [_; 1] = args.try_into().unwrap();
-    if let ArgWrap::RegisterDefinition(dbox) = rdef {
-      let (rtoken, inner) = *dbox;
-      let defn = rtoken.to_register()
-        .expect("if a Register parameter provides a token, it must have a Register definition.");
-      // TODO: Is this still applicable?
-      //     if (!$type) {
-      // // maybe ported as:  
-      // if defn.get_cs().with_str(|cs| cs == "\\font") {
-      //   //what to do here?
-      //   return Ok(Tokens!(T_CS!("\\tenrm")));
-      // } else {
-      //   let thecs = format!("\\the{cs}")
-      //   Error!("unexpected", thecs, $gullet, "You can't use $cs after \\the"); 
-      //   return Ok(Tokens!()); 
-      // }
-      let value = defn.value_of(inner)
-        .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
-      // In all cases, these should be OTHER, except for space. (!?)
-      match value {
-        RegisterValue::Tokens(ts) => ts.unlist(),
-        RegisterValue::Token(t) => vec![t],
-        rv => Explode!(rv.to_string()),
+  // The argument to \the is a variety of "Internal Quantities", being parameters,
+  // registers, internal registers, codenames, etc. See TeX Book, pp.214--215.
+  // [Since \the is expandable, perhaps should just be built into \the's code? Never need to revert]
+  DefMacro!("\\the", {
+    if let Some(token) = read_x_token(None, false, None)? {
+      if let Some(defn) = lookup_definition(&token)? {
+        if defn.is_register() { // SOME kind of register is acceptable
+          let args = if let Some(params) = defn.get_parameters() {
+            params.read_arguments(None)?
+          } else { Vec::new() };
+          return match defn.value_of(args) {
+            Some(RegisterValue::Token(t)) => Ok(Tokens!(t)),
+            Some(RegisterValue::Tokens(ts)) => Ok(ts),
+            Some(other) => Ok(Tokens!(Explode!(other.to_string()))),
+            None => Ok(Tokens!())
+          }
+        } else if defn.get_cs_name() == "\\font" {
+          // HACK to get the \fontcmd that would have selected the current font (see FontDef)
+          todo!();
+          // continue:
+          // return lookup_value("current_FontDef") || T_CS!("\\tenrm"); }    
+        // } else if (defn.is_font_def()) { // Or a propert TeX \fontcmd defined by \font
+        //   return defn.get_cs(); 
+        // }
+        } else { // the argument token is Undefined
+          if token.get_catcode() == Catcode::CS { // but IS a cs \something
+            Error!("expected", "<register>",
+              "A <register> was supposed to be here", s!("Got {} Defining it now.", token));
+            // Hackery: to avoid potential repeated errors, define it now as a number register
+            def_register(token, None, Number!(0), None)?; // Dimension, or what?
+            return Ok(Tokens!(T_OTHER!("0")));
+          }
+        }
       }
+      // If we fall through to here, whatever $token is shouln't have been used with \the
+      let (the_t,msg) = token.with_str(|tstr| 
+        (s!("\\the{tstr}"),s!("You can't use {tstr} after \\the")));
+      Error!("unexpected", the_t, msg);
+      T_OTHER!("0")
     } else {
-      Error!("expected", "<register>", "a register was expected to be here");
-      Vec::new()
+      Error!("expected", "<register>",
+        "A <register> was supposed to be here. Got nothing.");
+      T_OTHER!("0") 
     }
   });
   

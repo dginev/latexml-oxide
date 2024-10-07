@@ -551,7 +551,7 @@ fn load_tex_definitions(
     pathname_mouth,
     move || -> Result<()> {
       while let Some(token) =
-        gullet::read_x_token(Some(false), false)?
+        gullet::read_x_token(Some(false), false, None)?
       {
         if token != T_SPACE!() {
           invoke_token(&token)?;
