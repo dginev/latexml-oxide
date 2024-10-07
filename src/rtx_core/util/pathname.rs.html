@@ -343,7 +343,9 @@
 <a href="#342" id="342">342</a>
 <a href="#343" id="343">343</a>
 <a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a></pre></div><pre class="rust"><code><span class="kw">use </span>kpathsea::Kpaths;
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a></pre></div><pre class="rust"><code><span class="kw">use </span>kpathsea::Kpaths;
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 
@@ -374,7 +376,7 @@
 <span class="comment">// TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
 </span><span class="kw">static </span>URL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\w+://(.+)/([^/]+)$"</span>).unwrap());
 
-<span class="kw">static </span>KPSE: Lazy&lt;Mutex&lt;Kpaths&gt;&gt; = Lazy::new(|| Mutex::new(Kpaths::new().unwrap()));
+<span class="kw">static </span>KPSE: Lazy&lt;Mutex&lt;<span class="prelude-ty">Option</span>&lt;Kpaths&gt;&gt;&gt; = Lazy::new(|| Mutex::new(Kpaths::new().ok()));
 
 <span class="comment">// static ref INSTALLDIRS : Vec&lt;String&gt; = match env::current_exe() {
 //     Ok(exe_path) =&gt; {
@@ -675,9 +677,11 @@
 <span class="doccomment">/// search for a list of candidate names via the external `kpsewhich` utility
 /// returning the first path that is found
 </span><span class="kw">pub fn </span>kpsewhich(candidates: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-  <span class="kw">for </span>candidate <span class="kw">in </span>candidates {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = KPSE.lock().unwrap().find_file(candidate) {
-      <span class="kw">return </span><span class="prelude-val">Some</span>(path);
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>kpse) = <span class="kw-2">*</span>KPSE.lock().unwrap() {
+    <span class="kw">for </span>candidate <span class="kw">in </span>candidates {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = kpse.find_file(candidate) {
+        <span class="kw">return </span><span class="prelude-val">Some</span>(path);
+      }
     }
   }
   <span class="prelude-val">None
