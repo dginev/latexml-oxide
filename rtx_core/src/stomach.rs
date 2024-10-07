@@ -336,6 +336,12 @@ pub fn push_box_list(arg: Digested) {
 pub fn pop_box_list() -> Option<Digested> {
   stomach_mut!().box_list.pop()
 }
+pub fn with_box_list<R, FnR>(caller: FnR) -> R
+  where FnR: FnOnce(&[Digested]) -> R {
+  let stomach = stomach!();
+  let list = &stomach.box_list;
+  caller(list)
+}
 
 // **********************************************************************
 // Digestion
