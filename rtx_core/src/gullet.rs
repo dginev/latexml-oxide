@@ -543,6 +543,9 @@ pub enum ExpansionLevel {
 /// It may return comments in the token lists.
 /// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
 /// If `require_open` is true, the opening T_BEGIN has not yet been read, and is required.
+/// 
+/// If `toplevel` is true, it will automatically close empty mouths as it reads, 
+/// and will also fully expand macros (unless overridden by `expansion_level` being explicitly Off).
 pub fn read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require_open:bool) -> Result<Tokens> {
   use ExpansionLevel::*;
   if !require_open {
@@ -895,17 +898,29 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
   Ok(None)
 }
 
-///**********************************************************************
-/// Higher-level readers: Read various types of things from the input:
-///  tokens, non-expandable tokens, args, Numbers, ...
-///**********************************************************************
+//**********************************************************************
+// Higher-level readers: Read various types of things from the input:
+//  tokens, non-expandable tokens, args, Numbers, ...
+//**********************************************************************
+
+/// Read and return a "normal" TeX argument
+/// 
+/// The next Token or Tokens (if surrounded by braces).
+/// `expansion_level` controls expansion as if the argument were read
+///  and then expanded in isolation:
+/// 
+/// In the case of a single unbraced expandable token,
+///  it will **not** read any macro arguments from the following input!
 pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
     Some(token) => if token.get_catcode() == Catcode::BEGIN {
         read_balanced(expansion_level,false,false)
-      } else {
+      } else if matches!(expansion_level, ExpansionLevel::Off) {
         Ok(Tokens!(token))
+      } else {
+        unread_vec(vec![T_BEGIN!(), token, T_END!()]);
+        read_balanced(expansion_level, false, true)
       }
   }
 }
@@ -1569,12 +1584,23 @@ pub fn do_expand<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   reading_from_mouth(
     Mouth::default(),
     move || -> Result<Tokens> {
-      { unread(tokens); }
-      let mut expanded = Vec::new();
-      while let Some(t) = read_x_token(Some(false), false, None)? {
-        expanded.push(t);
-      }
-      Ok(Tokens::new(expanded))
+      { unread_one(T_END!());
+        unread(tokens); 
+        unread_one(T_BEGIN!()); }
+      read_balanced(ExpansionLevel::Full, false, true)
+    },
+  )
+}
+
+pub fn do_expand_partially<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
+  let tokens: Tokens = tokens.into();
+  reading_from_mouth(
+    Mouth::default(),
+    move || -> Result<Tokens> {
+      { unread_one(T_END!());
+        unread(tokens); 
+        unread_one(T_BEGIN!()); }
+      read_balanced(ExpansionLevel::Partial, false, true)
     },
   )
 }
