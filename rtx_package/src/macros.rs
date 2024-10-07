@@ -149,6 +149,7 @@ macro_rules! compile_tokenize_internal {
 #[macro_export]
 macro_rules! parameter_rust_type {
   (GeneralText) => {Tokens};
+  (XGeneralText) => {Tokens};
   (Semiverbatim) => {Tokens};
   (UntilBrace) => {Tokens};
   (TeXFileName) => {Tokens};
@@ -156,11 +157,12 @@ macro_rules! parameter_rust_type {
   (AlignmentTemplate) => {Template};
   (DefPlain) => {Tokens};
   (DefExpanded) => {Tokens};
-  (Expanded) => {Token};
   (Plain) => {Tokens};
   (Optional) => {Option<Tokens>};
   (OptionalMatch) => {Option<Tokens>};
   (DefToken) => {Token};
+  (Expanded) => {Tokens};
+  (ExpandedPartially) => {Tokens};
   (XToken) => {Token};
   (ExpandedIfToken) => {Token};
   (CSName) => {Token};

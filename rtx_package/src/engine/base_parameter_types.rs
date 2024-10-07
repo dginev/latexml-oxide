@@ -86,10 +86,14 @@ LoadDefinitions!({
   // however, <filler> does get expanded while searching for the initial {
   // which IS required in contrast to a general argument; ie a single token is not correct.
   DefParameterType!(GeneralText, sub[_inner, _extra] {
-    if let Some(t) = gullet::read_x_token(None, false, Some(true))? {
-      gullet::unread_one(t);  // Force expansion to skip <filler> before required {
-    }
+    gullet::skip_filler()?;
     gullet::read_balanced(ExpansionLevel::Off,false,true)
+  });
+
+  // This is like GeneralText, but it Partially expands the argument (not `\protected`, nor `\the`)
+  DefParameterType!(XGeneralText, sub[_inner, _extra] {
+    gullet::skip_filler()?;
+    gullet::read_balanced(ExpansionLevel::Partial,false,true)
   });
 
   DefParameterType!(Until, sub[_inner, until_extra] {

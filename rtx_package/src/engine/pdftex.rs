@@ -231,9 +231,9 @@ LoadDefinitions!({
   // pdfspecial modifier → direct:
   // stack action → set | push | pop | current
 
-  DefMacro!("\\expanded Expanded", "#1");
+  DefMacro!("\\expanded XGeneralText", "#1");
 
-  DefMacro!("\\pdfstrcmp Expanded Expanded", sub[(first,second)] {
+  DefMacro!("\\pdfstrcmp XGeneralText XGeneralText", sub[(first,second)] {
     match first.to_string().cmp(&second.to_string()) {
      Ordering::Greater => Tokens!(T_OTHER!("1")),
      Ordering::Equal => Tokens!(T_OTHER!("0")),
