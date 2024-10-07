@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/engine/base_parameter_types.rs`."><title>base_parameter_types.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (9096f4faf 2024-10-05)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rtx_package/engine/</div>base_parameter_types.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/engine/base_parameter_types.rs`."><title>base_parameter_types.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (55a22d2a6 2024-10-06)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rtx_package/engine/</div>base_parameter_types.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -938,18 +938,7 @@
 <a href="#937" id="937">937</a>
 <a href="#938" id="938">938</a>
 <a href="#939" id="939">939</a>
-<a href="#940" id="940">940</a>
-<a href="#941" id="941">941</a>
-<a href="#942" id="942">942</a>
-<a href="#943" id="943">943</a>
-<a href="#944" id="944">944</a>
-<a href="#945" id="945">945</a>
-<a href="#946" id="946">946</a>
-<a href="#947" id="947">947</a>
-<a href="#948" id="948">948</a>
-<a href="#949" id="949">949</a>
-<a href="#950" id="950">950</a>
-<a href="#951" id="951">951</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base Parameter Types
+<a href="#940" id="940">940</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base Parameter Types
 //! 
 //! Core TeX Implementation for LaTeXML
 
@@ -959,7 +948,7 @@
 // Define parsers for standard parameter types.
 </span><span class="macro">LoadDefinitions!</span>({
   <span class="macro">DefParameterType!</span>(Plain, sub[inner, _extra] {
-    <span class="kw">let </span><span class="kw-2">mut </span>value = ArgWrap::Tokens(gullet::read_arg()<span class="question-mark">?</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>value = ArgWrap::Tokens(gullet::read_arg(ExpansionLevel::Off)<span class="question-mark">?</span>);
     <span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
       <span class="comment">// TODO: How many arguments can we expect back? One? Many?
       //       Currently only passing through the first
@@ -980,7 +969,7 @@
   });
 
   <span class="macro">DefParameterType!</span>(DefPlain, sub[inner, _extra] {
-      <span class="kw">let </span><span class="kw-2">mut </span>value = ArgWrap::Tokens(gullet::read_balanced(<span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>);
+      <span class="kw">let </span><span class="kw-2">mut </span>value = ArgWrap::Tokens(gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>);
       <span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
         value = inner_ps.reparse_argument( value)<span class="question-mark">?</span>.remove(<span class="number">0</span>);
       }
@@ -1037,10 +1026,14 @@
   // however, &lt;filler&gt; does get expanded while searching for the initial {
   // which IS required in contrast to a general argument; ie a single token is not correct.
   </span><span class="macro">DefParameterType!</span>(GeneralText, sub[_inner, _extra] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
-      gullet::unread_one(t);  <span class="comment">// Force expansion to skip &lt;filler&gt; before required {
-    </span>}
-    gullet::read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">true</span>)
+    gullet::skip_filler()<span class="question-mark">?</span>;
+    gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">true</span>)
+  });
+
+  <span class="comment">// This is like GeneralText, but it Partially expands the argument (not `\protected`, nor `\the`)
+  </span><span class="macro">DefParameterType!</span>(XGeneralText, sub[_inner, _extra] {
+    gullet::skip_filler()<span class="question-mark">?</span>;
+    gullet::read_balanced(ExpansionLevel::Partial,<span class="bool-val">false</span>,<span class="bool-val">true</span>)
   });
 
   <span class="macro">DefParameterType!</span>(Until, sub[_inner, until_extra] {
@@ -1080,7 +1073,7 @@
 
   <span class="comment">// Read the next token, after expanding any expandable ones.
   </span><span class="macro">DefParameterType!</span>(XToken, sub[_inner, _extra] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="prelude-val">Ok</span>(ArgWrap::Token(t))
     } <span class="kw">else </span>{
       <span class="macro">Error!</span>(<span class="string">"expected"</span>,<span class="string">"XToken"</span>, <span class="string">"Paramater &lt;XToken&gt; found None."</span>);
@@ -1137,12 +1130,12 @@
     <span class="comment">// Make sure it's a single token!!!
     </span><span class="kw">let </span>until : Token = untils.first().expect(<span class="string">"XUntil needs a token Extra."</span>).into();
     <span class="kw">let </span><span class="kw-2">mut </span>tokens : Vec&lt;Token&gt; = Vec::new();
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="kw">if </span>token == until {
         <span class="kw">break</span>;
       } <span class="kw">else if </span>token.get_catcode() == Catcode::BEGIN {
         tokens.push(token);
-        tokens.extend(gullet::read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>.unlist());
+        tokens.extend(gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>.unlist());
         tokens.push(<span class="macro">T_END!</span>());
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition_stored(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
         <span class="kw">let </span>args = defn.read_arguments()<span class="question-mark">?</span>;
@@ -1157,7 +1150,22 @@
   <span class="comment">//  This reads a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once.
   </span><span class="macro">DefParameterType!</span>(Expanded, sub[_inner, _untils] {
-    gullet::read_balanced(<span class="bool-val">true</span>,<span class="bool-val">false</span>,<span class="bool-val">true</span>)
+    gullet::read_arg(ExpansionLevel::Full)
+  },
+  reversion =&gt; sub[arg, _inner, _extra] {
+    <span class="comment">// TODO: Consider a briefer syntax, maybe flat_vec ?
+    // https://docs.rs/flat_vec/latest/flat_vec/macro.flat_vec.html
+    </span><span class="kw">let </span><span class="kw-2">mut </span>tks = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
+    tks.extend(arg.into_iter().map(Token::revert).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
+    tks.push(<span class="macro">T_END!</span>());
+    <span class="prelude-val">Ok</span>(Tokens::new(tks))
+  });
+
+
+  <span class="comment">// Like Expanded, but defers \protected, and \the expanded only once.
+  // Similar to when \edef is used.
+  </span><span class="macro">DefParameterType!</span>(ExpandedPartially, sub[_inner, _untils] {
+    gullet::read_arg(ExpansionLevel::Partial)
   },
   reversion =&gt; sub[arg, _inner, _extra] {
     <span class="comment">// TODO: Consider a briefer syntax, maybe flat_vec ?
@@ -1173,9 +1181,9 @@
   // but expanding \the-like commands only once,
   // and also packing # parameters
   </span><span class="macro">DefParameterType!</span>(DefExpanded, sub[_inner, _extra] {
-      gullet::read_balanced(<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>)
+      gullet::read_balanced(ExpansionLevel::Partial, <span class="bool-val">true</span>, <span class="bool-val">true</span>)
     },
-    reversion      =&gt; sub[arg, _inner, _extra] {
+    reversion =&gt; sub[arg, _inner, _extra] {
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), <span class="macro">Tokens!</span>(arg).revert(), <span class="macro">T_END!</span>())) }
   );
 
@@ -1198,12 +1206,12 @@
 
   <span class="comment">// Read balanced material (?)
   </span><span class="macro">DefParameterType!</span>(Balanced, sub[_inner, _extra] {
-    gullet::read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)
+    gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)
   });
 
   <span class="comment">// Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   </span><span class="macro">DefParameterType!</span>(Semiverbatim,
-    sub[_inner, _extra] { gullet::read_arg() },
+    sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
     reversion =&gt; sub[arg, inner, _extra] {
       <span class="comment">// let mut reverted_inner;
       </span><span class="kw">let </span><span class="kw-2">mut </span>read_tokens: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
@@ -1239,7 +1247,7 @@
   </span><span class="macro">DefParameterType!</span>(Verbatim, sub[_inner, _extra] {
       gullet::read_until(<span class="kw-2">&amp;</span><span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>()))<span class="question-mark">?</span>;
     begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="string">'%'</span>, <span class="string">'\\'</span>]));
-      <span class="kw">let </span>arg = gullet::read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+      <span class="kw">let </span>arg = gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
       end_semiverbatim()<span class="question-mark">?</span>;
       <span class="prelude-val">Ok</span>(arg)
     },
@@ -1272,7 +1280,7 @@
       state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\textasciitilde"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\hyper@tilde"</span>), <span class="prelude-val">None</span>);
       state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@backslashchar"</span>), <span class="prelude-val">None</span>);
       <span class="comment">// Having prepared, read in the argument, expanding as we go
-      </span><span class="kw">let </span>arg = gullet::read_balanced(<span class="bool-val">true</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+      </span><span class="kw">let </span>arg = gullet::read_balanced(ExpansionLevel::Partial,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
       end_semiverbatim()<span class="question-mark">?</span>;
       arg
     },
@@ -1289,7 +1297,7 @@
     }
   );
   <span class="comment">// Read an argument that will not be digested.
-  </span><span class="macro">DefParameterType!</span>(Undigested, sub[_inner, _extra] { gullet::read_arg()},
+  </span><span class="macro">DefParameterType!</span>(Undigested, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off)},
   predigest =&gt; sub[arg]{ <span class="prelude-val">Ok</span>(arg.undigested()) }
   reversion =&gt; sub[arg, _inner, _extra] {
     <span class="kw">if </span>arg.is_empty() {
@@ -1320,10 +1328,10 @@
 
   <span class="comment">// Read a keyword value (KeyVals), that will not be digested.
   </span><span class="macro">DefParameterType!</span>(UndigestedKey, sub[_inner, _extra] {
-    gullet::read_arg() },
+    gullet::read_arg(ExpansionLevel::Off) },
   predigest =&gt; sub[arg]{ <span class="prelude-val">Ok</span>(arg.undigested()) });
   <span class="macro">DefParameterType!</span>(UndigestedDefKey, sub[_inner, _extra] {
-    gullet::read_arg()<span class="question-mark">?</span>.pack_parameters() },
+    gullet::read_arg(ExpansionLevel::Off)<span class="question-mark">?</span>.pack_parameters() },
   predigest =&gt; sub[arg]{ <span class="prelude-val">Ok</span>(arg.undigested()) });
 
   <span class="comment">// Read a token as used when defining it, ie. it may be enclosed in braces.
@@ -1331,7 +1339,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>token_opt = gullet::read_token()<span class="question-mark">?</span>;
     <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = token_opt {
       <span class="kw">if </span>token.get_catcode() != Catcode::BEGIN { <span class="kw">break</span>; }
-      <span class="kw">let </span><span class="kw-2">mut </span>toks : Vec&lt;Token&gt; = gullet::read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?
+      <span class="kw">let </span><span class="kw-2">mut </span>toks : Vec&lt;Token&gt; = gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?
         </span>.unlist().into_iter().filter(|t| {
           <span class="kw">let </span>cc = t.get_catcode();
           cc != Catcode::SPACE &amp;&amp; cc != Catcode::COMMENT
@@ -1361,7 +1369,7 @@
 
   <span class="comment">// Read a variable, ie. a token (after expansion) that is a writable register.
   </span><span class="macro">DefParameterType!</span>(Variable, sub[_inner, _extra] {
-    <span class="kw">let </span>token_opt = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>token_opt = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>defn_opt = <span class="kw">match </span>token_opt {
       <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>token) =&gt; state::lookup_register_definition(token),
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None
@@ -1400,44 +1408,11 @@
     // Ok(Tokens::new(reverted))
   </span>});
 
-  <span class="comment">// Same, but not necessarily writable
-  </span><span class="macro">DefParameterType!</span>(Register, sub[_inner, _extra] {
-    <span class="kw">let </span>token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>defn = <span class="kw">match </span>token {
-      <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) =&gt; state::lookup_register_definition(t)
-    };
-    <span class="kw">match </span>defn {
-      <span class="prelude-val">Some</span>(register) =&gt; {
-        <span class="kw">let </span>args = register.read_arguments()<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(ArgWrap::RegisterDefinition(Box::new((token.unwrap(), args))))
-      },
-      <span class="prelude-val">None </span>=&gt; {
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"A &lt;register&gt; was supposed to be here. Got {:?}"</span>, token);
-        <span class="macro">Error!</span>(<span class="string">"expected"</span>,<span class="string">"&lt;register&gt;"</span>, message);
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = token {
-          <span class="kw">if </span>is_definable(<span class="kw-2">&amp;</span>t) {
-            def_register(t, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-          }
-        }
-        <span class="prelude-val">Ok</span>(ArgWrap::Tokens(<span class="macro">Tokens!</span>()))
-      }
-    }
-  },
-  <span class="comment">// TODO: If we want to revert "arg" in an honest manner, it needs to be an ArgWrap type.
-  </span>reversion =&gt; sub[_arg, _inner, _extra] {
-    <span class="comment">// my ($var) = @_;
-    // my ($defn, @args) = @$var;
-    // my $params = $defn-&gt;getParameters;
-    // return Tokens($defn-&gt;getCS, ($params ? $params-&gt;revertArguments(@args) : ()));
-    </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-  });
-
   <span class="macro">DefParameterType!</span>(TeXFileName, sub[_inner, _extra] {
     <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
     gullet::skip_spaces()<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="kw">let </span>cc = token.get_catcode();
       <span class="kw">if </span><span class="macro">matches!</span>(cc, SPACE | EOL | COMMENT | CS) {
         <span class="kw">if </span><span class="macro">matches!</span>(cc, CS) {
@@ -1493,7 +1468,7 @@
   // as part of the reader???
   </span><span class="macro">DefParameterType!</span>(MoveableBox, sub[_inner, _extra] {
     gullet::skip_spaces()<span class="question-mark">?</span>;
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(xtoken) = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(xtoken) = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="macro">Tokens!</span>(xtoken)
     } <span class="kw">else </span>{
       <span class="macro">Tokens!</span>()
@@ -1525,7 +1500,7 @@
   <span class="comment">// Read a parenthesis delimited argument.
   // Note that this does NOT balance () within the argument.
   </span><span class="macro">DefParameterType!</span>(BalancedParen, sub[_inner, _extra] {
-    <span class="kw">let </span>tok_opt = gullet::read_x_token(<span class="prelude-val">None</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>tok_opt = gullet::read_x_token(<span class="prelude-val">None</span>,<span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>is_paren = <span class="kw">match </span>tok_opt {
       <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) =&gt; t.with_str(|ts| ts == <span class="string">"("</span>),
       <span class="kw">_ </span>=&gt; <span class="bool-val">false
@@ -1553,6 +1528,9 @@
   // It is useful when the content would usually need to have been \protect'd
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
+
+
+  //TODO: Refactor and add TeXDelimiter
   </span><span class="macro">DefParameterType!</span>(Digested, sub[_inner, _extra] {
       gullet::skip_spaces()<span class="question-mark">?</span>;
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
@@ -1561,7 +1539,7 @@
       <span class="kw">let </span>ismath = lookup_bool(<span class="string">"IN_MATH"</span>);
       <span class="kw">let </span><span class="kw-2">mut </span>list = Vec::new();
       <span class="kw">let </span><span class="kw-2">mut </span>next_token = <span class="prelude-val">None</span>;
-      <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false </span>)<span class="question-mark">? </span>{
+      <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
         <span class="kw">let </span>is_last = token.get_catcode() != Catcode::SPACE &amp;&amp; token != <span class="macro">T_RELAX!</span>();
         next_token = <span class="prelude-val">Some</span>(token);
         <span class="kw">if </span>is_last {
@@ -1812,7 +1790,7 @@
 
   <span class="comment">// Not sure that this is the most elegant solution, but...
   // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
-  </span><span class="macro">DefParameterType!</span>(DisplayStyle, sub[_inner, _extra] { gullet::read_arg() },
+  </span><span class="macro">DefParameterType!</span>(DisplayStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
     before_digest =&gt; {
       bgroup();
       <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"display"</span>);
@@ -1849,7 +1827,7 @@
   // # Perverse naming convention: not script style, but in the style of a script relative to
   // current.
   </span><span class="macro">DefParameterType!</span>(InScriptStyle, sub[_inner, _extra] {
-      gullet::read_arg() },
+      gullet::read_arg(ExpansionLevel::Off) },
     before_digest =&gt; {
       bgroup();
       <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
@@ -1882,7 +1860,7 @@
       }
     });
   <span class="macro">DefParameterType!</span>(InFractionStyle, sub[_inner, _extra] {
-      gullet::read_arg()
+      gullet::read_arg(ExpansionLevel::Off)
     },
     before_digest =&gt; {
       bgroup();

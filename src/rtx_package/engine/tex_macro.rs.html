@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/engine/tex_macro.rs`."><title>tex_macro.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (9096f4faf 2024-10-05)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rtx_package/engine/</div>tex_macro.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/engine/tex_macro.rs`."><title>tex_macro.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (55a22d2a6 2024-10-06)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rtx_package/engine/</div>tex_macro.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -221,23 +221,7 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Macro
+<a href="#223" id="223">223</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Macro
 //! 
 //! Core TeX Implementation for LaTeXML
 
@@ -282,36 +266,7 @@
   //----------------------------------------------------------------------
   // \csname           c  forms a control sequence name from the characters making up a collection of tokens.
   // \endcsname        c  is used with \csname to make a control sequence name.
-  </span><span class="macro">DefParameterType!</span>(CSName, reader =&gt; <span class="macro">reader!</span>( _inner, _extra, {
-    <span class="kw">let </span><span class="kw-2">mut </span>cs = escapechar();
-    <span class="kw">let </span>endcsname_token = <span class="macro">T_CS!</span>(<span class="string">"\\endcsname"</span>);
-    <span class="comment">// keep newlines from having \n inside!
-    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>)<span class="question-mark">? </span>{
-      <span class="kw">if </span>token == endcsname_token {
-        <span class="kw">break</span>;
-      }
-      <span class="kw">match </span>token.get_catcode() {
-        Catcode::CS =&gt; {
-          <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
-            <span class="kw">let </span>message =
-              <span class="macro">s!</span>(<span class="string">"The control sequence {:?} should not appear between \\csname and \\endcsname"</span>,
-                token);
-            <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, token, message);
-          } <span class="kw">else </span>{
-            <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {:?} is not defined"</span>, token);
-            <span class="macro">Error!</span>(<span class="string">"undefined"</span>, token, message);
-          }
-        },
-        Catcode::SPACE =&gt; {  <span class="comment">// Keep newlines from having \n!
-          </span>cs.push(<span class="string">' '</span>);
-        },
-        <span class="kw">_ </span>=&gt; {
-          token.with_str(|s| cs.push_str(s));
-        }
-      };
-    }
-    <span class="macro">T_CS!</span>(cs)
-  }));
+  </span><span class="macro">DefParameterType!</span>(CSName, reader =&gt; <span class="macro">reader!</span>( _inner, _extra, { read_cs_name() }));
   <span class="macro">DefMacro!</span>(<span class="string">"\\csname CSName"</span>, sub[(token)] {
     <span class="kw">if </span>lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
       <span class="kw">let </span>relax_meaning = lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap();
@@ -400,7 +355,7 @@
         <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"expandafter"</span>, <span class="string">"\\expandafter wrongly used without 2 arguments."</span>);
       }
     }
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       state::local_current_token(xtok);
       <span class="kw">let </span>invoked = defn.invoke(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
       <span class="kw">if </span>!invoked.is_empty() {
@@ -442,36 +397,49 @@
   // \the
   //----------------------------------------------------------------------
   // \the              c  returns character tokens for an internal quantity's or parameter's current value.
-  
-  // \the&lt;internal quantity&gt;
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\the Register"</span>, sub[args] {
-    <span class="kw">let </span>[rdef] : [<span class="kw">_</span>; <span class="number">1</span>] = args.try_into().unwrap();
-    <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = rdef {
-      <span class="kw">let </span>(rtoken, inner) = <span class="kw-2">*</span>dbox;
-      <span class="kw">let </span>defn = rtoken.to_register()
-        .expect(<span class="string">"if a Register parameter provides a token, it must have a Register definition."</span>);
-      <span class="comment">// TODO: Is this still applicable?
-      //     if (!$type) {
-      // // maybe ported as:  
-      // if defn.get_cs().with_str(|cs| cs == "\\font") {
-      //   //what to do here?
-      //   return Ok(Tokens!(T_CS!("\\tenrm")));
-      // } else {
-      //   let thecs = format!("\\the{cs}")
-      //   Error!("unexpected", thecs, $gullet, "You can't use $cs after \\the"); 
-      //   return Ok(Tokens!()); 
-      // }
-      </span><span class="kw">let </span>value = defn.value_of(inner)
-        .unwrap_or_else(|| RegisterValue::Tokens(<span class="macro">Tokens!</span>()));
-      <span class="comment">// In all cases, these should be OTHER, except for space. (!?)
-      </span><span class="kw">match </span>value {
-        RegisterValue::Tokens(ts) =&gt; ts.unlist(),
-        RegisterValue::Token(t) =&gt; <span class="macro">vec!</span>[t],
-        rv =&gt; <span class="macro">Explode!</span>(rv.to_string()),
+  // The argument to \the is a variety of "Internal Quantities", being parameters,
+  // registers, internal registers, codenames, etc. See TeX Book, pp.214--215.
+  // [Since \the is expandable, perhaps should just be built into \the's code? Never need to revert]
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\the"</span>, {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
+        <span class="kw">if </span>defn.is_register() { <span class="comment">// SOME kind of register is acceptable
+          </span><span class="kw">let </span>args = <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = defn.get_parameters() {
+            params.read_arguments(<span class="prelude-val">None</span>)<span class="question-mark">?
+          </span>} <span class="kw">else </span>{ Vec::new() };
+          <span class="kw">return match </span>defn.value_of(args) {
+            <span class="prelude-val">Some</span>(RegisterValue::Token(t)) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(t)),
+            <span class="prelude-val">Some</span>(RegisterValue::Tokens(ts)) =&gt; <span class="prelude-val">Ok</span>(ts),
+            <span class="prelude-val">Some</span>(other) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(other.to_string()))),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+          }
+        } <span class="kw">else if </span>defn.get_cs_name() == <span class="string">"\\font" </span>{
+          <span class="comment">// HACK to get the \fontcmd that would have selected the current font (see FontDef)
+          </span><span class="macro">todo!</span>();
+          <span class="comment">// continue:
+          // return lookup_value("current_FontDef") || T_CS!("\\tenrm"); }    
+        // } else if (defn.is_font_def()) { // Or a propert TeX \fontcmd defined by \font
+        //   return defn.get_cs(); 
+        // }
+        </span>} <span class="kw">else </span>{ <span class="comment">// the argument token is Undefined
+          </span><span class="kw">if </span>token.get_catcode() == Catcode::CS { <span class="comment">// but IS a cs \something
+            </span><span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;register&gt;"</span>,
+              <span class="string">"A &lt;register&gt; was supposed to be here"</span>, <span class="macro">s!</span>(<span class="string">"Got {} Defining it now."</span>, token));
+            <span class="comment">// Hackery: to avoid potential repeated errors, define it now as a number register
+            </span>def_register(token, <span class="prelude-val">None</span>, <span class="macro">Number!</span>(<span class="number">0</span>), <span class="prelude-val">None</span>)<span class="question-mark">?</span>; <span class="comment">// Dimension, or what?
+            </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)));
+          }
+        }
       }
+      <span class="comment">// If we fall through to here, whatever $token is shouln't have been used with \the
+      </span><span class="kw">let </span>(the_t,msg) = token.with_str(|tstr| 
+        (<span class="macro">s!</span>(<span class="string">"\\the{tstr}"</span>),<span class="macro">s!</span>(<span class="string">"You can't use {tstr} after \\the"</span>)));
+      <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, the_t, msg);
+      <span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;register&gt;"</span>, <span class="string">"a register was expected to be here"</span>);
-      Vec::new()
+      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;register&gt;"</span>,
+        <span class="string">"A &lt;register&gt; was supposed to be here. Got nothing."</span>);
+      <span class="macro">T_OTHER!</span>(<span class="string">"0"</span>) 
     }
   });
   

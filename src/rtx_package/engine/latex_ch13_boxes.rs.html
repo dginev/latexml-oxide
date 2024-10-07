@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/engine/latex_ch13_boxes.rs`."><title>latex_ch13_boxes.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (9096f4faf 2024-10-05)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rtx_package/engine/</div>latex_ch13_boxes.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/engine/latex_ch13_boxes.rs`."><title>latex_ch13_boxes.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (55a22d2a6 2024-10-06)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rtx_package/engine/</div>latex_ch13_boxes.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -290,12 +290,7 @@
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#292" id="292">292</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="comment">//**********************************************************************
 // C.13 Lengths, Spaces and Boxes
@@ -486,42 +481,37 @@
   // );
 
   </span><span class="macro">AssignValue!</span>(<span class="string">"SAVEBOX"</span>, <span class="number">100</span>);
-  <span class="comment">// DefPrimitive!("\\newsavebox DefToken", sub {
-  //     my $n = LookupValue('SAVEBOX') + 1;
-  //     AssignValue(SAVEBOX =&gt; $n, 'global');
-  //     DefRegisterI($_[1], undef, Number($n));
-  //     AssignValue('box' . $n, List()); });
+  <span class="macro">TeX!</span>(<span class="string">r#"""\def\newsavebox#1{\@ifdefinable{#1}{\newbox#1}}
+  \DeclareRobustCommand\savebox[1]{%
+    \@ifnextchar(%)
+      {\@savepicbox#1}{\@ifnextchar[{\@savebox#1}{\sbox#1}}}%
+  \DeclareRobustCommand\sbox[2]{\setbox#1\hbox{%
+    \color@setgroup#2\color@endgroup}}
+  \def\@savebox#1[#2]{%
+    \@ifnextchar [{\@isavebox#1[#2]}{\@isavebox#1[#2][c]}}
+  \long\def\@isavebox#1[#2][#3]#4{%
+    \sbox#1{\@imakebox[#2][#3]{#4}}}
+  \def\@savepicbox#1(#2,#3){%
+    \@ifnextchar[%]
+      {\@isavepicbox#1(#2,#3)}{\@isavepicbox#1(#2,#3)[]}}
+  \long\def\@isavepicbox#1(#2,#3)[#4]#5{%
+    \sbox#1{\@imakepicbox(#2,#3)[#4]{#5}}}
+  \def\lrbox#1{%
+    \edef\reserved@a{%
+      \endgroup
+      \setbox#1\hbox{%
+        \begingroup\aftergroup}%
+          \def\noexpand\@currenvir{\@currenvir}%
+          \def\noexpand\@currenvline{\on@line}}%
+    \reserved@a
+      \@endpefalse
+      \color@setgroup
+        \ignorespaces}
+  \def\endlrbox{\unskip\color@endgroup}
+  \DeclareRobustCommand\usebox[1]{\leavevmode\copy #1\relax}
+  """#</span>);
 
-  // DefPrimitive!("\\sbox {Register} {}", sub {
-  //     my ($defn) = @{ $_[1] };
-  //     my $value;
-  //     if ($defn &amp;&amp; ref $defn) {
-  //       $value = $defn-&gt;valueOf();
-  //       if (ref $value) {
-  //         $value = $value-&gt;valueOf;
-  //       }
-  //     } else {
-  //       Error('expected', '&lt;definition&gt;', undef, "\\sbox expected a definition, was missing");
-  //     }
-  //     my $contents = Digest($_[2]);
-  //     AssignValue('box' . $value, $contents); return; });
-
-  </span><span class="macro">DefMacro!</span>(
-    <span class="string">"\\savebox{}"</span>,
-    <span class="string">"\\@ifnextchar({\\pic@savebox#1}{\\@savebox#1}"
-  </span>);
-  <span class="comment">// DefPrimitive!("\\@savebox DefToken[][]{}", sub {
-  //     my ($defn, @args) = @{ LookupDefinition($_[1]) };
-  //     my $value = $defn-&gt;valueOf(@args);
-  //     AssignValue('box' . $value, Digest($_[4])); return; });
-  // DefPrimitive!("\\@savebox Register [][]{}", sub {
-  //     my ($defn)   = @{ $_[1] };
-  //     my $value    = $defn-&gt;valueOf()-&gt;valueOf;
-  //     my $contents = Digest($_[4]);
-  //     #    AssignValue('box' . $value, Digest($_[4])); return; });
-  //     AssignValue('box' . $value, $contents); return; });
-
-  // DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
+  <span class="comment">// DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
   // DefPrimitive!("\\end{lrbox}", primtiveproc!( args, {stomach.egroup()?; }));
   // DefPrimitive!("\\@begin@lrbox Token", sub {
   //     my ($stomach, $token) = @_;

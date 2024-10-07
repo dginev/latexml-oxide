@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/gullet.rs`."><title>gullet.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (9096f4faf 2024-10-05)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rtx_core/</div>gullet.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/gullet.rs`."><title>gullet.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (55a22d2a6 2024-10-06)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">rtx_core/</div>gullet.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -1659,7 +1659,91 @@
 <a href="#1658" id="1658">1658</a>
 <a href="#1659" id="1659">1659</a>
 <a href="#1660" id="1660">1660</a>
-<a href="#1661" id="1661">1661</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#1661" id="1661">1661</a>
+<a href="#1662" id="1662">1662</a>
+<a href="#1663" id="1663">1663</a>
+<a href="#1664" id="1664">1664</a>
+<a href="#1665" id="1665">1665</a>
+<a href="#1666" id="1666">1666</a>
+<a href="#1667" id="1667">1667</a>
+<a href="#1668" id="1668">1668</a>
+<a href="#1669" id="1669">1669</a>
+<a href="#1670" id="1670">1670</a>
+<a href="#1671" id="1671">1671</a>
+<a href="#1672" id="1672">1672</a>
+<a href="#1673" id="1673">1673</a>
+<a href="#1674" id="1674">1674</a>
+<a href="#1675" id="1675">1675</a>
+<a href="#1676" id="1676">1676</a>
+<a href="#1677" id="1677">1677</a>
+<a href="#1678" id="1678">1678</a>
+<a href="#1679" id="1679">1679</a>
+<a href="#1680" id="1680">1680</a>
+<a href="#1681" id="1681">1681</a>
+<a href="#1682" id="1682">1682</a>
+<a href="#1683" id="1683">1683</a>
+<a href="#1684" id="1684">1684</a>
+<a href="#1685" id="1685">1685</a>
+<a href="#1686" id="1686">1686</a>
+<a href="#1687" id="1687">1687</a>
+<a href="#1688" id="1688">1688</a>
+<a href="#1689" id="1689">1689</a>
+<a href="#1690" id="1690">1690</a>
+<a href="#1691" id="1691">1691</a>
+<a href="#1692" id="1692">1692</a>
+<a href="#1693" id="1693">1693</a>
+<a href="#1694" id="1694">1694</a>
+<a href="#1695" id="1695">1695</a>
+<a href="#1696" id="1696">1696</a>
+<a href="#1697" id="1697">1697</a>
+<a href="#1698" id="1698">1698</a>
+<a href="#1699" id="1699">1699</a>
+<a href="#1700" id="1700">1700</a>
+<a href="#1701" id="1701">1701</a>
+<a href="#1702" id="1702">1702</a>
+<a href="#1703" id="1703">1703</a>
+<a href="#1704" id="1704">1704</a>
+<a href="#1705" id="1705">1705</a>
+<a href="#1706" id="1706">1706</a>
+<a href="#1707" id="1707">1707</a>
+<a href="#1708" id="1708">1708</a>
+<a href="#1709" id="1709">1709</a>
+<a href="#1710" id="1710">1710</a>
+<a href="#1711" id="1711">1711</a>
+<a href="#1712" id="1712">1712</a>
+<a href="#1713" id="1713">1713</a>
+<a href="#1714" id="1714">1714</a>
+<a href="#1715" id="1715">1715</a>
+<a href="#1716" id="1716">1716</a>
+<a href="#1717" id="1717">1717</a>
+<a href="#1718" id="1718">1718</a>
+<a href="#1719" id="1719">1719</a>
+<a href="#1720" id="1720">1720</a>
+<a href="#1721" id="1721">1721</a>
+<a href="#1722" id="1722">1722</a>
+<a href="#1723" id="1723">1723</a>
+<a href="#1724" id="1724">1724</a>
+<a href="#1725" id="1725">1725</a>
+<a href="#1726" id="1726">1726</a>
+<a href="#1727" id="1727">1727</a>
+<a href="#1728" id="1728">1728</a>
+<a href="#1729" id="1729">1729</a>
+<a href="#1730" id="1730">1730</a>
+<a href="#1731" id="1731">1731</a>
+<a href="#1732" id="1732">1732</a>
+<a href="#1733" id="1733">1733</a>
+<a href="#1734" id="1734">1734</a>
+<a href="#1735" id="1735">1735</a>
+<a href="#1736" id="1736">1736</a>
+<a href="#1737" id="1737">1737</a>
+<a href="#1738" id="1738">1738</a>
+<a href="#1739" id="1739">1739</a>
+<a href="#1740" id="1740">1740</a>
+<a href="#1741" id="1741">1741</a>
+<a href="#1742" id="1742">1742</a>
+<a href="#1743" id="1743">1743</a>
+<a href="#1744" id="1744">1744</a>
+<a href="#1745" id="1745">1745</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
 <span class="kw">use </span>std::cell::{RefCell,RefMut};
@@ -1686,7 +1770,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{RegisterType, RegisterValue};
 <span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::mouth::Mouth;
-<span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
+<span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token, TOKEN_ENDCSNAME, TOKEN_RELAX};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 
 <span class="kw">static </span>DIGIT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"[0-9]"</span>).unwrap());
@@ -1898,11 +1982,11 @@
   <span class="comment">// ### NOTE: Truly fishy smuggling w/ \lx@hidden@cr
   </span><span class="kw">let </span>arg_opt = <span class="kw">if </span>(vtype == <span class="string">"cr"</span>) &amp;&amp; hidden {
     <span class="comment">// \lx@hidden@cr gets an argument as payload!!!!!
-    </span><span class="prelude-val">Some</span>(read_arg()<span class="question-mark">?</span>)
+    </span><span class="prelude-val">Some</span>(read_arg(ExpansionLevel::Off)<span class="question-mark">?</span>)
   } <span class="kw">else </span>{
     <span class="prelude-val">None
   </span>};
-  <span class="comment">// eprintln!("Halign: column after {post}");// . ToString($post)) if $LaTeXML::DEBUG{halign};
+  <span class="comment">// eprintln!("Halign: column after {post}");// . ToString($post) if $LaTeXML::DEBUG{halign};
   </span><span class="kw">if </span>(vtype == <span class="string">"cr" </span>|| vtype == <span class="string">"crcr"</span>)
     &amp;&amp; alignment.is_in_row()
     &amp;&amp; !alignment
@@ -2017,8 +2101,9 @@
 /// Note that most tokens pass through here, so be Fast &amp; Clean! readToken is folded in.
 ///    `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
 ///     will step to the next input stream (Mouth) if one is available,
-///     `toplevel` is doing TWO distinct things. When true:
+///     `toplevel` when true:
 /// * If a mouth is exhausted, move on to the containing mouth to continue reading
+///   `fully_expand` when true, OR when None but `toplevel` is true
 /// * expand even protected defns, essentially this means expand "for execution"
 /// 
 /// Note that, unlike readBalanced, this does NOT defer expansion of \the &amp; friends.
@@ -2030,11 +2115,12 @@
 </span><span class="kw">pub fn </span>read_x_token(
   toplevel_opt: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   for_conditional: bool,
+  fully_expand_opt: <span class="prelude-ty">Option</span>&lt;bool&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Token&gt;&gt; {
   <span class="comment">// toplevel should be true by default
   </span><span class="kw">let </span>toplevel = toplevel_opt.unwrap_or(<span class="bool-val">true</span>);
   <span class="kw">let </span>autoclose = toplevel;
-  <span class="kw">let </span>for_evaluation = toplevel;
+  <span class="kw">let </span>fully_expand = fully_expand_opt.unwrap_or(toplevel);
   <span class="kw">loop </span>{
     <span class="comment">// internal low-level reader that extracts a token from a mouth,
     // but always keeps comment tokens pending.
@@ -2100,7 +2186,7 @@
         <span class="prelude-val">Some</span>(typed_defn) =&gt; {
           <span class="kw">let </span>defn = typed_defn.to_definition()
             .expect(<span class="string">"token expansion requires the Stored item to implement trait Definition"</span>);
-          <span class="kw">if </span>!defn.is_expandable() || (defn.is_protected() &amp;&amp; !for_evaluation) {
+          <span class="kw">if </span>!defn.is_expandable() || (defn.is_protected() &amp;&amp; !fully_expand) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
           } <span class="kw">else </span>{
             local_current_token(token);
@@ -2173,7 +2259,7 @@
 <span class="doccomment">/// Read a single expanded, non-space, token
 </span><span class="kw">pub fn </span>read_x_non_space() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Token&gt;&gt; {
   <span class="kw">loop </span>{
-    <span class="kw">match </span>read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+    <span class="kw">match </span>read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
       <span class="prelude-val">Some</span>(t) =&gt; {
         <span class="kw">if </span>t.get_catcode() != Catcode::SPACE {
@@ -2184,14 +2270,29 @@
   }
 }
 
+<span class="doccomment">/// A directive describing to what degree a gullet reader should perform TeX's expansion
+</span><span class="attr">#[derive(Copy, Debug, Clone, PartialEq, Default)]
+</span><span class="kw">pub enum </span>ExpansionLevel {
+  <span class="comment">// No expansion, reads currently present tokens
+  </span><span class="attr">#[default]
+  </span>Off,
+  <span class="doccomment">/// Expands while reading, but deferring `\the` and `\protected`
+  </span>Partial,
+  <span class="doccomment">/// Expands completely while reading
+  </span>Full
+}
+
 <span class="doccomment">/// Approximates TeX's scan_toks (but doesn't parse \def parameter lists)
 /// and only optionally requires the openning "{".
 /// 
 /// It may return comments in the token lists.
-/// it optionally (`do_expand`) expands while reading, but deferring \the and related.
 /// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
 /// If `require_open` is true, the opening T_BEGIN has not yet been read, and is required.
-</span><span class="kw">pub fn </span>read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+/// 
+/// If `toplevel` is true, it will automatically close empty mouths as it reads, 
+/// and will also fully expand macros (unless overridden by `expansion_level` being explicitly Off).
+</span><span class="kw">pub fn </span>read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require_open:bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">use </span>ExpansionLevel::<span class="kw-2">*</span>;
   <span class="kw">if </span>!require_open {
     decrement_align_group_count();
   }
@@ -2199,7 +2300,7 @@
   <span class="comment">// let startloc = if lookup_verbosity() &gt; 0 { Some(get_locator()) } else { None };
   // Do we need to expand to get the { ???
   </span><span class="kw">if </span>require_open {
-    <span class="kw">let </span>token_opt = <span class="kw">if </span>do_expand { read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>),<span class="bool-val">false</span>)<span class="question-mark">? </span>}
+    <span class="kw">let </span>token_opt = <span class="kw">if </span>expansion_level != Off { read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>),<span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>}
     <span class="kw">else </span>{ read_token()<span class="question-mark">? </span>};
     <span class="kw">let </span>is_open = <span class="kw">match </span>token_opt {
       <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
@@ -2279,10 +2380,10 @@
             }
           }
           <span class="comment">// Note: use general-purpose lookup, since we may reexamine $defn below
-          </span><span class="kw">if </span>do_expand &amp;&amp; cc.is_active_or_cs() {
+          </span><span class="kw">if </span>expansion_level != Off &amp;&amp; cc.is_active_or_cs() {
             <span class="kw">let </span>meaning_opt = lookup_meaning(<span class="kw-2">&amp;</span>token);
             <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = meaning_opt.as_ref().and_then(|item| item.to_definition()) {
-              <span class="kw">if </span>defn.is_expandable() &amp;&amp; !defn.is_protected() {
+              <span class="kw">if </span>defn.is_expandable() &amp;&amp; (!defn.is_protected() || expansion_level == Full){
                 local_current_token(token);
                 <span class="kw">let </span>expansion = defn.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
                 <span class="kw">if </span>expansion.is_empty() {
@@ -2291,7 +2392,7 @@
                 }
                 <span class="comment">// If a special \the type command, push the expansion directly into the result
                 // Well, almost directly: handle any MARKER tokens now, and possibly un-pack T_PARAM
-                </span><span class="kw">if </span>DEFERRED_COMMANDS.contains(<span class="kw-2">&amp;</span>defn.get_cs().text) {
+                </span><span class="kw">if </span><span class="macro">expansion_level!</span>=Full &amp;&amp; DEFERRED_COMMANDS.contains(<span class="kw-2">&amp;</span>defn.get_cs().text) {
                   <span class="kw">for </span>t <span class="kw">in </span>expansion.unlist() {
                     <span class="kw">match </span>t.get_catcode() {
                       Catcode::MARKER =&gt; handle_marker(t),
@@ -2352,7 +2453,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>to_match: VecDeque&lt;char&gt; = keyword.to_uppercase().chars().collect();
     <span class="kw">let </span><span class="kw-2">mut </span>matched = Vec::new();
     <span class="kw">while </span>!to_match.is_empty() {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
         <span class="kw">let </span>cmp_tok = tok.with_str(|s| s.to_uppercase());
         matched.push(tok);
         <span class="kw">if </span>cmp_tok == to_match[<span class="number">0</span>].to_string() {
@@ -2409,7 +2510,7 @@
           <span class="comment">// And if it's a BEGIN, copy till balanced END
           </span>nbraces += <span class="number">1</span>;
           tokens.push(token);
-          <span class="kw">let </span>balanced_arg = read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+          <span class="kw">let </span>balanced_arg = read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
           <span class="kw">if </span>!balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
@@ -2440,7 +2541,7 @@
             tokens.push(r_token);
           }
           tokens.push(token);
-          <span class="kw">let </span>balanced_arg = read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+          <span class="kw">let </span>balanced_arg = read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
           <span class="kw">if </span>!balanced_arg.is_empty() {
             tokens.append(<span class="kw-2">&amp;mut </span>balanced_arg.unlist());
           }
@@ -2498,6 +2599,38 @@
     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(tks))
   }
 }
+
+<span class="kw">pub fn </span>read_cs_name() -&gt; <span class="prelude-ty">Result</span>&lt;Token&gt; {
+  <span class="comment">// TeX does NOT store the csname with the leading `\`, BUT stores active chars with a flag
+  // However, so long as the Mouth's CS and \string properly respect \escapechar, all's well!
+
+  </span><span class="kw">let </span><span class="kw-2">mut </span>cs = String::from(<span class="string">"\\"</span>);
+  <span class="comment">// keep newlines from having \n inside!
+  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+    <span class="kw">if </span>token.defined_as(<span class="kw-2">&amp;</span>TOKEN_ENDCSNAME) {
+      <span class="kw">break</span>;
+    }
+    <span class="kw">match </span>token.get_catcode() {
+      Catcode::CS =&gt; {
+        <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
+          <span class="kw">let </span>message =
+            <span class="macro">s!</span>(<span class="string">"The control sequence {:?} should not appear between \\csname and \\endcsname"</span>,
+              token);
+          <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, token, message);
+        } <span class="kw">else </span>{
+          <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {:?} is not defined"</span>, token);
+          <span class="macro">Error!</span>(<span class="string">"undefined"</span>, token, message);
+        }
+      },
+      Catcode::SPACE =&gt; cs.push(<span class="string">' '</span>),  <span class="comment">// Keep newlines from having \n!
+      </span><span class="kw">_ </span>=&gt; {
+        token.with_str(|s| cs.push_str(s));
+      }
+    };
+  }
+  <span class="prelude-val">Ok</span>(<span class="macro">T_CS!</span>(cs))
+}
+
 <span class="doccomment">/// reads and discards tokens, until it encounters a conditional, if any
 </span><span class="kw">pub fn </span>read_next_conditional() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;(Token, ConditionalType)&gt;&gt; {
   <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = read_token()<span class="question-mark">? </span>{
@@ -2510,17 +2643,29 @@
   <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 }
 
-<span class="doccomment">///**********************************************************************
-/// Higher-level readers: Read various types of things from the input:
-///  tokens, non-expandable tokens, args, Numbers, ...
-///**********************************************************************
-</span><span class="kw">pub fn </span>read_arg() -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<span class="comment">//**********************************************************************
+// Higher-level readers: Read various types of things from the input:
+//  tokens, non-expandable tokens, args, Numbers, ...
+//**********************************************************************
+
+</span><span class="doccomment">/// Read and return a "normal" TeX argument
+/// 
+/// The next Token or Tokens (if surrounded by braces).
+/// `expansion_level` controls expansion as if the argument were read
+///  and then expanded in isolation:
+/// 
+/// In the case of a single unbraced expandable token,
+///  it will **not** read any macro arguments from the following input!
+</span><span class="kw">pub fn </span>read_arg(expansion_level: ExpansionLevel) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   <span class="kw">match </span>read_non_space()<span class="question-mark">? </span>{
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()),
     <span class="prelude-val">Some</span>(token) =&gt; <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
-        read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)
-      } <span class="kw">else </span>{
+        read_balanced(expansion_level,<span class="bool-val">false</span>,<span class="bool-val">false</span>)
+      } <span class="kw">else if </span><span class="macro">matches!</span>(expansion_level, ExpansionLevel::Off) {
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(token))
+      } <span class="kw">else </span>{
+        unread_vec(<span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>(), token, <span class="macro">T_END!</span>()]);
+        read_balanced(expansion_level, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
       }
   }
 }
@@ -2543,6 +2688,18 @@
       }
     },
   }
+}
+
+<span class="doccomment">/// &lt;filler&gt; = &lt;optional spaces&gt; | &lt;filler&gt;\relax&lt;optional spaces&gt;
+/// TeX Book p.276 "&lt;left brace&gt; can be implicit", and experimentation, indicate Expansion!!!
+</span><span class="kw">pub fn </span>skip_filler() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = read_x_non_space()<span class="question-mark">? </span>{
+    <span class="kw">if </span>!tok.defined_as(<span class="kw-2">&amp;</span>TOKEN_RELAX) {
+      unread_one(tok);
+      <span class="kw">break</span>;
+    }
+  }
+  <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">pub fn </span>if_next(token: Token) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
@@ -2572,14 +2729,14 @@
     <span class="comment">// TODO: unwrap should be a proper error, value is expected
     </span>RegisterType::Token =&gt; <span class="prelude-val">Ok</span>(read_token()<span class="question-mark">?</span>.unwrap().into()),
     RegisterType::CharDef =&gt; <span class="prelude-val">Ok</span>(read_number()<span class="question-mark">?</span>.into()),
-    RegisterType::Any =&gt; <span class="prelude-val">Ok</span>(read_arg()<span class="question-mark">?</span>.into()),
+    RegisterType::Any =&gt; <span class="prelude-val">Ok</span>(read_arg(ExpansionLevel::Off)<span class="question-mark">?</span>.into()),
   }
 }
 
 <span class="kw">pub fn </span>read_register_value(
   value_type: RegisterType,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
-  <span class="kw">match </span>read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+  <span class="kw">match </span>read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
     <span class="prelude-val">Some</span>(token) =&gt; {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_register_definition(<span class="kw-2">&amp;</span>token) {
@@ -2700,7 +2857,7 @@
 ///   | `&lt;character token&gt;&lt;one optional space&gt;
 /// ```
 </span><span class="kw">pub fn </span>read_normal_integer() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Number&gt;&gt; {
-  <span class="kw">match </span>read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+  <span class="kw">match </span>read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
     <span class="prelude-val">Some</span>(token) =&gt; {
       <span class="kw">let </span>cc = token.get_catcode();
@@ -2744,10 +2901,10 @@
   <span class="kw">let </span>is_negative = read_optional_signs()<span class="question-mark">?</span>;
   <span class="kw">let </span>s = <span class="kw">if </span>is_negative { -<span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">1.0 </span>};
   <span class="kw">let </span><span class="kw-2">mut </span>string = read_digits(<span class="kw-2">&amp;</span>DIGIT_RE, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-  <span class="kw">let </span><span class="kw-2">mut </span>token = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+  <span class="kw">let </span><span class="kw-2">mut </span>token = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   <span class="kw">if </span>token.is_some() &amp;&amp; token.as_ref().unwrap().get_sym() == arena::pin_static(<span class="string">"."</span>) {
     string = <span class="macro">s!</span>(<span class="string">"{string}.{}"</span>, read_digits(<span class="kw-2">&amp;</span>DIGIT_RE, <span class="bool-val">true</span>)<span class="question-mark">?</span>);
-    token = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+    token = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   }
   <span class="kw">let </span>n_opt: <span class="prelude-ty">Option</span>&lt;f64&gt; = <span class="kw">if </span>!string.is_empty() {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = token {
@@ -3040,7 +3197,7 @@
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()),
     <span class="prelude-val">Some</span>(token) =&gt; {
       <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
-        <span class="prelude-val">Ok</span>(read_balanced(<span class="bool-val">false</span>,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>)
+        <span class="prelude-val">Ok</span>(read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>)
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = lookup_register_definition(<span class="kw-2">&amp;</span>token) {
         <span class="kw">match </span>defn.register_type() {
           <span class="prelude-val">Some</span>(RegisterType::Tokens) | <span class="prelude-val">Some</span>(RegisterType::Token) =&gt; {
@@ -3097,7 +3254,7 @@
 // returns false if None, or positive, true if negative
 </span><span class="kw">fn </span>read_optional_signs() -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>sign = <span class="bool-val">false</span>;
-  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
     <span class="kw">let </span>sym = t.get_sym();
     <span class="kw">if </span>sym == arena::pin_static(<span class="string">"-"</span>) {
       sign = !sign;
@@ -3111,7 +3268,7 @@
 
 <span class="kw">fn </span>read_digits(range_regex: <span class="kw-2">&amp;</span>Regex, skip: bool) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>result = String::new();
-  <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
     <span class="kw">let </span>digit_opt = token.with_str(|s| {
       <span class="kw">if </span>s.len() == <span class="number">1 </span>&amp;&amp; range_regex.is_match(s) {
         s.chars().next()
@@ -3138,12 +3295,12 @@
 </span><span class="doccomment">/// Return a number (Rust f64 number)
 </span><span class="kw">fn </span>read_factor() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;f64&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>factor = read_digits(<span class="kw-2">&amp;</span>DIGIT_RE, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-  <span class="kw">let </span><span class="kw-2">mut </span>token_opt = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+  <span class="kw">let </span><span class="kw-2">mut </span>token_opt = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>token) = token_opt {
     <span class="kw">let </span>sym = token.get_sym();
     <span class="kw">if </span>sym == arena::pin_static(<span class="string">"."</span>) || sym == arena::pin_static(<span class="string">","</span>) {
       factor = <span class="macro">s!</span>(<span class="string">"{}.{}"</span>, factor, read_digits(<span class="kw-2">&amp;</span>DIGIT_RE, <span class="bool-val">false</span>)<span class="question-mark">?</span>);
-      token_opt = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+      token_opt = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     }
   }
 
@@ -3172,12 +3329,23 @@
   reading_from_mouth(
     Mouth::default(),
     <span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-      { unread(tokens); }
-      <span class="kw">let </span><span class="kw-2">mut </span>expanded = Vec::new();
-      <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>)<span class="question-mark">? </span>{
-        expanded.push(t);
-      }
-      <span class="prelude-val">Ok</span>(Tokens::new(expanded))
+      { unread_one(<span class="macro">T_END!</span>());
+        unread(tokens); 
+        unread_one(<span class="macro">T_BEGIN!</span>()); }
+      read_balanced(ExpansionLevel::Full, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
+    },
+  )
+}
+
+<span class="kw">pub fn </span>do_expand_partially&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">let </span>tokens: Tokens = tokens.into();
+  reading_from_mouth(
+    Mouth::default(),
+    <span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+      { unread_one(<span class="macro">T_END!</span>());
+        unread(tokens); 
+        unread_one(<span class="macro">T_BEGIN!</span>()); }
+      read_balanced(ExpansionLevel::Partial, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
     },
   )
 }
