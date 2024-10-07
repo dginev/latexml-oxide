@@ -2,6 +2,36 @@
 //! 
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
+static UNICODE_EM_SPACES : [(f64,char); 7] = [ // Spaces to fake spacing, with width in ems
+  (0.100, '\u{200A}'),    // Hair space (thinner than thin space)
+  (0.167, '\u{2006}'),    // six-per-em
+  (0.200, '\u{2009}'),    // five-per-em, thin space
+  (0.250, '\u{2005}'),    // four-per-em, mid space
+  (0.333, '\u{2004}'),    // three-per-em, thick space
+  (0.500, '\u{2002}'),    // en-quad, "nut"
+  (1.000, '\u{2003}'),    // em-quad, "mutton"
+];
+/// String of spacing chars with width roughly equivalent to $dimen
+fn dimension_to_spaces(dimen: Dimension) -> String {
+  let fs      = lookup_font().unwrap().get_size().unwrap_or(1.0);    // 1 em
+  let mut ems     = dimen.pt_value(None) / fs;
+  let mut s       = String::default();
+  for (w,space_char) in UNICODE_EM_SPACES.into_iter().rev() {
+    if ems <= 0.0 {
+      break;
+    }
+    if ems + 0.01 > w {
+      let n = ((ems + 0.01).floor() / w) as usize;
+      ems -= n as f64 * w;
+      for _ in 0..n {
+        s.push(space_char);
+      }
+    }
+  }
+  s
+}
+
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Glue Family of primitive control sequences
@@ -16,23 +46,36 @@ LoadDefinitions!({
 
   // \hskip handled similarly to \kern
   // \hskip can be ignored in certain situations...
+  DefConstructor!("\\hskip Glue", sub[document, args, _props] {
+    unref!(args => length_digested);
+    let length = match  length_digested.data() {
+      DigestedData::RegisterValue(v) => v.into(),
+      _ => Dimension::default() // should this also be an error?
+    };
+    let parent = document.get_node();
+    //    Debug("HSKIP ".ToString($length)." at ".$document->getNodeQName($parent));
+    if document::with_node_qname(parent, |name| name == "svg:g") {
+      todo!();
+  //     if (my $x = $length->pxValue) {
+  //       # HACK HACK HACK
+  //       my $transform = $parent->getAttribute('transform');
+  //       $parent->setAttribute(transform => ($transform ? $transform . ' ' : '') . "translate($x,0)");
+  //   } }
+  //   elsif (inSVG()) {
+  //     Warn('unexpected', 'kern', $_[0], "Lost hskip in SVG " . ToString($length)); }
+  //   elsif ($props{isMath}) {
+  //     $document->insertElement('ltx:XMHint', undef, width => $length); }
+    } else {
+      document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?; 
+    } 
+  },
+  properties => sub[args] {
+    unref!(args => length);
+    Ok(stored_map!(
+      "width" => length, "isSpace" => true, "isSkip" => true))
+  });
 
-  // DefConstructor!("\\hskip Glue", sub[_document, _args] {
-  //     let parent = document.get_node();
-  //     if ($document->getNodeQName($parent) eq 'svg:g') {
-  //       if (my $x = $length->pxValue) {
-  //         # HACK HACK HACK
-  //         my $transform = $parent->getAttribute('transform');
-  //         $parent->setAttribute(transform => ($transform ? $transform . ' ' : '') . "translate($x,0)");
-  //     } }
-  //     elsif (inSVG()) {
-  //       Warn('unexpected', 'kern', $_[0], "Lost hskip in SVG " . ToString($length)); }
-  //     else {
-  //       $document->absorb(DimensionToSpaces($length)); } },
-  //   properties => sub {
-  //     my ($stomach, $length) = @_;
-  //     (width => $length, isSpace => 1); 
-  // });
+ 
   //======================================================================
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
