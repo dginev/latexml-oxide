@@ -1,9 +1,27 @@
 # Change Log
 
-## [0.2.1] (in active development)
-  - continue increasing test coverage
+## [0.4.1] (in active development)
 
-## [0.2]
+## [0.4.0] 2024-09-10
+  - The project was refactored to indicate an official `latexml` clone with an `-oxide` suffix.
+
+## [0.3.2] 2024-15-07
+  - Handover release, at the end of NIST's sponsorship for this project.
+  - Many of the supported internals have been updated to the mainline LaTeXML v0.8.8 logic
+  - Passing a lot more tests in `tokenize`, `structure`, `digestion`
+  - added compile-time TeX macros
+  - Decision: thread-local, global, mutable, singleton `State`
+  - more TeX.pool coverage
+  - math parsing executable was 
+
+## [0.3.1] 2023-31-05
+  - Rudimentary alignment support
+  - refactored to use a string-interner
+
+## [0.3.0] 2023-13-03
+  - The `expansion` test suite is now passing.
+
+## [0.2.0] 2022-20-04
   - update to 03.2022 state of the mainline LaTeXML test suite
   - unblock math parsing with the inclusion of a Marpa grammar
   - pass most of `tokenize` and `grouping` tests
