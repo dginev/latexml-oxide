@@ -1,0 +1,53 @@
+use crate::common::error::*;
+use crate::common::numeric_ops::NumericOps;
+use crate::definition::register::RegisterType;
+use crate::mouth;
+use crate::token::Catcode;
+use crate::tokens::Tokens;
+use crate::Object;
+use std::fmt;
+
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
+pub struct Number(pub i64);
+impl Object for Number {
+  fn revert(&self) -> Result<Tokens> {
+    Ok(Tokens::new(ExplodeText!(&self.0.to_string())))
+  }
+}
+impl NumericOps for Number {
+  fn new(number: i64) -> Self { Number(number) }
+  fn new_f64(number: f64) -> Self { Number(number.trunc() as i64) }
+  fn value_of(self) -> i64 { self.0 }
+  fn register_type(&self) -> RegisterType { RegisterType::Number }
+}
+
+impl Number {
+  pub fn to_attribute(&self) -> String { self.0.to_string() }
+}
+
+impl From<Number> for Tokens {
+  fn from(v: Number) -> Tokens { mouth::tokenize_internal(&v.0.to_string()) }
+}
+
+impl From<Number> for Option<Tokens> {
+  fn from(v: Number) -> Option<Tokens> { Some(v.into()) }
+}
+
+#[macro_export]
+macro_rules! Number {
+  ($number:expr) => {{
+    ::latexml_core::common::number::Number::new($number as i64)
+  }};
+}
+
+impl From<String> for Number {
+  fn from(s: String) -> Number { Number(s.parse::<i64>().unwrap()) }
+}
+
+impl fmt::Display for Number {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
+}
+
+impl From<Catcode> for Number {
+  fn from(c: Catcode) -> Number { Number::new(u8::from(c) as i64) }
+}

@@ -1,11 +1,11 @@
 [workspace]
 members = [
-  "rtx_core",
-  "rtx_codegen",
-  "rtx_package",
-  "rtx_math_parser",
-  "rtx_contrib",
-  "rtx"
+  "latexml_core",
+  "latexml_codegen",
+  "latexml_package",
+  "latexml_math_parser",
+  "latexml_contrib",
+  "latexml_oxide"
 ]
 resolver = "2"
 
