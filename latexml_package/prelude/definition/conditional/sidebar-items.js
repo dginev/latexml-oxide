@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ConditionalType"],"struct":["Conditional","ConditionalOptions","IfFrame"]};

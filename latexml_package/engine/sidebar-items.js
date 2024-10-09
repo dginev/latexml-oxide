@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["base_functions","etex","latex","latex_functions","pdftex","tex"]};

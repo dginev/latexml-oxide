@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DataSize","DigestionMode","InputFormat","OutputFormat"],"mod":["arena","cleaners","def_parser","dimension","error","float","font","glue","ligature","local_assignments","locator","model","mudimension","muglue","number","numeric_ops","object","relaxng","store","xml"],"struct":["Config"],"type":["BindingDispatcher"]};

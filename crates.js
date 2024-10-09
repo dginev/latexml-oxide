@@ -1,2 +1,2 @@
-window.ALL_CRATES = ["rtx","rtx_codegen","rtx_contrib","rtx_core","rtx_math_parser","rtx_package","rtxmath"];
-//{"start":21,"fragment_lengths":[5,14,14,11,18,14,10]}
+window.ALL_CRATES = ["latexml","latexml_codegen","latexml_contrib","latexml_core","latexml_math_parser","latexml_oxide","latexml_package","latexmlmath_oxide"];
+//{"start":21,"fragment_lengths":[9,18,18,15,22,16,18,20]}

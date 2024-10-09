@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["define","has_keyval"],"struct":["KeyVal","KeyvalConfig"]};

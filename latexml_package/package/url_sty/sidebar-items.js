@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["load_definitions"],"static":["LEADING_BACKSLASH_RE"]};

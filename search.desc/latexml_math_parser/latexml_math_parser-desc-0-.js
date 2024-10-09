@@ -1,0 +1,1 @@
+searchState.loadedDescShard("latexml_math_parser", 0, "Returns the argument unchanged.\nCalls <code>U::from(self)</code>.\nGenerate a textual token for each node; The parser …")

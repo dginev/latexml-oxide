@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["attribute_format","fixedformat"],"struct":["Dimension"]};
