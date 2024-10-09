@@ -438,7 +438,7 @@ LoadDefinitions!({
         if defn.is_register() && !defn.is_readonly() {
           let args = defn.read_arguments()?;
           // TODO: What is this datatype ?
-          // How does it fit the rtx typed interfaces for parameter types?
+          // How does it fit the latexml-oxide typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
           // Ok(Tokens!(defn_tok, defn_args))
           Ok(ArgWrap::RegisterDefinition(Box::new((token_opt.unwrap(), args))))

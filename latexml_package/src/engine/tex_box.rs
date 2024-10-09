@@ -108,8 +108,10 @@ LoadDefinitions!({
       Ok(Tokens!())
     }
   },
-  // The predigest closure is new for rtx, as it was a single closure in Perl
-  // The key problem is that in rtx the parameter type interfaces are well-typed,
+  // TODO: What kind of directives do we need to expose this description to the main Docs page?
+  //
+  // The predigest closure is new for latexml-oxide, as it was a single closure in Perl
+  // The key problem is that in latexml-oxide the parameter type interfaces are well-typed,
   // so it is not possible to remain elegant while at the same time
   // have access to the stomach AND digest.
   // Hence, the `reader` is exclusively responsible for using the gullet to obtain tokens,

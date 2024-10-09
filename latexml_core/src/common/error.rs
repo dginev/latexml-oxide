@@ -178,10 +178,10 @@ macro_rules! Fatal {
 #[macro_export]
 macro_rules! fatal {
   ($target:expr, $category:expr, $message:expr) => {{
-    use $crate::common::error::Error as RtxError;
+    use $crate::common::error::Error as LatexmlError;
     use $crate::common::error::ErrorCategory::*;
     use $crate::common::error::ErrorTarget::*;
-    return Err(RtxError {
+    return Err(LatexmlError {
       target: $target,
       category: $category,
       message: $message.to_string(),

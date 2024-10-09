@@ -12,7 +12,7 @@ use latexml_math_parser::*;
 fn main() -> Result<()> {
   if latexml_core::util::logger::init(log::LevelFilter::Info).is_err() {
     Error!(
-      "rtx",
+      "latexml_oxide",
       "logger",
       "Failed to load logger, aborting. Please check latexml_core::util::logger installed correctly."
     );
@@ -24,7 +24,7 @@ fn main() -> Result<()> {
     Some(s) => s,
     None => {
       Error!(
-        "rtx",
+        "latexml_oxide",
         "",
         "Please provide a TeX formula on input! Exiting..."
       );

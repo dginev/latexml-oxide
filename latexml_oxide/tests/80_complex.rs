@@ -6,7 +6,7 @@ extern crate latexml_package;
 mod helpers;
 
 ///**********************************************************************
-/// Test cases for rtx
+/// Test cases for latexml_oxide
 ///**********************************************************************
 use latexml::util::test::*;
 use latexml_core::common::error::*;

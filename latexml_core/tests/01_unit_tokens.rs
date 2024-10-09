@@ -1,5 +1,5 @@
 //======================================================================
-// Unit tests for rtx
+// Unit tests for latexml-oxide
 //======================================================================
 // I'd like to have a directory of unit tests, so it can be more easily
 // grown, but this will be a start
