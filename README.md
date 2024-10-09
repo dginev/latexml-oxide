@@ -1,8 +1,8 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.3.1-orange.svg) 
+[![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.3.1-orange.svg) 
 [![ported tests 26%](https://img.shields.io/badge/ported%20tests%20-%2026%25%20-%20%23a89932?style=flat)
-](https://github.com/dginev/rtx/issues/30)
+](https://github.com/dginev/latexml-oxide/issues/30)
 
 ### Why?
 
@@ -59,12 +59,12 @@ Requires Rust `nightly` v1.72, and newer.
 
 2. convert an example formula:
     ```bash
-    $ cargo run --release --bin rtxmath '1+1=2'
+    $ cargo run --release --bin latexmlmath_oxide '1+1=2'
     ```
 
 3. convert an example document:
     ```bash
-    $ cargo run --release --bin rtx rtx/tests/hello/hello.tex
+    $ cargo run --release --bin latexml_oxide latexml_oxide/tests/hello/hello.tex
     ```
 
 ### Docs

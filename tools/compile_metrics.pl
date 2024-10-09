@@ -27,7 +27,7 @@ use open qw(:std :utf8);
 # A little awkwardness in that we have to run within LaTeXML,
 # since the needed font encodings are embedded within (or only findable within) LaTeXML.
 
-my $MODULEPATH = "$FindBin::RealBin/../rtx_core/src/common/font/standard_metrics.rs";
+my $MODULEPATH = "$FindBin::RealBin/../latexml_core/src/common/font/standard_metrics.rs";
 my $FONTDIR    = '/usr/local/texlive/2022/texmf-dist/fonts/tfm/public';
 # Should be using kpsewhich, but...
 my $SIZE = 10;
