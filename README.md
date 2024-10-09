@@ -1,6 +1,6 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.3.1-orange.svg) 
+[![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.4.0-orange.svg) 
 [![ported tests 26%](https://img.shields.io/badge/ported%20tests%20-%2026%25%20-%20%23a89932?style=flat)
 ](https://github.com/dginev/latexml-oxide/issues/30)
 
