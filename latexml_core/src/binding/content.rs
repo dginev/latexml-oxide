@@ -474,7 +474,7 @@ pub fn input(
 
     //   // Should we be doing anything about options in the next 2 cases?..... I kinda think not,
     // but?   if (ftype == "rs") {                  // it's a LaTeXML binding.
-    //     load_rtx(request, path);
+    //     load_latexml(request, path);
     //   }
     //   // Else some sort of "known" definitions type file, but not simply 'tex'
     //   else if (ftype != "tex") && (pathname_is_raw(path)) {

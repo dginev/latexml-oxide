@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   if latexml_core::util::logger::init(log::LevelFilter::Info).is_err() {
     let err = || {
     Error!(
-      "rtx",
+      "latexml",
       "logger",
       "Failed to load logger. Please check latexml_core::util::logger installed correctly."
     ); Ok(()) };
@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Some(s) => s,
     None => {
       let err = || {Error!(
-        "rtx",
+        "latexml_oxide",
         "",
           "Please provide a source document! Exiting..."
       ); Ok(()) };
@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
     let message = s!("Could not prepare converter session! : {}", e);
-    let err = || {Error!("rtx", "session", message); Ok(())};
+    let err = || {Error!("latexml_oxide", "session", message); Ok(())};
     err().ok();
     process::exit(1);
   }

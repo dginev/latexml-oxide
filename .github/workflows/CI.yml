@@ -4,7 +4,7 @@ name: CI
 
 jobs:
   test:
-    name: rtx CI
+    name: latexml-oxide CI
     runs-on: ubuntu-20.04
     steps:
       - name: install dependencies

@@ -48,7 +48,7 @@ pub fn init_logger() {
     latexml_core::util::logger::init(log::LevelFilter::Warn).unwrap();
     // Initializing the libxml parser ONCE is a recommendation for thread-safety,
     // which should hopefully avoid any hangs in a threaded "cargo test"
-    // this may also be needed in web servers running parallel rtx conversion jobs
+    // this may also be needed in web servers running parallel latexml_oxide conversion jobs
     // See: https://dev.w3.org/XInclude-Test-Suite/libxml2-2.4.24/libxml2-2.4.24/doc/threads.html
     unsafe {
       libxml::bindings::xmlInitParser();
@@ -102,7 +102,7 @@ fn latexml_ok_internal(
       for (lineno, (tex_line, xml_line)) in tex_strings.iter().zip(xml_strings.iter()).enumerate() {
         assert_eq!(
           tex_line, xml_line,
-          "rtx result (left) differs from expected XML (right), file {xml_path}; line {lineno}"
+          "latexml_oxide result (left) differs from expected XML (right), file {xml_path}; line {lineno}"
         );
       }
       assert_eq!(
@@ -209,7 +209,7 @@ pub fn lex_single_tex_formula(tex: &str, latexml: &mut Core) -> (Vec<String>, Ve
 }
 
 /// Build a test function for each "*.tex" source found in a given directory path.
-/// The path should be absolute, or relative to the root rtx checkout.
+/// The path should be absolute, or relative to the root latexml-oxide checkout.
 #[macro_export]
 macro_rules! tex_tests {
   ($dir:literal) => {

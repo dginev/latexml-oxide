@@ -1,6 +1,6 @@
 use phf::phf_map;
 ///**********************************************************************
-/// Test cases for rtx
+/// Test cases for latexml_oxide
 ///**********************************************************************
 use latexml::util::test::*;
 static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {

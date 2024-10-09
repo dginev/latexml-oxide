@@ -11,7 +11,7 @@ use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
 
-const CONVERTER_IDENTITY: &str = "rtx (v0.3.0)";
+const CONVERTER_IDENTITY: &str = "latexml_oxide (v0.4.0)";
 
 pub struct ConversionResponse {
   pub result: Option<String>,

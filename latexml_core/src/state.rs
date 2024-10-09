@@ -257,7 +257,7 @@ pub struct State {
   /// flag to disable math parsing
   pub nomathparse: bool,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
-  /// A dispatcher routing to the compiled code of the main/official rtx bindings
+  /// A dispatcher routing to the compiled code of the in-distro latexml bindings
   pub bindings_dispatch: Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>

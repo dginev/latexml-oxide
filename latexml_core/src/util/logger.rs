@@ -3,8 +3,8 @@ use ansi_term::Style;
 use log::max_level;
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 
-struct RtxLogger;
-static LOGGER: RtxLogger = RtxLogger;
+struct LatexmlLogger;
+static LOGGER: LatexmlLogger = LatexmlLogger;
 
 /// prints a single line to STDERR
 #[macro_export]
@@ -30,7 +30,7 @@ macro_rules! print_stderr(
     })
 );
 
-impl log::Log for RtxLogger {
+impl log::Log for LatexmlLogger {
   fn enabled(&self, metadata: &Metadata) -> bool { metadata.level() <= max_level() }
 
   fn log(&self, record: &Record) {

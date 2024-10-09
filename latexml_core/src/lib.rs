@@ -1,4 +1,4 @@
-//! The Core of rtx - roughly the equivalent of TeX conversion.
+//! The Core of latexml - roughly the equivalent of TeX conversion.
 #![feature(thread_local)]
 #![allow(missing_docs)]
 extern crate rustc_hash;

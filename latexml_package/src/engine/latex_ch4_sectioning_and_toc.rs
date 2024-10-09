@@ -118,7 +118,7 @@ LoadDefinitions!({
       //
       // Part 2: I have now, with great attention and profiling, solidified the position that
       //       Whatsits are immutable during the absorbtion phase -- and hence
-      // the args and props passed in here will remain immutable in rtx.
+      // the args and props passed in here will remain immutable in latexml_oxide.
       // Hence, for this absorb call to run correctly, it must either:
       // 1) Accept a cloned value as currently, paying with performance
       // 2) Accept immutable references to digested objects,
