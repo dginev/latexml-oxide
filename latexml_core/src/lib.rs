@@ -97,27 +97,27 @@ pub struct Core {
 pub struct CoreOptions {
   // First, state::related options:
   /// a custom schema-induced model (default is `None`) for the final XML
-  pub model: Option<Model>,
+  pub model:            Option<Model>,
   /// default is 0, sub-zero values are quiet, positive values are verbose
-  pub verbosity: Option<i32>,
+  pub verbosity:        Option<i32>,
   /// strict error-reporting (is this still used?)
-  pub strict: Option<bool>,
+  pub strict:           Option<bool>,
   /// toggle preserving comments in the XML on/off
   pub include_comments: Option<bool>,
   /// toggle loading raw .sty modules on/off
-  pub include_styles: Option<bool>,
+  pub include_styles:   Option<bool>,
   /// disable math parsing (enabled by default)
-  pub nomathparse: Option<bool>,
+  pub nomathparse:      Option<bool>,
   /// an optional, fixed id prefix for all xml:id attributes
-  pub documentid: Option<String>,
+  pub documentid:       Option<String>,
   /// the list of paths used for loading TeX sources and packages
-  pub search_paths: Option<Vec<String>>,
+  pub search_paths:     Option<Vec<String>>,
   /// the list of paths used for loading graphics assets
-  pub graphics_paths: Option<Vec<String>>,
+  pub graphics_paths:   Option<Vec<String>>,
   /// set an explicit encoding of the input text
-  pub input_encoding: Option<String>,
+  pub input_encoding:   Option<String>,
   /// a list of package names to preload before processing start
-  pub preload: Option<Vec<String>>,
+  pub preload:          Option<Vec<String>>,
 }
 
 impl Core {

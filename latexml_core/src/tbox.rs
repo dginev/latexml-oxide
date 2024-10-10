@@ -22,25 +22,25 @@ use crate::{BoxOps, Digested};
 #[derive(Debug, Clone)]
 pub struct Tbox {
   /// plain-text content
-  pub text: SymStr,
+  pub text:       SymStr,
   /// associated font for `text`
-  pub font: Rc<Font>,
+  pub font:       Rc<Font>,
   /// source location where the box originated
-  pub locator: Locator,
+  pub locator:    Locator,
   /// misc properties, such as sizing information
   pub properties: HashMap<Stored>,
   /// a Tokens list containing the TeX that created (or could have) the Tbox.
-  pub tokens: Tokens,
+  pub tokens:     Tokens,
 }
 
 impl Default for Tbox {
   fn default() -> Self {
     Tbox {
-      text: *EMPTY_SYM,
-      font: Rc::new(Font::text_default()),
-      locator: Locator::default(),
+      text:       *EMPTY_SYM,
+      font:       Rc::new(Font::text_default()),
+      locator:    Locator::default(),
       properties: HashMap::default(),
-      tokens: Tokens!(),
+      tokens:     Tokens!(),
     }
   }
 }

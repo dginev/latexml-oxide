@@ -30,7 +30,7 @@ use metadata::Meta;
 /// Ideally, these are all immutable borrows of various `Core` data.
 pub struct ActionContext<'a> {
   /// The original XML nodes involved in this parse request
-  pub nodes: &'a [XMLNode],
+  pub nodes:    &'a [XMLNode],
   /// The owner document of the parsed nodes
   pub document: &'a mut Document,
 }
@@ -95,7 +95,7 @@ impl Actions {
         let mut translated_children = Vec::new();
         for child in children.iter() {
           let translated = self.translate_node(child, pragmas, ActionContext {
-            nodes: ctxt.nodes,
+            nodes:    ctxt.nodes,
             document: ctxt.document,
           })?;
           translated_children.push(translated);
@@ -106,7 +106,7 @@ impl Actions {
         let mut translated_children = Vec::new();
         for child in children.iter() {
           translated_children.push(self.translate_node(child, pragmas, ActionContext {
-            nodes: ctxt.nodes,
+            nodes:    ctxt.nodes,
             document: ctxt.document,
           })?);
         }

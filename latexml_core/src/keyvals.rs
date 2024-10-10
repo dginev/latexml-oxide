@@ -19,11 +19,11 @@ use crate::{BoxOps, Digested, NO_PROPERTIES};
 
 #[derive(Debug, Clone)]
 struct KVData {
-  key: String,
-  value: Option<ArgWrap>,
-  use_default: bool,
+  key:            String,
+  value:          Option<ArgWrap>,
+  use_default:    bool,
   primary_keyset: String,
-  keysets: Vec<String>,
+  keysets:        Vec<String>,
   digested_value: Option<Digested>,
 }
 
@@ -31,37 +31,37 @@ struct KVData {
 #[derive(Debug, Clone)]
 pub struct KeyVals {
   // which KeyVals are we parsing and how do we behave?
-  prefix: String,
+  prefix:               String,
   /// `keysets should be a list of keysets to find keys inside of.
   /// It defaults to ["_anonymous_"] if empty.
-  keysets: Vec<String>,
-  skip: Vec<String>,
-  set_all: bool,
-  set_internals: bool,
-  skip_missing: SkipMissing,
-  was_digested: bool,
-  hook_missing: Option<Token>,
+  keysets:              Vec<String>,
+  skip:                 Vec<String>,
+  set_all:              bool,
+  set_internals:        bool,
+  skip_missing:         SkipMissing,
+  was_digested:         bool,
+  hook_missing:         Option<Token>,
   // all the internal representations
-  tuples: Vec<KVData>,
-  cached_pairs: Vec<(String, ArgWrap)>,
-  cached_hash: HashMap<String, Vec<ArgWrap>>,
+  tuples:               Vec<KVData>,
+  cached_pairs:         Vec<(String, ArgWrap)>,
+  cached_hash:          HashMap<String, Vec<ArgWrap>>,
   cached_hash_digested: HashMap<String, Vec<Digested>>,
 }
 
 impl Default for KeyVals {
   fn default() -> Self {
     KeyVals {
-      prefix: "KV".to_string(),
-      keysets: vec!["_anonymous_".to_string()],
-      skip: Vec::new(),
-      set_all: false,
-      set_internals: false,
-      skip_missing: SkipMissing::None,
-      was_digested: false,
-      hook_missing: None,
-      tuples: Vec::new(),
-      cached_pairs: Vec::new(),
-      cached_hash: HashMap::default(),
+      prefix:               "KV".to_string(),
+      keysets:              vec!["_anonymous_".to_string()],
+      skip:                 Vec::new(),
+      set_all:              false,
+      set_internals:        false,
+      skip_missing:         SkipMissing::None,
+      was_digested:         false,
+      hook_missing:         None,
+      tuples:               Vec::new(),
+      cached_pairs:         Vec::new(),
+      cached_hash:          HashMap::default(),
       cached_hash_digested: HashMap::default(),
     }
   }
@@ -164,13 +164,13 @@ pub enum SkipMissing {
 
 #[derive(Default)]
 pub struct KeyvalsConfig {
-  pub prefix: Option<String>,
-  pub keysets: Vec<String>,
-  pub set_all: bool,
+  pub prefix:        Option<String>,
+  pub keysets:       Vec<String>,
+  pub set_all:       bool,
   pub set_internals: bool,
-  pub skip: Vec<String>,
-  pub skip_missing: SkipMissing,
-  pub hook_missing: Option<Token>,
+  pub skip:          Vec<String>,
+  pub skip_missing:  SkipMissing,
+  pub hook_missing:  Option<Token>,
 }
 
 impl KeyVals {

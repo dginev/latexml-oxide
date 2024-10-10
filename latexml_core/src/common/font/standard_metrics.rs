@@ -2,37 +2,37 @@ use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 
 pub struct MetricData {
-  pub file: &'static str,
-  pub encoding: &'static str,
-  pub space: f64,
-  pub spaceshrink: f64,
-  pub emwidth: f64,
+  pub file:         &'static str,
+  pub encoding:     &'static str,
+  pub space:        f64,
+  pub spaceshrink:  f64,
+  pub emwidth:      f64,
   pub spacestretch: f64,
-  pub quad: f64,
-  pub extraspace: f64,
-  pub exheight: f64,
-  pub ligatures: HashMap<&'static str, (&'static str, f64, f64, f64)>,
-  pub sizes: HashMap<&'static str, (f64, f64, f64, f64)>,
-  pub kerns: HashMap<&'static str, f64>,
-  pub slant: f64,
+  pub quad:         f64,
+  pub extraspace:   f64,
+  pub exheight:     f64,
+  pub ligatures:    HashMap<&'static str, (&'static str, f64, f64, f64)>,
+  pub sizes:        HashMap<&'static str, (f64, f64, f64, f64)>,
+  pub kerns:        HashMap<&'static str, f64>,
+  pub slant:        f64,
 }
 
 impl Default for MetricData {
   fn default() -> Self {
     MetricData {
-      file: "",
-      encoding: "",
-      space: 0.0,
-      spaceshrink: 0.0,
-      emwidth: 0.0,
+      file:         "",
+      encoding:     "",
+      space:        0.0,
+      spaceshrink:  0.0,
+      emwidth:      0.0,
       spacestretch: 0.0,
-      quad: 0.0,
-      extraspace: 0.0,
-      exheight: 0.0,
-      ligatures: HashMap::default(),
-      sizes: HashMap::default(),
-      kerns: HashMap::default(),
-      slant: 0.0,
+      quad:         0.0,
+      extraspace:   0.0,
+      exheight:     0.0,
+      ligatures:    HashMap::default(),
+      sizes:        HashMap::default(),
+      kerns:        HashMap::default(),
+      slant:        0.0,
     }
   }
 }

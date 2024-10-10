@@ -32,7 +32,7 @@ static NAMESPACE_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)
 
 #[derive(Default, Debug)]
 pub struct TagFrame {
-  model: HashSet<SymStr>,
+  model:      HashSet<SymStr>,
   attributes: HashSet<SymStr>,
 }
 
@@ -40,20 +40,20 @@ static DEFAULT_TAG_FRAME: Lazy<TagFrame> = Lazy::new(TagFrame::default);
 
 #[derive(Default, Debug)]
 pub struct Model {
-  pub schema: Option<Relaxng>,
-  pub schema_data: Option<Vec<SymStr>>,
-  pub schema_class: HashMap<SymStr, HashSet<SymStr>>,
-  pub code_namespace_prefixes: HashMap<SymStr, SymStr>,
-  pub code_namespaces: HashMap<SymStr, SymStr>,
+  pub schema:                      Option<Relaxng>,
+  pub schema_data:                 Option<Vec<SymStr>>,
+  pub schema_class:                HashMap<SymStr, HashSet<SymStr>>,
+  pub code_namespace_prefixes:     HashMap<SymStr, SymStr>,
+  pub code_namespaces:             HashMap<SymStr, SymStr>,
   pub document_namespace_prefixes: HashMap<SymStr, SymStr>,
-  pub document_namespaces: HashMap<SymStr, SymStr>,
+  pub document_namespaces:         HashMap<SymStr, SymStr>,
   // doctype_namespaces: HashMap<SymStr, SymStr>,
   // namespace_errors: usize,
-  pub permissive: bool,
-  pub no_compiled: bool,
-  pub debug_mode: bool,
-  pub namespace_errors: u8,
-  pub tagprop: HashMap<SymStr, TagFrame>,
+  pub permissive:                  bool,
+  pub no_compiled:                 bool,
+  pub debug_mode:                  bool,
+  pub namespace_errors:            u8,
+  pub tagprop:                     HashMap<SymStr, TagFrame>,
 }
 
 #[thread_local]

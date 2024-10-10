@@ -13,8 +13,8 @@ pub type LigatureMatcher =
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct MathLigatureOptions {
-  pub role: Option<String>,
-  pub name: Option<String>,
+  pub role:    Option<String>,
+  pub name:    Option<String>,
   pub meaning: Option<String>,
 }
 
@@ -30,11 +30,11 @@ impl MathLigatureOptions {
 
 #[derive(Clone, Default)]
 pub struct Ligature {
-  pub id: usize,
-  pub regex: Option<String>,
-  pub code: Option<LigatureClosure>,
+  pub id:        usize,
+  pub regex:     Option<String>,
+  pub code:      Option<LigatureClosure>,
   pub font_test: Option<FontTestClosure>,
-  pub matcher: Option<LigatureMatcher>,
+  pub matcher:   Option<LigatureMatcher>,
 }
 
 impl fmt::Debug for Ligature {

@@ -23,13 +23,13 @@ use crate::Digested;
 /// Ideally their ergonomics gets improved, or we gradually phase them out.
 #[derive(Debug, Default)]
 pub struct Localized {
-  dual_branch: Vec<&'static str>,
-  if_frames: Vec<Option<Rc<RefCell<IfFrame>>>>,
-  current_token: Vec<Token>,
+  dual_branch:       Vec<&'static str>,
+  if_frames:         Vec<Option<Rc<RefCell<IfFrame>>>>,
+  current_token:     Vec<Token>,
   align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
   reading_alignment: Vec<Digested>,
-  build_template: Vec<Template>,
-  unlocked: Vec<bool>,
+  build_template:    Vec<Template>,
+  unlocked:          Vec<bool>,
 }
 
 macro_rules! locals {

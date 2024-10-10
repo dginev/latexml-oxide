@@ -79,27 +79,27 @@ pub type BindingDispatcher = Rc<dyn Fn(&str) -> Option<Result<()>>>;
 
 #[derive(Clone)]
 pub struct Config {
-  pub verbosity: i32,
-  pub format: OutputFormat,
-  pub whatsin: DataSize,
-  pub whatsout: DataSize,
-  pub preamble: Option<String>,
-  pub postamble: Option<String>,
-  pub mode: Option<DigestionMode>,
-  pub bindings_dispatch: Option<BindingDispatcher>,
+  pub verbosity:               i32,
+  pub format:                  OutputFormat,
+  pub whatsin:                 DataSize,
+  pub whatsout:                DataSize,
+  pub preamble:                Option<String>,
+  pub postamble:               Option<String>,
+  pub mode:                    Option<DigestionMode>,
+  pub bindings_dispatch:       Option<BindingDispatcher>,
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
 }
 impl Default for Config {
   fn default() -> Self {
     Config {
-      verbosity: 1,
-      format: OutputFormat::XML,
-      whatsin: DataSize::Document,
-      whatsout: DataSize::Document,
-      preamble: None,
-      postamble: None,
-      mode: Some(DigestionMode::LaTeX),
-      bindings_dispatch: None,
+      verbosity:               1,
+      format:                  OutputFormat::XML,
+      whatsin:                 DataSize::Document,
+      whatsout:                DataSize::Document,
+      preamble:                None,
+      postamble:               None,
+      mode:                    Some(DigestionMode::LaTeX),
+      bindings_dispatch:       None,
       extra_bindings_dispatch: None,
     }
   }

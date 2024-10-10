@@ -147,16 +147,16 @@ pub type StashTable = Vec<(TableName, SymStr, Stored)>;
 /// For each of several tables (being "value", "meaning", "catcode" or other space of names),
 /// each table maintains the bound values, and "undo" defines the stack frames
 pub struct UndoFrame {
-  locked: bool,
-  meaning: AssignmentCount,
-  value: AssignmentCount,
-  catcode: AssignmentCount,
-  mathcode: AssignmentCount,
-  sfcode: AssignmentCount,
-  lccode: AssignmentCount,
-  uccode: AssignmentCount,
-  delcode: AssignmentCount,
-  stash: AssignmentCount,
+  locked:       bool,
+  meaning:      AssignmentCount,
+  value:        AssignmentCount,
+  catcode:      AssignmentCount,
+  mathcode:     AssignmentCount,
+  sfcode:       AssignmentCount,
+  lccode:       AssignmentCount,
+  uccode:       AssignmentCount,
+  delcode:      AssignmentCount,
+  stash:        AssignmentCount,
   stash_active: AssignmentCount,
 }
 
@@ -217,44 +217,44 @@ pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 pub struct State {
   // Tables
   /// bookkeeps arbitrary Stored values
-  value: Table,
+  value:                       Table,
   /// The definition assocated with a key, usually a control-sequence.
-  meaning: Table,
-  stash: Table,
-  stash_active: Table,
-  catcode: Table,
-  mathcode: Table,
-  sfcode: Table,
-  lccode: Table,
-  uccode: Table,
-  delcode: Table,
+  meaning:                     Table,
+  stash:                       Table,
+  stash_active:                Table,
+  catcode:                     Table,
+  mathcode:                    Table,
+  sfcode:                      Table,
+  lccode:                      Table,
+  uccode:                      Table,
+  delcode:                     Table,
   // Table bookkeeping
-  undo: VecDeque<UndoFrame>,
+  undo:                        VecDeque<UndoFrame>,
   // stateful runtime - data structures
   /// the schema-derived model used for the current document
-  prefixes: HashMap<SymStr, bool>, // ?
-  pub tag_properties: HashMap<SymStr, TagOptions>,
+  prefixes:                    HashMap<SymStr, bool>, // ?
+  pub tag_properties:          HashMap<SymStr, TagOptions>,
   /// an optional indirect model for long-distance relationships
-  pub indirect_model: Option<IndirectModel>,
+  pub indirect_model:          Option<IndirectModel>,
   /// Document-related resources declared during core conversion, pending until XML is finalized
-  pub pending_resources: Vec<Resource>,
+  pub pending_resources:       Vec<Resource>,
   // stateful runtime - simple fields
   // TODO: Maybe group these in a "SessionFlags" struct?
   //       we can then reset that if we reimplement a daemon app
-  pub verbosity: i32,
-  pub input_encoding: Option<String>,
+  pub verbosity:               i32,
+  pub input_encoding:          Option<String>,
   // strict: bool,
   // include_comments: bool,
   /// current paths to search for TeX inputs
-  pub search_paths: VecDeque<String>,
+  pub search_paths:            VecDeque<String>,
   /// current paths to search for graphics
-  pub graphics_paths: VecDeque<String>,
+  pub graphics_paths:          VecDeque<String>,
   // include_styles: bool,
   /// flag to disable math parsing
-  pub nomathparse: bool,
+  pub nomathparse:             bool,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   /// A dispatcher routing to the compiled code of the in-distro latexml bindings
-  pub bindings_dispatch: Option<BindingDispatcher>,
+  pub bindings_dispatch:       Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
 }
@@ -273,33 +273,33 @@ impl Default for State {
 
     State {
       // Tables
-      value: HashMap::default(),
-      meaning: HashMap::default(),
-      stash: HashMap::default(),
-      stash_active: HashMap::default(),
-      catcode: HashMap::default(),
-      mathcode: HashMap::default(),
-      sfcode: HashMap::default(),
-      lccode: HashMap::default(),
-      uccode: HashMap::default(),
-      delcode: HashMap::default(),
+      value:                   HashMap::default(),
+      meaning:                 HashMap::default(),
+      stash:                   HashMap::default(),
+      stash_active:            HashMap::default(),
+      catcode:                 HashMap::default(),
+      mathcode:                HashMap::default(),
+      sfcode:                  HashMap::default(),
+      lccode:                  HashMap::default(),
+      uccode:                  HashMap::default(),
+      delcode:                 HashMap::default(),
       // Table bookkeeping
-      undo: undo_vdq,
+      undo:                    undo_vdq,
       // stateful runtime - data structures
-      prefixes: HashMap::default(),
-      tag_properties: HashMap::default(),
-      indirect_model: None,
-      pending_resources: Vec::new(),
+      prefixes:                HashMap::default(),
+      tag_properties:          HashMap::default(),
+      indirect_model:          None,
+      pending_resources:       Vec::new(),
       // stateful runtime - simple fields
-      verbosity: 0,
-      input_encoding: None,
+      verbosity:               0,
+      input_encoding:          None,
       // strict: false,
       // include_comments: true,
-      search_paths: VecDeque::new(),
-      graphics_paths: VecDeque::new(),
+      search_paths:            VecDeque::new(),
+      graphics_paths:          VecDeque::new(),
       // include_styles: false,
-      nomathparse: false,
-      bindings_dispatch: None,
+      nomathparse:             false,
+      bindings_dispatch:       None,
       extra_bindings_dispatch: None,
     }
   }
@@ -351,17 +351,17 @@ macro_rules! std_state_mut {
 /// state fields allowed for customization during construction
 #[derive(Default)]
 pub struct StateOptions {
-  pub model: Option<Model>,
-  pub verbosity: Option<i32>,
-  pub strict: Option<bool>,
+  pub model:            Option<Model>,
+  pub verbosity:        Option<i32>,
+  pub strict:           Option<bool>,
   pub include_comments: Option<bool>,
-  pub include_styles: Option<bool>,
-  pub nomathparse: Option<bool>,
-  pub documentid: Option<String>,
-  pub search_paths: Option<Vec<String>>,
-  pub graphics_paths: Option<Vec<String>>,
-  pub catcodes: Option<Catcodes>,
-  pub input_encoding: Option<String>,
+  pub include_styles:   Option<bool>,
+  pub nomathparse:      Option<bool>,
+  pub documentid:       Option<String>,
+  pub search_paths:     Option<Vec<String>>,
+  pub graphics_paths:   Option<Vec<String>>,
+  pub catcodes:         Option<Catcodes>,
+  pub input_encoding:   Option<String>,
 }
 
 // Public interface: package-access methods, for an implied thread-local singleton STATE

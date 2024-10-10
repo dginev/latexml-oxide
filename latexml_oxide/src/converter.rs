@@ -14,20 +14,20 @@ use crate::core_interface::DigestionAPI;
 const CONVERTER_IDENTITY: &str = "latexml_oxide (v0.4.0)";
 
 pub struct ConversionResponse {
-  pub result: Option<String>,
-  pub log: String,
-  pub status: String,
+  pub result:      Option<String>,
+  pub log:         String,
+  pub status:      String,
   pub status_code: usize,
 }
 pub struct Runtime {
-  pub status: String,
+  pub status:      String,
   pub status_code: usize,
 }
 pub struct Converter {
   runtime: Runtime,
-  ready: bool,
-  opts: Config,
-  core: Core,
+  ready:   bool,
+  opts:    Config,
+  core:    Core,
 }
 
 impl Converter {
@@ -35,7 +35,7 @@ impl Converter {
   pub fn from_config(opts: Config) -> Converter {
     Converter {
       runtime: Runtime {
-        status: String::new(),
+        status:      String::new(),
         status_code: 3,
       },
       ready: false,
@@ -74,9 +74,9 @@ impl Converter {
       }
       if !self.ready {
         return ConversionResponse {
-          result: None,
-          log: self.flush_log(),
-          status: s!("Initialization failed."),
+          result:      None,
+          log:         self.flush_log(),
+          status:      s!("Initialization failed."),
           status_code: 3,
         };
       }
@@ -184,9 +184,9 @@ impl Converter {
           Ok(tex) => tex,
           Err(e) => {
             return ConversionResponse {
-              result: None,
-              log: self.flush_log(),
-              status: s!("fatal:untex:{:?}", e),
+              result:      None,
+              log:         self.flush_log(),
+              status:      s!("fatal:untex:{:?}", e),
               status_code: 3,
             };
           },

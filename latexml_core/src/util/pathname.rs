@@ -10,9 +10,9 @@ use std::sync::Mutex;
 #[derive(Debug, Clone, Default)]
 pub struct PathnameFindOptions {
   /// the allowed/requested paths to search in
-  pub paths: Option<Vec<String>>,
+  pub paths:               Option<Vec<String>>,
   /// the file extensions to search for
-  pub extensions: Option<Vec<String>>,
+  pub extensions:          Option<Vec<String>>,
   /// the location of the installation subdirectory (deprecated?)
   pub installation_subdir: Option<String>,
 }

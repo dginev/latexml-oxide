@@ -62,9 +62,9 @@ impl From<&str> for ConditionalType {
 #[derive(Default)]
 pub struct ConditionalOptions {
   /// scope to install in state
-  pub scope: Option<Scope>,
+  pub scope:   Option<Scope>,
   /// is this definition locked?
-  pub locked: Option<bool>,
+  pub locked:  Option<bool>,
   /// skipper, currently only used for \ifcase.
   // TODO: implement this?
   pub skipper: Option<bool>,
@@ -74,24 +74,24 @@ pub struct ConditionalOptions {
 #[derive(Clone)]
 pub struct Conditional {
   /// the command sequence
-  pub cs: Token,
+  pub cs:               Token,
   /// list of parameters, if any
-  pub paramlist: Option<Parameters>,
+  pub paramlist:        Option<Parameters>,
   /// a test closure, if implemented in a binding
-  pub test: Option<ConditionalClosure>,
+  pub test:             Option<ConditionalClosure>,
   /// the kind of piece in the syntax (if,else,fi...)
   pub conditional_type: ConditionalType,
   /// a skipper for \ifcase
-  pub skipper: Option<bool>,
+  pub skipper:          Option<bool>,
 }
 impl Default for Conditional {
   fn default() -> Self {
     Conditional {
-      cs: T_CS!("Conditional"),
-      paramlist: None,
-      test: None,
+      cs:               T_CS!("Conditional"),
+      paramlist:        None,
+      test:             None,
       conditional_type: ConditionalType::Unknown,
-      skipper: None,
+      skipper:          None,
     }
   }
 }
@@ -156,15 +156,15 @@ impl Definition for Conditional {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfFrame {
   /// the token which started the conditional
-  pub token: Token,
+  pub token:   Token,
   /// source location of the conditional start
-  pub start: Locator,
+  pub start:   Locator,
   /// flag: currently parsing the test
   pub parsing: bool,
   /// flag: already seen an else at this level
-  pub elses: bool,
+  pub elses:   bool,
   /// in nested conditionals, give each an id
-  pub ifid: i64,
+  pub ifid:    i64,
 }
 
 impl Conditional {

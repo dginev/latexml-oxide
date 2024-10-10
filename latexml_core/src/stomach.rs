@@ -26,13 +26,13 @@ static MAXSTACK: usize = 200;
 #[derive(Default)]
 pub struct Stomach {
   /// currently invoked tokens
-  pub token_stack: Vec<Token>,
+  pub token_stack:    Vec<Token>,
   /// tracks the tokens of boxing groups(?)
-  pub boxing: Vec<Token>,
+  pub boxing:         Vec<Token>,
   /// localized box lists for stacked digestion calls
   localized_box_list: Vec<Vec<Digested>>,
   /// collects the intermediate boxes resulting from a `digest` call.
-  pub box_list: Vec<Digested>,
+  pub box_list:       Vec<Digested>,
 }
 
 #[thread_local]

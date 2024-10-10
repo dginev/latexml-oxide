@@ -18,48 +18,48 @@ use crate::Digested;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {
-  pub bounded: bool,
-  pub is_prefix: bool,
-  pub require_math: bool,
-  pub forbid_math: bool,
-  pub robust: bool,
-  pub locked: bool,
-  pub nargs: Option<usize>,
-  pub scope: Option<Scope>,
-  pub font: Option<FontDirective>,
-  pub mode: Option<String>,
-  pub alias: Option<String>,
+  pub bounded:       bool,
+  pub is_prefix:     bool,
+  pub require_math:  bool,
+  pub forbid_math:   bool,
+  pub robust:        bool,
+  pub locked:        bool,
+  pub nargs:         Option<usize>,
+  pub scope:         Option<Scope>,
+  pub font:          Option<FontDirective>,
+  pub mode:          Option<String>,
+  pub alias:         Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,
-  pub after_digest: Vec<DigestionClosure>,
-  pub reversion: Option<Reversion>,
+  pub after_digest:  Vec<DigestionClosure>,
+  pub reversion:     Option<Reversion>,
 }
 
 #[derive(Clone)]
 pub struct Primitive {
-  pub cs: Token,
-  pub paramlist: Option<Parameters>,
+  pub cs:            Token,
+  pub paramlist:     Option<Parameters>,
   // TODO: we have a case where the replacement is a simple string/character
   //       which gets auto-wrapped with a Tbox during invoke.
-  pub replacement: Option<PrimitiveBody>,
+  pub replacement:   Option<PrimitiveBody>,
   pub before_digest: Vec<BeforeDigestClosure>,
-  pub after_digest: Vec<DigestionClosure>,
-  pub alias: Option<String>,
-  pub nargs: Option<usize>,
-  pub reversion: Option<Reversion>,
-  pub is_prefix: bool,
+  pub after_digest:  Vec<DigestionClosure>,
+  pub alias:         Option<String>,
+  pub nargs:         Option<usize>,
+  pub reversion:     Option<Reversion>,
+  pub is_prefix:     bool,
 }
 impl Default for Primitive {
   fn default() -> Self {
     Primitive {
-      cs: T_CS!("Primitive"),
-      paramlist: None,
-      replacement: None,
-      alias: None,
+      cs:            T_CS!("Primitive"),
+      paramlist:     None,
+      replacement:   None,
+      alias:         None,
       before_digest: Vec::new(),
-      after_digest: Vec::new(),
-      nargs: None,
-      reversion: None,
-      is_prefix: false,
+      after_digest:  Vec::new(),
+      nargs:         None,
+      reversion:     None,
+      is_prefix:     false,
     }
   }
 }

@@ -26,25 +26,25 @@ pub struct Args(pub Vec<Option<XM>>);
 /// during grammatical processing
 pub struct XProps {
   /// text content of the node
-  pub content: Option<Cow<'static, str>>,
+  pub content:   Option<Cow<'static, str>>,
   /// grammatical role used during math parsing
-  pub role: Option<Cow<'static, str>>,
+  pub role:      Option<Cow<'static, str>>,
   /// conceptual meaning of a construct, used in disambiguation and Content output
-  pub meaning: Option<Cow<'static, str>>,
+  pub meaning:   Option<Cow<'static, str>>,
   /// similar to `meaning`, but more fixed, usually associated with constants
-  pub name: Option<Cow<'static, str>>,
+  pub name:      Option<Cow<'static, str>>,
   /// script position w.r.t to baseline
   pub scriptpos: Option<Cow<'static, str>>,
   /// a unique identifier, in the `xml:id` sense
-  pub id: Option<Cow<'static, str>>,
+  pub id:        Option<Cow<'static, str>>,
   /// a pointer to a different node, usually for `XMRef`
-  pub idref: Option<Cow<'static, str>>,
+  pub idref:     Option<Cow<'static, str>>,
   /// an intermediate key to be fully realized as an id at a later time
-  pub xmkey: Option<Cow<'static, str>>,
+  pub xmkey:     Option<Cow<'static, str>>,
   /// an optional subtree-specific Font
-  pub font: Option<Font>,
+  pub font:      Option<Font>,
   /// usually associated with the internal `_font` attribute references
-  pub fontref: Option<Cow<'static, str>>,
+  pub fontref:   Option<Cow<'static, str>>,
 }
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
