@@ -506,7 +506,6 @@ macro_rules! LookupRegisterOrDefault {
 // Whatsit.                     useful for setting Whatsit properties,
 //   properties      : a hashref listing default values of properties to assign to the Whatsit.
 //                     These properties can be used in the constructor.
-#[rustfmt::skip]
 #[macro_export]
 macro_rules! DefConstructor {
   // Closure replacement flavors
@@ -1036,7 +1035,6 @@ merge_font(fontmap!($key => $val))
 /// in the `Tokens` or tokenized string and the result is used as the expansion
 /// of the control sequence. If a closure is used, it is called at expansion time
 /// and should return a list of tokens as its result.
-#[rustfmt::skip]
 #[macro_export]
 macro_rules! DefMacro {
   // simplest case - mock macro that discards everything.
