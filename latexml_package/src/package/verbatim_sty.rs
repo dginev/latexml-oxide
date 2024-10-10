@@ -105,7 +105,7 @@ LoadDefinitions!({
         lines.push(pre);
         if !post.is_empty() {
           let message = s!("Characters dropped after '\\end{{{}}}'", env);
-          Info!("unexpected","stuff", message);
+          Info!("unexpected", "stuff", message);
         }
         break;
       } else {
@@ -118,8 +118,13 @@ LoadDefinitions!({
     let mut tokens = Vec::new();
     for line in &lines {
       tokens.push(T_CS!("\\verbatim@startline"));
-      tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"),
-        vec![Tokens::new(ExplodeText!(line))]).unlist());
+      tokens.extend(
+        Invocation!(
+          T_CS!("\\verbatim@addtoline"),
+          vec![Tokens::new(ExplodeText!(line))]
+        )
+        .unlist(),
+      );
       tokens.push(T_CS!("\\verbatim@processline"));
     }
     tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)]).unlist());

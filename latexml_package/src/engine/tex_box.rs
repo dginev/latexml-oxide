@@ -1,5 +1,5 @@
 //! TeX Box
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -15,9 +15,18 @@ LoadDefinitions!({
   // remain in the constructed tree.
   DefPrimitive!("{", {
     bgroup();
-    let open = Tbox::new(*EMPTY_SYM, None, None,
-        Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true));
-    let mode = Some(if lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
+    let open = Tbox::new(
+      *EMPTY_SYM,
+      None,
+      None,
+      Tokens!(T_BEGIN!()),
+      stored_map!("isEmpty" => true),
+    );
+    let mode = Some(if lookup_bool("IN_MATH") {
+      TexMode::Math
+    } else {
+      TexMode::Text
+    });
     let body = stomach::digest_next_body(None)?;
     let mut boxes = vec![Digested::from(open)];
     boxes.extend(body);
@@ -33,14 +42,20 @@ LoadDefinitions!({
       mode,
       font,
       locator: Locator::default(),
-      properties: SymHashMap::default()
+      properties: SymHashMap::default(),
     }
   });
 
   DefPrimitive!("}", {
     let f = LookupFont!();
     egroup()?;
-    Tbox::new(*EMPTY_SYM, f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true))
+    Tbox::new(
+      *EMPTY_SYM,
+      f,
+      None,
+      Tokens!(T_END!()),
+      stored_map!("isEmpty"=>true),
+    )
   });
 
   // These are for those screwy cases where you need to create a group like box,
@@ -60,14 +75,22 @@ LoadDefinitions!({
     reversion => ""
   );
 
-  DefMacro!("\\lx@nounicode {}", r"\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi");
-
-  DefConstructor!("\\lx@framed[]{}",
-    "<ltx:text framed='#frame' _noautoclose='1'>#2</ltx:text>" // TODO
-  //   properties => { frame => sub { ToString($_[1] || 'rectangle'); }}
+  DefMacro!(
+    "\\lx@nounicode {}",
+    r"\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi"
   );
-  DefConstructor!("\\lx@hflipped{}",
-    "<ltx:text class='ltx_hflipped' _noautoclose='1'>#1</ltx:text>");
+
+  DefConstructor!(
+    "\\lx@framed[]{}",
+    "<ltx:text framed='#frame' _noautoclose='1'>#2</ltx:text>" /* TODO
+                                                                *   properties => { frame => sub
+                                                                * { ToString($_[1] ||
+                                                                * 'rectangle'); }} */
+  );
+  DefConstructor!(
+    "\\lx@hflipped{}",
+    "<ltx:text class='ltx_hflipped' _noautoclose='1'>#1</ltx:text>"
+  );
 
   // sub reportNoUnicode {
   //   my ($cs) = @_;
@@ -99,7 +122,6 @@ LoadDefinitions!({
   // \everyhbox      pt holds tokens inserted at the start of every hbox.
   // \everyvbox      pt holds tokens inserted at the start of every vbox.
   // ======================================================================
-  
 
   DefParameterType!(BoxSpecification, sub[_inner, _extra] {
     if let Some(key) = gullet::read_keyword(&["to", "spread"])? {
@@ -151,16 +173,20 @@ LoadDefinitions!({
   AssignValue!("TEXT_MODE_BINDINGS"  => Stored::VecDequeStored(VecDeque::new()));
   AssignValue!("HTEXT_MODE_BINDINGS" => Stored::VecDequeStored(VecDeque::new()));
   AssignValue!("VTEXT_MODE_BINDINGS" => Stored::VecDequeStored(VecDeque::new()));
-  push_value("HTEXT_MODE_BINDINGS", Tokens!(T_MATH!(), T_CS!("\\lx@dollar@in@textmode")))?;
-  push_value("VTEXT_MODE_BINDINGS", Tokens!(T_MATH!(), T_CS!("\\lx@dollar@in@normalmode")))?;
-
+  push_value(
+    "HTEXT_MODE_BINDINGS",
+    Tokens!(T_MATH!(), T_CS!("\\lx@dollar@in@textmode")),
+  )?;
+  push_value(
+    "VTEXT_MODE_BINDINGS",
+    Tokens!(T_MATH!(), T_CS!("\\lx@dollar@in@normalmode")),
+  )?;
 
   // TODO: collapseSVGGroup
   Tag!("svg:g", after_close => sub[_document, _node] {
     Err(unported!())?
     // collapse_svg_group(document, node)
   });
-
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props] {
     // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
@@ -263,7 +289,7 @@ LoadDefinitions!({
       //   return; });
     }
   );
-    
+
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Commands to store and use boxes
   // ----------------------------------------------------------------------
@@ -280,8 +306,8 @@ LoadDefinitions!({
   // \lastbox        c  is void or the last hbox or vbox on the current list.
   // ======================================================================
 
-
-  DefPrimitive!("\\lastbox", {// Hopefully, the correct box got seen!
+  DefPrimitive!("\\lastbox", {
+    // Hopefully, the correct box got seen!
     pop_box_list().map(|b| vec![b]).unwrap_or_default()
   });
 
@@ -309,7 +335,6 @@ LoadDefinitions!({
     state::assign_value(&format!("box{}", number.value_of()), stuff, scope);
     rest
   });
-
 
   // # <box dimension> = \ht | \wd | \dp
   DefRegister!("\\ht Number", Dimension::new(0),
@@ -463,7 +488,7 @@ LoadDefinitions!({
   },
   optional => true,
   predigest => sub[arg] { Ok(arg.undigested()) });
-  
+
   // \hrule, \vrule are awkward in trying to deal with 3 cases
   //  * as rules within an alignment/table
   //  * as separating lines within text
@@ -545,9 +570,7 @@ LoadDefinitions!({
 
 // Risky: I think this needs to be digested as a body to work like TeX (?)
 // but parameter think's it's just parsing from gullet...
-pub fn read_box_contents(
-  everybox_opt: Option<Tokens>,
-) -> Result<Tokens> {
+pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
   while let Some(t) = gullet::read_token()? {
     if t.get_catcode() == Catcode::BEGIN {
       break;

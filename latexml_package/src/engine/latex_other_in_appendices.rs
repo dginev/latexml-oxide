@@ -30,8 +30,10 @@ LoadDefinitions!({
     r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
   );
 
-  // PORT: continue here... \noexpand is passed in as an argument, which seems wrong - it should be #1 ?
-  TeX!(r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
+  // PORT: continue here... \noexpand is passed in as an argument, which seems wrong - it should be
+  // #1 ?
+  TeX!(
+    r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
   \def\i{I}\def\j{J}%
   \def\reserved@a##1##2{\let##1##2\reserved@a}%
   \expandafter\reserved@a\@uclclist\reserved@b{\reserved@b\@gobble}%
@@ -51,7 +53,8 @@ LoadDefinitions!({
   \protected@edef\reserved@a{\lowercase{#1}}%
   \reserved@a
 }}
-\protected@edef\MakeLowercase#1{\MakeLowercase{#1}}");
+\protected@edef\MakeLowercase#1{\MakeLowercase{#1}}"
+  );
 
   //======================================================================
   DefMacro!("\\@ehc", "I can't help");
@@ -139,7 +142,9 @@ LoadDefinitions!({
     "###
   );
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
-  DefPrimitive!("\\@onlypreamble{}", { only_preamble("\\@onlypreamble")?; });
+  DefPrimitive!("\\@onlypreamble{}", {
+    only_preamble("\\@onlypreamble")?;
+  });
   DefPrimitive!("\\GenericError{}{}{}{}", sub[(_arg1,arg2,arg3,arg4)] {
     make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error")?;
   });
@@ -229,7 +234,8 @@ LoadDefinitions!({
      }
      \def\@latex@info@no@line#1{%
        \@latex@info{#1\@gobble}}
-     ");
+     "
+  );
   DefPrimitive!("\\@setsize{}{}{}{}", None);
   Let!("\\@warning", "\\@latex@warning");
   Let!("\\@@warning", "\\@latex@warning@no@line");

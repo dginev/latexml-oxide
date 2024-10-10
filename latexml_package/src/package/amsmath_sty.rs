@@ -17,8 +17,6 @@ LoadDefinitions!({
   // RequirePackage!("amstext");
   // RequirePackage!("amsopn");
 
-
-
   //======================================================================
   // Section 4.2 Math spacing commands
   // \, == \thinspace

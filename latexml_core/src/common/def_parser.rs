@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
 
-use crate::common::arena::{self,EMPTY_SYM};
+use crate::common::arena::{self, EMPTY_SYM};
 use crate::common::error::*;
 
 use crate::mouth;
@@ -22,10 +22,7 @@ static PARAMSPECT_CHECK_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap());
 
 /// If calling at compile-time, pass `None` for state, to avoid initialization.
-pub fn parse_prototype(
-  proto: &str,
-  init_flag: bool
-) -> Result<(Token, Option<Parameters>)> {
+pub fn parse_prototype(proto: &str, init_flag: bool) -> Result<(Token, Option<Parameters>)> {
   let cs;
   let normalized_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
     cs = T_CS!(s!("\\{}", captures.get(1).map_or("", |m| m.as_str())));

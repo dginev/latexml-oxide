@@ -3,9 +3,9 @@ use std::borrow::Cow;
 
 use crate::common::error::*;
 // use crate::common::font::Font;
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::arena::SymHashMap as HashMap;
 use crate::state::Scope;
 
 use crate::definition::{
@@ -171,10 +171,7 @@ impl MathPrimitiveOptions {
     }
     // TODO: Do we want to run the font closures here? Maybe?
     if let Some(ref font_directive) = self.font {
-      h.insert(
-        "font",
-        Stored::FontDirective(font_directive.clone()),
-      );
+      h.insert("font", Stored::FontDirective(font_directive.clone()));
     }
     if let Some(ref lpadding) = self.lpadding {
       h.insert("lpadding", (*lpadding).into());
@@ -247,14 +244,11 @@ impl PartialEq for MathPrimitive {
 // }
 impl Object for MathPrimitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "MathPrimitive") }
-
 }
 impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
-  fn invoke(&self, _once_only: bool) -> Result<Tokens> {
-    Ok(Tokens!())
-  }
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     // Info!("MathPrimitive", "invoke", stomach, "invoke for {:?}", self.cs);
     // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -266,22 +260,18 @@ impl Definition for MathPrimitive {
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     let replacement_result = match self.replacement {
       None => Vec::new(),
-      Some(ref closure) => closure( args)?,
+      Some(ref closure) => closure(args)?,
     };
     result.extend(replacement_result);
     let mut w = Whatsit::default();
-    let after_result = self.execute_after_digest( &mut w)?;
+    let after_result = self.execute_after_digest(&mut w)?;
     result.extend(after_result);
 
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
     Ok(result)
   }
 
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-  ) -> Result<Vec<Node>> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,

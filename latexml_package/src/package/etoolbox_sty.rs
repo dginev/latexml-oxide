@@ -1151,7 +1151,8 @@ LoadDefinitions!({
   \else
     \expandafter\@secondoftwo
   \fi}
-");
+"
+  );
 
   // STOPGAP! Because a lot of LaTeXML definitions are realized via Perl subroutines,
   // the "\meaning#1" tests in the native definition of this macro would return CODE(...) strings
@@ -1264,7 +1265,8 @@ LoadDefinitions!({
               {\etb@dbg@info{pro}}
               {}%
             \etb@dbg@info{pos}\@firstoftwo}}
-        {\etb@dbg@fail{mac}\@secondoftwo}}}");
+        {\etb@dbg@fail{mac}\@secondoftwo}}}"
+  );
 
   // Need to be able to examine a Macro's replacement for a match (and then replace)
   // we can only do this for token expansions, and should return failure for all else.
@@ -1683,7 +1685,8 @@ LoadDefinitions!({
 
 \newcommand*{\dolistcsloop}{\forlistcsloop\do}
 
-");
+"
+  );
   //======================================================================
   // 2.5 Additional Document Hooks
   // \AfterPreamble

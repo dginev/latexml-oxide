@@ -1,15 +1,15 @@
 use libxml::tree::Node;
 use std::borrow::Cow;
 
+use crate::common::arena::{SymHashMap, EMPTY_SYM};
 use crate::common::error::*;
 use crate::common::object::Object;
-use crate::state::Scope;
-use crate::common::arena::{SymHashMap,EMPTY_SYM};
 use crate::definition::{
   BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
 };
 use crate::document::Document;
 use crate::parameter::Parameters;
+use crate::state::Scope;
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -74,16 +74,13 @@ impl PartialEq for Primitive {
 // }
 impl Object for Primitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Primitive") }
-
 }
 impl Definition for Primitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn is_prefix(&self) -> bool { self.is_prefix }
 
-  fn invoke(&self, _once_only: bool) -> Result<Tokens> {
-    Ok(Tokens!())
-  }
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     Debug!("primitive invoke for {:?}", self.cs);
     // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -96,23 +93,30 @@ impl Definition for Primitive {
     match self.replacement {
       Some(PrimitiveBody::Closure(ref closure)) => invoked_boxes.extend(closure(args)?),
       Some(PrimitiveBody::String(symbol)) => {
-        let cs_token = self.alias.as_ref().map(|alias| T_CS!(alias)).unwrap_or(self.cs);
+        let cs_token = self
+          .alias
+          .as_ref()
+          .map(|alias| T_CS!(alias))
+          .unwrap_or(self.cs);
         let box_tokens = vec![cs_token];
         if let Some(ref _params) = self.paramlist {
           todo!(); // we need to generalize the revert functions to take ArgWrap-typed arguments
-          // box_tokens.extend(params.revert_arguments(args)?);
+                   // box_tokens.extend(params.revert_arguments(args)?);
         }
         let box_props = if symbol == *EMPTY_SYM {
           SymHashMap::default()
         } else {
           stored_map!("isEmpty" => true)
         };
-        invoked_boxes.push(Digested::from(
-          Tbox::new(symbol, None, None, Tokens::new(box_tokens),
-          box_props))
-        );
+        invoked_boxes.push(Digested::from(Tbox::new(
+          symbol,
+          None,
+          None,
+          Tokens::new(box_tokens),
+          box_props,
+        )));
       },
-      None => {}
+      None => {},
     }
     if !self.after_digest.is_empty() {
       // optimize to avoid needless generation of whatsits
@@ -125,11 +129,7 @@ impl Definition for Primitive {
     Ok(invoked_boxes)
   }
 
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-  ) -> Result<Vec<Node>> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,

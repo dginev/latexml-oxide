@@ -24,7 +24,8 @@ macro_rules! map {
 #[macro_export]
 macro_rules! stored_map {
   ($( $key:expr => $val:expr ),*) => {{
-    let mut map : $crate::common::arena::SymHashMap<$crate::common::store::Stored> = $crate::common::arena::SymHashMap::default();
+    let mut map : $crate::common::arena::SymHashMap<$crate::common::store::Stored> =
+      $crate::common::arena::SymHashMap::default();
     $( map.insert($key, $val.into()); )*
     map
   }}

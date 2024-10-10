@@ -7,8 +7,8 @@ use std::rc::Rc;
 
 use crate::alignment::Alignment;
 use crate::comment::Comment;
-use crate::common::arena::{self, SymStr};
 use crate::common::arena::SymHashMap as HashMap;
+use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -363,18 +363,9 @@ impl BoxOps for Digested {
   fn get_string(&self) -> Result<Cow<str>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b
-        .borrow()
-        .get_string()
-        .map(|v| Cow::Owned(v.into_owned())),
-      List(ref l) => l
-        .borrow()
-        .get_string()
-        .map(|v| Cow::Owned(v.into_owned())),
-      Whatsit(ref w) => w
-        .borrow()
-        .get_string()
-        .map(|v| Cow::Owned(v.into_owned())),
+      TBox(ref b) => b.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
+      List(ref l) => l.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
+      Whatsit(ref w) => w.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
       _ => todo!(),
     }
   }
@@ -424,21 +415,9 @@ impl BoxOps for Digested {
   fn get_font(&self) -> Result<Option<Cow<Font>>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => Ok(
-        b.borrow()
-          .get_font()?
-          .map(|v| Cow::Owned(v.into_owned())),
-      ),
-      List(ref l) => Ok(
-        l.borrow()
-          .get_font()?
-          .map(|v| Cow::Owned(v.into_owned())),
-      ),
-      Whatsit(ref w) => Ok(
-        w.borrow()
-          .get_font()?
-          .map(|t| Cow::Owned(t.into_owned())),
-      ),
+      TBox(ref b) => Ok(b.borrow().get_font()?.map(|v| Cow::Owned(v.into_owned()))),
+      List(ref l) => Ok(l.borrow().get_font()?.map(|v| Cow::Owned(v.into_owned()))),
+      Whatsit(ref w) => Ok(w.borrow().get_font()?.map(|t| Cow::Owned(t.into_owned()))),
       Postponed(ref _tks) => Ok(None),
       _ => todo!(),
     }
@@ -447,10 +426,7 @@ impl BoxOps for Digested {
   /// Note the difference between calling `compute_size` on a Digested object, and calling it on a
   /// concrete box type. When called on `Digested` it will opt for caching the computed sizes,
   /// but when called on the concrete types it will always compute sizes fresh.
-  fn compute_size(
-    &self,
-    options: HashMap<Stored>,
-  ) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => b.borrow_mut().compute_size_and_cache(options),

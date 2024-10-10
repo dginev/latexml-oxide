@@ -4,7 +4,7 @@ use libxml::tree::SaveOptions;
 use std::env;
 use std::process;
 
-use latexml::util::test::{new_test_engine,lex_single_tex_formula};
+use latexml::util::test::{lex_single_tex_formula, new_test_engine};
 use latexml_core::common::error::Result;
 use latexml_core::state;
 use latexml_math_parser::*;
@@ -32,7 +32,8 @@ fn main() -> Result<()> {
     },
   };
   let mut core_engine = new_test_engine();
-  let (lexemes, mut lex_nodes, xmath_opt, mut doc) = lex_single_tex_formula(&source, &mut core_engine);
+  let (lexemes, mut lex_nodes, xmath_opt, mut doc) =
+    lex_single_tex_formula(&source, &mut core_engine);
   assert!(!lexemes.is_empty());
   eprintln!("\n\nlexemes: {lexemes:?}\n");
 
@@ -58,11 +59,7 @@ fn main() -> Result<()> {
       })
     );
   } else {
-    Warn!(
-      "math",
-      "parse",
-      "Grammar did not recognize expression."
-    );
+    Warn!("math", "parse", "Grammar did not recognize expression.");
     process::exit(1);
   }
   Ok(())

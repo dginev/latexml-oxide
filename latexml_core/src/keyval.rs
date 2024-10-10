@@ -4,8 +4,8 @@
 //! Used in conjunction with `KeyVals` to
 //!  fully implement KeyVal pairs.
 
-use std::rc::Rc;
 use std::borrow::Cow;
+use std::rc::Rc;
 
 use crate::binding::def::dialect::{def_conditional, def_macro};
 use crate::common::def_parser::parse_parameters;
@@ -14,9 +14,9 @@ use crate::common::store::Stored;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::ConditionalOptions;
 use crate::definition::{ExpansionBody, ExpansionClosure};
+use crate::mouth::tokenize;
 use crate::parameter::Parameter;
 use crate::state;
-use crate::mouth::tokenize;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -57,9 +57,7 @@ impl KeyVal {
   pub fn get_prop(&self, key: &str) -> Option<Stored> {
     state::lookup_value(&s!("KEYVAL@{}@{}", key, self.get_header()))
   }
-  pub fn get_default(&self) -> Option<Stored> {
-    self.get_prop("default")
-  }
+  pub fn get_default(&self) -> Option<Stored> { self.get_prop("default") }
   pub fn get_type(&self) -> Option<Rc<Parameter>> {
     match self.get_prop("type") {
       Some(Stored::Parameter(p)) => Some(p),
@@ -89,8 +87,8 @@ pub(crate) fn keyval_set(qname: &str, prop: &str, value: Stored) {
 /// check if a key-value pair is defined
 pub fn has_keyval(prefix: &str, keyset: &str, key: &str) -> bool {
   let qname = keyval_qname(prefix, keyset, key);
-  state::lookup_value(&s!("KEYVAL@defined@{}",qname)).is_some() ||
-  state::lookup_meaning(&T_CS!(s!("\\{qname}"))).is_some()
+  state::lookup_value(&s!("KEYVAL@defined@{}", qname)).is_some()
+    || state::lookup_meaning(&T_CS!(s!("\\{qname}"))).is_some()
 }
 
 /// disable a given key-val
@@ -123,7 +121,7 @@ pub struct KeyvalConfig<'a> {
 }
 
 /// (Re-)defines this Key of kind 'kind'.
-/// 
+///
 ///Defines a keyword `key` used in keyval arguments for the set `keyset` and,
 ///and if the option `code` is given, defines appropriate macros
 ///when used with the `keyval` package (or extensions thereof).
@@ -160,11 +158,21 @@ pub struct KeyvalConfig<'a> {
 ///The kind parameter only takes effect when `code` is given, otherwise only
 ///meta-data is stored.
 pub fn define(options: KeyvalConfig) -> Result<()> {
-  let KeyvalConfig {prefix , keyset, key,
-    vtype, default,kind,
-    code, macroprefix, mismatch, normalize,
-    bin, choices} = options;
-  
+  let KeyvalConfig {
+    prefix,
+    keyset,
+    key,
+    vtype,
+    default,
+    kind,
+    code,
+    macroprefix,
+    mismatch,
+    normalize,
+    bin,
+    choices,
+  } = options;
+
   let qname = keyval_qname(prefix, keyset, key);
 
   // define that the key exists and is not disabled
@@ -175,7 +183,7 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   let paramlist_opt = parse_parameters(
     vtype,
     &T_OTHER!(s!("KeyVal {key} in set {keyset} with prefix {prefix}")),
-    true
+    true,
   )?;
   match paramlist_opt {
     None => {
@@ -196,22 +204,14 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
           taking only first"
         );
       }
-      keyval_set(
-        &qname,
-        "type",
-        paramlist.take_parameters().remove(0).into(),
-      );
+      keyval_set(&qname, "type", paramlist.take_parameters().remove(0).into());
     },
   };
   // set the default
   // Question: Why was $default converted ToString ???
   if let Some(default_str) = default {
     let default_tks = tokenize(default_str);
-    keyval_set(
-      &qname,
-      "default",
-      Stored::Tokens(default_tks.clone()),
-    );
+    keyval_set(&qname, "default", Stored::Tokens(default_tks.clone()));
     def_macro(
       T_CS!(s!("\\{qname}@default")),
       None,
@@ -245,18 +245,16 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
       normalize.unwrap_or(false),
       bin,
     )?,
-    "boolean" => {
-      define_boolean(
-        &qname,
-        code,
-        mismatch,
-        &if let Some(mpfx) = macroprefix {
-          Cow::Owned(s!("{mpfx}{key}"))
-        } else {
-          Cow::Borrowed(&qname)
-        }
-      )?
-    },
+    "boolean" => define_boolean(
+      &qname,
+      code,
+      mismatch,
+      &if let Some(mpfx) = macroprefix {
+        Cow::Owned(s!("{mpfx}{key}"))
+      } else {
+        Cow::Borrowed(&qname)
+      },
+    )?,
     _ => Warn!(
       "unknown",
       "undef",
@@ -269,21 +267,14 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
 }
 
 /// Helper function to define state, neccesary for an ordinary key.
-fn define_ordinary(
-  qname: &str,
-  code_expansion: Option<ExpansionBody>,
-) -> Result<()> {
+fn define_ordinary(qname: &str, code_expansion: Option<ExpansionBody>) -> Result<()> {
   let qname_cs = T_CS!(s!("\\{qname}"));
   let plain_params = parse_parameters("{}", &qname_cs, true)?;
   def_macro(qname_cs, plain_params, code_expansion, None)
 }
 
 /// Helper function to define state, neccesary for a command key.
-fn define_command(
-  qname: &str,
-  code: Option<ExpansionBody>,
-  macroname: &str,
-) -> Result<()> {
+fn define_command(qname: &str, code: Option<ExpansionBody>, macroname: &str) -> Result<()> {
   let qname_cs = T_CS!(s!("\\{qname}"));
   let plain_params = parse_parameters("{}", &qname_cs, true)?;
   let plainp = plain_params.clone();
@@ -317,7 +308,7 @@ fn define_command(
     qname_cs,
     plain_params,
     ExpansionBody::Closure(closure),
-    None
+    None,
   )
 }
 
@@ -377,12 +368,7 @@ fn define_choice(
     // if we have chosen a valid index, run $code
     if valid {
       if let Some(ref code) = code_opt {
-        def_macro(
-          orig,
-          plain_params.clone(),
-          code.clone(),
-          None,
-        )?;
+        def_macro(orig, plain_params.clone(), code.clone(), None)?;
         tokens.push(orig);
         tokens.push(T_BEGIN!());
         tokens.extend(value.unlist());
@@ -390,12 +376,7 @@ fn define_choice(
       }
     } else if let Some(ref mismatch) = mismatch_opt {
       // else run `mismatch
-      def_macro(
-        orig,
-        plain_params.clone(),
-        mismatch.clone(),
-        None,
-      )?;
+      def_macro(orig, plain_params.clone(), mismatch.clone(), None)?;
       tokens.push(orig);
       tokens.push(T_BEGIN!());
       tokens.extend(value.unlist());
@@ -441,12 +422,7 @@ fn define_boolean(
     let mut tokens = vec![];
     // Store and invoke the original macro if needed
     if let Some(ref code) = code_opt {
-      def_macro(
-        orig_cs,
-        plain_params.clone(),
-        code.clone(),
-        None,
-      )?;
+      def_macro(orig_cs, plain_params.clone(), code.clone(), None)?;
       tokens.push(orig_cs);
       tokens.push(T_BEGIN!());
       tokens.extend(value.unlist());

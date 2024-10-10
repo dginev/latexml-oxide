@@ -18,12 +18,8 @@ static SPEC_RE: Lazy<Regex> =
 pub struct Dimension(pub i64);
 
 impl Object for Dimension {
-  fn revert(&self) -> Result<Tokens> {
-    Ok(Tokens::new(ExplodeText!(&self.to_string())))
-  }
-  fn be_digested(
-    self
-  ) -> Result<Digested>
+  fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
+  fn be_digested(self) -> Result<Digested>
   where
     Self: Sized,
     Self: fmt::Debug,
@@ -73,12 +69,9 @@ impl Dimension {
 impl std::str::FromStr for Dimension {
   type Err = crate::common::Error;
   fn from_str(spec: &str) -> Result<Dimension> {
-    Ok(Dimension::new_f64(Dimension::spec_to_f64(
-      spec
-    )?))
+    Ok(Dimension::new_f64(Dimension::spec_to_f64(spec)?))
   }
 }
-
 
 // Dimension!() macro is in setup.rs, since it binds state
 

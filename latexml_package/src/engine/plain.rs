@@ -1,5 +1,5 @@
 //! plain TeX
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
 
@@ -26,7 +26,7 @@ LoadDefinitions!({
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
   //**********************************************************************
-  
+
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   {
     for letter in b'A'..=b'Z' {
@@ -39,23 +39,24 @@ LoadDefinitions!({
   }
   DefRegister!("\\magnification", Number!(1000));
   Let!("\\bye", "\\end");
-  
+
   // Most of these are ignored, but...
   DefMacro!(
     "\\tracingall",
     "\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2 \
      \\tracingpages=1 \\tracingoutput=1 \\tracinglostchars=1 \\tracingmacros=2 \
      \\tracingparagraphs=1 \\tracingrestores=1 \\showboxbreadth=\\maxdimen \
-     \\showboxdepth=\\maxdimen \\errorstopmode");
+     \\showboxdepth=\\maxdimen \\errorstopmode"
+  );
   DefMacro!("\\tracingnone", None);
   DefMacro!("\\hideoutput", None);
-  
+
   //======================================================================
   // \choose & friends, also need VERY special argument handling
 
   // DefMacro('\choose',
-  //   '\lx@generalized@over{\choose}{meaning=binomial,thickness=0pt,left=\lx@left(,right=\lx@right)}');
-  // DefMacro('\brace',
+  //   '\lx@generalized@over{\choose}{meaning=binomial,thickness=0pt,left=\lx@left(,right=\lx@
+  // right)}'); DefMacro('\brace',
   //   '\lx@generalized@over{\brace}{thickness=0pt,left=\lx@left\{,right=\lx@right\}}');
   // DefMacro('\brack',
   //   '\lx@generalized@over{\brack}{thickness=0pt,left=\lx@left[,right=\lx@right]}');
@@ -120,35 +121,47 @@ LoadDefinitions!({
   // Note: applied in reverse order of definition (latest defined applied first!)
   // Note also, these area only applied in text content, not in attributes!
   DefPrimitive!("\\@@endash", {
-    Tbox::new(arena::pin_static("\u{2013}"), None, None,
-      Tokens!(T_CS!("\\@@endash")), SymHashMap::default()); });
+    Tbox::new(
+      arena::pin_static("\u{2013}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\@@endash")),
+      SymHashMap::default(),
+    );
+  });
   DefPrimitive!("\\@@emdash", {
-    Tbox::new(arena::pin_static("\u{2014}"), None, None,
-      Tokens!(T_CS!("\\@@emdash")), SymHashMap::default()); });
+    Tbox::new(
+      arena::pin_static("\u{2014}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\@@emdash")),
+      SymHashMap::default(),
+    );
+  });
 
   // EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})
   DefLigature!(r"--", "\u{2013}", fontTest => sub[arg] { non_typewriter(arg) });
   // EM DASH
   DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {non_typewriter(arg) });
 
-    // Ligatures for doubled single left & right quotes to convert to double quotes
+  // Ligatures for doubled single left & right quotes to convert to double quotes
   // [should ligatures be part of a font, in the first place? (it is in TeX!)
   DefLigature!("\u{2018}\u{2018}", "\u{201C}", 
     fontTest => sub[arg] {non_typewriter_t1(arg)}); // double left quote
   DefLigature!("\u{2019}\u{2019}", "\u{201D}", 
     fontTest => sub[arg] {non_typewriter_t1(arg)}); // double right quote
   DefLigature!("[?]\u{2018}",       "\u{00BF}",  
-    fontTest => sub[arg] {non_typewriter_t1(arg)});   // ? backquote
+    fontTest => sub[arg] {non_typewriter_t1(arg)}); // ? backquote
   DefLigature!("!\u{2018}",       "\u{00A1}",  
-    fontTest => sub[arg] {non_typewriter_t1(arg)});   // ! backquote
-  // These ligatures are also handled by TeX.
-  // However, it appears that decent modern fonts in modern browsers handle these at that level.
-  // So it's likely not worth doing it at the conversion level, possibly adversely affecting search.
-  // DefLigature(qr{ff},               "\x{FB00}", fontTest => \&nonTypewriterT1);
-  // DefLigature(qr{fi},               "\x{FB01}", fontTest => \&nonTypewriterT1);
-  // DefLigature(qr{fl},               "\x{FB02}", fontTest => \&nonTypewriterT1);
-  // DefLigature(qr{ffi},              "\x{FB03}", fontTest => \&nonTypewriterT1);
-  // DefLigature(qr{ffl},              "\x{FB04}", fontTest => \&nonTypewriterT1);
+    fontTest => sub[arg] {non_typewriter_t1(arg)}); // ! backquote
+                                                    // These ligatures are also handled by TeX.
+                                                    // However, it appears that decent modern fonts in modern browsers handle these at that level.
+                                                    // So it's likely not worth doing it at the conversion level, possibly adversely affecting search.
+                                                    // DefLigature(qr{ff},               "\x{FB00}", fontTest => \&nonTypewriterT1);
+                                                    // DefLigature(qr{fi},               "\x{FB01}", fontTest => \&nonTypewriterT1);
+                                                    // DefLigature(qr{fl},               "\x{FB02}", fontTest => \&nonTypewriterT1);
+                                                    // DefLigature(qr{ffi},              "\x{FB03}", fontTest => \&nonTypewriterT1);
+                                                    // DefLigature(qr{ffl},              "\x{FB04}", fontTest => \&nonTypewriterT1);
 
   DefConstructor!("\\TeX", r###"<ltx:text class='ltx_TeX_logo'
     cssstyle='letter-spacing:-0.2em; margin-right:0.2em'>T<ltx:text yoffset='-0.4ex'>E</ltx:text>X</ltx:text>"###,
@@ -165,16 +178,18 @@ LoadDefinitions!({
   // "Initialized" alignment; presets spacing, but since we're ignoring it anyway...
   Let!("\\ialign", "\\halign");
   // Overlapping alignments ???
-  DefMacro!("\\oalign{}",
-    r"\@@oalign{\lx@begin@alignment#1\lx@end@alignment}");
-  // TODO: What are the full arguments to alignment_bindings ? 
+  DefMacro!(
+    "\\oalign{}",
+    r"\@@oalign{\lx@begin@alignment#1\lx@end@alignment}"
+  );
+  // TODO: What are the full arguments to alignment_bindings ?
   // DefConstructor!("\\@@oalign{}", "#1",
   //   reversion    => "\\oalign{#1}", bounded => true, mode => "text",
   //   before_digest => sub { alignment_bindings('l', ); });
 
   // This is actually different; the lines should lie ontop of each other.
   // How should this be represented?
-  // TODO: What are the full arguments to alignment_bindings ? 
+  // TODO: What are the full arguments to alignment_bindings ?
   // DefMacro("\\ooalign{}",
   //   r"\@@ooalign{\lx@begin@alignment#1\lx@end@alignment}");
   // DefConstructor!("\\@@ooalign{}",
@@ -182,14 +197,14 @@ LoadDefinitions!({
   //   reversion    => "\\ooalign{#1}", bounded => true, mode => "text",
   //   before_digest => sub { alignment_bindings('l'); });
 
-  DefConstructor!("\\buildrel Until:\\over {}",
-  "<ltx:XMApp role='RELOP'>\
+  DefConstructor!(
+    "\\buildrel Until:\\over {}",
+    "<ltx:XMApp role='RELOP'>\
     <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/>\
     <ltx:XMArg>#2</ltx:XMArg>\
     <ltx:XMArg>#1</ltx:XMArg>\
-    </ltx:XMApp>"
-    // TODO
-    // properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } }
+    </ltx:XMApp>" /* TODO
+                   * properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } } */
   );
   DefMacro!("\\hidewidth", None);
   // DefMacro('\multispan{Number}', sub {
@@ -201,7 +216,10 @@ LoadDefinitions!({
   // TeX Book, Appendix B, p. 344
   //======================================================================
   TeX!(r"\outer\def^^L{\par}");
-  DefMacro!("\\dospecials", r"\do\ \do\\\do\{\do\}\do\$\do\&\do\#\do\^\do\^^K\do\_\do\^^A\do\%\do\~");
+  DefMacro!(
+    "\\dospecials",
+    r"\do\ \do\\\do\{\do\}\do\$\do\&\do\#\do\^\do\^^K\do\_\do\^^A\do\%\do\~"
+  );
 
   //======================================================================
   // TeX Book, Appendix B, p. 345
@@ -302,13 +320,20 @@ LoadDefinitions!({
     "\\newlanguage DefToken",
     r"\alloc@@{language}\global\chardef#1=\allocationnumber"
   );
-  DefMacro!("\\e@alloc{}{}{}{}{}{}",
-  r"\global\advance#3\@ne
+  DefMacro!(
+    "\\e@alloc{}{}{}{}{}{}",
+    r"\global\advance#3\@ne
   \allocationnumber#3\relax
-  \global#2#6\allocationnumber");
+  \global#2#6\allocationnumber"
+  );
   DefMacro!("\\alloc@{}{}{}{}", r"\e@alloc#2#3{\count1#1}#4\float@count");
-  DefMacro!("\\newread",        r"\e@alloc\read \chardef{\count16}\m@ne\sixt@@n");
-  DefMacro!("\\newwrite", r"\e@alloc\write
+  DefMacro!(
+    "\\newread",
+    r"\e@alloc\read \chardef{\count16}\m@ne\sixt@@n"
+  );
+  DefMacro!(
+    "\\newwrite",
+    r"\e@alloc\write
                   {\ifnum\allocationnumber=18
                       \advance\count17\@ne
                       \allocationnumber\count17 %
@@ -316,7 +341,8 @@ LoadDefinitions!({
                     \global\chardef}%
                     {\count17}%
                     \m@ne
-                    {128}");
+                    {128}"
+  );
 
   // This implementation is quite wrong
   DefPrimitive!("\\newinsert Token", sub[(t)] {
@@ -333,13 +359,13 @@ LoadDefinitions!({
   DefRegister!("\\p@", Dimension::new(UNITY));
   DefRegister!("\\z@", Dimension::new(0));
   DefRegister!("\\z@skip", Glue::new(0));
-  
+
   // Spacing stuff
   DefConstructor!("\\@", "");
-  
+
   // First approximation. till I figure out \newbox
   TeX!(r"\newbox\voidb@x");
-  
+
   //======================================================================
   // TeX Book, Appendix B, p. 348
 
@@ -409,7 +435,8 @@ LoadDefinitions!({
  \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
  \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
  \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
- \textfont3=\tenex");
+ \textfont3=\tenex"
+  );
 
   // Note: \newfam in math should be font switching(?)
 
@@ -440,7 +467,7 @@ LoadDefinitions!({
     font => {shape => "smallcaps", family => "serif", series => "medium" });
   DefPrimitive!("\\cal", None,
     font => {family => "caligraphic", series => "medium", shape => "upright" });
-  
+
   // Ideally, we should set these sizes from class files
   AssignValue!("NOMINAL_FONT_SIZE", 10);
   DefPrimitive!("\\tiny",         None, font => {size => 5 });
@@ -458,8 +485,10 @@ LoadDefinitions!({
 
   DefPrimitive!("\\frenchspacing", None);
   DefPrimitive!("\\nonfrenchspacing", None);
-  DefMacro!("\\normalbaselines",
-  r"\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit");
+  DefMacro!(
+    "\\normalbaselines",
+    r"\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit"
+  );
   DefMacro!(T_CS!("\\space"), None, T_SPACE!());
   DefMacro!(T_CS!("\\lq"), None, T_OTHER!("`"));
   DefMacro!(T_CS!("\\rq"), None, T_OTHER!("'"));
@@ -501,38 +530,75 @@ LoadDefinitions!({
   \def\loop#1\repeat{\def\body{#1}\iterate}
   \def\iterate{\body \let\next=\iterate \else\let\next=\relax\fi \next}
   \let\repeat=\fi
-  ");
+  "
+  );
 
   DefPrimitive!("\\enskip", {
-    Tbox::new(arena::pin_static("\u{2002}"), None, None, Tokens!(T_CS!("\\enskip")),
-    stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
-      "isSpace"=>true)) });
+    Tbox::new(
+      arena::pin_static("\u{2002}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\enskip")),
+      stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
+      "isSpace"=>true),
+    )
+  });
 
   DefPrimitive!("\\enspace", {
-      Tbox::new(arena::pin_static("\u{2002}"), None, None, Tokens!(T_CS!("\\enspace")),
+    Tbox::new(
+      arena::pin_static("\u{2002}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\enspace")),
       stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
-        "isSpace"=>true)) });
+        "isSpace"=>true),
+    )
+  });
 
   DefPrimitive!("\\quad", {
-      Tbox::new(arena::pin_static("\u{2003}"), None, None, Tokens!(T_CS!("\\quad")),
+    Tbox::new(
+      arena::pin_static("\u{2003}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\quad")),
       stored_map!("name" => "quad", "width" => Dimension::from_str("1em")?,
-        "isSpace"=>true)) });
+        "isSpace"=>true),
+    )
+  });
 
   // Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
   DefPrimitive!("\\qquad", {
-      Tbox::new(arena::pin_static("\u{2003}\u{2003}"), None, None, Tokens!(T_CS!("\\qquad")),
+    Tbox::new(
+      arena::pin_static("\u{2003}\u{2003}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\qquad")),
       stored_map!("name" => "qquad", "width" => Dimension::from_str("2em")?,
-        "isSpace"=>true, "asHint" => true)) });
+        "isSpace"=>true, "asHint" => true),
+    )
+  });
 
   DefPrimitive!("\\thinspace", {
-      Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\thinspace")),
+    Tbox::new(
+      arena::pin_static("\u{2009}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\thinspace")),
       stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em")?,
-        "isSpace"=>true)) });
+        "isSpace"=>true),
+    )
+  });
 
   DefPrimitive!("\\negthinspace", {
-      Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\negthinspace")),
+    Tbox::new(
+      *EMPTY_SYM,
+      None,
+      None,
+      Tokens!(T_CS!("\\negthinspace")),
       stored_map!("name" => "negthinspace", "width" => Dimension::from_str("-0.16667em")?,
-        "isSpace"=>true)) });
+        "isSpace"=>true),
+    )
+  });
 
   // DefConstructor('\hglue Glue', "?#isMath(<ltx:XMHint name='hglue' width='#width'/>)(\x{2003})",
   //   properties => sub { (stored_map!("isSpace"=>true), width => $_[1]) });
@@ -552,9 +618,14 @@ LoadDefinitions!({
   DefPrimitive!("\\nobreak", None);
   DefPrimitive!("\\allowbreak", None);
   DefPrimitive!("\\nobreakspace", {
-    Tbox::new(arena::pin_static("\u{00A0}"), None, None,
-      Tokens!(T_ACTIVE!('~')), stored_map!("isSpace" => true,
-      "width" => Dimension::from_str("0.333em")?))
+    Tbox::new(
+      arena::pin_static("\u{00A0}"),
+      None,
+      None,
+      Tokens!(T_ACTIVE!('~')),
+      stored_map!("isSpace" => true,
+      "width" => Dimension::from_str("0.333em")?),
+    )
   });
   DefMacro!(T_ACTIVE!('~'), None, "\\nobreakspace{}");
 
@@ -575,8 +646,8 @@ LoadDefinitions!({
   DefMacro!("\\medbreak", "\\par");
   DefMacro!("\\bigbreak", "\\par");
   DefMacro!("\\line", "\\hbox to \\hsize");
-  DefMacro!("\\leftline Undigested",   r"\ltx@leftline{\hbox{#1}}");
-  DefMacro!("\\rightline Undigested",  r"\ltx@rightline{\hbox{#1}}");
+  DefMacro!("\\leftline Undigested", r"\ltx@leftline{\hbox{#1}}");
+  DefMacro!("\\rightline Undigested", r"\ltx@rightline{\hbox{#1}}");
   DefMacro!("\\centerline Undigested", r"\ltx@centerline{\hbox{#1}}");
   DefConstructor!("\\ltx@leftline{}", sub[doc,args,_props] {
       align_line(doc,args,"left")?;
@@ -590,7 +661,6 @@ LoadDefinitions!({
       align_line(doc,args,"center")?;
     },
     alias => "\\centerline", bounded => true);
-  
 
   // These should be 0 width, but perhaps also shifted?
   DefMacro!("\\llap{}", r"\hbox to 0pt{\hss#1}");
@@ -615,111 +685,123 @@ LoadDefinitions!({
   // TODO: \item, \itemitem not done!
   // This could probably be adopted from LaTeX, if the <itemize> could auto-open
   // and close!
-  DefMacro!("\\hang",         r"\hangindent\parindent");
-  DefMacro!("\\item",         r"\par\hang\textindent");
-  DefMacro!("\\itemitem",     r"\par\indent \hangindent2\parindent \textindent");
+  DefMacro!("\\hang", r"\hangindent\parindent");
+  DefMacro!("\\item", r"\par\hang\textindent");
+  DefMacro!(
+    "\\itemitem",
+    r"\par\indent \hangindent2\parindent \textindent"
+  );
   DefMacro!("\\textindent{}", r"\indent\llap{#1\enspace}\ignorespaces");
-  DefMacro!("\\narrower", r"\advance\leftskip by\parindent\advance\rightskip by\parindent");
-
+  DefMacro!(
+    "\\narrower",
+    r"\advance\leftskip by\parindent\advance\rightskip by\parindent"
+  );
 
   // If folks start using plain TeX macros, and never load LaTeX.pool,
   // they might benefit from a ltx-plain.css?
   DefMacro!("\\beginsection Until:\\par", r"\@beginsection{{\bf #1}}");
-  DefConstructor!("\\@beginsection {}",
-    "<ltx:section><ltx:title>#1</ltx:title>");
+  DefConstructor!(
+    "\\@beginsection {}",
+    "<ltx:section><ltx:title>#1</ltx:title>"
+  );
 
   // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   //  If so, how do know when the theorem ends?
-  DefMacro!(T_CS!("\\proclaim"), 
+  DefMacro!(
+    T_CS!("\\proclaim"),
     parse_def_parameters(&T_CS!("\\proclaim"), Tokenize!("#1. #2\\par"))?,
-    Some(r"\@proclaim{{\bf #1}}{{\sl #2}}".into()));
+    Some(r"\@proclaim{{\bf #1}}{{\sl #2}}".into())
+  );
   DefConstructor!("\\@proclaim{}{}",
-    "<ltx:theorem><ltx:title font='#titlefont' _force_font='true' >#title</ltx:title>#2",
-    after_construct => sub[doc,_args] { doc.maybe_close_element("ltx:theorem")?; },
-    properties     => sub[args] {
-      if let Some(ref title) = args[0] {
-        Ok(stored_map!("title" => title, "titlefont" => title.get_font()?)) 
-      } else { Ok(SymHashMap::default()) }
-    });
+  "<ltx:theorem><ltx:title font='#titlefont' _force_font='true' >#title</ltx:title>#2",
+  after_construct => sub[doc,_args] { doc.maybe_close_element("ltx:theorem")?; },
+  properties     => sub[args] {
+    if let Some(ref title) = args[0] {
+      Ok(stored_map!("title" => title, "titlefont" => title.get_font()?))
+    } else { Ok(SymHashMap::default()) }
+  });
 
   //======================================================================
   // TeX Book, Appendix B. p. 356
 
-  DefPrimitive!("\\raggedright",   None);
-  DefPrimitive!("\\raggedleft",    None);    // this is actually LaTeX
+  DefPrimitive!("\\raggedright", None);
+  DefPrimitive!("\\raggedleft", None); // this is actually LaTeX
   DefPrimitive!("\\ttraggedright", None);
-  DefPrimitive!("\\leavevmode",    None);
-  DefMacro!("\\mathhexbox{}{}{}", r##"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"##);
+  DefPrimitive!("\\leavevmode", None);
+  DefMacro!(
+    "\\mathhexbox{}{}{}",
+    r##"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"##
+  );
   //----------------------------------------------------------------------
   //  Actually from LaTeX; Table 3.3, Greek, p.41
   //----------------------------------------------------------------------
-  DefMath!("\\alpha",      None, "\u{03B1}");
-  DefMath!("\\beta",       None, "\u{03B2}");
-  DefMath!("\\gamma",      None, "\u{03B3}");
-  DefMath!("\\delta",      None, "\u{03B4}");
-  DefMath!("\\epsilon",    None, "\u{03F5}");
+  DefMath!("\\alpha", None, "\u{03B1}");
+  DefMath!("\\beta", None, "\u{03B2}");
+  DefMath!("\\gamma", None, "\u{03B3}");
+  DefMath!("\\delta", None, "\u{03B4}");
+  DefMath!("\\epsilon", None, "\u{03F5}");
   DefMath!("\\varepsilon", None, "\u{03B5}");
-  DefMath!("\\zeta",       None, "\u{03B6}");
-  DefMath!("\\eta",        None, "\u{03B7}");
-  DefMath!("\\theta",      None, "\u{03B8}");
-  DefMath!("\\vartheta",   None, "\u{03D1}");
-  DefMath!("\\iota",       None, "\u{03B9}");
-  DefMath!("\\kappa",      None, "\u{03BA}");
-  DefMath!("\\lambda",     None, "\u{03BB}");
-  DefMath!("\\mu",         None, "\u{03BC}");
-  DefMath!("\\nu",         None, "\u{03BD}");
-  DefMath!("\\xi",         None, "\u{03BE}");
-  DefMath!("\\pi",         None, "\u{03C0}");
-  DefMath!("\\varpi",      None, "\u{03D6}");
-  DefMath!("\\rho",        None, "\u{03C1}");
-  DefMath!("\\varrho",     None, "\u{03F1}");
-  DefMath!("\\sigma",      None, "\u{03C3}");
-  DefMath!("\\varsigma",   None, "\u{03C2}");
-  DefMath!("\\tau",        None, "\u{03C4}");
-  DefMath!("\\upsilon",    None, "\u{03C5}");
-  DefMath!("\\phi",        None, "\u{03D5}");
-  DefMath!("\\varphi",     None, "\u{03C6}");
-  DefMath!("\\chi",        None, "\u{03C7}");
-  DefMath!("\\psi",        None, "\u{03C8}");
-  DefMath!("\\omega",      None, "\u{03C9}");
-  DefMath!("\\Gamma",      None, "\u{0393}");
-  DefMath!("\\Delta",      None, "\u{0394}");
-  DefMath!("\\Theta",      None, "\u{0398}");
-  DefMath!("\\Lambda",     None, "\u{039B}");
-  DefMath!("\\Xi",         None, "\u{039E}");
-  DefMath!("\\Pi",         None, "\u{03A0}");
-  DefMath!("\\Sigma",      None, "\u{03A3}");
-  DefMath!("\\Upsilon",    None, "\u{03A5}");
-  DefMath!("\\Phi",        None, "\u{03A6}");
-  DefMath!("\\Psi",        None, "\u{03A8}");
-  DefMath!("\\Omega",      None, "\u{03A9}");
+  DefMath!("\\zeta", None, "\u{03B6}");
+  DefMath!("\\eta", None, "\u{03B7}");
+  DefMath!("\\theta", None, "\u{03B8}");
+  DefMath!("\\vartheta", None, "\u{03D1}");
+  DefMath!("\\iota", None, "\u{03B9}");
+  DefMath!("\\kappa", None, "\u{03BA}");
+  DefMath!("\\lambda", None, "\u{03BB}");
+  DefMath!("\\mu", None, "\u{03BC}");
+  DefMath!("\\nu", None, "\u{03BD}");
+  DefMath!("\\xi", None, "\u{03BE}");
+  DefMath!("\\pi", None, "\u{03C0}");
+  DefMath!("\\varpi", None, "\u{03D6}");
+  DefMath!("\\rho", None, "\u{03C1}");
+  DefMath!("\\varrho", None, "\u{03F1}");
+  DefMath!("\\sigma", None, "\u{03C3}");
+  DefMath!("\\varsigma", None, "\u{03C2}");
+  DefMath!("\\tau", None, "\u{03C4}");
+  DefMath!("\\upsilon", None, "\u{03C5}");
+  DefMath!("\\phi", None, "\u{03D5}");
+  DefMath!("\\varphi", None, "\u{03C6}");
+  DefMath!("\\chi", None, "\u{03C7}");
+  DefMath!("\\psi", None, "\u{03C8}");
+  DefMath!("\\omega", None, "\u{03C9}");
+  DefMath!("\\Gamma", None, "\u{0393}");
+  DefMath!("\\Delta", None, "\u{0394}");
+  DefMath!("\\Theta", None, "\u{0398}");
+  DefMath!("\\Lambda", None, "\u{039B}");
+  DefMath!("\\Xi", None, "\u{039E}");
+  DefMath!("\\Pi", None, "\u{03A0}");
+  DefMath!("\\Sigma", None, "\u{03A3}");
+  DefMath!("\\Upsilon", None, "\u{03A5}");
+  DefMath!("\\Phi", None, "\u{03A6}");
+  DefMath!("\\Psi", None, "\u{03A8}");
+  DefMath!("\\Omega", None, "\u{03A9}");
 
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
 
   // The following shouldn't appear in math.
-  DefPrimitive!("\\OE", "\u{0152}");    // LATIN CAPITAL LIGATURE OE
-  DefPrimitive!("\\oe", "\u{0153}");    // LATIN SMALL LIGATURE OE
-  DefPrimitive!("\\AE", "\u{00C6}");     // LATIN CAPITAL LETTER AE
-  DefPrimitive!("\\ae", "\u{00E6}");     // LATIN SMALL LETTER AE
-  DefPrimitive!("\\AA", "\u{00C5}");     // LATIN CAPITAL LETTER A WITH RING ABOVE
-  DefPrimitive!("\\aa", "\u{00E5}");     // LATIN SMALL LETTER A WITH RING ABOVE
-  DefPrimitive!("\\O",  "\u{00D8}");     // LATIN CAPITAL LETTER O WITH STROKE
-  DefPrimitive!("\\o",  "\u{00F8}");     // LATIN SMALL LETTER O WITH STROKE
-  DefPrimitive!("\\L",  "\u{0141}");    // LATIN CAPITAL LETTER L WITH STROKE
-  DefPrimitive!("\\l",  "\u{0142}");    // LATIN SMALL LETTER L WITH STROKE
-  DefPrimitive!("\\ss", "\u{00DF}");     // LATIN SMALL LETTER SHARP S
+  DefPrimitive!("\\OE", "\u{0152}"); // LATIN CAPITAL LIGATURE OE
+  DefPrimitive!("\\oe", "\u{0153}"); // LATIN SMALL LIGATURE OE
+  DefPrimitive!("\\AE", "\u{00C6}"); // LATIN CAPITAL LETTER AE
+  DefPrimitive!("\\ae", "\u{00E6}"); // LATIN SMALL LETTER AE
+  DefPrimitive!("\\AA", "\u{00C5}"); // LATIN CAPITAL LETTER A WITH RING ABOVE
+  DefPrimitive!("\\aa", "\u{00E5}"); // LATIN SMALL LETTER A WITH RING ABOVE
+  DefPrimitive!("\\O", "\u{00D8}"); // LATIN CAPITAL LETTER O WITH STROKE
+  DefPrimitive!("\\o", "\u{00F8}"); // LATIN SMALL LETTER O WITH STROKE
+  DefPrimitive!("\\L", "\u{0141}"); // LATIN CAPITAL LETTER L WITH STROKE
+  DefPrimitive!("\\l", "\u{0142}"); // LATIN SMALL LETTER L WITH STROKE
+  DefPrimitive!("\\ss", "\u{00DF}"); // LATIN SMALL LETTER SHARP S
 
   // apparently the rest can appear in math.
-  DefPrimitive!("\\lx@sectionsign",   "\u{00a7}", alias=>"\\S");    // SECTION SIGN
-  DefPrimitive!("\\lx@paragraphsign", "\u{00B6}", alias=>"\\P");    // PILCROW SIGN
+  DefPrimitive!("\\lx@sectionsign",   "\u{00a7}", alias=>"\\S"); // SECTION SIGN
+  DefPrimitive!("\\lx@paragraphsign", "\u{00B6}", alias=>"\\P"); // PILCROW SIGN
   DefMacro!("\\S", "\\lx@sectionsign");
   DefMacro!("\\P", "\\lx@paragraphsign");
-  DefPrimitive!("\\dag",       "\u{2020}");          // DAGGER
-  DefPrimitive!("\\ddag",      "\u{2021}");          // DOUBLE DAGGER
-  DefPrimitive!("\\copyright", "\u{00A9}");           // COPYRIGHT SIGN
-  DefPrimitive!("\\pounds",    "\u{00A3}");           // POUND SIGN
-  
+  DefPrimitive!("\\dag", "\u{2020}"); // DAGGER
+  DefPrimitive!("\\ddag", "\u{2021}"); // DOUBLE DAGGER
+  DefPrimitive!("\\copyright", "\u{00A9}"); // COPYRIGHT SIGN
+  DefPrimitive!("\\pounds", "\u{00A3}"); // POUND SIGN
+
   //======================================================================
   // Specific accents (see TeX-Character)
   //----------------------------------------------------------------------
@@ -737,10 +819,10 @@ LoadDefinitions!({
   DefAccent!("\\r", '\u{030A}', "o"); // COMBINING RING ABOVE & non-combining
   DefAccent!("\\H", '\u{030B}', "\u{02DD}"); // COMBINING DOUBLE ACUTE ACCENT & non-combining
   DefAccent!("\\c", '\u{0327}', "\u{00B8}", below => true); // COMBINING CEDILLA & CEDILLA
-  // NOTE: The next two get define for math, as well; See below
+                                                            // NOTE: The next two get define for math, as well; See below
   DefAccent!("\\@text@daccent", '\u{0323}', ".",       below => true); // COMBINING DOT BELOW & DOT (?)
   DefAccent!("\\@text@baccent", '\u{0331}', "\u{00AF}", below => true); // COMBINING MACRON BELOW  & MACRON
-  // COMBINING DOUBLE INVERTED BREVE & ???? What????
+                                                                        // COMBINING DOUBLE INVERTED BREVE & ???? What????
   DefAccent!("\\t", '\u{0361}', "-");
   // this one"s actually defined in mathscinet.sty, but just stick it here!
   // COMBINING COMMA BELOW
@@ -756,8 +838,14 @@ LoadDefinitions!({
     unported!()
   });
   // Note that these two apparently work in Math? BUT the argument is treated as text!!!
-  DefMacro!("\\d{}", r"\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi");
-  DefMacro!("\\b{}", r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi");
+  DefMacro!(
+    "\\d{}",
+    r"\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi"
+  );
+  DefMacro!(
+    "\\b{}",
+    r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi"
+  );
 
   //   DefConstructor('\@math@daccent {}',
   //   "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\x{22c5}</ltx:XMTok>"
@@ -787,10 +875,9 @@ LoadDefinitions!({
   //       $whatsit->setProperty(textarg => $arg); }
   //     return; });
 
-
   //======================================================================
   // TeX Book, Appendix B. p. 357
-  // RIGHTWARDS ARROW??? a bit more explicitly 
+  // RIGHTWARDS ARROW??? a bit more explicitly
   DefMath!("\\to", None, "\u{2192}", role => "ARROW");
 
   DefPrimitive!("\\hrulefill", None);
@@ -804,14 +891,24 @@ LoadDefinitions!({
   Let!("\\sb", T_SUB!());
 
   DefPrimitive!("\\lx@thinmuskip", {
-    Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\,")),
+    Tbox::new(
+      arena::pin_static("\u{2009}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\,")),
       stored_map!("name"  => "thinspace", "isSpace" => true,
-      "width" => state::lookup_register("\\thinmuskip", Vec::new())?))
+      "width" => state::lookup_register("\\thinmuskip", Vec::new())?),
+    )
   });
   DefPrimitive!("\\lx@thinspace", {
-    Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\,")),
+    Tbox::new(
+      arena::pin_static("\u{2009}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\,")),
       stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em")?,
-       "isSpace" => true))
+       "isSpace" => true),
+    )
   });
   DefMacro!(
     "\\,",
@@ -820,26 +917,46 @@ LoadDefinitions!({
   );
 
   DefPrimitive!("\\!", {
-    Tbox::new(arena::pin_static("\u{200B}"), None, None, Tokens!(T_CS!("\\!")),  // zero width space
+    Tbox::new(
+      arena::pin_static("\u{200B}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\!")), // zero width space
       stored_map!("name"  => "negthinspace", "isSpace" => true,
-      "width" => lookup_dimension("\\thinmuskip").unwrap().negate()))
+      "width" => lookup_dimension("\\thinmuskip").unwrap().negate()),
+    )
   });
   DefPrimitive!("\\>", {
-    Tbox::new(arena::pin_static("\u{2005}"), None, None, Tokens!(T_CS!("\\>")),
+    Tbox::new(
+      arena::pin_static("\u{2005}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\>")),
       stored_map!("name"  => "medspace", "isSpace" => true,
-      "width" => state::lookup_register("\\medmuskip", Vec::new())?))
+      "width" => state::lookup_register("\\medmuskip", Vec::new())?),
+    )
   });
   DefPrimitive!("\\;", {
-    Tbox::new(arena::pin_static("\u{2004}"), None, None, Tokens!(T_CS!("\\;")),
+    Tbox::new(
+      arena::pin_static("\u{2004}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\;")),
       stored_map!("name"  => "thickspace", "isSpace" => true,
-      "width" => state::lookup_register("\\thickmuskip", Vec::new())?))
+      "width" => state::lookup_register("\\thickmuskip", Vec::new())?),
+    )
   });
 
   Let!("\\:", "\\>");
 
   DefPrimitive!("\\\t", {
-    Tbox::new(arena::pin_static("\u{00A0}"), None, None, Tokens!(T_CS!("\\\t")),
-      stored_map!("isSpace" => true, "width" => Dimension::from_str("1em")?))
+    Tbox::new(
+      arena::pin_static("\u{00A0}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\\t")),
+      stored_map!("isSpace" => true, "width" => Dimension::from_str("1em")?),
+    )
   });
 
   //----------------------------------------------------------------------
@@ -910,7 +1027,7 @@ LoadDefinitions!({
     activated.push(T_END!());
     activated
   },
-  locked => true);    // Only in math!
+  locked => true); // Only in math!
   assign_mathcode('\'', 0x8000u16, None);
   Let!("'", "\\active@math@prime");
 
@@ -1174,11 +1291,11 @@ LoadDefinitions!({
       }   // ? Hopefully this is safe.
     }
   });
-  
-    //----------------------------------------------------------------------
+
+  //----------------------------------------------------------------------
   // \joinrel
-  DefMath!("\\relbar", None, "-", role => "RELOP");    // ???
-  DefMath!("\\Relbar", None, "=", role => "RELOP");    // ???
+  DefMath!("\\relbar", None, "-", role => "RELOP"); // ???
+  DefMath!("\\Relbar", None, "=", role => "RELOP"); // ???
 
   // \joinrel is \mathrel{\mkern-3\mu}
   // Ah, but the Effect is to join 2 "relations" into one!
@@ -1186,7 +1303,7 @@ LoadDefinitions!({
     gullet::skip_spaces()?;
     if let Some(_left) = pop_box_list() {
       let mut stuff = Vec::new();
-      while let Some(tok) = gullet::read_x_token(Some(false),false, None)? {
+      while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
         stuff = stomach::invoke_token(&tok)?;
         if !stuff.is_empty() {
           break;
@@ -1236,47 +1353,47 @@ LoadDefinitions!({
   // Arrows get treated somewhat like relations (or meta-relations),
   // but it's hard to associate any particular "meaning" to them.
 
-  DefMath!("\\leftarrow",      "\u{2190}", role => "ARROW");         // LEFTWARDS ARROW
-  DefMath!("\\Leftarrow",      "\u{21D0}", role => "ARROW");         // LEFTWARDS DOUBLE ARROW
-  DefMath!("\\rightarrow",     "\u{2192}", role => "ARROW");         // RIGHTWARDS ARROW
-  DefMath!("\\Rightarrow",     "\u{21D2}", role => "ARROW");         // RIGHTWARDS DOUBLE ARROW
-  DefMath!("\\leftrightarrow", "\u{2194}", role => "METARELOP");     // LEFT RIGHT ARROW
-  DefMath!("\\Leftrightarrow", "\u{21D4}", role => "METARELOP");     // LEFT RIGHT DOUBLE ARROW
+  DefMath!("\\leftarrow",      "\u{2190}", role => "ARROW"); // LEFTWARDS ARROW
+  DefMath!("\\Leftarrow",      "\u{21D0}", role => "ARROW"); // LEFTWARDS DOUBLE ARROW
+  DefMath!("\\rightarrow",     "\u{2192}", role => "ARROW"); // RIGHTWARDS ARROW
+  DefMath!("\\Rightarrow",     "\u{21D2}", role => "ARROW"); // RIGHTWARDS DOUBLE ARROW
+  DefMath!("\\leftrightarrow", "\u{2194}", role => "METARELOP"); // LEFT RIGHT ARROW
+  DefMath!("\\Leftrightarrow", "\u{21D4}", role => "METARELOP"); // LEFT RIGHT DOUBLE ARROW
   DefMath!("\\iff", "\u{21D4}", role => "METARELOP", meaning => "iff"); // LEFT RIGHT DOUBLE ARROW
   DefMath!("\\mapsto",        "\u{21A6}", role => "ARROW", meaning => "maps-to");
-  DefMath!("\\hookleftarrow", "\u{21A9}", role => "ARROW");    // LEFTWARDS ARROW WITH HOOK
+  DefMath!("\\hookleftarrow", "\u{21A9}", role => "ARROW"); // LEFTWARDS ARROW WITH HOOK
   DefMath!("\\leftharpoonup", "\u{21BC}", role => "ARROW"); // LEFTWARDS HARPOON WITH BARB UPWARDS
   DefMath!("\\leftharpoondown", "\u{21BD}", role => "ARROW"); // LEFTWARDS HARPOON WITH BARB DOWNWARDS
   DefMath!("\\rightleftharpoons", "\u{21CC}", role => "METARELOP"); // RIGHTWARDS HARPOON OVER LEFTWARDS HARPOON
-  DefMath!("\\longleftarrow",      "\u{27F5}", role => "ARROW");  // LONG LEFTWARDS ARROW
-  DefMath!("\\Longleftarrow",      "\u{27F8}", role => "ARROW");  // LONG LEFTWARDS DOUBLE ARROW
-  DefMath!("\\longrightarrow",     "\u{27F6}", role => "ARROW");  // LONG RIGHTWARDS ARROW
-  DefMath!("\\Longrightarrow",     "\u{27F9}", role => "ARROW");  // LONG RIGHTWARDS DOUBLE ARROW
-  DefMath!("\\longleftrightarrow", "\u{27F7}", role => "METARELOP");    // LONG LEFT RIGHT ARROW
+  DefMath!("\\longleftarrow",      "\u{27F5}", role => "ARROW"); // LONG LEFTWARDS ARROW
+  DefMath!("\\Longleftarrow",      "\u{27F8}", role => "ARROW"); // LONG LEFTWARDS DOUBLE ARROW
+  DefMath!("\\longrightarrow",     "\u{27F6}", role => "ARROW"); // LONG RIGHTWARDS ARROW
+  DefMath!("\\Longrightarrow",     "\u{27F9}", role => "ARROW"); // LONG RIGHTWARDS DOUBLE ARROW
+  DefMath!("\\longleftrightarrow", "\u{27F7}", role => "METARELOP"); // LONG LEFT RIGHT ARROW
   DefMath!("\\Longleftrightarrow", "\u{27FA}", role => "METARELOP"); // LONG LEFT RIGHT DOUBLE ARROW
-  DefMath!("\\longmapsto",     "\u{27FC}", role => "ARROW");    // LONG RIGHTWARDS ARROW FROM BAR
-  DefMath!("\\hookrightarrow", "\u{21AA}", role => "ARROW");    // RIGHTWARDS ARROW WITH HOOK
+  DefMath!("\\longmapsto",     "\u{27FC}", role => "ARROW"); // LONG RIGHTWARDS ARROW FROM BAR
+  DefMath!("\\hookrightarrow", "\u{21AA}", role => "ARROW"); // RIGHTWARDS ARROW WITH HOOK
   DefMath!("\\rightharpoonup", "\u{21C0}", role => "ARROW"); // RIGHTWARDS HARPOON WITH BARB UPWARDS
   DefMath!("\\rightharpoondown", "\u{21C1}", role => "ARROW"); // RIGHTWARDS HARPOON WITH BARB DOWNWARDS
   DefMath!("\\leadsto",          "\u{219D}", role => "ARROW", meaning => "leads-to");
 
-  DefMath!("\\uparrow",     "\u{2191}", role => "ARROW");      // UPWARDS ARROW
-  DefMath!("\\Uparrow",     "\u{21D1}", role => "ARROW");      // UPWARDS DOUBLE ARROW
-  DefMath!("\\downarrow",   "\u{2193}", role => "ARROW");      // DOWNWARDS ARROW
-  DefMath!("\\Downarrow",   "\u{21D3}", role => "ARROW");      // DOWNWARDS DOUBLE ARROW
-  DefMath!("\\updownarrow", "\u{2195}", role => "ARROW");      // UP DOWN ARROW
-  DefMath!("\\Updownarrow", "\u{21D5}", role => "ARROW");      // UP DOWN DOUBLE ARROW
-  DefMath!("\\nearrow",     "\u{2197}", role => "ARROW");      // NORTH EAST ARROW
-  DefMath!("\\searrow",     "\u{2198}", role => "ARROW");      // SOUTH EAST ARROW
-  DefMath!("\\swarrow",     "\u{2199}", role => "ARROW");      // SOUTH WEST ARROW
-  DefMath!("\\nwarrow",     "\u{2196}", role => "ARROW");      // NORTH WEST ARROW
+  DefMath!("\\uparrow",     "\u{2191}", role => "ARROW"); // UPWARDS ARROW
+  DefMath!("\\Uparrow",     "\u{21D1}", role => "ARROW"); // UPWARDS DOUBLE ARROW
+  DefMath!("\\downarrow",   "\u{2193}", role => "ARROW"); // DOWNWARDS ARROW
+  DefMath!("\\Downarrow",   "\u{21D3}", role => "ARROW"); // DOWNWARDS DOUBLE ARROW
+  DefMath!("\\updownarrow", "\u{2195}", role => "ARROW"); // UP DOWN ARROW
+  DefMath!("\\Updownarrow", "\u{21D5}", role => "ARROW"); // UP DOWN DOUBLE ARROW
+  DefMath!("\\nearrow",     "\u{2197}", role => "ARROW"); // NORTH EAST ARROW
+  DefMath!("\\searrow",     "\u{2198}", role => "ARROW"); // SOUTH EAST ARROW
+  DefMath!("\\swarrow",     "\u{2199}", role => "ARROW"); // SOUTH WEST ARROW
+  DefMath!("\\nwarrow",     "\u{2196}", role => "ARROW"); // NORTH WEST ARROW
 
   // \mapstochar (3237), \lhook(312C), \rhook(312D)
   // These are really wrong; I can't find the right Unicode Glyphs.
   // These are only fragments intended to be assembled into meaningful(?) symbols.
-  DefMath!("\\mapstochar", "\u{2E20}");    // TeX 3237
-  DefMath!("\\lhook",      "\u{2E26}");    // TeX 312C
-  DefMath!("\\rhook",      "\u{2E27}");    // TeX 312D
+  DefMath!("\\mapstochar", "\u{2E20}"); // TeX 3237
+  DefMath!("\\lhook", "\u{2E26}"); // TeX 312C
+  DefMath!("\\rhook", "\u{2E27}"); // TeX 312D
 
   //======================================================================
   // TeX Book, Appendix B. p. 359
@@ -1297,23 +1414,27 @@ LoadDefinitions!({
         Ok(SymHashMap::default())
       }
   });
-  DefConstructor!("\\vdots",
-    "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\u{22EE}</ltx:XMTok>)(\u{22EE})");
-    // TODO:
-    // properties => sub {
-    //   (LookupValue('IN_MATH')
-    //     ? (font => LookupValue('font')->merge(family => 'serif',
-    //         series => 'medium', shape => 'upright')->specialize("\u{22EE}"))
-    //     : ()); });    # Since not DefMath!
-    //                   # But not these!
+  DefConstructor!(
+    "\\vdots",
+    "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\u{22EE}</ltx:XMTok>)(\u{22EE})"
+  );
+  // TODO:
+  // properties => sub {
+  //   (LookupValue('IN_MATH')
+  //     ? (font => LookupValue('font')->merge(family => 'serif',
+  //         series => 'medium', shape => 'upright')->specialize("\u{22EE}"))
+  //     : ()); });    # Since not DefMath!
+  //                   # But not these!
   DefMath!("\\cdots", None, "\u{22EF}", role => "ELIDEOP"); // MIDLINE HORIZONTAL ELLIPSIS
-  DefMath!("\\ddots", None, "\u{22F1}", role => "ID");           // DOWN RIGHT DIAGONAL ELLIPSIS
-  DefMath!("\\colon", None, ":",        role => "METARELOP");    // Seems like good default role
-  //         # Note that amsmath redefines \dots to be `smart'.
-  //         # Aha, also can be in text...
-  DefConstructor!("\\dots",
-    "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})");
-    // TODO:
+  DefMath!("\\ddots", None, "\u{22F1}", role => "ID"); // DOWN RIGHT DIAGONAL ELLIPSIS
+  DefMath!("\\colon", None, ":",        role => "METARELOP"); // Seems like good default role
+                                                              //         # Note that amsmath redefines \dots to be `smart'.
+                                                              //         # Aha, also can be in text...
+  DefConstructor!(
+    "\\dots",
+    "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})"
+  );
+  // TODO:
   //   properties => sub {
   //     (LookupValue('IN_MATH')
   //       ? (font => LookupValue('font')->merge(family => 'serif',
@@ -1339,21 +1460,21 @@ LoadDefinitions!({
   DefMath!("\\hat Digested", "\u{005E}",
     operator_role => "OVERACCENT", operator_stretchy => false);
   DefMath!("\\check Digested", "\u{02C7}",
-    operator_role => "OVERACCENT", operator_stretchy => false);    // CARON
-  DefMath!("\\breve Digested", "\u{02D8}", operator_role => "OVERACCENT");    // BREVE
-  DefMath!("\\acute Digested", "\u{00B4}",  operator_role => "OVERACCENT");    // ACUTE ACCENT
-  DefMath!("\\grave Digested", "\u{0060}",  operator_role => "OVERACCENT");    // GRAVE ACCENT
+    operator_role => "OVERACCENT", operator_stretchy => false); // CARON
+  DefMath!("\\breve Digested", "\u{02D8}", operator_role => "OVERACCENT"); // BREVE
+  DefMath!("\\acute Digested", "\u{00B4}",  operator_role => "OVERACCENT"); // ACUTE ACCENT
+  DefMath!("\\grave Digested", "\u{0060}",  operator_role => "OVERACCENT"); // GRAVE ACCENT
   DefMath!("\\tilde Digested", "\u{007E}",
-    operator_role => "OVERACCENT", operator_stretchy => false);           // TILDE
+    operator_role => "OVERACCENT", operator_stretchy => false); // TILDE
   DefMath!("\\bar Digested", "\u{00AF}",
-    operator_role => "OVERACCENT", operator_stretchy => false);           // MACRON
+    operator_role => "OVERACCENT", operator_stretchy => false); // MACRON
   DefMath!("\\vec Digested", "\u{2192}",
-    operator_role => "OVERACCENT", operator_stretchy => false);           // RIGHTWARDS ARROW
-  DefMath!("\\dot Digested",      "\u{02D9}", operator_role => "OVERACCENT");    // DOT ABOVE
-  DefMath!("\\ddot Digested",     "\u{00A8}",  operator_role => "OVERACCENT");    // DIAERESIS
+    operator_role => "OVERACCENT", operator_stretchy => false); // RIGHTWARDS ARROW
+  DefMath!("\\dot Digested",      "\u{02D9}", operator_role => "OVERACCENT"); // DOT ABOVE
+  DefMath!("\\ddot Digested",     "\u{00A8}",  operator_role => "OVERACCENT"); // DIAERESIS
   DefMath!("\\widehat Digested", "\u{005E}", operator_role => "OVERACCENT"); // CIRCUMFLEX ACCENT [plain? also amsfonts]
   DefMath!("\\widetilde Digested", "\u{007E}", operator_role => "OVERACCENT"); // TILDE [plain? also amsfonts]
-  // These aren"t handled as simple accents by TeX, so no Digested
+                                                                               // These aren"t handled as simple accents by TeX, so no Digested
   DefMath!("\\overbrace {}", "\u{23DE}", operator_role => "OVERACCENT",       // TOP CURLY BRACKET
     scriptpos => "mid", robust => true);
   DefMath!("\\underbrace {}", "\u{23DF}", operator_role => "UNDERACCENT",     // BOTTOM CURLY BRACKET
@@ -1361,18 +1482,24 @@ LoadDefinitions!({
 
   // NOTE that all the above accents REQUIRE math mode
   // EXCEPT underline, overrightarrow and overleftarrow!
-  Let!("\\underbar", "\\underline");    // Will anyone notice?
+  Let!("\\underbar", "\\underline"); // Will anyone notice?
 
-  DefMacro!("\\overrightarrow{}", r"\protect\ifmmode\lx@math@overrightarrow{#1}\else$\lx@math@overrightarrow{#1}$\fi");
-  DefMacro!("\\overleftarrow{}", r"\protect\ifmmode\lx@math@overleftarrow{#1}\else$\lx@math@overleftarrow{#1}$\fi");
+  DefMacro!(
+    "\\overrightarrow{}",
+    r"\protect\ifmmode\lx@math@overrightarrow{#1}\else$\lx@math@overrightarrow{#1}$\fi"
+  );
+  DefMacro!(
+    "\\overleftarrow{}",
+    r"\protect\ifmmode\lx@math@overleftarrow{#1}\else$\lx@math@overleftarrow{#1}$\fi"
+  );
 
-  DefMacro!("\\skew{}{}{}", r"{#2{#3\mkern#1mu}\mkern-#1mu}{}");  // ignore the subtle spacing for now?
-  //----------------------------------------------------------------------
-  // LaTeX; Table 3.10. Delimiters, p.47
-  //----------------------------------------------------------------------
-  // The meaning of OPEN/CLOSE tends to depend upon the pairing,
-  // rather than the individual tokens.
-  // This meaning is handled in MathParser (for now)
+  DefMacro!("\\skew{}{}{}", r"{#2{#3\mkern#1mu}\mkern-#1mu}{}"); // ignore the subtle spacing for now?
+                                                                 //----------------------------------------------------------------------
+                                                                 // LaTeX; Table 3.10. Delimiters, p.47
+                                                                 //----------------------------------------------------------------------
+                                                                 // The meaning of OPEN/CLOSE tends to depend upon the pairing,
+                                                                 // rather than the individual tokens.
+                                                                 // This meaning is handled in MathParser (for now)
   DefMacro!("\\{", r"\ifmmode\lx@math@lbrace\else\lx@text@lbrace\fi", protected => true);
   DefMacro!("\\}", r"\ifmmode\lx@math@rbrace\else\lx@text@rbrace\fi", protected => true);
   DefMath!("\\lx@math@lbrace", None, "{", role => "OPEN",  stretchy => false, alias => "\\{");
@@ -1414,7 +1541,6 @@ LoadDefinitions!({
   // sub lookup_delimiter {
   //   my ($delim) = @_;
   //   return $DELIMITER_MAP{$delim}; }
-
 
   // These originally had Token as parameter, rather than {}..... Why?
   // Note that in TeX, \big{((} will only enlarge the 1st paren!!!
@@ -1474,44 +1600,53 @@ LoadDefinitions!({
   // Note that in TeX, all 4 args get digested(!)
   // and the choice is made when absorbing!
 
-  DefMacro!("\\mathpalette{}{}", r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}");
+  DefMacro!(
+    "\\mathpalette{}{}",
+    r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}"
+  );
 
-  DefConstructor!("\\phantom{}",
+  DefConstructor!(
+    "\\phantom{}",
     "?#isMath(<ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)");    // !?!?!?!
-    // TODO:
-    // properties  => { isSpace => 1 },
-    // afterDigest => sub {
-    //   my $whatsit = $_[1];
-    //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-    //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-    //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
+  ); // !?!?!?!
+     // TODO:
+     // properties  => { isSpace => 1 },
+     // afterDigest => sub {
+     //   my $whatsit = $_[1];
+     //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
+     //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
+     //   return; });
 
-  DefConstructor!("\\hphantom{}",
+  DefConstructor!(
+    "\\hphantom{}",
     "?#isMath(<ltx:XMHint width='#width' name='hphantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)");    // !?!?!?!
-    // TODO:
-    // properties  => { isSpace => 1 },
-    // afterDigest => sub {
-    //   my $whatsit = $_[1];
-    //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-    //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-    //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
+  ); // !?!?!?!
+     // TODO:
+     // properties  => { isSpace => 1 },
+     // afterDigest => sub {
+     //   my $whatsit = $_[1];
+     //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
+     //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
+     //   return; });
 
-  DefConstructor!("\\vphantom{}",
+  DefConstructor!(
+    "\\vphantom{}",
     "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)");    // !?!?!?!
-    // TODO:
-    // properties  => { isSpace => 1 },
-    // afterDigest => sub {
-    //   my $whatsit = $_[1];
-    //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-    //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-    //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
+  ); // !?!?!?!
+     // TODO:
+     // properties  => { isSpace => 1 },
+     // afterDigest => sub {
+     //   my $whatsit = $_[1];
+     //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
+     //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
+     //   return; });
 
   DefConstructor!("\\mathstrut", "?#isMath(<ltx:XMHint name='mathstrut'/>)()",
     properties => { stored_map!("isSpace" => true) });
-  DefConstructor!("\\smash{}", "#1");    // well, what?
+  DefConstructor!("\\smash{}", "#1"); // well, what?
 
   //======================================================================
   // TeX Book, Appendix B. p. 361
@@ -1559,63 +1694,68 @@ LoadDefinitions!({
   DefMath!("\\deg", None, "deg", role => "OPFUNCTION",   meaning => "degree");
   DefMath!("\\det", None, "det", role => "LIMITOP", meaning => "determinant",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
   DefMath!("\\dim", None, "dim", role => "LIMITOP", meaning => "dimension");
 
   DefMath!("\\exp", None, "exp", role => "OPFUNCTION", meaning => "exponential");
   DefMath!("\\gcd", None, "gcd", role => "OPFUNCTION", meaning => "gcd",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
   DefMath!("\\hom", None, "hom", role => "OPFUNCTION");
   DefMath!("\\inf", None, "inf", role => "LIMITOP", meaning => "infimum",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
 
   DefMath!("\\ker", None, "ker", role => "OPFUNCTION", meaning => "kernel");
   DefMath!("\\lg", None, "lg", role => "OPFUNCTION");
   DefMath!("\\lim", None, "lim", role => "LIMITOP", meaning => "limit",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
   DefMath!("\\liminf", None, "lim inf", role => "LIMITOP", meaning => "limit-infimum",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
 
   DefMath!("\\limsup", None, "lim sup", role => "LIMITOP", meaning => "limit-supremum",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
   DefMath!("\\ln",  None, "ln",  role => "OPFUNCTION", meaning => "natural-logarithm");
   DefMath!("\\log", None, "log", role => "OPFUNCTION", meaning => "logarithm");
   DefMath!("\\max", None, "max", role => "OPFUNCTION", meaning => "maximum",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
 
   DefMath!("\\min", None, "min", role => "OPFUNCTION", meaning => "minimum",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
   DefMath!("\\Pr",  None, "Pr",  role => "OPFUNCTION",
-  );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
   DefMath!("\\sec", None, "sec", role => "TRIGFUNCTION", meaning   => "secant");
   DefMath!("\\sin", None, "sin", role => "TRIGFUNCTION", meaning   => "sine");
 
   DefMath!("\\sinh", None, "sinh", role => "TRIGFUNCTION", meaning => "hyperbolic-sine");
   DefMath!("\\sup", None, "sup", role => "LIMITOP", meaning => "supremum",
 
-    );//TODO: scriptpos => \&doScriptpos);
+  ); //TODO: scriptpos => \&doScriptpos);
   DefMath!("\\tan",  None, "tan",  role => "TRIGFUNCTION", meaning => "tangent");
   DefMath!("\\tanh", None, "tanh", role => "TRIGFUNCTION", meaning => "hyperbolic-tangent");
 
   //----------------------------------------------------------------------
   // Modulo
 
-  DefMath!("\\pmod{}", r"\;\;(\mathop{{\rm mod}} #1)", role => "MODIFIER");  //  , meaning=>"modulo");
+  DefMath!("\\pmod{}", r"\;\;(\mathop{{\rm mod}} #1)", role => "MODIFIER"); //  , meaning=>"modulo");
   DefMath!("\\bmod", "mod", role => "MODIFIEROP", meaning => "modulo");
 
   //======================================================================
   // TeX Book, Appendix B. p. 362
-  DefMacro!("\\matrix{}", "\\lx@gen@plain@matrix{name=matrix,datameaning=matrix}{#1}");
+  DefMacro!(
+    "\\matrix{}",
+    "\\lx@gen@plain@matrix{name=matrix,datameaning=matrix}{#1}"
+  );
 
-  DefMacro!("\\bordermatrix{}",    // Semantics?
-    r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}");
+  DefMacro!(
+    "\\bordermatrix{}", // Semantics?
+    r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"
+  );
   // HACK the newly created border matrix to add columns for the (spanned) parentheses!!!
   // Assume (for now) that there's no XMDual structure here.
   // What is the semantics, anyway?
@@ -1657,12 +1797,16 @@ LoadDefinitions!({
   //     return; },
   //   reversion => '#1');
 
-  DefMacro!("\\pmatrix{}",
-     r"\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\@left(,right=\@right)}{#1}");
+  DefMacro!(
+    "\\pmatrix{}",
+    r"\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\@left(,right=\@right)}{#1}"
+  );
 
   // Note that 2nd column in \cases is in text mode!
-  DefMacro!("\\cases{}",
-    r"\lx@gen@plain@cases{meaning=cases,left=\@left\{,conditionmode=text,style=\textstyle}{#1}");
+  DefMacro!(
+    "\\cases{}",
+    r"\lx@gen@plain@cases{meaning=cases,left=\@left\{,conditionmode=text,style=\textstyle}{#1}"
+  );
 
   //----------------------------------------------------------------------
   DefPrimitive!("\\openup Dimension", None);
@@ -1671,26 +1815,33 @@ LoadDefinitions!({
   // see https://www.tug.org/TUGboat/tb07-1/tb14beet.pdf
   // use in arXiv:hep-th/0001208
   // TODO:
-  // DefMacro!("\\displaylines{}", r###"\halign{\hbox to\displaywidth{$\hfil\displaystyle##\hfil$}\crcr#1\crcr}"###);
+  // DefMacro!("\\displaylines{}", r###"\halign{\hbox
+  // to\displaywidth{$\hfil\displaystyle##\hfil$}\crcr#1\crcr}"###);
 
-  DefMacro!("\\eqalign{}",
-    r"\@@eqalign{\lx@begin@alignment#1\lx@end@alignment}");
+  DefMacro!(
+    "\\eqalign{}",
+    r"\@@eqalign{\lx@begin@alignment#1\lx@end@alignment}"
+  );
   // DefConstructor('\@@eqalign{}',
   //   '#1',
   //   reversion    => '\eqalign{#1}', bounded => 1,
   //   beforeDigest => sub { alignmentBindings('rl', 'math',
   //       attributes => { vattach => 'baseline' }); });
 
-  DefMacro!("\\eqalignno{}",
-    r"\@@eqalignno{\lx@begin@alignment#1\lx@end@alignment}");
+  DefMacro!(
+    "\\eqalignno{}",
+    r"\@@eqalignno{\lx@begin@alignment#1\lx@end@alignment}"
+  );
   // DefConstructor('\@@eqalignno{}',
   //   '#1',
   //   reversion    => '\eqalignno{#1}', bounded => 1,
   //   beforeDigest => sub { alignmentBindings('rll', 'math',
   //       attributes => { vattach => 'baseline' }); });
 
-  DefMacro!("\\leqalignno{}",
-    r"\@@leqalignno{\lx@begin@alignment#1\lx@end@alignment}");
+  DefMacro!(
+    "\\leqalignno{}",
+    r"\@@leqalignno{\lx@begin@alignment#1\lx@end@alignment}"
+  );
   // DefConstructor('\@@leqalignno{}',
   //   '#1',
   //   reversion    => '\leqalignno{#1}', bounded => 1,
@@ -1700,7 +1851,7 @@ LoadDefinitions!({
   DefRegister!("\\pageno"   => Number::new(0));
   DefRegister!("\\headline" => Tokens!());
   DefRegister!("\\footline" => Tokens!());
-  DefMacro!("\\folio", "1");    // What else?
+  DefMacro!("\\folio", "1"); // What else?
 
   DefPrimitive!("\\nopagenumbers", None);
   DefMacro!("\\advancepageno", "\\advance\\pageno1\\relax");
@@ -1734,18 +1885,21 @@ LoadDefinitions!({
 
   // Until we can do the "v" properly:
   DefMacro!("\\vfootnote", "\\footnote");
-  DefMacro!("\\fo@t",      r"\ifcat\bgroup\noexpand\next \let\next\f@@t  \else\let\next\f@t\fi \next");
-  DefMacro!("\\f@@t",      r"\bgroup\aftergroup\@foot\let\next");
-  DefMacro!("\\f@t{}",     r"#1\@foot");
-  DefMacro!("\\@foot",     r"\strut\egroup");
+  DefMacro!(
+    "\\fo@t",
+    r"\ifcat\bgroup\noexpand\next \let\next\f@@t  \else\let\next\f@t\fi \next"
+  );
+  DefMacro!("\\f@@t", r"\bgroup\aftergroup\@foot\let\next");
+  DefMacro!("\\f@t{}", r"#1\@foot");
+  DefMacro!("\\@foot", r"\strut\egroup");
 
   DefPrimitive!("\\footstrut", None);
   DefRegister!("\\footins" => Number::new(0));
 
-  DefPrimitive!("\\topinsert",  None);
-  DefPrimitive!("\\midinsert",  None);
+  DefPrimitive!("\\topinsert", None);
+  DefPrimitive!("\\midinsert", None);
   DefPrimitive!("\\pageinsert", None);
-  DefPrimitive!("\\endinsert",  None);
+  DefPrimitive!("\\endinsert", None);
   // \topins ?
 
   //======================================================================
@@ -1761,7 +1915,7 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Stuff that probably doesn't belong here (LaTeX? or nowhere?)
   //DefMacro('\vspace{}', '\vskip#1\relax');
-  
+
   //======================================================================
   // In principle, <ltx:emph> is a nice markup for emphasized.
   // Unfortunately, TeX really just treats it as a font switch.
@@ -1786,7 +1940,6 @@ LoadDefinitions!({
   // TODO:
   // beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0),
   // 'local'); }, forbidMath => 1);
-
 });
 
 fn non_typewriter(font: &Font) -> bool {
@@ -1794,20 +1947,34 @@ fn non_typewriter(font: &Font) -> bool {
 }
 
 fn non_typewriter_t1(font: &Font) -> bool {
-  non_typewriter(font) &&
-  matches!(font.get_encoding().unwrap_or(&Cow::Borrowed("OT1")).as_ref(), "OT1" | "T1")
+  non_typewriter(font)
+    && matches!(
+      font
+        .get_encoding()
+        .unwrap_or(&Cow::Borrowed("OT1"))
+        .as_ref(),
+      "OT1" | "T1"
+    )
 }
 
-fn align_line(document: &mut Document, line:&[Option<Digested>], alignment:&str) -> Result<()> {
+fn align_line(document: &mut Document, line: &[Option<Digested>], alignment: &str) -> Result<()> {
   if document.is_openable("ltx:p") {
     let line_content = line.iter().filter_map(|c| c.as_ref()).collect();
-    document.insert_element("ltx:p", line_content, Some(string_map!(
-      "class" => s!("ltx_align_{alignment}"))))?; 
+    document.insert_element(
+      "ltx:p",
+      line_content,
+      Some(string_map!(
+      "class" => s!("ltx_align_{alignment}"))),
+    )?;
   } else if document.is_openable("ltx:text") {
     let line_content = line.iter().filter_map(|c| c.as_ref()).collect();
-    document.insert_element("ltx:text", line_content, Some(string_map!(
-      "class" => s!("ltx_align_{alignment}"))))?;
-    document.insert_element("ltx:break",Vec::new(),None)?;
+    document.insert_element(
+      "ltx:text",
+      line_content,
+      Some(string_map!(
+      "class" => s!("ltx_align_{alignment}"))),
+    )?;
+    document.insert_element("ltx:break", Vec::new(), None)?;
   } else if let Some(Some(line_content)) = line.first() {
     document.absorb(line_content, None)?;
   }

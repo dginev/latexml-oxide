@@ -89,8 +89,7 @@ impl MuGlue {
     minus: Option<f64>,
     mfill: Option<FillCode>,
   ) -> Self {
-    let (skip, plus, pfill, minus, mfill) =
-      spec_setup(spec, plus, pfill, minus, mfill, "mu");
+    let (skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, "mu");
     MuGlue {
       skip,
       plus,
@@ -133,5 +132,8 @@ impl From<MuGlue> for Option<Tokens> {
   fn from(v: MuGlue) -> Option<Tokens> { Some(v.into()) }
 }
 impl From<MuGlue> for Tokens {
-  fn from(v: MuGlue) -> Tokens { v.revert().expect("MuGlue should always be revertable to Tokens.") }
+  fn from(v: MuGlue) -> Tokens {
+    v.revert()
+      .expect("MuGlue should always be revertable to Tokens.")
+  }
 }

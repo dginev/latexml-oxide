@@ -1,8 +1,8 @@
+use crate::common::error::Result;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::cmp::Ordering;
 use std::fmt;
-use crate::common::error::Result;
 
 use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::{fixpoint, kround, NumericOps};
@@ -196,9 +196,7 @@ impl fmt::Display for Glue {
   }
 }
 impl Object for Glue {
-  fn be_digested(self) -> Result<Digested> {
-    Ok(RegisterValue::Glue(self).into())
-  }
+  fn be_digested(self) -> Result<Digested> { Ok(RegisterValue::Glue(self).into()) }
 }
 
 pub fn new_setup(
@@ -230,7 +228,7 @@ pub fn spec_setup(
   mut pfill: Option<FillCode>,
   minus: Option<f64>,
   mut mfill: Option<FillCode>,
-  unit: &str
+  unit: &str,
 ) -> (
   i64,
   Option<i64>,
@@ -377,10 +375,9 @@ impl Glue {
     plus: Option<f64>,
     pfill: Option<FillCode>,
     minus: Option<f64>,
-    mfill: Option<FillCode>
+    mfill: Option<FillCode>,
   ) -> Self {
-    let (skip, plus, pfill, minus, mfill) =
-      spec_setup(spec, plus, pfill, minus, mfill, "pt");
+    let (skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, "pt");
     Glue {
       skip,
       plus,

@@ -1,15 +1,15 @@
 //! TeX Job
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
-use chrono::prelude::*;
 use crate::prelude::*;
+use chrono::prelude::*;
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Job Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // The current Job
   //----------------------------------------------------------------------
@@ -44,7 +44,9 @@ LoadDefinitions!({
   // \everyjob         pt holds tokens which are inserted at the start of every job.
   // \deadcycles       iq is the number of times \output was called since the last \shipout.
   // \maxdeadcycles    pi is the maximum allowed value of \deadcycles before an error is generated.
-  DefPrimitive!("\\end", { gullet::flush(); });
+  DefPrimitive!("\\end", {
+    gullet::flush();
+  });
   DefRegister!("\\everyjob", Tokens!());
   DefRegister!("\\deadcycles", Number!(0));
   DefRegister!("\\maxdeadcycles", Number!(0));
@@ -60,5 +62,4 @@ LoadDefinitions!({
 
   // TODO: load_dump
   // TODO: load_latex
-  
 });

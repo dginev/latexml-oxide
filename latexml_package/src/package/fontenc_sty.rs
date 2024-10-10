@@ -106,7 +106,10 @@ LoadDefinitions!({
 
   DeclareOption!(None, {
     let current_option = Expand!(T_CS!("\\CurrentOption")).to_string();
-    unshift_value("font_encodings", vec![Stored::String(arena::pin(current_option))]);
+    unshift_value(
+      "font_encodings",
+      vec![Stored::String(arena::pin(current_option))],
+    );
   });
 
   // WELL... Actually, some "encodings" map the normal 7bit (or 8)

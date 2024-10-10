@@ -99,7 +99,7 @@ impl Actions {
             pragmas,
             ActionContext {
               nodes: ctxt.nodes,
-              document: ctxt.document
+              document: ctxt.document,
             },
           )?;
           translated_children.push(translated);
@@ -114,7 +114,7 @@ impl Actions {
             pragmas,
             ActionContext {
               nodes: ctxt.nodes,
-              document: ctxt.document
+              document: ctxt.document,
             },
           )?);
         }
@@ -328,17 +328,22 @@ pub fn fenced(
   let o = open.get_value(ctxt.nodes)?;
   let c = close.get_value(ctxt.nodes)?;
   let op_name = format!("delimited-{}{}", o, c);
-  
+
   // TODO: We need a method to figure out how many arguments are nested inside <arg>
   // for now assume 1
   // if arg.len() == 1 &&
-  if op_name == "delimited-()" { // Hopefully, can just ignore the parens?
+  if op_name == "delimited-()" {
+    // Hopefully, can just ignore the parens?
     let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
-    Ok(Some(XM::Dual( 
+    Ok(Some(XM::Dual(
       Box::new(arg_xmrefs.remove(0)),
-      Box::new(XM::Wrap(vec![open,arg,close], XProps::default(), Meta::default())),
+      Box::new(XM::Wrap(
+        vec![open, arg, close],
+        XProps::default(),
+        Meta::default(),
+      )),
       XProps::default(),
-      Meta::default() 
+      Meta::default(),
     )))
   } else {
     let op = xnew(op_name);

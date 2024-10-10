@@ -3,19 +3,19 @@
 // it would be massively superior to leverage Drop, compared to explicit `expire_*` calls
 
 //! Perl-style local assignments (dynamic scope)
-//! 
+//!
 //! This module can benefit from some thinking over and refactoring
 //! in principle the "local" scope variables in Perl are a completely standalone feature
 //! (it's global namespace value shadowing until scope expiration)
 //! ... so the push/pop can be modeled with sentry values getting created and dropped (TODO)...
 
+use once_cell::sync::Lazy;
 use std::cell::RefCell;
 use std::rc::Rc;
-use once_cell::sync::Lazy;
 
+use crate::alignment::template::Template;
 use crate::definition::conditional::IfFrame;
 use crate::token::Token;
-use crate::alignment::template::Template;
 use crate::Digested;
 
 /// These are fields realized via Perl's "local" mechanism in LaTeXML,
@@ -33,10 +33,14 @@ pub struct Localized {
 }
 
 macro_rules! locals {
-  () => ((*LOCALIZED_VARS).borrow())
+  () => {
+    (*LOCALIZED_VARS).borrow()
+  };
 }
 macro_rules! locals_mut {
-  () => ((*LOCALIZED_VARS).borrow_mut())
+  () => {
+    (*LOCALIZED_VARS).borrow_mut()
+  };
 }
 
 #[thread_local]
@@ -68,9 +72,7 @@ pub fn set_dual_branch(mode: &'static str) { locals_mut!().dual_branch.push(mode
 /// expire (localized) flag for "dual branch"
 pub fn expire_dual_branch() { locals_mut!().dual_branch.pop(); }
 /// get the current value for "dual branch"
-pub fn get_dual_branch() -> Option<&'static str> {
-  locals!().dual_branch.last().cloned()
-}
+pub fn get_dual_branch() -> Option<&'static str> { locals!().dual_branch.last().cloned() }
 
 pub fn increment_align_group_count() {
   let mut locals = locals_mut!();
@@ -91,15 +93,9 @@ pub fn decrement_align_group_count() {
   }
 }
 
-pub fn state_is_unlocked() -> bool {
-  locals!().unlocked.last().copied().unwrap_or(false)
-}
-pub fn local_state_unlocked(v: bool) {
-  locals_mut!().unlocked.push(v);
-}
-pub fn expire_state_unlocked() {
-  locals_mut!().unlocked.pop();
-}
+pub fn state_is_unlocked() -> bool { locals!().unlocked.last().copied().unwrap_or(false) }
+pub fn local_state_unlocked(v: bool) { locals_mut!().unlocked.push(v); }
+pub fn expire_state_unlocked() { locals_mut!().unlocked.pop(); }
 
 pub fn align_group_count() -> i32 {
   locals!()
@@ -116,24 +112,16 @@ pub fn set_align_group_count(v: i32) {
   }
 }
 pub fn local_align_group_count(v: i32) { locals_mut!().align_group_count.push(v); }
-pub fn expire_align_group_count() -> Option<i32> {
-  locals_mut!().align_group_count.pop()
-}
+pub fn expire_align_group_count() -> Option<i32> { locals_mut!().align_group_count.pop() }
 
-pub fn get_reading_alignment() -> Option<Digested> {
-  locals!().reading_alignment.last().cloned()
-}
-pub fn has_reading_alignment() -> bool { ! locals!().reading_alignment.is_empty() }
+pub fn get_reading_alignment() -> Option<Digested> { locals!().reading_alignment.last().cloned() }
+pub fn has_reading_alignment() -> bool { !locals!().reading_alignment.is_empty() }
 pub fn local_reading_alignment(alignment: &Digested) {
   locals_mut!().reading_alignment.push(alignment.clone());
 }
-pub fn expire_reading_alignment() -> Option<Digested> {
-  locals_mut!().reading_alignment.pop()
-}
+pub fn expire_reading_alignment() -> Option<Digested> { locals_mut!().reading_alignment.pop() }
 
-pub fn local_build_template(template: Template) {
-  locals_mut!().build_template.push(template);
-}
+pub fn local_build_template(template: Template) { locals_mut!().build_template.push(template); }
 pub fn set_build_template(template: Template) {
   *locals_mut!()
     .build_template
@@ -144,6 +132,6 @@ pub fn set_build_template(template: Template) {
 pub fn take_build_template() -> Option<Template> { locals_mut!().build_template.pop() }
 
 pub fn with_current_build_template<R, FnR>(caller: FnR) -> R
-where FnR: FnOnce(Option<&mut Template>) -> R  {
+where FnR: FnOnce(Option<&mut Template>) -> R {
   caller(locals_mut!().build_template.last_mut())
 }

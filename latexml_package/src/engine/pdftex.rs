@@ -102,7 +102,7 @@ LoadDefinitions!({
     } else {
       Tokens!() } });
   DefMacro!("\\pdffilemoddate {}", None);
-  DefMacro!("\\pdffiledump {}",None);
+  DefMacro!("\\pdffiledump {}", None);
   // DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
@@ -121,7 +121,6 @@ LoadDefinitions!({
   DefRegister!("\\pdfshellescape"          => Number::new(0));
   DefRegister!("\\pdflastximagecolordepth" => Number::new(0));
   DefRegister!("\\pdfretval"               => Number::new(0));
-
 
   // \pdfximage [ image attr spec ] general text (h, v, m)
   // \pdfrefximage object number (h, v, m)
@@ -157,21 +156,25 @@ LoadDefinitions!({
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
   DefMacro!("\\quitvmode", "");
   // \pdfliteral [ pdfliteral spec ] general text (h, v, m)
-  DefPrimitive!("\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText", None);
+  DefPrimitive!(
+    "\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText",
+    None
+  );
   // \special pdfspecial spec
   // \pdfresettimer
-  DefPrimitive!("\\pdfresettimer",           None);
+  DefPrimitive!("\\pdfresettimer", None);
   DefPrimitive!("\\pdfresettimerresettimer", None);
   // \pdfsetrandomseed number
   // \pdfnoligatures font
   // \pdfprimitive control sequence
-  // TODO: https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
+  // TODO:
+  // https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
   DefMacro!("\\pdfprimitive DefToken", "#1"); // we can just ignore the advanced effects for now.
 
   // \pdfcolorstack stack number stack action general text
   //TODO:
-  // DefPrimitive('\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current', sub {
-  //   # for now, carefully read and discard all arguments
+  // DefPrimitive('\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop
+  // OptionalMatch:current', sub {   # for now, carefully read and discard all arguments
   //   my ($stomach, $number, $set, $push, $pop, $current) = @_;
   //   return if ($pop);
   //   my $gullet = $stomach->getGullet;
@@ -241,5 +244,4 @@ LoadDefinitions!({
     }
   });
   DefMacro!("\\pdfglyphtounicode{}{}", "");
-
 });

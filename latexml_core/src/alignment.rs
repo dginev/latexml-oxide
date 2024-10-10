@@ -34,14 +34,14 @@ use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::digested::Digested;
-use crate::document::{get_node_qname,with_node_qname,Document};
+use crate::document::{get_node_qname, with_node_qname, Document};
+use crate::gullet::{self, ExpansionLevel};
 use crate::mouth::Mouth;
-use crate::token::Catcode;
-use crate::tokens::Tokens;
 use crate::state::*;
 use crate::stomach::*;
-use crate::gullet::{self, ExpansionLevel};
-use crate::{BoxOps,stomach};
+use crate::token::Catcode;
+use crate::tokens::Tokens;
+use crate::{stomach, BoxOps};
 
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
@@ -58,8 +58,7 @@ pub type OpenContainerFn =
 pub type CloseContainerFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
 pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<()>>;
 pub type CloseRowFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
-pub type OpenColumnFn =
-  Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
+pub type OpenColumnFn = Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
 pub type CloseColumnFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
 
 static SINGLE_PUNCT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*[\.,;]\s*$").unwrap());
@@ -203,7 +202,9 @@ impl Alignment {
   }
 
   pub fn next_column(&mut self) -> Result<Option<&mut Cell>> {
-    if self.current_row.is_none() { return Ok(None); }
+    if self.current_row.is_none() {
+      return Ok(None);
+    }
     self.current_column += 1;
     let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
     if let Some(colspec) = current_row.get_column_mut(self.current_column) {
@@ -319,9 +320,7 @@ impl Alignment {
     }
   }
 
-  pub fn revert(&self) -> Result<Tokens> {
-    Ok(self.reversion.clone().unwrap_or_default())
-  }
+  pub fn revert(&self) -> Result<Tokens> { Ok(self.reversion.clone().unwrap_or_default()) }
 
   pub fn set_reversion(&mut self, rev: Tokens) { self.reversion = Some(rev); }
   pub fn set_content_reversion(&mut self, rev: Tokens) { self.content_reversion = Some(rev); }
@@ -330,11 +329,7 @@ impl Alignment {
   // Support for building an alignment's Rows & Columns
   pub fn is_in_row(&self) -> bool { self.in_row }
   pub fn is_in_column(&self) -> bool { self.in_column }
-  pub fn start_row(
-    &mut self,
-    pseudorow: bool,
-
-  ) -> Result<()> {
+  pub fn start_row(&mut self, pseudorow: bool) -> Result<()> {
     self.new_row();
     bgroup(); // Grouping around ROW!
     if pseudorow {
@@ -359,18 +354,14 @@ impl Alignment {
     Ok(()) //  Digest(T_CS('\lx@alignment@row@after'));
   }
 
-  pub fn start_column(
-    &mut self,
-    pseudorow: bool,
-
-  ) -> Result<()> {
+  pub fn start_column(&mut self, pseudorow: bool) -> Result<()> {
     if !self.in_row {
       self.start_row(pseudorow)?;
     } else if pseudorow {
       self.current_row_mut().unwrap().set_pseudo();
     }
     bgroup(); // Grouping around CELL!
-                           // Note: a VERY round-about way of tracking the column spanning!
+              // Note: a VERY round-about way of tracking the column spanning!
     assign_value("alignmentStartColumn", self.current_column_number(), None);
     let _colspec = self.next_column();
     set_align_group_count(1000000);
@@ -503,7 +494,8 @@ impl BoxOps for Alignment {
             }
           }
         }
-        let empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty()?;
+        let empty =
+          cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty()?;
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
         if let Some(align) = cell.align {
@@ -549,11 +541,7 @@ impl BoxOps for Alignment {
           document.set_box_to_absorb(Some(box_ref.clone()));
           if ismath {
             // Hacky!
-            document.open_element(
-              "ltx:XMArg",
-              Some(string_map!("rule" => "Anything")),
-              None,
-                      )?;
+            document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None)?;
           }
           document.absorb(box_ref, None)?;
           if ismath {
@@ -671,34 +659,27 @@ pub fn read_alignment_template() -> Result<Template> {
       let invoked = defn.invoke(true)?;
       gullet::unread(invoked);
     } else if cc == Catcode::BEGIN {
-      let balanced_arg = gullet::read_balanced(ExpansionLevel::Off,false,false)?;
+      let balanced_arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
       if !balanced_arg.is_empty() {
         gullet::unread(balanced_arg);
       }
     } else {
-      Warn!(
-        "unexpected",
-        op,
-        s!("Unrecognized tabular template {op:?}")
-      );
+      Warn!("unexpected", op, s!("Unrecognized tabular template {op:?}"));
     }
     if nopens <= 0 {
       break;
     }
   }
   tokens.push(T_END!());
-  with_current_build_template(|template_opt| template_opt.unwrap()
-    .set_reversion(Tokens::new(tokens)));
+  with_current_build_template(|template_opt| {
+    template_opt.unwrap().set_reversion(Tokens::new(tokens))
+  });
   Ok(take_build_template().unwrap())
 }
 
-pub fn parse_alignment_template(
-  spec: &str
-) -> Result<Template> {
+pub fn parse_alignment_template(spec: &str) -> Result<Template> {
   let reader_mouth = Mouth::new(&s!("{{{spec}}}"), None)?;
-  gullet::reading_from_mouth(reader_mouth, || {
-    read_alignment_template()
-  })
+  gullet::reading_from_mouth(reader_mouth, read_alignment_template)
 }
 
 pub fn matrix_template() -> Template {
@@ -1111,7 +1092,8 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
         Some(NodeType::TextNode) => {
           let text = ch.get_content();
           if !(text.chars().all(|c| c.is_whitespace())
-            || (inferred_classes.first() == Some(&ColumnSpec::Math) && SINGLE_PUNCT.is_match(&text)))
+            || (inferred_classes.first() == Some(&ColumnSpec::Math)
+              && SINGLE_PUNCT.is_match(&text)))
           {
             inferred_classes.push(ColumnSpec::Text);
           }
@@ -1223,7 +1205,7 @@ fn alignment_characterize_lines(
   document: &mut Document,
   axis: Axis,
   reversed: bool,
-  lines: &mut [Vec<&mut Cell>]
+  lines: &mut [Vec<&mut Cell>],
 ) -> Result<()> {
   let n = lines.len();
   if n < 2 {

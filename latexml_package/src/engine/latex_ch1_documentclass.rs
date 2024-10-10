@@ -6,8 +6,8 @@ LoadDefinitions!({
   // Apparently LaTeX does NOT define \magnification,
   // and babel uses that to determine whether we're runing LaTeX!!!
   Let!("\\magnification", "\\@undefined");
-  Let!("\\@empty",        "\\lx@empty");
-  Let!("\\@ifundefined",  "\\lx@ifundefined");
+  Let!("\\@empty", "\\lx@empty");
+  Let!("\\@ifundefined", "\\lx@ifundefined");
   //**********************************************************************
   // Basic \documentclass & \documentstyle
 
@@ -38,8 +38,12 @@ LoadDefinitions!({
   DefPrimitive!("\\warn@unusedclassoptions", {
     if let Some(Stored::Strings(unused)) = lookup_value("@unusedoptionlist") {
       if !unused.is_empty() {
-        Info!("unexpected", "options",
-              "Unused global options: {}",unused.join(","));
+        Info!(
+          "unexpected",
+          "options",
+          "Unused global options: {}",
+          unused.join(",")
+        );
         state::assign_value("@unusedoptionlist", Stored::Strings(Rc::new([])), None);
       }
     }

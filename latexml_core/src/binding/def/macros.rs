@@ -64,7 +64,7 @@ macro_rules! transfer_opt_default {
 #[macro_export]
 macro_rules! before_digest {
   ($(sub)? $body:block) => {
-    vec![before_digest_single!( $body)]
+    vec![before_digest_single!($body)]
   };
 }
 
@@ -152,25 +152,18 @@ macro_rules! properties {
     properties!($args, $body)
   };
   ($args:ident, $body:block) => {
-    Rc::new(
-      move |mut $args: &Vec<Option<Digested>>|
-            -> Result<SymHashMap<Stored>> {
-        $body
-      },
-    )
+    Rc::new(move |mut $args: &Vec<Option<Digested>>| -> Result<SymHashMap<Stored>> { $body })
   };
   ($(sub)? $body:block) => {
     Rc::new(
-      move |_args: &Vec<Option<Digested>>|
-            -> Result<SymHashMap<Stored>> {
+      move |_args: &Vec<Option<Digested>>| -> Result<SymHashMap<Stored>> {
         $body.into_properties_result()
       },
     )
   };
   ($value:expr) => {
     Rc::new(
-      move |_args: &Vec<Option<Digested>>|
-            -> Result<SymHashMap<Stored>> { Ok($value.clone()) },
+      move |_args: &Vec<Option<Digested>>| -> Result<SymHashMap<Stored>> { Ok($value.clone()) },
     )
   };
 }
@@ -188,17 +181,13 @@ macro_rules! after_digest {
 #[macro_export]
 macro_rules! after_digest_single {
   ($whatsit:ident, $body:block) => {
-    Rc::new(
-      move |$whatsit: &mut Whatsit| -> Result<Vec<Digested>> { $body.into_digested_result() },
-    )
+    Rc::new(move |$whatsit: &mut Whatsit| -> Result<Vec<Digested>> { $body.into_digested_result() })
   };
 }
 #[macro_export]
 macro_rules! after_digest_simple {
   ($whatsit:ident, $body:block) => {
-    Rc::new(
-      move |$whatsit: &mut Whatsit| -> Result<Vec<Digested>> { $body.into_digested_result() },
-    )
+    Rc::new(move |$whatsit: &mut Whatsit| -> Result<Vec<Digested>> { $body.into_digested_result() })
   };
 }
 
@@ -206,8 +195,9 @@ macro_rules! after_digest_simple {
 macro_rules! reader {
   ($inner:ident, $extra:ident, $body:block) => {
     Rc::new(
-      |$inner: Option<&Parameters>, $extra: &[Tokens]|
-       -> Result<ArgWrap> {$body.into_result_argwrap()}
+      |$inner: Option<&Parameters>, $extra: &[Tokens]| -> Result<ArgWrap> {
+        $body.into_result_argwrap()
+      },
     )
   };
 }
@@ -216,9 +206,8 @@ macro_rules! reader {
 macro_rules! predigest {
   ($arg:ident, $body:block) => {
     Some(Rc::new(|$arg: ArgWrap| -> Result<Option<Digested>> {
-        $body.into_digested_option_result()
-      },
-    ))
+      $body.into_digested_option_result()
+    }))
   };
 }
 
@@ -238,16 +227,12 @@ macro_rules! getter {
 macro_rules! setter {
   ($value:ident, $args: ident, $body:block) => {
     Some(Rc::new(
-      move |$value: RegisterValue, _scope: Option<Scope>, mut $args: Vec<ArgWrap>| {
-        $body
-      },
+      move |$value: RegisterValue, _scope: Option<Scope>, mut $args: Vec<ArgWrap>| $body,
     ))
   };
   ($value:ident, $scope:ident, $args: ident, $body:block) => {
     Some(Rc::new(
-      move |$value: RegisterValue, $scope: Option<Scope>, mut $args: Vec<ArgWrap>| {
-        $body
-      },
+      move |$value: RegisterValue, $scope: Option<Scope>, mut $args: Vec<ArgWrap>| $body,
     ))
   };
 }
@@ -256,10 +241,9 @@ macro_rules! setter {
 macro_rules! reversion {
   ($arg:ident, $inner:ident, $extra:ident, $body:block) => {
     Some(Rc::new(
-      |mut $arg: Vec<Token>,
-       $inner: Option<&Parameters>,
-       $extra: &[Tokens]|
-       -> Result<Tokens> {$body}
+      |mut $arg: Vec<Token>, $inner: Option<&Parameters>, $extra: &[Tokens]| -> Result<Tokens> {
+        $body
+      },
     ))
   };
 }
@@ -268,7 +252,7 @@ macro_rules! reversion {
 macro_rules! reversion_digested {
   ($whatsit:ident, $args:ident, $body:block) => {
     Some(Reversion::Closure(Rc::new(
-      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>| -> Result<Tokens> {$body}
+      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>| -> Result<Tokens> { $body },
     )))
   };
 }
@@ -427,7 +411,7 @@ macro_rules! Roman {
 #[macro_export]
 macro_rules! requireMath {
   ($cs_name:expr) => {
-    if ! $crate::state::lookup_bool("IN_MATH") {
+    if !$crate::state::lookup_bool("IN_MATH") {
       let message = s!("{} should only appear in math mode", $cs_name);
       Warn!("unexpected", "mode", message);
     }
@@ -440,13 +424,13 @@ macro_rules! forbidMath {
       let message = s!("{} should not appear in math mode", $cs_name);
       Warn!("unexpected", "mode", message);
     }
-  }
+  };
 }
 
 #[macro_export]
 macro_rules! AssignRegister {
   ($cs:literal, $value:expr) => {
-    AssignRegister!($cs,$value,Vec::new())
+    AssignRegister!($cs, $value, Vec::new())
   };
   ($cs:literal, $value:expr, $args:expr) => {
     let value_ident = { $value };
@@ -461,13 +445,25 @@ macro_rules! AssignRegister {
 
 #[macro_export]
 macro_rules! SetCounter {
-  ($ctr:expr => $value:expr) => { SetCounter!($ctr,$value) };
+  ($ctr:expr => $value:expr) => {
+    SetCounter!($ctr, $value)
+  };
   ($ctr:expr, $value:expr) => {
-    state::assign_register(&s!("\\c@{}",$ctr), $value.into(), Some(Scope::Global), Vec::new())?;
+    state::assign_register(
+      &s!("\\c@{}", $ctr),
+      $value.into(),
+      Some(Scope::Global),
+      Vec::new(),
+    )?;
     after_assignment();
-    def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None,
+    def_macro(
+      T_CS!(s!("\\@{}@ID", $ctr)),
+      None,
       Tokens::new(Explode!($value.value_of())),
-      Some(ExpandableOptions{ scope: Some(Scope::Global),
-         ..ExpandableOptions::default()}))?;
-  }
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..ExpandableOptions::default()
+      }),
+    )?;
+  };
 }

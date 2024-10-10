@@ -8,8 +8,8 @@ pub use rustc_hash::FxHashMap as HashMap;
 pub use std::borrow::Cow;
 pub use std::collections::VecDeque;
 pub use std::rc::Rc;
-pub use std::sync::Arc;
 pub use std::str::FromStr;
+pub use std::sync::Arc;
 
 pub use latexml_core::alignment::cell::Cell;
 pub use latexml_core::alignment::template::{Align, Template};
@@ -24,11 +24,11 @@ pub use latexml_core::common::font;
 pub use latexml_core::common::font::Font;
 pub use latexml_core::common::glue::Glue;
 pub use latexml_core::common::locator::Locator;
+pub use latexml_core::common::model;
 pub use latexml_core::common::mudimension::MuDimension;
 pub use latexml_core::common::muglue::MuGlue;
 pub use latexml_core::common::number::Number;
-pub use latexml_core::common::model;
-pub use latexml_core::common::numeric_ops::{NumericOps,UNITY, UNITY_F64};
+pub use latexml_core::common::numeric_ops::{NumericOps, UNITY, UNITY_F64};
 pub use latexml_core::common::object::Object;
 pub use latexml_core::common::xml::XML_NS;
 pub use latexml_core::definition::argument::ArgWrap;
@@ -41,8 +41,8 @@ pub use latexml_core::definition::register::{Register, RegisterType, RegisterVal
 pub use latexml_core::definition::ConditionalClosure;
 pub use latexml_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
-  ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveClosure, PrimitiveFn,
-  ReplacementClosure, Reversion, PrimitiveBody,
+  ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveBody, PrimitiveClosure,
+  PrimitiveFn, ReplacementClosure, Reversion,
 };
 pub use latexml_core::digested::{Digested, DigestedData};
 pub use latexml_core::document::resource::*;
@@ -61,7 +61,7 @@ pub use latexml_core::state::*;
 pub use latexml_core::stomach::*;
 pub use latexml_core::tbox::Tbox;
 pub use latexml_core::token::*;
-pub use latexml_core::tokens::{Tokens,NO_TOKENS};
+pub use latexml_core::tokens::{Tokens, NO_TOKENS};
 pub use latexml_core::util::pathname;
 pub use latexml_core::util::radix;
 pub use latexml_core::whatsit::Whatsit;

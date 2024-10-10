@@ -8,9 +8,8 @@ use crate::document::Document;
 
 pub type LigatureClosure = Rc<dyn Fn(&str) -> String>;
 pub type FontTestClosure = Rc<dyn Fn(&Font) -> bool>;
-pub type LigatureMatcher = Rc<
-  dyn Fn(&mut Document, &mut Node) -> Result<Option<(usize, String, MathLigatureOptions)>>,
->;
+pub type LigatureMatcher =
+  Rc<dyn Fn(&mut Document, &mut Node) -> Result<Option<(usize, String, MathLigatureOptions)>>>;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct MathLigatureOptions {

@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
-use crate::common::arena::{self, ANY_SYM, SymStr};
+use crate::common::arena::{self, SymStr, ANY_SYM};
 use crate::common::error::*;
 use crate::common::relaxng::Relaxng;
 use crate::common::xml::XML_NS;
@@ -15,7 +15,8 @@ use crate::util::pathname;
 use libxml::tree::Node;
 
 use super::arena::{
-  SymHashMap, DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM, RELAXNG_SYM, WILD_CARD_SYM
+  SymHashMap, DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM,
+  H_PI_SYM, RELAXNG_SYM, WILD_CARD_SYM,
 };
 
 // use common::font::*;
@@ -56,13 +57,17 @@ pub struct Model {
 }
 
 #[thread_local]
-pub static MODEL : Lazy<RefCell<Model>> = Lazy::new(|| RefCell::new(Model::new()));
+pub static MODEL: Lazy<RefCell<Model>> = Lazy::new(|| RefCell::new(Model::new()));
 
 macro_rules! model {
-  () => ((*MODEL).borrow())
+  () => {
+    (*MODEL).borrow()
+  };
 }
 macro_rules! model_mut {
-  () => ((*MODEL).borrow_mut())
+  () => {
+    (*MODEL).borrow_mut()
+  };
 }
 
 pub fn initialize_model() {
@@ -95,11 +100,7 @@ impl Model {
   pub fn register_namespace(&mut self, codeprefix: &str, namespace_opt: Option<&str>) {
     self.register_namespace_sym(arena::pin(codeprefix), namespace_opt.map(arena::pin))
   }
-  pub fn register_namespace_sym(
-    &mut self,
-    codeprefix: SymStr,
-    namespace_opt: Option<SymStr>,
-  ) {
+  pub fn register_namespace_sym(&mut self, codeprefix: SymStr, namespace_opt: Option<SymStr>) {
     // double-check empty strings are None
     let namespace_opt_checked = namespace_opt.filter(|val| *val != *EMPTY_SYM);
     match namespace_opt_checked {
@@ -160,7 +161,7 @@ impl Model {
     let compiled_fh = File::open(path).unwrap();
     let compiled_reader = BufReader::new(&compiled_fh);
     for line_item in compiled_reader.lines().map_while(std::result::Result::ok) {
-      let line : String = line_item;
+      let line: String = line_item;
       if let Some(caps) = TAG_MODEL_LINE_RE.captures(&line) {
         let tag = caps.get(1).map_or("", |m| m.as_str());
         let attr = caps.get(2).map_or("", |m| m.as_str());
@@ -187,10 +188,7 @@ impl Model {
     note_end(&s!("Loading compiled schema {path}\n"));
   }
   pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
-    let frame = self
-      .tagprop
-      .entry(arena::pin(tag))
-      .or_default();
+    let frame = self.tagprop.entry(arena::pin(tag)).or_default();
 
     for element in elements {
       frame.model.insert(arena::pin(element));
@@ -209,10 +207,7 @@ impl Model {
   // }
 
   pub fn add_tag_attribute(&mut self, tag: &str, attributes: Vec<&str>) {
-    let frame = self
-      .tagprop
-      .entry(arena::pin(tag))
-      .or_default();
+    let frame = self.tagprop.entry(arena::pin(tag)).or_default();
 
     for attribute in attributes {
       frame.attributes.insert(arena::pin(attribute));
@@ -224,17 +219,31 @@ impl Model {
   }
   pub fn describe_model(&self) {}
   fn load_internal_extensions(&mut self) {
-    if !self.tagprop.contains_key(&arena::pin_static("ltx:_CaptureBlock_")) {
+    if !self
+      .tagprop
+      .contains_key(&arena::pin_static("ltx:_CaptureBlock_"))
+    {
       // Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block, ltx:para,
-      self.synthesize_element("ltx:_CaptureBlock_",
-        &["ltx:block","ltx:logical-block","ltx:sectional-block","Caption"]);
-      let cb_entry = self.tagprop.entry(arena::pin_static("ltx:_CaptureBlock_"))
+      self.synthesize_element(
+        "ltx:_CaptureBlock_",
+        &[
+          "ltx:block",
+          "ltx:logical-block",
+          "ltx:sectional-block",
+          "Caption",
+        ],
+      );
+      let cb_entry = self
+        .tagprop
+        .entry(arena::pin_static("ltx:_CaptureBlock_"))
         .or_default();
       cb_entry.model.insert(arena::pin_static("svg:g"));
-      cb_entry.model.insert(arena::pin_static("svg:foreignObject"));
+      cb_entry
+        .model
+        .insert(arena::pin_static("svg:foreignObject"));
     }
   }
-  
+
   /// Clone the tagprop's (allowed content & attributes) of @other to $tag
   fn synthesize_element(&mut self, tag: &str, others: &[&str]) {
     let mut to_add_in_model = Vec::new();
@@ -242,8 +251,9 @@ impl Model {
     for other in others {
       if let Some(content) = self.schema_class.get(&arena::pin(other)) {
         for child in content {
-          to_add_in_model.push(*child); } }
-      else if let Some(entry) = self.tagprop.get(&arena::pin(other)) {
+          to_add_in_model.push(*child);
+        }
+      } else if let Some(entry) = self.tagprop.get(&arena::pin(other)) {
         for child in &entry.model {
           to_add_in_model.push(*child);
         }
@@ -271,9 +281,7 @@ pub fn set_doc_type(roottag: &str, publicid: &str, systemid: &str) {
   ]);
 }
 
-pub fn set_relaxng_schema(schema: &str) {
-  model_mut!().set_relaxng_schema(schema)
-}
+pub fn set_relaxng_schema(schema: &str) { model_mut!().set_relaxng_schema(schema) }
 pub fn add_schema_declaration(document: &mut Document) {
   if let Some(ref schema) = model!().schema {
     schema.add_schema_declaration(document);
@@ -383,10 +391,14 @@ pub fn get_document_namespace_prefix(
   }
 
   if docprefix.is_none() && !probe {
-    { model_mut!().namespace_errors += 1; }
+    {
+      model_mut!().namespace_errors += 1;
+    }
     let ns_err = s!("namespace{}", &model!().namespace_errors.to_string());
     docprefix = Some(arena::pin(&ns_err));
-    { model_mut!().register_document_namespace(&ns_err, Some(namespace)); }
+    {
+      model_mut!().register_document_namespace(&ns_err, Some(namespace));
+    }
     let message2 = if let Some(dp) = docprefix {
       arena::with(dp, |dp_str| s!("Using '{dp_str}' instead"))
     } else {
@@ -422,17 +434,24 @@ pub fn get_document_namespace(docprefix: &str, probe: bool) -> Option<String> {
   };
 
   if docprefix_sym != h_default_sym && ns_str.is_empty() && !probe {
-    { model_mut!().namespace_errors += 1; }
+    {
+      model_mut!().namespace_errors += 1;
+    }
     let ns_error = s!(
       "http://example.com/namespace{}",
       &model!().namespace_errors.to_string()
     );
-    { model_mut!().register_document_namespace(docprefix, Some(&ns_error)); }
+    {
+      model_mut!().register_document_namespace(docprefix, Some(&ns_error));
+    }
     let msg1 = arena::with(docprefix_sym, |dp_str| {
       s!("No namespace has been registered for prefix '{dp_str}' (in document)")
     });
     let msg2 = s!("Using '{ns_str}' instead");
-    let err = || {Error!("malformed", docprefix, msg1, msg2); Ok(()) };
+    let err = || {
+      Error!("malformed", docprefix, msg1, msg2);
+      Ok(())
+    };
     err().ok();
   }
   if ns_str.is_empty() {
@@ -448,12 +467,8 @@ pub fn get_document_namespace(docprefix: &str, probe: bool) -> Option<String> {
 /// In the following:
 /// $forattribute is 1 if the namespace is for an attribute (in which case, there must be a
 /// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
-/// if missing. 
-pub fn get_namespace_prefix(
-  namespace: &str,
-  _forattribute: bool,
-  probe: bool,
-) -> Option<SymStr> {
+/// if missing.
+pub fn get_namespace_prefix(namespace: &str, _forattribute: bool, probe: bool) -> Option<SymStr> {
   let mut codeprefix: Option<SymStr> = None;
   let ns_sym = arena::pin(namespace);
   let mut model = model_mut!();
@@ -585,8 +600,7 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
       if let Some(ns) = node.get_namespace() {
         let href = ns.get_href();
         if !href.is_empty() {
-          prefix = get_document_namespace_prefix(&href, false, true)
-            .unwrap_or(empty_sym);
+          prefix = get_document_namespace_prefix(&href, false, true).unwrap_or(empty_sym);
         }
       }
       if prefix == empty_sym {
@@ -641,51 +655,39 @@ pub fn decode_qname_sym(sym: SymStr) -> Result<(Option<String>, String)> {
 // However, it would need more context to do that.
 
 /// A check for allowed direct element containment, using ticket-based `SymStr` names.
-/// 
-/// TODO: This is a major code smell, experimental prototyping to see how to interoperate 
+///
+/// TODO: This is a major code smell, experimental prototyping to see how to interoperate
 /// strings with the inerned arena.
-/// `can_contain` and `can_contain_sym` should be implemented once, and one should be an 
+/// `can_contain` and `can_contain_sym` should be implemented once, and one should be an
 /// interning-only helper.
 pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
   // Handle obvious cases explicitly.
-  if tag == *H_PCDATA_SYM
-    || tag == *H_COMMENT_SYM
-    || tag == *EMPTY_SYM
-  {
+  if tag == *H_PCDATA_SYM || tag == *H_COMMENT_SYM || tag == *EMPTY_SYM {
     return false;
   } else if tag == *WILD_CARD_SYM {
     return true;
   };
   if arena::with(tag, |tag_str| tag_str.ends_with("_Capture_"))
-    || arena::with(child, |child_str| child_str.ends_with("_Capture_") ||
-      child_str.ends_with("_CaptureBlock_"))
+    || arena::with(child, |child_str| {
+      child_str.ends_with("_Capture_") || child_str.ends_with("_CaptureBlock_")
+    })
   {
     // with or without namespace prefix
     return true;
   }
 
-  if child == *WILD_CARD_SYM
-    || child == *H_COMMENT_SYM
-    || child == *H_PI_SYM
-    || child == *H_DTD_SYM
+  if child == *WILD_CARD_SYM || child == *H_COMMENT_SYM || child == *H_PI_SYM || child == *H_DTD_SYM
   {
     return true;
   }
 
   let mut model = model_mut!();
-  if model.permissive
-    && tag == *H_DOC_SYM
-    && child != *H_PCDATA_SYM
-  {
+  if model.permissive && tag == *H_DOC_SYM && child != *H_PCDATA_SYM {
     return true; // No DTD? Punt!
   }
 
   // Else query tag properties.
-  let model_entry = &mut model
-    .tagprop
-    .entry(tag)
-    .or_default()
-    .model;
+  let model_entry = &mut model.tagprop.entry(tag).or_default().model;
   model_entry.contains(&ANY_SYM) || model_entry.contains(&child)
 }
 
@@ -697,8 +699,7 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
     "_WildCard_" => return true,
     _ => {},
   };
-  if tag.ends_with("_Capture_") || child.ends_with("_Capture_") || 
-     tag.ends_with("_CaptureBlock_") {
+  if tag.ends_with("_Capture_") || child.ends_with("_Capture_") || tag.ends_with("_CaptureBlock_") {
     // with or without namespace prefix
     return true;
   }
@@ -773,11 +774,9 @@ pub fn set_model(new_model: Model) {
   let mut model = model_mut!();
   *model = new_model;
 }
-pub fn is_permissive() -> bool {
-  model!().permissive
-}
+pub fn is_permissive() -> bool { model!().permissive }
 
-pub fn with_schema_data<FnR,R>(caller: FnR) -> R
+pub fn with_schema_data<FnR, R>(caller: FnR) -> R
 where FnR: FnOnce(Option<&Vec<SymStr>>) -> R {
   caller(model!().schema_data.as_ref())
 }
@@ -813,11 +812,7 @@ pub(crate) fn compute_indirect_model_aux(
   let tag_contents: Vec<SymStr> = get_tag_contents(&tag);
 
   for kid in tag_contents {
-    if desc
-      .entry_sym(kid)
-      .or_default()
-      .contains_key_sym(&start)
-    {
+    if desc.entry_sym(kid).or_default().contains_key_sym(&start) {
       continue;
     } // Already solved
 
@@ -829,11 +824,7 @@ pub(crate) fn compute_indirect_model_aux(
     }
 
     if kid != *H_PCDATA_SYM && openable.contains(&kid) {
-      let inner = if start != *EMPTY_SYM {
-        start
-      } else {
-        kid
-      };
+      let inner = if start != *EMPTY_SYM { start } else { kid };
 
       compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
     }
@@ -843,10 +834,10 @@ pub fn register_document_namespace(docprefix: &str, namespace_opt: Option<&str>)
   model_mut!().register_document_namespace(docprefix, namespace_opt)
 }
 pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
-  model_mut!().register_namespace(codeprefix,namespace_opt)
+  model_mut!().register_namespace(codeprefix, namespace_opt)
 }
 
-pub fn with_code_namespaces<FnR,R>(caller: FnR) -> R
+pub fn with_code_namespaces<FnR, R>(caller: FnR) -> R
 where FnR: FnOnce(&HashMap<SymStr, SymStr>) -> R {
   caller(&model!().code_namespaces)
 }

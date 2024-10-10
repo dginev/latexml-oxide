@@ -1,5 +1,5 @@
 //! TeX Logic
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -83,8 +83,8 @@ LoadDefinitions!({
   // Mode testing
   //----------------------------------------------------------------------
   // \ifhmode          c  is true if TeX is in horizontal or restricted horizontal mode.
-  // \ifinner          c  is true if TeX is in internal vertical, restricted horizontal, or nondisplay math mode.
-  // \ifmmode          c  is true if TeX is in math or display math mode.
+  // \ifinner          c  is true if TeX is in internal vertical, restricted horizontal, or
+  // nondisplay math mode. \ifmmode          c  is true if TeX is in math or display math mode.
   // \ifvmode          c  is true if TeX is in vertical or internal vertical mode.
 
   // NOTE: We don't KNOW if we're in vertical, horizontal or inner mode!!!!!!!
@@ -125,7 +125,10 @@ fn compare(u: i64, rel: Token, v: i64) -> bool {
       rel,
       rel.get_catcode()
     );
-    let err = || {Error!("expected", "<relationaltoken>", message); Ok(())};
+    let err = || {
+      Error!("expected", "<relationaltoken>", message);
+      Ok(())
+    };
     err().ok();
     false
   }

@@ -16,12 +16,10 @@ use std::rc::Rc;
 use latexml::tex_tests;
 use latexml_core::common::error::Result;
 
-fn digestion_tests_dispatch(
-  filename: &str,
-  ) -> Option<Result<()>> {
+fn digestion_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     "rebox.tex" => Some(helpers::rebox_tex::load_definitions()),
-    _ => None
+    _ => None,
   }
 }
 

@@ -1,5 +1,5 @@
-use crate::common::object::Object;
 use crate::common::arena::{self, SymStr};
+use crate::common::object::Object;
 use crate::util::pathname;
 use std::fmt;
 use std::fmt::Write as _;
@@ -30,7 +30,7 @@ impl Default for Locator {
       from_line: line!(),
       to_line: line!(),
       from_column: column!(),
-      to_column: column!()
+      to_column: column!(),
     }
   }
 }
@@ -94,7 +94,7 @@ impl Locator {
       from_line: from.from_line,
       from_column: from.from_column,
       to_line,
-      to_column
+      to_column,
     })
   }
 

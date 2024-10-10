@@ -12,12 +12,12 @@ use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
 
+use crate::common::arena::{self, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::arena::{self,SymHashMap,SymStr};
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};
@@ -37,18 +37,13 @@ pub type ConditionalClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<bool>>;
 pub type PrimitiveFn = dyn Fn(Vec<ArgWrap>) -> Result<Vec<Digested>>;
 pub type PrimitiveClosure = Rc<PrimitiveFn>;
 pub type BeforeDigestClosure = Rc<dyn Fn() -> Result<Vec<Digested>>>;
-pub type PropertiesClosure =
-  Rc<dyn Fn(&Vec<Option<Digested>>) -> Result<SymHashMap<Stored>>>;
-pub type DigestionClosure =
-  Rc<dyn Fn(&mut Whatsit) -> Result<Vec<Digested>>>;
-pub type ReplacementClosure = Rc<
-  dyn Fn(&mut Document, &Vec<Option<Digested>>, &SymHashMap<Stored>) -> Result<()>,
->;
+pub type PropertiesClosure = Rc<dyn Fn(&Vec<Option<Digested>>) -> Result<SymHashMap<Stored>>>;
+pub type DigestionClosure = Rc<dyn Fn(&mut Whatsit) -> Result<Vec<Digested>>>;
+pub type ReplacementClosure =
+  Rc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &SymHashMap<Stored>) -> Result<()>>;
 pub type ConstructionClosure = Rc<dyn Fn(&mut Document, &Whatsit) -> Result<()>>;
-pub type DigestedReversionClosure =
-  Rc<dyn Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
-pub type SizingClosure =
-  Rc<dyn Fn(&Whatsit) -> Result<(Dimension, Dimension, Dimension)>>;
+pub type DigestedReversionClosure = Rc<dyn Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
+pub type SizingClosure = Rc<dyn Fn(&Whatsit) -> Result<(Dimension, Dimension, Dimension)>>;
 pub type FontClosure = Rc<dyn Fn(Option<&Whatsit>) -> Result<Font>>;
 
 #[derive(Clone)]
@@ -108,12 +103,10 @@ impl PartialEq for ExpansionBody {
 #[derive(Clone)]
 pub enum PrimitiveBody {
   Closure(PrimitiveClosure),
-  String(SymStr)
+  String(SymStr),
 }
 impl From<char> for PrimitiveBody {
-  fn from(c: char) -> Self {
-    PrimitiveBody::String(arena::pin_char(c))
-  }
+  fn from(c: char) -> Self { PrimitiveBody::String(arena::pin_char(c)) }
 }
 
 #[derive(Clone)]
@@ -136,7 +129,9 @@ impl PartialEq for Reversion {
 }
 
 impl From<&str> for Reversion {
-  fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters().ok().unwrap()) }
+  fn from(t: &str) -> Reversion {
+    Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters().ok().unwrap())
+  }
 }
 impl From<Tokens> for Reversion {
   fn from(ts: Tokens) -> Reversion { Reversion::Tokens(ts) }
@@ -265,11 +260,7 @@ pub trait Definition: Object {
 
   // ======================================================================
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(
-    &mut self,
-    args: Vec<Option<Tokens>>,
-    _gullet: &mut Gullet,
-  ) -> Result<Tokens> {
+  fn invocation(&mut self, args: Vec<Option<Tokens>>, _gullet: &mut Gullet) -> Result<Tokens> {
     let mut invocation_result: Vec<Token> = vec![self.get_cs().into_owned()];
 
     match self.get_parameters() {
@@ -285,19 +276,13 @@ pub trait Definition: Object {
 
   fn get_num_args(&self) -> usize { 0 }
 
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-  ) -> Result<Vec<Node>>;
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>>;
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn capture_body(&self) -> bool { false }
 
-  fn execute_before_digest(
-    &self
-  ) -> Result<Vec<Digested>> {
+  fn execute_before_digest(&self) -> Result<Vec<Digested>> {
     local_state_unlocked(true);
     let mut before_digested = Vec::new();
     if let Some(pre_list) = self.before_digest() {
@@ -308,10 +293,7 @@ pub trait Definition: Object {
     expire_state_unlocked();
     Ok(before_digested)
   }
-  fn execute_after_digest(
-    &self,
-    whatsit: &mut Whatsit,
-  ) -> Result<Vec<Digested>> {
+  fn execute_after_digest(&self, whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
     local_state_unlocked(true);
     let mut after_digested = Vec::new();
     if let Some(post_list) = self.after_digest() {
@@ -323,10 +305,7 @@ pub trait Definition: Object {
     Ok(after_digested)
   }
 
-  fn execute_after_digest_body(
-    &self,
-    whatsit: &mut Whatsit,
-  ) -> Result<Vec<Digested>> {
+  fn execute_after_digest_body(&self, whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
     local_state_unlocked(true);
     let mut after_body_digested = Vec::new();
     if let Some(post_list) = self.after_digest_body() {
@@ -341,11 +320,11 @@ pub trait Definition: Object {
     Ok(after_body_digested)
   }
 
-  fn value_of(&self, _args: Vec<ArgWrap>) -> Option<RegisterValue> {
-    todo!()
-  }
+  fn value_of(&self, _args: Vec<ArgWrap>) -> Option<RegisterValue> { todo!() }
   /// runs the setter to assign the value for a register
-  fn set_value(&self, _value: RegisterValue, _scope: Option<Scope>, _args: Vec<ArgWrap>) { todo!(); }
+  fn set_value(&self, _value: RegisterValue, _scope: Option<Scope>, _args: Vec<ArgWrap>) {
+    todo!();
+  }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { todo!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }

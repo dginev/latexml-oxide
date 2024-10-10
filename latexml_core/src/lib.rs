@@ -67,6 +67,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
 
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;
 pub use crate::common::error::*;
 use crate::common::font::Font;
@@ -75,11 +76,10 @@ use crate::common::model::Model;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::arena::SymHashMap as HashMap;
 use crate::definition::register::RegisterValue;
 use crate::digested::{Digested, DigestedData};
 use crate::document::Document;
-use crate::state::{State, StateOptions, set_state};
+use crate::state::{set_state, State, StateOptions};
 use crate::stomach::Stomach;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
@@ -140,9 +140,7 @@ impl Core {
     };
     stomach::set_stomach(Stomach::default());
     set_state(State::new(state_options));
-    Core {
-      preload
-    }
+    Core { preload }
   }
 }
 /// Common operations for Box-like (digested) data
@@ -174,9 +172,7 @@ pub trait BoxOps: Object {
   fn get_properties_mut(&mut self) -> &mut HashMap<Stored> { todo!() }
   /// set a named property (allows all `Stored` types for values)
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    self
-      .get_properties_mut()
-      .insert(key, value.into());
+    self.get_properties_mut().insert(key, value.into());
   }
   /// get a single named property (with special "isSpace" check)
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
@@ -203,7 +199,10 @@ pub trait BoxOps: Object {
     })
   }
   fn get_property_string(&self, key: &str) -> String {
-    self.get_property(key).map(|v| v.to_string()).unwrap_or_default()
+    self
+      .get_property(key)
+      .map(|v| v.to_string())
+      .unwrap_or_default()
   }
   /// get a mutable reference to a single named property (does NOT have the "isSpace" check)
   fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> {
@@ -242,10 +241,7 @@ pub trait BoxOps: Object {
   // However, when requesting the size of a box, you'd get either (w/ explicit size overriding)
 
   /// gets the "width" property value, if any
-  fn get_width(
-    &self,
-    options: Option<HashMap<Stored>>,
-  ) -> Result<Option<RegisterValue>> {
+  fn get_width(&self, options: Option<HashMap<Stored>>) -> Result<Option<RegisterValue>> {
     if !self.has_property("width") && !self.has_property("cached_width") {
       // TODO: Restore caching?
       // self.compute_size_store(options.unwrap_or_default())?
@@ -391,10 +387,7 @@ pub trait BoxOps: Object {
   }
 
   /// computes and returns the size of a box-like object
-  fn compute_size(
-    &self,
-    options: HashMap<Stored>,
-  ) -> Result<(Dimension, Dimension, Dimension)>;
+  fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)>;
 }
 
 /// The current TeX processing mode

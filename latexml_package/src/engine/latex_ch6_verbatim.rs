@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-static SEMIVERBATIM_CHARS: [char;4] = ['%', '\\', '{', '}'];
+static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
 
 //======================================================================
 // C.6.4 Verbatim
@@ -156,30 +156,31 @@ fn before_digest_verbatim() -> Result<Vec<Digested>> {
   Ok(stuff)
 }
 
-fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> { 
+fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   // makes you wonder if the `get_font` API should be working with Rc<Font> in the first place...
-  let font : Option<Rc<Font>> = whatsit.get_font()?.map(|ft| Rc::new((*ft).to_owned()));
+  let font: Option<Rc<Font>> = whatsit.get_font()?.map(|ft| Rc::new((*ft).to_owned()));
   let loc = whatsit.get_locator();
-  let (end,space) = if starred {
+  let (end, space) = if starred {
     ("\\end{verbatim*}", '\u{2423}')
   } else {
     ("\\end{verbatim}", ' ')
   };
-  let mut lines : Vec<_> = Vec::new();
+  let mut lines: Vec<_> = Vec::new();
   while let Some(next_line) = gullet::read_raw_line() {
     let mut line = next_line.as_str();
     let mut exiting = false;
-    if let Some((final_line,remaining)) = line.split_once(end) {
+    if let Some((final_line, remaining)) = line.split_once(end) {
       line = final_line;
       gullet::unread_one(T_CR!());
       gullet::unread(Tokenize!(remaining));
       exiting = true;
     }
     // The raw chars will still have to be decoded (but not space!!)
-    let mut decoded_line : String = String::new();
+    let mut decoded_line: String = String::new();
     for c in line.chars() {
-      if c == ' ' { decoded_line.push(space); }
-      else {
+      if c == ' ' {
+        decoded_line.push(space);
+      } else {
         let decoded_c = font::decode_string(arena::pin_char(c), Some("OT1_typewriter"), true);
         arena::with(decoded_c, |c_str| decoded_line.push_str(c_str));
       }
@@ -188,7 +189,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     lines.push(arena::pin(decoded_line));
     if exiting {
       break;
-    } 
+    }
   }
   if let Some(last_line) = lines.last() {
     if *last_line == arena::pin_static("\n") {
@@ -201,10 +202,23 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   }
   egroup()?;
   lines.push(arena::pin_static(end));
-  let boxes = lines.into_iter().map(|line|
-    Tbox::new(line, font.clone(), Some(loc),
-      Token{text: line, code:Catcode::OTHER}.into(), SymHashMap::default()).into()
-  ).collect();
+  let boxes = lines
+    .into_iter()
+    .map(|line| {
+      Tbox::new(
+        line,
+        font.clone(),
+        Some(loc),
+        Token {
+          text: line,
+          code: Catcode::OTHER,
+        }
+        .into(),
+        SymHashMap::default(),
+      )
+      .into()
+    })
+    .collect();
   whatsit.set_body(boxes);
   Ok(())
 }

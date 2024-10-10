@@ -1,12 +1,12 @@
+use latexml_core::common::arena;
 use latexml_core::common::error::*;
 use latexml_core::common::object::Object;
-use latexml_core::common::arena;
 use latexml_core::common::{Config, DataSize, OutputFormat};
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::list::List;
 use latexml_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
-use latexml_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut};
+use latexml_core::{fatal, report, report_mut, s, Core, CoreOptions, Error, Fatal, Info};
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
@@ -205,7 +205,10 @@ impl Converter {
           Ok(dom) => dom.serialize_to_string(),
           Err(e) => {
             let message = s!("{:?}", e);
-            let err = || {Error!("document", "convert", message); Ok(()) };
+            let err = || {
+              Error!("document", "convert", message);
+              Ok(())
+            };
             err().ok();
             String::new()
           },
@@ -283,7 +286,7 @@ impl Converter {
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
     if self.opts.verbosity >= 0 {
-      Info!("arena","strings_allocated", arena::len());
+      Info!("arena", "strings_allocated", arena::len());
     }
     Info!("status", "conversion", self.runtime.status_code);
     let log = self.flush_log();

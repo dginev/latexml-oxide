@@ -29,9 +29,7 @@ pub trait Object {
     Self: Sized,
     Self: Debug,
   {
-    panic!(
-      "Was it really intended to digest? We don't know how! {self:?}"
-    );
+    panic!("Was it really intended to digest? We don't know how! {self:?}");
   }
   fn get_locator(&self) -> Locator { Locator::default() }
 

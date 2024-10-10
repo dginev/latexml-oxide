@@ -15,8 +15,7 @@ pub fn reenter_text_mode(vertical_mode: bool) {
     Some(Stored::VecDequeStored(ref vdq)) => vdq.iter().collect::<VecDeque<&Stored>>(),
     _ => VecDeque::new(),
   };
-  if let Some(Stored::VecDequeStored(ref vdq)) = text_bindings
-  {
+  if let Some(Stored::VecDequeStored(ref vdq)) = text_bindings {
     bindings.extend(vdq.iter().collect::<Vec<_>>());
   }
   for binding in bindings {
@@ -55,19 +54,19 @@ pub fn today() -> Result<String> {
     "November",
     "December",
   ];
-  let month =
-    month_names[state::lookup_register("\\month", vec![])?.unwrap().value_of() as usize - 1];
+  let month = month_names[state::lookup_register("\\month", vec![])?
+    .unwrap()
+    .value_of() as usize
+    - 1];
   let day = state::lookup_register("\\day", vec![])?.unwrap().value_of();
-  let year = state::lookup_register("\\year", vec![])?.unwrap().value_of();
+  let year = state::lookup_register("\\year", vec![])?
+    .unwrap()
+    .value_of();
   Ok(s!("{} {}, {}", month, day, year))
 }
 
-pub fn parse_def_parameters(
-  cs: &Token,
-  params_in: Tokens,
-) -> Result<Option<Parameters>> {
-  let mut tokens: VecDeque<Token> =
-    VecDeque::from(params_in.pack_parameters()?.unlist());
+pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Parameters>> {
+  let mut tokens: VecDeque<Token> = VecDeque::from(params_in.pack_parameters()?.unlist());
   // Now, recognize parameters and delimiters.
   let mut params = Vec::new();
   let mut n = 0;
@@ -82,7 +81,7 @@ pub fn parse_def_parameters(
             Cow::Borrowed("RequireBrace"),
             Cow::Borrowed("RequireBrace"),
             None,
-                  )?);
+          )?);
           break;
         } else {
           n += 1;
@@ -90,7 +89,7 @@ pub fn parse_def_parameters(
             t = t_next;
           } else {
             todo!(); // hm, this is a bit of a pain to port without making t into an
-                              // Option<Token>...
+                     // Option<Token>...
           }
         }
       } else {
@@ -143,10 +142,10 @@ pub fn parse_def_parameters(
       } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
         // Special case: trailing sole # => delimited by next opening brace.
         tokens.pop_front();
-        params.push(Parameter::new("UntilBrace","UntilBrace", None)?);
+        params.push(Parameter::new("UntilBrace", "UntilBrace", None)?);
       } else {
         // Nothing? Just a plain parameter.
-        params.push(Parameter::new("Plain","{}", None)?);
+        params.push(Parameter::new("Plain", "{}", None)?);
       }
     } else {
       // Initial delimiting text is required.
@@ -179,12 +178,7 @@ pub fn parse_def_parameters(
   }
 }
 
-pub fn do_def(
-  globally: bool,
-  cs: Token,
-  params: Tokens,
-  body: Tokens,
-) -> Result<()> {
+pub fn do_def(globally: bool, cs: Token, params: Tokens, body: Tokens) -> Result<()> {
   let paramlist = parse_def_parameters(&cs, params)?;
   let scope = if globally { Some(Scope::Global) } else { None };
   state::install_definition(
@@ -195,8 +189,9 @@ pub fn do_def(
       Some(ExpandableOptions {
         nopack_parameters: true,
         ..ExpandableOptions::default()
-      }))?,
-    scope
+      }),
+    )?,
+    scope,
   );
   after_assignment();
   Ok(())
@@ -206,8 +201,8 @@ pub fn do_def(
 // We'll assume that a box is horizontal if there's anything at all,
 // but it's not a vbox (!?!?)
 pub fn classify_box(boxnum: Number) -> Result<&'static str> {
-  with_value(&s!("box{}", boxnum.value_of()), |val_opt| Ok(
-    match val_opt  {
+  with_value(&s!("box{}", boxnum.value_of()), |val_opt| {
+    Ok(match val_opt {
       Some(Stored::Digested(ref d)) => match d.data() {
         DigestedData::Whatsit(ref w)
           if w.borrow().definition == lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
@@ -217,28 +212,22 @@ pub fn classify_box(boxnum: Number) -> Result<&'static str> {
         _ => "hbox",
       },
       _ => "",
-    }
-  ))
+    })
+  })
 }
 
 const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
 // Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
 // What we're really after is a connectio nto a font encoding mapping.
-pub fn decode_math_char(
-  mut n: u16,
-  ) -> Result<(Option<String>, Option<char>)> {
+pub fn decode_math_char(mut n: u16) -> Result<(Option<String>, Option<char>)> {
   let class: u16 = n / (16 * 256);
   n %= 16 * 256;
   let fam: u16 = n / 256;
   n %= 256;
-  let font = lookup_value(&s!("textfont_{fam}"))
-    .unwrap_or_else(|| {
-        lookup_value(&s!("scriptfont_{fam}"))
-        .unwrap_or_else(|| {
-          lookup_value(&s!("scriptscriptfont_{fam}"))
-            .unwrap_or(Stored::Bool(false))
-        })
-    });
+  let font = lookup_value(&s!("textfont_{fam}")).unwrap_or_else(|| {
+    lookup_value(&s!("scriptfont_{fam}"))
+      .unwrap_or_else(|| lookup_value(&s!("scriptscriptfont_{fam}")).unwrap_or(Stored::Bool(false)))
+  });
   // TODO: This function is called with n=20,000, how is the char cast sensible here? Consult Bruce.
   // TODO: confusing types, the 256 arithmetic implies larger than u8 inputs, what for?
   let c = n as u8 as char;
@@ -249,40 +238,41 @@ pub fn decode_math_char(
     with_value(&s!("math_token_attributes_{}", c), |charinfo| {
       let inner_role = if let Some(Stored::HashString(ref info)) = charinfo {
         &info[role]
-      } else { role };
+      } else {
+        role
+      };
       if inner_role.is_empty() {
         None
       } else {
         Some(inner_role.to_string())
-      }})
-    } else {
-      Some(role.to_string())
-    };
-  let font_opt =
-    with_font_info(&T_CS!(font.to_string()), |fontinfo| {
-      let cinfo = if let Some(Stored::Font(ref info)) = fontinfo? {
-        if let Some(ref data) = info.encoding {
-          font::decode(n as u8, Some(data.to_string()), false)
-        } else {
-          Some(c)
-        }
+      }
+    })
+  } else {
+    Some(role.to_string())
+  };
+  let font_opt = with_font_info(&T_CS!(font.to_string()), |fontinfo| {
+    let cinfo = if let Some(Stored::Font(ref info)) = fontinfo? {
+      if let Some(ref data) = info.encoding {
+        font::decode(n as u8, Some(data.to_string()), false)
       } else {
-        None
-      };
-      // Interesting, the compiler needs the explicit error type here?
-      Ok::<Option<char>,latexml_core::Error>(cinfo) })?;
+        Some(c)
+      }
+    } else {
+      None
+    };
+    // Interesting, the compiler needs the explicit error type here?
+    Ok::<Option<char>, latexml_core::Error>(cinfo)
+  })?;
   Ok((role_opt, font_opt))
 }
 
 /// Stomach-level counterpart to `read_box_contents`.
-/// 
+///
 /// Reading a Box's content is crucially dependent on invoking the "{" token and obtaining a
 /// digested result.
 /// Hence it is *always* needed to pair `read_box_contents` with its stomach-level
 /// counterpart, `predigest_box_contents`
-pub fn predigest_box_contents(
-  _tokens: ArgWrap,
-) -> Result<Option<Digested>> {
+pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   let mut contents = stomach::invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
     Ok(None)
@@ -315,10 +305,10 @@ where T: Sized + Object {
 }
 
 /// This attempts to be a generalize vbox construction;
-/// 
+///
 /// The idea is to receeive block-like material, possibly wrapped in appropriate
 /// container which gets attributes.
-/// 
+///
 /// The contents are constructed in an ltx:_CaptureBlock_ element,
 /// designed to accept all reasonable block material from several levels,
 /// and then determine which container element is most apprpriate for both the conent & context
@@ -330,7 +320,7 @@ pub fn insert_block(
 ) -> Result<Vec<Node>> {
   // Create something like:
   // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
-  let context_opt = document.get_element();  // Where we originally start inserting.
+  let context_opt = document.get_element(); // Where we originally start inserting.
   if context_opt.is_none() {
     // edge case: if we start the doc with a block, the context is empty
     document.absorb(contents, None)?;
@@ -339,11 +329,18 @@ pub fn insert_block(
   let mut context = context_opt.unwrap();
   let mut context_tag = document::get_node_qname(&context);
   // svg is slightly tricky
-  let (is_svg,is_xmath, is_xmtext) = arena::with(context_tag, |tag| (tag.starts_with("svg:"), tag.starts_with("ltx:XM"), tag == "ltx:XMText"));
+  let (is_svg, is_xmath, is_xmtext) = arena::with(context_tag, |tag| {
+    (
+      tag.starts_with("svg:"),
+      tag.starts_with("ltx:XM"),
+      tag == "ltx:XMText",
+    )
+  });
   let ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
-  if is_xmath && !is_xmtext { // but math always needs this
+  if is_xmath && !is_xmtext {
+    // but math always needs this
     context = document.open_element("ltx:XMText", None, None)?;
-    context_tag =  document::get_node_qname(&context);
+    context_tag = document::get_node_qname(&context);
   }
   let is_inline = is_svg || document::can_contain(&context, "#PCDATA");
   let mut container_attr = block_attr.clone();
@@ -352,33 +349,50 @@ pub fn insert_block(
   document.absorb(contents, None)?;
 
   let mut nodes = content_nodes(&container);
-  let node_tags = nodes.iter().map(document::get_node_qname)
+  let node_tags = nodes
+    .iter()
+    .map(document::get_node_qname)
     .collect::<Vec<_>>();
   let nnodes = nodes.len();
   document.close_to_node(&container, true)?;
   document.close_node(&container)?;
   document.close_to_node(&context, true)?;
 
-  if nnodes < 1 { // Insertion came up empty?
+  if nnodes < 1 {
+    // Insertion came up empty?
     document.remove_node(container); // then remove the new block entirely
     return Ok(nodes);
-  } else if ignorable_attr && node_tags.iter().all(|tag|  
-    document::can_contain_qsym(context_tag, *tag)) { 
-      // No attributes, contents allowed in context?
-      document.unwrap_nodes(container)?; // No container needed, at all.
-      return Ok(nodes);
-  } else if nnodes==1 {
+  } else if ignorable_attr
+    && node_tags
+      .iter()
+      .all(|tag| document::can_contain_qsym(context_tag, *tag))
+  {
+    // No attributes, contents allowed in context?
+    document.unwrap_nodes(container)?; // No container needed, at all.
+    return Ok(nodes);
+  } else if nnodes == 1 {
     if document::can_contain_qsym(context_tag, node_tags[0])
-      && (ignorable_attr || block_attr.keys().all(|key| document::sym_can_have_attribute(node_tags[0], arena::pin(key)))) {
-        // IF: Single node, allowed in context & accepts attributes
-        // THEN: Add attributes and unwrap the single node
-        for (k,v) in block_attr.iter() {
-          document.set_attribute(&mut nodes[0], k, v)?;
-        }
-        document.unwrap_nodes(container)?;
-        return Ok(nodes);
-    } else if let Some(newcontainer) = document::sym_can_contain_somehow(context_tag,node_tags[0]) {
-      if ignorable_attr || block_attr.keys().all(|key| newcontainer.map(|nc| document::sym_can_have_attribute(nc, arena::pin(key))).unwrap_or(false)) {
+      && (ignorable_attr
+        || block_attr
+          .keys()
+          .all(|key| document::sym_can_have_attribute(node_tags[0], arena::pin(key))))
+    {
+      // IF: Single node, allowed in context & accepts attributes
+      // THEN: Add attributes and unwrap the single node
+      for (k, v) in block_attr.iter() {
+        document.set_attribute(&mut nodes[0], k, v)?;
+      }
+      document.unwrap_nodes(container)?;
+      return Ok(nodes);
+    } else if let Some(newcontainer) = document::sym_can_contain_somehow(context_tag, node_tags[0])
+    {
+      if ignorable_attr
+        || block_attr.keys().all(|key| {
+          newcontainer
+            .map(|nc| document::sym_can_have_attribute(nc, arena::pin(key)))
+            .unwrap_or(false)
+        })
+      {
         if let Some(nc) = newcontainer {
           // rename the capture to that container
           document.rename_node_qsym(container, nc, true)?;
@@ -392,37 +406,72 @@ pub fn insert_block(
 
   // Otherwise, rename the capture
   // MAY need foreignObject wrapper
-  if is_svg && node_tags.iter().any(|tag| arena::with(*tag, |tag_str| 
-    tag_str.starts_with("ltx:"))) {
-    context     = document.wrap_nodes("svg:foreignObject", vec![container.clone()])?
+  if is_svg
+    && node_tags
+      .iter()
+      .any(|tag| arena::with(*tag, |tag_str| tag_str.starts_with("ltx:")))
+  {
+    context = document
+      .wrap_nodes("svg:foreignObject", vec![container.clone()])?
       .expect("foreign object wrap should always succeed in SVG");
     context_tag = document::get_node_qname(&context);
   }
   let candidates = if is_inline {
-    ["ltx:inline-block","ltx:inline-logical-block","ltx:inline-sectional-block"]
-      .map(arena::pin_static).to_vec()
+    [
+      "ltx:inline-block",
+      "ltx:inline-logical-block",
+      "ltx:inline-sectional-block",
+    ]
+    .map(arena::pin_static)
+    .to_vec()
   } else {
-    ["ltx:block","ltx:logical-block", "ltx:sectional-block", "ltx:figure"]
-      .map(arena::pin_static).to_vec()
+    [
+      "ltx:block",
+      "ltx:logical-block",
+      "ltx:sectional-block",
+      "ltx:figure",
+    ]
+    .map(arena::pin_static)
+    .to_vec()
   };
-  let filtered_candidates = candidates.into_iter().filter(|candidate|
-    node_tags.iter().all(|tag| document::sym_can_contain_somehow(*candidate, *tag).is_some())).collect::<Vec<_>>();
-    // and are allowed in the context
-  let allowed_candidates = filtered_candidates.iter()
+  let filtered_candidates = candidates
+    .into_iter()
+    .filter(|candidate| {
+      node_tags
+        .iter()
+        .all(|tag| document::sym_can_contain_somehow(*candidate, *tag).is_some())
+    })
+    .collect::<Vec<_>>();
+  // and are allowed in the context
+  let allowed_candidates = filtered_candidates
+    .iter()
     .filter(|candidate| document::can_contain_qsym(context_tag, **candidate))
     .copied()
     .collect::<Vec<_>>();
-  if let Some(final_tag) = allowed_candidates.first().map_or(filtered_candidates.first(), Some) {
+  if let Some(final_tag) = allowed_candidates
+    .first()
+    .map_or(filtered_candidates.first(), Some)
+  {
     // Rename the capture to the correct container
-    // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free where Symbol tickets and &str
-    // are equally intuitive to use without runtime panics from arena mutability exceptions.
+    // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free
+    // where Symbol tickets and &str are equally intuitive to use without runtime panics from
+    // arena mutability exceptions.
     document.rename_node(container, &arena::to_string(*final_tag), true)?;
-  } else { // we didn't know what to do?
-    let message = arena::with(context_tag, |ctxt_str| 
-      s!("Did not find a block-like candidate in {} (with attributes ({})", ctxt_str, block_attr.iter()
-      .map(|(k,v)| s!("{k}={v}")).collect::<Vec<_>>().join(";")));
+  } else {
+    // we didn't know what to do?
+    let message = arena::with(context_tag, |ctxt_str| {
+      s!(
+        "Did not find a block-like candidate in {} (with attributes ({})",
+        ctxt_str,
+        block_attr
+          .iter()
+          .map(|(k, v)| s!("{k}={v}"))
+          .collect::<Vec<_>>()
+          .join(";")
+      )
+    });
     Warn!("malformed", "_CaptureBlock_", message);
-    document.rename_node( container, "ltx:block", true)?;
+    document.rename_node(container, "ltx:block", true)?;
   }
   Ok(nodes)
 }
@@ -433,10 +482,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
 
   // If the Math ONLY contains XMath/XMText, it apparently isn't math at all!?!
   if document
-    .findnodes(
-      "ltx:XMath/ltx:*[local-name() != 'XMText']",
-      Some(&mathnode),
-      )
+    .findnodes("ltx:XMath/ltx:*[local-name() != 'XMText']", Some(&mathnode))
     .is_empty()
   {
     // So unwrap down to the contents of the XMText's.
@@ -478,10 +524,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
 // a single ltx:tabular in an equation (perverse, but people do that).
 // So, we put this one on ltx:Math also, and scan for any contained XMText to fixup.
 
-fn cleanup_xmtext_outer(
-  document: &mut Document,
-  math_node: &Node,
-) -> Result<()> {
+fn cleanup_xmtext_outer(document: &mut Document, math_node: &Node) -> Result<()> {
   for text_node in document.findnodes("descendant::ltx:XMText", Some(math_node)) {
     cleanup_xmtext(document, text_node)?;
   }
@@ -502,7 +545,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
         .findnodes(
           "ltx:text | ltx:inline-block[count(*)=1] | ltx:p",
           Some(&text_node),
-              )
+        )
         .is_empty()
     {
       break;
@@ -520,11 +563,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
 
   // Now apply a simplifying rule for nested Math
   // If the XMText contains a single Math, pull it's content up in
-  if children.len() == 1
-    && !document
-      .findnodes("ltx:Math", Some(&text_node))
-      .is_empty()
-  {
+  if children.len() == 1 && !document.findnodes("ltx:Math", Some(&text_node)).is_empty() {
     // Replace XMText by XMWrap/*  (this should preserve the parse?)
     document.rename_node(text_node, "ltx:XMWrap", false)?; // text_node =
     let first_child = children.pop().unwrap();
@@ -553,8 +592,8 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
   // [will alignment attributes be lost?]
   } else if children.len() == 1
     && model::with_node_qname(children.first().as_ref().unwrap(), |qname| {
-        qname == "ltx:tabular"
-      })
+      qname == "ltx:tabular"
+    })
   //// Should we ALWAYS do this, or just for some minimal amount of math???
   ////        && !document.findnodes('ltx:tabular/ltx:tr/ltx:td/text()'
   ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td/text()'
@@ -563,30 +602,30 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
   ////                                 $text_node)
   {
     todo!(); // TODO
-                      // // First step is remove any ltx:tbody from the tabular!
-                      // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
-                      //   document.unwrapNodes($tb); }
-                      // // Now, we can start replacing tabular=>XMArray, tr=>XMRow, td=>XMCell
-                      // my $table = document.renameNode($children[0], 'ltx:XMArray');
-                      // foreach my $row ($table->childNodes) {
-                      //   $row = document.renameNode($row, 'ltx:XMRow');
-                      //   foreach my $cell ($row->childNodes) {
-                      //     $cell = document.renameNode($cell, 'ltx:XMCell');
-                      //     foreach my $m ($cell->childNodes) {
-                      //       if ($model->getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap
-                      // the Math/XMath layer         document.replaceNode($m,
-                      // map { $_->childNodes } $m->childNodes); }       else
-                      // {                                           // Otherwise, wrap whatever it
-                      // is in an XMText         document.wrapNodes('ltx:
-                      // XMText', $m); } } } }
-                      // And now we don't need the XMText any more.
-                      // foreach my $attr ($text_node->attributes) {    // Copy the child's
-                      // attributes (should Merge!!)
-                      //   $table->setAttribute($attr->nodeName => $attr->getValue); }
-                      // my $newtable = document.unwrapNodes($text_node);
-                      // if (my $id = $text_node->getAttribute('xml:id')) {
-                      //   document.unRecordID($id);
-                      //   document.recordID($id, $newtable); } }
+             // // First step is remove any ltx:tbody from the tabular!
+             // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
+             //   document.unwrapNodes($tb); }
+             // // Now, we can start replacing tabular=>XMArray, tr=>XMRow, td=>XMCell
+             // my $table = document.renameNode($children[0], 'ltx:XMArray');
+             // foreach my $row ($table->childNodes) {
+             //   $row = document.renameNode($row, 'ltx:XMRow');
+             //   foreach my $cell ($row->childNodes) {
+             //     $cell = document.renameNode($cell, 'ltx:XMCell');
+             //     foreach my $m ($cell->childNodes) {
+             //       if ($model->getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap
+             // the Math/XMath layer         document.replaceNode($m,
+             // map { $_->childNodes } $m->childNodes); }       else
+             // {                                           // Otherwise, wrap whatever it
+             // is in an XMText         document.wrapNodes('ltx:
+             // XMText', $m); } } } }
+             // And now we don't need the XMText any more.
+             // foreach my $attr ($text_node->attributes) {    // Copy the child's
+             // attributes (should Merge!!)
+             //   $table->setAttribute($attr->nodeName => $attr->getValue); }
+             // my $newtable = document.unwrapNodes($text_node);
+             // if (my $id = $text_node->getAttribute('xml:id')) {
+             //   document.unRecordID($id);
+             //   document.recordID($id, $newtable); } }
   }
   Ok(())
 }
@@ -652,7 +691,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
 }
 
 /// Converts tokens to a string in the fashion of \message and others
-/// 
+///
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
 /// [This could be a $tokens->unpackParameters, but for the curious space treatment]
@@ -734,11 +773,14 @@ pub struct KVSpec {
   pub keysets: Vec<String>,
   pub skip: Vec<String>,
 }
-pub fn keyvals_aux(
-  until: Option<Token>,
-  spec: KVSpec,
-) -> Result<KeyVals> {
-  let KVSpec {mut star, plus, mut prefix, mut keysets, skip} = spec;
+pub fn keyvals_aux(until: Option<Token>, spec: KVSpec) -> Result<KeyVals> {
+  let KVSpec {
+    mut star,
+    plus,
+    mut prefix,
+    mut keysets,
+    skip,
+  } = spec;
   // support both "keysets" and "prefix|keysets"
   if keysets.is_empty() {
     if let Some(pfx) = prefix.take() {
@@ -753,31 +795,29 @@ pub fn keyvals_aux(
   }
 
   // create a new set of Key-Value arguments
-  let mut keyvals = KeyVals::new(
-    KeyvalsConfig {
-      prefix,
-      keysets,
-      set_all: plus,
-      set_internals: true,
-      skip,
-      skip_missing: if star { keyvals::SkipMissing::All } else { keyvals::SkipMissing::None},
-      hook_missing: None,
+  let mut keyvals = KeyVals::new(KeyvalsConfig {
+    prefix,
+    keysets,
+    set_all: plus,
+    set_internals: true,
+    skip,
+    skip_missing: if star {
+      keyvals::SkipMissing::All
+    } else {
+      keyvals::SkipMissing::None
     },
-  );
+    hook_missing: None,
+  });
   // and read it from the gullet
   if let Some(until_token) = until {
-    keyvals.read_from(until_token,false)?;
+    keyvals.read_from(until_token, false)?;
   }
   // we still want to make use of the hash
   Ok(keyvals)
 }
 
-pub fn uppercase_token(token: Token) -> Token {
-  either_case_token(token, true)
-}
-pub fn lowercase_token(token: Token) -> Token {
-  either_case_token(token, false)
-}
+pub fn uppercase_token(token: Token) -> Token { either_case_token(token, true) }
+pub fn lowercase_token(token: Token) -> Token { either_case_token(token, false) }
 
 fn either_case_token(token: Token, is_upper: bool) -> Token {
   let (chars_count, thischar) = token.with_str(|s| (s.chars().count(), s.chars().next()));
@@ -813,7 +853,7 @@ fn either_case_token(token: Token, is_upper: bool) -> Token {
 }
 
 /// a candidate for use by \hskip, \hspace, etc... ?
-pub fn dimension_to_spaces<T:NumericOps>(dimen: T) -> Cow<'static, str> {
+pub fn dimension_to_spaces<T: NumericOps>(dimen: T) -> Cow<'static, str> {
   let fs = lookup_font().unwrap().get_size(); // 1 em
   let pt = dimen.pt_value(None);
   let ems = pt / fs.unwrap();
@@ -862,33 +902,21 @@ pub fn set_align_or_class(
   if qname == arena::pin_static("ltx:tag") {
   }
   // HACK
-  else if !align.is_empty()
-    && model::can_have_attribute(qname, arena::pin_static("align"))
-  {
+  else if !align.is_empty() && model::can_have_attribute(qname, arena::pin_static("align")) {
     node.set_attribute("align", align)?;
-  } else if !class.is_empty()
-    && model::can_have_attribute(qname, arena::pin_static("class"))
-  {
+  } else if !class.is_empty() && model::can_have_attribute(qname, arena::pin_static("class")) {
     document.add_class(node, class)?;
   }
   Ok(())
 }
 
-pub fn make_generic_message(
-  cmd: &str,
-  args: Vec<Tokens>,
-  kind: &str,
-  ) -> Result<()> {
+pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<()> {
   bgroup();
-  state::let_i(
-    &T_CS!("\\protect"),
-    &T_CS!("\\string"),
-    None
-  );
+  state::let_i(&T_CS!("\\protect"), &T_CS!("\\string"), None);
   state::let_i(
     &T_CS!("\\MessageBreak"),
     &T_CS!("\\ltx@hard@MessageBreak"),
-    None
+    None,
   ); // tricky, we need Expand() to execute it
   let mut message = String::new();
   for arg in args.into_iter() {
@@ -916,7 +944,7 @@ pub fn make_generic_message(
 }
 
 /// Convert a vertical positioning, optional argument.
-/// 
+///
 ///  t = "top", b = "bottom"; default is "middle".
 /// Note that the default for vattach attribute is "baseline".
 /// Utility, not really TeX, but used by LaTeX, AmSTeX.
@@ -933,23 +961,23 @@ pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
 
 pub fn in_svg(document: &Document) -> bool {
   if let Some(context) = document.get_element() {
-    document::with_node_qname(&context,
-      |qname| qname.starts_with("svg:"))
-  } else { false }
+    document::with_node_qname(&context, |qname| qname.starts_with("svg:"))
+  } else {
+    false
+  }
 }
 
 pub fn adjust_box_color(tbox: &Digested) -> Result<()> {
-  let color_opt = lookup_font().and_then(|f| f.get_color()
-    .map(|c| c.clone().into_owned()));
+  let color_opt = lookup_font().and_then(|f| f.get_color().map(|c| c.clone().into_owned()));
   if let Some(color) = color_opt {
     if color != "black" {
-       adjust_box_color_rec(&color, HashMap::default(), tbox);
+      adjust_box_color_rec(&color, HashMap::default(), tbox);
     }
   }
   Ok(())
 }
 
-fn adjust_box_color_rec(_color: &str, _props: HashMap<String,String>, _tbox: &Digested) {
+fn adjust_box_color_rec(_color: &str, _props: HashMap<String, String>, _tbox: &Digested) {
   todo!();
 }
 

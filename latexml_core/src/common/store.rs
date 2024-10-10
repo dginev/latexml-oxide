@@ -7,17 +7,17 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self,SymStr};
 use crate::common::arena::data::SymHashMap;
+use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
+use crate::common::float::Float;
 use crate::common::font::Font;
 use crate::common::glue::Glue;
 use crate::common::locator::Locator;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
-use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
@@ -44,16 +44,14 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 
 // Basic principles:
 // 1. If the type is `Copy`, store directly
-// 2. If the type is intended as state-exclusive, store in a Box
-//      (or directly if any already Boxed datatype such as Vec, VecDeque, HashMap)
-// 3. If the struct is intended for reuse in digestion components, store it in an Rc,
-//    e.g. Rc<Font>
-// 4. In the very unfortunate cases where we have to mutate items while they are stored,
-//    we may consider a RefCell<> wrapper for interior mutability.
-//      BUT it is often possible to take the value out to mutate, and re-insert.
-//      state::checkout_value(key) + mutate + state::checkin_value(key,val)
-//      The only cases where this isn't straightforward is for deep recursive callchains,
-//      as in the ones where we rely on Stomach or a Mouth being in state.
+// 2. If the type is intended as state-exclusive, store in a Box (or directly if any already Boxed
+//    datatype such as Vec, VecDeque, HashMap)
+// 3. If the struct is intended for reuse in digestion components, store it in an Rc, e.g. Rc<Font>
+// 4. In the very unfortunate cases where we have to mutate items while they are stored, we may
+//    consider a RefCell<> wrapper for interior mutability. BUT it is often possible to take the
+//    value out to mutate, and re-insert. state::checkout_value(key) + mutate +
+//    state::checkin_value(key,val) The only cases where this isn't straightforward is for deep
+//    recursive callchains, as in the ones where we rely on Stomach or a Mouth being in state.
 /// The original global state (in Perl) allowed arbitrary values. To stay consistent, we create an
 /// extremely permissive struct that affords all essential kinds of values that appear essential.
 #[derive(Default, Clone)]
@@ -566,7 +564,7 @@ impl Stored {
       Stored::Register(defn) => Some(defn.clone()),
       Stored::Expandable(defn) => Some(defn.clone()),
       Stored::Constructor(defn) => Some(defn.clone()),
-      _ => None
+      _ => None,
     }
   }
 }
@@ -585,8 +583,8 @@ impl From<bool> for &Stored {
   }
 }
 
-impl From<Cow<'_,str>> for Stored {
-  fn from(value: Cow<'_,str>) -> Self { Stored::String(arena::pin(value)) }
+impl From<Cow<'_, str>> for Stored {
+  fn from(value: Cow<'_, str>) -> Self { Stored::String(arena::pin(value)) }
 }
 impl From<String> for Stored {
   fn from(value: String) -> Self { Stored::String(arena::pin(value)) }
@@ -778,15 +776,9 @@ impl From<Vec<String>> for Stored {
   fn from(value: Vec<String>) -> Self { Stored::Strings(Rc::from(value.into_boxed_slice())) }
 }
 
-
 impl<'a> From<Vec<&'a str>> for Stored {
   fn from(value: Vec<&'a str>) -> Self {
-    Stored::Strings(
-      value
-        .iter()
-        .map(ToString::to_string)
-        .collect(),
-    )
+    Stored::Strings(value.iter().map(ToString::to_string).collect())
   }
 }
 
@@ -816,9 +808,9 @@ impl From<SymHashMap<Stored>> for Stored {
 // TODO: What is the right interface here? Should we really commit to SymStr?
 // Or is it too distracting from a developer perspective and String should be allowed more widely?
 impl From<HashMap<String, Stored>> for Stored {
-  fn from(str_hash: HashMap<String, Stored>) -> Self { 
+  fn from(str_hash: HashMap<String, Stored>) -> Self {
     let mut arena_value = HashMap::default();
-    for (key,value) in str_hash {
+    for (key, value) in str_hash {
       arena_value.insert(arena::pin(key), value);
     }
     Stored::HashStored(SymHashMap(arena_value))
@@ -991,7 +983,7 @@ impl<'a> From<&'a Stored> for Option<Catcode> {
 }
 
 impl<'a> From<&'a Stored> for Option<&'a [char]> {
-  fn from(value: &'a Stored) -> Option<&'a[char]> {
+  fn from(value: &'a Stored) -> Option<&'a [char]> {
     match value {
       Stored::Chars(ref cc) => Some(cc),
       _ => None,
@@ -1008,9 +1000,7 @@ impl From<&Stored> for Option<Rc<[Option<char>]>> {
   }
 }
 impl From<Stored> for Option<Rc<[Option<char>]>> {
-  fn from(value: Stored) -> Option<Rc<[Option<char>]>> {
-    (&value).into()
-  }
+  fn from(value: Stored) -> Option<Rc<[Option<char>]>> { (&value).into() }
 }
 
 impl<'a> From<&'a Stored> for Option<RegisterValue> {
@@ -1060,7 +1050,7 @@ impl<'a> From<&'a Stored> for Token {
       Stored::Token(t) => *t,
       Stored::String(text) => Token {
         text: *text,
-        code: Catcode::CS
+        code: Catcode::CS,
       },
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);

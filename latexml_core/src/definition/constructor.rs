@@ -3,10 +3,10 @@ use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
 
+use crate::common::arena::SymHashMap;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
-use crate::common::arena::SymHashMap;
 use crate::state::*;
 
 use crate::definition::{
@@ -15,11 +15,11 @@ use crate::definition::{
 };
 use crate::document::Document;
 use crate::parameter::Parameters;
+use crate::stomach::digest_next_body;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{BoxOps, Digested};
-use crate::stomach::digest_next_body;
 
 /// configuration for creating a new Constructor
 #[derive(Clone)]
@@ -82,7 +82,7 @@ impl Default for ConstructorOptions {
       // environment-specific
       require_math: false,
       forbid_math: false,
-      properties: Rc::new(| _whatsit| Ok(SymHashMap::default())),
+      properties: Rc::new(|_whatsit| Ok(SymHashMap::default())),
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
@@ -209,7 +209,6 @@ impl fmt::Display for Constructor {
 }
 impl Object for Constructor {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Constructor") }
-
 }
 impl Definition for Constructor {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
@@ -217,9 +216,7 @@ impl Definition for Constructor {
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }
   fn capture_body(&self) -> bool { self.capture_body }
   fn get_sizer(&self) -> Option<SizingClosure> { self.sizer.clone() }
-  fn invoke(&self, _once_only: bool) -> Result<Tokens> {
-    Ok(Tokens!())
-  }
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> { Ok(Tokens!()) }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   fn invoke_primitive(&self) -> Result<Vec<Digested>> {
@@ -240,7 +237,7 @@ impl Definition for Constructor {
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       None => Vec::new(),
-      Some(params) => params.read_arguments_and_digest( self)?,
+      Some(params) => params.read_arguments_and_digest(self)?,
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
@@ -248,7 +245,7 @@ impl Definition for Constructor {
 
     // Compute any extra Whatsit properties (many end up as element attributes)
 
-    let mut properties = (self.properties)( &args)?;
+    let mut properties = (self.properties)(&args)?;
     // for (key, value) in properties.iter() {
     //   if (ref $value eq 'CODE') {
     //     $properties{$key} = &$value($stomach, @args); } }
@@ -275,7 +272,7 @@ impl Definition for Constructor {
     };
 
     // Call any 'After' code.
-    let mut post = self.execute_after_digest( &mut whatsit)?;
+    let mut post = self.execute_after_digest(&mut whatsit)?;
 
     if self.capture_body {
       let captured = digest_next_body(None)?;
@@ -287,7 +284,7 @@ impl Definition for Constructor {
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
       // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
     }
-    let post_post = self.execute_after_digest_body( &mut whatsit)?;
+    let post_post = self.execute_after_digest_body(&mut whatsit)?;
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
     // Package the result boxes
@@ -312,11 +309,7 @@ impl Definition for Constructor {
     // self.nargs = Some(nargs);
   }
 
-  fn do_absorbtion(
-    &self,
-    document: &mut Document,
-    whatsit: &Whatsit,
-  ) -> Result<Vec<Node>> {
+  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit) -> Result<Vec<Node>> {
     for pre_closure in &self.before_construct {
       pre_closure(document, whatsit)?;
     }
@@ -326,11 +319,7 @@ impl Definition for Constructor {
         // info!(target:"constructor:replacement", "no replacement for {:?}", self.get_cs_name());
       },
       Some(ref main_closure) => {
-        main_closure(
-          document,
-          whatsit.get_args(),
-          whatsit.get_properties(),
-              )?
+        main_closure(document, whatsit.get_args(), whatsit.get_properties())?
       },
     };
 

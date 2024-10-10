@@ -30,7 +30,7 @@ macro_rules! LoadPool {
       InputDefinitionOptions {
         extension: Some(Cow::Borrowed("pool")),
         ..InputDefinitionOptions::default()
-      }
+      },
     )?
   }};
 }
@@ -50,7 +50,7 @@ macro_rules! InputDefinitions {
 macro_rules! InnerPool {
   ($name:ident) => {
     $crate::engine::$name::load_definitions()?
-  }
+  };
 }
 
 #[macro_export]
@@ -93,8 +93,13 @@ macro_rules! FindFile {
     find_file($name, None)
   };
   ($name:expr, type => $ext:literal) => {
-    find_file($name, Some(FindFileOptions{
-      ext_type: Some(Cow::Borrowed($ext)), ..FindFileOptions::default()}))
+    find_file(
+      $name,
+      Some(FindFileOptions {
+        ext_type: Some(Cow::Borrowed($ext)),
+        ..FindFileOptions::default()
+      }),
+    )
   };
 }
 
@@ -733,7 +738,7 @@ macro_rules! CounterValue {
 macro_rules! AddToCounter {
   ($ctr:expr, $value:expr) => {
     add_to_counter($ctr, $value.into())?
-  }
+  };
 }
 #[macro_export]
 macro_rules! StepCounter {
@@ -778,14 +783,14 @@ macro_rules! ResetCounter {
 macro_rules! Expand {
   ($tokens:expr) => {
     do_expand($tokens)?
-  }
+  };
 }
 
 /// Return `tokens` with all partial expandsion
 macro_rules! ExpandPartially {
   ($tokens:expr) => {
     do_expand_partially($tokens)?
-  }
+  };
 }
 /// Builds a representation of a single command sequence invoked on a
 /// `Vec<Token>` of its arguments.
@@ -802,10 +807,7 @@ macro_rules! Invocation {
     Invocation!($token, vec![None])
   };
   ($token:expr, $args:expr) => {
-    build_invocation(
-      $token,
-      $args.into_iter().map(Into::into).collect()
-    )?
+    build_invocation($token, $args.into_iter().map(Into::into).collect())?
   };
 }
 #[macro_export]
@@ -819,7 +821,9 @@ macro_rules! DefLigature {
       vec![Ligature {
         id: new_ligature_id,
         regex: Some($regex.to_string()),
-        code: Some(Rc::new(move |text|regex_compiled.replace_all(text, $replacement).to_string())),
+        code: Some(Rc::new(move |text| {
+          regex_compiled.replace_all(text, $replacement).to_string()
+        })),
         font_test: test_closure,
         matcher: None,
       }],
@@ -833,7 +837,9 @@ macro_rules! DefLigature {
       vec![Ligature {
         id: new_ligature_id,
         regex: Some($regex.to_string()),
-        code: Some(Rc::new(move |text|regex_compiled.replace_all(text, $replacement).to_string())),
+        code: Some(Rc::new(move |text| {
+          regex_compiled.replace_all(text, $replacement).to_string()
+        })),
         font_test: None,
         matcher: None,
       }],
@@ -966,13 +972,13 @@ macro_rules! AssignCatcode {
 macro_rules! LookupMeaning {
   ($name:expr) => {
     state::lookup_meaning($name)
-  }
+  };
 }
 #[macro_export]
 macro_rules! LookupDefinition {
   ($name:expr) => {
     state::lookup_definition($name)?
-  }
+  };
 }
 #[macro_export]
 macro_rules! InstallDefinition {
@@ -984,7 +990,7 @@ macro_rules! InstallDefinition {
 macro_rules! XEquals {
   ($token1:expr, $token2:expr) => {
     state::x_equals($token1, $token2)
-  }
+  };
 }
 #[macro_export]
 macro_rules! IsDefined {
@@ -1008,25 +1014,13 @@ macro_rules! IsDefinable {
 #[macro_export]
 macro_rules! Let {
   ($token1:literal, $token2:literal) => {
-    state::let_i(
-      &T_CS!($token1),
-      &T_CS!($token2),
-      None
-    )
+    state::let_i(&T_CS!($token1), &T_CS!($token2), None)
   };
   ($token1:literal, $token2:literal, None) => {
-    state::let_i(
-      &T_CS!($token1),
-      &T_CS!($token2),
-      None
-    )
+    state::let_i(&T_CS!($token1), &T_CS!($token2), None)
   };
   ($token1:literal, $token2:literal, $scope:expr) => {
-    state::let_i(
-      &T_CS!($token1),
-      &T_CS!($token2),
-      Some($scope)
-    )
+    state::let_i(&T_CS!($token1), &T_CS!($token2), Some($scope))
   };
   // half-packaged args
   ($token1:literal, $token2:expr) => {
@@ -1064,7 +1058,7 @@ macro_rules! MergeFont {
     merge_font($kv)
   };
   ($key:ident => $val:expr) => {
-    merge_font(fontmap!($key => $val))
+merge_font(fontmap!($key => $val))
   };
 }
 
@@ -1220,7 +1214,7 @@ macro_rules! TypedMacro {
 }
 
 /// Defines a register with `value` as the initial value
-/// 
+///
 /// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
 /// Usually, the `prototype` is just the control sequence,
 /// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
@@ -1467,26 +1461,24 @@ macro_rules! GetKeyVals {
 #[macro_export]
 macro_rules! DefKeyVal {
   ($keyset:expr, $key:expr, $vtype:expr) => {{
-    ::latexml_core::keyval::define(
-      KeyvalConfig {
-        prefix: "KV",
-        keyset: $keyset,
-        key: $key,
-        vtype: $vtype,
-        default: None,
-        ..KeyvalConfig::default()
-      })?;
+    ::latexml_core::keyval::define(KeyvalConfig {
+      prefix: "KV",
+      keyset: $keyset,
+      key: $key,
+      vtype: $vtype,
+      default: None,
+      ..KeyvalConfig::default()
+    })?;
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr) => {{
-    ::latexml_core::keyval::define(
-      KeyvalConfig {
-        prefix: "KV",
-        keyset: $keyset,
-        key: $key,
-        vtype: $vtype,
-        default: Some($default),
-        ..KeyvalConfig::default()
-      })?;
+    ::latexml_core::keyval::define(KeyvalConfig {
+      prefix: "KV",
+      keyset: $keyset,
+      key: $key,
+      vtype: $vtype,
+      default: Some($default),
+      ..KeyvalConfig::default()
+    })?;
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) => {
     // TODO: explicit $options with prefix logic
@@ -1551,7 +1543,7 @@ macro_rules! TokenizeInternal {
 macro_rules! RawTeX {
   ($text:expr) => {
     ::latexml_core::stomach::raw_tex($text)?;
-  }
+  };
 }
 
 #[macro_export]
@@ -1560,7 +1552,7 @@ macro_rules! TeX {
     let tokenized;
     compile_tokenize_internal!(tokenized, $text);
     ::latexml_core::stomach::digest(tokenized)?;
-  }
+  };
 }
 
 #[macro_export]
@@ -1614,8 +1606,8 @@ macro_rules! DeclareOption {
   (None, $(sub)? $body:block) => {
     let cs = String::from("\\default@ds");
     // block case, create a primitive
-    let code: PrimitiveBody = PrimitiveBody::Closure(
-      Rc::new(move |_args| $body.into_digested_result()));
+    let code: PrimitiveBody =
+      PrimitiveBody::Closure(Rc::new(move |_args| $body.into_digested_result()));
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
   };
   ($option:expr, $tex:literal) => {
@@ -1624,22 +1616,22 @@ macro_rules! DeclareOption {
     state::push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
-    def_macro(T_CS!(cs),None,tokenized,None)?;
+    def_macro(T_CS!(cs), None, tokenized, None)?;
   };
   ($option:expr, $tokenized:ident) => {
     state::push_value("@declaredoptions", $option.to_string())?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
-    def_macro(T_CS!(cs),None, $tokenized, None)?;
+    def_macro(T_CS!(cs), None, $tokenized, None)?;
   };
   ($option:expr, $(sub)? $body:block) => {
     state::push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
-    let code: PrimitiveBody = PrimitiveBody::Closure(
-      Rc::new(move |_args| $body.into_digested_result()));
+    let code: PrimitiveBody =
+      PrimitiveBody::Closure(Rc::new(move |_args| $body.into_digested_result()));
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
-  }
+  };
 }
 
 #[macro_export]
@@ -1702,11 +1694,7 @@ macro_rules! AddToMacro {
 #[macro_export]
 macro_rules! BeginItemize {
   ($itype:literal, $counter:literal) => {{
-    begin_itemize(
-      $itype,
-      Some($counter),
-      BeginItemizeOptions::default()
-    )
+    begin_itemize($itype, Some($counter), BeginItemizeOptions::default())
   }};
 }
 
@@ -1733,9 +1721,10 @@ macro_rules! defi_opts {
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@reversion (sub[$whatsit,$args] $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? reversion $(:)?$(=>)? sub[$arg:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
+  (@munch ( $(,)? reversion $(:)?$(=>)?
+    sub[$arg:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@reversion (sub[$arg,$inner,$extra] $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+    defi_opts!(@reversion (sub[$arg,$inner,$extra] $body $($next)*) -> {$kind, $([ $key @ $val ])*})
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? $(sub)? $body:block $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2094,7 +2083,7 @@ macro_rules! defi_opts {
   };
   (@munch ( $(,)? allocate $(:)?$(=>)? $idval:expr)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ allocate @ Some($idval.to_string()) ] })
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [allocate @ Some($idval.to_string()) ]})
   };
   // for defmath
   // stretchy: bool
@@ -2109,16 +2098,19 @@ macro_rules! defi_opts {
   // operator_role: string
   (@munch ( $(,)? operator_role $(:)?$(=>)? $flag:literal, $($next:tt)*)
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ operator_role @ Some($flag.to_string()) ] })
+  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+    [ operator_role @ Some($flag.to_string()) ] })
   };
   (@munch ( $(,)? operator_role $(:)?$(=>)? $flag:literal)
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-  defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ operator_role @ Some($flag.to_string()) ] })
+  defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )*
+    [ operator_role @ Some($flag.to_string()) ] })
   };
   // operator_stretchy: bool
   (@munch ( $(,)? operator_stretchy $(:)?$(=>)? $flag:literal, $($next:tt)*)
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ operator_stretchy @ Some($flag) ] })
+  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+    [ operator_stretchy @ Some($flag) ] })
   };
   (@munch ( $(,)? operator_stretchy $(:)?$(=>)? $flag:literal)
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2127,7 +2119,8 @@ macro_rules! defi_opts {
   // scriptpos: string
   (@munch ( $(,)? scriptpos $(:)?$(=>)? $flag:literal, $($next:tt)*)
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ scriptpos @ Some($flag.to_string()) ] })
+  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+    [ scriptpos @ Some($flag.to_string()) ] })
   };
   (@munch ( $(,)? scriptpos $(:)?$(=>)? $flag:literal)
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2157,7 +2150,8 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_digest @ before_digest!($body)]})
   };
-  (@before_digest ($(sub)? $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@before_digest ($(sub)? $body:block $($next:tt)* ) -> {$kind:ident,
+    $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_digest @ before_digest!($body)]})
   };

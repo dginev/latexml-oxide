@@ -1,7 +1,7 @@
+use crate::common::error::Result;
 use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
 use rustc_hash::FxHashMap as HashMap;
-use crate::common::error::Result;
 use std::borrow::Cow;
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
@@ -38,7 +38,10 @@ impl XPath {
       Ok(nodes) => nodes,
       Err(e) => {
         let message = s!("{:?}", e);
-        let err = || {Error!("xpath", "findnodes", message); Ok(()) };
+        let err = || {
+          Error!("xpath", "findnodes", message);
+          Ok(())
+        };
         err().ok();
         panic!("this is an external libxml2 error; unwinding...");
       },
@@ -50,7 +53,10 @@ impl XPath {
       Ok(vals) => vals,
       Err(e) => {
         let message = s!("{:?}", e);
-        let err = || {Error!("xpath", "findvalues", message); Ok(())};
+        let err = || {
+          Error!("xpath", "findvalues", message);
+          Ok(())
+        };
         err().ok();
         Vec::new()
       },
@@ -102,8 +108,12 @@ pub fn content_nodes(node: &Node) -> Vec<Node> {
   node
     .get_child_nodes()
     .into_iter()
-    .filter(|n| matches!(n.get_type(), 
-        Some(NodeType::ElementNode) | Some(NodeType::TextNode)))
+    .filter(|n| {
+      matches!(
+        n.get_type(),
+        Some(NodeType::ElementNode) | Some(NodeType::TextNode)
+      )
+    })
     .collect()
 }
 

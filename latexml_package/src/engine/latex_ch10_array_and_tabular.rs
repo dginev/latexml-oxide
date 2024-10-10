@@ -17,7 +17,7 @@ LoadDefinitions!({
   DefRegister!("\\tabcolsep", Dimension!("6pt"));
   DefMacro!("\\arraystretch", None, T_OTHER!("1"));
   Let!("\\@tabularcr", "\\lx@alignment@newline");
-  if ! has_value("GUESS_TABULAR_HEADERS") {
+  if !has_value("GUESS_TABULAR_HEADERS") {
     AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
   }
 
@@ -51,7 +51,9 @@ LoadDefinitions!({
     locked => true);
   DefMacro!("\\endtabular", r"\@tabular@after\lx@end@alignment\@end@tabular",
     locked => true);
-  DefPrimitive!("\\@end@tabular", { egroup()?; });
+  DefPrimitive!("\\@end@tabular", {
+    egroup()?;
+  });
   DefConstructor!("\\@@tabular[] Undigested DigestedBody",
     "#3",
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
@@ -80,7 +82,9 @@ LoadDefinitions!({
   //   before_digest => { stomach.bgroup(); },
   //   reversion    => r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*",
   //   mode         => "text");
-  DefPrimitive!("\\@end@tabular@", { egroup()?; });
+  DefPrimitive!("\\@end@tabular@", {
+    egroup()?;
+  });
   Let!("\\multicolumn", "\\@multicolumn");
 
   // A weird bit that sometimes gets invoked by Cargo Cult programmers...
@@ -170,7 +174,9 @@ LoadDefinitions!({
     r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
   );
   DefMacro!("\\endarray", None, r"\lx@end@alignment\@end@array");
-  DefPrimitive!("\\@end@array", { egroup()?; });
+  DefPrimitive!("\\@end@array", {
+    egroup()?;
+  });
   DefConstructor!("\\@@array[] Undigested DigestedBody",
     "#3",
     before_digest => { bgroup(); },

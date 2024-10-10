@@ -101,19 +101,25 @@ LoadDefinitions!({
   DefPrimitive!("\\selectfont", {
     let family = Expand!(T_CS!("\\f@family")).to_string();
     let series = Expand!(T_CS!("\\f@series")).to_string();
-    let shape  = Expand!(T_CS!("\\f@shape")).to_string();
-    if let Some(sh) = font::lookup_font_family(&family) { MergeFont!(sh.clone()); }
-    else {
+    let shape = Expand!(T_CS!("\\f@shape")).to_string();
+    if let Some(sh) = font::lookup_font_family(&family) {
+      MergeFont!(sh.clone());
+    } else {
       let message = s!("Unrecognized font family {:?}.", family);
-      Info!("unexpected", family, message); }
-    if let Some(sh) = font::lookup_font_series(&series) { MergeFont!(sh.clone()); }
-    else {
+      Info!("unexpected", family, message);
+    }
+    if let Some(sh) = font::lookup_font_series(&series) {
+      MergeFont!(sh.clone());
+    } else {
       let message = s!("Unrecognized font series {:?}.", series);
-      Info!("unexpected", series, message); }
-    if let Some(sh) = font::lookup_font_shape(&shape) { MergeFont!(sh.clone()); }
-    else {
+      Info!("unexpected", series, message);
+    }
+    if let Some(sh) = font::lookup_font_shape(&shape) {
+      MergeFont!(sh.clone());
+    } else {
       let message = s!("Unrecognized font shape {:?}.", shape);
-      Info!("unexpected",shape,message); }
+      Info!("unexpected", shape, message);
+    }
     Ok(Vec::new())
   });
 

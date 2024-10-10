@@ -156,9 +156,12 @@ impl Definition for Expandable {
             //     ? ($$expansion[0], $$expansion[1]) : ($expansion, undef));
             //   if ($t0 && ($t0->equals($$self{cs})
             //       || ($t1 && $t1->equals($$self{cs}) && $t0->equals(T_CS('\protect'))))) {
-            Error!("recursion", self.cs,
-                  format!("Token {} expands into itself!",self.cs),
-                  "defining as empty");
+            Error!(
+              "recursion",
+              self.cs,
+              format!("Token {} expands into itself!", self.cs),
+              "defining as empty"
+            );
             //     $expansion = TokensI(); } }
             Tokens!()
           } else {
@@ -170,7 +173,8 @@ impl Definition for Expandable {
           } else {
             Vec::new()
           };
-          if self.has_cc_arg {  // Do we actually need to substitute the args in?
+          if self.has_cc_arg {
+            // Do we actually need to substitute the args in?
             let mut args_tks = Vec::new();
             for arg in args.iter() {
               args_tks.push(arg.as_tokens()?);
@@ -198,16 +202,10 @@ impl Definition for Expandable {
   }
 
   // Not implemented for expandable
-  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
-    Ok(Vec::new())
-  }
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-  ) -> Result<Vec<Node>> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
@@ -221,7 +219,7 @@ impl Expandable {
     cs: Token,
     paramlist: Option<Parameters>,
     mut expansion_opt: Option<ExpansionBody>,
-    traits: Option<ExpandableOptions>
+    traits: Option<ExpandableOptions>,
   ) -> Result<Self> {
     let traits = traits.unwrap_or_default();
     if !traits.nopack_parameters {
@@ -230,9 +228,11 @@ impl Expandable {
       }
     }
     let has_cc_arg = match expansion_opt {
-      Some(ExpansionBody::Tokens(ref tks)) => {
-        tks.unlist_ref().iter().any(|t| t.get_catcode() == Catcode::ARG ) },
-      _ => false
+      Some(ExpansionBody::Tokens(ref tks)) => tks
+        .unlist_ref()
+        .iter()
+        .any(|t| t.get_catcode() == Catcode::ARG),
+      _ => false,
     };
     // simplify: treat empty tokens as None
     let expansion = match expansion_opt {

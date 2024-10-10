@@ -1,13 +1,13 @@
+use crate::common::arena::SymHashMap;
+use once_cell::sync::Lazy;
+use std::cell::RefCell;
 use std::error::Error as ErrorTrait;
 use std::fmt;
 use std::io;
 use std::num::{ParseFloatError, ParseIntError};
 use std::result;
-use std::cell::RefCell;
-use once_cell::sync::Lazy;
-use crate::common::arena::SymHashMap;
 
-#[derive(Debug,Clone,Default)]
+#[derive(Debug, Clone, Default)]
 pub struct LogState {
   pub undefined: SymHashMap<usize>,
   pub missing: SymHashMap<usize>,
@@ -29,34 +29,39 @@ pub enum LogStatus {
 }
 
 #[thread_local]
-pub static REPORT : Lazy<RefCell<LogState>> = Lazy::new(|| RefCell::new(LogState::default()));
+pub static REPORT: Lazy<RefCell<LogState>> = Lazy::new(|| RefCell::new(LogState::default()));
 #[macro_export]
 macro_rules! report {
-  () => ((*$crate::common::error::REPORT).borrow())
+  () => {
+    (*$crate::common::error::REPORT).borrow()
+  };
 }
 #[macro_export]
 macro_rules! report_mut {
-  () => ((*$crate::common::error::REPORT).borrow_mut())
+  () => {
+    (*$crate::common::error::REPORT).borrow_mut()
+  };
 }
 
-pub fn note_status(status: LogStatus, what:Option<&str>) {
+pub fn note_status(status: LogStatus, what: Option<&str>) {
   let mut report = REPORT.borrow_mut();
   use LogStatus::*;
   match status {
-    Debug => {report.debug += 1},
-    Info => {report.info += 1},
-    Warning => {report.warning += 1},
-    Error => {report.error += 1},
-    Fatal => {report.fatal = true},
+    Debug => report.debug += 1,
+    Info => report.info += 1,
+    Warning => report.warning += 1,
+    Error => report.error += 1,
+    Fatal => report.fatal = true,
     Undefined => {
-      let entry = report.undefined.entry(
-        what.unwrap_or_default()).or_insert(0);
-      *entry +=1;
+      let entry = report
+        .undefined
+        .entry(what.unwrap_or_default())
+        .or_insert(0);
+      *entry += 1;
     },
     Missing => {
-      let entry = report.missing.entry(
-        what.unwrap_or_default()).or_insert(0);
-      *entry +=1;
+      let entry = report.missing.entry(what.unwrap_or_default()).or_insert(0);
+      *entry += 1;
     },
   }
 }
@@ -69,8 +74,14 @@ pub fn get_status(status: LogStatus) -> usize {
     Info => report.info,
     Warning => report.warning,
     Error => report.error,
-    Fatal => if report.fatal {1} else {0},
-    _ => todo!()
+    Fatal => {
+      if report.fatal {
+        1
+      } else {
+        0
+      }
+    },
+    _ => todo!(),
   }
 }
 
@@ -169,8 +180,7 @@ macro_rules! Error {
 #[macro_export]
 macro_rules! Fatal {
   ($target:expr, $category:expr, $message:expr) => {{
-    $crate::common::error::note_status(
-      $crate::common::error::LogStatus::Fatal, None);
+    $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
     fatal!($target, $category, $message);
   }};
 }
@@ -311,7 +321,6 @@ pub enum ErrorTarget {
   Timeout,
 }
 
-
 impl fmt::Display for ErrorCategory {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use ErrorCategory::*;
@@ -342,7 +351,11 @@ impl fmt::Display for ErrorCategory {
 }
 impl fmt::Display for Error {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f,"Error:{}:{:?} {}", self.category, self.target, self.message)
+    write!(
+      f,
+      "Error:{}:{:?} {}",
+      self.category, self.target, self.message
+    )
   }
 }
 
@@ -356,14 +369,18 @@ impl Error {
     Error {
       target: ErrorTarget::Internal,
       category: ErrorCategory::ToDo,
-      message: String::from("This section of the code is not yet implemented / ported over from Perl.")
+      message: String::from(
+        "This section of the code is not yet implemented / ported over from Perl.",
+      ),
     }
   }
 }
 
 #[macro_export]
 macro_rules! unported {
-  () => (::latexml_core::common::error::Error::todo())
+  () => {
+    ::latexml_core::common::error::Error::todo()
+  };
 }
 
 impl From<io::Error> for Error {

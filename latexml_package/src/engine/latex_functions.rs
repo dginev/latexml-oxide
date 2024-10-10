@@ -1,5 +1,5 @@
-use crate::prelude::*;
 use crate::engine::tex_tables::alignment_bindings;
+use crate::prelude::*;
 
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
@@ -42,7 +42,7 @@ pub fn make_note_tags(
   counter: &str,
   mark_opt: Option<&Digested>,
   tag_opt: Option<Cow<Digested>>,
-  ) -> Result<SymHashMap<Stored>> {
+) -> Result<SymHashMap<Stored>> {
   if let Some(tag) = tag_opt {
     let mut props = ref_step_id(counter)?;
     let mark = match mark_opt {
@@ -52,29 +52,27 @@ pub fn make_note_tags(
     props.insert("mark", mark.into());
     props.insert(
       "tags",
-     stomach::digest(
-          Tokens!(
-            T_BEGIN!(),
-            T_CS!("\\def"),
-            T_CS!(s!("\\the{counter}")),
-            T_BEGIN!(),
-            tag.revert()?,
-            T_END!(),
-            T_CS!("\\def"),
-            T_CS!(s!("\\typerefnum@{counter}")),
-            T_BEGIN!(),
-            T_CS!(s!("\\{counter}typerefname")),
-            T_SPACE!(),
-            tag.revert()?,
-            T_END!(),
-            T_CS!("\\lx@make@tags"),
-            T_BEGIN!(),
-            T_OTHER!(counter),
-            T_END!(),
-            T_END!()
-          ),
-              )?
-        .into(),
+      stomach::digest(Tokens!(
+        T_BEGIN!(),
+        T_CS!("\\def"),
+        T_CS!(s!("\\the{counter}")),
+        T_BEGIN!(),
+        tag.revert()?,
+        T_END!(),
+        T_CS!("\\def"),
+        T_CS!(s!("\\typerefnum@{counter}")),
+        T_BEGIN!(),
+        T_CS!(s!("\\{counter}typerefname")),
+        T_SPACE!(),
+        tag.revert()?,
+        T_END!(),
+        T_CS!("\\lx@make@tags"),
+        T_BEGIN!(),
+        T_OTHER!(counter),
+        T_END!(),
+        T_END!()
+      ))?
+      .into(),
     );
     Ok(props)
   } else {
@@ -90,17 +88,14 @@ pub fn make_note_tags(
 
 // Find any pairs of footnotemark & footnotetext;
 // Move the contents of the text to the mark, removing the text node.
-pub fn relocate_footnote(
-  document: &mut Document,
-  node: &mut Node,
-) -> Result<()> {
+pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()> {
   if let Some(caps) = NOTE_TEXT_END.captures(&node.get_attribute("role").unwrap_or_default()) {
     let notetype = caps.get(1).map_or("", |m| m.as_str()); // Eg "footnote", "endnote",...
     if let Some(mark) = node.get_attribute("mark") {
       for mut marknote in document.findnodes(
         &format!(".//ltx:note[@role='{notetype}mark'][@mark='{mark}']"),
         None,
-          ) {
+      ) {
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
       }
     }
@@ -111,7 +106,7 @@ pub fn relocate_footnote(
       for mut textnote in document.findnodes(
         &format!(".//ltx:note[@role='{notetype}text'][@mark='{mark}']"),
         None,
-          ) {
+      ) {
         relocate_footnote_aux(document, notetype, node, &mut textnote)?;
       }
     }
@@ -151,7 +146,7 @@ pub fn only_preamble(cs: &str) -> Result<()> {
 pub fn tabular_bindings(
   template: Template,
   mut properties: SymHashMap<Stored>,
-  mut xml_attributes: HashMap<String, String>
+  mut xml_attributes: HashMap<String, String>,
 ) -> Result<()> {
   if !properties.contains_key("guess_headers") {
     if let Some(v) = lookup_value("GUESS_TABULAR_HEADERS") {
@@ -171,8 +166,7 @@ pub fn tabular_bindings(
     }
   }
   if !xml_attributes.contains_key("rowsep") {
-    let astr = gullet::do_expand(T_CS!("\\arraystretch"))?
-      .to_string();
+    let astr = gullet::do_expand(T_CS!("\\arraystretch"))?.to_string();
     if astr != "1" {
       let astr_int = astr.parse::<i64>().expect(&astr);
       xml_attributes.insert(
@@ -191,12 +185,7 @@ pub fn tabular_bindings(
         .into(),
     );
   } // Account for html space
-  alignment_bindings(
-    template,
-    String::from("text"),
-    properties,
-    xml_attributes
-  );
+  alignment_bindings(template, String::from("text"), properties, xml_attributes);
   state::let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);
   state::let_i(&T_CS!("\\tabularnewline"), &T_CS!("\\\\"), None);
   // NOTE: Fit this back in!!!!!!!

@@ -29,7 +29,7 @@ pub const UNTEX_LINELENGTH: usize = 78;
 pub const NO_TOKENS: Tokens = Tokens(Vec::new());
 pub const NO_BORROWED_TOKENS: &Tokens = &NO_TOKENS;
 /// Tokens are a thin wrapper over a vector of Token objects
-/// 
+///
 /// They are usually read from a `Mouth` and treated as an immutable interface.
 /// For access to the inner Token contents, use one of the `unlist` methods.
 #[derive(Debug, Clone, Default)]
@@ -171,10 +171,7 @@ impl Tokens {
   pub fn len(&self) -> usize { self.0.len() }
 
   // Just a synonym for unlist in this reversion case
-  pub fn revert(self) -> Vec<Token> {
-    self
-      .0
-  }
+  pub fn revert(self) -> Vec<Token> { self.0 }
 
   /// to_number casts back to a parsed Number (usually via gullet::read_number)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
@@ -247,14 +244,23 @@ impl Tokens {
 
   /// Methods for overloaded ops.
   pub fn equals(&self, other: Tokens) -> bool {
-    let self_tokens : Vec<&Token> = self.0.iter()
-      .filter(|t| t.code != Catcode::COMMENT && t.code != Catcode::MARKER).collect();
-    let other_tokens : Vec<&Token> = other.0.iter()
-    .filter(|t| t.code != Catcode::COMMENT && t.code != Catcode::MARKER).collect();
+    let self_tokens: Vec<&Token> = self
+      .0
+      .iter()
+      .filter(|t| t.code != Catcode::COMMENT && t.code != Catcode::MARKER)
+      .collect();
+    let other_tokens: Vec<&Token> = other
+      .0
+      .iter()
+      .filter(|t| t.code != Catcode::COMMENT && t.code != Catcode::MARKER)
+      .collect();
     if self_tokens.len() != other_tokens.len() {
       false
     } else {
-      self_tokens.into_iter().zip(other_tokens).all(|(t_self,t_other)| *t_self == *t_other)
+      self_tokens
+        .into_iter()
+        .zip(other_tokens)
+        .all(|(t_self, t_other)| *t_self == *t_other)
     }
   }
 
@@ -276,9 +282,7 @@ impl Tokens {
     )
   }
   /// digest the current `Tokens`
-  pub fn be_digested(self) -> Result<Digested> {
-    stomach::digest(self)
-  }
+  pub fn be_digested(self) -> Result<Digested> { stomach::digest(self) }
 
   /// neutralize each token
   pub fn neutralize(self, extraspecials: &[char]) -> Tokens {
@@ -407,8 +411,8 @@ impl Tokens {
     tex_string
   }
 
-  /// Packs repeated CC_PARAM tokens into CC_ARG tokens for use as a macro body (and other token lists)
-  /// Also unwraps \noexpand tokens, since that is also needed for macro bodies
+  /// Packs repeated CC_PARAM tokens into CC_ARG tokens for use as a macro body (and other token
+  /// lists) Also unwraps \noexpand tokens, since that is also needed for macro bodies
   /// (but not strictly part of packing parameters)
   pub fn pack_parameters(self) -> Result<Self> {
     let mut rescanned = Vec::new();
@@ -421,7 +425,7 @@ impl Tokens {
           // only group clear match token cases
           rescanned.push(Token {
             text: next_t.unwrap().get_sym(),
-            code: Catcode::ARG
+            code: Catcode::ARG,
           });
         } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
@@ -452,27 +456,31 @@ impl Tokens {
         Catcode::BEGIN => {
           while let Some(bt) = walker.next_back() {
             match bt.get_catcode() {
-              Catcode::SPACE => {}, // skip trailing spaces
+              Catcode::SPACE => {},  // skip trailing spaces
               Catcode::END => break, // match & skip one }
-              _ => { // FAIL: mismatched { ?
+              _ => {
+                // FAIL: mismatched { ?
                 back_trailer = Some(bt);
                 break;
-              }
+              },
             }
           }
-          if back_trailer.is_some() { // bail if non-matching {
+          if back_trailer.is_some() {
+            // bail if non-matching {
             break;
-          } else { // move forward on balanced open {
+          } else {
+            // move forward on balanced open {
             walker.next();
           }
         },
-        Catcode::SPACE => { // skip leading spaces
+        Catcode::SPACE => {
+          // skip leading spaces
           walker.next();
         },
-        _ => {break} // keep any other leading case
+        _ => break, // keep any other leading case
       }
     }
-    let mut collected : Vec<Token> = walker.collect();
+    let mut collected: Vec<Token> = walker.collect();
     if let Some(bt) = back_trailer {
       collected.push(bt)
     }
@@ -512,7 +520,7 @@ impl ToTokens for Catcode {
       INVALID => "INVALID",
       CS => "CS",
       MARKER => "MARKER",
-      ARG => "ARG"
+      ARG => "ARG",
     };
     stream.append(Ident::new("Catcode", Span::call_site()));
     stream.append(Punct::new(':', Spacing::Joint));

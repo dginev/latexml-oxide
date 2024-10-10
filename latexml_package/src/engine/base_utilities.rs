@@ -1,5 +1,5 @@
 //! Base Utilities
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use rustc_hash::FxHashSet as HashSet;
@@ -21,7 +21,8 @@ LoadDefinitions!({
   // LaTeX has a very particular, but useful, notion of "Undefined",
   //    so let's get that squared away at the outset; it's useful for TeX, too!
   //
-  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
+  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as
+  // \relax
   DefMacro!("\\lx@ifundefined{}{}{}", sub[(name, if_token, else_token)] {
     let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
     if IsDefined!(&cs) {
@@ -42,8 +43,8 @@ LoadDefinitions!({
       while !boxes.is_empty() {
         if match boxes[0].get_property("isSpace") {
           Some(Cow::Borrowed(Stored::Bool(space_bool))) => *space_bool,
-          Some(Cow::Owned(Stored::Bool(ref space_bool)))  => *space_bool,
-          _ => false
+          Some(Cow::Owned(Stored::Bool(ref space_bool))) => *space_bool,
+          _ => false,
         } {
           boxes = boxes[1..].to_vec();
         } else {
@@ -56,7 +57,6 @@ LoadDefinitions!({
     }
     Ok(boxes)
   });
-
 
   DefConstructor!("\\@ADDCLASS Semiverbatim", sub[document,args] {
       document.add_class(&mut document.get_element().unwrap(), 
@@ -101,7 +101,7 @@ LoadDefinitions!({
     if let Some(keys) = keys_opt {
       let known_key = if let Some(Stored::HashTagData(ref mut frnt)) = lookup_value("frontmatter") {
         frnt.contains_key(&tag)
-      } else { false }; 
+      } else { false };
       // if replace and previous entries
       // remove previous entries
       if known_key && keys.has_key("replace") {
@@ -117,7 +117,7 @@ LoadDefinitions!({
         return Ok(Vec::new());
       }
     }
-    
+
     let attrs_digested = if let Some(attr_kvs) = attrs_opt {
       if let DigestedData::KeyVals(digested) = attr_kvs.be_digested()?.data() {
         Some(digested.get_hash_digested())
@@ -176,15 +176,17 @@ LoadDefinitions!({
   // This is called by afterOpen (by default on <ltx:document>) to
   // output any frontmatter that was accumulated.
 
-  // TODO: Porting confusion at this point -- is this now to be phased out in favor of insert_frontmatter ?
-  // original latexml may have moved here...
+  // TODO: Porting confusion at this point -- is this now to be phased out in favor of
+  // insert_frontmatter ? original latexml may have moved here...
   Tag!("ltx:document", after_open_late => sub[document, _node] {
     // this happens only once per conversion, so not a big deal to keep it in the closure
-    let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
+    let frontmatter_elements_set: HashSet<String> =
+      FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
     let mut frontmatter = match state::remove_value("frontmatter") {
       Some(Stored::HashTagData(frnt)) => frnt,
-      _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
+      _ => fatal!(TexPool, Expected,
+            "Global TeX Frontmatter hash was not available, should never happen"),
     };
     state::assign_value("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
 
@@ -200,7 +202,8 @@ LoadDefinitions!({
     for key in &all_keys {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...
-        document.set_box_to_absorb(Tbox::new(*EMPTY_SYM, lookup_font(), None, Tokens!(T_SPACE!()), SymHashMap::default()).into());
+        document.set_box_to_absorb(Tbox::new(*EMPTY_SYM, lookup_font(), None, Tokens!(T_SPACE!()),
+          SymHashMap::default()).into());
         for (tag, attr, stuff) in list {
           document.open_element(&tag, attr, None)?;
           // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
@@ -226,7 +229,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
     after_digest => { state::assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
 
-    // Maintain a list of classes that apply to the document root.
+  // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
   Tag!("ltx:document", after_open_late => sub[document, root] {
     let classes = with_mapping_keys("DOCUMENT_CLASSES", |keys| arena::join(&keys," "));
@@ -292,7 +295,7 @@ LoadDefinitions!({
   });
 
   // Remove the last closed node, if it's empty.
-  let remove_empty_element: Vec<ConstructionClosure> = construct!(document, _whatsit,{
+  let remove_empty_element: Vec<ConstructionClosure> = construct!(document, _whatsit, {
     if let Some(node) = document.get_node().get_last_child() {
       // This should be the wrapper just added.
       if node.get_child_nodes().is_empty() {
@@ -464,13 +467,13 @@ LoadDefinitions!({
     "\\lx@add@Preamble@PI Undigested",
     "<?latexml preamble='#1'?>"
   );
-
 });
 
 /// Insert FrontMatter into document, if not already added
 pub fn insert_frontmatter(_document: &mut Document) -> Result<()> {
-  
-  if lookup_bool("frontmatter_done") { return Ok(()); }
+  if lookup_bool("frontmatter_done") {
+    return Ok(());
+  }
   // TODO: Continue
   // if let Some(frontmatter) = lookup_value("frontmatter");
   // my @set_keys    = $frontmatter ? (keys %$frontmatter) : ();
@@ -496,9 +499,9 @@ pub fn insert_frontmatter(_document: &mut Document) -> Result<()> {
   //           ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
   //       map { $document->absorb($_) } @stuff;
   //       my $completed_node = $document->closeElement($tag);
-  //       # At this time, the frontmatter element should really carry the actual literal values intended.
-  //       # Thus, if we see an empty element, something went wrong -- including our bindings are too verbose,
-  //       # as e.g. \preprint{} always generates a ltx:note element.
+  //       # At this time, the frontmatter element should really carry the actual literal values
+  // intended.       # Thus, if we see an empty element, something went wrong -- including our
+  // bindings are too verbose,       # as e.g. \preprint{} always generates a ltx:note element.
   //       #
   //       # To solve this in a single location: prune here!
   //       if (($tag ne "ltx:rdf") && !scalar($completed_node->childNodes)) {

@@ -11,9 +11,10 @@ use crate::binding::counter::dialect::step_counter;
 use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::common::arena;
 use crate::common::arena::SymHashMap;
+use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::number::Number;
-use crate::common::error::*;
+use crate::common::numeric_ops::NumericOps;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
 use crate::definition::expandable::{Expandable, ExpandableOptions};
@@ -22,23 +23,21 @@ use crate::definition::primitive::{Primitive, PrimitiveOptions};
 use crate::definition::register::{
   Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
 };
-use crate::common::numeric_ops::NumericOps;
 use crate::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
   ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion, SizingClosure,
 };
 use crate::document::Document;
+use crate::gullet;
+use crate::mouth;
 use crate::parameter::Parameters;
 use crate::state::*;
-use crate::gullet;
+use crate::stomach::*;
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
-use crate::mouth;
-use crate::stomach::*;
-
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
   "name",
@@ -86,7 +85,7 @@ pub fn is_defined_token(cs: &Token) -> bool {
       Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",
       Stored::Constructor(ref m) => m.get_cs_name() != "\\relax",
       Stored::Register(ref m) => m.get_cs_name() != "\\relax",
-      other => panic!("TODO: unexpected case for is_defined_token, got: {other:?}")
+      other => panic!("TODO: unexpected case for is_defined_token, got: {other:?}"),
     },
     _ => false,
   }
@@ -96,8 +95,9 @@ pub fn is_defined_token(cs: &Token) -> bool {
 pub fn is_definable(token: &Token) -> bool {
   let meaning = lookup_meaning(token);
   token.with_str(|name| name != "\\relax" && !name.starts_with("\\end"))
-    && (meaning.is_none() || (meaning == lookup_meaning(&TOKEN_RELAX))
-        || lookup_bool("2.09_COMPATIBILITY"))
+    && (meaning.is_none()
+      || (meaning == lookup_meaning(&TOKEN_RELAX))
+      || lookup_bool("2.09_COMPATIBILITY"))
 }
 
 /// unconditionally wraps a CS token around a string
@@ -107,8 +107,8 @@ pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 //======================================================================
 // Defining Conditional Control Sequences.
 //======================================================================
-/// Define a conditional control sequence. 
-/// 
+/// Define a conditional control sequence.
+///
 /// Its processing takes place in the Gullet.
 /// The test is applied to the arguments (if any),
 /// which determines which branch is executed.
@@ -159,13 +159,13 @@ pub fn def_conditional(
           T_CS!(s!("\\{}true", name)),
           None,
           Tokens!(T_CS!("\\let"), cs, T_CS!("\\iftrue")),
-          None
+          None,
         )?;
         def_macro(
           T_CS!(s!("\\{}false", name)),
           None,
           Tokens!(T_CS!("\\let"), cs, T_CS!("\\iffalse")),
-          None
+          None,
         )?;
         let_i(&cs, &T_CS!("\\iffalse"), None);
       } else {
@@ -197,7 +197,7 @@ pub fn def_conditional(
 }
 
 /// Defines the macro expansion for a command sequence.
-/// 
+///
 /// A macro control sequence that reads parameters
 /// as specified by `paramlist` and is expanded during macro expansion time in the `Gullet`.
 /// See `ExpansionBody` for the possible kinds of `expansion` material.
@@ -251,11 +251,11 @@ pub struct RegisterOptions {
   /// an optional name for the register (default: the cs)
   pub address: Option<String>,
   /// an optional allocation for the register (default: None)
-  pub allocate: Option<String>
+  pub allocate: Option<String>,
 }
 
 /// Defines a register with an initial value.
-/// 
+///
 /// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
 /// Usually, the `prototype` is just the control sequence,
 /// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
@@ -275,7 +275,7 @@ pub fn def_register<T: Into<RegisterValue>>(
     None => match options.allocate {
       Some(v) => allocate_register(&v)?.unwrap_or_default(),
       None => String::new(),
-    }
+    },
   };
   // by adding this check here, we no longer need to use Register::new in the Rust version
   if address.is_empty() {
@@ -300,7 +300,7 @@ pub fn def_register<T: Into<RegisterValue>>(
       value: None,
       role: None,
       locator: gullet::get_locator(),
-      mathglyph: None
+      mathglyph: None,
     },
     Some(Scope::Global),
   );
@@ -308,7 +308,7 @@ pub fn def_register<T: Into<RegisterValue>>(
 }
 
 /// Defines a primitive control sequence
-/// 
+///
 /// A primitive is processed during
 /// digestion (in the  `Stomach`), after macro expansion but before Construction time.
 /// Primitive control sequences generate Boxes or Lists, generally
@@ -328,15 +328,13 @@ pub fn def_primitive(
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure =
-      before_digest_simple!({ requireMath!(cs_name_cloned) });
+    let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
     before_digest_env.push(require_math_closure);
   }
 
   if options.forbid_math {
     let cs_name_cloned = cs_name.clone();
-    let forbid_math_closure =
-      before_digest_simple!({ forbidMath!(cs_name_cloned) });
+    let forbid_math_closure = before_digest_simple!({ forbidMath!(cs_name_cloned) });
     before_digest_env.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
@@ -461,7 +459,7 @@ pub fn def_math_dual(
         dtks.push(T_BEGIN!());
         for carg in cargs.into_iter().flatten() {
           // if let Some(carg) = carg_opt {
-            dtks.extend(carg.unlist());
+          dtks.extend(carg.unlist());
           //} else {}
           // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         }
@@ -472,7 +470,7 @@ pub fn def_math_dual(
         dtks.push(T_BEGIN!());
         for parg in pargs.into_iter().flatten() {
           // if let Some(parg) = parg_opt {
-            dtks.extend(parg.unlist());
+          dtks.extend(parg.unlist());
           //} else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         }
         dtks.push(T_END!());
@@ -674,13 +672,7 @@ pub fn def_math_constructor(
       )
     })
   } else {
-    Rc::new(move |_whatsit| {
-      Ok(
-        lookup_font()
-          .unwrap()
-          .specialize(&presentation_for_font),
-      )
-    })
+    Rc::new(move |_whatsit| Ok(lookup_font().unwrap().specialize(&presentation_for_font)))
   }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // If trivial presentation, allow it in Text
@@ -718,9 +710,7 @@ pub fn def_math_constructor(
     )
   } else {
     Rc::new(
-      move |document: &mut Document,
-            args: &Vec<Option<Digested>>,
-            props: &SymHashMap<Stored>| {
+      move |document: &mut Document, args: &Vec<Option<Digested>>, props: &SymHashMap<Stored>| {
         let mut attrs = HashMap::default();
         for key in ["role", "scriptpos", "stretchy"] {
           if let Some(v) = props.get(key) {
@@ -831,7 +821,7 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token>
 }
 
 /// Binding definition connecting a TeX command sequence with a structured XML output.
-/// 
+///
 /// The Constructor is where LaTeXML really starts getting interesting;
 /// invoking the control sequence will generate an arbitrary XML
 /// fragment in the document tree.  More specifically: during digestion, the arguments
@@ -858,24 +848,22 @@ pub fn def_constructor(
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure =
-      before_digest_simple!( { requireMath!(cs_name_cloned) });
+    let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
     before_digest_closures.push(require_math_closure);
   }
   if options.forbid_math {
     let cs_name_cloned = cs_name;
-    let forbid_math_closure =
-      before_digest_simple!( { forbidMath!(cs_name_cloned) });
+    let forbid_math_closure = before_digest_simple!({ forbidMath!(cs_name_cloned) });
     before_digest_closures.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let begin_mode_closure = before_digest_simple!( {
+    let begin_mode_closure = before_digest_simple!({
       begin_mode(&mode_clone)?;
     });
     before_digest_closures.push(begin_mode_closure);
   } else if options.bounded {
-    let bgroup_closure = before_digest_simple!( {
+    let bgroup_closure = before_digest_simple!({
       bgroup();
     });
     before_digest_closures.push(bgroup_closure);
@@ -886,13 +874,13 @@ pub fn def_constructor(
   //  Can we consolidate into a single, top-level, font handler?
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
-      let merge_font_closure = before_digest_simple!( {
+      let merge_font_closure = before_digest_simple!({
         merge_font((*chosen_font).clone());
       });
       before_digest_closures.push(merge_font_closure);
     },
     Some(FontDirective::Closure(font_closure)) => {
-      let execute_font_closure = before_digest_simple!( {
+      let execute_font_closure = before_digest_simple!({
         merge_font(font_closure(None)?);
       });
       before_digest_closures.push(execute_font_closure);
@@ -904,12 +892,12 @@ pub fn def_constructor(
   let mut after_digest_closures: Vec<DigestionClosure> = options.after_digest;
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: DigestionClosure = after_digest_simple!( _whatsit, {
+    let end_mode_closure: DigestionClosure = after_digest_simple!(_whatsit, {
       end_mode(&mode_clone)?;
     });
     after_digest_closures.push(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: DigestionClosure = after_digest_simple!( _whatsit, {
+    let egroup_closure: DigestionClosure = after_digest_simple!(_whatsit, {
       egroup()?;
     });
     after_digest_closures.push(egroup_closure);
@@ -941,7 +929,7 @@ pub fn def_constructor(
 }
 
 /// Defines an Environment that generates a specific XML fragment.
-/// 
+///
 /// `compiled_replacement` is of the same form as for DefConstructor, but will generally include
 /// reference to the `#body` property.
 /// Upon encountering a `\begin{env}`:  the mode is switched, if needed, else a new group is opened;
@@ -964,22 +952,20 @@ pub fn def_environment(
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   if options.require_math {
     let require_name = begin_name.clone();
-    let require_math_closure =
-      before_digest_simple!( { requireMath!(require_name) });
+    let require_math_closure = before_digest_simple!({ requireMath!(require_name) });
     before_digest_env.push(require_math_closure);
   }
   if options.forbid_math {
     let forbid_name = begin_name.clone();
-    let forbid_math_closure =
-      before_digest_simple!( { forbidMath!(forbid_name) });
+    let forbid_math_closure = before_digest_simple!({ forbidMath!(forbid_name) });
     before_digest_env.push(forbid_math_closure);
   }
-  let bgroup_closure = before_digest_simple!( {
+  let bgroup_closure = before_digest_simple!({
     bgroup();
   });
   before_digest_env.push(bgroup_closure);
   let atbegin_key = s!("@environment@{name}@atbegin");
-  let atbegin_hook_closure = before_digest_simple!( {
+  let atbegin_hook_closure = before_digest_simple!({
     if let Some(b) = lookup_tokens(&atbegin_key) {
       vec![digest(b.unlist())?]
     } else {
@@ -990,14 +976,14 @@ pub fn def_environment(
   before_digest_env.push(atbegin_hook_closure);
   if let Some(ref mode) = options.mode {
     let bmode = mode.clone();
-    let mode_closure = before_digest_simple!( {
+    let mode_closure = before_digest_simple!({
       set_mode(&bmode)?;
     });
     before_digest_env.push(mode_closure);
   }
 
   let env_name = name.clone();
-  let current_environment_closure = before_digest_simple!( {
+  let current_environment_closure = before_digest_simple!({
     assign_value("current_environment", env_name.clone(), None);
     let body = T_LETTER!(env_name.clone());
     def_macro(
@@ -1010,7 +996,7 @@ pub fn def_environment(
   before_digest_env.push(current_environment_closure);
 
   if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_simple!( {
+    let merge_font_closure = before_digest_simple!({
       if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
         merge_font((**chosen_font).clone());
       }
@@ -1019,23 +1005,19 @@ pub fn def_environment(
   }
   before_digest_env.extend(options.before_digest);
 
-  let push_frame_closure = Rc::new(
-    |_document: &mut Document, _whatsit: &Whatsit| {
-      push_frame();
-      Ok(())
-    },
-  );
+  let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
+    push_frame();
+    Ok(())
+  });
   let mut before_construct_with_frame: Vec<ConstructionClosure> = vec![push_frame_closure];
   before_construct_with_frame.extend(options.before_construct);
 
   let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
 
-  let pop_frame_closure = Rc::new(
-    |_document: &mut Document, _whatsit: &Whatsit| {
-      pop_frame()?;
-      Ok(())
-    },
-  );
+  let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
+    pop_frame()?;
+    Ok(())
+  });
   after_construct_with_frame.push(pop_frame_closure);
 
   let begin_name_constructor = Rc::new(Constructor {
@@ -1063,7 +1045,7 @@ pub fn def_environment(
   let mut after_digest_env = options.after_digest.clone();
   let name_clone = name.to_string();
   let end_name_clone = end_name.to_string();
-  let unexpected_end_closure = after_digest_simple!( _whatsit, {
+  let unexpected_end_closure = after_digest_simple!(_whatsit, {
     let env = lookup_string("current_environment");
     if env.is_empty() || name_clone != env {
       let message1 = s!("Can't close environment {}", name_clone);
@@ -1075,12 +1057,7 @@ pub fn def_environment(
           .collect::<Vec<String>>()
           .join(", "))
       );
-      Error!(
-        "unexpected",
-        end_name_clone,
-        message1,
-        message2
-      );
+      Error!("unexpected", end_name_clone, message1, message2);
     }
     Ok(Vec::new())
   });
@@ -1089,28 +1066,24 @@ pub fn def_environment(
   match options.mode {
     Some(mode) => {
       let emode = mode;
-      let emode_closure = Rc::new(
-        move |_whatsit: &mut Whatsit| {
-          end_mode(&emode)?;
-          Ok(Vec::new())
-        },
-      );
+      let emode_closure = Rc::new(move |_whatsit: &mut Whatsit| {
+        end_mode(&emode)?;
+        Ok(Vec::new())
+      });
       after_digest_env.push(emode_closure);
     },
     None => {
-      let egroup_closure = Rc::new(
-        |_whatsit: &mut Whatsit| {
-          egroup()?;
-          Ok(Vec::new())
-        },
-      );
+      let egroup_closure = Rc::new(|_whatsit: &mut Whatsit| {
+        egroup()?;
+        Ok(Vec::new())
+      });
       after_digest_env.push(egroup_closure);
     },
   };
 
   let mut before_digest_for_endenv = options.before_digest_end;
   let atend_key = s!("@environment@{name}@atend");
-  let atend_hook_closure = before_digest_simple!( {
+  let atend_hook_closure = before_digest_simple!({
     if let Some(e) = lookup_tokens(&atend_key) {
       vec![digest(e.unlist())?]
     } else {
@@ -1155,7 +1128,7 @@ pub fn def_environment(
   install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);
   let mut after_digest_end = options.after_digest;
-  after_digest_end.push(after_digest_simple!( _whatsit, {
+  after_digest_end.push(after_digest_simple!(_whatsit, {
     egroup()?;
   }));
 
@@ -1172,7 +1145,11 @@ pub fn def_environment(
   install_definition(Rc::new(end_name_constructor), options.scope);
 
   if options.locked {
-    assign_value(&s!("\\begin{{{}}}:locked", &name), true, Some(Scope::Global));
+    assign_value(
+      &s!("\\begin{{{}}}:locked", &name),
+      true,
+      Some(Scope::Global),
+    );
     assign_value(&s!("\\end{{{}}}:locked", &name), true, Some(Scope::Global));
     assign_value(&s!("\\{}:locked", &name), true, Some(Scope::Global));
     assign_value(&s!("\\end{}:locked", &name), true, Some(Scope::Global));
@@ -1195,7 +1172,7 @@ pub fn get_xmarg_id() -> Result<Tokens> {
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
-    })
+    }),
   )?;
   gullet::do_expand(T_CS!("\\the@lx@xmarg@ID"))
 }
@@ -1207,14 +1184,14 @@ type ArgsUnpacked = Vec<Option<Tokens>>;
 /// return two lists
 ///   (1) The Tokens' wrapped in an XMAarg, with an ID added
 ///   (2) a corresponding list of Tokens creating XMRef's to those IDs
-/// 
+///
 /// Ah, but there are complications!!!
 /// On the one hand, arguments may be hidden, never appearing on the presentation side
 /// (all will be passed to the content side); This argues for putting the XMArg's on the content
-/// side. OTOH, they ought to be on the presentation side, so that they can be expanded & digested in
-/// the proper context they will be presented, and pick up all the styling (font size,
-/// displaystyle..) I don't know how to work around the latter, so we'll put args on the presentation
-/// side, UNLESS they are hidden, in which case they'll be on the content side.
+/// side. OTOH, they ought to be on the presentation side, so that they can be expanded & digested
+/// in the proper context they will be presented, and pick up all the styling (font size,
+/// displaystyle..) I don't know how to work around the latter, so we'll put args on the
+/// presentation side, UNLESS they are hidden, in which case they'll be on the content side.
 /// So, how do we know if they're hidden? We'll scan the presentation for #\d, that's how!
 pub fn dualize_arglist(
   presentation: &str,
@@ -1284,7 +1261,7 @@ pub fn dualize_arglist(
 }
 
 /// Define a Mathematical symbol or function.
-/// 
+///
 /// There are two sets of cases:
 ///  (1) If the presentation appears to be TeX code, we create an XMDual,
 /// since the presentation may end up with structure, etc.
@@ -1410,17 +1387,16 @@ fn transfer_common_constructor_options(
   //
   // before_digest
   //
-  let mut before_digest_closures: Vec<BeforeDigestClosure> =
-    vec![before_digest_simple!( {
-      requireMath!(cs_str);
-    })];
+  let mut before_digest_closures: Vec<BeforeDigestClosure> = vec![before_digest_simple!({
+    requireMath!(cs_str);
+  })];
   if !options.nogroup {
-    before_digest_closures.push(before_digest_simple!( {
+    before_digest_closures.push(before_digest_simple!({
       bgroup();
     }));
   }
   if let Some(font) = options.font {
-    before_digest_closures.push(before_digest_simple!( {
+    before_digest_closures.push(before_digest_simple!({
       if let FontDirective::Asset(ref chosen_font) = font {
         merge_font((**chosen_font).clone());
       }
@@ -1433,7 +1409,7 @@ fn transfer_common_constructor_options(
   //
   let mut after_digest_closures = options.after_digest;
   if !options.nogroup {
-    after_digest_closures.push(after_digest_simple!( _args, {
+    after_digest_closures.push(after_digest_simple!(_args, {
       egroup()?;
     }));
   }
@@ -1457,13 +1433,7 @@ fn transfer_common_constructor_options(
           )
         })
       } else {
-        Rc::new(move |_whatsit| {
-          Ok(
-            lookup_font()
-              .unwrap()
-              .specialize(&presentation_for_font),
-          )
-        })
+        Rc::new(move |_whatsit| Ok(lookup_font().unwrap().specialize(&presentation_for_font)))
       },
     )),
   );
@@ -1476,27 +1446,31 @@ fn transfer_common_constructor_options(
 // We ASSUME the same set of \count positions used by TeX & LaTeX
 // for recording the next available position in \count,\dimen,\skip,\muskip.
 
-pub fn allocate_register(rtype:&str) -> Result<Option<String>> {
+pub fn allocate_register(rtype: &str) -> Result<Option<String>> {
   let addr = match rtype {
     "\\count" => "\\count10",
     "\\dimen" => "\\count11",
     "\\skip" => "\\count12",
     "\\muskip" => "\\count13",
-    "\\box"   => "\\count14",
-    "\\toks"  => "\\count15",
-    _ => ""
+    "\\box" => "\\count14",
+    "\\toks" => "\\count15",
+    _ => "",
   };
-  if !addr.is_empty() { // addr is a Register but MUST be stored as \count<#>
+  if !addr.is_empty() {
+    // addr is a Register but MUST be stored as \count<#>
     if let Some(n) = lookup_number(addr) {
       let next = n.value_of() + 1;
       assign_value(addr, Number::new(next), Some(Scope::Global));
       Ok(Some(format!("{rtype}{next}")))
-    }
-    else {
+    } else {
       Ok(None)
     }
   } else {
-    Error!("misdefined", rtype, format!("Type {rtype} is not an allocated register type"));
+    Error!(
+      "misdefined",
+      rtype,
+      format!("Type {rtype} is not an allocated register type")
+    );
     Ok(None)
   }
 }

@@ -12,30 +12,30 @@ use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 
 /// Normalize an alignment before construction
-/// 
+///
 /// * consolodating column & row spanning information
 /// * scanning for empty rows & columns and collapsing them (while accounting for spanning, and
 ///   copying borders appropriately)
-/// 
+///
 /// Note that a trailing \\ in allignment (often needed to effect \hline)
 ///    causes an empty row at the end. Other fancy layout fine-tuning often
 ///    involves adding extra rows & columsn for spacing.  HTML's table model
 ///    is more forgiving that TeX's, so we don't need these extras
 ///    and, in fact, they often mess up the html layout!
-/// 
+///
 /// However, math alignments, and those with expected structure (eg. eqnarray)
 ///    should generally NOT have rows & columns collapsed --- except the last row!
 ///
 /// Also note the inconsistency between TeX & HTML's table models regarding spans.
-/// 
+///
 /// \multicolumn creates a cell that covers a certain number of columns
 ///     which are then omitted from the LaTeX AND the HTML.
-/// 
+///
 /// OTOH, \multirow creates a cell which overlaps following rows!
-/// 
+///
 /// The & is still needed to allocate the cells in those rows.
 /// And in fact they need not even be empty! TeX will just pile them up!
-/// 
+///
 /// However, in HTML the spanned rows ARE omitted!
 pub fn normalize_alignment(alignment: &mut Alignment) -> Result<()> {
   if !alignment.is_normalized {
@@ -56,11 +56,9 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
     // Do we need to account for any space in the $$row{before} or $$row{after}?
     for cell in row.get_columns_mut() {
       if let Some(ref mut boxes) = &mut cell.boxes {
-        let (w, h, d, cw, _ch, _cd) = boxes.get_size(
-          Some(stored_map!(
+        let (w, h, d, cw, _ch, _cd) = boxes.get_size(Some(stored_map!(
             "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
-            "vattach" => cell.vattach.clone() )),
-              )?;
+            "vattach" => cell.vattach.clone() )))?;
         // Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width
         // vattach))     . ") size " . showSize($w,  $h,  $d)
         //     . " csize " . showSize($cw, $ch, $cd)

@@ -1,7 +1,7 @@
-use proc_macro::TokenStream;
-use quote::{format_ident, quote};
 use latexml_core::common::arena;
 use latexml_core::common::def_parser::parse_prototype;
+use proc_macro::TokenStream;
+use quote::{format_ident, quote};
 use syn::{DeriveInput, Lit, Meta};
 
 /// For now this prototype compilation technique is tied tightly to the `TypedMacroWO!` macro from
@@ -42,7 +42,7 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
           params
             .get_parameters()
             .iter()
-            .filter(|p| !arena::with(p.name,|name|name.starts_with("Skip")))
+            .filter(|p| !arena::with(p.name, |name| name.starts_with("Skip")))
             .map(|p| {
               if let Some(ref inner_p) = p.inner {
                 if let Some(first_inner) = inner_p.get_parameters().first() {
@@ -69,7 +69,8 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
           (sub [( $($var:ident),* )]
             $body:block $($input:tt)*) => {
             let these_parameters = #quoted_params;
-            #inneri!(#csname, these_parameters, sub [( $($var),* ):(#(#proto_types),*)] $body $($input)*)
+            #inneri!(
+              #csname, these_parameters, sub [( $($var),* ):(#(#proto_types),*)] $body $($input)*)
           }
         }
         )

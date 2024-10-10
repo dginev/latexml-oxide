@@ -13,7 +13,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
 use crate::gullet;
-use crate::state::{lookup_bool,lookup_font, with_value};
+use crate::state::{lookup_bool, lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
@@ -85,7 +85,7 @@ impl Tbox {
       Tokens!(Token {
         text,
         code: Catcode::OTHER
-    })
+      })
     } else {
       tokens_opt
     };
@@ -108,15 +108,18 @@ impl Tbox {
     if lookup_bool("IN_MATH") {
       properties.insert("mode", Stored::String(*MATH_SYM));
       if text != empty_sym {
-        with_value(&arena::with(text, |text_str| {
-          s!("math_token_attributes_{}", text_str) }), |value_opt|
-        if let Some(Stored::HashString(attr)) = value_opt {
-          for (key, value) in attr.iter() {
-            properties
-              .entry(key)
-              .or_insert_with(|| Stored::String(arena::pin(value)));
-          }
-        });
+        with_value(
+          &arena::with(text, |text_str| s!("math_token_attributes_{}", text_str)),
+          |value_opt| {
+            if let Some(Stored::HashString(attr)) = value_opt {
+              for (key, value) in attr.iter() {
+                properties
+                  .entry(key)
+                  .or_insert_with(|| Stored::String(arena::pin(value)));
+              }
+            }
+          },
+        );
       }
       font = Rc::new(arena::with(text, |text_str| font.specialize(text_str)));
     }
@@ -125,9 +128,8 @@ impl Tbox {
       font,
       locator,
       properties,
-      tokens
+      tokens,
     }
-
   }
   /// checks if the text content is empty
   pub fn is_empty(&self) -> bool {
@@ -187,7 +189,7 @@ impl BoxOps for Tbox {
         Ok(vec![document.insert_math_token(
           &text,
           Stored::cast_to_string_hash(&self.properties),
-          Some(font)
+          Some(font),
         )?])
       } else {
         match document.open_text(&text, font)? {
@@ -200,14 +202,9 @@ impl BoxOps for Tbox {
     }
   }
 
-  fn get_font(&self) -> Result<Option<Cow<Font>>> {
-    Ok(Some(Cow::Borrowed(&self.font)))
-  }
+  fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(Some(Cow::Borrowed(&self.font))) }
 
-  fn compute_size(
-    &self,
-    options: HashMap<Stored>,
-  ) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     if let Some(body_stored) = self.get_property("body") {
       if let Stored::Digested(ref body) = *body_stored {
         body.compute_size(options)
@@ -215,11 +212,7 @@ impl BoxOps for Tbox {
         panic!("the stored 'body' property should always be a Stored::Digested enum case.");
       }
     } else {
-      Ok(
-        self
-          .font
-          .compute_string_size(&self.get_string()?, options),
-      )
+      Ok(self.font.compute_string_size(&self.get_string()?, options))
     }
   }
 }

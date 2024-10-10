@@ -187,7 +187,11 @@ fn assign_lookup_arrays() {
     None,
     "shift searchpaths None"
   );
-  assert_eq!(pop_value("SEARCHPATHS").unwrap(), None, "pop searchpaths None");
+  assert_eq!(
+    pop_value("SEARCHPATHS").unwrap(),
+    None,
+    "pop searchpaths None"
+  );
   assert_eq!(
     lookup_value("SEARCHPATHS"),
     Some(Stored::VecDequeStored(VecDeque::new())),
@@ -232,7 +236,11 @@ fn assign_lookup_arrays() {
     None,
     "shift searchpaths None"
   );
-  assert_eq!(pop_value("SEARCHPATHS").unwrap(), None, "pop searchpaths None");
+  assert_eq!(
+    pop_value("SEARCHPATHS").unwrap(),
+    None,
+    "pop searchpaths None"
+  );
   assert_eq!(
     lookup_value("SEARCHPATHS"),
     Some(Stored::VecDequeStored(VecDeque::new())),
@@ -256,19 +264,14 @@ fn install_definition_and_meaning() {
 
   // Assign a Meaning
   assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
-  if let Some(Stored::Expandable(ref stored_meaning)) =
-    lookup_meaning(&T_CS!("\\foobar"))
-  {
+  if let Some(Stored::Expandable(ref stored_meaning)) = lookup_meaning(&T_CS!("\\foobar")) {
     assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has
                                                        // definition for CS \jobname
   } else {
     panic!("Failed to lookup installed meaning!");
   }
 
-  let looked_up_meaning = {
-    lookup_meaning(&T_CS!("\\foobar"))
-      .unwrap()
-  };
+  let looked_up_meaning = { lookup_meaning(&T_CS!("\\foobar")).unwrap() };
   {
     assign_meaning(
       &T_CS!("\\foolet"),

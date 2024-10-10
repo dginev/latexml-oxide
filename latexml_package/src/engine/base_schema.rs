@@ -1,5 +1,5 @@
 //! Base Schema                                                         | #
-//! 
+//!
 //! Core TeX Implementation for LaTeXML                                 | #
 use crate::prelude::*;
 
@@ -104,5 +104,4 @@ LoadDefinitions!({
   for (k, v) in rdf_prefixes.iter() {
     AssignMapping!("RDFa_prefixes", k => *v);
   }
-
 });

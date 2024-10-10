@@ -97,8 +97,10 @@ LoadDefinitions!({
     Ok(())
   }
 
-  DefMacro!("\\bibliography Semiverbatim",
-    r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#);
+  DefMacro!(
+    "\\bibliography Semiverbatim",
+    r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#
+  );
 
   DefMacro!("\\lx@ifusebbl{}{}{}", sub[(bib_files_tks, bbl_clause, bib_clause)] {
     let bib_files = Expand!(bib_files_tks).to_string();
@@ -203,7 +205,7 @@ LoadDefinitions!({
       }
       begin_bibliography(whatsit)?;
     },
-    before_construct => sub[doc,whatsit] { 
+    before_construct => sub[doc,whatsit] {
       adjust_backmatter_element(doc, whatsit)?;
     },
     locked => true
@@ -316,9 +318,9 @@ LoadDefinitions!({
   });
 
   DefConstructor!("\\lx@bibnewblock", sub[document] {
-    if document.is_openable("ltx:bibblock") {
-      document.open_element("ltx:bibblock",None,None)?;
-    }});
+  if document.is_openable("ltx:bibblock") {
+    document.open_element("ltx:bibblock",None,None)?;
+  }});
   Let!("\\newblock", "\\lx@bibnewblock");
   Tag!("ltx:bibitem",  auto_open => true, auto_close => true);
   Tag!("ltx:bibblock", auto_open => true, auto_close => true);
@@ -420,7 +422,6 @@ LoadDefinitions!({
   // DefConstructor('\nocite Semiverbatim',
   //   "<ltx:cite><ltx:bibref show='nothing' bibrefs='#bibrefs'/></ltx:cite>",
   //   properties => sub { (bibrefs => CleanBibKey($_[1])) });
-
 });
 
 fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
@@ -430,11 +431,12 @@ fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
 }
 
 fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
-  let asif_opt = if let Some(Stored::String(asif_sym)) = whatsit.get_property("backmatterelement").as_deref() {
-    Some(arena::to_string(*asif_sym))
-  } else {
-    None
-  };
+  let asif_opt =
+    if let Some(Stored::String(asif_sym)) = whatsit.get_property("backmatterelement").as_deref() {
+      Some(arena::to_string(*asif_sym))
+    } else {
+      None
+    };
   // Note: We allocate a string here, since
   // it looks like arena::with can deadlock with find_insertion_point
   // we may need a find_insertion_point_sym to avoid that...
@@ -451,17 +453,17 @@ fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Resu
 // bibliographies with blank lines!
 // So, let's do some redirection!
 fn setup_pseudo_bibitem() -> Result<()> {
-  Let!("\\save@bibitem","\\bibitem");
-  Let!("\\save@par","\\par");
+  Let!("\\save@bibitem", "\\bibitem");
+  Let!("\\save@par", "\\par");
   Let!("\\save@backbackslash", "\\\\");
-  Let!("\\bibitem","\\restoring@bibitem");
-  Let!("\\par","\\par@in@bibliography");
+  Let!("\\bibitem", "\\restoring@bibitem");
+  Let!("\\par", "\\par@in@bibliography");
   Let!("\\\\", "\\par@in@bibliography");
   Let!("\\vskip", "\\vskip@in@bibliography");
   // Moreover some people use \item instead of \bibitem
-  Let!("\\item","\\item@in@bibliography");
+  Let!("\\item", "\\item@in@bibliography");
   // And protect from redefinitions.
-  Let!("\\newblock","\\lx@bibnewblock");
+  Let!("\\newblock", "\\lx@bibnewblock");
   // Risky, but when bibliography immediatesly starts with text (no implied \par)
   if let Some(token) = gullet::read_non_space()? {
     gullet::unread_one(token);
@@ -473,17 +475,13 @@ fn setup_pseudo_bibitem() -> Result<()> {
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
-fn begin_bibliography(
-  whatsit: &mut Whatsit,
-) -> Result<()> {
-  begin_bibliography_clean( whatsit)?;
+fn begin_bibliography(whatsit: &mut Whatsit) -> Result<()> {
+  begin_bibliography_clean(whatsit)?;
   // Fix for missing \bibitems!
   setup_pseudo_bibitem()
 }
 
-fn begin_bibliography_clean(
-  whatsit: &mut Whatsit,
-) -> Result<()> {
+fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // Check if \bibsection is defined and try to decipher it.
   // Expecting something like \section*{sometext}
 

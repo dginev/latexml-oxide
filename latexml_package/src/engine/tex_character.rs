@@ -1,5 +1,5 @@
 //! TeX Character
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -12,15 +12,20 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Character Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // \ (ctrl space)    c  inserts a control space.
   // \char           c  provides access to one of the 256 characters in a font.
   //----------------------------------------------------------------------
   DefPrimitive!("\\ ", {
-    Tbox::new(arena::pin_static("\u{00A0}"), None, None, Tokens!(T_CS!("\\ ")),
+    Tbox::new(
+      arena::pin_static("\u{00A0}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\ ")),
       stored_map!("name" => "space", "isSpace" => true,
-      "width" => Dimension::from_str("0.5em")?))
+      "width" => Dimension::from_str("0.5em")?),
+    )
   });
 
   DefPrimitive!("\\char Number", sub[(number)] {
@@ -53,8 +58,8 @@ LoadDefinitions!({
   //     my ($stomach, $num, $letter) = @_;
   //     my $n        = $num->valueOf;
   //     my $fontinfo = lookupFontinfo(LookupValue('textfont_0'));
-  //     my $acc      = ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : chr($n));
-  //     my $reversion = Invocation(T_CS('\accent'), $num, $letter);
+  //     my $acc      = ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) :
+  // chr($n));     my $reversion = Invocation(T_CS('\accent'), $num, $letter);
   //     # NOTE: REVERSE LOOKUP in above accent list for the non-spacing accent char
   //     # BUT, \accent always (?) makes an above type accent... doesn't it?
   //     if (my $combiner = LookupMapping('accent_combiner_above', $acc)
@@ -64,9 +69,9 @@ LoadDefinitions!({
   //       Warn('unexpected', "accent$n", $stomach, "Accent '$n' not recognized");
   //       Box(ToString($letter), undef, undef, $reversion); } });
 
-
   //======================================================================
-  // \chardef        iq provides an alternate way to define a control sequence that returns a character.
+  // \chardef        iq provides an alternate way to define a control sequence that returns a
+  // character.
   //----------------------------------------------------------------------
 
   // Almost like a register (and \countdef), but different...
@@ -174,14 +179,12 @@ LoadDefinitions!({
   // Special character codes
   //----------------------------------------------------------------------
   // \endlinechar    pi is the character added to the end of input lines.
-  // \escapechar     pi is the character used for category 0 characters when outputting control sequences.
-  // \newlinechar    pi is the character which begins a new line of output.
+  // \escapechar     pi is the character used for category 0 characters when outputting control
+  // sequences. \newlinechar    pi is the character which begins a new line of output.
   DefRegister!("\\endlinechar", Number!(13));
   DefRegister!("\\escapechar", Number!(92));
   DefRegister!("\\newlinechar", Number!(-1));
-
 });
-
 
 // Create a box applying an accent to a letter
 // Hopefully, we'll get a Box from digestion with a plain string.

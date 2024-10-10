@@ -2,10 +2,10 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 use std::fmt;
 
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
-use crate::common::arena::SymHashMap as HashMap;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -88,17 +88,10 @@ impl BoxOps for List {
   }
   fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
-    todo!()
-  }
+  fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { todo!() }
 
-  fn get_font(&self) -> Result<Option<Cow<Font>>> {
-    Ok(self.font.as_ref().map(Cow::Borrowed))
-  }
-  fn compute_size(
-    &self,
-    options: HashMap<Stored>,
-  ) -> Result<(Dimension, Dimension, Dimension)> {
+  fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
+  fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     Ok(match &self.font {
       Some(f) => f.compute_boxes_size(&self.boxes, options)?,
       _ => Font::text_default().compute_boxes_size(&self.boxes, options)?,
@@ -147,7 +140,10 @@ impl List {
     // 2. empty contents
     self.get_property_bool("isEmpty")
       || self.get_property_bool("isSpace")
-      || self.boxes.iter().all(|item| item.is_empty().unwrap_or(false))
+      || self
+        .boxes
+        .iter()
+        .all(|item| item.is_empty().unwrap_or(false))
   }
 }
 

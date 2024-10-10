@@ -1,6 +1,6 @@
 use crate::prelude::*;
 LoadDefinitions!({
-    // #======================================================================
+  // #======================================================================
   // # C.11.5 Index and Glossary
   // #======================================================================
 
@@ -194,5 +194,4 @@ LoadDefinitions!({
   // DefPrimitiveI('\indexspace',   undef, undef);
   // DefPrimitiveI('\makeindex',    undef, undef);
   // DefPrimitiveI('\makeglossary', undef, undef);
-
 });

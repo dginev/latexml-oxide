@@ -1,8 +1,8 @@
+use once_cell::sync::Lazy;
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use std::cell::RefCell;
-use once_cell::sync::Lazy;
 
 use crate::common::arena;
 use crate::common::arena::SymHashMap as HashMap;
@@ -18,7 +18,7 @@ use crate::state::*;
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::{Digested, TexMode, gullet};
+use crate::{gullet, Digested, TexMode};
 
 static MAXSTACK: usize = 200;
 
@@ -36,19 +36,23 @@ pub struct Stomach {
 }
 
 #[thread_local]
-pub static STOMACH : Lazy<RefCell<Stomach>> = Lazy::new(|| RefCell::new(Stomach::default()));
+pub static STOMACH: Lazy<RefCell<Stomach>> = Lazy::new(|| RefCell::new(Stomach::default()));
 
 macro_rules! stomach {
-  () => ((*STOMACH).borrow())
+  () => {
+    (*STOMACH).borrow()
+  };
 }
 macro_rules! stomach_mut {
-  () => ((*STOMACH).borrow_mut())
+  () => {
+    (*STOMACH).borrow_mut()
+  };
 }
 
 /// Initialize various stomach parameters, preload, etc.
 pub fn initialize_stomach() {
   let mut stomach = stomach_mut!();
-  stomach.boxing      = Vec::new();
+  stomach.boxing = Vec::new();
   stomach.token_stack = Vec::new();
   stomach.box_list = Vec::new();
   stomach.localized_box_list = Vec::new();
@@ -62,11 +66,7 @@ pub fn initialize_stomach() {
     Some(Scope::Global),
   );
   assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-  assign_value(
-    "groupInitiator",
-    "Initialization",
-    Some(Scope::Global),
-  );
+  assign_value("groupInitiator", "Initialization", Some(Scope::Global));
   // Setup default fonts.
   assign_value("font", Font::text_default(), Some(Scope::Global));
   assign_value("mathfont", Font::math_default(), Some(Scope::Global));
@@ -138,9 +138,11 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
   }
   let after = remove_value("afterGroup");
   pop_frame()?;
-  if !nobox {{
-    stomach_mut!().boxing.pop(); // For begingroup/endgroup
-  }}
+  if !nobox {
+    {
+      stomach_mut!().boxing.pop(); // For begingroup/endgroup
+    }
+  }
   if let Some(Stored::VecDequeStored(after_entries)) = after {
     for entry in after_entries.into_iter().rev() {
       match entry {
@@ -234,7 +236,7 @@ pub fn endgroup() -> Result<()> {
 // Could (should?) be taken up by Stomach by building horizontal, vertical or math lists ?
 
 /// Sets the mode without doing any grouping (NOR does it stack the modes!!)
-/// 
+///
 /// Useful for environments, where the group has already been established.
 /// (presumably, in the long run, modes & groups should be much less coupled)
 pub fn set_mode(mode: &str) -> Result<()> {
@@ -327,17 +329,14 @@ pub fn expire_local_box_list() -> Vec<Digested> {
   buffer
 }
 
-pub fn extend_box_list<I>(arg: I) where I: IntoIterator<Item = Digested> {
+pub fn extend_box_list<I>(arg: I)
+where I: IntoIterator<Item = Digested> {
   stomach_mut!().box_list.extend(arg)
 }
-pub fn push_box_list(arg: Digested) {
-  stomach_mut!().box_list.push(arg)
-}
-pub fn pop_box_list() -> Option<Digested> {
-  stomach_mut!().box_list.pop()
-}
+pub fn push_box_list(arg: Digested) { stomach_mut!().box_list.push(arg) }
+pub fn pop_box_list() -> Option<Digested> { stomach_mut!().box_list.pop() }
 pub fn with_box_list<R, FnR>(caller: FnR) -> R
-  where FnR: FnOnce(&[Digested]) -> R {
+where FnR: FnOnce(&[Digested]) -> R {
   let stomach = stomach!();
   let list = &stomach.box_list;
   caller(list)
@@ -350,9 +349,7 @@ pub fn with_box_list<R, FnR>(caller: FnR) -> R
 /// Digest a list of tokens independent from any current Gullet.
 /// Typically used to digest arguments to primitives or constructors.
 /// Returns a List containing the digested material.
-pub fn digest<T: Into<Tokens>>(
-  tokens: T
-) -> Result<Digested> {
+pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
   let tokens: Tokens = tokens.into();
   if tokens.is_empty() {
     return Ok(Digested::default());
@@ -370,9 +367,8 @@ pub fn digest<T: Into<Tokens>>(
     new_local_box_list();
     while let Some(token) = match gullet::get_pending_comment() {
       Some(comment) => Some(comment),
-      None => gullet::read_x_token(Some(true), false, None)?
-    }
-    {
+      None => gullet::read_x_token(Some(true), false, None)?,
+    } {
       // Done if we run out of tokens
       let invoked = invoke_token(&token)?;
       extend_box_list(invoked);
@@ -401,10 +397,7 @@ pub fn digest<T: Into<Tokens>>(
 
 /// Return the digested `List` after reading and digesting a body from the its Gullet.
 /// The body extends until the current level of boxing or environment is closed.
-pub fn digest_next_body(
-  terminal_opt: Option<Token>,
-) -> Result<Vec<Digested>> {
-
+pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   let start_location = { gullet::get_locator() };
 
   let init_depth = { stomach!().boxing.len() };
@@ -418,9 +411,8 @@ pub fn digest_next_body(
   // try reading a executable token
   while let Some(token) = match gullet::get_pending_comment() {
     Some(comment) => Some(comment),
-    None => gullet::read_x_token(Some(true), false, None)?
-  }
-  {
+    None => gullet::read_x_token(Some(true), false, None)?,
+  } {
     // done if we run out of tokens
     found_token = true;
     // first, check for alignment case
@@ -438,7 +430,7 @@ pub fn digest_next_body(
     }
     // normal case
     let invoked = invoke_token(&token)?;
-    extend_box_list( invoked);
+    extend_box_list(invoked);
 
     if let Some(ref terminal) = terminal_opt {
       if &token == terminal {
@@ -468,7 +460,6 @@ pub fn digest_next_body(
   }
   Ok(expire_local_box_list())
 }
-
 
 /// a convenience function for including chunks of raw TeX (or LaTeX) code
 /// It is useful for copying portions of the normal
@@ -500,14 +491,12 @@ pub fn raw_tex(text: &str) -> Result<()> {
 }
 
 /// Invoke a token
-/// 
+///
 /// If it is a primitive or constructor, the definition will be invoked,
 /// possibly arguments will be parsed from the Gullet.
 /// Otherwise, the token is simply digested: turned into an appropriate box.
 /// Returns a list of boxes/whatsits.
-pub fn invoke_token<'a>(
-  input_token: &'a Token,
-) -> Result<Vec<Digested>> {
+pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
   let mut maybe_token: Option<Cow<'a, Token>> = Some(Cow::Borrowed(input_token));
   // Overly complex, but want to avoid recursion/stack
   let mut result: Vec<Digested> = Vec::new();
@@ -517,7 +506,9 @@ pub fn invoke_token<'a>(
     let token = maybe_token.take().unwrap().into_owned();
     // info!(target:"invoke_token", "{:?}", token);
     local_current_token(token);
-    { stomach_mut!().token_stack.push(token); }
+    {
+      stomach_mut!().token_stack.push(token);
+    }
     if { stomach!().token_stack.len() } > MAXSTACK {
       fatal!(
         Stomach,
@@ -565,14 +556,17 @@ pub fn invoke_token<'a>(
         // A math-active character will (typically) be a macro,
         // but it isn't expanded in the gullet, but later when digesting, in math mode
         // (? I think)
-        let invoked_meaning = meaning.invoke( false)?;
+        let invoked_meaning = meaning.invoke(false)?;
         if !invoked_meaning.is_empty() {
-          { gullet::unread(invoked_meaning); }
+          {
+            gullet::unread(invoked_meaning);
+          }
         }
         // replace the token by it's expansion!!!
-        maybe_token = gullet::read_x_token(None, false, None)?
-          .map(Cow::Owned);
-        { stomach_mut!().token_stack.pop(); }
+        maybe_token = gullet::read_x_token(None, false, None)?.map(Cow::Owned);
+        {
+          stomach_mut!().token_stack.pop();
+        }
         expire_current_token();
         continue;
       },
@@ -580,9 +574,10 @@ pub fn invoke_token<'a>(
         // Conditionals are "expandable", use the regular invoke.
         let invoked_meaning = meaning.invoke(false)?;
         gullet::unread(invoked_meaning);
-        maybe_token = gullet::read_x_token(None, false, None)?
-            .map(Cow::Owned);
-        { stomach_mut!().token_stack.pop(); }
+        maybe_token = gullet::read_x_token(None, false, None)?.map(Cow::Owned);
+        {
+          stomach_mut!().token_stack.pop();
+        }
         expire_current_token();
         continue;
       },
@@ -630,11 +625,9 @@ pub fn invoke_token<'a>(
   Ok(result)
 }
 
-fn invoke_token_undefined(
-  token: &Token,
-) -> Result<Vec<Digested>> {
+fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
   let cs = token.with_cs_name(|cs| String::from(cs));
-  note_status(LogStatus::Undefined, Some( &cs));
+  note_status(LogStatus::Undefined, Some(&cs));
 
   // To minimize chatter, go ahead and define it...
   if cs.starts_with("\\if") {
@@ -654,7 +647,7 @@ fn invoke_token_undefined(
         None,
         Tokens!(T_CS!("\\let"), T_CS!(&cs), T_CS!("\\iftrue")).into(),
         None,
-            )?,
+      )?,
       None,
     );
     install_definition(
@@ -663,7 +656,7 @@ fn invoke_token_undefined(
         None,
         Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")).into(),
         None,
-            )?,
+      )?,
       None,
     );
 
@@ -709,7 +702,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
           None,
           Tokens!(meaning),
           HashMap::default(),
-                ))))
+        ))))
       }
     },
     Catcode::COMMENT => {
@@ -729,7 +722,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
         None,
         Tokens!(meaning),   // tokens
         HashMap::default(), // properties
-            ))))
+      ))))
     },
   }
 }
@@ -738,9 +731,7 @@ pub fn set_stomach(new_stomach: Stomach) {
   let mut singleton = stomach_mut!();
   *singleton = new_stomach;
 }
-pub fn clone_box_list() -> Vec<Digested> {
-  stomach!().box_list.clone()
-}
+pub fn clone_box_list() -> Vec<Digested> { stomach!().box_list.clone() }
 
 /// get the current boxing level
 pub fn get_boxing_level() -> usize { stomach!().boxing.len() }
@@ -751,10 +742,11 @@ pub fn get_boxing_level() -> usize { stomach!().boxing.len() }
 /// Making it relative to the math's level avoids unnecessary changes
 pub fn get_script_level() -> usize {
   let boxlevel = get_boxing_level();
-  with_value("script_base_level",|val_opt|
+  with_value("script_base_level", |val_opt| {
     if let Some(Stored::Int(prevlevel)) = val_opt {
       boxlevel - (*prevlevel as usize) + 1
     } else {
       boxlevel
-    })
+    }
+  })
 }

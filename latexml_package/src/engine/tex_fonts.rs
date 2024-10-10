@@ -1,5 +1,5 @@
 //! TeX Fonts
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -54,7 +54,11 @@ LoadDefinitions!({
     DefPrimitive!(cs, None, None, font => props_opt);
   });
 
-  DefMacro!(T_CS!("\\fontname"), None,Tokens::new(Explode!("fontname not implemented")));
+  DefMacro!(
+    T_CS!("\\fontname"),
+    None,
+    Tokens::new(Explode!("fontname not implemented"))
+  );
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
     getter => sub[args] {
       let p = args.remove(0).expect_number().value_of();
@@ -74,8 +78,13 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // / (italic corr.)  c  inserts an italic correction.
   DefPrimitive!("\\/", {
-    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\/")),
-      stored_map!("isSpace" => true, "name" => "italiccorr", "width" => Dimension::default()))
+    Tbox::new(
+      *EMPTY_SYM,
+      None,
+      None,
+      Tokens!(T_CS!("\\/")),
+      stored_map!("isSpace" => true, "name" => "italiccorr", "width" => Dimension::default()),
+    )
   });
   DefPrimitive!("\\lx@fontencoding{}", sub[(encoding)] {
     let encoding = Expand!(encoding).to_string();
@@ -272,5 +281,4 @@ LoadDefinitions!({
       '\u{2191}', '\u{2193}', None, None, None, None, '\u{21D1}', '\u{21D3}'
     ]
   );
-
 });

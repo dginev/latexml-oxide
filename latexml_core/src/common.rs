@@ -8,6 +8,7 @@ pub mod float;
 pub mod font;
 pub mod glue;
 pub mod ligature;
+pub mod local_assignments;
 pub mod locator;
 pub mod model;
 pub mod mudimension;
@@ -18,7 +19,6 @@ pub mod object;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
-pub mod local_assignments;
 
 use crate::common::error::*;
 use crate::fmt;

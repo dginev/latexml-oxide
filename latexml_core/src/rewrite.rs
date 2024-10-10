@@ -1,14 +1,13 @@
 use crate::common::error::*;
 use crate::document::Document;
-use crate::state::{Scope};
+use crate::state::Scope;
 use crate::tokens::Tokens;
 use libxml::tree::Node;
 use std::collections::VecDeque;
 use std::fmt;
 use std::rc::Rc;
 
-pub type RewriteReplaceClosure =
-  Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Result<()>>;
+pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Result<()>>;
 
 // ======================================================================
 // Defining Rewrite rules that act on the DOM
@@ -278,7 +277,7 @@ impl Rewrite {
                 &node,
                 self.options.select_count.unwrap_or(1),
                 clauses.clone(),
-                          )?;
+              )?;
               // unmark_wildcards(node, w);
             }
           } else {

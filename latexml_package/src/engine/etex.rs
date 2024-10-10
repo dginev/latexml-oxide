@@ -179,10 +179,8 @@ LoadDefinitions!({
   // # since we don't know where it ends, we can't easily use Parse::RecDescent.
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
-  fn etex_readexpr(
-    rtype: RegisterType,
-  ) -> Result<RegisterValue> {
-    let value = etex_readexpr_i( rtype, 0)?;
+  fn etex_readexpr(rtype: RegisterType) -> Result<RegisterValue> {
+    let value = etex_readexpr_i(rtype, 0)?;
     if let Some(token) = gullet::read_token()? {
       // Skip \relax
       if token != *TOKEN_RELAX {
@@ -192,17 +190,14 @@ LoadDefinitions!({
     Ok(value)
   }
 
-  fn etex_readexpr_i(
-    rtype: RegisterType,
-    prec: usize,
-  ) -> Result<RegisterValue> {
+  fn etex_readexpr_i(rtype: RegisterType, prec: usize) -> Result<RegisterValue> {
     // Read a first value
     let token = match gullet::read_x_non_space()? {
       Some(t) => t,
       None => return Ok(RegisterValue::default()),
     };
     let mut value = if token == T_OTHER!("(") {
-      let i_value = etex_readexpr_i( rtype, 0)?;
+      let i_value = etex_readexpr_i(rtype, 0)?;
       let close = gullet::read_x_token(None, false, None)?;
       // close parenthesis should have terminated recursive call
       if close.is_none() || close != Some(T_OTHER!(")")) {
@@ -223,15 +218,15 @@ LoadDefinitions!({
         gullet::unread_one(next); // leave the \relax for top-level to strip off.
         break;
       } else if next == T_OTHER!("+") && prec < 1 {
-        value = value.add(etex_readexpr_i( rtype, 1)?);
+        value = value.add(etex_readexpr_i(rtype, 1)?);
       } else if next == T_OTHER!("-") && prec < 1 {
-        value = value.subtract(etex_readexpr_i( rtype, 1)?);
+        value = value.subtract(etex_readexpr_i(rtype, 1)?);
       } else if next == T_OTHER!("*") && prec < 2 {
         // multiplier should be pure number
-        value = value.multiply(etex_readexpr_i( RegisterType::Number, 2)?);
+        value = value.multiply(etex_readexpr_i(RegisterType::Number, 2)?);
       } else if next == T_OTHER!("/") && prec < 2 {
         // denominator should be pure number
-        value = value.divideround(etex_readexpr_i( RegisterType::Number, 2)?);
+        value = value.divideround(etex_readexpr_i(RegisterType::Number, 2)?);
       } else {
         // anything else, we're done.
         gullet::unread_one(next);

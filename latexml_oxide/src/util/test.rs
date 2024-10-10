@@ -7,11 +7,11 @@ use std::rc::Rc;
 use std::sync::Once;
 
 use crate::core_interface::DigestionAPI;
+use latexml_codegen::LoadModel;
 use latexml_core::common::BindingDispatcher;
 use latexml_core::document::Document;
-use latexml_core::{s, Core, CoreOptions, state};
+use latexml_core::{s, state, Core, CoreOptions};
 use latexml_math_parser::node_to_grammar_lexemes;
-use latexml_codegen::LoadModel;
 
 pub fn latexml_tests(
   dirpath: &str,
@@ -86,8 +86,8 @@ fn validate_requirements(_dirpath: &str, _requires: Option<&phf::Map<&str, &str>
   true
 }
 
-// fn latexml_ok(tex_path: &str, xml_path: &str, name: &str) { latexml_ok_internal(tex_path, xml_path, name,
-// None) }
+// fn latexml_ok(tex_path: &str, xml_path: &str, name: &str) { latexml_ok_internal(tex_path,
+// xml_path, name, None) }
 
 fn latexml_ok_internal(
   tex_path: &str,
@@ -192,7 +192,10 @@ pub fn new_test_engine() -> Core {
 
 /// Simple tokenization of a single formula, without any custom preloads
 /// beyond latex and amsmath
-pub fn lex_single_tex_formula(tex: &str, latexml: &mut Core) -> (Vec<String>, Vec<Node>, Option<Node>, Document) {
+pub fn lex_single_tex_formula(
+  tex: &str,
+  latexml: &mut Core,
+) -> (Vec<String>, Vec<Node>, Option<Node>, Document) {
   let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
   assert!(xml_result.is_ok(), "{:?}", xml_result.err());
   let mut doc = xml_result.unwrap();

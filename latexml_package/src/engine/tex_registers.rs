@@ -1,5 +1,5 @@
 //! TeX Registers
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -7,7 +7,7 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Registers Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // Accessing Registers
   //----------------------------------------------------------------------
@@ -22,7 +22,7 @@ LoadDefinitions!({
   DefRegister!("\\skip Number"   => Glue::new(0));
   DefRegister!("\\muskip Number" => MuGlue::new(0));
   DefRegister!("\\toks Number"   => Tokens!());
-    
+
   //======================================================================
   // Defining Registers, shorthands
   //----------------------------------------------------------------------
@@ -124,13 +124,14 @@ LoadDefinitions!({
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {
   // Let w/o AfterAssign
   let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
-  assign_meaning(&cs, relax_meaning,None);
+  assign_meaning(&cs, relax_meaning, None);
   // define
   let num = gullet::read_number()?;
   let address = s!("{address_type}{}", num.value_of());
-  let options = Some(RegisterOptions{
+  let options = Some(RegisterOptions {
     address: Some(address),
-    ..RegisterOptions::default()});
+    ..RegisterOptions::default()
+  });
   def_register(cs, None, init, options)?;
   after_assignment();
   Ok(())
