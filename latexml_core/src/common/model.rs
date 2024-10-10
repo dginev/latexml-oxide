@@ -224,15 +224,12 @@ impl Model {
       .contains_key(&arena::pin_static("ltx:_CaptureBlock_"))
     {
       // Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block, ltx:para,
-      self.synthesize_element(
-        "ltx:_CaptureBlock_",
-        &[
-          "ltx:block",
-          "ltx:logical-block",
-          "ltx:sectional-block",
-          "Caption",
-        ],
-      );
+      self.synthesize_element("ltx:_CaptureBlock_", &[
+        "ltx:block",
+        "ltx:logical-block",
+        "ltx:sectional-block",
+        "Caption",
+      ]);
       let cb_entry = self
         .tagprop
         .entry(arena::pin_static("ltx:_CaptureBlock_"))
@@ -347,14 +344,11 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
     } else {
       Some(search_paths.iter().map(ToString::to_string).collect())
     };
-    let pathname_opt = pathname::find(
-      &name,
-      pathname::PathnameFindOptions {
-        paths,
-        extensions: Some(vec![s!("model")]),
-        installation_subdir: Some(arena::with(schema_type, |str| s!("resources/{str}"))),
-      },
-    );
+    let pathname_opt = pathname::find(&name, pathname::PathnameFindOptions {
+      paths,
+      extensions: Some(vec![s!("model")]),
+      installation_subdir: Some(arena::with(schema_type, |str| s!("resources/{str}"))),
+    });
 
     match pathname_opt {
       Some(compiled_path) => model.load_compiled_schema(&compiled_path),

@@ -9,4 +9,5 @@ tab_spaces = 2
 error_on_line_overflow = true
 error_on_unformatted = false
 condense_wildcard_suffixes = true
+overflow_delimited_expr = true
 edition = "2021"

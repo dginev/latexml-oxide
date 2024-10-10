@@ -31,14 +31,11 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
     ),
   };
 
-  let pathname_opt = pathname::find(
-    &name,
-    pathname::PathnameFindOptions {
-      paths: Some(vec![s!(".")]),
-      extensions: Some(vec![s!("model")]),
-      installation_subdir: Some(s!("resources/RelaxNG")),
-    },
-  );
+  let pathname_opt = pathname::find(&name, pathname::PathnameFindOptions {
+    paths: Some(vec![s!(".")]),
+    extensions: Some(vec![s!("model")]),
+    installation_subdir: Some(s!("resources/RelaxNG")),
+  });
 
   let path = match pathname_opt {
     Some(n) => n,

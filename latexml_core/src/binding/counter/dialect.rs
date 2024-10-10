@@ -346,10 +346,9 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
   let refnum = digest_text(Tokens!(T_CS!(&the_ctr)))?;
   let invocation;
   {
-    invocation = build_invocation(
-      T_CS!("\\lx@make@tags"),
-      vec![Some(Tokens!(T_OTHER!(ctype)))],
-    )?;
+    invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
+      ctype
+    )))])?;
   }
 
   let tags = stomach::digest(invocation)?;
@@ -585,10 +584,9 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     tag_tokens.extend(reverted_tag);
     tag_tokens.push(T_END!());
     tag_tokens.extend(
-      build_invocation(
-        T_CS!("\\lx@make@tags"),
-        vec![Some(Tokens!(T_OTHER!(counter)))],
-      )?
+      build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
+        counter
+      )))])?
       .unlist(),
     );
     tag_tokens.push(T_END!());

@@ -110,10 +110,9 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
     }
   });
   if tags_numbered_update {
-    let invoked_tags = build_invocation(
-      T_CS!("\\lx@make@tags"),
-      vec![Some(Tokens::new(Explode!(ctr.unwrap())))],
-    )?;
+    let invoked_tags = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens::new(
+      Explode!(ctr.unwrap()),
+    ))])?;
     let stored_tags_update = Stored::Digested(stomach::digest(invoked_tags)?);
     with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
       if let Some(Stored::HashStored(ref mut tags)) = tags_opt {

@@ -99,19 +99,16 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   // Used for SemiVerbatim text
-  DeclareFontMap!(
-    "ASCII",
-    mixrc![
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-      None, None, ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
-      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A',
-      'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
-      'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', '`', 'a', 'b', 'c', 'd', 'e',
-      'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
-      'x', 'y', 'z', '{', '|', '}', '~', None
-    ]
-  );
+  DeclareFontMap!("ASCII", mixrc![
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+    ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2',
+    '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D', 'E',
+    'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+    'Y', 'Z', '[', '\\', ']', '^', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
+    'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~',
+    None
+  ]);
 
   // Note that several entries are used for accents, and in practice will actually
   // be used in something like an m:mover; thus they needn't (shouldn't?) be "small"
@@ -127,22 +124,18 @@ LoadDefinitions!({
   //   but could be U+02C6 (modifier letter circumflex accent) U+02DC (small tilde)
   // [Note that generally we're using codepoints characterized as "modifier letter"
   // only when no other spacing point is available.]
-  DeclareFontMap!(
-    "OT1",
-    mixrc![
-      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
-      '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{FB00}', '\u{FB01}', '\u{FB02}',
-      '\u{FB03}', '\u{FB04}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}',
-      '\u{02D8}', '\u{00AF}', '\u{02DA}', '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}',
-      '\u{00F8}', '\u{00C6}', '\u{0152}', '\u{00D8}', '\u{0335}', '!', '\u{201D}', '#', '$', '%',
-      '&', '\u{2019}', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6',
-      '7', '8', '9', ':', ';', '\u{00A1}', '=', '\u{00BF}', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F',
-      'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-      'Y', 'Z', '[', '\u{201C}', ']', '^', '\u{02D9}', '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f',
-      'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
-      'y', 'z', '\u{2013}', '\u{2014}', '\u{02DD}', '\u{007E}', '\u{00A8}'
-    ]
-  ); // TODO: do we really need '\u{00A0}'\x{0335} as a single entry?
+  DeclareFontMap!("OT1", mixrc![
+    '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}', '\u{03A5}',
+    '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{FB00}', '\u{FB01}', '\u{FB02}', '\u{FB03}', '\u{FB04}',
+    '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}', '\u{02D8}', '\u{00AF}', '\u{02DA}',
+    '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}', '\u{00F8}', '\u{00C6}', '\u{0152}', '\u{00D8}',
+    '\u{0335}', '!', '\u{201D}', '#', '$', '%', '&', '\u{2019}', '(', ')', '*', '+', ',', '-', '.',
+    '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '\u{00A1}', '=', '\u{00BF}',
+    '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
+    'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\u{201C}', ']', '^', '\u{02D9}', '\u{2018}',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+    't', 'u', 'v', 'w', 'x', 'y', 'z', '\u{2013}', '\u{2014}', '\u{02DD}', '\u{007E}', '\u{00A8}'
+  ]); // TODO: do we really need '\u{00A0}'\x{0335} as a single entry?
 
   DeclareFontMap!(
     "OT1",

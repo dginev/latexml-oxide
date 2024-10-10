@@ -94,14 +94,10 @@ impl Actions {
       Node::Tree(ref rule, ref children) => {
         let mut translated_children = Vec::new();
         for child in children.iter() {
-          let translated = self.translate_node(
-            child,
-            pragmas,
-            ActionContext {
-              nodes: ctxt.nodes,
-              document: ctxt.document,
-            },
-          )?;
+          let translated = self.translate_node(child, pragmas, ActionContext {
+            nodes: ctxt.nodes,
+            document: ctxt.document,
+          })?;
           translated_children.push(translated);
         }
         self.action_on(*rule, translated_children, pragmas, ctxt)
@@ -109,14 +105,10 @@ impl Actions {
       Node::Rule(ref rule, ref children) => {
         let mut translated_children = Vec::new();
         for child in children.iter() {
-          translated_children.push(self.translate_node(
-            child,
-            pragmas,
-            ActionContext {
-              nodes: ctxt.nodes,
-              document: ctxt.document,
-            },
-          )?);
+          translated_children.push(self.translate_node(child, pragmas, ActionContext {
+            nodes: ctxt.nodes,
+            document: ctxt.document,
+          })?);
         }
         self.action_on(*rule, translated_children, pragmas, ctxt)
       },

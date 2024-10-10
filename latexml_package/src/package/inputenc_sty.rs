@@ -12,13 +12,10 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   state::set_input_encoding(None); // Disable the state::level decoding, if any.
 
   // Then load TeX's input encoding definitions.
-  input_definitions(
-    encoding,
-    InputDefinitionOptions {
-      extension: Some("def".into()),
-      ..InputDefinitionOptions::default()
-    },
-  )?;
+  input_definitions(encoding, InputDefinitionOptions {
+    extension: Some("def".into()),
+    ..InputDefinitionOptions::default()
+  })?;
   // NOTE: INPUT_ENCODING is never actually used anywhere!
   // So, presumably either Perl is magically converting to utf8
   // or more likely, treating the bytes as (misinterpreted?) utf8?

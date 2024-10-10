@@ -761,16 +761,13 @@ LoadDefinitions!({
       let prefix = extra_iter.next().map(ToString::to_string);
       // TODO: is the last extra field actually a "skip" ? Example?
       let keysets = extra_iter.map(ToString::to_string).collect();
-      keyvals_aux(
-        Some(T_END!()),
-        KVSpec {
-          star,
-          plus,
-          prefix,
-          keysets,
-          ..KVSpec::default()
-        },
-      )
+      keyvals_aux(Some(T_END!()), KVSpec {
+        star,
+        plus,
+        prefix,
+        keysets,
+        ..KVSpec::default()
+      })
     } else {
       Error!("Expected", "{", "Missing keyval arguments");
       Ok(KeyVals::default())
@@ -813,16 +810,13 @@ LoadDefinitions!({
       let prefix = extra_iter.next().map(ToString::to_string);
       // TODO: is the last extra field actually a "skip" ? Example?
       let keysets = extra_iter.map(ToString::to_string).collect();
-      let kvs: KeyVals = keyvals_aux(
-        Some(T_OTHER!("]")),
-        KVSpec {
-          star,
-          plus,
-          prefix,
-          keysets,
-          ..KVSpec::default()
-        },
-      )?;
+      let kvs: KeyVals = keyvals_aux(Some(T_OTHER!("]")), KVSpec {
+        star,
+        plus,
+        prefix,
+        keysets,
+        ..KVSpec::default()
+      })?;
       Ok(Some(kvs))
     } else {
       Ok(None)
