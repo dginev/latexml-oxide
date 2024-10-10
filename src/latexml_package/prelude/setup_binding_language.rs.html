@@ -2267,9 +2267,7 @@
 <a href="#2266" id="2266">2266</a>
 <a href="#2267" id="2267">2267</a>
 <a href="#2268" id="2268">2268</a>
-<a href="#2269" id="2269">2269</a>
-<a href="#2270" id="2270">2270</a>
-<a href="#2271" id="2271">2271</a></pre></div><pre class="rust"><code><span class="attr">#[macro_export]
+<a href="#2269" id="2269">2269</a></pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LoadDefinitions {
   (<span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="kw">pub fn </span>load_definitions() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -2777,8 +2775,7 @@
 // Whatsit.                     useful for setting Whatsit properties,
 //   properties      : a hashref listing default values of properties to assign to the Whatsit.
 //                     These properties can be used in the constructor.
-</span><span class="attr">#[rustfmt::skip]
-#[macro_export]
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> DefConstructor {
   <span class="comment">// Closure replacement flavors
   </span>(<span class="macro-nonterminal">$proto</span>:literal, sub [ <span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$args</span>:ident, <span class="macro-nonterminal">$props</span>:ident ]
@@ -3307,8 +3304,7 @@ merge_font(<span class="macro">fontmap!</span>(<span class="macro-nonterminal">$
 /// in the `Tokens` or tokenized string and the result is used as the expansion
 /// of the control sequence. If a closure is used, it is called at expansion time
 /// and should return a list of tokens as its result.
-</span><span class="attr">#[rustfmt::skip]
-#[macro_export]
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> DefMacro {
   <span class="comment">// simplest case - mock macro that discards everything.
   </span>(<span class="macro-nonterminal">$proto</span>:literal, <span class="prelude-val">None</span>) =&gt; {
