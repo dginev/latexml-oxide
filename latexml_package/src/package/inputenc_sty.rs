@@ -17,7 +17,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
     InputDefinitionOptions {
       extension: Some("def".into()),
       ..InputDefinitionOptions::default()
-    }
+    },
   )?;
   // NOTE: INPUT_ENCODING is never actually used anywhere!
   // So, presumably either Perl is magically converting to utf8
@@ -25,12 +25,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
   assign_value("INPUT_ENCODING", encoding.to_string(), None);
   let encoding_tokenized = TokenizeInternal!(encoding);
-  def_macro(
-    T_CS!("\\inputencodingname"),
-    None,
-    encoding_tokenized,
-    None,
-  )
+  def_macro(T_CS!("\\inputencodingname"), None, encoding_tokenized, None)
 }
 
 LoadDefinitions!({
@@ -51,9 +46,12 @@ LoadDefinitions!({
 
   DefMacro!("\\@inpenc@undefined", {
     let enc_sym = get_input_encoding().unwrap();
-    let message = arena::with(enc_sym, |enc|
-     s!("Keyboard character used is undefined in inputencoding {}",
-      enc));
+    let message = arena::with(enc_sym, |enc| {
+      s!(
+        "Keyboard character used is undefined in inputencoding {}",
+        enc
+      )
+    });
     Error!("unexpected", "<char>", message);
   });
 

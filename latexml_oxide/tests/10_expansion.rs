@@ -18,13 +18,11 @@ static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
 "meaning" => "t1enc.def",
 "ifthen" => "ifthen.sty"};
 
-pub fn expansion_tests_dispatch(
-  filename: &str,
-  ) -> Option<Result<()>> {
+pub fn expansion_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions()),
     "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions()),
-    _ => None
+    _ => None,
   }
 }
 

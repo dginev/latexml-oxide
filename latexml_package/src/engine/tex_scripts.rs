@@ -103,11 +103,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
             "subscript"
           };
           if !prevspace {
-            Error!(
-              "unexpected",
-              s!("double-{lcode}"),
-              s!("Double {lcode}")
-            );
+            Error!("unexpected", s!("double-{lcode}"), s!("Double {lcode}"));
           }
           cs = if cc == Catcode::SUPER {
             "\\lx@floating@superscript"
@@ -149,31 +145,28 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     MergeFont!(scripted => true);
     // Now, get following boxes (may have to process several tokens!)
     let mut stuff = Vec::new();
-    while let Some(tok) = gullet::read_x_token(Some(false), false, None)?
-    {
+    while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
       stuff = stomach::invoke_token(&tok)?;
       if !stuff.is_empty() {
         break;
       }
     }
     if stuff.is_empty() {
-      Error!(
-        "expected",
-        "{",
-        "Missing sub/superscript argument"
-      ); //$gullet->showUnexpected);
+      Error!("expected", "{", "Missing sub/superscript argument"); //$gullet->showUnexpected);
       stuff.push(Digested::default());
     }
     let script = stuff.remove(0); // ONLY the first box is the script!
 
     if !script.is_empty()? {
-      let mut properties = {stored_map!(
-        "isMath" => true,
-        "base"        => if let Some(b) = base { Stored::Digested(b) }
-          else { Stored::None },                      // for sizing/positioning
-        "scriptlevel" => get_script_level(),
-        "level"       => get_boxing_level()
-      )};
+      let mut properties = {
+        stored_map!(
+          "isMath" => true,
+          "base"        => if let Some(b) = base { Stored::Digested(b) }
+            else { Stored::None },                      // for sizing/positioning
+          "scriptlevel" => get_script_level(),
+          "level"       => get_boxing_level()
+        )
+      };
       if let Some(pvs) = prevscript {
         properties.insert("prevscript", pvs.into());
       }
@@ -211,7 +204,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       None,
       Tokens!(placeholder),
       SymHashMap::default(),
-      ))])
+    ))])
   }
 }
 
@@ -331,21 +324,17 @@ LoadDefinitions!({
   def_primitive(
     T_SUPER!(),
     None,
-    Some(PrimitiveBody::Closure(Rc::new(
-      |_args: Vec<ArgWrap>| {
-        script_handler(Catcode::SUPER)
-      },
-    ))),
+    Some(PrimitiveBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
+      script_handler(Catcode::SUPER)
+    }))),
     PrimitiveOptions::default(),
   )?;
   def_primitive(
     T_SUB!(),
     None,
-    Some(PrimitiveBody::Closure(Rc::new(
-      |_args: Vec<ArgWrap>| {
-        script_handler( Catcode::SUB)
-      },
-    ))),
+    Some(PrimitiveBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
+      script_handler(Catcode::SUB)
+    }))),
     PrimitiveOptions::default(),
   )?;
 
@@ -399,5 +388,4 @@ LoadDefinitions!({
       sizer => sub[w] {
         script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post") }
   );
-
 });

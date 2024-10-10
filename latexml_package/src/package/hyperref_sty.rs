@@ -1,5 +1,5 @@
-use crate::prelude::*;
 use crate::package::url_sty::LEADING_BACKSLASH_RE;
+use crate::prelude::*;
 
 LoadDefinitions!({
   // Some of the requirements not yet applicable/supported in latexml
@@ -231,7 +231,10 @@ LoadDefinitions!({
   // # Additional User Macros
 
   // \href{url}{text}
-  DefMacro!("\\href HyperVerbatim {}", "\\lx@hyper@url@\\href{}{}{#1}{#2}");
+  DefMacro!(
+    "\\href HyperVerbatim {}",
+    "\\lx@hyper@url@\\href{}{}{#1}{#2}"
+  );
 
   // Redefine \url{url} from url.sty...
   // It's slightly different in that it expands the argument
@@ -242,7 +245,7 @@ LoadDefinitions!({
     state::let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
-        gullet::read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!
+        read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!
     } else {
       ( T_OTHER!("{"), T_OTHER!("}"),
         Tokens!(open.as_other()) )
@@ -283,8 +286,10 @@ LoadDefinitions!({
     sizer     => "#5",
     reversion => "#1#2#4#3");
   // \nolinkurl{url}
-  DefConstructor!("\\nolinkurl Semiverbatim",
-    "<ltx:ref href='#1' class='ltx_nolink' >#1</ltx:ref>");
+  DefConstructor!(
+    "\\nolinkurl Semiverbatim",
+    "<ltx:ref href='#1' class='ltx_nolink' >#1</ltx:ref>"
+  );
 
   // \hyperbaseurl{url}
   DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {
@@ -441,7 +446,8 @@ LoadDefinitions!({
 \Hy@pdftoolbartrue
 \Hy@typexmlfalse
 \Hy@unicodetrue
-");
+"
+  );
   DefMacro!("\\@bookmarksopenlevel", "\\maxdimen");
   // This only approximates the "contextual label" that should precede the number,
   // and ignores the user-definable macros.

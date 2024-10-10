@@ -5,9 +5,9 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::rc::Rc;
 
+use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::arena::SymHashMap as HashMap;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
@@ -16,7 +16,7 @@ use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, FontDirective, Reversion};
 use crate::document::Document;
 use crate::list::List;
-use crate::state::{get_dual_branch,lookup_font};
+use crate::state::{get_dual_branch, lookup_font};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, DigestedData, TexMode};
@@ -81,16 +81,20 @@ impl Whatsit {
   /// A Whatsit is empty if it is marked empty, or space-like, or has an empty body.
   pub fn is_empty(&self) -> Result<bool> {
     Ok(
-    // 1. A space-like thing
-    // 2. An environment-like structure with an empty body
-    // TODO: For now it is difficult to pass in a state with an initialized TeX.pool.
-    self.get_property_bool("isEmpty")
-      || self.get_property_bool("isSpace")
-      || (self.get_definition().get_cs_name() == "Begin"
-        && match self.get_body()? {
-            Some(b) => b.unlist_ref().iter().all(|inner| inner.is_empty().unwrap_or(false)),
+      // 1. A space-like thing
+      // 2. An environment-like structure with an empty body
+      // TODO: For now it is difficult to pass in a state with an initialized TeX.pool.
+      self.get_property_bool("isEmpty")
+        || self.get_property_bool("isSpace")
+        || (self.get_definition().get_cs_name() == "Begin"
+          && match self.get_body()? {
+            Some(b) => b
+              .unlist_ref()
+              .iter()
+              .all(|inner| inner.is_empty().unwrap_or(false)),
             None => true,
-        }))
+          }),
+    )
   }
   /// sets a pre-assembled HashMap of properties
   pub fn set_properties(&mut self, props: HashMap<Stored>) {
@@ -141,9 +145,7 @@ impl Whatsit {
     if self.is_math() {
       list.mode = Some(mode);
     }
-    self
-      .properties
-      .insert("body", Digested::from(list).into());
+    self.properties.insert("body", Digested::from(list).into());
     if let Some(digested) = trailer_opt {
       if let DigestedData::Whatsit(ref trailer) = digested.data() {
         // And copy any otherwise undefined properties from the trailer
@@ -155,9 +157,7 @@ impl Whatsit {
             .entry_sym(*prop)
             .or_insert_with(|| value.clone());
         }
-        self
-          .properties
-          .insert("trailer", digested.clone().into());
+        self.properties.insert("trailer", digested.clone().into());
       }
     }
   }
@@ -229,9 +229,7 @@ impl fmt::Debug for Whatsit {
 }
 
 impl fmt::Display for Whatsit {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.revert().unwrap())
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.revert().unwrap()) }
 }
 
 impl Object for Whatsit {
@@ -358,9 +356,7 @@ impl BoxOps for Whatsit {
     self.properties.get(key).map(Cow::Borrowed)
   }
   fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> { self.properties.get_mut(key) }
-  fn get_string(&self) -> Result<Cow<str>> {
-    Ok(Cow::Owned(self.revert()?.to_string()))
-  }
+  fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.revert()?.to_string())) }
 
   fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
     // Significant time is consumed here, and associated with a specific CS,
@@ -392,16 +388,9 @@ impl BoxOps for Whatsit {
     }
   }
 
-  fn set_font(&mut self, font: Rc<Font>) {
-    self
-      .properties
-      .insert("font", Stored::Font(font));
-  }
+  fn set_font(&mut self, font: Rc<Font>) { self.properties.insert("font", Stored::Font(font)); }
 
-  fn compute_size(
-    &self,
-    options: HashMap<Stored>,
-  ) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
       sizer(self)

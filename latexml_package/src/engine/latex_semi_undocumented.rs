@@ -94,7 +94,8 @@ LoadDefinitions!({
   \def\in@@##1#1##2##3\in@@{%
     \ifx\in@##2\in@false\else\in@true\fi}%
   \in@@#2#1\in@\in@@}
-  \newif\ifin@");
+  \newif\ifin@"
+  );
 
   DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
     if is_definable(&token) {

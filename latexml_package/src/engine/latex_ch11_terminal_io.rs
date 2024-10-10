@@ -12,5 +12,4 @@ LoadDefinitions!({
     }
   });
   DefPrimitive!("\\typein[]{}", None);
-
 });

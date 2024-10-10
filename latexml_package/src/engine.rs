@@ -1,16 +1,16 @@
 // TeX Pool
-pub mod tex;
-mod base_schema;
 mod base_parameter_types;
+mod base_schema;
 mod base_utilities;
 mod base_xmath;
+pub mod tex;
 mod tex_box;
 mod tex_character;
 mod tex_debugging;
+mod tex_file_io;
 mod tex_fonts;
 mod tex_glue;
 mod tex_hyphenation;
-mod tex_file_io;
 mod tex_inserts;
 mod tex_job;
 mod tex_kern;

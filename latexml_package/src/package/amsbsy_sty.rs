@@ -3,7 +3,6 @@
 //**********************************************************************
 use crate::prelude::*;
 LoadDefinitions!({
-
   RequirePackage!("amsgen");
 
   DefConstructor!("\\boldsymbol{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
@@ -12,5 +11,4 @@ LoadDefinitions!({
   // a bold for those glyphs.  Since we're just forcing the glyph to be bold,
   // \pmb is probably \boldsymbol. or... ??
   Let!("\\pmb", "\\boldsymbol");
-
 });

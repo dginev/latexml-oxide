@@ -1,65 +1,65 @@
 //! TeX Math
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
 LoadDefinitions!({
-
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Math Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // NOT YET IMPLEMENTED !?!?!
   //----------------------------------------------------------------------
-  // \radical                c  makes a radical atom from the delimiter (27-bit number) and the math field.
-  // \muskipdef              c  creates a symbolic name for a \muskip register.
+  // \radical                c  makes a radical atom from the delimiter (27-bit number) and the math
+  // field. \muskipdef              c  creates a symbolic name for a \muskip register.
   // \muskip                 iq assigns <muglue> to a \muskip register.
-  // \nonscript              c  ignores immediately following glue or kern in script and scriptscript styles.
-  
+  // \nonscript              c  ignores immediately following glue or kern in script and
+  // scriptscript styles.
+
   //======================================================================
   // The next two sections are the basic LaTeXML Infrastructure for math.
   // There are several internal control sequences which need to be renamed!
   //======================================================================
-  
+
   // Decide whether we're going into or out of math, inline or display.
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
   // This really should be T_MATH
   // and it should (or not) check for a second $ only if not in restricted horizontal mode!
   // (and then all the \lx@dollar@in@(text|math|normal)mode defns would not be needed.
   DefPrimitive!(T_CS!("\\lx@dollar@in@normalmode"), None, {
-      let mut op = "\\lx@begin@inline@math";
-      {
-        let mode = state::lookup_string("MODE");
-        Debug!("T_MATH primitive current mode: {:?}", mode);
-        if mode == "display_math" {
-          if gullet::if_next(T_MATH!())? {
-            gullet::read_token()?;
-            op = "\\lx@end@display@math";
-          } else {
-            // Avoid a Fatal, but we're likely in trouble.
-            // Should we switch to text mode? (LaTeX normally wouldn't)
-            // Did we miss something and would should have already been in text mode? Possibly...
-            Error!(
-              "expected",
-              "$",
-              "Missing $ closing display math.\nIgnoring; expect to be in wrong math/text mode."
-            );
-            op = "";
-          }
-        } else if mode == "inline_math" {
-          op = "\\lx@end@inline@math";
-        } else if gullet::if_next(T_MATH!())? {
+    let mut op = "\\lx@begin@inline@math";
+    {
+      let mode = state::lookup_string("MODE");
+      Debug!("T_MATH primitive current mode: {:?}", mode);
+      if mode == "display_math" {
+        if gullet::if_next(T_MATH!())? {
           gullet::read_token()?;
-          op = "\\lx@begin@display@math";
+          op = "\\lx@end@display@math";
+        } else {
+          // Avoid a Fatal, but we're likely in trouble.
+          // Should we switch to text mode? (LaTeX normally wouldn't)
+          // Did we miss something and would should have already been in text mode? Possibly...
+          Error!(
+            "expected",
+            "$",
+            "Missing $ closing display math.\nIgnoring; expect to be in wrong math/text mode."
+          );
+          op = "";
         }
+      } else if mode == "inline_math" {
+        op = "\\lx@end@inline@math";
+      } else if gullet::if_next(T_MATH!())? {
+        gullet::read_token()?;
+        op = "\\lx@begin@display@math";
       }
-      if !op.is_empty() {
-        Ok(stomach::invoke_token(&T_CS!(op))?)
-      } else {
-        Ok(Vec::new())
-      }
-    });
+    }
+    if !op.is_empty() {
+      Ok(stomach::invoke_token(&T_CS!(op))?)
+    } else {
+      Ok(Vec::new())
+    }
+  });
   // Let this be the default, conventional $
   Let!(T_MATH!(), T_CS!("\\lx@dollar@in@normalmode"));
 
@@ -72,8 +72,11 @@ LoadDefinitions!({
   // This is the "normal" case: $ appearing with an alignment that is in text mode.
   // It's just like regular $, except it doesn't look for $$ (no display math).
   DefPrimitive!("\\lx@dollar@in@textmode", {
-    let mathcs = if lookup_bool("IN_MATH") { T_CS!("\\lx@end@inline@math") }
-      else {T_CS!("\\lx@begin@inline@math") };
+    let mathcs = if lookup_bool("IN_MATH") {
+      T_CS!("\\lx@end@inline@math")
+    } else {
+      T_CS!("\\lx@begin@inline@math")
+    };
     stomach::invoke_token(&mathcs)
   });
 
@@ -91,9 +94,11 @@ LoadDefinitions!({
   // This would be complicated by the need to hide these $ from untex.
   DefPrimitive!(T_CS!("\\lx@dollar@in@mathmode"), None, {
     let level = stomach::get_boxing_level();
-    if lookup_int("MATH_ALIGN_$_BEGUN") == (level as i64) { // If we're begun making _something_ with $.
-      let l = if lookup_bool("IN_MATH") { // But we're somehow in math?
-        stomach::invoke_token(&T_CS!("\\lx@end@inline@math")) 
+    if lookup_int("MATH_ALIGN_$_BEGUN") == (level as i64) {
+      // If we're begun making _something_ with $.
+      let l = if lookup_bool("IN_MATH") {
+        // But we're somehow in math?
+        stomach::invoke_token(&T_CS!("\\lx@end@inline@math"))
       } else {
         stomach::invoke_token(&T_CS!("\\lx@end@inmath@text"))
       };
@@ -101,19 +106,20 @@ LoadDefinitions!({
       l
     } else {
       assign_value("MATH_ALIGN_$_BEGUN", level + 1, None); // Note that we've begun something
-      if lookup_bool("IN_MATH") { // If we're "still" in math
+      if lookup_bool("IN_MATH") {
+        // If we're "still" in math
         stomach::invoke_token(&T_CS!("\\lx@begin@inmath@text"))
       } else {
         stomach::invoke_token(&T_CS!("\\lx@begin@inline@math"))
       }
-    } 
+    }
   });
   //======================================================================
   // For inserting (non-trivial?) text while in math mode
   DefConstructor!("\\lx@begin@inmath@text",
     "<ltx:XMText>#body</ltx:XMText>",
     // alias => T_MATH ? do we support that ?
-    alias => "$", 
+    alias => "$",
     before_digest => sub { stomach::begin_mode("text")?; },
     capture_body => true
   );
@@ -196,16 +202,16 @@ LoadDefinitions!({
   Tag!("ltx:Math", after_close => sub[document, node] {
     cleanup_math(document, node.clone())?;
   });
-  
+
   //======================================================================
   // General
   //----------------------------------------------------------------------
-  // \everydisplay         pt holds tokens inserted at the start of every switch to display math mode.
-  // \everymath            pt holds tokens inserted at the start of every switch to math mode.
+  // \everydisplay         pt holds tokens inserted at the start of every switch to display math
+  // mode. \everymath            pt holds tokens inserted at the start of every switch to math
+  // mode.
   DefRegister!("\\everymath", Tokens!());
   DefRegister!("\\everydisplay", Tokens!());
 
-    
   // Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
   DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
@@ -249,10 +255,10 @@ LoadDefinitions!({
     let value  = gullet::read_number().unwrap_or_default();
     let (role, glyph) = decode_math_char(value.value_of() as u16)?;
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
-    state::install_definition(Register::new_chardef(newcs,Some(value.into()), glyph, role.map(arena::pin)), None);
+    state::install_definition(
+      Register::new_chardef(newcs,Some(value.into()), glyph, role.map(arena::pin)), None);
     state::after_assignment();
   });
-  
 
   DefConstructor!("\\mathaccent Number Digested",
   "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
@@ -302,15 +308,16 @@ LoadDefinitions!({
   //======================================================================
   // TeX-level grammatical roles
   //----------------------------------------------------------------------
-  // \mathbin                c  assigns class 2 (binary operation) to the following character or subformula.
-  // \mathclose              c  assigns class 5 (closing) to the following character or subformula.
-  // \mathinner              c  makes an inner atom holding the math field.
-  // \mathop                 c  assigns class 1 (large operator) to following character or subformula.
-  // \mathopen               c  assigns class 4 (opening) to following character or subformula.
-  // \mathord                c  assigns class 0 (ordinary) to following character or subformula.
-  // \mathpunct              c  assigns class 6 (punctuation) to following character or subformula.
-  // \mathrel                c  assigns class 3 (relation) to following character or subformula.
-  
+  // \mathbin                c  assigns class 2 (binary operation) to the following character or
+  // subformula. \mathclose              c  assigns class 5 (closing) to the following character
+  // or subformula. \mathinner              c  makes an inner atom holding the math field.
+  // \mathop                 c  assigns class 1 (large operator) to following character or
+  // subformula. \mathopen               c  assigns class 4 (opening) to following character or
+  // subformula. \mathord                c  assigns class 0 (ordinary) to following character or
+  // subformula. \mathpunct              c  assigns class 6 (punctuation) to following character
+  // or subformula. \mathrel                c  assigns class 3 (relation) to following character
+  // or subformula.
+
   // Is XMWrap the right thing to wrap with (instead of XMArg)?
   // We can't really assume that the stuff inside is sensible math.
   // NOTE that \mathord and \mathbin aren't really right here.
@@ -420,14 +427,14 @@ LoadDefinitions!({
       Ok(Vec::new())
     },
     alias => "\\right");
-  
+
   //======================================================================
   // Limit placement
   //----------------------------------------------------------------------
   // \limits                 c  displays limits above and below large operators (class 1).
   // \nolimits               c  displays limits to the right of large operators (class 1).
   // \displaylimits          c  restores normal conventions for using limits with operators.
-    
+
   // TODO:
   // DefConstructor('\limits', undef, sub {
   //     my $node = $_[0]->getElement;
@@ -497,24 +504,48 @@ LoadDefinitions!({
   // \scriptscriptstyle      c  selects scriptscript style: SS or SS'.
   // \scriptstyle            c  selects script style: S or S'.
   // \textstyle              c  selects text style: T or T'.
-  
+
   // Also record that this explicitly sets the mathstyle (support for \over, etal)
   DefPrimitive!("\\displaystyle", {
     MergeFont!(mathstyle => "display");
-    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\displaystyle")),
-      stored_map!("explicit_mathstyle" => true)) });
+    Tbox::new(
+      *EMPTY_SYM,
+      None,
+      None,
+      Tokens!(T_CS!("\\displaystyle")),
+      stored_map!("explicit_mathstyle" => true),
+    )
+  });
   DefPrimitive!("\\textstyle", {
     MergeFont!(mathstyle => "text");
-    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\textstyle")),
-      stored_map!("explicit_mathstyle" => true)) });
+    Tbox::new(
+      *EMPTY_SYM,
+      None,
+      None,
+      Tokens!(T_CS!("\\textstyle")),
+      stored_map!("explicit_mathstyle" => true),
+    )
+  });
   DefPrimitive!("\\scriptstyle", {
     MergeFont!(mathstyle => "script");
-    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\scriptstyle")),
-      stored_map!("explicit_mathstyle" => true)) });
+    Tbox::new(
+      *EMPTY_SYM,
+      None,
+      None,
+      Tokens!(T_CS!("\\scriptstyle")),
+      stored_map!("explicit_mathstyle" => true),
+    )
+  });
   DefPrimitive!("\\scriptscriptstyle", {
     MergeFont!(mathstyle => "scriptscript");
-    Tbox::new(*EMPTY_SYM, None, None, Tokens!(T_CS!("\\scriptscriptstyle")),
-      stored_map!("explicit_mathstyle" => true)) });
+    Tbox::new(
+      *EMPTY_SYM,
+      None,
+      None,
+      Tokens!(T_CS!("\\scriptscriptstyle")),
+      stored_map!("explicit_mathstyle" => true),
+    )
+  });
 
   //======================================================================
   //
@@ -542,17 +573,23 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \overline               c  puts a line over the following character or subformula.
   // \underline              c  puts a line under the following character or subformula.
-  DefMath!("\\overline Digested", "\u{00AF}",  operator_role => "OVERACCENT");    // MACRON
+  DefMath!("\\overline Digested", "\u{00AF}",  operator_role => "OVERACCENT"); // MACRON
   DefMath!("\\lx@math@underline{}", "\u{00AF}", operator_role => "UNDERACCENT",
     name => "underline", alias => "\\underline");
-  DefConstructor!("\\lx@text@underline{}", "<ltx:text framed='underline' _noautoclose='true'>#1</ltx:text>");
+  DefConstructor!(
+    "\\lx@text@underline{}",
+    "<ltx:text framed='underline' _noautoclose='true'>#1</ltx:text>"
+  );
   DefMath!("\\lx@math@overrightarrow{}", "\u{2192}", operator_role => "OVERACCENT",
     name => "overrightarrow", alias => "\\overrightarrow");
   DefMath!("\\lx@math@overleftarrow{}", "\u{2190}", operator_role => "OVERACCENT",
     name => "overleftarrow", alias => "\\overleftarrow");
 
   // Careful: Use \protect so that it doesn"t expand too early in alignments, etc.
-  DefMacro!("\\underline{}", r"\protect\ifmmode\lx@math@underline{#1}\else\lx@text@underline{#1}\fi");
+  DefMacro!(
+    "\\underline{}",
+    r"\protect\ifmmode\lx@math@underline{#1}\else\lx@text@underline{#1}\fi"
+  );
 
   //======================================================================
   // fraction-like things
@@ -562,9 +599,9 @@ LoadDefinitions!({
   // \atop                   d  is equivalent to `\atopwithdelims..'.
   // \atopwithdelims         d  is a generalized fraction command with an invisible fraction bar.
   // \over                   d  is equivalent to `\overwithdelims..'.
-  // \overwithdelims         d  is a generalized fraction command with preset fraction bar thickness.
-  // After digesting the \choose (or whatever), grab the previous and following material
-  // and store as args in the whatsit.
+  // \overwithdelims         d  is a generalized fraction command with preset fraction bar
+  // thickness. After digesting the \choose (or whatever), grab the previous and following
+  // material and store as args in the whatsit.
 
   // Increment the mathstyle stored in any boxes & whatsits.
   // The tricky part is to know when NOT to increment!
@@ -574,7 +611,7 @@ LoadDefinitions!({
   // We don't have a clear API to find the displayable Boxes within;
   // and we don't have a good handle on grouping...
 
-    // # ARGH!!!!!!!!! RETHINK!!!!!!
+  // # ARGH!!!!!!!!! RETHINK!!!!!!
   // sub adjustMathstyle {
   //   my ($outerstyle, $adjusted, @boxes) = @_;
   //   foreach my $box (@boxes) {
@@ -602,10 +639,11 @@ LoadDefinitions!({
   // # This isn't the same as just shifting the mathstyle!
   // # we're sorta trying to infer WHY the box has a given style...?
   // our %mathstyle_adjust_map = (
-  //   display => { display => 'text', text => 'script', script => 'script', scriptscript => 'scriptscript' },
-  //   text => { display => 'text', text => 'script', script => 'scriptscript', scriptscript => 'scriptscript' },
-  //   script => { display => 'display', text => 'text', script => 'scriptscript', scriptscript => 'scriptscript' },
-  //   scriptscript => { display => 'display', text => 'text', script => 'scriptscript', scriptscript => 'scriptscript' });
+  //   display => { display => 'text', text => 'script', script => 'script', scriptscript =>
+  // 'scriptscript' },   text => { display => 'text', text => 'script', script => 'scriptscript',
+  // scriptscript => 'scriptscript' },   script => { display => 'display', text => 'text', script
+  // => 'scriptscript', scriptscript => 'scriptscript' },   scriptscript => { display =>
+  // 'display', text => 'text', script => 'scriptscript', scriptscript => 'scriptscript' });
 
   // sub adjustMathStyle_internal {
   //   my ($outerstyle, $box) = @_;
@@ -639,8 +677,8 @@ LoadDefinitions!({
   //     . "<ltx:XMWrap>"
   //     . "#left)()"
   //     . "<ltx:XMApp>"
-  //     . "<ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/>"
-  //     . "<ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg>"
+  //     . "<ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle'
+  // thickness='#thickness'/>"     . "<ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg>"
   //     . "<ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg>"
   //     . "</ltx:XMApp>"
   //     . "?#needXMDual(#right"
@@ -696,16 +734,17 @@ LoadDefinitions!({
   // DefMacro('\above Dimension',
   //   '\lx@generalized@over{\above #1}{meaning=divide,thickness=#1}');
   // DefMacro('\abovewithdelims Token Token Dimension',
-  // '\lx@generalized@over{\abovewithdelims #1 #2 #3}{left={\@left#1},right={\@right#2},meaning=divide,thickness=#3}');
-  // DefMacro('\atop',
+  // '\lx@generalized@over{\abovewithdelims #1 #2
+  // #3}{left={\@left#1},right={\@right#2},meaning=divide,thickness=#3}'); DefMacro('\atop',
   //   '\lx@generalized@over{\atop}{thickness=0pt}');
   // DefMacro('\atopwithdelims Token Token',
-  //   '\lx@generalized@over{\atopwithdelims #1 #2}{thickness=0pt,left={\@left#1},right={\@right#2}}');
-  // DefMacro('\over',
+  //   '\lx@generalized@over{\atopwithdelims #1
+  // #2}{thickness=0pt,left={\@left#1},right={\@right#2}}'); DefMacro('\over',
   //   '\lx@generalized@over{\over}{meaning=divide}');
   // DefMacro('\overwithdelims Token Token',
-  //   '\lx@generalized@over{\overwithdelims #1 #2}{left={\@left#1},right={\@right#2},meaning=divide}');
-  // // My thinking was that this is a "fraction" providing the dimension is > 0!
+  //   '\lx@generalized@over{\overwithdelims #1
+  // #2}{left={\@left#1},right={\@right#2},meaning=divide}'); // My thinking was that this is a
+  // "fraction" providing the dimension is > 0!
 
   //======================================================================
   //
@@ -745,17 +784,18 @@ LoadDefinitions!({
   // \postdisplaypenalty     pi is the penalty added immediately after a math display.
   // \predisplaypenalty      pi is the penalty added immediately before a math display.
   // \relpenalty             pi is the penalty for a line break after a relation.
-  // \displaywidowpenalty    pi is the penalty added after the penultimate line immediately preceeding a display.
-  // \skewchar               iq is -1 or the character used to fine-tune the positioning of math accents     .
-  // \defaultskewchar        pi is -1 or the \skewchar value for a font when it is loaded.
-  // \delimitershortfall     pd is the second parameter used to compute the size of delimeters required by \left and \right.
-  // \displayindent          pd is the amount to shift a line holding a displayed equation.
-  // \displaywidth           pd is the width of the line holding a displayed equation.
-  // \mathsurround           pd is extra space added when switching in and out of math mode.
-  // \nulldelimiterspace     pd is the width of a null or missing delimiter.
-  // \predisplaysize         pd is the effective width of the line preceeding a displayed equation.
-  // \scriptspace            pd is extra space added after a subscript or a superscript.
-  // \delimiterfactor        pi is the first parameter used to compute the size of delimeters required by \left and \right.
+  // \displaywidowpenalty    pi is the penalty added after the penultimate line immediately
+  // preceeding a display. \skewchar               iq is -1 or the character used to fine-tune the
+  // positioning of math accents     . \defaultskewchar        pi is -1 or the \skewchar value for
+  // a font when it is loaded. \delimitershortfall     pd is the second parameter used to compute
+  // the size of delimeters required by \left and \right. \displayindent          pd is the amount
+  // to shift a line holding a displayed equation. \displaywidth           pd is the width of the
+  // line holding a displayed equation. \mathsurround           pd is extra space added when
+  // switching in and out of math mode. \nulldelimiterspace     pd is the width of a null or
+  // missing delimiter. \predisplaysize         pd is the effective width of the line preceeding a
+  // displayed equation. \scriptspace            pd is extra space added after a subscript or a
+  // superscript. \delimiterfactor        pi is the first parameter used to compute the size of
+  // delimeters required by \left and \right.
   DefRegister!("\\binoppenalty", Number!(700));
   DefRegister!("\\relpenalty", Number!(500));
   DefRegister!("\\displaywidowpenalty", Number!(50));
@@ -774,7 +814,7 @@ LoadDefinitions!({
   //       $$info{skewchar} = $value; } }
   // );
   DefRegister!("\\defaultskewchar", Number!(-1));
-  
+
   // Dimen registers; TeXBook p. 274
   DefRegister!("\\delimitershortfall", Dimension!("5pt"));
   DefRegister!("\\nulldelimiterspace", Dimension!("1.2pt"));
@@ -799,20 +839,20 @@ LoadDefinitions!({
   // Even a \begin{array} ends up expanding into a $ !!!
   DefMacro!("\\eqno", {
     // my $locator  = $gullet->getLocator;
-    let mut stuff    = Vec::new();
+    let mut stuff = Vec::new();
     // This is risky!!!
 
     while let Some(t) = gullet::read_x_token(Some(false), false, None)? {
       if t == T_BEGIN!() {
         stuff.push(t);
-        let balanced_arg = gullet::read_balanced(ExpansionLevel::Off,false,false)?;
+        let balanced_arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
         if !balanced_arg.is_empty() {
           stuff.extend(balanced_arg.unlist());
         }
         stuff.push(T_END!());
       }
       // What do I need to explicitly list here!?!?!? UGGH!
-      else if  t == T_MATH!()
+      else if t == T_MATH!()
         || t == T_CS!("\\]")
         // UGH from 2022: also don"t jump over rows
         || t == T_CS!("\\cr")
@@ -822,7 +862,7 @@ LoadDefinitions!({
         || t == T_CS!("\\begingroup") // Totally wrong, but to catch expanded environments
         // any sort of environ begin or end???
         || t.with_str(|tstr| tstr.starts_with("\\begin{") || tstr.starts_with("\\end{"))
-        // This seems needed within AmSTeX environs
+      // This seems needed within AmSTeX environs
       {
         let mut invoked = Invocation!(T_CS!("\\@@eqno"), vec![Tokens::new(stuff)]).unlist();
         invoked.push(t);
@@ -831,8 +871,12 @@ LoadDefinitions!({
         stuff.push(t);
       }
     }
-    Error!("unexpected", "\\eqno", "Fell of the end reading tag for \\eqno!");
-      // s!("started {locator}"));
+    Error!(
+      "unexpected",
+      "\\eqno",
+      "Fell of the end reading tag for \\eqno!"
+    );
+    // s!("started {locator}"));
     Tokens::new(stuff)
   });
 
@@ -841,7 +885,6 @@ LoadDefinitions!({
   DefConstructor!("\\@@eqno{}",
     "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
     reversion => "");
-
 });
 
 /// A shorthand data structure for delimiter metadata
@@ -850,49 +893,50 @@ pub struct DelimiterMeta {
   left_role: &'static str,
   right_role: &'static str,
   name: Option<&'static str>,
-
 }
 /// This duplicates in slightly different way what DefMath has put together.
-pub static DELIMITER_MAP : Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new(|| raw_map!(
-  "(" => DelimiterMeta{char: '(', left_role: "OPEN", right_role: "CLOSE", name:None},
-  ")" => DelimiterMeta{char: ')', left_role: "OPEN", right_role: "CLOSE", name:None},
-  "[" => DelimiterMeta{char: '[', left_role: "OPEN", right_role: "CLOSE", name:None},
-  "]" => DelimiterMeta{ char: ']', left_role: "OPEN", right_role: "CLOSE", name:None},
-  "\\{" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
-  "\\}" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
-  "\\lfloor"=> DelimiterMeta{ char: '\u{230A}',
-                left_role: "OPEN", right_role: "CLOSE", name: Some("lfloor") },
-  "\\rfloor"=> DelimiterMeta{ char: '\u{230B}',
-                left_role: "OPEN", right_role: "CLOSE", name: Some("rfloor") },
-  "\\lceil" => DelimiterMeta{ char: '\u{2308}',
-                left_role: "OPEN", right_role: "CLOSE", name: Some("lceil") },
-  "\\rceil" => DelimiterMeta{ char: '\u{2309}',
-                left_role: "OPEN", right_role: "CLOSE", name: Some("rceil") },
-  "\\langle"=> DelimiterMeta{ char: '\u{27E8}',
-                left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
-  "\\rangle"=> DelimiterMeta{ char: '\u{27E9}',
-                left_role: "OPEN",  right_role: "CLOSE", name: Some("rangle") },
-  "<"      => DelimiterMeta{ char: '\u{27E8}',
-                left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
-  ">"      => DelimiterMeta{ char: '\u{27E9}',
-                left_role: "OPEN", right_role: "CLOSE", name: Some("rangle") },
-  "/"      => DelimiterMeta{ char: '/', left_role: "MULOP",   right_role: "MULOP", name: None },
-  "\\backslash" => DelimiterMeta{ char: '\u{005C}',
-                left_role: "MULOP",   right_role: "MULOP", name: Some("backslash") },
-  "|"      => DelimiterMeta{ char: '|',
-                left_role: "VERTBAR", right_role: "VERTBAR", name: None },
-  "\\|"     => DelimiterMeta{ char: '\u{2225}',
-                left_role: "VERTBAR", right_role: "VERTBAR", name: None },
-  "\\uparrow"   => DelimiterMeta{ char: '\u{2191}',
-                    left_role: "OPEN", right_role: "CLOSE", name: Some("uparrow") },
-  "\\Uparrow"   => DelimiterMeta{ char: '\u{21D1}',
-                    left_role: "OPEN", right_role: "CLOSE", name: Some("Uparrow") },
-  "\\downarrow" => DelimiterMeta{ char: '\u{2193}',
-                    left_role: "OPEN", right_role: "CLOSE", name: Some("downarrow") },
-  "\\Downarrow" =>  DelimiterMeta{ char: '\u{21D3}',
-                    left_role: "OPEN", right_role: "CLOSE", name: Some("Downarrow") },
-  "\\updownarrow" => DelimiterMeta{ char: '\u{2195}',
-                    left_role: "OPEN", right_role: "CLOSE", name: Some("updownarrow") },
-  "\\Updownarrow" => DelimiterMeta{ char: '\u{21D5}',
-                    left_role: "OPEN", right_role: "CLOSE", name: Some("Updownarrow") }
-));
+pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new(|| {
+  raw_map!(
+    "(" => DelimiterMeta{char: '(', left_role: "OPEN", right_role: "CLOSE", name:None},
+    ")" => DelimiterMeta{char: ')', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "[" => DelimiterMeta{char: '[', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "]" => DelimiterMeta{ char: ']', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\{" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\}" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\lfloor"=> DelimiterMeta{ char: '\u{230A}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("lfloor") },
+    "\\rfloor"=> DelimiterMeta{ char: '\u{230B}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("rfloor") },
+    "\\lceil" => DelimiterMeta{ char: '\u{2308}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("lceil") },
+    "\\rceil" => DelimiterMeta{ char: '\u{2309}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("rceil") },
+    "\\langle"=> DelimiterMeta{ char: '\u{27E8}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
+    "\\rangle"=> DelimiterMeta{ char: '\u{27E9}',
+                  left_role: "OPEN",  right_role: "CLOSE", name: Some("rangle") },
+    "<"      => DelimiterMeta{ char: '\u{27E8}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
+    ">"      => DelimiterMeta{ char: '\u{27E9}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("rangle") },
+    "/"      => DelimiterMeta{ char: '/', left_role: "MULOP",   right_role: "MULOP", name: None },
+    "\\backslash" => DelimiterMeta{ char: '\u{005C}',
+                  left_role: "MULOP",   right_role: "MULOP", name: Some("backslash") },
+    "|"      => DelimiterMeta{ char: '|',
+                  left_role: "VERTBAR", right_role: "VERTBAR", name: None },
+    "\\|"     => DelimiterMeta{ char: '\u{2225}',
+                  left_role: "VERTBAR", right_role: "VERTBAR", name: None },
+    "\\uparrow"   => DelimiterMeta{ char: '\u{2191}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("uparrow") },
+    "\\Uparrow"   => DelimiterMeta{ char: '\u{21D1}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("Uparrow") },
+    "\\downarrow" => DelimiterMeta{ char: '\u{2193}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("downarrow") },
+    "\\Downarrow" =>  DelimiterMeta{ char: '\u{21D3}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("Downarrow") },
+    "\\updownarrow" => DelimiterMeta{ char: '\u{2195}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("updownarrow") },
+    "\\Updownarrow" => DelimiterMeta{ char: '\u{21D5}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("Updownarrow") }
+  )
+});

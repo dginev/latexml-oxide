@@ -175,7 +175,7 @@ LoadDefinitions!({
   NewCounter!("enumii",  "", idwithin => "enumi",     idprefix => "i");
   NewCounter!("enumiii", "", idwithin => "enumii",    idprefix => "i");
   NewCounter!("enumiv",  "", idwithin => "enumiii",   idprefix => "i");
-  NewCounter!("enumv",   "", idwithin => "enumiv",    idprefix => "i");    // A couple of extra
+  NewCounter!("enumv",   "", idwithin => "enumiv",    idprefix => "i"); // A couple of extra
   NewCounter!("enumvi",  "", idwithin => "enumv",     idprefix => "i");
 
   // How the refnums look... (probably should be in class file, but already here)

@@ -8,8 +8,8 @@ use std::io::Cursor;
 use latexml_core::common::arena::{self, SymHashMap};
 use latexml_core::common::error::{note_begin, note_end, note_progress, Result};
 use latexml_core::common::xml::*;
-use latexml_core::document::{get_node_qname,sym_can_have_attribute,with_node_qname,Document};
-use latexml_core::{map, sym_map, s, static_map, Error, Fatal, fatal};
+use latexml_core::document::{get_node_qname, sym_can_have_attribute, with_node_qname, Document};
+use latexml_core::{fatal, map, s, static_map, sym_map, Error, Fatal};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -246,7 +246,7 @@ impl MathParser {
     let mut p = xnode.get_parent().unwrap();
     if let Some(result) = self.parse_rec(xnode, "Anything,", document)? {
       // Add text representation to the containing Math element.
-      
+
       // This is a VERY screwy situation? How can the parent be a document fragment??
       // This has got to be a LibXML bug???
       if p.get_type() == Some(NodeType::DocumentFragNode) {
@@ -358,9 +358,7 @@ impl MathParser {
           attr.insert(String::from("xml:id"), nid.to_owned());
         }
         for (key, value) in attr {
-          if !(key.starts_with('_')
-            || sym_can_have_attribute(rtag, arena::pin(&key)))
-          {
+          if !(key.starts_with('_') || sym_can_have_attribute(rtag, arena::pin(&key))) {
             continue;
           }
           if key == "xml:id" {
@@ -399,15 +397,11 @@ impl MathParser {
   }
 
   // Depth first parsing of XMArg nodes.
-  fn parse_children(
-    &mut self,
-    node: &Node,
-    document: &mut Document,
-  ) -> Result<()> {
+  fn parse_children(&mut self, node: &Node, document: &mut Document) -> Result<()> {
     for child in element_nodes(node) {
       let tag = get_node_qname(&child);
       if tag == arena::pin_static("ltx:XMArg") || tag == arena::pin_static("ltx:XMWrap") {
-        self.parse_rec( child, "Anything", document)?;
+        self.parse_rec(child, "Anything", document)?;
       } else if tag == arena::pin_static("ltx:XMApp")
         || tag == arena::pin_static("ltx:XMArray")
         || tag == arena::pin_static("ltx:XMRow")
@@ -577,9 +571,7 @@ impl MathParser {
 // Mostly for debugging information?
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pub fn text_form(node: &Node, document: &Document) -> String {
-  textrec(node, None, None, document)
-}
+pub fn text_form(node: &Node, document: &Document) -> String { textrec(node, None, None, document) }
 
 // ================================================================================
 // Some more XML utilities, but math specific (?)
@@ -655,18 +647,18 @@ fn textrec(
       .first()
       .expect("XMDual should always have 2 child elements.");
     textrec(content, Some(outer_bp), Some(outer_name), document) // Just send out the
-                                                                        // semantic form
-                                                                        // Fall back to
-                                                                        // presentation, if
-                                                                        // content has poor
-                                                                        // semantics (eg. from
-                                                                        // replacement patterns)
-                                                                        // TODO
-                                                                        // return ($text =~
-                                                                        // /^\(*Unknown/ ?
-                                                                        // textrec($presentation,
-                                                                        // $outer_bp, $outer_name)
-                                                                        // : $text); }
+                                                                 // semantic form
+                                                                 // Fall back to
+                                                                 // presentation, if
+                                                                 // content has poor
+                                                                 // semantics (eg. from
+                                                                 // replacement patterns)
+                                                                 // TODO
+                                                                 // return ($text =~
+                                                                 // /^\(*Unknown/ ?
+                                                                 // textrec($presentation,
+                                                                 // $outer_bp, $outer_name)
+                                                                 // : $text); }
   } else if tag == arena::pin_static("ltx:XMTok") {
     let name = match get_token_meaning(&node, document) {
       Some(meaning) => meaning,
@@ -701,12 +693,7 @@ fn textrec(
   }
 }
 
-fn textrec_apply(
-  name: &str,
-  op: &Node,
-  args: Vec<Node>,
-  document: &Document,
-) -> (usize, String) {
+fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document) -> (usize, String) {
   let role = op
     .get_attribute("role")
     .unwrap_or_else(|| "Unknown".to_string());
@@ -757,8 +744,7 @@ fn textrec_apply(
   } else if role == "POSTFIX" {
     (
       10000,
-      textrec(&args[0], Some(10000), Some(name), document)
-        + &textrec(op, None, None, document),
+      textrec(&args[0], Some(10000), Some(name), document) + &textrec(op, None, None, document),
     )
   } else if name == "multirelation" {
     let joined = args
@@ -850,8 +836,7 @@ pub fn p_get_value(node: &Node) -> String {
 //================================================================================
 
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Node> {
-  if with_node_qname(node, |name| name == "ltx:XMRef")
-  {
+  if with_node_qname(node, |name| name == "ltx:XMRef") {
     if let Some(idref) = node.get_attribute("idref") {
       // Can it happen that $realnode is, itself, an XMRef?
       // Then we should recurse recurse!
@@ -863,7 +848,10 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
         // LaTeXML::MathParser::IDREFS{$idref}
         // ? "Previously bound to " .
         // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-        let err = || {Error!("expected", "id", message); Ok(()) };
+        let err = || {
+          Error!("expected", "id", message);
+          Ok(())
+        };
         err().ok();
         //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
       }

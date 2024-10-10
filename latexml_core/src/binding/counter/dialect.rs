@@ -21,11 +21,11 @@ use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 
 use crate::definition::expandable::ExpandableOptions;
-use crate::definition::{Definition,ExpansionBody};
-use crate::state;
+use crate::definition::{Definition, ExpansionBody};
 use crate::mouth;
-use crate::stomach;
+use crate::state;
 use crate::state::*;
+use crate::stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -50,21 +50,27 @@ pub struct NewCounterOptions<'ct> {
 
 /// Defines a new counter named $ctr.
 /// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
-pub fn new_counter(
-  ctr: &str,
-  within: &str,
-  options_opt: Option<NewCounterOptions>,
-  ) -> Result<()> {
+pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>) -> Result<()> {
   let unctr = s!("UN{ctr}"); // UNctr is counter for generating ID's for UN-numbered items.
-  if !within.is_empty() && within != "document" && lookup_definition(&T_CS!(s!("\\c@{within}")))?.is_none() {
+  if !within.is_empty()
+    && within != "document"
+    && lookup_definition(&T_CS!(s!("\\c@{within}")))?.is_none()
+  {
     new_counter(within, "", None)?;
   }
   let cctr = s!("\\c@{ctr}");
   let clctr = s!("\\cl@{ctr}");
   let cunctr = s!("\\c@{unctr}");
   let clunctr = s!("\\cl@{unctr}");
-  def_register(T_CS!(&cctr), None, Number::new(0),
-    Some(RegisterOptions{allocate: Some(String::from("\\count")), ..RegisterOptions::default()}))?;
+  def_register(
+    T_CS!(&cctr),
+    None,
+    Number::new(0),
+    Some(RegisterOptions {
+      allocate: Some(String::from("\\count")),
+      ..RegisterOptions::default()
+    }),
+  )?;
   after_assignment();
   if !has_value(&clctr) {
     state::assign_value(&clctr, Tokens!(), Some(Scope::Global));
@@ -120,12 +126,10 @@ pub fn new_counter(
   def_macro(
     T_CS!(s!("\\the{}", ctr)),
     None,
-    Some(ExpansionBody::Closure(Rc::new(
-      move |_args| {
-        let counter_value = counter_value(&ctr_string)?.value_of();
-        Ok(Tokens::new(ExplodeText!(counter_value)))
-      },
-    ))),
+    Some(ExpansionBody::Closure(Rc::new(move |_args| {
+      let counter_value = counter_value(&ctr_string)?.value_of();
+      Ok(Tokens::new(ExplodeText!(counter_value)))
+    }))),
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -141,7 +145,7 @@ pub fn new_counter(
         scope: Some(Scope::Global),
         ..ExpandableOptions::default()
       }),
-      )?;
+    )?;
   }
 
   let mut prefix = match options_opt {
@@ -181,39 +185,34 @@ pub fn new_counter(
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Rc::new(
-          move |_args| {
-            Ok(mouth::tokenize_internal(&s!(
-              "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
-\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
-              idwithin,
-              idwithin,
-              prefix,
-              ctr_string
-            )))
-          },
-        ))),
+        Some(ExpansionBody::Closure(Rc::new(move |_args| {
+          Ok(mouth::tokenize_internal(&s!(
+            "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
+            idwithin,
+            idwithin,
+            prefix,
+            ctr_string
+          )))
+        }))),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
         }),
-          )?;
+      )?;
     } else {
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Rc::new(
-          move |_args| {
-            Ok(mouth::tokenize_internal(&s!(
-              "{prefix}\\csname @{ctr_string}@ID\\endcsname",
-            )))
-          },
-        ))),
+        Some(ExpansionBody::Closure(Rc::new(move |_args| {
+          Ok(mouth::tokenize_internal(&s!(
+            "{prefix}\\csname @{ctr_string}@ID\\endcsname",
+          )))
+        }))),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
         }),
-          )?;
+      )?;
     }
     def_macro(
       T_CS!(s!("\\@{}@ID", ctr)),
@@ -223,7 +222,7 @@ pub fn new_counter(
         scope: Some(Scope::Global),
         ..ExpandableOptions::default()
       }),
-      )?;
+    )?;
   }
 
   Ok(())
@@ -258,19 +257,11 @@ pub fn add_to_counter(ctr: &str, value: Number) -> Result<()> {
 
 /// Analog of `\stepcounter`, steps the counter and returns the expansion of
 /// `\the$ctr`  Usually you should use `ref_step_counter(ctr)` instead.
-pub fn step_counter(
-  ctr: &str,
-  noreset: bool
-) -> Result<()> {
+pub fn step_counter(ctr: &str, noreset: bool) -> Result<()> {
   let value = counter_value(ctr)?;
   let newvalue = value.add(Number::new(1));
   let c_ctr = s!("\\c@{ctr}");
-  state::assign_register(
-    &c_ctr,
-    newvalue.into(),
-    Some(Scope::Global),
-    Vec::new()
-  )?;
+  state::assign_register(&c_ctr, newvalue.into(), Some(Scope::Global), Vec::new())?;
   state::after_assignment();
   let token_value = Tokens::new(Explode!(newvalue.value_of()));
   def_macro(
@@ -296,22 +287,17 @@ pub fn step_counter(
 
 /// Analog of `\refstepcounter`, steps the counter and returns a hash
 /// containing the keys `refnum` and `id`.
-/// 
+///
 /// This makes it
 /// suitable for use in a `properties` option to constructors.
 /// The `id` is generated in parallel with the reference number
 /// to assist debugging.
 // TODO: Maybe these should be specialized types in Rust, rather than hashmaps?
-pub fn ref_step_counter(
-  ctype: &str,
-  noreset: bool,
-  ) -> Result<HashMap<Stored>> {
-
-  let ctr = with_mapping("counter_for_type", ctype, |meaning|
-    match meaning  {
-      Some(Stored::String(ctr)) => arena::to_string(*ctr),
-      _ => ctype.to_string(),
-    });
+pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
+  let ctr = with_mapping("counter_for_type", ctype, |meaning| match meaning {
+    Some(Stored::String(ctr)) => arena::to_string(*ctr),
+    _ => ctype.to_string(),
+  });
   step_counter(&ctr, noreset)?;
   maybe_preempt_refnum(&ctr, false);
 
@@ -348,7 +334,7 @@ pub fn ref_step_counter(
         scope: Some(Scope::Global),
         ..ExpandableOptions::default()
       }),
-      )?;
+    )?;
   }
 
   let id = if has_id {
@@ -362,7 +348,8 @@ pub fn ref_step_counter(
   {
     invocation = build_invocation(
       T_CS!("\\lx@make@tags"),
-      vec![Some(Tokens!(T_OTHER!(ctype)))])?;
+      vec![Some(Tokens!(T_OTHER!(ctype)))],
+    )?;
   }
 
   let tags = stomach::digest(invocation)?;
@@ -404,18 +391,10 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
     if !norefnum && lookup_meaning(&hj_refnum).is_some() {
-      state::let_i(
-        &T_CS!(s!("\\the{ctr}")),
-        &hj_refnum,
-        Some(Scope::Global)
-      );
+      state::let_i(&T_CS!(s!("\\the{ctr}")), &hj_refnum, Some(Scope::Global));
     }
     if lookup_meaning(&hj_id).is_some() {
-      state::let_i(
-        &T_CS!(s!("\\the{ctr}@ID")),
-        &hj_id,
-        Some(Scope::Global)
-      );
+      state::let_i(&T_CS!(s!("\\the{ctr}@ID")), &hj_id, Some(Scope::Global));
     }
     // TODO: Continue once we know the type of "mapper"
     // let _label = state!().lookup_value("PEEKED_LABEL");
@@ -460,8 +439,7 @@ pub fn maybe_note_label(label: &str) {
 
 fn deactivate_counter_scope(ctr: &str) {
   let scopes = lookup_value(&s!("scopes_for_counter:{ctr}"));
-  if let Some(Stored::VecDequeStored(stored_scopes)) = scopes
-  {
+  if let Some(Stored::VecDequeStored(stored_scopes)) = scopes {
     for scope_stored in stored_scopes {
       if let Stored::String(scope) = scope_stored {
         state::deactivate_scope(scope);
@@ -474,8 +452,7 @@ fn deactivate_counter_scope(ctr: &str) {
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
   let nested = lookup_value(&s!("nested_counters_{ctr}"));
-  if let Some(Stored::Strings(stored_counters)) = nested
-  {
+  if let Some(Stored::Strings(stored_counters)) = nested {
     for inner_ctr in &*stored_counters {
       deactivate_counter_scope(inner_ctr);
     }
@@ -486,17 +463,17 @@ fn deactivate_counter_scope(ctr: &str) {
 /// Like `RefStepCounter`, but only steps the "uncounter",
 /// and returns only the id;  This is useful for unnumbered cases
 /// of objects that normally get both a refnum and id.
-pub fn ref_step_id(
-  ctype: &str,
-  ) -> Result<HashMap<Stored>> {
-  let ctr = with_mapping("counter_for_type", ctype, |mapping| match mapping  {
+pub fn ref_step_id(ctype: &str) -> Result<HashMap<Stored>> {
+  let ctr = with_mapping("counter_for_type", ctype, |mapping| match mapping {
     Some(map) => map.to_string(),
     None => ctype.to_string(),
   });
   let unctr = s!("UN{ctr}");
   step_counter(&unctr, false)?;
   maybe_preempt_refnum(&ctr, true);
-  let cunctr_val = lookup_number(&s!("\\c@{unctr}")).unwrap_or_default().value_of();
+  let cunctr_val = lookup_number(&s!("\\c@{unctr}"))
+    .unwrap_or_default()
+    .value_of();
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),
     None,
@@ -517,9 +494,20 @@ pub fn ref_step_id(
 pub fn reset_counter(ctr: &Token) -> Result<()> {
   let (c_ctr, c_un_ctr, ctr_id) =
     ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{ctr}@ID")));
-  state::assign_register(&c_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
-  if !ctr.with_str(|cstr| cstr.starts_with("UN")) { // but not UN
-    state::assign_register(&c_un_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
+  state::assign_register(
+    &c_ctr,
+    Number::new(0).into(),
+    Some(Scope::Global),
+    Vec::new(),
+  )?;
+  if !ctr.with_str(|cstr| cstr.starts_with("UN")) {
+    // but not UN
+    state::assign_register(
+      &c_un_ctr,
+      Number::new(0).into(),
+      Some(Scope::Global),
+      Vec::new(),
+    )?;
   }
   def_macro(
     T_CS!(ctr_id),
@@ -540,9 +528,7 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
 }
 
 /// Create id, and tags for an itemize type \item
-pub fn ref_step_item_counter(
-  tag_opt: Option<&Tokens>,
-  ) -> Result<HashMap<Stored>> {
+pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>> {
   let counter = state::lookup_string("itemcounter");
   let n = lookup_int("itemization_items");
   state::assign_value("itemization_items", n + 1, None);
@@ -601,8 +587,8 @@ pub fn ref_step_item_counter(
     tag_tokens.extend(
       build_invocation(
         T_CS!("\\lx@make@tags"),
-        vec![Some(Tokens!(T_OTHER!(counter)))]
-          )?
+        vec![Some(Tokens!(T_OTHER!(counter)))],
+      )?
       .unlist(),
     );
     tag_tokens.push(T_END!());
@@ -643,7 +629,7 @@ pub fn begin_itemize(
   itype: &str,
   counter: Option<&str>,
   options: BeginItemizeOptions,
-  ) -> Result<HashMap<Stored>> {
+) -> Result<HashMap<Stored>> {
   // The list-type and level of the *containing* list (if any!)
   let outercounter = state::lookup_string("itemcounter");
   let outerlevel = if !outercounter.is_empty() {
@@ -659,7 +645,8 @@ pub fn begin_itemize(
     "\\itemsep",
     lookup_dimension("\\lx@default@itemsep")
       .unwrap_or_default()
-      .into());
+      .into()
+  );
   state::assign_value("itemization_level", listlevel, None);
   state::assign_value(&s!("{counter}level"), level, None);
   state::assign_value("itemization_items", 0, None);
@@ -679,7 +666,7 @@ pub fn begin_itemize(
     T_CS!("\\@listctr"),
     None,
     Tokens!(Explode!(usecounter)),
-    None
+    None,
   )?;
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
@@ -698,7 +685,7 @@ pub fn begin_itemize(
       T_CS!(thectr),
       None,
       mouth::tokenize_internal(&theexpansion),
-      None
+      None,
     )?;
 
     // AND reset this list's counter when the outer item is stepped
@@ -741,16 +728,13 @@ pub fn begin_itemize(
   }
 
   let mut rsc = ref_step_counter(&s!("@itemize{listpostfix}"), false)?;
-  rsc.insert(
-    "counter", usecounter.into());
+  rsc.insert("counter", usecounter.into());
   rsc.insert("series", series.into());
   Ok(rsc)
 }
 
 /// Copies the current id, tags, and inlist counter values into whatsit properties
-pub fn rescue_caption_counters(
-  captype: &str,
-  whatsit: &mut Whatsit) {
+pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit) {
   let tagskey = &s!("{captype}_tags");
   if let Some(tags) = state::remove_value(tagskey) {
     state::assign_value(tagskey, false, Some(Scope::Global));

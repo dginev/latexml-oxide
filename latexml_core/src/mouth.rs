@@ -317,7 +317,7 @@ impl Mouth {
           Ok(count) => count,
           Err(e) => {
             let message = s!("BufReader::read_to_end returned an error: {:?}", e);
-            Warn!("mouth", "io", message,"","",self.get_location());
+            Warn!("mouth", "io", message, "", "", self.get_location());
             0
           },
         };
@@ -341,7 +341,7 @@ impl Mouth {
             },
             Err(e) => {
               let message = s!("input isn't valid under encoding utf8: {:?}", e);
-              Info!("misdefined", "utf8", message, "","",self.get_location());
+              Info!("misdefined", "utf8", message, "", "", self.get_location());
               let file_str = String::from_utf8_lossy(&file_bytes);
               self.buffer = Mouth::split_lines(&file_str);
             },
@@ -409,9 +409,15 @@ impl Mouth {
   /// when performing the check.
   pub fn has_more_input(&mut self) -> bool {
     !self.is_eol()
-    || !self.buffer.is_empty()
-    || (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf()
-           .expect("fill_buf should have no reason to fail.").is_empty())
+      || !self.buffer.is_empty()
+      || (self.reader.is_some()
+        && !self
+          .reader
+          .as_mut()
+          .unwrap()
+          .fill_buf()
+          .expect("fill_buf should have no reason to fail.")
+          .is_empty())
   }
 
   /// Read the next token, or undef if exhausted.
@@ -484,23 +490,27 @@ impl Mouth {
 
         self.chars = line.chars().collect::<VecDeque<char>>();
         self.nchars = self.chars.len();
-        // In state N, skip leading spaces & ignored, possibly decoding (trailing space removed above)
-        while let Some((_ch,cc)) = self.get_next_char() {  
+        // In state N, skip leading spaces & ignored, possibly decoding (trailing space removed
+        // above)
+        while let Some((_ch, cc)) = self.get_next_char() {
           match cc {
-            Catcode::SPACE | Catcode::IGNORE => { },
-            Catcode::EOL => { // Eolch already? empty line!
+            Catcode::SPACE | Catcode::IGNORE => {},
+            Catcode::EOL => {
+              // Eolch already? empty line!
               self.colno = self.nchars; // ignore rest of line.
               return Some(T_CS!("\\par"));
             },
-            _ => break
+            _ => break,
           }
         }
-        if self.nchars == 0 || self.colno > self.nchars { // Past end of line?
+        if self.nchars == 0 || self.colno > self.nchars {
+          // Past end of line?
           // If upcoming line is empty, and there is no recognizable EOL, fake one
           if read_mode && eolch != Some('\r') {
             return Some(T_MARKER!("EOL"));
           }
-        } else { // Back up over peeked char
+        } else {
+          // Back up over peeked char
           self.colno -= 1;
         }
         // Sneak a comment out, every so often.
@@ -760,7 +770,6 @@ impl Mouth {
   /// Careful:
   /// used BOTH for flushing input for `\endinput`
   /// and for detecting line end for `\read`
-  ///
   pub fn is_eol(&mut self) -> bool {
     let savecolno = self.colno;
     // We have to peek past any ignored tokens & also spaces, if skipping
@@ -799,9 +808,7 @@ pub fn tokenize(text: &str) -> Tokens {
     return NO_TOKENS;
   }
   state::use_std_state();
-  let result = Mouth::new(text, None)
-      .unwrap()
-      .read_tokens();
+  let result = Mouth::new(text, None).unwrap().read_tokens();
   state::use_main_state();
   result
 }
@@ -811,9 +818,7 @@ pub fn tokenize_internal(text: &str) -> Tokens {
     return NO_TOKENS;
   }
   state::use_sty_state();
-  let result = Mouth::new(text, None)
-    .unwrap()
-    .read_tokens();
+  let result = Mouth::new(text, None).unwrap().read_tokens();
   state::use_main_state();
   result
 }

@@ -1,5 +1,5 @@
 //! TeX Kern
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -7,7 +7,7 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Kern Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // Basic kerning
   //----------------------------------------------------------------------
@@ -43,8 +43,8 @@ LoadDefinitions!({
     } else if props.get("isMath") == Some(&Stored::Bool(true)) {
       // TODO: Reconsider if the insert_element API needs to be based around
       // Stored map values, rather than String map values.
-      document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_string())))?; 
-    } else { 
+      document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_string())))?;
+    } else {
       // Add space to document?
       document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;
     }
@@ -73,14 +73,14 @@ LoadDefinitions!({
     }
   });
   // Get kern, if last on LIST
-  DefRegister!("\\lastkern" => Dimension::new(0), readonly => true, 
+  DefRegister!("\\lastkern" => Dimension::new(0), readonly => true,
   getter => {
     stomach::with_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
         if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
           if box_in_list.get_property_bool("isKern") {
-            let width_stored = box_in_list.get_property("width").unwrap(); 
+            let width_stored = box_in_list.get_property("width").unwrap();
             if let Stored::Dimension(ref width_d) = *width_stored {
               return *width_d;
             } else {
@@ -141,18 +141,17 @@ LoadDefinitions!({
   // \moveleft<dimen><box>, \moveright<dimen><box>
   // \moveleft<dimen><box>, \moveright<dimen><box>
   DefConstructor!("\\moveleft Dimension MoveableBox",
-    "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
-    after_digest => sub[whatsit] {
-      if let DigestedData::RegisterValue(d) = whatsit.get_arg(1).unwrap().data() {
-        whatsit.set_property("x", d.clone().multiply(Number::new(-1)));
-      }
-    });
+  "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
+  after_digest => sub[whatsit] {
+    if let DigestedData::RegisterValue(d) = whatsit.get_arg(1).unwrap().data() {
+      whatsit.set_property("x", d.clone().multiply(Number::new(-1)));
+    }
+  });
   DefConstructor!("\\moveright Dimension MoveableBox",
-    "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
-    after_digest => sub[whatsit] {
-      if let Some(dimension) = whatsit.get_arg(1) {
-        whatsit.set_property("x", dimension.clone());
-      }
-    });
-  
+  "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
+  after_digest => sub[whatsit] {
+    if let Some(dimension) = whatsit.get_arg(1) {
+      whatsit.set_property("x", dimension.clone());
+    }
+  });
 });

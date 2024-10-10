@@ -14,7 +14,7 @@ use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
 use crate::keyvals::KeyVals;
 use crate::list::List;
-use crate::state::{Scope,lookup_font};
+use crate::state::{lookup_font, Scope};
 use crate::token::*;
 use crate::whatsit::Whatsit;
 use crate::*;
@@ -62,7 +62,10 @@ impl IntoOption<Option<Reversion>> for &str {
       Some(Reversion::Tokens(Tokens!()))
     } else {
       Some(Reversion::Tokens(
-        mouth::tokenize_internal(self).pack_parameters().ok().unwrap(),
+        mouth::tokenize_internal(self)
+          .pack_parameters()
+          .ok()
+          .unwrap(),
       ))
     }
   }
@@ -145,7 +148,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
             text: arena::pin(&sized_data),
             ..Tbox::default()
           })],
-          HashMap::default()
+          HashMap::default(),
         )
       }))
     }
@@ -179,7 +182,7 @@ impl IntoTokensResult<Result<Tokens>> for Result<()> {
   fn into_tokens_result(self) -> Result<Tokens> {
     match self {
       Ok(()) => Ok(Tokens!()),
-      Err(e) => Err(e)
+      Err(e) => Err(e),
     }
   }
 }
@@ -206,8 +209,7 @@ pub trait IntoResultArgWrap<T>: Sized {
   fn into_result_argwrap(self) -> Result<ArgWrap>;
 }
 
-impl IntoResultArgWrap<Result<ArgWrap>> for crate::common::error::Error
-{
+impl IntoResultArgWrap<Result<ArgWrap>> for crate::common::error::Error {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Err(self) }
 }
 
@@ -332,9 +334,7 @@ pub trait IntoDigestedOptionResult<T>: Sized {
 }
 
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for () {
-  fn into_digested_option_result(self: ()) -> Result<Option<Digested>> {
-    Ok(None)
-  }
+  fn into_digested_option_result(self: ()) -> Result<Option<Digested>> { Ok(None) }
 }
 
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Glue {

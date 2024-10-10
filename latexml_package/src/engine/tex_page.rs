@@ -1,5 +1,5 @@
 //! TeX Page
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;

@@ -21,5 +21,5 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
   }
 }
 
-// III. That's all! Run "cargo test" in the latexml_oxide/ root and your binding will be compiled and made
-// visible to the main latexml-oxide executable
+// III. That's all! Run "cargo test" in the latexml_oxide/ root and your binding will be compiled
+// and made visible to the main latexml-oxide executable

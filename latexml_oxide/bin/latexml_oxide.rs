@@ -12,11 +12,13 @@ use std::rc::Rc;
 fn main() -> Result<(), Box<dyn Error>> {
   if latexml_core::util::logger::init(log::LevelFilter::Info).is_err() {
     let err = || {
-    Error!(
-      "latexml",
-      "logger",
-      "Failed to load logger. Please check latexml_core::util::logger installed correctly."
-    ); Ok(()) };
+      Error!(
+        "latexml",
+        "logger",
+        "Failed to load logger. Please check latexml_core::util::logger installed correctly."
+      );
+      Ok(())
+    };
     err().ok();
   }
   let mut argv = env::args();
@@ -25,11 +27,14 @@ fn main() -> Result<(), Box<dyn Error>> {
   let source = match argv.next() {
     Some(s) => s,
     None => {
-      let err = || {Error!(
-        "latexml_oxide",
-        "",
+      let err = || {
+        Error!(
+          "latexml_oxide",
+          "",
           "Please provide a source document! Exiting..."
-      ); Ok(()) };
+        );
+        Ok(())
+      };
       err().ok();
       process::exit(1);
     },
@@ -50,7 +55,10 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
     let message = s!("Could not prepare converter session! : {}", e);
-    let err = || {Error!("latexml_oxide", "session", message); Ok(())};
+    let err = || {
+      Error!("latexml_oxide", "session", message);
+      Ok(())
+    };
     err().ok();
     process::exit(1);
   }

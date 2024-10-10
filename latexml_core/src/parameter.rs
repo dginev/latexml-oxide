@@ -5,22 +5,21 @@ use regex::Regex;
 use std::fmt;
 use std::rc::Rc;
 
+use crate::common::arena::{self, SymStr, EMPTY_SYM};
 use crate::common::error::*;
 use crate::common::object::Object;
-use crate::common::arena::{self,EMPTY_SYM,SymStr};
 use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
-use crate::mouth::Mouth;
 use crate::gullet;
+use crate::mouth::Mouth;
 use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ReaderFn =
-  dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
+pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
@@ -99,9 +98,9 @@ impl fmt::Debug for Parameter {
   }
 }
 impl fmt::Display for Parameter {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
-    arena::with(self.name,|name| 
-      write!(f, "{name}")) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    arena::with(self.name, |name| write!(f, "{name}"))
+  }
 }
 
 impl PartialEq for Parameter {
@@ -109,14 +108,13 @@ impl PartialEq for Parameter {
 }
 impl Object for Parameter {
   fn stringify(&self) -> String { arena::to_string(self.spec) }
-
 }
 
 static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").unwrap());
 static SKIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Skip(.+)$").unwrap());
 
 impl Parameter {
-  pub fn new<T: AsRef<str>>(name: T, spec: T, extra:Option<Vec<Tokens>>) -> Result<Self> {
+  pub fn new<T: AsRef<str>>(name: T, spec: T, extra: Option<Vec<Tokens>>) -> Result<Self> {
     Parameter {
       name: arena::pin(name),
       spec: arena::pin(spec),
@@ -129,65 +127,88 @@ impl Parameter {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
-    let mut descriptor: Option<Rc<Parameter>> = with_mapping_sym(arena::pin_static("PARAMETER_TYPES"), self.name, |looked_up_mapping|
-      if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
-        Some(Rc::clone(d_lookup))
-      } else {
-        None
-      });
+    let mut descriptor: Option<Rc<Parameter>> = with_mapping_sym(
+      arena::pin_static("PARAMETER_TYPES"),
+      self.name,
+      |looked_up_mapping| {
+        if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
+          Some(Rc::clone(d_lookup))
+        } else {
+          None
+        }
+      },
+    );
     if descriptor.is_none() {
       // TODO: see discussion on line 168
-      let basetype_opt = arena::with(self.name, |name| OPTIONAL_REGEX.captures(name).map(|captures|
-        captures.get(1).map_or("", |m| m.as_str()).to_string())).map(arena::pin);
+      let basetype_opt = arena::with(self.name, |name| {
+        OPTIONAL_REGEX
+          .captures(name)
+          .map(|captures| captures.get(1).map_or("", |m| m.as_str()).to_string())
+      })
+      .map(arena::pin);
       if let Some(basetype) = basetype_opt {
-        descriptor = with_mapping_sym(arena::pin_static("PARAMETER_TYPES"), basetype, |basetype_param_opt|
-        match basetype_param_opt {
-          Some(Stored::Parameter(d_lookup)) => Ok(Some(d_lookup.clone())),
-          _ => match Parameter::check_reader_function(&arena::with(self.name, |name| s!("Read{name}"))) {
-            Some(reader) => Ok(Some(Rc::new(Parameter {
-              reader,
-              optional: true,
-              ..Parameter::default()
-            }))),
-            None => match Parameter::check_reader_function(&arena::with(basetype, |type_str| s!("Read{type_str}"))) {
+        descriptor = with_mapping_sym(
+          arena::pin_static("PARAMETER_TYPES"),
+          basetype,
+          |basetype_param_opt| match basetype_param_opt {
+            Some(Stored::Parameter(d_lookup)) => Ok(Some(d_lookup.clone())),
+            _ => match Parameter::check_reader_function(&arena::with(self.name, |name| {
+              s!("Read{name}")
+            })) {
               Some(reader) => Ok(Some(Rc::new(Parameter {
                 reader,
                 optional: true,
-                novalue: true,
                 ..Parameter::default()
               }))),
-              None => fatal!(
-                Parameter,
-                Init,
-                s!("Can't initialize parameter {:?}, unknown?", self.name)
-              ),
+              None => match Parameter::check_reader_function(&arena::with(basetype, |type_str| {
+                s!("Read{type_str}")
+              })) {
+                Some(reader) => Ok(Some(Rc::new(Parameter {
+                  reader,
+                  optional: true,
+                  novalue: true,
+                  ..Parameter::default()
+                }))),
+                None => fatal!(
+                  Parameter,
+                  Init,
+                  s!("Can't initialize parameter {:?}, unknown?", self.name)
+                ),
+              },
             },
           },
-        })?;
+        )?;
         self.optional = true;
       } else {
         // TODO: This looks like a code smell. Do we need a new arena method?
         // We start with a ticket, do a non-allocation operation on the underlying &str,
-        // Then want to ping the newly acquired &str slice in the arena. Clearly that is only possible
-        // *AFTER* the original &str is released, but how do we avoid allocating? 
+        // Then want to ping the newly acquired &str slice in the arena. Clearly that is only
+        // possible *AFTER* the original &str is released, but how do we avoid allocating?
         // Is this a use for unsafe{} or is there a more idiomatic way?
         // Maybe, with_mut... which allows an inner pin?
-        let basetype_opt = arena::with(self.name, |name|
-          SKIP_REGEX.captures(name).map(|captures|
-            captures.get(1).map_or("", |m| m.as_str()).to_string())).map(arena::pin);
+        let basetype_opt = arena::with(self.name, |name| {
+          SKIP_REGEX
+            .captures(name)
+            .map(|captures| captures.get(1).map_or("", |m| m.as_str()).to_string())
+        })
+        .map(arena::pin);
         if let Some(basetype) = basetype_opt {
-          descriptor = with_mapping_sym(arena::pin_static("PARAMETER_TYPES"), basetype, |basetype_param_opt|
-          match basetype_param_opt {
-            Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
-            _ => match arena::with(self.name, |name| Parameter::check_reader_function(name)) {
-              Some(reader) => Some(Rc::new(Parameter {
-                reader,
-                optional: true,
-                novalue: true,
-                ..Parameter::default()
-              })),
-              None => Parameter::check_reader_function(
-                &arena::with(basetype,|type_str| s!("Read{type_str}"))).map(|reader| {
+          descriptor = with_mapping_sym(
+            arena::pin_static("PARAMETER_TYPES"),
+            basetype,
+            |basetype_param_opt| match basetype_param_opt {
+              Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
+              _ => match arena::with(self.name, |name| Parameter::check_reader_function(name)) {
+                Some(reader) => Some(Rc::new(Parameter {
+                  reader,
+                  optional: true,
+                  novalue: true,
+                  ..Parameter::default()
+                })),
+                None => Parameter::check_reader_function(&arena::with(basetype, |type_str| {
+                  s!("Read{type_str}")
+                }))
+                .map(|reader| {
                   Rc::new(Parameter {
                     reader,
                     optional: true,
@@ -195,21 +216,23 @@ impl Parameter {
                     ..Parameter::default()
                   })
                 }),
+              },
             },
-          });
+          );
           if let Some(ref _desc) = descriptor {
             self.novalue = true;
             self.optional = true;
           }
         } else {
           descriptor =
-            Parameter::check_reader_function(&arena::with(self.name, |name| s!("Read{name}")))
-              .map(|reader| {
-              Rc::new(Parameter {
-                reader,
-                ..Parameter::default()
-              })
-            });
+            Parameter::check_reader_function(&arena::with(self.name, |name| s!("Read{name}"))).map(
+              |reader| {
+                Rc::new(Parameter {
+                  reader,
+                  ..Parameter::default()
+                })
+              },
+            );
         }
       }
     }
@@ -237,15 +260,15 @@ impl Parameter {
         Unknown,
         arena::with2(self.name, self.spec, |name, spec| s!(
           "Unrecognized parameter type with name {:?}, spec {:?}",
-          name, spec))
+          name,
+          spec
+        ))
       ),
     }
     // Last but not least, initialize any "inner" parameters
-    self.inner = self.inner.map(|inner_ps| {
-      inner_ps
-        .init()
-        .expect("inner param init shouldn't fail?")
-    });
+    self.inner = self
+      .inner
+      .map(|inner_ps| inner_ps.init().expect("inner param init shouldn't fail?"));
     Ok(self)
   }
 
@@ -254,12 +277,13 @@ impl Parameter {
     // TODO: This function doesn't have a direct Rust equivalent, since the metaprogramming isn't
     // possible But what is the exact purpose of seeking through the pool namespace? Wouldn't
     // any parameter be already assigned in the state::
-    with_mapping("PARAMETER_TYPES", name, |param_opt|
+    with_mapping("PARAMETER_TYPES", name, |param_opt| {
       if let Some(Stored::Parameter(param)) = param_opt {
         Some(param.reader.clone())
       } else {
         None
-      })
+      }
+    })
   }
 
   pub fn setup_catcodes(&self) {
@@ -275,11 +299,7 @@ impl Parameter {
     Ok(())
   }
 
-  pub fn read(
-    &self,
-
-    fordefn: Option<&dyn Definition>,
-  ) -> Result<ArgWrap> {
+  pub fn read(&self, fordefn: Option<&dyn Definition>) -> Result<ArgWrap> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -318,27 +338,25 @@ impl Parameter {
     };
     self.revert_catcodes()?;
 
-    let checked_value = if !self.optional
-      && !self.novalue
-      && (value_arg.is_none() && self.predigest.is_none())
-    {
-      // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in
-      // the long-run        Until *may* have a value, but it also may *not*, both OK. So...
-      // except it from the error message here
-      if !arena::with(self.name,|name| name.starts_with("Until")) {
-        let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
-        Error!(
-          "expected",
-          self,
-          s!("Missing argument {} for {}", self.stringify(), fordefn_str)
-        );
-        ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
+    let checked_value =
+      if !self.optional && !self.novalue && (value_arg.is_none() && self.predigest.is_none()) {
+        // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens>
+        // in the long-run        Until *may* have a value, but it also may *not*, both OK.
+        // So... except it from the error message here
+        if !arena::with(self.name, |name| name.starts_with("Until")) {
+          let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
+          Error!(
+            "expected",
+            self,
+            s!("Missing argument {} for {}", self.stringify(), fordefn_str)
+          );
+          ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
+        } else {
+          value_arg
+        }
       } else {
         value_arg
-      }
-    } else {
-      value_arg
-    };
+      };
     Ok(checked_value)
   }
 
@@ -352,25 +370,23 @@ impl Parameter {
       self.setup_catcodes();
       if value_arg.is_tokens() {
         if let Some(value) = value_arg.owned_tokens() {
-          let neutralized = gullet::reading_from_mouth(Mouth::default(),
-                    move || {
-              gullet::unread(value);
-              let mut tokens = Vec::new();
-              loop {
-                match gullet::get_pending_comment() {
-                  Some(token) => tokens.push(token),
-                  None => match gullet::read_x_token(Some(true), false, None) {
-                    Ok(token_opt) => match token_opt {
-                      Some(token) => tokens.push(token),
-                      None => break,
-                    },
-                    Err(x) => return Err(x),
-                  }
-                }
+          let neutralized = gullet::reading_from_mouth(Mouth::default(), move || {
+            gullet::unread(value);
+            let mut tokens = Vec::new();
+            loop {
+              match gullet::get_pending_comment() {
+                Some(token) => tokens.push(token),
+                None => match gullet::read_x_token(Some(true), false, None) {
+                  Ok(token_opt) => match token_opt {
+                    Some(token) => tokens.push(token),
+                    None => break,
+                  },
+                  Err(x) => return Err(x),
+                },
               }
-              Ok(Tokens::new(tokens).neutralize(&[]))
-            },
-          )?;
+            }
+            Ok(Tokens::new(tokens).neutralize(&[]))
+          })?;
           value_arg = ArgWrap::Tokens(neutralized);
         } else {
           value_arg = ArgWrap::default();
@@ -418,7 +434,7 @@ impl Parameter {
           value.unlist(),
           self.inner.as_ref(),
           &self.extra,
-              )?))
+        )?))
       } else {
         Ok(None)
       }
@@ -436,21 +452,28 @@ impl Parameter {
   pub fn reparse(&self, tokens: Tokens) -> Result<ArgWrap> {
     // Needs neutralization, since the keyvals may have been tokenized already???
     // perhaps a better test would involve whether $tokens is, in fact, Tokens?
-    if self.name == arena::pin_static("Plain") || self.predigest.is_some() {    // Gack!
-      Ok(ArgWrap::Tokens(tokens)) }
-    else if self.semiverbatim.is_some() { // Needs neutralization
-       // but maybe specific to catcodes
-       Ok(ArgWrap::Tokens(
-        tokens.neutralize(self.semiverbatim.as_ref().unwrap().as_slice())))
+    if self.name == arena::pin_static("Plain") || self.predigest.is_some() {
+      // Gack!
+      Ok(ArgWrap::Tokens(tokens))
+    } else if self.semiverbatim.is_some() {
+      // Needs neutralization
+      // but maybe specific to catcodes
+      Ok(ArgWrap::Tokens(
+        tokens.neutralize(self.semiverbatim.as_ref().unwrap().as_slice()),
+      ))
     } else {
-      gullet::reading_from_mouth(Mouth::default(), || { // start with empty mouth
+      gullet::reading_from_mouth(Mouth::default(), || {
+        // start with empty mouth
         let mut tokens = tokens.unlist();
         if !tokens.is_empty() // Strip outer braces from dimensions & friends
-          && arena::with(self.name,|name| matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"))
-          && tokens.first().map(|t| t.get_catcode() == Catcode::BEGIN).unwrap_or(false) 
-          && tokens.last().map(|t| t.get_catcode() == Catcode::END).unwrap_or(false) {
+          && arena::with(self.name,|name|
+              matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"))
+          && tokens.first().map(|t| t.get_catcode() == Catcode::BEGIN)
+              .unwrap_or(false)
+          && tokens.last().map(|t| t.get_catcode() == Catcode::END).unwrap_or(false)
+        {
           tokens.remove(0);
-          tokens.pop(); 
+          tokens.pop();
         }
         gullet::unread_vec(tokens); // but put back tokens to be read
         let value = self.read(None)?;
@@ -515,10 +538,7 @@ impl Parameters {
     Ok(self)
   }
 
-  pub fn read_arguments(
-    &self,
-    fordefn: Option<&dyn Definition>,
-  ) -> Result<Vec<ArgWrap>> {
+  pub fn read_arguments(&self, fordefn: Option<&dyn Definition>) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::new();
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
@@ -537,25 +557,19 @@ impl Parameters {
     Ok(args)
   }
 
-  pub fn read_arguments_and_digest(
-    &self,
-    fordefn: &Constructor,
-  ) -> Result<Vec<Option<Digested>>> {
+  pub fn read_arguments_and_digest(&self, fordefn: &Constructor) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
     for parameter in &self.0 {
       let value = parameter.read(Some(fordefn))?;
       if !parameter.novalue {
-        let digested_value = parameter.digest( value, Some(fordefn))?;
+        let digested_value = parameter.digest(value, Some(fordefn))?;
         args.push(digested_value);
       }
     }
     Ok(args)
   }
 
-  pub fn reparse_argument(
-    &self,
-    value: ArgWrap
-  ) -> Result<Vec<ArgWrap>> {
+  pub fn reparse_argument(&self, value: ArgWrap) -> Result<Vec<ArgWrap>> {
     if value.is_none() {
       return Ok(Vec::new());
     }
@@ -570,9 +584,7 @@ impl Parameters {
     })
   }
 
-  pub fn as_keysets(&self) -> Vec<String> {
-    self.0.iter().map(|p| p.stringify()).collect()
-  }
+  pub fn as_keysets(&self) -> Vec<String> { self.0.iter().map(|p| p.stringify()).collect() }
 }
 impl fmt::Display for Parameters {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -603,10 +615,8 @@ impl ToTokens for Parameters {
 
 impl ToTokens for Parameter {
   fn to_tokens(&self, stream: &mut TokenStream) {
-    let name = arena::with(self.name,|name|
-      quote!(arena::pin_static(#name)));
-    let spec = arena::with(self.spec,|spec|
-      quote!(arena::pin_static(#spec)));
+    let name = arena::with(self.name, |name| quote!(arena::pin_static(#name)));
+    let spec = arena::with(self.spec, |spec| quote!(arena::pin_static(#spec)));
     let extra = &self.extra;
     let inner = match &self.inner {
       None => quote!(None),

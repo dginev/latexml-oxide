@@ -22,9 +22,7 @@ impl Default for Float {
 }
 
 impl Object for Float {
-  fn revert(&self) -> Result<Tokens> {
-    Ok(Tokens::new(ExplodeText!(&self.to_string())))
-  }
+  fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
   fn stringify(&self) -> String { s!("Float[{}]", self.0) }
 }
 

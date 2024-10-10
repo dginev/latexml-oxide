@@ -1,5 +1,5 @@
 //! TeX Paragraph
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
 use latexml_core::document::helpers::prune_empty_para;
@@ -12,8 +12,8 @@ LoadDefinitions!({
   //======================================================================
   // Spacing tweaks
   //----------------------------------------------------------------------
-  // \ignorespaces           c  makes TeX read and expand tokens but do nothing until a nonspace token is reached.
-  // \noboundary             c  if present, breaks ligatures and kerns.
+  // \ignorespaces           c  makes TeX read and expand tokens but do nothing until a nonspace
+  // token is reached. \noboundary             c  if present, breaks ligatures and kerns.
   // \vadjust                c  inserts a vertical list between two lines in a paragraph.
 
   DefPrimitive!("\\ignorespaces SkipSpaces", None);
@@ -29,7 +29,7 @@ LoadDefinitions!({
   // \indent                 c  begins a new paragraph indented by \parindent.
   // \noindent               c  begins a new paragraph that is not indented.
   // \par                    c  is an explicit command to end a paragraph.
-  DefRegister!("\\everypar", Tokens!());  
+  DefRegister!("\\everypar", Tokens!());
   // These determine whether the _next_ paragraph gets indented!
   // thus it needs \par to check whether such indentation has been set.
   DefConstructor!("\\indent", sub[document] {
@@ -59,7 +59,7 @@ LoadDefinitions!({
     }
   });
 
-    // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
+  // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
   // A para can contain both p and displayed equations and such.
 
   // Remember; \par _closes_, not opens, paragraphs!
@@ -69,7 +69,7 @@ LoadDefinitions!({
   // ignored in the preamble.
   let mut skippable_props: SymHashMap<Stored> = SymHashMap::default();
   skippable_props.insert("alignmentSkippable", Stored::Bool(true));
-    
+
   DefConstructor!("\\lx@normal@par",
     sub[document, _args, props] {
       if !prop_bool!(props, "inPreamble") {
@@ -143,29 +143,31 @@ LoadDefinitions!({
   //======================================================================
   // Paragraph Shape
   //----------------------------------------------------------------------
-  // \prevgraf               iq is the number of lines in the paragraph most recently completed or partially completed.
-  // \spacefactor            iq controls interword spacing.
+  // \prevgraf               iq is the number of lines in the paragraph most recently completed or
+  // partially completed. \spacefactor            iq controls interword spacing.
   // \emergencystretch       pd is glue used in the third pass made for bad paragraphs.
   // \hangindent             pd is the amount of hanging indentation.
   // \hsize                  pd is the width of normal lines in a paragraph.
   // \lineskiplimit          pd is the cutoff used to select between \baselineskip and \lineskip.
   // \parindent              pd is the width of indentation at the beginning of a paragraph.
-  // \baselineskip           pg is glue added between lines to keep their baselines consistently spaced.
-  // \leftskip               pg is glue added at the left of every line in a paragraph.
+  // \baselineskip           pg is glue added between lines to keep their baselines consistently
+  // spaced. \leftskip               pg is glue added at the left of every line in a paragraph.
   // \rightskip              pg is glue added at the right of every line in a paragraph.
-  // \lineskip               pg is alternate interline glue used if the \baselineskip glue is not feasible   .
-  // \parskip                pg is extra glue put between paragraphs.
+  // \lineskip               pg is alternate interline glue used if the \baselineskip glue is not
+  // feasible   . \parskip                pg is extra glue put between paragraphs.
   // \parfillskip            pg is glue which finishs the last line of a paragraph.
   // \spaceskip              pg is alternate interword glue.
   // \xspaceskip             pg is alternate intersentence glue.
   // \adjdemerits            pi holds the demerits for visually incompatible adjacent lines.
-  // \doublehyphendemerits   pi holds the demerits added if two consecutive lines end with discretionary breaks.
-  // \finalhyphendemerits    pi holds the demerits added if the penultimate line in a paragraph ends with a discretionary break.
-  // \hangafter              pi is the number of lines before hanging indentation changes.
-  // \looseness              pi tells TeX to try and increase or decrease the number of lines in a paragraph.
-  
+  // \doublehyphendemerits   pi holds the demerits added if two consecutive lines end with
+  // discretionary breaks. \finalhyphendemerits    pi holds the demerits added if the penultimate
+  // line in a paragraph ends with a discretionary break. \hangafter              pi is the number
+  // of lines before hanging indentation changes. \looseness              pi tells TeX to try and
+  // increase or decrease the number of lines in a paragraph.
+
   // \tolerance              pi is the acceptable \badness of lines after hyphenation.
-  // \pretolerance           pi is the acceptable \badness of lines in a paragraph before hyphenation is attempted.
+  // \pretolerance           pi is the acceptable \badness of lines in a paragraph before
+  // hyphenation is attempted.
   DefRegister!("\\spacefactor", Number!(0));
   DefRegister!("\\prevgraf", Number!(0));
   DefRegister!("\\emergencystretch", Dimension!("0"));
@@ -188,6 +190,4 @@ LoadDefinitions!({
   DefRegister!("\\looseness", Number!(0));
   DefRegister!("\\tolerance", Number!(200));
   DefRegister!("\\pretolerance", Number!(100));
-
-
 });

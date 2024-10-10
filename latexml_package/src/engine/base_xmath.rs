@@ -1,5 +1,5 @@
 //! Base XMath
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
 use std::collections::hash_map::Entry;
@@ -21,7 +21,7 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Some of this stuff is more semantic versions of declarations in
   // plain or latex. Is this the right place for them?
-  
+
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Normally, the content branch contains the pure structure and meaning of a construct,
   // and the presentation is generated from lower level TeX macros that only concern
@@ -34,12 +34,12 @@ LoadDefinitions!({
   // whereever it seems sensible on the presentation branch, after it has been generated.
   // This appears to be obsolete/no-longer-used, but keep for future reference.
   DefConstructor!("\\lx@assert@meaning{}{}", "#2",
-    reversion      => "#2",
-    after_construct => sub[document,whatsit] {
-      let node    = document.get_node().clone(); // This should be the wrapper just added.
-      let meaning = whatsit.get_arg(1).unwrap().to_string();
-      add_meaning_rec(document, node, meaning)?;
-    });
+  reversion      => "#2",
+  after_construct => sub[document,whatsit] {
+    let node    = document.get_node().clone(); // This should be the wrapper just added.
+    let meaning = whatsit.get_arg(1).unwrap().to_string();
+    add_meaning_rec(document, node, meaning)?;
+  });
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Support for constructing mathematical expressions
   // # Common XMath pattern for assigning attributes from Whatsit properties.
@@ -98,7 +98,8 @@ LoadDefinitions!({
 
   // sub I_symbol {
   //   my ($kv, $text) = @_;
-  //   return Tokens(T_CS('\lx@symbol'), I_keyvals($kv), T_BEGIN, (defined $text ? $text : ()), T_END); }
+  //   return Tokens(T_CS('\lx@symbol'), I_keyvals($kv), T_BEGIN, (defined $text ? $text : ()),
+  // T_END); }
 
   // sub I_wrap {
   //   my ($kv, @stuff) = @_;
@@ -107,13 +108,13 @@ LoadDefinitions!({
   // # These two accept key operator_meaning, operator_omcd to give a meaning to the sub/superscript
   // # NOTE (BUG): We SHOULD nest paired sub/superscripts, but avoid conflicting double scripts
   // # To do that we need to sniff at the base, whether it already contains scripts.
-  // # However, IsScript isn't quite sufficient if the scripts are hidden within Whatsits, duals, etc.
-  // # Currently, LaTeXML manages to deal with the double scripts anyway;
-  // # The reversion ALWAYS wraps the base (which will render non-optimally in images but avoid Errors)
-  // DefConstructor('\lx@superscript OptionalKeyVals:XMath {} InScriptStyle',
+  // # However, IsScript isn't quite sufficient if the scripts are hidden within Whatsits, duals,
+  // etc. # Currently, LaTeXML manages to deal with the double scripts anyway;
+  // # The reversion ALWAYS wraps the base (which will render non-optimally in images but avoid
+  // Errors) DefConstructor('\lx@superscript OptionalKeyVals:XMath {} InScriptStyle',
   //   "<ltx:XMApp $XMath_attributes>"
-  //     . "<ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/>"
-  //     . "<ltx:XMArg>#2</ltx:XMArg>"
+  //     . "<ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd'
+  // scriptpos='#scriptpos'/>"     . "<ltx:XMArg>#2</ltx:XMArg>"
   //     . "<ltx:XMArg rule='Superscript'>#3</ltx:XMArg>"
   //     . "</ltx:XMApp>",
   //   afterDigest => sub { XMath_copy_keyvals(@_); },
@@ -123,19 +124,20 @@ LoadDefinitions!({
   //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
   //     (IsEmpty($sup)
   //       ? Revert($base)
-  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUPER, revertScript($sup))); },
-  //   properties => sub {
+  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUPER,
+  // revertScript($sup))); },   properties => sub {
   //     my ($stomach, $kv, $base, $script) = @_;
   //     my $basetype = IsScript($base);
   //     my $bump     = ($basetype && ($$basetype[1] eq 'SUPERSCRIPT') ? 1 : 0);
   //     (scriptpos => "post" . ($_[0]->getScriptLevel + $bump),
   //       bump => $bump); },
-  //   sizer => sub { scriptSizer($_[0]->getArg(3), $_[0]->getArg(2), undef, 'SUPERSCRIPT', 'post'); });
+  //   sizer => sub { scriptSizer($_[0]->getArg(3), $_[0]->getArg(2), undef, 'SUPERSCRIPT', 'post');
+  // });
 
   // DefConstructor('\lx@subscript OptionalKeyVals:XMath {} InScriptStyle',
   //   "<ltx:XMApp $XMath_attributes>"
-  //     . "<ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/>"
-  //     . "<ltx:XMArg>#2</ltx:XMArg>"
+  //     . "<ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd'
+  // scriptpos='#scriptpos'/>"     . "<ltx:XMArg>#2</ltx:XMArg>"
   //     . "<ltx:XMArg rule='Subscript'>#3</ltx:XMArg>"
   //     . "</ltx:XMApp>",
   //   afterDigest => sub { XMath_copy_keyvals(@_); },
@@ -145,29 +147,37 @@ LoadDefinitions!({
   //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
   //     (IsEmpty($sub)
   //       ? Revert($base)
-  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUB, revertScript($sub))); },
-  //   properties => sub {
+  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUB,
+  // revertScript($sub))); },   properties => sub {
   //     my ($stomach, $kv, $base, $script) = @_;
   //     my $basetype = IsScript($base);
   //     my $bump     = ($basetype && ($$basetype[1] eq 'SUBSCRIPT') ? 1 : 0);
   //     (scriptpos => "post" . ($_[0]->getScriptLevel + $bump),
   //       bump => $bump); },
-  //   sizer => sub { scriptSizer($_[0]->getArg(3), $_[0]->getArg(2), undef, 'SUBSCRIPT', 'post'); });
+  //   sizer => sub { scriptSizer($_[0]->getArg(3), $_[0]->getArg(2), undef, 'SUBSCRIPT', 'post');
+  // });
 
   // # Ignore $kv for the moment?????
   // sub I_subscript {
   //   my ($kv, $base, $script) = @_;
-  //   return Tokens(T_CS('\lx@subscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script, T_END); }
+  //   return Tokens(T_CS('\lx@subscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script,
+  // T_END); }
 
   // sub I_superscript {
   //   my ($kv, $base, $script) = @_;
-  //   return Tokens(T_CS('\lx@superscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script, T_END); }
+  //   return Tokens(T_CS('\lx@superscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN,
+  // $script, T_END); }
 
   // Superscript meaning power
-  DefMacro!("\\lx@power{}{}", "\\lx@superscript[operator_meaning=power]{#1}{#2}");
+  DefMacro!(
+    "\\lx@power{}{}",
+    "\\lx@superscript[operator_meaning=power]{#1}{#2}"
+  );
   // Superscript meaning functional (or applicative) power; iterated function/operator application
-  DefMacro!("\\lx@functionalpower{}{}",
-    "\\lx@superscript[operator_meaning=functional-power]{#1}{#2}");
+  DefMacro!(
+    "\\lx@functionalpower{}{}",
+    "\\lx@superscript[operator_meaning=functional-power]{#1}{#2}"
+  );
 
   // These to be used in presentation side
   DefMath!("\\lx@ApplyFunction", None, "\u{2061}", reversion => "", name => "", role =>"APPLYOP");
@@ -197,8 +207,8 @@ LoadDefinitions!({
   // # Building XMDuals for Mathematical Parallel markup
   // # Used when the content and presentation forms have different structure.
 
-  DefKeyVal!("XMath", "reversion",              "UndigestedDefKey");
-  DefKeyVal!("XMath", "content_reversion",      "UndigestedDefKey");
+  DefKeyVal!("XMath", "reversion", "UndigestedDefKey");
+  DefKeyVal!("XMath", "content_reversion", "UndigestedDefKey");
   DefKeyVal!("XMath", "presentation_reversion", "UndigestedDefKey");
 
   DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
@@ -399,11 +409,13 @@ LoadDefinitions!({
   //======================================================================
 
   // We OUGHT to be able to do this using \llap,\rlap,\hss...
-  DefMacro!("\\lx@tweaked{}{}",
-  r"\ifmmode\lx@math@tweaked{#1}{#2}\else\lx@text@tweaked{#1}{#2}\fi");
+  DefMacro!(
+    "\\lx@tweaked{}{}",
+    r"\ifmmode\lx@math@tweaked{#1}{#2}\else\lx@text@tweaked{#1}{#2}\fi"
+  );
   // TODO:
-  // DefConstructor!("\\lx@math@tweaked RequiredKeyVals {}", "<ltx:XMWrap $XMath_attributes>#2</ltx:XMWrap>",
-  //   afterDigest => sub {
+  // DefConstructor!("\\lx@math@tweaked RequiredKeyVals {}", "<ltx:XMWrap
+  // $XMath_attributes>#2</ltx:XMWrap>",   afterDigest => sub {
   //     my ($stomach, $whatsit) = @_;
   //     my ($kv,      $body)    = $whatsit->getArgs;
   //     XMath_copy_keyvals($stomach, $whatsit);
@@ -674,11 +686,15 @@ LoadDefinitions!({
   //     Let("\\\\", '\lx@alignment@newline');
   // });
 
-  DefPrimitive!("\\lx@end@gen@matrix", { egroup()?; });
+  DefPrimitive!("\\lx@end@gen@matrix", {
+    egroup()?;
+  });
 
-  DefMacro!("\\lx@gen@plain@matrix{}{}",
+  DefMacro!(
+    "\\lx@gen@plain@matrix{}{}",
     "\\lx@gen@matrix@bindings{#1}\
-      \\lx@gen@plain@matrix@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}\\lx@end@gen@matrix");
+      \\lx@gen@plain@matrix@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}\\lx@end@gen@matrix"
+  );
 
   // # The delimiters on a matrix are presumably just for notation or readability (not an operator);
   // # the array data itself is the matrix.
@@ -714,7 +730,7 @@ LoadDefinitions!({
   //     $whatsit->setProperties(alignment => LookupValue('Alignment'));
   //     return; });
 
-    //----------------------------------------------------------------------
+  //----------------------------------------------------------------------
   // Cases: Generalized
   // keys are
   //  name  : the name of the command (for reversion)
@@ -748,15 +764,19 @@ LoadDefinitions!({
   //               T_CS('\hfil')) }]),
   //       'math');
   //     Let("\\\\", '\lx@alignment@newline');
-  //     DefMacro('\lx@alignment@row@before', '');    # Don't inherit counter stepping from containing environments
-  //     DefMacro('\lx@alignment@row@after',  '');
+  //     DefMacro('\lx@alignment@row@before', '');    # Don't inherit counter stepping from
+  // containing environments     DefMacro('\lx@alignment@row@after',  '');
   // });
 
-  DefMacro!("\\lx@gen@plain@cases{}{}",
+  DefMacro!(
+    "\\lx@gen@plain@cases{}{}",
     "\\lx@gen@cases@bindings{#1}\
       \\lx@gen@plain@cases@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}
-      \\lx@end@gen@cases");
-  DefPrimitive!("\\lx@end@gen@cases", { egroup()?; });
+      \\lx@end@gen@cases"
+  );
+  DefPrimitive!("\\lx@end@gen@cases", {
+    egroup()?;
+  });
 
   // The logical structure for cases extracts the columns of the alignment
   // to give alternating value,condition (an empty condition is replaced by "otherwise" !?!?!)
@@ -767,8 +787,8 @@ LoadDefinitions!({
   //     my ($document) = @_;
   //     if (my $point = $document->getElement->lastChild) {
   //       # Get the sequence of alternating (case, condition).
-  //       # Expecting ltx:XMArray/ltx:XMRow/ltx:XMCell [should have /ltx:XMArg, but could be empty!!!]
-  //       my @cells = $document->findnodes('ltx:XMArray/ltx:XMRow/ltx:XMCell', $point);
+  //       # Expecting ltx:XMArray/ltx:XMRow/ltx:XMCell [should have /ltx:XMArg, but could be
+  // empty!!!]       my @cells = $document->findnodes('ltx:XMArray/ltx:XMRow/ltx:XMCell', $point);
   //       my @stuff = map { ($_->hasChildNodes ? createXMRefs($document, element_nodes($_))
   //           : ['ltx:XMText', {}, 'otherwise']) } @cells;
   //       $document->replaceTree(['ltx:XMDual', {},
@@ -781,9 +801,7 @@ LoadDefinitions!({
   //     (T_CS('\cases'), T_BEGIN, Revert($body), T_END); });
 
   // TODO: Continue MathFork and equationgroup
-
 });
-
 
 pub fn add_meaning_rec(_document: &mut Document, _node: Node, _meaning: String) -> Result<()> {
   // if ($node->nodeType == XML_ELEMENT_NODE) {
@@ -795,6 +813,6 @@ pub fn add_meaning_rec(_document: &mut Document, _node: Node, _meaning: String) 
   //       $document->setAttribute($node, meaning => $meaning); } }
   //   else {
   //     foreach my $c ($node->childNodes) {
-        // addMeaningRec($document, $c, $meaning); } } }
-    todo!()
+  // addMeaningRec($document, $c, $meaning); } } }
+  todo!()
 }

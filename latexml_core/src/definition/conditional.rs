@@ -20,7 +20,7 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
-use crate::{gullet,state};
+use crate::{gullet, state};
 
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
@@ -140,16 +140,10 @@ impl Definition for Conditional {
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
   // Not implemented for expandable
-  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
-    todo!()
-  }
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> { todo!() }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-  ) -> Result<Vec<Node>> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
@@ -246,11 +240,7 @@ impl Conditional {
   //   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // The inner \ifx should expand to "XY junk", since A==A
   // Return the token we've skipped to, and the frame that this applies to.
-  fn skip_conditional_body(
-    &self,
-    nskips: i64,
-
-  ) -> Result<Tokens> {
+  fn skip_conditional_body(&self, nskips: i64) -> Result<Tokens> {
     let mut level = 1;
     let mut n_ors = 0;
     let _start = gullet::get_locator();
@@ -267,7 +257,7 @@ impl Conditional {
         Some(ConditionalType::Fi) => {
           // Found a \fi
           let local_frame = get_ifframe();
-          let maybe_last = with_value_mut("if_stack",|value_opt| {
+          let maybe_last = with_value_mut("if_stack", |value_opt| {
             if let Some(Stored::VecDequeStored(stack)) = value_opt {
               if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
                 if *stack_frame.borrow() != *local_frame.as_ref().unwrap().borrow() {
@@ -332,7 +322,7 @@ impl Conditional {
   }
 
   fn invoke_else(&self) -> Result<Tokens> {
-    let stack_frame_opt = with_value_mut("if_stack", |stack_opt|
+    let stack_frame_opt = with_value_mut("if_stack", |stack_opt| {
       if let Some(Stored::VecDequeStored(stack)) = stack_opt {
         if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
           Some(Rc::clone(stack_frame))
@@ -341,7 +331,8 @@ impl Conditional {
         }
       } else {
         None
-      });
+      }
+    });
     let local_token = get_current_token().unwrap();
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
@@ -382,17 +373,17 @@ impl Conditional {
   }
 
   fn invoke_fi(&self) -> Result<Tokens> {
-    let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> =
-      with_value("if_stack", |stack_opt|
-        if let Some(Stored::VecDequeStored(ref stack)) = stack_opt {
-          if let Some(Stored::IfFrame(frame)) = stack.front() {
-            Some(Rc::clone(frame))
-          } else {
-            None
-          }
+    let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> = with_value("if_stack", |stack_opt| {
+      if let Some(Stored::VecDequeStored(ref stack)) = stack_opt {
+        if let Some(Stored::IfFrame(frame)) = stack.front() {
+          Some(Rc::clone(frame))
         } else {
           None
-        });
+        }
+      } else {
+        None
+      }
+    });
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test

@@ -4,27 +4,27 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 
+use super::keyval::{has_keyval, keyval_get, keyval_qname};
 use crate::common::arena::SymHashMap;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::gullet::{self, ExpansionLevel};
 use crate::definition::argument::ArgWrap;
 use crate::document::Document;
+use crate::gullet::{self, ExpansionLevel};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, NO_PROPERTIES};
-use super::keyval::{keyval_qname, keyval_get,has_keyval};
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 struct KVData {
   key: String,
   value: Option<ArgWrap>,
   use_default: bool,
   primary_keyset: String,
   keysets: Vec<String>,
-  digested_value: Option<Digested>  
+  digested_value: Option<Digested>,
 }
 
 #[allow(dead_code)] // TODO: remove when KeyVals is fully implemented
@@ -91,27 +91,38 @@ impl Object for KeyVals {
       );
     } else {
       crate::stomach::digest(self.set_keys_expansion())?;
-    }  
+    }
 
     // iterate over the tuples, digesting the values
     for tuple in self.tuples.iter_mut() {
-      let KVData {key, value, primary_keyset, digested_value, ..} = tuple;
-      if digested_value.is_none() {// avoid accidental repeats?
+      let KVData {
+        key,
+        value,
+        primary_keyset,
+        digested_value,
+        ..
+      } = tuple;
+      if digested_value.is_none() {
+        // avoid accidental repeats?
         let keytype_opt = keyval_get(&keyval_qname(&self.prefix, primary_keyset, key), "type");
-        let v       = if let Some(Stored::Parameter(keytype)) = keytype_opt {
+        let v = if let Some(Stored::Parameter(keytype)) = keytype_opt {
           if let Some(v) = value.take() {
             keytype.digest(v, None)?
-          } else { None }
+          } else {
+            None
+          }
         } else if let Some(v) = value.take() {
           Some(v.be_digested()?)
-        } else { None };
+        } else {
+          None
+        };
         tuple.digested_value = v;
       }
     }
     // TODO: DG: KeyVals digestion feels very iffy while porting it over to Rust.
-    // had to add an explicit "rebuild" to cache the digested values in the new "cached_hash_digested"
-    // It feels like the entire object should be reorganized to leverage a little more of the well-typed
-    // capabilities we have here.
+    // had to add an explicit "rebuild" to cache the digested values in the new
+    // "cached_hash_digested" It feels like the entire object should be reorganized to leverage
+    // a little more of the well-typed capabilities we have here.
     self.rebuild(None);
     self.was_digested = true;
     Ok(self.into())
@@ -127,9 +138,7 @@ impl BoxOps for KeyVals {
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
     todo!();
   }
-  fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
-    Ok(Vec::new())
-  } // TODO
+  fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
   fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,
@@ -142,7 +151,7 @@ impl BoxOps for KeyVals {
     todo!() // TODO
   }
 }
-#[derive(Debug,Clone,Default,PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum SkipMissing {
   #[default]
   /// throw errors
@@ -150,7 +159,7 @@ pub enum SkipMissing {
   /// silently ignore all missing keys
   All,
   /// store all missing keys under the provided token
-  Store(Token)
+  Store(Token),
 }
 
 #[derive(Default)]
@@ -175,7 +184,15 @@ impl KeyVals {
   ///**********************************************************************
   pub fn new(options: KeyvalsConfig) -> Self {
     // parse all the arguments
-    let KeyvalsConfig { prefix, mut keysets, set_all, set_internals, skip, skip_missing, hook_missing } = options;
+    let KeyvalsConfig {
+      prefix,
+      mut keysets,
+      set_all,
+      set_internals,
+      skip,
+      skip_missing,
+      hook_missing,
+    } = options;
     let prefix = prefix.unwrap_or_else(|| String::from("KV"));
     if keysets.is_empty() {
       keysets = vec![String::from("_anonymous_")];
@@ -195,12 +212,16 @@ impl KeyVals {
   //======================================================================
   // Resolution to KeySets
   //======================================================================
-  
+
   /// Return a list of the keysets in which this key is defined
   fn resolve_keyval_for(&self, key: &str) -> Vec<String> {
-    let prefix     = &self.prefix;
+    let prefix = &self.prefix;
     let allkeysets = &self.keysets;
-    let keysets : Vec<_> = self.keysets.iter().filter(|kset| has_keyval(prefix, kset, key)).collect();
+    let keysets: Vec<_> = self
+      .keysets
+      .iter()
+      .filter(|kset| has_keyval(prefix, kset, key))
+      .collect();
     // throw an error (not really), unless we record the missing macros
     // Since we're not as obsessive about declaring ALL keys, we'll soften the blow
     if keysets.is_empty() {
@@ -209,40 +230,40 @@ impl KeyVals {
         Info!("undefined", "Encountered unknown KeyVals key",
           s!("'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"));
       }
-      return Vec::new(); 
+      return Vec::new();
     }
     // return either the first or all of the KeyVal objects
     // TODO: SymStr would avoid the allocation.
-    if self.set_all { 
+    if self.set_all {
       keysets.into_iter().cloned().collect()
     } else {
-      vec![keysets[0].clone()] 
+      vec![keysets[0].clone()]
     }
   }
 
-  fn can_resolve_keyval_for(&self, key:&str) -> bool {
+  fn can_resolve_keyval_for(&self, key: &str) -> bool {
     // iterate over the keysets
-    self.keysets.iter().any(|keyset| has_keyval(&self.prefix, keyset, key) )
+    self
+      .keysets
+      .iter()
+      .any(|keyset| has_keyval(&self.prefix, keyset, key))
   }
 
   /// Return the 1st of the keysets, or the 1st one of the KeyVals itself
   fn get_primary_keyval<'a>(&'a self, keysets: &'a [String]) -> &'a str {
     match keysets.first() {
       None => self.keysets[0].as_str(),
-      Some(kset) => kset.as_str()
+      Some(kset) => kset.as_str(),
     }
   }
 
-  fn read_keyword_from(
-    &self,
-    close: Token,
-  ) -> Result<(Tokens, Option<Token>)> {
+  fn read_keyword_from(&self, close: Token) -> Result<(Tokens, Option<Token>)> {
     // set of tokens we will expand
     let mut tokens = Vec::new();
     let delim = &[close, T_OTHER!(","), T_OTHER!("=")];
     // skip leading spaces
     gullet::skip_spaces()?;
-    
+
     let mut last_token = None;
     while let Some(token) = gullet::read_x_token(None, false, None)? {
       // skip to the next iteration if we have a paragraph
@@ -398,29 +419,50 @@ impl KeyVals {
     // and return the list of tokens
     Tokens::new(tokens)
   }
-  
-  pub fn revert(&self) -> Result<Tokens> {  
+
+  pub fn revert(&self) -> Result<Tokens> {
     let mut tokens = Vec::new();
     // iterate over the key-value pairs
     for tuple in &self.tuples {
-      let KVData { key, value, use_default, keysets:_, primary_keyset, digested_value:_ } = tuple;
+      let KVData {
+        key,
+        value,
+        use_default,
+        keysets: _,
+        primary_keyset,
+        digested_value: _,
+      } = tuple;
       if !primary_keyset.is_empty() {
-        let reverted = self.revert_keyval(key, primary_keyset, value.as_ref(), *use_default, !tokens.is_empty())?;
-        tokens.extend(reverted); 
+        let reverted = self.revert_keyval(
+          key,
+          primary_keyset,
+          value.as_ref(),
+          *use_default,
+          !tokens.is_empty(),
+        )?;
+        tokens.extend(reverted);
       }
     }
     // and return the list of tokens
     Ok(Tokens::new(tokens))
   }
 
-  fn revert_keyval(&self, key:&str, keyset: &str, value_opt:Option<&ArgWrap>, use_default:bool, is_first:bool) -> Result<Vec<Token>> {
+  fn revert_keyval(
+    &self,
+    key: &str,
+    keyset: &str,
+    value_opt: Option<&ArgWrap>,
+    use_default: bool,
+    is_first: bool,
+  ) -> Result<Vec<Token>> {
     // get the key-value definition
     let keytype_stored = keyval_get(&keyval_qname(&self.prefix, keyset, key), "type");
     // define the tokens
     let mut tokens = Vec::new();
     // write comma and key, unless in the first iteration
     if !is_first {
-      tokens.push(T_OTHER!(",")); }
+      tokens.push(T_OTHER!(","));
+    }
     tokens.extend(Explode!(key));
     // write the default (if applicable)
     if !use_default {
@@ -428,7 +470,8 @@ impl KeyVals {
         tokens.push(T_OTHER!("="));
         if let Some(Stored::Parameter(keytype)) = keytype_stored {
           // TODO: The types here are a little curious. The stored value must be cast back into
-          // Tokens if Parameter's revert works on Tokens. Or should that revert call work on ArgWrap?
+          // Tokens if Parameter's revert works on Tokens. Or should that revert call work on
+          // ArgWrap?
           if let Some(reverted) = keytype.revert(Some(value.revert()?))? {
             tokens.extend(reverted.unlist());
           }
@@ -439,7 +482,6 @@ impl KeyVals {
     }
     Ok(tokens)
   }
-  
 
   //======================================================================
   // Changing contained values
@@ -450,7 +492,7 @@ impl KeyVals {
     key: &str,
     value_arg: ArgWrap,
     use_default: bool,
-    no_rebuild: bool
+    no_rebuild: bool,
   ) -> Result<()> {
     // figure out the keyset(s) for the key to be added
     let keysets = self.resolve_keyval_for(key);
@@ -458,20 +500,24 @@ impl KeyVals {
 
     // and add the new tuple to the set of tuples
     let value = if use_default {
-      match keyval_get(&keyval_qname(&self.prefix,&primary_keyset,key),"default") {
+      match keyval_get(&keyval_qname(&self.prefix, &primary_keyset, key), "default") {
         None => None,
         Some(v) => {
           let arg: Result<ArgWrap> = v.into();
           Some(arg?)
-        }
+        },
       }
     } else {
       Some(value_arg)
     };
-    self
-      .tuples
-      .push(KVData{key: key.to_string(), value, use_default, keysets,
-         primary_keyset, digested_value: None});
+    self.tuples.push(KVData {
+      key: key.to_string(),
+      value,
+      use_default,
+      keysets,
+      primary_keyset,
+      digested_value: None,
+    });
     // we now need to rebuild, unless we were asked not to
     // TODO: Maybe only update the last element?
     if !no_rebuild {
@@ -496,7 +542,14 @@ impl KeyVals {
 
     for tuple in self.tuples.drain(..) {
       // take all the elements we need from the stack
-      let KVData {key, value, use_default, primary_keyset, keysets, digested_value} = tuple;
+      let KVData {
+        key,
+        value,
+        use_default,
+        primary_keyset,
+        keysets,
+        digested_value,
+      } = tuple;
       // if we want to skip some values, we need to store new tuples
       let key_str = key.as_str();
       if let Some(skip) = skip_opt {
@@ -517,7 +570,7 @@ impl KeyVals {
         let entry = hash_digested.entry(key.to_string()).or_default();
         entry.push(dvalue.clone());
       }
-      
+
       // Record.
       newtuples.push(KVData {
         key,
@@ -525,14 +578,14 @@ impl KeyVals {
         use_default,
         primary_keyset,
         keysets,
-        digested_value
+        digested_value,
       });
     }
     // store all of the values
     self.cached_pairs = pairs;
     self.cached_hash = hash;
     self.cached_hash_digested = hash_digested;
-    self.tuples = newtuples;   
+    self.tuples = newtuples;
   }
 
   //======================================================================
@@ -550,28 +603,29 @@ impl KeyVals {
     // if we want to silence all missing errors, store them in a hook
     if silence_missing {
       self.skip_missing = SkipMissing::All;
-      self.hook_missing = None; 
-    }    
+      self.hook_missing = None;
+    }
 
     // read the opening token and figure out where we are
     let startloc = gullet::get_locator();
     // set and read tokens
     let _open = gullet::read_token()?;
-        
+
     let punct_tks = Tokens!(T_OTHER!(","));
     let until_tks = Tokens!(until);
     // iterate over all the key-value pairs to read
     loop {
       // gobble leading spaces
       gullet::skip_spaces()?;
-      if gullet::if_next(T_BEGIN!())? { // Protect against redundant {} wrapping
+      if gullet::if_next(T_BEGIN!())? {
+        // Protect against redundant {} wrapping
         gullet::read_token()?;
-        gullet::unread(gullet::read_balanced(ExpansionLevel::Off,false,false)?.strip_braces());
-        gullet::skip_spaces()?; 
+        gullet::unread(gullet::read_balanced(ExpansionLevel::Off, false, false)?.strip_braces());
+        gullet::skip_spaces()?;
       }
       // Read a single keyword, get a delimiter and a set of keyword tokens
-      let (ktoks, mut delim_opt) = self.read_keyword_from(until)?; 
-  
+      let (ktoks, mut delim_opt) = self.read_keyword_from(until)?;
+
       // if there was no delimiter at the end, we throw an error
       if delim_opt.is_none() {
         let message = s!(
@@ -584,10 +638,10 @@ impl KeyVals {
 
       // turn the key tokens into a string and trim whitespace
       let key_str = ktoks.to_string();
-      let key = key_str.trim();      
+      let key = key_str.trim();
 
       // if we have a non-empty key
-      if !key.is_empty() {        
+      if !key.is_empty() {
         let mut value = ArgWrap::None;
         // if we have an '=', we explcity assign a value
         let is_explicit = delim_opt == Some(T_OTHER!("="));
@@ -603,9 +657,9 @@ impl KeyVals {
           let mut toks = Vec::new();
           loop {
             // TODO: The types are a bit unnatural here - we need the plural Tokens for read_match,
-            //       but we expect the singular Token as a delimiter result, since we are matching on a char separator
-            delim_opt = gullet::read_match(&[&punct_tks, &until_tks])?
-              .map(|tks| tks.into());
+            //       but we expect the singular Token as a delimiter result, since we are matching
+            // on a char separator
+            delim_opt = gullet::read_match(&[&punct_tks, &until_tks])?.map(|tks| tks.into());
             if delim_opt.is_some() {
               break; // only until we hit a delim.
             }
@@ -613,7 +667,7 @@ impl KeyVals {
               // Copy next token to args
               toks.push(tok);
               if tok.get_catcode() == Catcode::BEGIN {
-                let balanced_arg = gullet::read_balanced(ExpansionLevel::Off,false,false)?;
+                let balanced_arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
                 if !balanced_arg.is_empty() {
                   toks.extend(balanced_arg.unlist());
                 }
@@ -656,8 +710,8 @@ impl KeyVals {
 
     // restore all settings if we silenced the missing keys
     if silence_missing {
-     self.skip_missing = skip_missing;
-     self.hook_missing = hook_missing;
+      self.skip_missing = skip_missing;
+      self.hook_missing = hook_missing;
     }
     Ok(())
   }

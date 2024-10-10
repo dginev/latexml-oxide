@@ -1,5 +1,5 @@
 //! TeX Inserts
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -8,7 +8,7 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Inserts Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- 
+
   //======================================================================
   // Inserting material
   //----------------------------------------------------------------------
@@ -31,7 +31,7 @@ LoadDefinitions!({
     } else {
       Digested::from(List::default())
     }
-  });  
+  });
   DefMacro!(T_CS!("\\splitfirstmark"), None, Tokens!());
   DefMacro!(T_CS!("\\splitbotmark"), None, Tokens!());
 

@@ -1,7 +1,7 @@
 use crate::prelude::*;
-LoadDefinitions!( {
+LoadDefinitions!({
   // Ignore the options
-  for option in ["in","cm","plain", "empty", "headings", "myheadings"] {
+  for option in ["in", "cm", "plain", "empty", "headings", "myheadings"] {
     DeclareOption!(option, None);
   }
   ProcessOptions!();

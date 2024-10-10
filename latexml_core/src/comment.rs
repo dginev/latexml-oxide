@@ -37,17 +37,11 @@ impl BoxOps for Comment {
     Ok(Vec::new())
   }
   fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(None) }
-  fn get_width(
-    &self,
-    _options: Option<HashMap<Stored>>,
-  ) -> Result<Option<RegisterValue>> {
+  fn get_width(&self, _options: Option<HashMap<Stored>>) -> Result<Option<RegisterValue>> {
     Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
   }
 
-  fn compute_size(
-    &self,
-    _options: HashMap<Stored>,
-  ) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(&self, _options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     Ok((
       Dimension::default(),
       Dimension::default(),

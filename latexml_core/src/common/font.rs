@@ -1,5 +1,5 @@
 use crate::binding::content::{load_font_map, preload_font_map};
-use crate::common::arena::{self, EMPTY_SYM, SymHashMap, SymStr};
+use crate::common::arena::{self, SymHashMap, SymStr, EMPTY_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::state::*;
@@ -16,8 +16,8 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::cmp::max;
 use std::fmt;
-use std::rc::Rc;
 use std::hash::{BuildHasher, Hash, Hasher};
+use std::rc::Rc;
 
 mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
@@ -245,7 +245,8 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
   }
 }
 
-/// A data structure containing Font information, but also related textual properties (such as color)
+/// A data structure containing Font information, but also related textual properties (such as
+/// color)
 ///
 /// This struct is a little interesting, as we want to pass overrides that partially modify (via a
 /// merge) the current font, in each definitional binding. To accommodate that with this struct,
@@ -1068,12 +1069,10 @@ fn is_diff(x: Option<&Cow<str>>, y: Option<&Cow<str>>) -> bool {
   x.is_some() && (y.is_none() || (x != y))
 }
 
-fn is_diff_f64(x: Option<f64>, y: Option<f64>) -> bool {
-  x.is_some() && (y.is_none() || (x != y))
-}
+fn is_diff_f64(x: Option<f64>, y: Option<f64>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
 
 /// Decode a codepoint using the fontmap for a given font and/or fontencoding.
-/// 
+///
 /// If `encoding` not provided, then lookup according to the current font's
 /// encoding; the font family may also be used to choose the fontmap (think tt fonts!).
 /// When `implicit` is false, we are "explicitly" asking for a decoding, such as
@@ -1084,11 +1083,7 @@ fn is_diff_f64(x: Option<f64>, y: Option<f64>) -> bool {
 /// so that if anything above 128 comes in, it must already be Unicode!.
 /// The lower half plane still needs to go through decoding, though, to deal
 /// with TeX's rearrangement of ASCII...
-pub fn decode(
-  code: u8,
-  encoding_opt: Option<String>,
-  implicit: bool,
-  ) -> Option<char> {
+pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<char> {
   let mut font = None;
   let encoding = match encoding_opt {
     Some(enc) => Cow::Owned(enc),
@@ -1113,9 +1108,10 @@ pub fn decode(
       map = Some(encmap);
       if let Some(ref font) = font {
         if let Some(family) = (*font).get_family() {
-          with_value(&s!("{encoding}_{family}_fontmap"), |fmap_opt|
-          if let Some(fmap) = fmap_opt {
-            map = fmap.into(); // Use the family specific map, if any.
+          with_value(&s!("{encoding}_{family}_fontmap"), |fmap_opt| {
+            if let Some(fmap) = fmap_opt {
+              map = fmap.into(); // Use the family specific map, if any.
+            }
           });
         }
       }
@@ -1145,11 +1141,7 @@ pub fn decode(
   }
 }
 
-pub fn decode_string(
-  string: SymStr,
-  encoding_opt: Option<&str>,
-  implicit: bool,
-  ) -> SymStr {
+pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool) -> SymStr {
   let empty_sym = *EMPTY_SYM;
   if string == empty_sym {
     return empty_sym;
@@ -1175,9 +1167,10 @@ pub fn decode_string(
       map = Some(encmap);
       if let Some(ref font) = font {
         if let Some(family) = (*font).get_family() {
-          with_value(&s!("{}_{}_fontmap", encoding, family), |fmap_opt|
+          with_value(&s!("{}_{}_fontmap", encoding, family), |fmap_opt| {
             if let Some(fmap) = fmap_opt {
               map = fmap.into(); // Use the family specific map, if any.
+            }
           });
         }
       }

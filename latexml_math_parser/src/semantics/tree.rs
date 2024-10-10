@@ -1,8 +1,8 @@
-use libxml::tree::Node;
 use latexml_core::common::font::Font;
 use latexml_core::common::xml::element_nodes;
 use latexml_core::document::Document;
 use latexml_core::Info;
+use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::cmp::Ordering;
@@ -249,7 +249,7 @@ impl XM {
       XM::Dual(_, _, _, ref mut meta) => meta,
       XM::Wrap(_, _, ref mut meta) => meta,
       XM::Choices(cs) => cs[0].get_meta_mut(), // Should we return a none type instead?
-      XM::Ref(_)| XM::Arg(_) => todo!(),
+      XM::Ref(_) | XM::Arg(_) => todo!(),
     }
   }
   pub fn get_inner_meta(&self) -> Vec<&Meta> {
@@ -292,7 +292,7 @@ impl XM {
           .collect::<Vec<_>>()
           .join("")
       )),
-      XM::Choices(_)| XM::Arg(_)=> todo!(),
+      XM::Choices(_) | XM::Arg(_) => todo!(),
       XM::Dual(content, pres, _, _) => Cow::Owned(format!(
         "{}{}",
         content.get_value(nodes).expect("inner"),
@@ -695,7 +695,9 @@ impl XM {
       },
       XM::Choices(mut choices) => {
         {
-          Info!("math_parser","choices",
+          Info!(
+            "math_parser",
+            "choices",
             "to_xmath handler discarded {} parse choices.",
             choices.len() - 1
           );
@@ -854,7 +856,10 @@ impl From<&Node> for XM {
         XM::Arg(inner_xm)
       },
       // TODO: continue for the other cases
-      missing_case => {dbg!(missing_case); todo!()},
+      missing_case => {
+        dbg!(missing_case);
+        todo!()
+      },
     }
   }
 }

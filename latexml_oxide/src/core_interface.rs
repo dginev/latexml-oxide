@@ -6,23 +6,23 @@ use std::rc::Rc;
 
 use latexml_core::common::arena;
 use latexml_core::common::error::{self, note_begin, note_end, Result};
-use latexml_core::common::DigestionMode;
-use latexml_core::common::store::Stored;
 use latexml_core::common::model;
+use latexml_core::common::store::Stored;
+use latexml_core::common::DigestionMode;
 use latexml_core::definition::expandable::Expandable;
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
-use latexml_core::list::List;
-use latexml_core::stomach;
 use latexml_core::gullet;
-use latexml_core::state::{self,Scope};
+use latexml_core::list::List;
+use latexml_core::state::{self, Scope};
+use latexml_core::stomach;
 use latexml_core::token::{Catcode, Token};
 use latexml_core::tokens::Tokens;
 use latexml_core::util::pathname;
 use latexml_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
-use latexml_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
 use latexml_codegen::LoadModel;
+use latexml_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
 use latexml_math_parser::MathParser;
 use latexml_package::prelude::{
   input_content, input_definitions, InputDefinitionOptions, InputOptions,
@@ -71,9 +71,7 @@ impl DigestionAPI for Core {
     // let paths = state::search_paths;
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
-      input_definitions(
-        &preload,
-        InputDefinitionOptions::default())?;
+      input_definitions(&preload, InputDefinitionOptions::default())?;
     }
     state::assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())
@@ -123,7 +121,6 @@ impl DigestionAPI for Core {
     if let Some(dir) = dir_opt {
       let dir = dir.to_str().unwrap_or(".");
       {
-
         state::assign_value("SOURCEDIRECTORY", arena::pin(dir), None);
         state::add_search_path(dir.to_string());
       }
@@ -145,9 +142,7 @@ impl DigestionAPI for Core {
     );
 
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    input_content(
-      &request,
-      InputOptions::default())?;
+    input_content(&request, InputOptions::default())?;
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -173,7 +168,6 @@ impl DigestionAPI for Core {
     note_begin("Building");
     let mut document = Document::new();
     {
-
       // TODO: Can we disentangle the ownership to avoid the clone?
       let paths_stored = state::get_search_paths();
       let schema_paths = paths_stored
@@ -194,11 +188,13 @@ impl DigestionAPI for Core {
       if state::has_search_paths() {
         {
           if state::lookup_bool("INCLUDE_COMMENTS") {
-            let paths_string = state::with_search_paths(|paths| paths
-              .iter()
-              .map(String::as_str)
-              .collect::<Vec<&str>>()
-              .join(","));
+            let paths_string = state::with_search_paths(|paths| {
+              paths
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<&str>>()
+                .join(",")
+            });
             let attributes = map! {s!("paths") => paths_string};
             document.insert_pi("latexml", Some(attributes))?;
           }
@@ -238,9 +234,9 @@ impl DigestionAPI for Core {
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
       if let Some(Stored::VecDequeStored(rules)) = state::remove_value("DOCUMENT_REWRITE_RULES") {
         if let Some(root) = document.get_document().get_root_element() {
-          // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable state.
-          // (TODO: obviously, this could be avoided if they never needed mutable state.
-          // When do they?)
+          // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
+          // state. (TODO: obviously, this could be avoided if they never needed mutable
+          // state. When do they?)
           let mut rewrites = Vec::new();
           for rule in rules {
             if let Stored::Rewrite(mut rewrite_rule) = rule {
@@ -257,7 +253,7 @@ impl DigestionAPI for Core {
       note_end("Rewriting");
     }
 
-    if ! state::get_nomathparse_flag() {
+    if !state::get_nomathparse_flag() {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
     }
@@ -336,7 +332,6 @@ impl DigestionAPI for Core {
       self.initialize_singletons(preloads)?;
     }
     {
-
       if !pathname::is_literaldata(&request) {
         state::assign_value("SOURCEFILE", request.clone(), None);
       }
@@ -363,9 +358,7 @@ impl DigestionAPI for Core {
 
     {
       // Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
-      input_content(
-        &request,
-        InputOptions::default())?;
+      input_content(&request, InputOptions::default())?;
     }
 
     if let Some(preamble) = options.preamble {

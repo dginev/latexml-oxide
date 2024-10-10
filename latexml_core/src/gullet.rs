@@ -1,13 +1,13 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
-use std::cell::{RefCell,RefMut};
+use std::cell::{RefCell, RefMut};
 use std::collections::VecDeque;
 // use std::mem;
 // use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self,DONT_EXPAND_SYM, SymStr};
+use crate::common::arena::{self, SymStr, DONT_EXPAND_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -18,8 +18,8 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::{fixpoint, NumericOps, UNITY};
 use crate::common::object::Object;
-use crate::{state, DigestedData};
 use crate::state::*;
+use crate::{state, DigestedData};
 
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
@@ -32,19 +32,28 @@ static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 #[thread_local]
-static DEFERRED_COMMANDS: Lazy<HashSet<SymStr>> = Lazy::new(||
-  set!(arena::pin_static("\\the"), arena::pin_static("\\showthe"),
-    arena::pin_static("\\unexpanded"), arena::pin_static("\\detokenize")));
+static DEFERRED_COMMANDS: Lazy<HashSet<SymStr>> = Lazy::new(|| {
+  set!(
+    arena::pin_static("\\the"),
+    arena::pin_static("\\showthe"),
+    arena::pin_static("\\unexpanded"),
+    arena::pin_static("\\detokenize")
+  )
+});
 
 // If it is a column ending token, Returns the token, a keyword and whether it is "hidden"
 #[thread_local]
-static COLUMN_ENDS : Lazy<[(Token,&'static str, bool); 6]> = Lazy::new(|| [    // besides T_ALIGN
-  (T_CS!("\\cr"),           "cr",     false),
-  (T_CS!("\\crcr"),         "crcr",   false),
-  (T_CS!("\\lx@hidden@cr"),    "cr",     true),
-  (T_CS!("\\lx@hidden@crcr"),  "crcr",   true),
-  (T_CS!("\\lx@hidden@align"), "insert", true),
-  (T_CS!("\\span"),         "span",   false)]);
+static COLUMN_ENDS: Lazy<[(Token, &'static str, bool); 6]> = Lazy::new(|| {
+  [
+    // besides T_ALIGN
+    (T_CS!("\\cr"), "cr", false),
+    (T_CS!("\\crcr"), "crcr", false),
+    (T_CS!("\\lx@hidden@cr"), "cr", true),
+    (T_CS!("\\lx@hidden@crcr"), "crcr", true),
+    (T_CS!("\\lx@hidden@align"), "insert", true),
+    (T_CS!("\\span"), "span", false),
+  ]
+});
 
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
@@ -60,23 +69,31 @@ pub struct Gullet {
   pub pending_comments: VecDeque<Token>,
   pub token_limit: Option<usize>,
   pub pushback_limit: Option<usize>,
-  pub progress: usize
+  pub progress: usize,
 }
 
 #[thread_local]
-pub static GULLET : Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet::default()));
+pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet::default()));
 
 macro_rules! gullet {
-  () => ((*GULLET).borrow())
+  () => {
+    (*GULLET).borrow()
+  };
 }
 macro_rules! gullet_mut {
-  () => ((*GULLET).borrow_mut())
+  () => {
+    (*GULLET).borrow_mut()
+  };
 }
 macro_rules! runtime {
-  () => ((*GULLET).borrow_mut().runtime)
+  () => {
+    (*GULLET).borrow_mut().runtime
+  };
 }
 macro_rules! runtime_mut {
-  () => ((*GULLET).borrow_mut().runtime.as_mut())
+  () => {
+    (*GULLET).borrow_mut().runtime.as_mut()
+  };
 }
 
 /// Initialize (or reset, if reentrant) a Gullet to its default empty state
@@ -107,7 +124,7 @@ pub fn get_locator() -> Locator {
     Locator::default()
   }
 }
-  
+
 /// Comment-oriented location string, based on `get_locator`
 pub fn get_location() -> String {
   let loc = get_locator();
@@ -121,14 +138,14 @@ pub fn mouth_is_open(mouth: &Mouth) -> bool {
       return true;
     }
   }
-  gullet.mouthstack.iter().any(|runtime| &runtime.mouth == mouth)
+  gullet
+    .mouthstack
+    .iter()
+    .any(|runtime| &runtime.mouth == mouth)
 }
-  
 
 /// Push the `tokens` back into the input stream to be re-read.
-pub fn unread(tokens: Tokens) {
-  unread_vec(tokens.unlist());
-}
+pub fn unread(tokens: Tokens) { unread_vec(tokens.unlist()); }
 /// Variant of `unread`, but drains the contents of `tokens` without taking ownership.
 pub fn unread_mut(tokens: &mut Tokens) {
   if let Some(ref mut runtime) = gullet_mut!().runtime {
@@ -214,9 +231,7 @@ pub fn flush_mouth() {
 // Low-level readers: read token, read expanded token
 //**********************************************************************
 // # Get the next pending comment token (if any)
-pub fn get_pending_comment() -> Option<Token> {
-  gullet_mut!().pending_comments.pop_front()
-}
+pub fn get_pending_comment() -> Option<Token> { gullet_mut!().pending_comments.pop_front() }
 
 /// Note that every char (token) comes through here (maybe even twice, through args parsing),
 /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
@@ -267,7 +282,11 @@ fn handle_template(
 // but always keeps comment tokens pending.
 fn read_internal_token() -> Option<Token> {
   let mut next_token = None;
-  let Gullet {ref mut runtime, ref mut pending_comments, ..} = *gullet_mut!();
+  let Gullet {
+    ref mut runtime,
+    ref mut pending_comments,
+    ..
+  } = *gullet_mut!();
   let pushback = &mut runtime.as_mut().unwrap().pushback;
   // Check in pushback first....
   while let Some(pushback_token) = pushback.pop_front() {
@@ -299,20 +318,31 @@ fn read_internal_token() -> Option<Token> {
 pub fn read_token() -> Result<Option<Token>> {
   let mut next_token: Option<Token>;
   loop {
-    { // each time we try to read, do the defensive checks
+    {
+      // each time we try to read, do the defensive checks
       let gullet = gullet!();
       // If we're without a runtime, bail
-      if gullet.runtime.is_none() { return Ok(None); }
+      if gullet.runtime.is_none() {
+        return Ok(None);
+      }
       // some infinite loops are hard to predict and may be
       // better guarded against via a global token limit.
       if let Some(token_limit) = gullet.token_limit {
         if gullet.progress > token_limit {
-          Fatal!(Timeout, TokenLimit, s!("Token limit of {token_limit} exceeded, infinite loop?"));
+          Fatal!(
+            Timeout,
+            TokenLimit,
+            s!("Token limit of {token_limit} exceeded, infinite loop?")
+          );
         }
       }
       if let Some(pushback_limit) = gullet.pushback_limit {
         if gullet.runtime.as_ref().unwrap().pushback.len() > pushback_limit {
-          Fatal!(Timeout, PushbackLimit, s!("Pushback limit of {pushback_limit} exceeded, infinite loop?"));
+          Fatal!(
+            Timeout,
+            PushbackLimit,
+            s!("Pushback limit of {pushback_limit} exceeded, infinite loop?")
+          );
         }
       }
     }
@@ -357,14 +387,14 @@ pub fn read_token() -> Result<Option<Token>> {
 ///    `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
 ///     will step to the next input stream (Mouth) if one is available,
 ///     `toplevel` when true:
-/// * If a mouth is exhausted, move on to the containing mouth to continue reading
-///   `fully_expand` when true, OR when None but `toplevel` is true
+/// * If a mouth is exhausted, move on to the containing mouth to continue reading `fully_expand`
+///   when true, OR when None but `toplevel` is true
 /// * expand even protected defns, essentially this means expand "for execution"
-/// 
+///
 /// Note that, unlike readBalanced, this does NOT defer expansion of \the & friends.
-/// 
+///
 /// Also, \noexpand'd tokens effectively act ilke \relax
-/// 
+///
 /// For arguments to \if,\ifx, etc use `for_conditional` true,
 ///    which handles \noexpand and CS which have been \let to tokens specially.
 pub fn read_x_token(
@@ -382,12 +412,19 @@ pub fn read_x_token(
     let next_token = read_internal_token();
     //ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
     if next_token.is_none() {
-      {let gullet = gullet!();
-      if !autoclose
-        || !gullet.runtime.as_ref().map(|r| r.autoclose).unwrap_or(false)
-        || gullet.mouthstack.is_empty() {
-        return Ok(None);
-      }}
+      {
+        let gullet = gullet!();
+        if !autoclose
+          || !gullet
+            .runtime
+            .as_ref()
+            .map(|r| r.autoclose)
+            .unwrap_or(false)
+          || gullet.mouthstack.is_empty()
+        {
+          return Ok(None);
+        }
+      }
       close_mouth(false)?; // Next input stream.
       continue;
     }
@@ -400,7 +437,8 @@ pub fn read_x_token(
           unexpanded
         } else {
           T_CS!("\\special_relax")
-        }));
+        },
+      ));
     }
     // Wow!!!!! See TeX the Program \S 309
     // SHOULD count nesting of { }!!! when SCANNED (not digested)
@@ -414,7 +452,8 @@ pub fn read_x_token(
         }
       } else {
         None
-      }};
+      }
+    };
     if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
       if let DigestedData::Alignment(data) = reading_alignment.data() {
         handle_template(data.borrow_mut(), token, atype, ahidden)?;
@@ -425,21 +464,19 @@ pub fn read_x_token(
     } else if token.get_catcode().is_active_or_cs() {
       match lookup_meaning(&token) {
         Some(Stored::Token(let_token)) => {
-          return Ok(Some(if for_conditional {
-            let_token
-          } else {
-            token
-          }))
+          return Ok(Some(if for_conditional { let_token } else { token }))
         },
         Some(Stored::None) | None => {
           if token.get_catcode() == Catcode::CS {
-            return Ok(Some(generate_error_stub(&token)?)); // cs SHOULD have defn by now; report early.
+            return Ok(Some(generate_error_stub(&token)?)); // cs SHOULD have defn by now; report
+                                                           // early.
           } else {
             return Ok(Some(token));
           }
         },
         Some(typed_defn) => {
-          let defn = typed_defn.to_definition()
+          let defn = typed_defn
+            .to_definition()
             .expect("token expansion requires the Stored item to implement trait Definition");
           if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
             return Ok(Some(token));
@@ -479,10 +516,7 @@ pub fn read_raw_line() -> Option<String> {
     // If we still have peeked tokens, we ONLY want to combine it with the remainder
     // of the current line from the Mouth (NOT reading a new line)
     if !tokens.is_empty() {
-      Some(
-        Tokens::new(tokens).to_string()
-          + &runtime.mouth.read_raw_line(true).unwrap_or_default(),
-      )
+      Some(Tokens::new(tokens).to_string() + &runtime.mouth.read_raw_line(true).unwrap_or_default())
     } else {
       // Otherwise, read the next line from the Mouth.
       runtime.mouth.read_raw_line(false)
@@ -534,19 +568,23 @@ pub enum ExpansionLevel {
   /// Expands while reading, but deferring `\the` and `\protected`
   Partial,
   /// Expands completely while reading
-  Full
+  Full,
 }
 
 /// Approximates TeX's scan_toks (but doesn't parse \def parameter lists)
 /// and only optionally requires the openning "{".
-/// 
+///
 /// It may return comments in the token lists.
 /// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
 /// If `require_open` is true, the opening T_BEGIN has not yet been read, and is required.
-/// 
-/// If `toplevel` is true, it will automatically close empty mouths as it reads, 
+///
+/// If `toplevel` is true, it will automatically close empty mouths as it reads,
 /// and will also fully expand macros (unless overridden by `expansion_level` being explicitly Off).
-pub fn read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require_open:bool) -> Result<Tokens> {
+pub fn read_balanced(
+  expansion_level: ExpansionLevel,
+  is_macrodef: bool,
+  require_open: bool,
+) -> Result<Tokens> {
   use ExpansionLevel::*;
   if !require_open {
     decrement_align_group_count();
@@ -555,30 +593,37 @@ pub fn read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require
   // let startloc = if lookup_verbosity() > 0 { Some(get_locator()) } else { None };
   // Do we need to expand to get the { ???
   if require_open {
-    let token_opt = if expansion_level != Off { read_x_token(Some(false),false, None)? }
-    else { read_token()? };
+    let token_opt = if expansion_level != Off {
+      read_x_token(Some(false), false, None)?
+    } else {
+      read_token()?
+    };
     let is_open = match token_opt {
       None => false,
       Some(token) => {
-        token.get_catcode() == Catcode::BEGIN ||
-        state::lookup_meaning(&token) == Some(Stored::Token(T_BEGIN!()))
-      }
+        token.get_catcode() == Catcode::BEGIN
+          || state::lookup_meaning(&token) == Some(Stored::Token(T_BEGIN!()))
+      },
     };
     if !is_open {
-      Error!("expected", "{", s!("Expected opening '{{' got {token_opt:?}"));
+      Error!(
+        "expected",
+        "{",
+        s!("Expected opening '{{' got {token_opt:?}")
+      );
       return Ok(Tokens!());
     }
   }
   let mut tokens = Vec::new();
-  let mut level  = 1;
+  let mut level = 1;
   loop {
     // we'll keep comments in the result
     let mut next_token = None;
-    if ! gullet!().pending_comments.is_empty() {
+    if !gullet!().pending_comments.is_empty() {
       tokens.extend(gullet_mut!().pending_comments.drain(..));
     }
     // Examine pushback first
-  while let Some(pushback_token) = runtime_mut!().unwrap().pushback.pop_front() {
+    while let Some(pushback_token) = runtime_mut!().unwrap().pushback.pop_front() {
       match pushback_token.get_catcode() {
         Catcode::COMMENT => tokens.push(pushback_token),
         Catcode::MARKER => handle_marker(pushback_token),
@@ -608,18 +653,20 @@ pub fn read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require
       Some(token) => match token.get_catcode() {
         Catcode::CS if token.text == *DONT_EXPAND_SYM => {
           if let Some(next_t) = read_token()? {
-            tokens.push(next_t);  // Pass on NEXT token, unchanged.
+            tokens.push(next_t); // Pass on NEXT token, unchanged.
           }
         },
         Catcode::END => {
           level -= 1;
-          if level <= 0 { break; }
+          if level <= 0 {
+            break;
+          }
           tokens.push(token);
         },
         Catcode::BEGIN => {
-          level +=1 ;
+          level += 1;
           tokens.push(token);
-        }
+        },
         cc => {
           // Wow!!!!! See TeX the Program \S 309
           // Not sure if this code still applies within scan_toks???
@@ -638,7 +685,7 @@ pub fn read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require
           if expansion_level != Off && cc.is_active_or_cs() {
             let meaning_opt = lookup_meaning(&token);
             if let Some(defn) = meaning_opt.as_ref().and_then(|item| item.to_definition()) {
-              if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full){
+              if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full) {
                 local_current_token(token);
                 let expansion = defn.invoke(false)?;
                 if expansion.is_empty() {
@@ -647,15 +694,16 @@ pub fn read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require
                 }
                 // If a special \the type command, push the expansion directly into the result
                 // Well, almost directly: handle any MARKER tokens now, and possibly un-pack T_PARAM
-                if expansion_level!=Full && DEFERRED_COMMANDS.contains(&defn.get_cs().text) {
+                if expansion_level != Full && DEFERRED_COMMANDS.contains(&defn.get_cs().text) {
                   for t in expansion.unlist() {
                     match t.get_catcode() {
                       Catcode::MARKER => handle_marker(t),
-                      Catcode::PARAM if is_macrodef => {// "unpack" to cover the packParameters at end!
+                      Catcode::PARAM if is_macrodef => {
+                        // "unpack" to cover the packParameters at end!
                         tokens.push(t);
                         tokens.push(t);
                       },
-                      _ => tokens.push(t)
+                      _ => tokens.push(t),
                     }
                   }
                 } else {
@@ -672,15 +720,16 @@ pub fn read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require
           }
           // if no special handling triggered above, just return the token
           tokens.push(token);
-        }
-      }
+        },
+      },
     }
   }
   if level > 0 {
-    // TODO: The current implementation has a limitation where if the balancing end is in a different mouth,
-    //       it will not be recognized.
+    // TODO: The current implementation has a limitation where if the balancing end is in a
+    // different mouth,       it will not be recognized.
     // TODO: also, add the startloc details
-    // my $loc_message = $startloc ? ("Started at " . ToString($startloc)) : ("Ended at " . ToString($self->getLocator));
+    // my $loc_message = $startloc ? ("Started at " . ToString($startloc)) : ("Ended at " .
+    // ToString($self->getLocator));
     Error!(
       "expected",
       "}",
@@ -731,7 +780,7 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
 }
 
 /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
-/// 
+///
 /// Note that Braces on input hides the contents from matching,
 /// so this assumes there wont be braces in $delim!
 /// But, see readUntilBrace for that case.
@@ -765,7 +814,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
           // And if it's a BEGIN, copy till balanced END
           nbraces += 1;
           tokens.push(token);
-          let balanced_arg = read_balanced(ExpansionLevel::Off,false,false)?;
+          let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
           if !balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
@@ -796,7 +845,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
             tokens.push(r_token);
           }
           tokens.push(token);
-          let balanced_arg = read_balanced(ExpansionLevel::Off,false,false)?;
+          let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
           if !balanced_arg.is_empty() {
             tokens.append(&mut balanced_arg.unlist());
           }
@@ -829,9 +878,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
 
 /// Convenience method wrapping around `read_until`
 /// TODO: This seems to be the wrong Rust type interface, we need to rework...
-pub fn read_until_token(t: Token) -> Result<Tokens> {
-  read_until(&Tokens!(t))
-}
+pub fn read_until_token(t: Token) -> Result<Tokens> { read_until(&Tokens!(t)) }
 /// reads until it encounters a Catcode::BEGIN token
 pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
@@ -868,19 +915,20 @@ pub fn read_cs_name() -> Result<Token> {
     match token.get_catcode() {
       Catcode::CS => {
         if lookup_definition(&token)?.is_some() {
-          let message =
-            s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
-              token);
+          let message = s!(
+            "The control sequence {:?} should not appear between \\csname and \\endcsname",
+            token
+          );
           Error!("unexpected", token, message);
         } else {
           let message = s!("The token {:?} is not defined", token);
           Error!("undefined", token, message);
         }
       },
-      Catcode::SPACE => cs.push(' '),  // Keep newlines from having \n!
+      Catcode::SPACE => cs.push(' '), // Keep newlines from having \n!
       _ => {
         token.with_str(|s| cs.push_str(s));
-      }
+      },
     };
   }
   Ok(T_CS!(cs))
@@ -904,34 +952,34 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
 //**********************************************************************
 
 /// Read and return a "normal" TeX argument
-/// 
+///
 /// The next Token or Tokens (if surrounded by braces).
 /// `expansion_level` controls expansion as if the argument were read
 ///  and then expanded in isolation:
-/// 
+///
 /// In the case of a single unbraced expandable token,
 ///  it will **not** read any macro arguments from the following input!
 pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
-    Some(token) => if token.get_catcode() == Catcode::BEGIN {
-        read_balanced(expansion_level,false,false)
+    Some(token) => {
+      if token.get_catcode() == Catcode::BEGIN {
+        read_balanced(expansion_level, false, false)
       } else if matches!(expansion_level, ExpansionLevel::Off) {
         Ok(Tokens!(token))
       } else {
         unread_vec(vec![T_BEGIN!(), token, T_END!()]);
         read_balanced(expansion_level, false, true)
       }
+    },
   }
 }
 /// Read and return a LaTeX optional argument
-/// 
+///
 /// returns `default` if there is no '[', otherwise the contents of the array.
 /// Note that this returns an empty array if `[]` is present,
 /// i.e. `[contents]` in TeX will lead to `Tokens(contents)`, otherwise returns `None`
-pub fn read_optional(
-  default: Option<Tokens>,
-) -> Result<Option<Tokens>> {
+pub fn read_optional(default: Option<Tokens>) -> Result<Option<Tokens>> {
   match read_non_space()? {
     None => Ok(None),
     Some(t) => {
@@ -971,9 +1019,7 @@ pub fn if_next(token: Token) -> Result<bool> {
 // See TeXBook, Ch.24, pp.269-271.
 //**********************************************************************
 
-pub fn read_value(
-  value_type: RegisterType,
-) -> Result<RegisterValue> {
+pub fn read_value(value_type: RegisterType) -> Result<RegisterValue> {
   match value_type {
     RegisterType::Number => Ok(read_number()?.into()),
     RegisterType::Dimension => Ok(read_dimension()?.into()),
@@ -988,9 +1034,7 @@ pub fn read_value(
   }
 }
 
-pub fn read_register_value(
-  value_type: RegisterType,
-) -> Result<Option<RegisterValue>> {
+pub fn read_register_value(value_type: RegisterType) -> Result<Option<RegisterValue>> {
   match read_x_token(None, false, None)? {
     None => Ok(None),
     Some(token) => {
@@ -1172,8 +1216,7 @@ pub fn read_float() -> Result<Float> {
     if let Some(t) = token {
       unread_one(t); // Unread
     }
-    read_normal_integer()?
-      .map(|v| v.value_of() as f64)
+    read_normal_integer()?.map(|v| v.value_of() as f64)
   };
 
   if let Some(n) = n_opt {
@@ -1265,9 +1308,7 @@ fn read_unit() -> Result<Option<f64>> {
     Some(u.value_of() as f64)
   } else {
     read_keyword(&["true"])?; // But ignore, we're not bothering with mag...
-    if let Some(u) = read_keyword(
-      &["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"],
-        )? {
+    if let Some(u) = read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"])? {
       skip_one_space()?;
       Some(convert_unit(&u))
     } else {
@@ -1311,13 +1352,11 @@ pub fn read_glue() -> Result<Glue> {
       f1,
       r2.map(|v| v as f64),
       f2,
-        ))
+    ))
   }
 }
 
-pub fn read_rubber(
-  mu: bool,
-) -> Result<(Option<i64>, Option<FillCode>)> {
+pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
   let is_negative = read_optional_signs()?;
   let s = if is_negative { -1 } else { 1 };
   match read_factor()? {
@@ -1419,11 +1458,7 @@ pub fn read_mu_dimension() -> Result<MuDimension> {
     let m = if is_negative { mglue.negate() } else { mglue };
     Ok(MuDimension::new(m.value_of()))
   } else {
-    Warn!(
-      "expected",
-      "<mudimen>",
-      "Expecting mudimen; assuming 0"
-    );
+    Warn!("expected", "<mudimen>", "Expecting mudimen; assuming 0");
     Ok(MuDimension::new(0))
   }
 }
@@ -1452,7 +1487,7 @@ pub fn read_tokens_value() -> Result<Tokens> {
     None => Ok(Tokens!()),
     Some(token) => {
       if token.get_catcode() == Catcode::BEGIN {
-        Ok(read_balanced(ExpansionLevel::Off,false,false)?)
+        Ok(read_balanced(ExpansionLevel::Off, false, false)?)
       } else if let Some(defn) = lookup_register_definition(&token) {
         match defn.register_type() {
           Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
@@ -1581,28 +1616,26 @@ fn read_factor() -> Result<Option<f64>> {
 
 pub fn do_expand<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   let tokens: Tokens = tokens.into();
-  reading_from_mouth(
-    Mouth::default(),
-    move || -> Result<Tokens> {
-      { unread_one(T_END!());
-        unread(tokens); 
-        unread_one(T_BEGIN!()); }
-      read_balanced(ExpansionLevel::Full, false, true)
-    },
-  )
+  reading_from_mouth(Mouth::default(), move || -> Result<Tokens> {
+    {
+      unread_one(T_END!());
+      unread(tokens);
+      unread_one(T_BEGIN!());
+    }
+    read_balanced(ExpansionLevel::Full, false, true)
+  })
 }
 
 pub fn do_expand_partially<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   let tokens: Tokens = tokens.into();
-  reading_from_mouth(
-    Mouth::default(),
-    move || -> Result<Tokens> {
-      { unread_one(T_END!());
-        unread(tokens); 
-        unread_one(T_BEGIN!()); }
-      read_balanced(ExpansionLevel::Partial, false, true)
-    },
-  )
+  reading_from_mouth(Mouth::default(), move || -> Result<Tokens> {
+    {
+      unread_one(T_END!());
+      unread(tokens);
+      unread_one(T_BEGIN!());
+    }
+    read_balanced(ExpansionLevel::Partial, false, true)
+  })
 }
 
 pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
@@ -1610,15 +1643,11 @@ pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
     Catcode::ALIGN => Some((*token, "align", false)),
     Catcode::CS | Catcode::ACTIVE => {
       // Embedded version of Equals, knowing both are tokens
-      let defn = lookup_meaning(token)
-        .unwrap_or_else(|| Stored::Token(*token));
+      let defn = lookup_meaning(token).unwrap_or_else(|| Stored::Token(*token));
       for end in *COLUMN_ENDS {
         let e = &end.0;
         // Would be nice to cache the defns, but don't know when they're present & constant!
-        if defn
-          == lookup_meaning(e)
-            .unwrap_or_else(|| Stored::Token(*e))
-        {
+        if defn == lookup_meaning(e).unwrap_or_else(|| Stored::Token(*e)) {
           return Some(end);
         }
       }
@@ -1645,22 +1674,19 @@ fn handle_marker(marker_token: Token) {
 }
 
 /// Do something, while reading tokens from a specific Mouth.
-/// 
+///
 /// This reads ONLY from that mouth (or any mouth openned by code in that source),
 /// and the mouth should end up empty afterwards, and only be closed here.
-pub fn reading_from_mouth<R, FnR>(
-  mouth: Mouth,
-  reader: FnR,
-) -> Result<R>
-where
-  FnR: FnOnce() -> Result<R>,
-{
+pub fn reading_from_mouth<R, FnR>(mouth: Mouth, reader: FnR) -> Result<R>
+where FnR: FnOnce() -> Result<R> {
   let context_mouth_source = arena::pin(mouth.get_source());
   open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
   let results: R = { reader()? };
   // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
   loop {
-    let mouth_source = gullet!().runtime.as_ref()
+    let mouth_source = gullet!()
+      .runtime
+      .as_ref()
       .map(|r| arena::pin(r.mouth.get_source()));
     if mouth_source == Some(context_mouth_source) {
       close_mouth(true)?;
@@ -1670,24 +1696,28 @@ where
         "unexpected",
         "<closed>",
         "Mouth is unexpectedly already closed",
-        arena::with(context_mouth_source,|source| s!("Reading from {source}, but it has already been closed."))
+        arena::with(context_mouth_source, |source| s!(
+          "Reading from {source}, but it has already been closed."
+        ))
       );
       break;
     } else {
       let has_input_remaining = {
         if let Some(ref mut runtime) = runtime!() {
-          !runtime.autoclose
-            || !runtime.pushback.is_empty()
-            || runtime.mouth.has_more_input()
-        } else { false }};
+          !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input()
+        } else {
+          false
+        }
+      };
       if has_input_remaining {
         let next = read_token()?.unwrap();
         Error!(
           "unexpected",
           next,
           s!("Unexpected input remaining: '{next}'"),
-          arena::with(context_mouth_source,|source|
-            s!("Finished reading from {source}, but it still has input."))
+          arena::with(context_mouth_source, |source| s!(
+            "Finished reading from {source}, but it still has input."
+          ))
         );
         {
           if let Some(ref mut runtime) = runtime!() {
@@ -1734,7 +1764,7 @@ pub fn flush() {
 }
 
 /// Execute a function with a mutable reference to the current mouth
-pub fn with_mouth_mut<FnR,R>(caller: FnR) -> R
+pub fn with_mouth_mut<FnR, R>(caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Mouth>) -> R {
   let mut gullet = gullet_mut!();
   let mouth_opt = match gullet.runtime {

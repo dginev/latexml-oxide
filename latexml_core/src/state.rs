@@ -8,15 +8,15 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self, SymStr, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM};
+use crate::common::arena::{self, SymHashMap, SymStr, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::glue::Glue;
+use crate::common::model::{self, compute_indirect_model_aux};
 use crate::common::model::{IndirectModel, Model};
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
-use crate::common::model::{self,compute_indirect_model_aux};
 use crate::common::numeric_ops::NumericOps;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
@@ -28,8 +28,8 @@ use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
-use crate::mouth;
 use crate::gullet;
+use crate::mouth;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
@@ -200,9 +200,9 @@ impl UndoFrame {
 }
 
 /// The type of values that are storable by the different namespaced "tables" in State.
-/// 
+///
 /// There are tables for:
-/// 
+///
 ///  catcode: keys are char;
 ///     Also, `math:char` =1 when `char` is active in math.
 ///  mathcode, sfcode, lccode, uccode, delcode : are similar to catcode but store
@@ -214,7 +214,7 @@ impl UndoFrame {
 pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 
 /// The state efficiently bookkeeps the bindings in a TeX-like fashion.
-/// 
+///
 /// Bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
 /// until the current group (opened by \bgroup) is closed (by \egroup).
@@ -260,7 +260,7 @@ pub struct State {
   /// A dispatcher routing to the compiled code of the in-distro latexml bindings
   pub bindings_dispatch: Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
-  pub extra_bindings_dispatch: Option<BindingDispatcher>
+  pub extra_bindings_dispatch: Option<BindingDispatcher>,
 }
 unsafe impl Send for State {}
 // State is NOT Sync!
@@ -310,32 +310,46 @@ impl Default for State {
 }
 
 #[thread_local]
-static STD_STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
-  catcodes: Some(Catcodes::Standard),
-  ..StateOptions::default()
-})));
+static STD_STATE: Lazy<RefCell<State>> = Lazy::new(|| {
+  RefCell::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Standard),
+    ..StateOptions::default()
+  }))
+});
 #[thread_local]
-static STY_STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
-  catcodes: Some(Catcodes::Style),
-  ..StateOptions::default()
-})));
+static STY_STATE: Lazy<RefCell<State>> = Lazy::new(|| {
+  RefCell::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Style),
+    ..StateOptions::default()
+  }))
+});
 #[thread_local]
-static STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
-  catcodes: Some(Catcodes::Standard),
-  ..StateOptions::default()
-})));
+static STATE: Lazy<RefCell<State>> = Lazy::new(|| {
+  RefCell::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Standard),
+    ..StateOptions::default()
+  }))
+});
 
 macro_rules! state {
-  () => ((*STATE).borrow())
+  () => {
+    (*STATE).borrow()
+  };
 }
 macro_rules! state_mut {
-  () => ((*STATE).borrow_mut())
+  () => {
+    (*STATE).borrow_mut()
+  };
 }
 macro_rules! sty_state_mut {
-  () => ((*STY_STATE).borrow_mut())
+  () => {
+    (*STY_STATE).borrow_mut()
+  };
 }
 macro_rules! std_state_mut {
-  () => ((*STD_STATE).borrow_mut())
+  () => {
+    (*STD_STATE).borrow_mut()
+  };
 }
 
 /// state fields allowed for customization during construction
@@ -398,7 +412,9 @@ impl State {
 
     let mut value_table = HashMap::default();
     let mut specials_vdq = VecDeque::new();
-    specials_vdq.push_front(Stored::Chars(Box::new(['^', '_', '~', '&', '$', '#', '\''])));
+    specials_vdq.push_front(Stored::Chars(Box::new([
+      '^', '_', '~', '&', '$', '#', '\'',
+    ])));
     value_table.insert(arena::pin_static("SPECIALS"), specials_vdq);
 
     let mut catcodes_typed: Table = HashMap::default();
@@ -630,7 +646,7 @@ impl State {
     key: &str,
     value: T,
     scope: S,
-    ) {
+  ) {
     let value = value.into();
     let scope = scope.into();
     let key_sym = arena::pin(key);
@@ -734,21 +750,18 @@ impl State {
     }
   }
   pub fn ensure_tag_property(&mut self, tag: SymStr) -> &mut TagOptions {
-    self
-    .tag_properties
-    .entry(tag)
-    .or_default()
+    self.tag_properties.entry(tag).or_default()
   }
 }
 
-#[derive(Debug,Copy,Clone,PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum RotateState {
   Main,
   Std,
-  Sty
+  Sty,
 }
 #[thread_local]
-static mut STATE_IN_USE : RotateState = RotateState::Main;
+static mut STATE_IN_USE: RotateState = RotateState::Main;
 
 pub fn use_sty_state() {
   unsafe {
@@ -784,8 +797,8 @@ pub fn use_main_state() {
         let mut main_state = state_mut!();
         std::mem::swap(&mut *std_state, &mut *main_state);
         STATE_IN_USE = RotateState::Main;
-      }
-      RotateState::Main => {}
+      },
+      RotateState::Main => {},
     };
   }
 }
@@ -812,8 +825,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
       if arena::with(*s, |txt| {
-        txt == "Anonymous String"
-          || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
+        txt == "Anonymous String" || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
       }) {
         Info!("ignore", lock_key, "Ignoring redefinition of {lock_key}");
       }
@@ -828,7 +840,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
 pub fn generate_error_stub(token: &Token) -> Result<Token> {
   let cs = token.with_cs_name(ToString::to_string);
   note_status(LogStatus::Undefined, Some(&cs));
-                                      // To minimize chatter, go ahead and define it...
+  // To minimize chatter, go ahead and define it...
   if cs.starts_with("\\if") {
     // Apparently an \ifsomething ???
     let name = cs.replace("\\if", "");
@@ -845,7 +857,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
         T_CS!(s!("\\{}true", name)),
         None,
         Some(s!("\\let{}\\iftrue", cs).into()),
-        None
+        None,
       )?,
       Some(Scope::Global),
     );
@@ -854,7 +866,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
         T_CS!(s!("\\{}false", name)),
         None,
         Some(s!("\\let{}\\iffalse", cs).into()),
-        None
+        None,
       )?,
       Some(Scope::Global),
     );
@@ -872,7 +884,8 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       Constructor {
         cs: *token,
         replacement: Some(Rc::new(move |document, _args, _props| {
-          document.make_error("undefined", &cs) })),
+          document.make_error("undefined", &cs)
+        })),
         ..Constructor::default()
       },
       //TODO: sizer => "X"),
@@ -882,7 +895,6 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
   Ok(*token)
 }
 
-
 // SAFETY
 // any method which does not return a borrowed piece of data should be package-level
 // so that the global singleton State can get locked+unlocked during the same call
@@ -890,20 +902,12 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
 // TODO: Should this be a prelude?
 
 /// assigns a `Stored` value at the given key and scope
-pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(
-  key: &str,
-  value: T,
-  scope: S,
-  ) {
-  state_mut!().assign_value(key,value,scope)
+pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T, scope: S) {
+  state_mut!().assign_value(key, value, scope)
 }
 
 /// assigns a `Stored` value at the given (arena ticket!) key and scope
-pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(
-  key: SymStr,
-  value: T,
-  scope: S,
-) {
+pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(key: SymStr, value: T, scope: S) {
   let value = value.into();
   let scope = scope.into();
   state_mut!().assign_internal(TableName::Value, key, value, scope);
@@ -1018,15 +1022,13 @@ pub fn push_tokens(key: &str, value: Tokens) {
   }
 }
 
-pub fn lookup_value(key:&str) -> Option<Stored> {
-  state!().lookup_value(key).cloned()
-}
-pub fn with_value<R, FnR>(key:&str, caller: FnR) -> R
-where FnR: FnOnce(Option<&Stored>) -> R  {
+pub fn lookup_value(key: &str) -> Option<Stored> { state!().lookup_value(key).cloned() }
+pub fn with_value<R, FnR>(key: &str, caller: FnR) -> R
+where FnR: FnOnce(Option<&Stored>) -> R {
   caller(state!().lookup_value(key))
 }
-pub fn with_value_mut<R, FnR>(key:&str, caller: FnR) -> R
-where FnR: FnOnce(Option<&mut Stored>) -> R  {
+pub fn with_value_mut<R, FnR>(key: &str, caller: FnR) -> R
+where FnR: FnOnce(Option<&mut Stored>) -> R {
   caller(state_mut!().lookup_value_mut(key))
 }
 /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
@@ -1167,7 +1169,12 @@ pub fn assign_alignment(alignment: Alignment, scope: Option<Scope>) {
   assign_value("Alignment", alignment, scope);
 }
 
-pub fn assign_register(cs:&str, value: RegisterValue, scope: Option<Scope>, parameters: Vec<ArgWrap>) -> Result<()> {
+pub fn assign_register(
+  cs: &str,
+  value: RegisterValue,
+  scope: Option<Scope>,
+  parameters: Vec<ArgWrap>,
+) -> Result<()> {
   let cs = T_CS!(cs);
   let defn_opt = lookup_definition(&cs)?;
   if let Some(defn) = defn_opt {
@@ -1176,14 +1183,16 @@ pub fn assign_register(cs:&str, value: RegisterValue, scope: Option<Scope>, para
       return Ok(());
     }
   }
-  Warn!("expected", "register",
-      format!("The control sequence '{cs}' is not a register"));
+  Warn!(
+    "expected",
+    "register",
+    format!("The control sequence '{cs}' is not a register")
+  );
   Ok(())
 }
 pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
   let cs = T_CS!(cs);
-  Ok(
-  if let Some(defn) = lookup_definition(&cs)? {
+  Ok(if let Some(defn) = lookup_definition(&cs)? {
     if defn.is_register() {
       defn.value_of(parameters)
     } else {
@@ -1198,12 +1207,17 @@ pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<Regi
   })
 }
 
-pub fn lookup_expandable(token: &Token, toplevel_opt: Option<bool>) -> Result<Option<Rc<dyn Definition>>> {
+pub fn lookup_expandable(
+  token: &Token,
+  toplevel_opt: Option<bool>,
+) -> Result<Option<Rc<dyn Definition>>> {
   let toplevel = toplevel_opt.unwrap_or(true); // Default, for full expansion, same as read_x_token
-  // Can only be a token or definition; we want defns!
-  // is this the right logic here? don't expand unless digesting?
-  Ok(lookup_definition(token)?
-    .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected())))
+                                               // Can only be a token or definition; we want defns!
+                                               // is this the right logic here? don't expand unless digesting?
+  Ok(
+    lookup_definition(token)?
+      .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected())),
+  )
 }
 
 /// Whether token is affected by \noexpand
@@ -1293,18 +1307,19 @@ pub fn shift_value(key: &str) -> Result<Option<Stored>> {
     )
   }
   Ok(
-  if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-    state.value.get_mut(&key_sym).unwrap().front_mut()
-  {
-    front.pop_front()
-  } else {
-    Error!(
-      "State",
-      "Stored",
-      "BUG: Tried to shift_value from a non-vecdeque value key!"
-    );
-    None
-  })
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
+      state.value.get_mut(&key_sym).unwrap().front_mut()
+    {
+      front.pop_front()
+    } else {
+      Error!(
+        "State",
+        "Stored",
+        "BUG: Tried to shift_value from a non-vecdeque value key!"
+      );
+      None
+    },
+  )
 }
 
 pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
@@ -1332,7 +1347,7 @@ pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
 }
 
 pub fn lookup_mapping(map: &str, key: &str) -> Option<Stored> {
-  state!().lookup_mapping(map,key).cloned()
+  state!().lookup_mapping(map, key).cloned()
 }
 
 //======================================================================
@@ -1436,11 +1451,7 @@ pub fn lookup_lccode(key: char) -> Option<u16> {
   }
 }
 /// like `assign_catcode` but targets Lccode and its table
-pub fn assign_lccode<T: Into<u16>, C: Into<char>>(
-    key: C,
-  value: T,
-  scope: Option<Scope>,
-) {
+pub fn assign_lccode<T: Into<u16>, C: Into<char>>(key: C, value: T, scope: Option<Scope>) {
   let c: char = key.into();
   state_mut!().assign_internal(
     TableName::Lccode,
@@ -1462,11 +1473,7 @@ pub fn lookup_uccode(key: char) -> Option<u16> {
   }
 }
 /// like `assign_catcode` but targets Uccode and its table
-pub fn assign_uccode<T: Into<u16>, C: Into<char>>(
-    key: C,
-  value: T,
-  scope: Option<Scope>,
-) {
+pub fn assign_uccode<T: Into<u16>, C: Into<char>>(key: C, value: T, scope: Option<Scope>) {
   let c: char = key.into();
   let mut tmp = [0u8; 4];
   let s = arena::pin(c.encode_utf8(&mut tmp));
@@ -1494,9 +1501,7 @@ pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
 /// this may give the definition object (if defined) or another token (if \let) or undef
 /// Any other token is returned as is.
 pub fn lookup_meaning(token: &Token) -> Option<Stored> {
-  if token.get_catcode().is_active_or_cs()
-    && token.text != *EMPTY_SYM
-  {
+  if token.get_catcode().is_active_or_cs() && token.text != *EMPTY_SYM {
     match state!().meaning.get(&token.text) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => None,
@@ -1513,22 +1518,18 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
 pub fn lookup_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
   match state!().lookup_value(key) {
     None | Some(Stored::None) => None,
-    Some(v) => <Option<&VecDeque<Stored>>>::from(v).cloned()
+    Some(v) => <Option<&VecDeque<Stored>>>::from(v).cloned(),
   }
 }
 
 pub fn with_vecdeque<R, FnR>(key: &str, caller: FnR) -> R
-where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R  {
+where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R {
   caller(state!().lookup_vecdeque(key))
 }
 
 /// $meaning should be a definition (for defining active control sequences)
 /// or another token, for \let
-pub fn assign_meaning<T: Into<Stored>>(
-    token: &Token,
-  meaning: T,
-  scope: Option<Scope>,
-) {
+pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<Scope>) {
   let meaning = meaning.into();
   // HACK!!!????
   // short-circuit guard to avoid e.g. T_MATH let to itself
@@ -1543,9 +1544,7 @@ pub fn assign_meaning<T: Into<Stored>>(
 
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
-  if token.get_catcode().is_active_or_cs()
-    && token.text != *EMPTY_SYM
-  {
+  if token.get_catcode().is_active_or_cs() && token.text != *EMPTY_SYM {
     match state!().meaning.get(&token.text) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => false,
@@ -1562,33 +1561,35 @@ pub fn has_meaning(token: &Token) -> bool {
 /// Since we're not doing digestion here, we don't need to handle mathactive,
 /// nor cs let to executable tokens
 /// This returns a definition object, or undef
-pub fn lookup_definition(key: &Token) -> Result<Option<Rc<dyn Definition>>> {Ok(
-  if let Some(defs) = state!().lookup_definition_internal(key) {
-    match defs.front() {
-      Some(Stored::Conditional(entry)) => Some(entry.clone()),
-      Some(Stored::Constructor(entry)) => Some(entry.clone()),
-      Some(Stored::Expandable(entry)) => Some(entry.clone()),
-      Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
-      Some(Stored::Primitive(entry)) => Some(entry.clone()),
-      Some(Stored::Register(entry)) => Some(entry.clone()),
-      Some(Stored::None) | Some(Stored::Token(_)) | None => None,
-      Some(v) => {
-        let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-        Error!("unexpected", "value", message);
-        None
-      },
-    }
-  } else {
-    None
-  })
+pub fn lookup_definition(key: &Token) -> Result<Option<Rc<dyn Definition>>> {
+  Ok(
+    if let Some(defs) = state!().lookup_definition_internal(key) {
+      match defs.front() {
+        Some(Stored::Conditional(entry)) => Some(entry.clone()),
+        Some(Stored::Constructor(entry)) => Some(entry.clone()),
+        Some(Stored::Expandable(entry)) => Some(entry.clone()),
+        Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
+        Some(Stored::Primitive(entry)) => Some(entry.clone()),
+        Some(Stored::Register(entry)) => Some(entry.clone()),
+        Some(Stored::None) | Some(Stored::Token(_)) | None => None,
+        Some(v) => {
+          let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
+          Error!("unexpected", "value", message);
+          None
+        },
+      }
+    } else {
+      None
+    },
+  )
 }
 
 /// Returns a definition as `Stored` so that one can call `.read_arguments`
-/// 
+///
 /// This can't be specialized during compile-time over a trait object?
 /// Instead we'll dispatch via `Stored` at runtime, to allow generic calls.
-pub fn lookup_definition_stored(key: &Token) -> Result<Option<Stored>> {Ok(
-  match state!().lookup_definition_internal(key) {
+pub fn lookup_definition_stored(key: &Token) -> Result<Option<Stored>> {
+  Ok(match state!().lookup_definition_internal(key) {
     Some(defs) => match defs.front() {
       // Still, good time to handle the Token case and catch weird storage errors
       Some(Stored::Conditional(entry)) => Some(Stored::Conditional(Rc::clone(entry))),
@@ -1645,10 +1646,7 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   // Debug!("Looking up digestable {:?}", lookupname);
   let state = state!();
   let entry_opt = state.meaning.get(&lookup_sym);
-  if lookup_sym != *EMPTY_SYM
-    && entry_opt.is_some()
-    && !entry_opt.as_ref().unwrap().is_empty()
-  {
+  if lookup_sym != *EMPTY_SYM && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
     // Debug!("Found definition for: {:?}", lookupname);
     if let Some(entry) = entry_opt {
       if let Some(front) = entry.front() {
@@ -1718,12 +1716,16 @@ pub fn pop_frame() -> Result<()> {
 }
 
 /// Determine depth of group nesting.
-/// 
+///
 /// nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
 pub fn get_frame_depth() -> usize {
-  state!().undo.iter().filter(|frame| !frame.locked).count()
+  state!()
+    .undo
+    .iter()
+    .filter(|frame| !frame.locked)
+    .count()
     .saturating_sub(1)
 }
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
@@ -1802,9 +1804,7 @@ pub fn end_semiverbatim() -> Result<()> { pop_frame() }
 /// Set one of the definition prefixes global, etc (only global matters!)
 pub fn set_prefix(prefix: &str) { state_mut!().prefixes.insert(arena::pin(prefix), true); }
 /// gets the current value of a named prefix
-pub fn get_prefix(prefix: &str) -> bool {
-  state!().get_prefix(prefix)
-}
+pub fn get_prefix(prefix: &str) -> bool { state!().get_prefix(prefix) }
 
 /// clears the global prefixes
 pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
@@ -1850,10 +1850,7 @@ pub fn activate_scope(scope: SymStr) {
     let frame_table = frame.table_mut(table_name);
     let entry = frame_table.entry(key).or_insert(0);
     *entry += 1; // Note that this many values must be undone
-    let key_table = state
-      .table_mut(table_name)
-      .entry(key)
-      .or_default();
+    let key_table = state.table_mut(table_name).entry(key).or_default();
     key_table.push_front(value); // And push new binding.
   }
 }
@@ -1912,28 +1909,24 @@ pub fn deactivate_scope(scope: SymStr) {
     } else {
       let message = arena::with(key, |key_str| {
         s!(
-        "Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
+          "Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
           is {:?}",
-        key_str,
-        table_name,
-        value,
-        table_entry
-          .iter()
-          .map(ToString::to_string)
-          .collect::<Vec<String>>()
-          .join(", ")
-      )
+          key_str,
+          table_name,
+          value,
+          table_entry
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>()
+            .join(", ")
+        )
       });
-      arena::with(key, |key_str| {
-        Warn!("internal", key_str, message)
-      });
+      arena::with(key, |key_str| Warn!("internal", key_str, message));
     }
   }
 }
 /// return all known named scopes
-pub fn get_known_scopes() -> Vec<SymStr> {
-  state!().stash.keys().copied().collect::<Vec<_>>()
-}
+pub fn get_known_scopes() -> Vec<SymStr> { state!().stash.keys().copied().collect::<Vec<_>>() }
 /// return the currently activated named scopes
 pub fn get_active_scopes() -> Vec<SymStr> {
   state!().stash_active.keys().copied().collect::<Vec<_>>()
@@ -2003,14 +1996,13 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
 //   return $code; }
 // #======================================================================
 
-
 // TODO: Continue here -- need to diagnoze why the indirect model is not returning
 // an intermediate "ltx:p" when asking for "#PCDATA" inside "ltx:_CaptureBlock_",
 // instead getting an intermediate "ltx:para".
 
 /// The indirect model includes all elements allowed as direct children,
 /// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
-/// 
+///
 /// This model therefor includes information from the Schema, as well as
 /// `auto_open` information that may be introduced in binding files.
 // [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]
@@ -2034,15 +2026,11 @@ pub fn compute_indirect_model() -> IndirectModel {
     for kid in desc_keys {
       // Find best path to `kid`.
       let mut best = 0;
-      let mut desc_kid_keys: Vec<SymStr> = desc
-        .entry_sym(kid)
-        .or_default()
-        .keys()
-        .copied()
-        .collect();
+      let mut desc_kid_keys: Vec<SymStr> =
+        desc.entry_sym(kid).or_default().keys().copied().collect();
       // TODO: why sort?
       // Update: it appears that "ltx:p" and "ltx:para" in ltx:_CaptureBlock_ is one reason!!!
-      desc_kid_keys.sort_by(|a,b| arena::with2(*a,*b,|astr,bstr| astr.cmp(bstr))); 
+      desc_kid_keys.sort_by(|a, b| arena::with2(*a, *b, |astr, bstr| astr.cmp(bstr)));
       for start in desc_kid_keys {
         if tag != kid && tag != start {
           let start_entry = {
@@ -2076,11 +2064,7 @@ pub fn compute_indirect_model() -> IndirectModel {
 
 // Package helpers used in core need to be localized here -- as state methods
 /// `Let` macro setter
-pub fn let_i(
-  token1: &Token,
-  token2: &Token,
-  scope: Option<Scope>,
-) {
+pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   let meaning =// if token2.get_dont_expand().is_some() {
   //   Stored::Token(token2.clone())
   // } else {
@@ -2096,8 +2080,8 @@ pub fn x_equals(token1: &Token, token2: &Token) -> bool {
   let def2_opt = lookup_meaning(token2); // ditto
   match (def1_opt, def2_opt) {
     (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
-    (None, None) => true,                       // true if both undefined
-    (_, _) => false,                            // False, if only one has 'meaning'
+    (None, None) => true,                     // true if both undefined
+    (_, _) => false,                          // False, if only one has 'meaning'
   }
 }
 
@@ -2120,52 +2104,37 @@ pub fn after_assignment() {
 
 // Ported from Perl's "local" declarations
 
-
-pub fn get_tag_property(tag: SymStr) -> TagOptions {
-  state_mut!().ensure_tag_property(tag).clone()
-}
-pub fn ensure_tag_property(tag: SymStr) {
-  state_mut!().ensure_tag_property(tag);
-}
+pub fn get_tag_property(tag: SymStr) -> TagOptions { state_mut!().ensure_tag_property(tag).clone() }
+pub fn ensure_tag_property(tag: SymStr) { state_mut!().ensure_tag_property(tag); }
 
 pub fn with_tag_property<R, FnR>(tag: SymStr, caller: FnR) -> R
-where FnR: FnOnce(Option<&TagOptions>) -> R  {
-    caller(state!().tag_properties.get(&tag))
+where FnR: FnOnce(Option<&TagOptions>) -> R {
+  caller(state!().tag_properties.get(&tag))
 }
 pub fn with_tag_property_mut<R, FnR>(tag: SymStr, caller: FnR) -> R
-where FnR: FnOnce(&mut TagOptions) -> R  {
+where FnR: FnOnce(&mut TagOptions) -> R {
   ensure_tag_property(tag);
   caller(state_mut!().tag_properties.get_mut(&tag).unwrap())
 }
 
-pub fn has_indirect_model() -> bool {
-  state!().indirect_model.is_some()
-}
+pub fn has_indirect_model() -> bool { state!().indirect_model.is_some() }
 pub fn set_indirect_model(im: IndirectModel) {
   let mut state = state_mut!();
   state.indirect_model = Some(im);
 }
-pub fn get_nomathparse_flag() -> bool {
-  state!().nomathparse
-}
+pub fn get_nomathparse_flag() -> bool { state!().nomathparse }
 pub fn set_nomathparse_flag(val: bool) {
   let mut state = state_mut!();
   state.nomathparse = val;
 }
 
-pub fn current_verbosity() -> i32 {
-  state!().verbosity
-}
+pub fn current_verbosity() -> i32 { state!().verbosity }
 
-pub fn push_pending_resource(value: Resource) {
-  state_mut!().pending_resources.push(value);
-}
+pub fn push_pending_resource(value: Resource) { state_mut!().pending_resources.push(value); }
 pub fn take_pending_resources() -> Vec<Resource> {
   state_mut!().pending_resources.drain(..).collect()
 }
-pub fn reset_pending_resources() {
-  state_mut!().pending_resources = Vec::new();
-}
+pub fn reset_pending_resources() { state_mut!().pending_resources = Vec::new(); }
 pub fn get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -> Option<SymStr> {
   match state!().indirect_model.as_ref().unwrap().get_sym(&tag) {
     Some(sub_m) => sub_m.get_sym(&childtag).copied(),
@@ -2173,9 +2142,7 @@ pub fn get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -> Option<
   }
 }
 
-pub fn get_bindings_dispatch() -> Option<BindingDispatcher> {
-  state!().bindings_dispatch.clone()
-}
+pub fn get_bindings_dispatch() -> Option<BindingDispatcher> { state!().bindings_dispatch.clone() }
 pub fn get_extra_bindings_dispatch() -> Option<BindingDispatcher> {
   state!().extra_bindings_dispatch.clone()
 }
@@ -2188,9 +2155,7 @@ pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   state.extra_bindings_dispatch = Some(dispatcher);
 }
 
-pub fn get_search_paths() -> Vec<String> {
-  state!().search_paths.iter().cloned().collect()
-}
+pub fn get_search_paths() -> Vec<String> { state!().search_paths.iter().cloned().collect() }
 pub fn with_search_paths<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(&VecDeque<String>) -> R {
   caller(&state!().search_paths)
@@ -2199,23 +2164,19 @@ pub fn add_search_path(path: String) {
   let mut state = state_mut!();
   state.search_paths.push_back(path);
 }
-pub fn search_paths_push_front(path:String) {
+pub fn search_paths_push_front(path: String) {
   let mut state = state_mut!();
   state.search_paths.push_front(path);
 }
-pub fn has_search_paths() -> bool {
-  ! state!().search_paths.is_empty()
-}
-pub fn get_graphics_paths() -> Vec<String> {
-  state!().graphics_paths.iter().cloned().collect()
-}
-pub fn graphics_paths_push_front(path:String) {
+pub fn has_search_paths() -> bool { !state!().search_paths.is_empty() }
+pub fn get_graphics_paths() -> Vec<String> { state!().graphics_paths.iter().cloned().collect() }
+pub fn graphics_paths_push_front(path: String) {
   let mut state = state_mut!();
   state.graphics_paths.push_front(path);
 }
 
 /// manage a (global) hash of values
-pub fn with_mapping<R,FnR>(map: &str, key: &str, caller: FnR) -> R
+pub fn with_mapping<R, FnR>(map: &str, key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&Stored>) -> R {
   let map_sym = arena::pin(map);
   caller(match state!().value.get(&map_sym) {
@@ -2227,7 +2188,7 @@ where FnR: FnOnce(Option<&Stored>) -> R {
   })
 }
 
-pub fn with_mapping_sym<R,FnR>(map: SymStr, key: SymStr, caller: FnR) -> R
+pub fn with_mapping_sym<R, FnR>(map: SymStr, key: SymStr, caller: FnR) -> R
 where FnR: FnOnce(Option<&Stored>) -> R {
   caller(match state!().value.get(&map) {
     None => None,
@@ -2238,25 +2199,23 @@ where FnR: FnOnce(Option<&Stored>) -> R {
   })
 }
 
-pub fn with_mapping_keys<R,FnR>(map: &str, caller: FnR) -> R
+pub fn with_mapping_keys<R, FnR>(map: &str, caller: FnR) -> R
 where FnR: FnOnce(Vec<SymStr>) -> R {
   caller(state!().lookup_mapping_keys(map))
 }
 
-pub fn with_font_info<R,FnR>(key: &Token, caller: FnR) -> R
-  where FnR: FnOnce(Result<Option<&Stored>>) -> R {
-   caller(state!().lookup_font_info(key))
+pub fn with_font_info<R, FnR>(key: &Token, caller: FnR) -> R
+where FnR: FnOnce(Result<Option<&Stored>>) -> R {
+  caller(state!().lookup_font_info(key))
 }
 
-pub fn get_input_encoding() -> Option<SymStr> {
-  state!().input_encoding.as_ref().map(arena::pin)
-}
+pub fn get_input_encoding() -> Option<SymStr> { state!().input_encoding.as_ref().map(arena::pin) }
 pub fn set_input_encoding(val: Option<String>) {
   let mut state = state_mut!();
   state.input_encoding = val;
 }
 
-pub fn with_stacked_values<R,FnR>(key: &str, caller: FnR) -> R
+pub fn with_stacked_values<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Vec<&Stored>) -> R {
   caller(state!().lookup_stacked_values(key))
 }

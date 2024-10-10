@@ -189,7 +189,8 @@ LoadDefinitions!({
   // );
 
   AssignValue!("SAVEBOX", 100);
-  TeX!(r#"""\def\newsavebox#1{\@ifdefinable{#1}{\newbox#1}}
+  TeX!(
+    r#"""\def\newsavebox#1{\@ifdefinable{#1}{\newbox#1}}
   \DeclareRobustCommand\savebox[1]{%
     \@ifnextchar(%)
       {\@savepicbox#1}{\@ifnextchar[{\@savebox#1}{\sbox#1}}}%
@@ -217,7 +218,8 @@ LoadDefinitions!({
         \ignorespaces}
   \def\endlrbox{\unskip\color@endgroup}
   \DeclareRobustCommand\usebox[1]{\leavevmode\copy #1\relax}
-  """#);
+  """#
+  );
 
   // DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
   // DefPrimitive!("\\end{lrbox}", primtiveproc!( args, {stomach.egroup()?; }));

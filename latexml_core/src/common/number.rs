@@ -10,9 +10,7 @@ use std::fmt;
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct Number(pub i64);
 impl Object for Number {
-  fn revert(&self) -> Result<Tokens> {
-    Ok(Tokens::new(ExplodeText!(&self.0.to_string())))
-  }
+  fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.0.to_string()))) }
 }
 impl NumericOps for Number {
   fn new(number: i64) -> Self { Number(number) }

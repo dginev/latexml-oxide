@@ -82,7 +82,6 @@ pub fn extract_bracketed(text: &mut String, delimiter: Option<&Delimiter>) -> Op
   }
 }
 
-
 // Nice tip from https://users.rust-lang.org/t/trim-string-in-place/15809/18
 pub fn trim_end_in_place(s: &mut String) {
   let trimmed = s.trim_end();

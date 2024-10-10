@@ -42,7 +42,7 @@ pub fn kround(number: f64) -> i64 {
 }
 
 /// Convert `float` to a fixed-point number
-/// 
+///
 /// If `unit` is given, it is number of units PER SCALED-POINT! (hence, extra division)
 /// AND, note that the float is rounded and THEN truncated after multiplying by units!
 /// to mimic TeX's behavior.

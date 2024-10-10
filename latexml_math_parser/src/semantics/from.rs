@@ -126,7 +126,7 @@ impl<OP: ToString + Sized> From<(OP, Vec<XM>)> for XM {
 impl From<(&str, &str)> for Args {
   fn from(args: (&str, &str)) -> Args {
     Args(
-      <[&str;2]>::from(args)
+      <[&str; 2]>::from(args)
         .iter()
         .map(|&x| x.into())
         .map(Option::Some)

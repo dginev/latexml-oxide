@@ -1,8 +1,8 @@
+use once_cell::sync::Lazy;
+use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
-use std::borrow::Cow;
-use once_cell::sync::Lazy;
 
 use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
@@ -15,10 +15,10 @@ use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::definition::register::Register;
+use crate::definition::Definition;
 use crate::state;
 use crate::tokens::Tokens;
 use crate::Digested;
-use crate::definition::Definition;
 
 static CONTROLNAME: &[&str] = &[
   "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO",
@@ -47,7 +47,7 @@ pub enum Catcode {
   INVALID,
   CS,
   MARKER,
-  ARG
+  ARG,
 }
 
 impl From<u8> for Catcode {
@@ -104,7 +104,7 @@ impl From<Catcode> for u8 {
       INVALID => 15,
       CS => 16,
       MARKER => 17,
-      ARG => 18
+      ARG => 18,
     }
   }
 }
@@ -134,7 +134,7 @@ impl Catcode {
       INVALID => "Invalid",
       CS => "ControlSequence",
       MARKER => "Marker",
-      ARG => "Arg"
+      ARG => "Arg",
     }
   }
   /// a \meaning-friendly name
@@ -182,7 +182,7 @@ impl Catcode {
       INVALID => "T_INVALID",
       CS => "T_CS",
       MARKER => "T_MARKER",
-      ARG => "T_ARG"
+      ARG => "T_ARG",
     }
   }
 
@@ -197,9 +197,7 @@ impl Catcode {
       // Primitives
       ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE => true,
       // Non-primitive
-      IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG => {
-        false
-      },
+      IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG => false,
     }
   }
   /// Catcodes with associated primitives
@@ -209,8 +207,9 @@ impl Catcode {
       // Executable
       BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS => true,
       // Non-executable
-      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER |
-      ARG => false,
+      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG => {
+        false
+      },
     }
   }
   /// Catcodes which can be neutralized
@@ -288,8 +287,7 @@ impl Display for Token {
 // That is NOT done here; see Equals(x,y) and XEquals(x,y)
 impl PartialEq for Token {
   fn eq(&self, other: &Token) -> bool {
-    self.code == other.code
-      && (self.code == Catcode::SPACE || (self.text == other.text))
+    self.code == other.code && (self.code == Catcode::SPACE || (self.text == other.text))
   }
 }
 
@@ -302,73 +300,73 @@ impl PartialEq for Token {
 #[thread_local]
 pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("{"),
-  code: Catcode::BEGIN
+  code: Catcode::BEGIN,
 });
 /// constant for an END "}" token
 #[thread_local]
 pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("}"),
-  code: Catcode::END
+  code: Catcode::END,
 });
 /// constant for a MATH "$" token
 #[thread_local]
 pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("$"),
-  code: Catcode::MATH
+  code: Catcode::MATH,
 });
 /// constant for an ALIGN "&" token
 #[thread_local]
 pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("&"),
-  code: Catcode::ALIGN
+  code: Catcode::ALIGN,
 });
 /// constant for a PARAM "#" token
 #[thread_local]
 pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("#"),
-  code: Catcode::PARAM
+  code: Catcode::PARAM,
 });
 /// constant for a SUPER "^" token
 #[thread_local]
 pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("^"),
-  code: Catcode::SUPER
+  code: Catcode::SUPER,
 });
 /// constant for a SUB "_" token
 #[thread_local]
 pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("_"),
-  code: Catcode::SUB
+  code: Catcode::SUB,
 });
 /// constant for a SPACE " " token
 #[thread_local]
 pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static(" "),
-  code: Catcode::SPACE
+  code: Catcode::SPACE,
 });
 /// constant for a CR "\n" token
 #[thread_local]
 pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\n"),
-  code: Catcode::SPACE
+  code: Catcode::SPACE,
 });
 /// constant for T_CS("\relax")
 #[thread_local]
 pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\relax"),
-  code: Catcode::CS
+  code: Catcode::CS,
 });
 /// constant for T_CS("\expandafter")
 #[thread_local]
 pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\expandafter"),
-  code: Catcode::CS
+  code: Catcode::CS,
 });
 /// constant for T_CS("\endcsname")
 #[thread_local]
 pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\endcsname"),
-  code: Catcode::CS
+  code: Catcode::CS,
 });
 
 #[macro_export]
@@ -408,14 +406,12 @@ macro_rules! T_LETTER {
     Token {
       text: $crate::common::arena::pin_static($text),
       code: Catcode::LETTER,
-
     }
   };
   ($text:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
-
     }
   };
 }
@@ -442,7 +438,6 @@ macro_rules! T_OTHER_CHAR {
     Token {
       text: $crate::common::arena::pin_char($text),
       code: Catcode::OTHER,
-
     }
   };
 }
@@ -455,7 +450,6 @@ macro_rules! T_ACTIVE {
     Token {
       text: $crate::common::arena::pin(s),
       code: Catcode::ACTIVE,
-
     }
   }};
 }
@@ -466,7 +460,6 @@ macro_rules! T_COMMENT {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
-
     }
   };
 }
@@ -477,14 +470,12 @@ macro_rules! T_CS {
     $crate::token::Token {
       text: $crate::common::arena::pin_static($text),
       code: $crate::token::Catcode::CS,
-
     }
   };
   ($text:expr) => {
     $crate::token::Token {
       text: $crate::common::arena::pin($text),
       code: $crate::token::Catcode::CS,
-
     }
   };
 }
@@ -500,7 +491,6 @@ macro_rules! T_MARKER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
-
     }
   };
 }
@@ -512,7 +502,6 @@ macro_rules! T_ARG {
     Token {
       text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::ARG,
-
     }
   };
 }
@@ -527,14 +516,12 @@ macro_rules! Token {
     Token {
       text: $crate::common::arena::pin_static($text),
       code: $cc,
-
     }
   };
   ($text:expr, $cc:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: $cc,
-
     }
   };
 }
@@ -606,7 +593,6 @@ macro_rules! SymExplodeText(
   ).collect::<Vec<Token>>()
 }));
 
-
 // static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 
 impl Default for Token {
@@ -614,7 +600,6 @@ impl Default for Token {
     Token {
       text: arena::pin_static("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
-
     }
   }
 }
@@ -627,7 +612,6 @@ impl Token {
     Token {
       text: arena::pin(text),
       code,
-
     }
   }
 
@@ -755,7 +739,8 @@ impl Token {
             }
           }
         }
-        None});
+        None
+      });
       if let Some(token) = maybe_return {
         return token;
       }
@@ -767,14 +752,12 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::OTHER,
-
     }
   }
   pub fn as_cs(&self) -> Token {
     Token {
       text: self.text,
       code: Catcode::CS,
-
     }
   }
 
@@ -806,14 +789,14 @@ impl Token {
         } else {
           Cow::Borrowed(text)
         }
-      } else { Cow::Borrowed(text) };
+      } else {
+        Cow::Borrowed(text)
+      };
       s!("{}[{}]", self.code.short_name(), display_text)
     })
   }
 
-  pub fn to_register(&self) -> Option<Rc<Register>> {
-    state::lookup_register_definition(self)
-  }
+  pub fn to_register(&self) -> Option<Rc<Register>> { state::lookup_register_definition(self) }
 
   pub fn to_number(&self) -> Number {
     Number::new(self.with_str(|text| text.parse::<i64>()).unwrap_or(0))
@@ -839,9 +822,7 @@ impl Token {
     Float::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0))
   }
 
-  pub fn be_digested(self) -> Result<Digested> {
-    crate::stomach::digest(Tokens::new(vec![self]))
-  }
+  pub fn be_digested(self) -> Result<Digested> { crate::stomach::digest(Tokens::new(vec![self])) }
 
   /// Check whether the current token is defined as `other`.
   /// That is, whether it is equal to `other`, or \let to `other`.
@@ -863,14 +844,16 @@ impl Token {
           Stored::Register(inner) => inner.get_cs().into_owned(),
           Stored::Conditional(inner) => inner.get_cs().into_owned(),
           Stored::Constructor(inner) => inner.get_cs().into_owned(),
-          oops => panic!("unexpected definition {oops:?} for {self:?}")
+          oops => panic!("unexpected definition {oops:?} for {self:?}"),
         };
-        if (letto.get_catcode() == occ) && ((occ == Catcode::SPACE) || letto.get_sym() == other.get_sym()) {
+        if (letto.get_catcode() == occ)
+          && ((occ == Catcode::SPACE) || letto.get_sym() == other.get_sym())
+        {
           return true;
         }
       }
     }
-    false 
+    false
   }
 }
 

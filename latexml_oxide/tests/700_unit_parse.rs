@@ -1,6 +1,6 @@
 use latexml::util::test::{lex_single_tex_formula, new_test_engine};
-use latexml_math_parser::MathParser;
 use latexml_core::common::model;
+use latexml_math_parser::MathParser;
 
 #[test]
 fn basic_1() {
@@ -42,8 +42,7 @@ fn basic_1() {
   let parsed_tree_opt = parse_tree_opt.unwrap();
   assert!(parsed_tree_opt.is_some());
   let parsed_tree = parsed_tree_opt.unwrap();
-  let parsed_xml_result =
-    parsed_tree.into_xmath(&mut xmath_opt.unwrap(), &mut nodes, &mut doc);
+  let parsed_xml_result = parsed_tree.into_xmath(&mut xmath_opt.unwrap(), &mut nodes, &mut doc);
   assert!(parsed_xml_result.is_ok());
   let parsed_xml = parsed_xml_result.unwrap();
   for mut fnode in doc.findnodes("//*[@_font]", Some(&parsed_xml)) {

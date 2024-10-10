@@ -1,5 +1,5 @@
 //! Base Parameter Types
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -29,57 +29,57 @@ LoadDefinitions!({
   });
 
   DefParameterType!(DefPlain, sub[inner, _extra] {
-      let mut value = ArgWrap::Tokens(gullet::read_balanced(ExpansionLevel::Off, true, true)?);
-      if let Some(inner_ps) = inner {
-        value = inner_ps.reparse_argument( value)?.remove(0);
-      }
-      Ok(value)
-    },
-    reversion => sub[arg, inner, _extra] {
-    // let mut reverted_inner;
-    let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
-    read_tokens.extend(if let Some(inner_ps) = inner {
-      inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
-    } else {
-      arg.iter().map(|t| t.revert()).collect()
-    });
-    read_tokens.push(T_END!());
-    Ok(Tokens::new(read_tokens))
-    });
+    let mut value = ArgWrap::Tokens(gullet::read_balanced(ExpansionLevel::Off, true, true)?);
+    if let Some(inner_ps) = inner {
+      value = inner_ps.reparse_argument( value)?.remove(0);
+    }
+    Ok(value)
+  },
+  reversion => sub[arg, inner, _extra] {
+  // let mut reverted_inner;
+  let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+  read_tokens.extend(if let Some(inner_ps) = inner {
+    inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
+  } else {
+    arg.iter().map(|t| t.revert()).collect()
+  });
+  read_tokens.push(T_END!());
+  Ok(Tokens::new(read_tokens))
+  });
 
   DefParameterType!(Optional, sub[inner, default] {
-      let value = gullet::read_optional(None)?;
-      if value.is_none() && !default.is_empty() {
-        // TODO: Is the default really multiple Vec<Tokens> ? Or just a single Tokens?
-        //       the default[0] is suspicious, compared to the original perl "$default"
-        ArgWrap::Tokens(default[0].clone())
-      } else if let Some(inner_ps) = inner {
-        let mut reparsed = inner_ps.reparse_argument( value.into())?;
-        if !reparsed.is_empty() {
-          reparsed.remove(0)
-        } else {
-          ArgWrap::None
-        }
+    let value = gullet::read_optional(None)?;
+    if value.is_none() && !default.is_empty() {
+      // TODO: Is the default really multiple Vec<Tokens> ? Or just a single Tokens?
+      //       the default[0] is suspicious, compared to the original perl "$default"
+      ArgWrap::Tokens(default[0].clone())
+    } else if let Some(inner_ps) = inner {
+      let mut reparsed = inner_ps.reparse_argument( value.into())?;
+      if !reparsed.is_empty() {
+        reparsed.remove(0)
       } else {
-        value.into()
+        ArgWrap::None
       }
-    },
-    optional => true,
-    reversion => sub[arg, inner, _extra] {
-      // TODO: Same question for the type of "arg" as the one above "default" above:
-      //  should this be a single `Tokens` rather than a `Vec<Token>`?
-      if !arg.is_empty() {
-        let mut read_tokens: Vec<Token> = vec![T_OTHER!("[")];
-        read_tokens.extend(match inner {
-          None => arg.into_iter().map(Token::revert).collect(),
-          Some(inner_ps) => inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?,
-        });
-        read_tokens.push(T_OTHER!("]"));
-        Ok(Tokens::new(read_tokens))
-      } else {
-        Ok(Tokens!())
-      }
-    });
+    } else {
+      value.into()
+    }
+  },
+  optional => true,
+  reversion => sub[arg, inner, _extra] {
+    // TODO: Same question for the type of "arg" as the one above "default" above:
+    //  should this be a single `Tokens` rather than a `Vec<Token>`?
+    if !arg.is_empty() {
+      let mut read_tokens: Vec<Token> = vec![T_OTHER!("[")];
+      read_tokens.extend(match inner {
+        None => arg.into_iter().map(Token::revert).collect(),
+        Some(inner_ps) => inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?,
+      });
+      read_tokens.push(T_OTHER!("]"));
+      Ok(Tokens::new(read_tokens))
+    } else {
+      Ok(Tokens!())
+    }
+  });
 
   // This is a peculiar type of argument of the form
   //   <general text> = <filler>{<balanced text><right brace>
@@ -220,7 +220,6 @@ LoadDefinitions!({
     tks.push(T_END!());
     Ok(Tokens::new(tks))
   });
-
 
   // Like Expanded, but defers \protected, and \the expanded only once.
   // Similar to when \edef is used.
@@ -589,7 +588,6 @@ LoadDefinitions!({
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
 
-
   //TODO: Refactor and add TeXDelimiter
   DefParameterType!(Digested, sub[_inner, _extra] {
       gullet::skip_spaces()?;
@@ -752,54 +750,62 @@ LoadDefinitions!({
   //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 
   pub fn required_key_vals(
-    star:bool, plus:bool, _inner: Option<&Parameters>, extra:&[Tokens]) -> Result<KeyVals> {
+    star: bool,
+    plus: bool,
+    _inner: Option<&Parameters>,
+    extra: &[Tokens],
+  ) -> Result<KeyVals> {
     if gullet::if_next(T_BEGIN!())? {
       let mut extra_iter = extra.iter();
       // subtle!!! The first extra is the prefix, according to the Perl use.
       let prefix = extra_iter.next().map(ToString::to_string);
       // TODO: is the last extra field actually a "skip" ? Example?
       let keysets = extra_iter.map(ToString::to_string).collect();
-      keyvals_aux( Some(T_END!()), KVSpec {
-        star, plus,
-        prefix,
-        keysets,
-        ..KVSpec::default()
-      })
+      keyvals_aux(
+        Some(T_END!()),
+        KVSpec {
+          star,
+          plus,
+          prefix,
+          keysets,
+          ..KVSpec::default()
+        },
+      )
     } else {
-      Error!("Expected","{", "Missing keyval arguments");
+      Error!("Expected", "{", "Missing keyval arguments");
       Ok(KeyVals::default())
     }
   }
 
   DefParameterType!(RequiredKeyVals, sub[inner, extra] {
-      required_key_vals(false, false, inner, extra)
-    },
-    reversion => sub[arg, _inner, _extra] {
-      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
-    });
+    required_key_vals(false, false, inner, extra)
+  },
+  reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
   DefParameterType!(RequiredKeyValsStar, sub[inner, extra] {
-      required_key_vals(true, false, inner, extra)
-    },
-    reversion => sub[arg, _inner, _extra] {
-      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
-    });
+    required_key_vals(true, false, inner, extra)
+  },
+  reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
   DefParameterType!(RequiredKeyValsPlus, sub[inner, extra] {
-      required_key_vals(false, true, inner, extra)
-    },
-    reversion => sub[arg, _inner, _extra] {
-      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
-    });
+    required_key_vals(false, true, inner, extra)
+  },
+  reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
   DefParameterType!(RequiredKeyValsStarPlus, sub[inner, extra] {
-      required_key_vals(true, true, inner, extra)
-    }, reversion => sub[arg, _inner, _extra] {
-      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
-    });
+    required_key_vals(true, true, inner, extra)
+  }, reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
 
   pub fn optional_key_vals(
     star: bool,
     plus: bool,
     _inner: Option<&Parameters>,
-    extra: &[Tokens]
+    extra: &[Tokens],
   ) -> Result<Option<KeyVals>> {
     if gullet::if_next(T_OTHER!("["))? {
       let mut extra_iter = extra.iter();
@@ -816,7 +822,7 @@ LoadDefinitions!({
           keysets,
           ..KVSpec::default()
         },
-          )?;
+      )?;
       Ok(Some(kvs))
     } else {
       Ok(None)
@@ -851,14 +857,14 @@ LoadDefinitions!({
   // Not sure that this is the most elegant solution, but...
   // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
   DefParameterType!(DisplayStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
-    before_digest => {
-      bgroup();
-      MergeFont!(mathstyle => "display");
-    },
-    after_digest => { egroup()?; },
-    reversion => sub[arg, _inner, _extra] {
-      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
-    });
+  before_digest => {
+    bgroup();
+    MergeFont!(mathstyle => "display");
+  },
+  after_digest => { egroup()?; },
+  reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
   // TODO: Add when needed
   // DefParameterType!(TextStyle, sub[inner, _extra] {
   //     $_[0]->readArg; },
@@ -887,54 +893,52 @@ LoadDefinitions!({
   // # Perverse naming convention: not script style, but in the style of a script relative to
   // current.
   DefParameterType!(InScriptStyle, sub[_inner, _extra] {
-      gullet::read_arg(ExpansionLevel::Off) },
-    before_digest => {
-      bgroup();
-      MergeFont!(scripted => true);
-    },
-    after_digest => { egroup()?; },
-    reversion => sub[arg, _inner, _extra] {
-        Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
-    });
+    gullet::read_arg(ExpansionLevel::Off) },
+  before_digest => {
+    bgroup();
+    MergeFont!(scripted => true);
+  },
+  after_digest => { egroup()?; },
+  reversion => sub[arg, _inner, _extra] {
+      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
   // # NOTE: the various parameter features don't combine easily!!
   // # I need a ScriptStyleUntil for \root!!!
   // # I also need to redo fractions using these new types....
   DefParameterType!(OptionalInScriptStyle, sub[_inner, _extra] {
-      gullet::read_optional(None)
-    },
-    before_digest => {
-      bgroup();
-      MergeFont!(scripted => true);
-    },
-    after_digest => {
-      egroup()?;
-    },
-    optional => true,
-    reversion => sub[arg,_inner,_extra] {
-      if arg.is_empty() { Ok(Tokens!()) }
-      else {
-        let mut tks = vec![T_OTHER!("[")];
-        tks.extend(arg.into_iter().map(|t| t.revert()));
-        tks.push(T_OTHER!("]"));
-        Ok(Tokens::new(tks))
-      }
-    });
+    gullet::read_optional(None)
+  },
+  before_digest => {
+    bgroup();
+    MergeFont!(scripted => true);
+  },
+  after_digest => {
+    egroup()?;
+  },
+  optional => true,
+  reversion => sub[arg,_inner,_extra] {
+    if arg.is_empty() { Ok(Tokens!()) }
+    else {
+      let mut tks = vec![T_OTHER!("[")];
+      tks.extend(arg.into_iter().map(|t| t.revert()));
+      tks.push(T_OTHER!("]"));
+      Ok(Tokens::new(tks))
+    }
+  });
   DefParameterType!(InFractionStyle, sub[_inner, _extra] {
-      gullet::read_arg(ExpansionLevel::Off)
-    },
-    before_digest => {
-      bgroup();
-      MergeFont!(fraction => true);
-    },
-    after_digest => {
-      egroup()?;
-    },
-    reversion => sub[arg,_inner,_extra] {
-      let mut reverted = vec![T_BEGIN!()];
-      reverted.extend(arg.into_iter().map(Token::revert));
-      reverted.push(T_END!());
-      Ok(Tokens::new(reverted))
-    });
-
-
+    gullet::read_arg(ExpansionLevel::Off)
+  },
+  before_digest => {
+    bgroup();
+    MergeFont!(fraction => true);
+  },
+  after_digest => {
+    egroup()?;
+  },
+  reversion => sub[arg,_inner,_extra] {
+    let mut reverted = vec![T_BEGIN!()];
+    reverted.extend(arg.into_iter().map(Token::revert));
+    reverted.push(T_END!());
+    Ok(Tokens::new(reverted))
+  });
 });

@@ -1,19 +1,19 @@
 //! TeX Debugging
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> =
   Lazy::new(|| Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap());
 static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
 static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
-  
+
 use crate::prelude::*;
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Debugging Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   DefConstructor!("\\lx@ERROR{}{}", "<ltx:ERROR class='ltx_#1'>#2</ltx:ERROR>");
-  
+
   //======================================================================
   // running modes
   //----------------------------------------------------------------------
@@ -21,8 +21,9 @@ LoadDefinitions!({
   // \errorstopmode    c  switches to normal interaction for processing errors.
   // \nonstopmode      c  acts like pressing R in response to an error.
   // \scrollmode       c  acts like pressing S in response to an error.
-  // \pausing          pi if positive, the program halts after every line is read from the input file and waits for a response from the user.
-  
+  // \pausing          pi if positive, the program halts after every line is read from the input
+  // file and waits for a response from the user.
+
   // These are no-ops; Basically, LaTeXML runs in scrollmode
   DefPrimitive!(T_CS!("\\errorstopmode"), None, None);
   DefPrimitive!(T_CS!("\\scrollmode"), None, None);
@@ -35,8 +36,8 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \message          c  writes an expanded token list on the terminal and to the log file.
   // \errmessage       c  displays text on the terminal and interrupts the program.
-  // \errhelp          pt is text displayed on the terminal if h is pressed after an \errmessage     .
-  // \errorcontextlines pi is the number of lines to display on the terminal at an error.
+  // \errhelp          pt is text displayed on the terminal if h is pressed after an \errmessage
+  // . \errorcontextlines pi is the number of lines to display on the terminal at an error.
 
   // Converts $tokens to a string in the fashion of \message and others:
   // doubles #, converts to string; optionally adds spaces after control sequences
@@ -157,7 +158,7 @@ LoadDefinitions!({
                 }
               }
             }
-            if !continue_flag { 
+            if !continue_flag {
               spec_parts.push(p_spec);
             }
           }
@@ -201,9 +202,9 @@ LoadDefinitions!({
   // \show             c  writes a token's definition on the terminal and to the log file.
   // \showbox          c  writes the contents of a box to the log file.
   // \showlists        c  writes information about current lists to the log file.
-  // \showthe          c  writes a value on the terminal and to the log file and interrupts the program.
-  // \showboxbreadth   pi is the maximum number of items per level written by \showbox and \showlists.
-  // \showboxdepth     pi is the maximum level written by \showbox and \showlists.
+  // \showthe          c  writes a value on the terminal and to the log file and interrupts the
+  // program. \showboxbreadth   pi is the maximum number of items per level written by \showbox
+  // and \showlists. \showboxdepth     pi is the maximum level written by \showbox and \showlists.
 
   // Debugging aids; Ignored!
   DefPrimitive!("\\show Token", sub[(arg)] {
@@ -229,27 +230,27 @@ LoadDefinitions!({
   // Tracing
   //----------------------------------------------------------------------
   // \tracingcommands  pi if positive, writes commands to the log file.
-  // \tracinglostchars pi if positive, writes characters not in the current font to the log file     .
-  // \tracingmacros    pi    if positive, writes to the log file when expanding macros and arguments .
-  // \tracingonline    pi    if positive, writes diagnostic output to the terminal as well as to the log file.
-  // \tracingoutput    pi    if positive, writes contents of shipped out boxes to the log file.
-  // \tracingpages     pi    if positive, writes the page-cost calculations to the log file.
-  // \tracingparagraphs pi   if positive, writes a summary of the line-breaking calculations to the  log     file.
-  // \tracingrestores  pi    if positive, writes save-stack details to the log file.
-  // \tracingstats     pi    if positive, writes memory usage statistics to the log file.
+  // \tracinglostchars pi if positive, writes characters not in the current font to the log file
+  // . \tracingmacros    pi    if positive, writes to the log file when expanding macros and
+  // arguments . \tracingonline    pi    if positive, writes diagnostic output to the terminal as
+  // well as to the log file. \tracingoutput    pi    if positive, writes contents of shipped out
+  // boxes to the log file. \tracingpages     pi    if positive, writes the page-cost calculations
+  // to the log file. \tracingparagraphs pi   if positive, writes a summary of the line-breaking
+  // calculations to the  log     file. \tracingrestores  pi    if positive, writes save-stack
+  // details to the log file. \tracingstats     pi    if positive, writes memory usage statistics
+  // to the log file.
   DefRegister!("\\tracingmacros", Number!(0),
     getter => { LookupNumber!("TRACINGMACROS") },
-    setter => sub[value, scope, _args] { AssignValue!("TRACINGMACROS" => value.value_of(), scope); });
+    setter => sub[value,scope,_args] { AssignValue!("TRACINGMACROS" => value.value_of(), scope); });
   DefRegister!("\\tracingcommands", Number!(0),
     getter => { LookupNumber!("TRACINGCOMMANDS") },
-    setter => sub[value, scope, _args] { AssignValue!("TRACINGCOMMANDS" => value.value_of(), scope); });
+    setter => sub[value,scope,_args] { AssignValue!("TRACINGCOMMANDS" => value.value_of(), scope);});
 
-    DefRegister!("\\tracingonline", Number!(0));
-    DefRegister!("\\tracingstats", Number!(0));
-    DefRegister!("\\tracingparagraphs", Number!(0));
-    DefRegister!("\\tracingpages", Number!(0));
-    DefRegister!("\\tracingoutput", Number!(0));
-    DefRegister!("\\tracinglostchars", Number!(1));
-    DefRegister!("\\tracingrestores", Number!(0));
-  
+  DefRegister!("\\tracingonline", Number!(0));
+  DefRegister!("\\tracingstats", Number!(0));
+  DefRegister!("\\tracingparagraphs", Number!(0));
+  DefRegister!("\\tracingpages", Number!(0));
+  DefRegister!("\\tracingoutput", Number!(0));
+  DefRegister!("\\tracinglostchars", Number!(1));
+  DefRegister!("\\tracingrestores", Number!(0));
 });

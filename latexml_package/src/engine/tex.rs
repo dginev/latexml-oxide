@@ -3,7 +3,7 @@ LoadDefinitions!({
   // port of TeX.pool.ltxml
   // commit 4cd73e7584c5f0422293ba38f9b757332584afec
   // Author: Bruce Miller <nebconinc@gmail.com>
-  // Date:   Thu May 9 13:19:32 2024 -0400  
+  // Date:   Thu May 9 13:19:32 2024 -0400
   InnerPool!(base_schema);
   InnerPool!(base_parameter_types);
   InnerPool!(base_utilities);
@@ -38,16 +38,16 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Orphans?
   //======================================================================
-  
+
   // This is LaTeX, but used a little in the Primitives?
   // define it here (only approxmiately), since it's already useful.
-  
+
   Let!("\\protect", "\\relax");
   DefRegister!("\\everyhelp", Tokens!());
-  DefMacro!("\\hiderel{}", "#1");    // Just ignore, for now...
-  
+  DefMacro!("\\hiderel{}", "#1"); // Just ignore, for now...
+
   InnerPool!(latex_hook);
-  
+
   //======================================================================
   // After all other rewrites have acted, a little cleanup
   // [This suggests that it should be (one of) the LAST (math) rewrite applied?
@@ -82,5 +82,4 @@ LoadDefinitions!({
   //       ## WHY THIS????
   //       $document->getNode->appendChild($node);
   // } });
-
 });

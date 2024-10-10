@@ -6,21 +6,21 @@ use std::collections::VecDeque;
 use std::path::Path;
 use std::rc::Rc;
 
-use crate::util::pathname::{self, PathnameFindOptions};
 use crate::common::arena;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
 use crate::common::model;
 use crate::document::resource::*;
 use crate::document::tag::{TagOptionName, TagOptions};
-use crate::mouth::{Mouth, MouthOptions};
-use crate::gullet::do_expand;
-use crate::parameter::{Parameter, Parameters};
-use crate::tokens::Tokens;
-use crate::state::*;
-use crate::token::*;
 use crate::gullet;
+use crate::gullet::do_expand;
+use crate::mouth::{Mouth, MouthOptions};
+use crate::parameter::{Parameter, Parameters};
+use crate::state::*;
 use crate::stomach::*;
+use crate::token::*;
+use crate::tokens::Tokens;
+use crate::util::pathname::{self, PathnameFindOptions};
 // use crate::util::pathname::PathnameFindOptions;
 use crate::Digested;
 
@@ -69,21 +69,16 @@ impl Default for InputDefinitionOptions {
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(
-  raw_file: &str,
-  mut options: InputDefinitionOptions
-) -> Result<()> {
+pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) -> Result<()> {
   let name = raw_file.trim();
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
-  let prevname =
-    if options.handleoptions && lookup_definition(&T_CS!("\\@currname"))?.is_some() {
-      gullet::do_expand(T_CS!("\\@currname"))?.to_string()
-    } else {
-      String::new()
-    };
-  let prevext = if options.handleoptions && lookup_definition(&T_CS!("\\@currext"))?.is_some()
-  {
+  let prevname = if options.handleoptions && lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+    gullet::do_expand(T_CS!("\\@currname"))?.to_string()
+  } else {
+    String::new()
+  };
+  let prevext = if options.handleoptions && lookup_definition(&T_CS!("\\@currext"))?.is_some() {
     gullet::do_expand(T_CS!("\\@currext"))?.to_string()
   } else {
     String::new()
@@ -103,7 +98,8 @@ pub fn input_definitions(
         }) {
           options.as_class = true;
         }
-      }});
+      }
+    });
   }
   if options.noltxml {
     options.raw = true; // so it will be read as raw by Gullet.
@@ -125,9 +121,7 @@ pub fn input_definitions(
   };
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
-    if let Some(Stored::String(prevoptions)) =
-      lookup_value(&s!("{filename}_loaded_with_options"))
-    {
+    if let Some(Stored::String(prevoptions)) = lookup_value(&s!("{filename}_loaded_with_options")) {
       if arena::with(prevoptions, |prev_str| current_options != prev_str) {
         let message = s!(
           "Option clash for file {} with options {:?}, previously loaded with {:?}",
@@ -145,36 +139,21 @@ pub fn input_definitions(
 
   // Mark as loaded, then process the definitions
   note_begin(&s!("Loading {:?} definitions", filename));
-  def_macro(
-    T_CS!("\\@currname"),
-    None,
-    Tokens!(Explode!(name)),
-    None,
-  )?;
-  def_macro(
-    T_CS!("\\@currext"),
-    None,
-    Tokens!(Explode!(as_type)),
-    None,
-  )?;
+  def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
+  def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
 
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set
   // them *always*, as a matter of course TODO: This *IS* inaccurate with the Package.pm
   // InputDefinitions, revisit at the right time and make sure it matches line-by-line (including
   // the subordinated methods)
   if options.handleoptions {
-    before_input_handle_options(
-      &mut options,
-      &prevname,
-      &prevext,
-      name,
-      &as_type)?;
+    before_input_handle_options(&mut options, &prevname, &prevext, name, &as_type)?;
     def_macro(
       T_CS!(s!("\\{}.{}-h@@k", name, as_type)),
       None,
       options.after,
       None,
-      )?;
+    )?;
   }
 
   if !current_options.is_empty() {
@@ -185,9 +164,8 @@ pub fn input_definitions(
     );
   }
 
-  let is_binding = !options.noltxml
-    && (load_external_binding(&filename)?
-      || load_binding(&filename)?);
+  let is_binding =
+    !options.noltxml && (load_external_binding(&filename)? || load_binding(&filename)?);
   let mut is_found_raw = false;
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
@@ -209,16 +187,12 @@ pub fn input_definitions(
         ext_type: options.extension.as_ref().cloned(),
         search_paths_only: false,
       }),
-      ) {
+    ) {
       is_found_raw = true;
       load_tex_definitions(&filename, &file)?;
     } else if !options.noerror {
       // TODO: Proper missing reports
-      Warn!(
-        "missing_file",
-        name,
-        s!("Can't find file for {name}")
-      );
+      Warn!("missing_file", name, s!("Can't find file for {name}"));
       // note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
       // # We'll only warn about a missing file of definitions: it may be ignorable or never used.
       // # if there ARE problems, they'll likely produce their own errors!
@@ -241,15 +215,10 @@ pub fn input_definitions(
         None,
         Tokens!(Explode!(prevname)),
         None,
-          )?;
+      )?;
     }
     if !prevext.is_empty() {
-      def_macro(
-        T_CS!("\\@currext"),
-        None,
-        Tokens!(Explode!(prevext)),
-        None,
-          )?;
+      def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(prevext)), None)?;
     }
     digest(T_CS!("\\@popfilename"))?;
     reset_options()?; // And reset options afterwards, too.
@@ -259,18 +228,11 @@ pub fn input_definitions(
 }
 
 /// loads a binding from the main binding dispatcher, if available+found
-pub fn load_binding(file: &str) -> Result<bool> {
-  _load_binding(true, file)
-}
+pub fn load_binding(file: &str) -> Result<bool> { _load_binding(true, file) }
 /// loads a binding from an external binding dispatcher, if available+found
-pub fn load_external_binding(file: &str) -> Result<bool> {
-  _load_binding(false, file)
-}
+pub fn load_external_binding(file: &str) -> Result<bool> { _load_binding(false, file) }
 // in the spirit of Perl's Package::loadLTXML
-fn _load_binding(
-  internal: bool,
-  request: &str,
-  ) -> Result<bool> {
+fn _load_binding(internal: bool, request: &str) -> Result<bool> {
   // avoid double-loads, but be binding-specific
   let loaded_key = s!("{request}_binding_loaded");
   if lookup_bool(&loaded_key) {
@@ -316,7 +278,7 @@ fn before_input_handle_options(
   prevname: &str,
   prevext: &str,
   name: &str,
-  as_type: &str
+  as_type: &str,
 ) -> Result<()> {
   // Note: this is trying to emulate the LaTeX 2 (latex.ltx) use of \@pushfilename. For expl3, see
   // expl3.sty.ltxml
@@ -327,16 +289,18 @@ fn before_input_handle_options(
     if !prevname.is_empty() && has_value(&s!("opt@{}.{}", prevname, prevext)) {
       // Only pass those class options that are declared by the package!
       let mut topass = Vec::new();
-      with_vecdeque("@declaredoptions",|vdq_opt| if let Some(declared_options) = vdq_opt {
-        for op in with_options_to_pass.into_iter() {
-          if declared_options.iter().any(|x| {
-            if let Stored::String(val) = x {
-              arena::with(*val, |str| str == op)
-            } else {
-              false
+      with_vecdeque("@declaredoptions", |vdq_opt| {
+        if let Some(declared_options) = vdq_opt {
+          for op in with_options_to_pass.into_iter() {
+            if declared_options.iter().any(|x| {
+              if let Stored::String(val) = x {
+                arena::with(*val, |str| str == op)
+              } else {
+                false
+              }
+            }) {
+              topass.push(op)
             }
-          }) {
-            topass.push(op)
           }
         }
       });
@@ -345,18 +309,8 @@ fn before_input_handle_options(
       }
     }
   }
-  def_macro(
-    T_CS!("\\@currname"),
-    None,
-    Tokens!(Explode!(name)),
-    None,
-  )?;
-  def_macro(
-    T_CS!("\\@currext"),
-    None,
-    Tokens!(Explode!(as_type)),
-    None,
-  )?;
+  def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
+  def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
   // reset options (Note reset & pass were in opposite order in LoadClass ????)
   reset_options()?;
   pass_options(name, as_type, options.options.clone())?;
@@ -365,21 +319,20 @@ fn before_input_handle_options(
   if options.as_class {
     push_value("@masquerading@as@class", arena::pin(name))?;
   }
-  let current_opt_val = with_vecdeque(&s!("opt@{}.{}", name, as_type), |vdq_opt|
-    match vdq_opt {
-      Some(vdq) => {
-        let mut pieces = String::new();
-        for x in vdq.iter() {
-          if let Stored::String(val) = x {
-            arena::with(*val, |str| pieces.push_str(str));
-          }
-          pieces.push(',');
+  let current_opt_val = with_vecdeque(&s!("opt@{}.{}", name, as_type), |vdq_opt| match vdq_opt {
+    Some(vdq) => {
+      let mut pieces = String::new();
+      for x in vdq.iter() {
+        if let Stored::String(val) = x {
+          arena::with(*val, |str| pieces.push_str(str));
         }
-        pieces.pop();
-        pieces
-      },
-      None => String::new()
-    });
+        pieces.push(',');
+      }
+      pieces.pop();
+      pieces
+    },
+    None => String::new(),
+  });
   def_macro(
     T_CS!(s!("\\opt@{}.{}", name, as_type)),
     None,
@@ -400,7 +353,7 @@ pub struct InputOptions {
 /// Input for cases when the file (or data)
 /// is plain TeX material that is expected to contribute content
 /// to the document (as opposed to pure definitions).
-/// 
+///
 /// A Mouth is opened onto the file, and subsequent reading
 /// and/or digestion will pull Tokens from that Mouth until it is
 /// exhausted, or closed.
@@ -408,10 +361,7 @@ pub struct InputOptions {
 /// In some circumstances it may be useful to provide a string containing
 /// the TeX material explicitly, rather than referencing a file.
 /// In this case, the `literal` pseudo-protocal may be used.
-pub fn input_content(
-  request: &str,
-  options: InputOptions,
-  ) -> Result<()> {
+pub fn input_content(request: &str, options: InputOptions) -> Result<()> {
   let filepath = find_file(request, None);
   match filepath {
     // TODO: type => $options{type}, noltxml => 1
@@ -424,17 +374,14 @@ pub fn input_content(
 }
 
 /// This is essentially the `\input` equivalent
-/// 
+///
 /// we are most likely expecting to get actual content,
 /// (possibly with definitions included, as well)
 /// but might actually be getting pure definitions,
 /// (like a proper style file)
 /// in which case we may really want to load a binding.
 /// Note that generic style files (non-latex) often have a .tex extension.
-pub fn input(
-  request: &str,
-  options: InputOptions,
-  ) -> Result<()> {
+pub fn input(request: &str, options: InputOptions) -> Result<()> {
   // unwrap if in quotes \input{"file name"}
   let mut clean_req = Cow::Borrowed(request);
   while request.starts_with('"') && request.ends_with('"') {
@@ -463,9 +410,7 @@ pub fn input(
   // // Next special case: If we were currently reading a "known" style or binding file,
   // // then this file, even if .tex, must also be definitions rather than content.!!(?)
   if lookup_bool("INTERPRETING_DEFINITIONS") {
-    input_definitions(
-      &clean_req,
-      InputDefinitionOptions::default())
+    input_definitions(&clean_req, InputDefinitionOptions::default())
   } else if let Some(path) = find_file(&clean_req, None) {
     // Found something plausible..
     // let ftype = if pathname_is_literaldata(path) { "tex" } else {
@@ -498,10 +443,7 @@ pub fn input(
   }
 }
 
-fn load_tex_definitions(
-  request: &str,
-  pathname: &str,
-  ) -> Result<()> {
+fn load_tex_definitions(request: &str, pathname: &str) -> Result<()> {
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -547,19 +489,14 @@ fn load_tex_definitions(
     },
   )?;
 
-  gullet::reading_from_mouth(
-    pathname_mouth,
-    move || -> Result<()> {
-      while let Some(token) =
-        gullet::read_x_token(Some(false), false, None)?
-      {
-        if token != T_SPACE!() {
-          invoke_token(&token)?;
-        }
+  gullet::reading_from_mouth(pathname_mouth, move || -> Result<()> {
+    while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
+      if token != T_SPACE!() {
+        invoke_token(&token)?;
       }
-      Ok(())
-    },
-  )?;
+    }
+    Ok(())
+  })?;
 
   assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
   assign_value("INCLUDE_STYLES", was_including_styles, None);
@@ -567,10 +504,7 @@ fn load_tex_definitions(
   Ok(())
 }
 
-pub fn load_tex_content(
-  path: &str,
-  _options: InputOptions,
-  ) -> Result<()> {
+pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
   // If there is a file-specific declaration file (name_tex.rs), load it first!
   // TODO: is this `.latexml` variation still relevant in the Rust port?
   let _has_binding = if !pathname::is_literaldata(path) {
@@ -595,7 +529,7 @@ pub fn load_tex_content(
         content: cached_opt,
         ..MouthOptions::default()
       },
-      )?,
+    )?,
     true,
   );
   Ok(())
@@ -620,8 +554,7 @@ pub fn process_options() -> Result<()> {
   } else {
     String::new()
   };
-  let declared_options: VecDeque<Stored> = lookup_vecdeque("@declaredoptions")
-    .unwrap_or_default();
+  let declared_options: VecDeque<Stored> = lookup_vecdeque("@declaredoptions").unwrap_or_default();
   let opt_key = s!("opt@{}.{}", name, ext);
   let current_options = lookup_vecdeque(&opt_key).unwrap_or_default();
   let class_options = lookup_vecdeque("class_options").unwrap_or_default();
@@ -695,11 +628,7 @@ pub fn process_options() -> Result<()> {
   }
   // Now, undefine the handlers?
   for option in declared_options.iter() {
-    let_i(
-      &T_CS!(s!("\\ds@{}", option)),
-      &T_RELAX!(),
-      None
-    );
+    let_i(&T_CS!(s!("\\ds@{}", option)), &T_RELAX!(), None);
   }
   Ok(())
 }
@@ -712,7 +641,7 @@ fn execute_option_internal(option: &str) -> Result<bool> {
       None,
       Tokens!(T_OTHER!(option)),
       None,
-      )?;
+    )?;
 
     let unused = match remove_vecdeque("@unusedoptionlist") {
       Some(list) => list
@@ -735,9 +664,7 @@ fn execute_option_internal(option: &str) -> Result<bool> {
   }
 }
 
-fn execute_default_option_internal(
-  option: &str,
-  ) -> Result<bool> {
+fn execute_default_option_internal(option: &str) -> Result<bool> {
   def_macro(
     T_CS!("\\CurrentOption"),
     None,
@@ -794,10 +721,7 @@ impl Default for RequireOptions {
 /// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find`
 /// ???) Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
-pub fn require_package(
-  name: &str,
-  mut options: RequireOptions,
-  ) -> Result<()> {
+pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
   if options.notex.is_none()
     && !lookup_bool("INCLUDE_STYLES")
@@ -827,7 +751,7 @@ pub fn require_package(
       notex: options.notex.unwrap_or(false),
       after: options.after,
       ..InputDefinitionOptions::default()
-    }
+    },
   )
 }
 
@@ -861,11 +785,7 @@ pub fn require_resource(mut resource: Resource) {
   // }
 }
 
-pub fn load_class(
-  name: &str,
-  _options: Vec<String>,
-  after: Tokens,
-  ) -> Result<()> {
+pub fn load_class(name: &str, _options: Vec<String>, after: Tokens) -> Result<()> {
   input_definitions(
     name,
     InputDefinitionOptions {
@@ -875,7 +795,7 @@ pub fn load_class(
       handleoptions: true,
       noerror: true,
       ..InputDefinitionOptions::default()
-    }
+    },
   )
   // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1,
   // noerror => 1,     %options)) {
@@ -905,10 +825,7 @@ pub struct FindFileOptions {
 }
 
 /// search for a file as prescribed by a `FindFileOptions` configuration
-pub fn find_file(
-  file: &str,
-  options: Option<FindFileOptions>,
-) -> Option<String> {
+pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String> {
   let options = options.unwrap_or_default();
   if pathname::is_literaldata(file) {
     // If literal protocol return immediately (unless notex!)
@@ -1023,28 +940,26 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
 pub fn install_tag(tag: &str, mut properties: TagOptions) {
   let tag_ticket = arena::pin(tag);
   with_tag_property_mut(tag_ticket, |options| {
-  if properties.auto_open.is_some() {
-    options.auto_open = properties.auto_open;
-  }
-  if properties.auto_close.is_some() {
-    options.auto_close = properties.auto_close;
-  }
-  for name in &TagOptionName::all() {
-    if name.is_prepend() {
-      options.prepend(name, properties.remove(name));
-    } else if name.is_append() {
-      options.append(name, properties.remove(name));
-    } else {
-      // we'll handle the regular ones out of the loop
+    if properties.auto_open.is_some() {
+      options.auto_open = properties.auto_open;
     }
-  }});
+    if properties.auto_close.is_some() {
+      options.auto_close = properties.auto_close;
+    }
+    for name in &TagOptionName::all() {
+      if name.is_prepend() {
+        options.prepend(name, properties.remove(name));
+      } else if name.is_append() {
+        options.append(name, properties.remove(name));
+      } else {
+        // we'll handle the regular ones out of the loop
+      }
+    }
+  });
 }
 
 /// Selects the RelaxNG schema defining the XML output language
-pub fn select_relaxng_schema(
-  schema: &str,
-  namespaces: Option<HashMap<String, String>>,
-) {
+pub fn select_relaxng_schema(schema: &str, namespaces: Option<HashMap<String, String>>) {
   // What verb here? Set, Choose,...
   model::set_relaxng_schema(schema);
   if let Some(namespaces) = namespaces {
@@ -1066,9 +981,7 @@ pub fn digest_text(stuff: Tokens) -> Result<Digested> {
   value
 }
 
-pub fn digest_literal<T: Into<Tokens>>(
-  stuff: T,
-  ) -> Result<Digested> {
+pub fn digest_literal<T: Into<Tokens>>(stuff: T) -> Result<Digested> {
   let stuff: Tokens = stuff.into();
   // Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
   // valid changes of state!)
@@ -1086,9 +999,7 @@ pub fn digest_literal<T: Into<Tokens>>(
   value
 }
 
-pub fn digest_if(
-  token: Token,
-  ) -> Result<Option<Digested>> {
+pub fn digest_if(token: Token) -> Result<Option<Digested>> {
   if lookup_definition(&token)?.is_some() {
     match digest(Tokens!(token)) {
       Ok(t) => Ok(Some(t)),
@@ -1099,15 +1010,14 @@ pub fn digest_if(
   }
 }
 
-/// Creates a single `Tokens` representing a TeX invocation of the lead `token` over a list of arguments.
-/// 
+/// Creates a single `Tokens` representing a TeX invocation of the lead `token` over a list of
+/// arguments.
+///
 /// Note: currently this is near the `Mouth` representation of data, and deals purely with tokens.
 /// A more generic version of this method may be able to support `ArgWrap` for the argument list.
-/// Indeed, the return type may also be lifted to a new generic ArgWrap::Invocation, if there was benefit.
-pub fn build_invocation<T: Into<Token>>(
-  token: T,
-  args: Vec<Option<Tokens>>
-) -> Result<Tokens> {
+/// Indeed, the return type may also be lifted to a new generic ArgWrap::Invocation, if there was
+/// benefit.
+pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Option<Tokens>>) -> Result<Tokens> {
   let token: Token = token.into();
   // Note: token may have been \let to another defn!
   if let Some(defn) = lookup_definition(&token)? {
@@ -1118,7 +1028,10 @@ pub fn build_invocation<T: Into<Token>>(
     Ok(Tokens::new(invoked_tokens))
   } else {
     let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
-    token.with_cs_name(|csname| { Error!("undefined", csname, message); Ok(()) })?;
+    token.with_cs_name(|csname| {
+      Error!("undefined", csname, message);
+      Ok(())
+    })?;
     let mut invoked_tokens = vec![token];
     // DefConstructor!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
@@ -1200,7 +1113,7 @@ pub fn preload_font_map(encoding: &str) -> Result<()> {
         extension: Some(Cow::Borrowed("fontmap")),
         noerror: true,
         ..InputDefinitionOptions::default()
-      }
+      },
     )?;
     if has_value(&s!("{encoding}_fontmap")) {
       // Got map?

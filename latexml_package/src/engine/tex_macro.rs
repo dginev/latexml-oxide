@@ -1,5 +1,5 @@
 //! TeX Macro
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -16,8 +16,12 @@ LoadDefinitions!({
   // \relax            c  is a control sequence which typesets nothing.
   // \afterassignment  c  saves a token and inserts it after the next assignment.
   // \aftergroup       c  saves a token and inserts it after the current group is complete.
-  DefPrimitive!("\\begingroup", { begingroup(); });
-  DefPrimitive!("\\endgroup", { endgroup()?; });
+  DefPrimitive!("\\begingroup", {
+    begingroup();
+  });
+  DefPrimitive!("\\endgroup", {
+    endgroup()?;
+  });
   // This makes \relax disappear completely after digestion
   // (which seems most TeX like).
   DefPrimitive!(T_CS!("\\relax"), None, {});
@@ -28,7 +32,7 @@ LoadDefinitions!({
 
   // NON-STANDARD: Internal token produced by Gullet in response to \dont_expand;
   // Acts like \relax, but isn't equal to it.
-  DefPrimitive!(T_CS!("\\special_relax"), None, { });
+  DefPrimitive!(T_CS!("\\special_relax"), None, {});
 
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
   DefPrimitive!("\\afterassignment Token", sub[(t)] {
@@ -41,8 +45,8 @@ LoadDefinitions!({
   //======================================================================
   // CSName
   //----------------------------------------------------------------------
-  // \csname           c  forms a control sequence name from the characters making up a collection of tokens.
-  // \endcsname        c  is used with \csname to make a control sequence name.
+  // \csname           c  forms a control sequence name from the characters making up a collection
+  // of tokens. \endcsname        c  is used with \csname to make a control sequence name.
   DefParameterType!(CSName, reader => reader!( _inner, _extra, { read_cs_name() }));
   DefMacro!("\\csname CSName", sub[(token)] {
     if lookup_meaning(&token).is_none() {
@@ -53,7 +57,7 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\endcsname", {
-    Error!("unexpected" ,"\\endcsname", "Extra \\endcsname");
+    Error!("unexpected", "\\endcsname", "Extra \\endcsname");
     //$stomach->getGullet->showUnexpected);
   });
 
@@ -62,8 +66,9 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \global        c  is an assignment prefix which makes the assignment transcend its group.
   // \long          c  is a prefix for definitions which require multi-paragraph arguments.
-  // \outer         c  is a prefix for a definition which restricts where the definition may be used.
-  // \globaldefs    pi if positive, all assignments are global; if negative, \global is ignored.
+  // \outer         c  is a prefix for a definition which restricts where the definition may be
+  // used. \globaldefs    pi if positive, all assignments are global; if negative, \global is
+  // ignored.
 
   DefPrimitive!("\\global",{ state::set_prefix("global"); }, is_prefix => true);
   DefPrimitive!("\\long",  { state::set_prefix("long");   }, is_prefix => true);
@@ -102,8 +107,9 @@ LoadDefinitions!({
   // Copying definitions
   //----------------------------------------------------------------------
   //  \let       c  gives a control sequence a token's current meaning.
-  // \futurelet  c  `<cs> <token1> <token2>' is equivalent to `\let <cs> = <token2> <token1> <token2>'.
-  DefPrimitive!("\\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token", 
+  // \futurelet  c  `<cs> <token1> <token2>' is equivalent to `\let <cs> = <token2> <token1>
+  // <token2>'.
+  DefPrimitive!("\\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token",
   sub[(token1, token2)] {
     Let!(token1, token2);
   });
@@ -167,41 +173,54 @@ LoadDefinitions!({
   });
   // NON-STANDARD:
   DefPrimitive!(T_CS!("\\dont_expand"), None, {
-    Error!("misdefined", "\\dont_expand",
-      "The token \\dont_expand should never reach Stomach!"); });
+    Error!(
+      "misdefined",
+      "\\dont_expand",
+      "The token \\dont_expand should never reach Stomach!"
+    );
+  });
 
   //======================================================================
   // \the
   //----------------------------------------------------------------------
-  // \the              c  returns character tokens for an internal quantity's or parameter's current value.
-  // The argument to \the is a variety of "Internal Quantities", being parameters,
+  // \the              c  returns character tokens for an internal quantity's or parameter's current
+  // value. The argument to \the is a variety of "Internal Quantities", being parameters,
   // registers, internal registers, codenames, etc. See TeX Book, pp.214--215.
   // [Since \the is expandable, perhaps should just be built into \the's code? Never need to revert]
   DefMacro!("\\the", {
     if let Some(token) = read_x_token(None, false, None)? {
       if let Some(defn) = lookup_definition(&token)? {
-        if defn.is_register() { // SOME kind of register is acceptable
+        if defn.is_register() {
+          // SOME kind of register is acceptable
           let args = if let Some(params) = defn.get_parameters() {
             params.read_arguments(None)?
-          } else { Vec::new() };
+          } else {
+            Vec::new()
+          };
           return match defn.value_of(args) {
             Some(RegisterValue::Token(t)) => Ok(Tokens!(t)),
             Some(RegisterValue::Tokens(ts)) => Ok(ts),
             Some(other) => Ok(Tokens!(Explode!(other.to_string()))),
-            None => Ok(Tokens!())
-          }
+            None => Ok(Tokens!()),
+          };
         } else if defn.get_cs_name() == "\\font" {
           // HACK to get the \fontcmd that would have selected the current font (see FontDef)
           todo!();
           // continue:
-          // return lookup_value("current_FontDef") || T_CS!("\\tenrm"); }    
-        // } else if (defn.is_font_def()) { // Or a propert TeX \fontcmd defined by \font
-        //   return defn.get_cs(); 
-        // }
-        } else { // the argument token is Undefined
-          if token.get_catcode() == Catcode::CS { // but IS a cs \something
-            Error!("expected", "<register>",
-              "A <register> was supposed to be here", s!("Got {} Defining it now.", token));
+          // return lookup_value("current_FontDef") || T_CS!("\\tenrm"); }
+          // } else if (defn.is_font_def()) { // Or a propert TeX \fontcmd defined by \font
+          //   return defn.get_cs();
+          // }
+        } else {
+          // the argument token is Undefined
+          if token.get_catcode() == Catcode::CS {
+            // but IS a cs \something
+            Error!(
+              "expected",
+              "<register>",
+              "A <register> was supposed to be here",
+              s!("Got {} Defining it now.", token)
+            );
             // Hackery: to avoid potential repeated errors, define it now as a number register
             def_register(token, None, Number!(0), None)?; // Dimension, or what?
             return Ok(Tokens!(T_OTHER!("0")));
@@ -209,15 +228,17 @@ LoadDefinitions!({
         }
       }
       // If we fall through to here, whatever $token is shouln't have been used with \the
-      let (the_t,msg) = token.with_str(|tstr| 
-        (s!("\\the{tstr}"),s!("You can't use {tstr} after \\the")));
+      let (the_t, msg) =
+        token.with_str(|tstr| (s!("\\the{tstr}"), s!("You can't use {tstr} after \\the")));
       Error!("unexpected", the_t, msg);
       T_OTHER!("0")
     } else {
-      Error!("expected", "<register>",
-        "A <register> was supposed to be here. Got nothing.");
-      T_OTHER!("0") 
+      Error!(
+        "expected",
+        "<register>",
+        "A <register> was supposed to be here. Got nothing."
+      );
+      T_OTHER!("0")
     }
   });
-  
 });

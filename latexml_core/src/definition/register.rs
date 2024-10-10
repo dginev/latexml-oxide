@@ -3,27 +3,27 @@ use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
 
+use crate::common::arena::SymHashMap as HashMap;
+use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::glue::Glue;
 use crate::common::font;
+use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
-use crate::common::arena::{SymStr, self};
-use crate::common::arena::SymHashMap as HashMap;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
+use crate::gullet;
 use crate::parameter::Parameters;
 use crate::state::{Scope, Stored};
 use crate::tbox::Tbox;
-use crate::gullet;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested, Locator, state};
+use crate::{state, Digested, Locator};
 
 use super::argument::ArgWrap;
 
@@ -259,11 +259,11 @@ impl From<Number> for MuGlue {
 // TODO: Does this successfully emulate the behavior in latexml?
 //   see example use in gullet::read_tokens_value
 impl From<RegisterValue> for Tokens {
-  fn from(v: RegisterValue) -> Tokens { 
+  fn from(v: RegisterValue) -> Tokens {
     match v {
       RegisterValue::Tokens(tks) => tks,
       RegisterValue::Token(t) => Tokens!(t),
-      _ => Tokens!(T_OTHER!(v.value_of().to_string())) 
+      _ => Tokens!(T_OTHER!(v.value_of().to_string())),
     }
   }
 }
@@ -284,7 +284,10 @@ impl From<&RegisterValue> for Dimension {
         );
         // silence a potential Fatal from 100 errors,
         // until a better place is reached in the high-level conversion logic
-        let err = || {Error!("expected", "dimension", message); Ok(()) };
+        let err = || {
+          Error!("expected", "dimension", message);
+          Ok(())
+        };
         err().ok();
         Dimension::new(0)
       },
@@ -304,7 +307,10 @@ impl From<&RegisterValue> for Glue {
         let message = s!("Token register can not be cast into a Glue: {other:?}");
         // silence a potential Fatal from 100 errors,
         // until a better place is reached in the high-level conversion logic
-        let err = || { Error!("expected", "dimension", message); Ok(()) };
+        let err = || {
+          Error!("expected", "dimension", message);
+          Ok(())
+        };
         err().ok();
         Glue::new(0)
       },
@@ -329,7 +335,10 @@ impl From<&RegisterValue> for MuGlue {
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
         let message = s!("Token register can not be cast into a Glue: {:?}", other);
-        let err = || {Error!("expected", "dimension", message); Ok(())};
+        let err = || {
+          Error!("expected", "dimension", message);
+          Ok(())
+        };
         err().ok();
         MuGlue::new(0)
       },
@@ -394,16 +403,16 @@ pub enum RegisterType {
 impl PartialEq for RegisterType {
   fn eq(&self, other: &Self) -> bool {
     use RegisterType::*;
-      match self {
-        Number | CharDef => matches!(other, Number | CharDef),
-        Dimension => matches!(other, Dimension),
-        MuDimension => matches!(other, MuDimension),
-        Glue => matches!(other, Glue),
-        MuGlue => matches!(other, MuGlue),
-        Token => matches!(other, Token),
-        Tokens => matches!(other, Tokens),
-        Any => matches!(other, Any),
-      }
+    match self {
+      Number | CharDef => matches!(other, Number | CharDef),
+      Dimension => matches!(other, Dimension),
+      MuDimension => matches!(other, MuDimension),
+      Glue => matches!(other, Glue),
+      MuGlue => matches!(other, MuGlue),
+      Token => matches!(other, Token),
+      Tokens => matches!(other, Tokens),
+      Any => matches!(other, Any),
+    }
   }
 }
 
@@ -454,7 +463,7 @@ impl Default for Register {
       value: None,
       mathglyph: None,
       role: None,
-      default: None
+      default: None,
     }
   }
 }
@@ -482,7 +491,6 @@ impl fmt::Display for Register {
 
 impl Object for Register {
   fn stringify(&self) -> String { format!("{self:?}") }
-
 }
 
 impl Definition for Register {
@@ -490,20 +498,21 @@ impl Definition for Register {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { self.readonly }
   // not implemented for primitives
-  fn invoke(&self, _once_only: bool) -> Result<Tokens> {
-    todo!()
-  }
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> { todo!() }
   fn get_parameters(&self) -> Option<&Parameters> { self.parameters.as_ref() }
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
 
   fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>) {
-    if matches!(self.register_type,RegisterType::CharDef) {
+    if matches!(self.register_type, RegisterType::CharDef) {
       let message = self
         .cs
         .with_cs_name(|cs_str| s!("Can't assign to chardef {}", cs_str));
-      let err = || {Error!("unexpected", "chardef", message); Ok(()) };
+      let err = || {
+        Error!("unexpected", "chardef", message);
+        Ok(())
+      };
       err().ok();
     } else if let Some(setter) = &self.setter {
       setter(value, scope, args);
@@ -513,18 +522,20 @@ impl Definition for Register {
         let message = s!("Can't assign to register {}", self.address);
         Warn!("unexpected", self.address, message);
       } else {
-        let loc = if args.is_empty() { Cow::Borrowed(&self.address) } else {
+        let loc = if args.is_empty() {
+          Cow::Borrowed(&self.address)
+        } else {
           let args_string: String = args
             .into_iter()
             .map(|a| {
               a.as_tokens()
-               .expect("TODO: handle malformed values here.")
-               .unwrap()
-               .to_string()
-           })
-           .collect::<Vec<String>>()
-           .join("");
-          Cow::Owned(format!("{}{args_string}",self.address))
+                .expect("TODO: handle malformed values here.")
+                .unwrap()
+                .to_string()
+            })
+            .collect::<Vec<String>>()
+            .join("");
+          Cow::Owned(format!("{}{args_string}", self.address))
         };
         state::assign_value(&loc, value, scope);
       }
@@ -538,21 +549,39 @@ impl Definition for Register {
     // but if defined in the document source, better to use \char ###\relax, so it still "works"
     if matches!(self.register_type, RegisterType::CharDef) {
       let mut props = HashMap::default();
-      if let Some(role) = self.role { 
-        props.insert("role",Stored::String(role));
+      if let Some(role) = self.role {
+        props.insert("role", Stored::String(role));
       }
       return Ok(vec![Digested::from(
         if let Some(mathglyph) = self.mathglyph {
-          Tbox::new(arena::pin_char(mathglyph), None, None,
-            Tokens!(T_CS!("\\mathchar"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), 
-            props)
+          Tbox::new(
+            arena::pin_char(mathglyph),
+            None,
+            None,
+            Tokens!(
+              T_CS!("\\mathchar"),
+              self.value.as_ref().unwrap().revert()?,
+              T_CS!("\\relax")
+            ),
+            props,
+          )
         } else {
-          Tbox::new(arena::pin_char(
-            font::decode(self.value.clone().unwrap().value_of() as u8, None,false).unwrap_or_default()),
-            None, None,
-            Tokens!(T_CS!("\\char"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), 
-            props)
-        })])
+          Tbox::new(
+            arena::pin_char(
+              font::decode(self.value.clone().unwrap().value_of() as u8, None, false)
+                .unwrap_or_default(),
+            ),
+            None,
+            None,
+            Tokens!(
+              T_CS!("\\char"),
+              self.value.as_ref().unwrap().revert()?,
+              T_CS!("\\relax")
+            ),
+            props,
+          )
+        },
+      )]);
     }
 
     // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -580,11 +609,7 @@ impl Definition for Register {
     }
   }
 
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-  ) -> Result<Vec<Node>> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
@@ -605,9 +630,9 @@ impl Definition for Register {
           .map(ToString::to_string)
           .collect::<Vec<String>>()
           .join("");
-        Cow::Owned(format!("{}{args_string}",self.address))
+        Cow::Owned(format!("{}{args_string}", self.address))
       };
-      state::with_value(&key,|v_opt| match v_opt {
+      state::with_value(&key, |v_opt| match v_opt {
         Some(v) => v.into(),
         None => self.default.clone(),
       })
@@ -623,7 +648,12 @@ impl Register {
   /// You can't assign it; when you invoke the control sequence, it returns
   /// the result of evaluating the character (more like a regular primitive).
   /// When `mathglyph` is provided, it is the unicode corresponding to the `\mathchar` of `value`
-  pub fn new_chardef(cs: Token, value: Option<RegisterValue>, mathglyph:Option<char>, role:Option<SymStr>) -> Self {
+  pub fn new_chardef(
+    cs: Token,
+    value: Option<RegisterValue>,
+    mathglyph: Option<char>,
+    role: Option<SymStr>,
+  ) -> Self {
     Register {
       cs,
       parameters: None,

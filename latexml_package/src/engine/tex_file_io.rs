@@ -1,8 +1,8 @@
 //! TeX File IO
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
-static PSFILE_REGEX : Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpsfile=(.+?)(?:\s|\})").unwrap());
+static PSFILE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpsfile=(.+?)(?:\s|\})").unwrap());
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -16,7 +16,7 @@ LoadDefinitions!({
   // \read             c  reads one or more lines from an auxiliary file.
   // \endinput         c  stops input from a file at the end of the current line.
   // \inputlineno      iq holds the line number of the line last read in the current input file.
-  
+
   // TeX I/O primitives
   DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName",
   sub[(port, filename)] {
@@ -52,11 +52,12 @@ LoadDefinitions!({
       AssignValue!(&file_key, false, Some(Scope::Global));
     }
   });
-  
+
   DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token", sub[(port, token)] {
-    let mouth_opt = if let Some(Stored::Mouth(mouth_stored)) = lookup_value(&format!("input_file:{port}")) {
-      Some(mouth_stored)
-    } else { None };
+    let mouth_opt =
+      if let Some(Stored::Mouth(mouth_stored)) = lookup_value(&format!("input_file:{port}")) {
+        Some(mouth_stored)
+      } else { None };
     if let Some(mouth_obj) = mouth_opt {
       bgroup();
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
@@ -241,14 +242,13 @@ LoadDefinitions!({
   //         $options .= "trim=$left $bottom 0 0,clip=true"; } }
   //     (options => $options, path => $path, candidates => join(',', @candidates)); },
   //   mode => 'text');
-  // # Since these ultimately generate external resources, it can be useful to have a handle on them.
-  // Tag('ltx:graphics', afterOpen => sub { GenerateID(@_, 'g'); });
-  
+  // # Since these ultimately generate external resources, it can be useful to have a handle on
+  // them. Tag('ltx:graphics', afterOpen => sub { GenerateID(@_, 'g'); });
+
   //======================================================================
   // output processing
   //----------------------------------------------------------------------
   // \shipout          c  sends the contents of a box to the dvi file.
   // \output           pt holds the token list used to typeset one page.
   DefRegister!("\\output", Tokens!());
-
 });

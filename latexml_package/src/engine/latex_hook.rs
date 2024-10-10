@@ -1,7 +1,6 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
-
   // No, \documentclass isn't really a primitive -- It's not even TeX!
   // But we define a number of stubs here that will automatically load
   // the LaTeX pool (or AmSTeX.pool) (which will presumably redefine them), and then
@@ -34,10 +33,15 @@ LoadDefinitions!({
       InputDefinitionOptions {
         extension: Some(Cow::Borrowed("pool")),
         ..InputDefinitionOptions::default()
-      })?;
+      },
+    )?;
   });
 
-  for _ltx3trigger in ["\\ExplSyntaxOn","\\ProvidesExplClass","\\ProvidesExplPackage"] {
+  for _ltx3trigger in [
+    "\\ExplSyntaxOn",
+    "\\ProvidesExplClass",
+    "\\ProvidesExplPackage",
+  ] {
     // DG: note that these auto-loads are not perfect --
     //     if they are triggered with a raw .sty file for example,
     //     the expl3 support will "expire" at the end of the current scope,
@@ -75,6 +79,5 @@ LoadDefinitions!({
   );
   DefMacro!(T_CS!("\\@currnamestack"), None, Tokens!());
   Let!("\\@currname", "\\lx@empty");
-  Let!("\\@currext",  "\\lx@empty");
-
+  Let!("\\@currext", "\\lx@empty");
 });

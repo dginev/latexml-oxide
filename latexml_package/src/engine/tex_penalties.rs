@@ -1,5 +1,5 @@
 //! TeX Penalties
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
@@ -17,7 +17,7 @@ LoadDefinitions!({
   DefPrimitive!("\\penalty Number", None);
   DefPrimitive!("\\unpenalty", None);
   DefRegister!("\\lastpenalty", Number::new(0), readonly => true);
-  
+
   //======================================================================
   // values for various penalties
   //----------------------------------------------------------------------
@@ -27,8 +27,8 @@ LoadDefinitions!({
   // \floatingpenalty  pi is the penalty for insertions that are split between pages.
   // \hyphenpenalty    pi is the penalty for a line break after a discretionary hyphen.
   // \interlinepenalty pi is the penalty added between lines in a paragraph.
-  // \linepenalty      pi is an amount added to the \badness calculated for every line in a paragraph.
-  // \outputpenalty    pi holds the penalty from the current page break.
+  // \linepenalty      pi is an amount added to the \badness calculated for every line in a
+  // paragraph. \outputpenalty    pi holds the penalty from the current page break.
   // \widowpenalty     pi is the penalty added after the penultimate line in a paragraph.
   DefRegister!("\\brokenpenalty", Number!(100));
   DefRegister!("\\clubpenalty", Number!(150));

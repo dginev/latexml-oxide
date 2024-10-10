@@ -402,23 +402,49 @@ impl From<Stored> for Result<ArgWrap> {
       Stored::MuGlue(g) => ArgWrap::MuGlue(g),
       Stored::Number(n) => ArgWrap::Number(n),
       Stored::Float(f) => ArgWrap::Float(f),
-      Stored::Dimension(d) => ArgWrap::Dimension(d),    
-      // we could just map "_" to None, but it is safer to enumerate, to avoid missing 
+      Stored::Dimension(d) => ArgWrap::Dimension(d),
+      // we could just map "_" to None, but it is safer to enumerate, to avoid missing
       // meaningful cases.
       Stored::None => ArgWrap::None,
-      Stored::Mouth(_) | Stored::Primitive(_) | Stored::Bool(_) | Stored::Parameter(_) |
-      Stored::MathPrimitive(_) | Stored::Conditional(_) |
-      Stored::Constructor(_) | Stored::Charcode(_) | Stored::Expandable(_) | Stored::Ligature(_) |
-      Stored::HashStored(_) | Stored::HashTagData(_) | Stored::HashString(_) | Stored::Digested(_) |
-      Stored::FontDirective(_) | Stored::Register(_) | Stored::Rewrite(_) |
-      Stored::Stash(_) | Stored::Fontmap(_) | Stored::Int(_) | Stored::String(_) | 
-      Stored::Strings(_) | Stored::Node(_) | Stored::IfFrame(_) | Stored::Font(_) |
-      Stored::Reversion(_) | Stored::Catcode(_) | Stored::Locator(_) | Stored::VecDequeStored(_) |
-      Stored::VecDigested(_) | Stored::Chars(_)
-      => {
-        Error!("stored","type","Failed to cast to argument; Found stored {:?}", t);
-        ArgWrap::None 
-      } 
+      Stored::Mouth(_)
+      | Stored::Primitive(_)
+      | Stored::Bool(_)
+      | Stored::Parameter(_)
+      | Stored::MathPrimitive(_)
+      | Stored::Conditional(_)
+      | Stored::Constructor(_)
+      | Stored::Charcode(_)
+      | Stored::Expandable(_)
+      | Stored::Ligature(_)
+      | Stored::HashStored(_)
+      | Stored::HashTagData(_)
+      | Stored::HashString(_)
+      | Stored::Digested(_)
+      | Stored::FontDirective(_)
+      | Stored::Register(_)
+      | Stored::Rewrite(_)
+      | Stored::Stash(_)
+      | Stored::Fontmap(_)
+      | Stored::Int(_)
+      | Stored::String(_)
+      | Stored::Strings(_)
+      | Stored::Node(_)
+      | Stored::IfFrame(_)
+      | Stored::Font(_)
+      | Stored::Reversion(_)
+      | Stored::Catcode(_)
+      | Stored::Locator(_)
+      | Stored::VecDequeStored(_)
+      | Stored::VecDigested(_)
+      | Stored::Chars(_) => {
+        Error!(
+          "stored",
+          "type",
+          "Failed to cast to argument; Found stored {:?}",
+          t
+        );
+        ArgWrap::None
+      },
     })
   }
 }
@@ -436,9 +462,14 @@ impl From<ArgWrap> for Result<Stored> {
       ArgWrap::Float(v) => Stored::Float(v),
       ArgWrap::None => Stored::None,
       ArgWrap::KV(_) | ArgWrap::RegisterDefinition(_) | ArgWrap::AlignmentTemplate(_) => {
-        Error!("stored","type","Failed to cast into Stored (no equivalent). Extend Stored if intended; {:?}", t);
+        Error!(
+          "stored",
+          "type",
+          "Failed to cast into Stored (no equivalent). Extend Stored if intended; {:?}",
+          t
+        );
         Stored::None
-      }
+      },
     })
   }
 }
