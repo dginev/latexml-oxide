@@ -2081,7 +2081,7 @@ pub fn x_equals(token1: &Token, token2: &Token) -> bool {
   match (def1_opt, def2_opt) {
     (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
     (None, None) => true,                     // true if both undefined
-    (_, _) => false,                          // False, if only one has 'meaning'
+    (..) => false,                            // False, if only one has 'meaning'
   }
 }
 

@@ -29,7 +29,7 @@ impl Display for CurryTerm {
       CurryTerm::Var(v) => write!(f, "{v}"),
       CurryTerm::Literal(u) => write!(f, "{u}"),
       CurryTerm::Sub(x, y) => match &**y {
-        CurryTerm::Sub(_, _) | CurryTerm::Add(_, _) => write!(f, "{x}-({y})"),
+        CurryTerm::Sub(..) | CurryTerm::Add(..) => write!(f, "{x}-({y})"),
         _ => write!(f, "{x}-{y}"),
       },
       CurryTerm::Add(x, y) => write!(f, "{x}+{y}"),
@@ -241,7 +241,7 @@ impl CurryConstraint {
         .simplify();
         new_rhs = Literal(0);
       },
-      Add(_, _) => {
+      Add(..) => {
         new_lhs = Sub(lhs.clone().into(), rhs.clone().into()).simplify();
         new_rhs = Literal(0);
       },

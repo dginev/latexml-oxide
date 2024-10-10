@@ -103,7 +103,7 @@ impl ValidationPragmatics {
           self.validate_recursive(subtree)?
         }
       },
-      XM::Apply(Operator(op), args, _, _) => {
+      XM::Apply(Operator(op), args, ..) => {
         self.validate_recursive(op)?;
         for arg_subtree in args.trees() {
           self.validate_recursive(arg_subtree)?;
@@ -183,7 +183,7 @@ fn _pragma_letter_case_flat_unstyled(name: &str) -> String {
 }
 
 fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), _, _, _) = tree {
+  if let XM::Apply(Operator(op), ..) = tree {
     if let XM::Lexeme(ref _lexeme, ref atom_meta) = **op {
       if let Some(ref fences) = atom_meta.fenced {
         if fences.as_str() == "parens" {
@@ -198,7 +198,7 @@ fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>
 }
 
 fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, _, _) = tree {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
     match **op {
       XM::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
         if let Some(top_lhs) = args.trees().first() {
@@ -265,7 +265,7 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
 /// pruning, as there are known, albeit rare, counter-examples ("f x").
 fn pragma_unfenced_letter_arguments_require_visual_cues(tree: &XM) -> Result<(), Box<dyn Error>> {
   match *tree {
-    XM::Apply(Operator(ref op), ref args, _, _) if args.0.len() == 1 => {
+    XM::Apply(Operator(ref op), ref args, ..) if args.0.len() == 1 => {
       if let Some(XM::Lexeme(ref arg_name, ref atom_meta)) = args.0[0] {
         if atom_meta.fenced.is_none() {
           let (arg_base, _sep, lexeme) = distill_lexeme(arg_name);
@@ -313,7 +313,7 @@ fn pragma_unfenced_letter_arguments_require_visual_cues(tree: &XM) -> Result<(),
 /// appear as list elements.
 fn pragma_opfunctions_are_rarely_arguments(tree: &XM) -> Result<(), Box<dyn Error>> {
   match *tree {
-    XM::Apply(_, ref args, _, _) if args.0.len() == 1 => {
+    XM::Apply(_, ref args, ..) if args.0.len() == 1 => {
       if let Some(XM::Lexeme(ref arg_name, ref atom_meta)) = args.0[0] {
         if arg_name.starts_with("OPFUNCTION") && atom_meta.fenced.is_none() {
           return Err("OPFUNCTIONs are rarely arguments, prune.".into());
@@ -333,7 +333,7 @@ fn pragma_opfunctions_are_rarely_arguments(tree: &XM) -> Result<(), Box<dyn Erro
 /// Mostly since we can't enforce IDs to strictly have "curry=1", rather
 /// we need them with "curry >= 1", to stay a little more lenient.
 fn pragma_higher_order_ids_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(ref op, ref args, _, _) = tree {
+  if let XM::Apply(ref op, ref args, ..) = tree {
     if args.0.len() == 1 {
       match &*op.0 {
         XM::Lexeme(ref op_name, _) if op_name.starts_with("ID:") => match args.0[0] {
@@ -345,7 +345,7 @@ fn pragma_higher_order_ids_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error
               return Err("ID applied to unfenced ID is highly unusual, prune.".into());
             }
           },
-          Some(XM::Apply(_, _, _, _)) => {
+          Some(XM::Apply(..)) => {
             return Err("ID of a higher order shouldn't accept any compound trees.".into());
           },
           _ => {},
@@ -362,7 +362,7 @@ fn pragma_higher_order_ids_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error
 /// A right-associative application h(f(x,y)) is instead.
 /// Prune it out if possible.
 fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, _, _) = tree {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
     match **op {
       XM::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
         let trees = args.trees();
@@ -393,7 +393,7 @@ fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box
 /// that they are to be multiplied Prune such parses. We have special rules for some notations, such
 /// as "dlmf_range".
 fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, _, _) = tree {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
     match **op {
       XM::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
         let arg_trees = args.trees();
@@ -421,7 +421,7 @@ fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &XM) -> Result<(), Box
 /// The only case (that I currently know) of a standalone "d" is in the Lebnitz derivative notation.
 /// For which we have a special rule. So the generic fraction parse should be pruned.
 fn pragma_standalone_diffops_are_not_numerators(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, _, _) = tree {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
     match **op {
       XM::Lexeme(ref oplexeme, _) if oplexeme.starts_with("MULOP") => {
         if let Some(XM::Lexeme(ref numlexeme, _)) = args.trees().first() {
@@ -440,7 +440,7 @@ fn pragma_standalone_diffops_are_not_numerators(tree: &XM) -> Result<(), Box<dyn
 /// function symbols say " f_i g_j ". This pragma prunes trees that applies two adjacent scripted
 /// constructs.
 fn pragma_adjacent_unfenced_scripts_dont_apply(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, _, _) = tree {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
     if args.trees().len() == 1 {
       if let XM::Apply(Operator(ref op_op), _, _, ref op_meta) = **op {
         let op_base_name = op_op.base_operator_name();
@@ -464,7 +464,7 @@ fn pragma_adjacent_unfenced_scripts_dont_apply(tree: &XM) -> Result<(), Box<dyn 
 /// Adjacent functions don't unify into a single operator
 /// as they are meant to apply right-to-left, one-by-one
 fn pragma_adjacent_functions_dont_unify_into_op(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), _, _, _) = tree {
+  if let XM::Apply(Operator(op), ..) = tree {
     if let XM::Apply(Operator(inner_op), inner_args, _, inner_meta) = &**op {
       if inner_meta.fenced.is_none() {
         if let XM::Lexeme(name, _) = inner_op.get_baseline() {
@@ -488,7 +488,7 @@ fn pragma_adjacent_functions_dont_unify_into_op(tree: &XM) -> Result<(), Box<dyn
 }
 /// Postfix
 fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, _, _) = tree {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
     let arg_trees = args.trees();
     if arg_trees.len() == 1 {
       if let Some(XM::Apply(Operator(arg_op), _, _, arg_meta)) = arg_trees.first() {
@@ -510,7 +510,7 @@ fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dy
 }
 
 fn pragma_restrict_numeral_fractions(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, _, _) = tree {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
     match **op {
       XM::Lexeme(ref oplexeme, _) if oplexeme == "arith1.divide" => {
         let arg_trees = args.trees();

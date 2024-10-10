@@ -979,7 +979,7 @@ impl Font {
     let mut prevbox_opt: Option<Digested> = None;
     for mut thisbox in filtered_boxes {
       // Should any `options` be inherited by the contained boxes?
-      let (w, h, d, _, _, _) = thisbox.get_size(None)?;
+      let (w, h, d, ..) = thisbox.get_size(None)?;
 
       // DG: TODO: We'll have to figure out how to rearrange this logic,
       //           now that every emitted result of get_size is a Dimension.

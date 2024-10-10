@@ -8,4 +8,5 @@ where_single_line = true
 tab_spaces = 2
 error_on_line_overflow = true
 error_on_unformatted = false
+condense_wildcard_suffixes = true
 edition = "2021"
