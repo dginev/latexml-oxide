@@ -41,11 +41,7 @@ impl Default for KeyVal {
 impl KeyVal {
   pub fn new(prefix: Option<String>, keyset: String, key: String) -> Self {
     let prefix = prefix.unwrap_or_else(|| "KV".to_string());
-    KeyVal {
-      prefix,
-      key,
-      keyset,
-    }
+    KeyVal { prefix, key, keyset }
   }
 
   pub fn get_header(&self) -> String { s!("{}@{}@{}", self.prefix, self.keyset, self.key) }

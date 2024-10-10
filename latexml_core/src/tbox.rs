@@ -82,10 +82,7 @@ impl Tbox {
     };
     let empty_sym = *EMPTY_SYM;
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
-      Tokens!(Token {
-        text,
-        code: Catcode::OTHER
-      })
+      Tokens!(Token { text, code: Catcode::OTHER })
     } else {
       tokens_opt
     };

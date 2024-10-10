@@ -609,10 +609,7 @@ impl Default for Token {
 impl Token {
   /// simple Token constructor, wrapping over text and catcode
   pub fn new<T: AsRef<str>>(text: T, code: Catcode) -> Self {
-    Token {
-      text: arena::pin(text),
-      code,
-    }
+    Token { text: arena::pin(text), code }
   }
 
   /// Get the CS Name of the token. This is the name that definitions will be
