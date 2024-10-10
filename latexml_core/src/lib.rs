@@ -245,7 +245,7 @@ pub trait BoxOps: Object {
     if !self.has_property("width") && !self.has_property("cached_width") {
       // TODO: Restore caching?
       // self.compute_size_store(options.unwrap_or_default())?
-      let (w, _, _) = self.compute_size(options.unwrap_or_default())?;
+      let (w, ..) = self.compute_size(options.unwrap_or_default())?;
       return Ok(Some(RegisterValue::Dimension(w)));
     }
 

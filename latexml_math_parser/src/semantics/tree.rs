@@ -144,7 +144,7 @@ impl Operator {
   pub fn unconstrain_recursive(&mut self) { self.0.unconstrain_recursive(); }
 
   fn fmt_indented(&self, level: &[bool], f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    if let XM::Lexeme(_, _) = &*self.0 {
+    if let XM::Lexeme(..) = &*self.0 {
       self.0.fmt_indented(level, f)
     } else {
       let indent = if level.is_empty() {
@@ -255,7 +255,7 @@ impl XM {
   pub fn get_inner_meta(&self) -> Vec<&Meta> {
     match self {
       XM::Lexeme(_atom, meta) => vec![meta],
-      XM::Apply(op, args, _, _) => vec![op.get_meta()]
+      XM::Apply(op, args, ..) => vec![op.get_meta()]
         .into_iter()
         .chain(
           args
@@ -265,7 +265,7 @@ impl XM {
             .map(|arg| arg.as_ref().unwrap().get_meta()),
         )
         .collect(),
-      XM::Dual(content, presentation, _, _) => vec![content.get_meta(), presentation.get_meta()],
+      XM::Dual(content, presentation, ..) => vec![content.get_meta(), presentation.get_meta()],
       _ => Vec::new(),
     }
   }
@@ -282,7 +282,7 @@ impl XM {
           }
         },
       },
-      XM::Apply(op, args, _, _) => Cow::Owned(format!(
+      XM::Apply(op, args, ..) => Cow::Owned(format!(
         "{}{}",
         op.0.get_value(nodes)?,
         args
@@ -293,12 +293,12 @@ impl XM {
           .join("")
       )),
       XM::Choices(_) | XM::Arg(_) => todo!(),
-      XM::Dual(content, pres, _, _) => Cow::Owned(format!(
+      XM::Dual(content, pres, ..) => Cow::Owned(format!(
         "{}{}",
         content.get_value(nodes).expect("inner"),
         pres.get_value(nodes).expect("inner")
       )),
-      XM::Wrap(args, _, _) => Cow::Owned(
+      XM::Wrap(args, ..) => Cow::Owned(
         args
           .iter()
           .map(|a| a.get_value(nodes).expect("oof"))
@@ -382,7 +382,7 @@ impl XM {
           // (otherwise, it's already built in)
           if let Some(ref expr) = new_meta.curry_level {
             match expr {
-              CurryTerm::Add(_, _) | CurryTerm::Sub(_, _) => {
+              CurryTerm::Add(..) | CurryTerm::Sub(..) => {
                 new_meta.curry_constraints.insert(CurryConstraint((
                   expr.clone(),
                   Ordering::Greater,
@@ -406,8 +406,8 @@ impl XM {
         }
         Ok(new_tree)
       },
-      XM::Dual(_, _, _, _) => todo!(),
-      XM::Wrap(_, _, _) => todo!(),
+      XM::Dual(..) => todo!(),
+      XM::Wrap(..) => todo!(),
       XM::Arg(_) => todo!(),
       XM::Choices(_) => Err("can not specialize choices".into()),
     }
@@ -438,7 +438,7 @@ impl XM {
   pub fn base_operator_name(&self) -> String {
     match self {
       XM::Lexeme(ref name, _) => name.to_string(),
-      XM::Apply(ref op, ref args, _, _) => {
+      XM::Apply(ref op, ref args, ..) => {
         match &*op.0 {
           XM::Lexeme(ref name, _) if name == "unknown.subscript" => {
             let arg_base = args.0.first().unwrap().as_ref().unwrap().clone();
@@ -453,7 +453,7 @@ impl XM {
             arg_base.base_operator_name()
           },
           XM::Lexeme(other, _) => other.to_string(),
-          XM::Apply(sub_other, _, _, _) => format!("reduced__{}", sub_other.0.base_operator_name()),
+          XM::Apply(sub_other, ..) => format!("reduced__{}", sub_other.0.base_operator_name()),
           _ => String::new(),
         }
       },
@@ -463,10 +463,10 @@ impl XM {
 
   pub fn get_baseline(&self) -> &Self {
     match self {
-      XM::Lexeme(_, _) => self,
-      XM::Token(_, _) => self,
+      XM::Lexeme(..) => self,
+      XM::Token(..) => self,
       XM::Ref(_) => self,
-      XM::Apply(ref op, ref args, _, _) => {
+      XM::Apply(ref op, ref args, ..) => {
         if let XM::Lexeme(name, _) = &*op.0 {
           if name == "unknown.subscript" || name == "unknown.superscript" {
             args.trees().first().unwrap().get_baseline()
@@ -477,8 +477,8 @@ impl XM {
           self
         }
       },
-      XM::Dual(_, _, _, _) => todo!(),
-      XM::Wrap(_inner, _, _) => todo!(),
+      XM::Dual(..) => todo!(),
+      XM::Wrap(_inner, ..) => todo!(),
       XM::Arg(_) => todo!(),
       XM::Choices(args) => args.first().unwrap().get_baseline(),
     }
@@ -542,7 +542,7 @@ impl XM {
         op.fmt_indented(level, f)?;
         args.fmt_indented(&arg_level, f)
       },
-      XM::Dual(content, pres, _, _) => {
+      XM::Dual(content, pres, ..) => {
         writeln!(f, "\n{indent}Dual")?;
         let mut arg_level: Vec<bool> = level.to_vec();
         arg_level.push(true);
@@ -558,7 +558,7 @@ impl XM {
         }
         writeln!(f)
       },
-      XM::Wrap(content, _, _) => {
+      XM::Wrap(content, ..) => {
         writeln!(f, "\n{indent}Wrap")?;
         let mut arg_level: Vec<bool> = level.to_vec();
         arg_level.push(true);

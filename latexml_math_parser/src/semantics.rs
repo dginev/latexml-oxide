@@ -499,7 +499,7 @@ pub fn obtain_arg(tree: XM, n: usize, ctxt: ActionContext) -> Result<Option<XM>,
       // if ($nth && !$node->isSameNode($onode)) {
       //   return LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT, $nth); }
     },
-    XM::Apply(_, ref args, _, _) => match args.0.get(n) {
+    XM::Apply(_, ref args, ..) => match args.0.get(n) {
       Some(t) => Ok(t.clone()),
       None => Ok(None),
     },
