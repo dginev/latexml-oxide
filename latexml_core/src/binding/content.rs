@@ -479,15 +479,12 @@ fn load_tex_definitions(request: &str, pathname: &str) -> Result<()> {
   } else {
     Some(content_str)
   };
-  let pathname_mouth = Mouth::create(
-    pathname,
-    MouthOptions {
-      fordefinitions: true,
-      notes: true,
-      content,
-      ..MouthOptions::default()
-    },
-  )?;
+  let pathname_mouth = Mouth::create(pathname, MouthOptions {
+    fordefinitions: true,
+    notes: true,
+    content,
+    ..MouthOptions::default()
+  })?;
 
   gullet::reading_from_mouth(pathname_mouth, move || -> Result<()> {
     while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
@@ -522,14 +519,11 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
     Some(cached)
   };
   gullet::open_mouth(
-    Mouth::create(
-      path,
-      MouthOptions {
-        notes: true,
-        content: cached_opt,
-        ..MouthOptions::default()
-      },
-    )?,
+    Mouth::create(path, MouthOptions {
+      notes: true,
+      content: cached_opt,
+      ..MouthOptions::default()
+    })?,
     true,
   );
   Ok(())
@@ -734,25 +728,22 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   }
   // TODO: Ideally we want to use the same struct for the RequirePackage options as for the
   // InputDefinitions options
-  input_definitions(
-    name,
-    InputDefinitionOptions {
-      extension: options.extension,
-      handleoptions: true,
-      // Pass classes options if we have NONE!
-      withoptions: if options.options.is_empty() {
-        Some(Vec::new())
-      } else {
-        None
-      }, // fake boolean use, multi-type in latexml... refactor?
-      options: options.options,
-      as_class: options.as_class,
-      noltxml: options.noltxml.unwrap_or(false),
-      notex: options.notex.unwrap_or(false),
-      after: options.after,
-      ..InputDefinitionOptions::default()
-    },
-  )
+  input_definitions(name, InputDefinitionOptions {
+    extension: options.extension,
+    handleoptions: true,
+    // Pass classes options if we have NONE!
+    withoptions: if options.options.is_empty() {
+      Some(Vec::new())
+    } else {
+      None
+    }, // fake boolean use, multi-type in latexml... refactor?
+    options: options.options,
+    as_class: options.as_class,
+    noltxml: options.noltxml.unwrap_or(false),
+    notex: options.notex.unwrap_or(false),
+    after: options.after,
+    ..InputDefinitionOptions::default()
+  })
 }
 
 pub fn require_resource(mut resource: Resource) {
@@ -786,17 +777,14 @@ pub fn require_resource(mut resource: Resource) {
 }
 
 pub fn load_class(name: &str, _options: Vec<String>, after: Tokens) -> Result<()> {
-  input_definitions(
-    name,
-    InputDefinitionOptions {
-      extension: Some(Cow::Borrowed("cls")),
-      after,
-      notex: true,
-      handleoptions: true,
-      noerror: true,
-      ..InputDefinitionOptions::default()
-    },
-  )
+  input_definitions(name, InputDefinitionOptions {
+    extension: Some(Cow::Borrowed("cls")),
+    after,
+    notex: true,
+    handleoptions: true,
+    noerror: true,
+    ..InputDefinitionOptions::default()
+  })
   // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1,
   // noerror => 1,     %options)) {
   //   return $success; }
@@ -905,13 +893,10 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // }
     // If we're looking for TeX, look within our paths & installation first (faster than kpse)
     if !options.notex {
-      if let Some(path) = pathname::find(
-        file,
-        PathnameFindOptions {
-          paths: Some(paths),
-          ..PathnameFindOptions::default()
-        },
-      ) {
+      if let Some(path) = pathname::find(file, PathnameFindOptions {
+        paths: Some(paths),
+        ..PathnameFindOptions::default()
+      }) {
         return Some(path);
       }
     }
@@ -1107,14 +1092,11 @@ pub fn preload_font_map(encoding: &str) -> Result<()> {
   let failed_flag = lookup_bool(&fail_key);
   if !failed_flag {
     assign_value(&fail_key, true, None); // Stop recursion?
-    input_definitions(
-      &encoding.to_lowercase(),
-      InputDefinitionOptions {
-        extension: Some(Cow::Borrowed("fontmap")),
-        noerror: true,
-        ..InputDefinitionOptions::default()
-      },
-    )?;
+    input_definitions(&encoding.to_lowercase(), InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("fontmap")),
+      noerror: true,
+      ..InputDefinitionOptions::default()
+    })?;
     if has_value(&s!("{encoding}_fontmap")) {
       // Got map?
       assign_value(&fail_key, false, None);

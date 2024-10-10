@@ -95,22 +95,18 @@ pub enum TableName {
 }
 impl Display for TableName {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(
-      f,
-      "{}",
-      match self {
-        TableName::Meaning => "Meaning",
-        TableName::Value => "Value",
-        TableName::Catcode => "Catcode",
-        TableName::Mathcode => "Mathcode",
-        TableName::Sfcode => "Sfcode",
-        TableName::Lccode => "Lccode",
-        TableName::Uccode => "Uccode",
-        TableName::Delcode => "Delcode",
-        TableName::Stash => "Stash",
-        TableName::StashActive => "StashActive",
-      }
-    )
+    write!(f, "{}", match self {
+      TableName::Meaning => "Meaning",
+      TableName::Value => "Value",
+      TableName::Catcode => "Catcode",
+      TableName::Mathcode => "Mathcode",
+      TableName::Sfcode => "Sfcode",
+      TableName::Lccode => "Lccode",
+      TableName::Uccode => "Uccode",
+      TableName::Delcode => "Delcode",
+      TableName::Stash => "Stash",
+      TableName::StashActive => "StashActive",
+    })
   }
 }
 impl TableName {

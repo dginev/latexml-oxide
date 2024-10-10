@@ -119,10 +119,9 @@ LoadDefinitions!({
     for line in &lines {
       tokens.push(T_CS!("\\verbatim@startline"));
       tokens.extend(
-        Invocation!(
-          T_CS!("\\verbatim@addtoline"),
-          vec![Tokens::new(ExplodeText!(line))]
-        )
+        Invocation!(T_CS!("\\verbatim@addtoline"), vec![Tokens::new(
+          ExplodeText!(line)
+        )])
         .unlist(),
       );
       tokens.push(T_CS!("\\verbatim@processline"));

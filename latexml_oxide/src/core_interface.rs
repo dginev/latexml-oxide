@@ -307,13 +307,10 @@ impl DigestionAPI for Core {
         request
       };
 
-      if let Some(pathname) = pathname::find(
-        &request_base,
-        PathnameFindOptions {
-          extensions: Some(vec![mode.extension(), String::new()]),
-          ..PathnameFindOptions::default()
-        },
-      ) {
+      if let Some(pathname) = pathname::find(&request_base, PathnameFindOptions {
+        extensions: Some(vec![mode.extension(), String::new()]),
+        ..PathnameFindOptions::default()
+      }) {
         request = pathname;
         dir = pathname::directory(&request);
         name = pathname::file_stem(&request);

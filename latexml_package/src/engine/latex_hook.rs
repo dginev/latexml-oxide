@@ -28,13 +28,10 @@ LoadDefinitions!({
   }
   // TODO: Port and use `DefAutoload` instead of this single-purpose macro
   DefPrimitive!("\\@load@latex@pool", {
-    input_definitions(
-      "LaTeX",
-      InputDefinitionOptions {
-        extension: Some(Cow::Borrowed("pool")),
-        ..InputDefinitionOptions::default()
-      },
-    )?;
+    input_definitions("LaTeX", InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("pool")),
+      ..InputDefinitionOptions::default()
+    })?;
   });
 
   for _ltx3trigger in [

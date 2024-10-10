@@ -138,10 +138,9 @@ fn assign_lookup_arrays() {
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value"),
   };
 
-  unshift_value(
-    "empty_key",
-    vec![Stored::String(arena::pin_static("mydir"))],
-  );
+  unshift_value("empty_key", vec![Stored::String(arena::pin_static(
+    "mydir",
+  ))]);
   let shifted = shift_value("empty_key").unwrap();
   if let Some(Stored::String(shifted)) = shifted {
     arena::with(shifted, |shifted_str| {
