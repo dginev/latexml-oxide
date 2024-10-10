@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use latexml_core::common::xml::content_nodes;
-use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
+use std::char::{REPLACEMENT_CHARACTER, decode_utf16};
 
 pub fn reenter_text_mode(vertical_mode: bool) {
   let mode_key = if vertical_mode {
@@ -89,7 +89,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
             t = t_next;
           } else {
             todo!(); // hm, this is a bit of a pain to port without making t into an
-                     // Option<Token>...
+            // Option<Token>...
           }
         }
       } else {
@@ -602,30 +602,30 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
   ////                                 $text_node)
   {
     todo!(); // TODO
-             // // First step is remove any ltx:tbody from the tabular!
-             // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
-             //   document.unwrapNodes($tb); }
-             // // Now, we can start replacing tabular=>XMArray, tr=>XMRow, td=>XMCell
-             // my $table = document.renameNode($children[0], 'ltx:XMArray');
-             // foreach my $row ($table->childNodes) {
-             //   $row = document.renameNode($row, 'ltx:XMRow');
-             //   foreach my $cell ($row->childNodes) {
-             //     $cell = document.renameNode($cell, 'ltx:XMCell');
-             //     foreach my $m ($cell->childNodes) {
-             //       if ($model->getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap
-             // the Math/XMath layer         document.replaceNode($m,
-             // map { $_->childNodes } $m->childNodes); }       else
-             // {                                           // Otherwise, wrap whatever it
-             // is in an XMText         document.wrapNodes('ltx:
-             // XMText', $m); } } } }
-             // And now we don't need the XMText any more.
-             // foreach my $attr ($text_node->attributes) {    // Copy the child's
-             // attributes (should Merge!!)
-             //   $table->setAttribute($attr->nodeName => $attr->getValue); }
-             // my $newtable = document.unwrapNodes($text_node);
-             // if (my $id = $text_node->getAttribute('xml:id')) {
-             //   document.unRecordID($id);
-             //   document.recordID($id, $newtable); } }
+    // // First step is remove any ltx:tbody from the tabular!
+    // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
+    //   document.unwrapNodes($tb); }
+    // // Now, we can start replacing tabular=>XMArray, tr=>XMRow, td=>XMCell
+    // my $table = document.renameNode($children[0], 'ltx:XMArray');
+    // foreach my $row ($table->childNodes) {
+    //   $row = document.renameNode($row, 'ltx:XMRow');
+    //   foreach my $cell ($row->childNodes) {
+    //     $cell = document.renameNode($cell, 'ltx:XMCell');
+    //     foreach my $m ($cell->childNodes) {
+    //       if ($model->getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap
+    // the Math/XMath layer         document.replaceNode($m,
+    // map { $_->childNodes } $m->childNodes); }       else
+    // {                                           // Otherwise, wrap whatever it
+    // is in an XMText         document.wrapNodes('ltx:
+    // XMText', $m); } } } }
+    // And now we don't need the XMText any more.
+    // foreach my $attr ($text_node->attributes) {    // Copy the child's
+    // attributes (should Merge!!)
+    //   $table->setAttribute($attr->nodeName => $attr->getValue); }
+    // my $newtable = document.unwrapNodes($text_node);
+    // if (my $id = $text_node->getAttribute('xml:id')) {
+    //   document.unRecordID($id);
+    //   document.recordID($id, $newtable); } }
   }
   Ok(())
 }

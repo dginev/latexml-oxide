@@ -1,8 +1,8 @@
 use crate::data::{get_grammatical_role, get_token_meaning};
-use crate::semantics::tree::lookup_lex_node;
-use crate::semantics::tree::XM;
 use crate::semantics::ActionContext;
 use crate::semantics::XProps;
+use crate::semantics::tree::XM;
+use crate::semantics::tree::lookup_lex_node;
 use latexml_core::binding::def::dialect::get_xmarg_id;
 use libxml::tree::Node;
 use std::borrow::Cow;

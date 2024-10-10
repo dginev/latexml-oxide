@@ -19,6 +19,7 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
+use crate::definition::Reversion;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
@@ -26,7 +27,6 @@ use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::{Register, RegisterValue};
-use crate::definition::Reversion;
 use crate::definition::{Definition, FontDirective};
 use crate::document::tag::TagData;
 use crate::ligature::Ligature;
@@ -574,13 +574,7 @@ impl From<bool> for Stored {
 }
 
 impl From<bool> for &Stored {
-  fn from(value: bool) -> Self {
-    if value {
-      &STORED_TRUE
-    } else {
-      &STORED_FALSE
-    }
-  }
+  fn from(value: bool) -> Self { if value { &STORED_TRUE } else { &STORED_FALSE } }
 }
 
 impl From<Cow<'_, str>> for Stored {

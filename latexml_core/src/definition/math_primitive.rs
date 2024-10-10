@@ -8,6 +8,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::Scope;
 
+use crate::Digested;
 use crate::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
   PrimitiveClosure, Reversion,
@@ -17,7 +18,6 @@ use crate::parameter::Parameters;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::Digested;
 
 use super::SizingClosure;
 

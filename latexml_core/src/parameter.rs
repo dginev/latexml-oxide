@@ -1,11 +1,12 @@
 use once_cell::sync::Lazy;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use regex::Regex;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::common::arena::{self, SymStr, EMPTY_SYM};
+use crate::Digested;
+use crate::common::arena::{self, EMPTY_SYM, SymStr};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::definition::argument::ArgWrap;
@@ -17,7 +18,6 @@ use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::Digested;
 
 pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;

@@ -12,6 +12,7 @@ use crate::common::error::*;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 // use crate::common::numeric_ops::NumericOps;
+use crate::Digested;
 use crate::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::parameter::Parameters;
@@ -19,7 +20,6 @@ use crate::state::*;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::Digested;
 use crate::{gullet, state};
 
 // Conditional control sequences; Expandable

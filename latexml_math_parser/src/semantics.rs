@@ -15,7 +15,7 @@ use latexml_core::document::Document;
 use latexml_core::raw_map;
 
 use self::tree::lookup_lex_node;
-pub use self::tree::{Args, Operator, XProps, XM};
+pub use self::tree::{Args, Operator, XM, XProps};
 use crate::pragmatics::ValidationPragmatics;
 use crate::util::create_xmrefs;
 

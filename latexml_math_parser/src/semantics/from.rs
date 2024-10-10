@@ -1,5 +1,5 @@
 use super::metadata::Meta;
-use super::tree::{Args, Operator, XProps, XM};
+use super::tree::{Args, Operator, XM, XProps};
 use libxml::tree::Node;
 
 impl From<&str> for Operator {

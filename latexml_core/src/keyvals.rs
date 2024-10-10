@@ -227,8 +227,13 @@ impl KeyVals {
     if keysets.is_empty() {
       let all_joined = allkeysets.join(",");
       if self.skip_missing == SkipMissing::None {
-        Info!("undefined", "Encountered unknown KeyVals key",
-          s!("'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"));
+        Info!(
+          "undefined",
+          "Encountered unknown KeyVals key",
+          s!(
+            "'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"
+          )
+        );
       }
       return Vec::new();
     }

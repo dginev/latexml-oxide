@@ -1,10 +1,10 @@
+use crate::Object;
 use crate::common::error::*;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::RegisterType;
 use crate::mouth;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
-use crate::Object;
 use std::fmt;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
@@ -33,9 +33,7 @@ impl From<Number> for Option<Tokens> {
 
 #[macro_export]
 macro_rules! Number {
-  ($number:expr) => {{
-    ::latexml_core::common::number::Number::new($number as i64)
-  }};
+  ($number:expr) => {{ ::latexml_core::common::number::Number::new($number as i64) }};
 }
 
 impl From<String> for Number {

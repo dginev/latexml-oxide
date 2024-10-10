@@ -6,7 +6,7 @@ use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::list::List;
 use latexml_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
-use latexml_core::{fatal, report, report_mut, s, Core, CoreOptions, Error, Fatal, Info};
+use latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report, report_mut, s};
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;

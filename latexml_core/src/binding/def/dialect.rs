@@ -6,6 +6,7 @@ use std::rc::Rc;
 use regex::Regex;
 
 // use crate::common::error::*;
+use crate::Digested;
 use crate::binding::content::merge_font;
 use crate::binding::counter::dialect::step_counter;
 use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
@@ -37,7 +38,6 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::Digested;
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
   "name",
@@ -1166,9 +1166,11 @@ pub fn get_xmarg_id() -> Result<Tokens> {
   def_macro(
     T_CS!("\\@@lx@xmarg@ID"),
     None,
-    Tokens!(Explode!(lookup_register("\\c@@lx@xmarg", Vec::new())?
-      .unwrap()
-      .value_of())),
+    Tokens!(Explode!(
+      lookup_register("\\c@@lx@xmarg", Vec::new())?
+        .unwrap()
+        .value_of()
+    )),
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()

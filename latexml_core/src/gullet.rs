@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 // use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self, SymStr, DONT_EXPAND_SYM};
+use crate::common::arena::{self, DONT_EXPAND_SYM, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -16,16 +16,16 @@ use crate::common::locator::Locator;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
-use crate::common::numeric_ops::{fixpoint, NumericOps, UNITY};
+use crate::common::numeric_ops::{NumericOps, UNITY, fixpoint};
 use crate::common::object::Object;
 use crate::state::*;
-use crate::{state, DigestedData};
+use crate::{DigestedData, state};
 
+use crate::definition::Definition;
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
-use crate::definition::Definition;
 use crate::mouth::Mouth;
-use crate::token::{Catcode, Token, TOKEN_ENDCSNAME, TOKEN_RELAX};
+use crate::token::{Catcode, TOKEN_ENDCSNAME, TOKEN_RELAX, Token};
 use crate::tokens::Tokens;
 
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
@@ -464,12 +464,12 @@ pub fn read_x_token(
     } else if token.get_catcode().is_active_or_cs() {
       match lookup_meaning(&token) {
         Some(Stored::Token(let_token)) => {
-          return Ok(Some(if for_conditional { let_token } else { token }))
+          return Ok(Some(if for_conditional { let_token } else { token }));
         },
         Some(Stored::None) | None => {
           if token.get_catcode() == Catcode::CS {
             return Ok(Some(generate_error_stub(&token)?)); // cs SHOULD have defn by now; report
-                                                           // early.
+          // early.
           } else {
             return Ok(Some(token));
           }
@@ -1126,11 +1126,7 @@ pub fn read_number() -> Result<Number> {
   let is_negative = read_optional_signs()?;
   let s = if is_negative { -1 } else { 1 };
   if let Some(n) = read_normal_integer()? {
-    if is_negative {
-      Ok(n.negate())
-    } else {
-      Ok(n)
-    }
+    if is_negative { Ok(n.negate()) } else { Ok(n) }
   } else if let Some(n) = read_internal_dimension()? {
     Ok(Number::new(s * n.value_of()))
   } else if let Some(n) = read_internal_glue()? {
@@ -1327,11 +1323,7 @@ fn read_unit() -> Result<Option<f64>> {
 pub fn read_glue() -> Result<Glue> {
   let is_negative = read_optional_signs()?;
   if let Some(n) = read_internal_glue()? {
-    if is_negative {
-      Ok(n.negate())
-    } else {
-      Ok(n)
-    }
+    if is_negative { Ok(n.negate()) } else { Ok(n) }
   } else {
     let mut d = read_dimension()?;
     if is_negative {
@@ -1666,8 +1658,8 @@ fn handle_marker(marker_token: Token) {
       set_align_group_count(0);
     }, // switch to column proper!
     "after-column" => { // Were in before-column template
-       // let alignment = lookup_alignment();
-       // Debug("Halign $alignment: alignment  after column") if $LaTeXML::DEBUG{halign};
+      // let alignment = lookup_alignment();
+      // Debug("Halign $alignment: alignment  after column") if $LaTeXML::DEBUG{halign};
     },
     _ => {},
   });

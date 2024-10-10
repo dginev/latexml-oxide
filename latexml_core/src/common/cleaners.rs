@@ -52,7 +52,7 @@ pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
 pub fn clean_id(key: &str) -> String {
   let cleaned = Cow::Borrowed(key.trim_start().trim_end()); // Trim leading/trailing, in any case
   let cleaned_1 = SPACES_RE.replace_all(&cleaned, ""); // remove all spaces
-                                                       // Remove common idiom:
+  // Remove common idiom:
   let cleaned_2 = DIRTY_ID_IDIOM_RE.replace_all(&cleaned_1, "$inner");
   // transform some forbidden chars
   let cleaned_3 = cleaned_2

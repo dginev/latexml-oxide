@@ -2,13 +2,14 @@
 use crate::definition::argument::ArgWrap;
 use crate::fmt;
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt, quote};
 
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::rc::Rc;
 
+use crate::Digested;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -20,7 +21,6 @@ use crate::common::numeric_ops::NumericOps;
 use crate::keyvals::KeyVals;
 use crate::stomach;
 use crate::token::*;
-use crate::Digested;
 
 /// If untex is requested to add line-breaks, this is the line length it will allow
 pub const UNTEX_LINELENGTH: usize = 78;

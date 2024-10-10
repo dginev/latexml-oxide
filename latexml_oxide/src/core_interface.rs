@@ -4,11 +4,11 @@ use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
 use std::rc::Rc;
 
+use latexml_core::common::DigestionMode;
 use latexml_core::common::arena;
-use latexml_core::common::error::{self, note_begin, note_end, Result};
+use latexml_core::common::error::{self, Result, note_begin, note_end};
 use latexml_core::common::model;
 use latexml_core::common::store::Stored;
-use latexml_core::common::DigestionMode;
 use latexml_core::definition::expandable::Expandable;
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
@@ -22,10 +22,10 @@ use latexml_core::util::pathname;
 use latexml_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
 use latexml_codegen::LoadModel;
-use latexml_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
+use latexml_core::{CharToken, Core, Debug, Explode, T_CS, T_SPACE, Token, fatal, map, s};
 use latexml_math_parser::MathParser;
 use latexml_package::prelude::{
-  input_content, input_definitions, InputDefinitionOptions, InputOptions,
+  InputDefinitionOptions, InputOptions, input_content, input_definitions,
 };
 
 static CLS_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.cls$").unwrap());

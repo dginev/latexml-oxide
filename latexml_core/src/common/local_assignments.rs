@@ -13,10 +13,10 @@ use once_cell::sync::Lazy;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::Digested;
 use crate::alignment::template::Template;
 use crate::definition::conditional::IfFrame;
 use crate::token::Token;
-use crate::Digested;
 
 /// These are fields realized via Perl's "local" mechanism in LaTeXML,
 /// but (for now) require explicit "expire" calls in Rust.

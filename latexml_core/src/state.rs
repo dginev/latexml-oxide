@@ -8,7 +8,8 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self, SymHashMap, SymStr, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM};
+use crate::common::BindingDispatcher;
+use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -19,13 +20,12 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 pub use crate::common::store::Stored; // reexport for convenience
-use crate::common::BindingDispatcher;
+use crate::definition::Definition;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::ConditionalType;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::register::{Register, RegisterValue};
-use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
 use crate::gullet;
@@ -566,7 +566,7 @@ impl State {
         // whatever is left -- if anything -- should be bindings below the locked frame.
         if let Some(frame) = last_frame {
           frame.table_mut(table_name).insert(key, 1); // Note that there's only one
-                                                      // value in the stack, now
+          // value in the stack, now
         }
 
         // Undo the bindings, if `key` was bound in this frame
@@ -589,7 +589,7 @@ impl State {
 
           is_replace = current_frame_table.get(&key).unwrap_or(&0) > &0;
           if is_replace { // If the value was previously assigned in this frame
-             // we do this in 2.1, then proceed to 2.2
+            // we do this in 2.1, then proceed to 2.2
           } else {
             // Otherwise, push new value & set 1 to be undone
             current_frame_table.insert(key, 1);
@@ -730,11 +730,7 @@ impl State {
     let cc = key.get_catcode();
     let name = key.get_sym();
     let lookupname: Option<SymStr> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      if name == *EMPTY_SYM {
-        None
-      } else {
-        Some(name)
-      }
+      if name == *EMPTY_SYM { None } else { Some(name) }
     } else {
       key.get_executable_primitive_name().map(arena::pin)
     };
@@ -1208,8 +1204,8 @@ pub fn lookup_expandable(
   toplevel_opt: Option<bool>,
 ) -> Result<Option<Rc<dyn Definition>>> {
   let toplevel = toplevel_opt.unwrap_or(true); // Default, for full expansion, same as read_x_token
-                                               // Can only be a token or definition; we want defns!
-                                               // is this the right logic here? don't expand unless digesting?
+  // Can only be a token or definition; we want defns!
+  // is this the right logic here? don't expand unless digesting?
   Ok(
     lookup_definition(token)?
       .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected())),

@@ -1,7 +1,7 @@
+use latexml_core::Info;
 use latexml_core::common::font::Font;
 use latexml_core::common::xml::element_nodes;
 use latexml_core::document::Document;
-use latexml_core::Info;
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
@@ -10,9 +10,9 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 
+use super::ActionContext;
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 use super::metadata::Meta;
-use super::ActionContext;
 use crate::parser::{p_get_value, realize_xmnode};
 use crate::pragmatics::ValidationPragmatics;
 
@@ -714,7 +714,7 @@ impl XM {
         return match get_token_meaning(lookup_lex_node(lex, nodes)?) {
           Some(v) => Ok(Some(Cow::Owned(v))),
           None => Ok(None),
-        }
+        };
       },
       other => {
         dbg!(other);

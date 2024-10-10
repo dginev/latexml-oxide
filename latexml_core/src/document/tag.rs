@@ -2,9 +2,9 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::rc::Rc;
 
+use crate::Digested;
 use crate::common::error::*;
 use crate::document::Document;
-use crate::Digested;
 
 pub type TagConstructionClosure = Rc<dyn Fn(&mut Document, &mut Node) -> Result<()>>;
 pub type TagData = (String, Option<HashMap<String, String>>, Digested);

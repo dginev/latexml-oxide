@@ -596,7 +596,7 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         alignment.borrow_mut().end_row()?;
         expire_local_box_list();
         return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole
-                                                                       // row???
+      // row???
       } else if *token == T_CS!("\\lx@hidden@noalign") {
         // \puts something in vertical list
         //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};

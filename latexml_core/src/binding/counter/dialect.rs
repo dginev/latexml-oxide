@@ -12,7 +12,7 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 
 use crate::binding::content::{build_invocation, digest_literal, digest_text};
-use crate::binding::def::dialect::{def_macro, def_register, is_defined, RegisterOptions};
+use crate::binding::def::dialect::{RegisterOptions, def_macro, def_register, is_defined};
 use crate::common::arena;
 use crate::common::arena::SymHashMap as HashMap;
 use crate::common::cleaners::{clean_id, clean_label, roman_aux};
@@ -20,6 +20,7 @@ use crate::common::error::*;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 
+use crate::BoxOps;
 use crate::definition::expandable::ExpandableOptions;
 use crate::definition::{Definition, ExpansionBody};
 use crate::mouth;
@@ -29,7 +30,6 @@ use crate::stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::BoxOps;
 
 /// configuration for new_counter
 #[derive(Default)]

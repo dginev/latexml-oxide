@@ -79,7 +79,7 @@ use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
 use crate::digested::{Digested, DigestedData};
 use crate::document::Document;
-use crate::state::{set_state, State, StateOptions};
+use crate::state::{State, StateOptions, set_state};
 use crate::stomach::Stomach;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;

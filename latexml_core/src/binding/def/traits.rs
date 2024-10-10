@@ -14,7 +14,7 @@ use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
 use crate::keyvals::KeyVals;
 use crate::list::List;
-use crate::state::{lookup_font, Scope};
+use crate::state::{Scope, lookup_font};
 use crate::token::*;
 use crate::whatsit::Whatsit;
 use crate::*;

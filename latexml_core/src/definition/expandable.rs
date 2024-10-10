@@ -7,13 +7,13 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::state::*;
 
+use crate::Digested;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 use crate::document::Document;
 use crate::parameter::Parameters;
 use crate::token::*;
-use crate::tokens::{Tokens, NO_TOKENS};
+use crate::tokens::{NO_TOKENS, Tokens};
 use crate::whatsit::Whatsit;
-use crate::Digested;
 
 #[derive(Debug, Clone, Default)]
 pub struct ExpandableOptions {

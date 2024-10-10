@@ -4,12 +4,12 @@ use regex::Regex;
 use std::cmp::Ordering;
 use std::fmt;
 
+use crate::Object;
 use crate::common::dimension::attribute_format;
-use crate::common::numeric_ops::{fixpoint, kround, NumericOps};
+use crate::common::numeric_ops::{NumericOps, fixpoint, kround};
 use crate::definition::register::{RegisterType, RegisterValue};
 use crate::digested::Digested;
 use crate::state::*;
-use crate::Object;
 
 use super::dimension::fixedformat;
 
@@ -278,7 +278,7 @@ pub fn spec_setup(
 
       let mut plus = if punit.is_empty() {
         None // Some(0.0) ?
-             // ? punit = "0";
+      // ? punit = "0";
       } else if let Some(code) = FillCode::from(punit) {
         pfill = Some(code);
         Some(fixpoint(p, None))
@@ -295,7 +295,7 @@ pub fn spec_setup(
 
       let mut minus = if munit.is_empty() {
         None // ? Some(0.0);
-             // munit = 0;
+      // munit = 0;
       } else if let Some(code) = FillCode::from(munit) {
         mfill = Some(code);
         Some(fixpoint(m, None))

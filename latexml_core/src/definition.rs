@@ -22,15 +22,15 @@ use crate::common::store::Stored;
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};
 
+use crate::Digested;
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
 use crate::parameter::Parameters;
-use crate::state::{expire_state_unlocked, local_state_unlocked, Scope};
+use crate::state::{Scope, expire_state_unlocked, local_state_unlocked};
 use crate::token::Token;
-use crate::tokens::{Tokens, NO_TOKENS};
+use crate::tokens::{NO_TOKENS, Tokens};
 use crate::whatsit::Whatsit;
-use crate::Digested;
 
 pub type ExpansionClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<Tokens>>;
 pub type ConditionalClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<bool>>;
@@ -150,13 +150,7 @@ impl From<Tokens> for ExpansionBody {
 }
 
 impl From<Tokens> for Option<ExpansionBody> {
-  fn from(t: Tokens) -> Option<ExpansionBody> {
-    if t.is_empty() {
-      None
-    } else {
-      Some(t.into())
-    }
-  }
+  fn from(t: Tokens) -> Option<ExpansionBody> { if t.is_empty() { None } else { Some(t.into()) } }
 }
 
 impl From<&str> for ExpansionBody {

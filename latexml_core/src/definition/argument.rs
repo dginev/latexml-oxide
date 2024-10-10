@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::{self, Display};
 
+use crate::Locator;
 use crate::alignment::template::Template;
 use crate::common::dimension::Dimension;
 use crate::common::error::Result;
@@ -12,12 +13,11 @@ use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::definition::register::RegisterValue;
 use crate::definition::Digested;
+use crate::definition::register::RegisterValue;
 use crate::keyvals::KeyVals;
 use crate::token::Token;
-use crate::tokens::{Tokens, NO_BORROWED_TOKENS};
-use crate::Locator;
+use crate::tokens::{NO_BORROWED_TOKENS, Tokens};
 
 #[derive(Debug, Clone, Default)]
 pub enum ArgWrap {

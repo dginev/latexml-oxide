@@ -6,10 +6,10 @@ use std::borrow::Cow;
 use std::io::Cursor;
 
 use latexml_core::common::arena::{self, SymHashMap};
-use latexml_core::common::error::{note_begin, note_end, note_progress, Result};
+use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
 use latexml_core::common::xml::*;
-use latexml_core::document::{get_node_qname, sym_can_have_attribute, with_node_qname, Document};
-use latexml_core::{fatal, map, s, static_map, sym_map, Error, Fatal};
+use latexml_core::document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname};
+use latexml_core::{Error, Fatal, fatal, map, s, static_map, sym_map};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -647,18 +647,18 @@ fn textrec(
       .first()
       .expect("XMDual should always have 2 child elements.");
     textrec(content, Some(outer_bp), Some(outer_name), document) // Just send out the
-                                                                 // semantic form
-                                                                 // Fall back to
-                                                                 // presentation, if
-                                                                 // content has poor
-                                                                 // semantics (eg. from
-                                                                 // replacement patterns)
-                                                                 // TODO
-                                                                 // return ($text =~
-                                                                 // /^\(*Unknown/ ?
-                                                                 // textrec($presentation,
-                                                                 // $outer_bp, $outer_name)
-                                                                 // : $text); }
+  // semantic form
+  // Fall back to
+  // presentation, if
+  // content has poor
+  // semantics (eg. from
+  // replacement patterns)
+  // TODO
+  // return ($text =~
+  // /^\(*Unknown/ ?
+  // textrec($presentation,
+  // $outer_bp, $outer_name)
+  // : $text); }
   } else if tag == arena::pin_static("ltx:XMTok") {
     let name = match get_token_meaning(&node, document) {
       Some(meaning) => meaning,
