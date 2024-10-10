@@ -3,8 +3,8 @@
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
-use unicode_normalization::char::compose;
 use unicode_normalization::UnicodeNormalization;
+use unicode_normalization::char::compose;
 
 static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
 

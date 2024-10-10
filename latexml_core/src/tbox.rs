@@ -4,7 +4,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, SymStr, EMPTY_SYM, MATH_SYM, TEXT_SYM};
+use crate::common::arena::{self, EMPTY_SYM, MATH_SYM, SymStr, TEXT_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;

@@ -1,7 +1,7 @@
+use crate::Digested;
 use crate::common::error::*;
 use crate::common::locator::Locator;
 use crate::tokens::Tokens;
-use crate::Digested;
 ///======================================================================
 /// Exported generic functions for dealing with `LaTeXML`'s objects
 ///======================================================================

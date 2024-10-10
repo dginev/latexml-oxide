@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
-use crate::common::arena::{self, SymStr, ANY_SYM};
+use crate::common::arena::{self, ANY_SYM, SymStr};
 use crate::common::error::*;
 use crate::common::relaxng::Relaxng;
 use crate::common::xml::XML_NS;
@@ -15,8 +15,8 @@ use crate::util::pathname;
 use libxml::tree::Node;
 
 use super::arena::{
-  SymHashMap, DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM,
-  H_PI_SYM, RELAXNG_SYM, WILD_CARD_SYM,
+  DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM,
+  RELAXNG_SYM, SymHashMap, WILD_CARD_SYM,
 };
 
 // use common::font::*;

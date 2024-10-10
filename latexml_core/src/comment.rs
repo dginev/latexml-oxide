@@ -11,8 +11,8 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
 use crate::document::Document;
-use crate::tokens::Tokens;
 use crate::tokens::NO_TOKENS;
+use crate::tokens::Tokens;
 use crate::{BoxOps, NO_PROPERTIES};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

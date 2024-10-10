@@ -10,7 +10,7 @@ use crate::core_interface::DigestionAPI;
 use latexml_codegen::LoadModel;
 use latexml_core::common::BindingDispatcher;
 use latexml_core::document::Document;
-use latexml_core::{s, state, Core, CoreOptions};
+use latexml_core::{Core, CoreOptions, s, state};
 use latexml_math_parser::node_to_grammar_lexemes;
 
 pub fn latexml_tests(

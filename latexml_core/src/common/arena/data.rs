@@ -5,8 +5,8 @@ use std::iter::IntoIterator;
 use std::ops::Index;
 
 use std::any::type_name;
-use string_interner::symbol::SymbolU32;
 use string_interner::Symbol;
+use string_interner::symbol::SymbolU32;
 
 use crate::common::arena;
 

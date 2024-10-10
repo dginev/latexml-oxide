@@ -4,6 +4,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
 
+use crate::Digested;
 use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -14,11 +15,10 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
-use crate::definition::register::Register;
 use crate::definition::Definition;
+use crate::definition::register::Register;
 use crate::state;
 use crate::tokens::Tokens;
-use crate::Digested;
 
 static CONTROLNAME: &[&str] = &[
   "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO",

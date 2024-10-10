@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::common::error::*;
-use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F64};
+use crate::common::numeric_ops::{NumericOps, UNITY, UNITY_F64, fixpoint, kround, round_to};
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
 use crate::state::*;

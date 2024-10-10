@@ -11,8 +11,8 @@ use rustc_hash::FxHasher;
 
 use once_cell::sync::Lazy;
 use std::hash::BuildHasherDefault;
-use string_interner::backend::BufferBackend;
 use string_interner::StringInterner;
+use string_interner::backend::BufferBackend;
 
 pub mod data;
 pub use data::{SymHashMap, SymStr};

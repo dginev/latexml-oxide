@@ -65,9 +65,7 @@ macro_rules! RequirePackage {
 }
 #[macro_export]
 macro_rules! LoadClass {
-  ($class:expr, $options:expr, $after:expr) => {{
-    load_class($class, $options, $after)
-  }};
+  ($class:expr, $options:expr, $after:expr) => {{ load_class($class, $options, $after) }};
 }
 
 #[macro_export]
@@ -659,9 +657,7 @@ macro_rules! DefEnvironmentIWO (
 
 #[macro_export]
 macro_rules! RelaxNGSchema {
-  ($name:expr) => {{
-    select_relaxng_schema($name, None)
-  }};
+  ($name:expr) => {{ select_relaxng_schema($name, None) }};
 }
 
 #[macro_export]
@@ -723,9 +719,7 @@ macro_rules! defi_math {
 
 #[macro_export]
 macro_rules! CounterValue {
-  ($ctr:expr) => {{
-    counter_value($ctr)?
-  }};
+  ($ctr:expr) => {{ counter_value($ctr)? }};
   ($ctr:expr) => {
     counter_value($ctr)?
   };
@@ -764,12 +758,8 @@ macro_rules! RefStepID {
 }
 #[macro_export]
 macro_rules! ResetCounter {
-  ($ctr:literal) => {{
-    reset_counter(&T_OTHER!($ctr))?
-  }};
-  ($ctr:expr) => {{
-    reset_counter($ctr)?
-  }};
+  ($ctr:literal) => {{ reset_counter(&T_OTHER!($ctr))? }};
+  ($ctr:expr) => {{ reset_counter($ctr)? }};
   ($ctr:expr) => {
     reset_counter($ctr)?
   };
@@ -794,12 +784,8 @@ macro_rules! ExpandPartially {
 /// A leading string argument is interpreted as `T_CS`.
 #[macro_export]
 macro_rules! Invocation {
-  ($csname:literal) => {{
-    Invocation!(T_CS!($csname))
-  }};
-  ($csname:literal, $args:expr) => {{
-    Invocation!(T_CS!($csname), $args)
-  }};
+  ($csname:literal) => {{ Invocation!(T_CS!($csname)) }};
+  ($csname:literal, $args:expr) => {{ Invocation!(T_CS!($csname), $args) }};
   ($token:expr) => {
     Invocation!($token, vec![None])
   };
@@ -878,33 +864,23 @@ macro_rules! DefAccent {
 //
 #[macro_export]
 macro_rules! LookupBool {
-  ($name:expr) => {{
-    state::lookup_bool($name)
-  }};
+  ($name:expr) => {{ state::lookup_bool($name) }};
 }
 #[macro_export]
 macro_rules! LookupFont {
-  () => {{
-    state::lookup_font()
-  }};
+  () => {{ state::lookup_font() }};
 }
 #[macro_export]
 macro_rules! LookupString {
-  ($name:expr) => {{
-    state::lookup_string($name)
-  }};
+  ($name:expr) => {{ state::lookup_string($name) }};
 }
 #[macro_export]
 macro_rules! LookupNumber {
-  ($name:expr) => {{
-    state::lookup_number($name)
-  }};
+  ($name:expr) => {{ state::lookup_number($name) }};
 }
 #[macro_export]
 macro_rules! LookupTokens {
-  ($name:expr) => {{
-    state::lookup_tokens($name)
-  }};
+  ($name:expr) => {{ state::lookup_tokens($name) }};
 }
 #[macro_export]
 macro_rules! AssignValue {
@@ -914,12 +890,8 @@ macro_rules! AssignValue {
   ($name:expr => $value:expr, $scope:expr) => {
     AssignValue!($name, $value, $scope)
   };
-  ($name:expr, $value:expr) => {{
-    state::assign_value($name, $value, None)
-  }};
-  ($name:expr, $value:expr, $scope:expr) => {{
-    state::assign_value($name, $value, $scope)
-  }};
+  ($name:expr, $value:expr) => {{ state::assign_value($name, $value, None) }};
+  ($name:expr, $value:expr, $scope:expr) => {{ state::assign_value($name, $value, $scope) }};
   ($name:expr, $value:expr, $scope:expr) => {
     state::assign_value($name, $value, $scope)
   };
@@ -936,28 +908,20 @@ macro_rules! AssignMeaning {
   ($key:expr, $val:expr) => {
     AssignMeaning!($key, $val, None)
   };
-  ($key:expr, $val:expr, $scope: expr) => {{
-    assign_meaning($key, $val, $scope)
-  }};
+  ($key:expr, $val:expr, $scope: expr) => {{ assign_meaning($key, $val, $scope) }};
 }
 
 #[macro_export]
 macro_rules! LookupCatcode {
-  ($c:expr) => {{
-    state::lookup_catcode($c)
-  }};
+  ($c:expr) => {{ state::lookup_catcode($c) }};
 }
 #[macro_export]
 macro_rules! AssignCatcode {
   ($name:expr => $value:expr) => {
     AssignCatcode!($name, $value)
   };
-  ($c:expr, $catcode:expr) => {{
-    AssignCatcode!($c, $catcode, None)
-  }};
-  ($c:expr, $catcode:expr, $scope:expr) => {{
-    assign_catcode($c, $catcode, $scope)
-  }};
+  ($c:expr, $catcode:expr) => {{ AssignCatcode!($c, $catcode, None) }};
+  ($c:expr, $catcode:expr, $scope:expr) => {{ assign_catcode($c, $catcode, $scope) }};
 }
 #[macro_export]
 macro_rules! LookupMeaning {
@@ -991,9 +955,7 @@ macro_rules! IsDefined {
 }
 #[macro_export]
 macro_rules! IsDefinedToken {
-  ($name:expr) => {{
-    is_defined_token($name)
-  }};
+  ($name:expr) => {{ is_defined_token($name) }};
 }
 #[macro_export]
 macro_rules! IsDefinable {
@@ -1418,9 +1380,7 @@ macro_rules! Revert {
   ($thing:literal) => {
     Explode!($thing)
   };
-  ($thing:expr) => {{
-    $thing.revert()?.unlist()
-  }};
+  ($thing:expr) => {{ $thing.revert()?.unlist() }};
 }
 
 #[macro_export]
@@ -1490,16 +1450,12 @@ macro_rules! Digest {
     stomach::digest(tokenized)
   }};
 
-  ($tokens:expr) => {{
-    stomach::digest($tokens)
-  }};
+  ($tokens:expr) => {{ stomach::digest($tokens) }};
 }
 
 #[macro_export]
 macro_rules! DigestText {
-  ($tokens:expr) => {{
-    digest_text($tokens)
-  }};
+  ($tokens:expr) => {{ digest_text($tokens) }};
 }
 
 /// Tokenize($string); Tokenizes the string using the standard cattable, returning a
@@ -1555,16 +1511,12 @@ macro_rules! Dimension {
 
 #[macro_export]
 macro_rules! Glue {
-  ($spec:expr) => {{
-    Glue::new_spec($spec, None, None, None, None)
-  }};
+  ($spec:expr) => {{ Glue::new_spec($spec, None, None, None, None) }};
 }
 
 #[macro_export]
 macro_rules! MuGlue {
-  ($spec:expr) => {{
-    MuGlue::new_spec($spec, None, None, None, None)
-  }};
+  ($spec:expr) => {{ MuGlue::new_spec($spec, None, None, None, None) }};
 }
 
 #[macro_export]
@@ -1583,9 +1535,7 @@ macro_rules! DocType {
 
 #[macro_export]
 macro_rules! Today {
-  () => {{
-    today()?
-  }};
+  () => {{ today()? }};
 }
 
 #[macro_export]
@@ -1658,11 +1608,7 @@ macro_rules! AddToMacro {
              This is usually in error!",
             $cs
           );
-          Warn!(
-            "unexpected",
-            "ExpandableBody::Closure",
-            message
-          );
+          Warn!("unexpected", "ExpandableBody::Closure", message);
           Vec::new()
         },
         None => Vec::new(),
@@ -1676,7 +1622,7 @@ macro_rules! AddToMacro {
           scope: Some(Scope::Global),
           nopack_parameters: true,
           ..ExpandableOptions::default()
-        })
+        }),
       )?;
     }
   }};
@@ -1684,9 +1630,7 @@ macro_rules! AddToMacro {
 
 #[macro_export]
 macro_rules! BeginItemize {
-  ($itype:literal, $counter:literal) => {{
-    begin_itemize($itype, Some($counter), BeginItemizeOptions::default())
-  }};
+  ($t:literal, $c:literal) => {{ begin_itemize($t, Some($c), BeginItemizeOptions::default()) }};
 }
 
 //

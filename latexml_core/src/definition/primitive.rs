@@ -1,7 +1,8 @@
 use libxml::tree::Node;
 use std::borrow::Cow;
 
-use crate::common::arena::{SymHashMap, EMPTY_SYM};
+use crate::Digested;
+use crate::common::arena::{EMPTY_SYM, SymHashMap};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::definition::{
@@ -14,7 +15,6 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::Digested;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {
@@ -101,7 +101,7 @@ impl Definition for Primitive {
         let box_tokens = vec![cs_token];
         if let Some(ref _params) = self.paramlist {
           todo!(); // we need to generalize the revert functions to take ArgWrap-typed arguments
-                   // box_tokens.extend(params.revert_arguments(args)?);
+          // box_tokens.extend(params.revert_arguments(args)?);
         }
         let box_props = if symbol == *EMPTY_SYM {
           SymHashMap::default()

@@ -1,5 +1,5 @@
 use crate::binding::content::{load_font_map, preload_font_map};
-use crate::common::arena::{self, SymHashMap, SymStr, EMPTY_SYM};
+use crate::common::arena::{self, EMPTY_SYM, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::state::*;
@@ -221,11 +221,7 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
       at
     } else {
       let size_f64 = size_str.parse::<f64>().unwrap_or(1.0);
-      if size_f64 == 0.0 {
-        1.0
-      } else {
-        size_f64
-      } // Yes, also if 0, "" (from regexp)
+      if size_f64 == 0.0 { 1.0 } else { size_f64 } // Yes, also if 0, "" (from regexp)
     };
     if let Some(scaled) = scaled_opt {
       size *= scaled;

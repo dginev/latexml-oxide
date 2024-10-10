@@ -1,4 +1,4 @@
-use super::{get_node_qname, Document};
+use super::{Document, get_node_qname};
 use crate::common::arena;
 use crate::common::error::*;
 use libxml::tree::Node;

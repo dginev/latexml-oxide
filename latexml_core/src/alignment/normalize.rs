@@ -1,11 +1,11 @@
-use super::template::Align;
 use super::Alignment;
+use super::template::Align;
+use crate::BoxOps;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::store::Stored;
 use crate::digested::Digested;
 use crate::list::List;
-use crate::BoxOps;
 use std::collections::VecDeque;
 
 use crate::common::float::Float;
@@ -109,7 +109,7 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
         filtered.push_back(row);
         continue;
       } // don't remove inner rows from math EXCEPT last row!!
-        // let (mut pruneh, mut pruned) = (0, 0);
+      // let (mut pruneh, mut pruned) = (0, 0);
       for (j, col) in row.get_columns().iter().enumerate() {
         // TODO: add cached_height and cached_depth
         // if let Some(cached_height) = col.cached_height {
@@ -297,13 +297,13 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
         }
       }
       if j > 0 { // If not 1st row, add right padding to previous column
-         //         foreach my $row (@rows) {
-         //           if (my $col = $$row{columns}[$j - 1]) {
-         //             $$col{rpadding} = Dimension($prunew); } } }
-         //       else {       // Else add left padding to (newly) first column
-         //         foreach my $row (@rows) {    // And add the padding to previous column
-         //           if (my $col = $$row{columns}[0]) {
-         //             $$col{lpadding} = Dimension($prunew); } } }
+        //         foreach my $row (@rows) {
+        //           if (my $col = $$row{columns}[$j - 1]) {
+        //             $$col{rpadding} = Dimension($prunew); } } }
+        //       else {       // Else add left padding to (newly) first column
+        //         foreach my $row (@rows) {    // And add the padding to previous column
+        //           if (my $col = $$row{columns}[0]) {
+        //             $$col{lpadding} = Dimension($prunew); } } }
       }
     }
   }
@@ -380,7 +380,7 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
     // NOTE: Should be storing column widths to; individually, as well as per-column!
     rowheights.push(rowh + rowd);
   } // somehow our heights are way too short????
-    // Now compute the positions
+  // Now compute the positions
   let mut rowpos = Vec::new();
   let mut colpos = Vec::new();
   let mut y = 0;

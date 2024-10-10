@@ -23,7 +23,7 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{state, Digested, Locator};
+use crate::{Digested, Locator, state};
 
 use super::argument::ArgWrap;
 
@@ -480,7 +480,12 @@ impl fmt::Debug for Register {
     write!(
       f,
       "Register[cs:{:?}, address:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, value:{:?}, default:{:?}]",
-      self.cs, self.address, self.parameters, self.register_type, self.readonly, self.value,
+      self.cs,
+      self.address,
+      self.parameters,
+      self.register_type,
+      self.readonly,
+      self.value,
       self.default,
     )
   }

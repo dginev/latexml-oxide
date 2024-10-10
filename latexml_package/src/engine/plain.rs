@@ -154,14 +154,14 @@ LoadDefinitions!({
     fontTest => sub[arg] {non_typewriter_t1(arg)}); // ? backquote
   DefLigature!("!\u{2018}",       "\u{00A1}",  
     fontTest => sub[arg] {non_typewriter_t1(arg)}); // ! backquote
-                                                    // These ligatures are also handled by TeX.
-                                                    // However, it appears that decent modern fonts in modern browsers handle these at that level.
-                                                    // So it's likely not worth doing it at the conversion level, possibly adversely affecting search.
-                                                    // DefLigature(qr{ff},               "\x{FB00}", fontTest => \&nonTypewriterT1);
-                                                    // DefLigature(qr{fi},               "\x{FB01}", fontTest => \&nonTypewriterT1);
-                                                    // DefLigature(qr{fl},               "\x{FB02}", fontTest => \&nonTypewriterT1);
-                                                    // DefLigature(qr{ffi},              "\x{FB03}", fontTest => \&nonTypewriterT1);
-                                                    // DefLigature(qr{ffl},              "\x{FB04}", fontTest => \&nonTypewriterT1);
+  // These ligatures are also handled by TeX.
+  // However, it appears that decent modern fonts in modern browsers handle these at that level.
+  // So it's likely not worth doing it at the conversion level, possibly adversely affecting search.
+  // DefLigature(qr{ff},               "\x{FB00}", fontTest => \&nonTypewriterT1);
+  // DefLigature(qr{fi},               "\x{FB01}", fontTest => \&nonTypewriterT1);
+  // DefLigature(qr{fl},               "\x{FB02}", fontTest => \&nonTypewriterT1);
+  // DefLigature(qr{ffi},              "\x{FB03}", fontTest => \&nonTypewriterT1);
+  // DefLigature(qr{ffl},              "\x{FB04}", fontTest => \&nonTypewriterT1);
 
   DefConstructor!("\\TeX", r###"<ltx:text class='ltx_TeX_logo'
     cssstyle='letter-spacing:-0.2em; margin-right:0.2em'>T<ltx:text yoffset='-0.4ex'>E</ltx:text>X</ltx:text>"###,
@@ -819,10 +819,10 @@ LoadDefinitions!({
   DefAccent!("\\r", '\u{030A}', "o"); // COMBINING RING ABOVE & non-combining
   DefAccent!("\\H", '\u{030B}', "\u{02DD}"); // COMBINING DOUBLE ACUTE ACCENT & non-combining
   DefAccent!("\\c", '\u{0327}', "\u{00B8}", below => true); // COMBINING CEDILLA & CEDILLA
-                                                            // NOTE: The next two get define for math, as well; See below
+  // NOTE: The next two get define for math, as well; See below
   DefAccent!("\\@text@daccent", '\u{0323}', ".",       below => true); // COMBINING DOT BELOW & DOT (?)
   DefAccent!("\\@text@baccent", '\u{0331}', "\u{00AF}", below => true); // COMBINING MACRON BELOW  & MACRON
-                                                                        // COMBINING DOUBLE INVERTED BREVE & ???? What????
+  // COMBINING DOUBLE INVERTED BREVE & ???? What????
   DefAccent!("\\t", '\u{0361}', "-");
   // this one"s actually defined in mathscinet.sty, but just stick it here!
   // COMBINING COMMA BELOW
@@ -1428,8 +1428,8 @@ LoadDefinitions!({
   DefMath!("\\cdots", None, "\u{22EF}", role => "ELIDEOP"); // MIDLINE HORIZONTAL ELLIPSIS
   DefMath!("\\ddots", None, "\u{22F1}", role => "ID"); // DOWN RIGHT DIAGONAL ELLIPSIS
   DefMath!("\\colon", None, ":",        role => "METARELOP"); // Seems like good default role
-                                                              //         # Note that amsmath redefines \dots to be `smart'.
-                                                              //         # Aha, also can be in text...
+  //         # Note that amsmath redefines \dots to be `smart'.
+  //         # Aha, also can be in text...
   DefConstructor!(
     "\\dots",
     "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})"
@@ -1474,7 +1474,7 @@ LoadDefinitions!({
   DefMath!("\\ddot Digested",     "\u{00A8}",  operator_role => "OVERACCENT"); // DIAERESIS
   DefMath!("\\widehat Digested", "\u{005E}", operator_role => "OVERACCENT"); // CIRCUMFLEX ACCENT [plain? also amsfonts]
   DefMath!("\\widetilde Digested", "\u{007E}", operator_role => "OVERACCENT"); // TILDE [plain? also amsfonts]
-                                                                               // These aren"t handled as simple accents by TeX, so no Digested
+  // These aren"t handled as simple accents by TeX, so no Digested
   DefMath!("\\overbrace {}", "\u{23DE}", operator_role => "OVERACCENT",       // TOP CURLY BRACKET
     scriptpos => "mid", robust => true);
   DefMath!("\\underbrace {}", "\u{23DF}", operator_role => "UNDERACCENT",     // BOTTOM CURLY BRACKET
@@ -1494,12 +1494,13 @@ LoadDefinitions!({
   );
 
   DefMacro!("\\skew{}{}{}", r"{#2{#3\mkern#1mu}\mkern-#1mu}{}"); // ignore the subtle spacing for now?
-                                                                 //----------------------------------------------------------------------
-                                                                 // LaTeX; Table 3.10. Delimiters, p.47
-                                                                 //----------------------------------------------------------------------
-                                                                 // The meaning of OPEN/CLOSE tends to depend upon the pairing,
-                                                                 // rather than the individual tokens.
-                                                                 // This meaning is handled in MathParser (for now)
+  //
+  //----------------------------------------------------------------------
+  // LaTeX; Table 3.10. Delimiters, p.47
+  //----------------------------------------------------------------------
+  // The meaning of OPEN/CLOSE tends to depend upon the pairing,
+  // rather than the individual tokens.
+  // This meaning is handled in MathParser (for now)
   DefMacro!("\\{", r"\ifmmode\lx@math@lbrace\else\lx@text@lbrace\fi", protected => true);
   DefMacro!("\\}", r"\ifmmode\lx@math@rbrace\else\lx@text@rbrace\fi", protected => true);
   DefMath!("\\lx@math@lbrace", None, "{", role => "OPEN",  stretchy => false, alias => "\\{");
@@ -1610,39 +1611,39 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
   ); // !?!?!?!
-     // TODO:
-     // properties  => { isSpace => 1 },
-     // afterDigest => sub {
-     //   my $whatsit = $_[1];
-     //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-     //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-     //   return; });
+  // TODO:
+  // properties  => { isSpace => 1 },
+  // afterDigest => sub {
+  //   my $whatsit = $_[1];
+  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
+  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
+  //   return; });
 
   DefConstructor!(
     "\\hphantom{}",
     "?#isMath(<ltx:XMHint width='#width' name='hphantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
   ); // !?!?!?!
-     // TODO:
-     // properties  => { isSpace => 1 },
-     // afterDigest => sub {
-     //   my $whatsit = $_[1];
-     //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-     //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-     //   return; });
+  // TODO:
+  // properties  => { isSpace => 1 },
+  // afterDigest => sub {
+  //   my $whatsit = $_[1];
+  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
+  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
+  //   return; });
 
   DefConstructor!(
     "\\vphantom{}",
     "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
   ); // !?!?!?!
-     // TODO:
-     // properties  => { isSpace => 1 },
-     // afterDigest => sub {
-     //   my $whatsit = $_[1];
-     //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-     //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-     //   return; });
+  // TODO:
+  // properties  => { isSpace => 1 },
+  // afterDigest => sub {
+  //   my $whatsit = $_[1];
+  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
+  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
+  //   return; });
 
   DefConstructor!("\\mathstrut", "?#isMath(<ltx:XMHint name='mathstrut'/>)()",
     properties => { stored_map!("isSpace" => true) });

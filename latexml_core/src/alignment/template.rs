@@ -1,9 +1,9 @@
 //! Support for tabular/array environments
 use super::cell::Cell;
+use crate::Digested;
 use crate::common::dimension::Dimension;
 use crate::token::Token;
 use crate::tokens::Tokens;
-use crate::Digested;
 
 use std::collections::VecDeque;
 use std::fmt::{self, Debug, Display};

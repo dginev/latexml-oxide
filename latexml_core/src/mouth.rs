@@ -2,8 +2,8 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::fs::File;
 use std::io;
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::str;
 
 use core::ops::RangeBounds;
@@ -20,7 +20,7 @@ use crate::common::object::Object;
 use crate::state;
 use crate::state::*;
 use crate::token::*;
-use crate::tokens::{Tokens, NO_TOKENS};
+use crate::tokens::{NO_TOKENS, Tokens};
 use crate::util::pathname;
 use crate::util::text::trim_end_in_place;
 
@@ -284,7 +284,7 @@ impl Mouth {
       }
     }
     self.reader.take(); // if we have a reader, this will force a Drop at the end of finish(), which
-                        // will close the file handle
+    // will close the file handle
   }
   // Auxiliaries
 

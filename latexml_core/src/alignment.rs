@@ -34,14 +34,14 @@ use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::digested::Digested;
-use crate::document::{get_node_qname, with_node_qname, Document};
+use crate::document::{Document, get_node_qname, with_node_qname};
 use crate::gullet::{self, ExpansionLevel};
 use crate::mouth::Mouth;
 use crate::state::*;
 use crate::stomach::*;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
-use crate::{stomach, BoxOps};
+use crate::{BoxOps, stomach};
 
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
@@ -361,7 +361,7 @@ impl Alignment {
       self.current_row_mut().unwrap().set_pseudo();
     }
     bgroup(); // Grouping around CELL!
-              // Note: a VERY round-about way of tracking the column spanning!
+    // Note: a VERY round-about way of tracking the column spanning!
     assign_value("alignmentStartColumn", self.current_column_number(), None);
     let _colspec = self.next_column();
     set_align_group_count(1000000);
@@ -1406,11 +1406,7 @@ fn alignment_match_head(
   let ok = nhead == nh;
   // Debug("Matched $nh header lines => " . ($ok ? "Succeed" : "Failed")) if
   // $LaTeXML::DEBUG{alignment};
-  if ok {
-    nhead
-  } else {
-    0
-  }
+  if ok { nhead } else { 0 }
 }
 
 fn alignment_match_data(
@@ -1425,11 +1421,7 @@ fn alignment_match_data(
   let ok = (nd as f64 * 1.0) / n as f64 > 0.66;
   //   Debug("Matched $nd data lines => " . ($ok ? "Succeed" : "Failed"))
   //     if $LaTeXML::DEBUG{alignment};
-  if ok {
-    nd
-  } else {
-    0
-  }
+  if ok { nd } else { 0 }
 }
 
 // Match the $n lines starting at $i2 to those starting at $i1.
@@ -1483,11 +1475,7 @@ fn alignment_skip_data(
     n += 1;
   }
   // eprintln!("Found {n} data lines at {i}");
-  if n >= MIN_ALIGNMENT_DATA_LINES {
-    n
-  } else {
-    0
-  }
+  if n >= MIN_ALIGNMENT_DATA_LINES { n } else { 0 }
 }
 
 /// Return the maximum "content length" for lines from $from to $to.

@@ -5,7 +5,7 @@ use latexml_core::definition::expandable::Expandable;
 use latexml_core::state::*;
 use latexml_core::token::{Catcode, Token};
 use latexml_core::tokens::Tokens;
-use latexml_core::{s, CharToken, Explode, Token, T_CS, T_SPACE};
+use latexml_core::{CharToken, Explode, T_CS, T_SPACE, Token, s};
 use std::collections::VecDeque;
 
 #[test]
@@ -265,7 +265,7 @@ fn install_definition_and_meaning() {
   assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
   if let Some(Stored::Expandable(ref stored_meaning)) = lookup_meaning(&T_CS!("\\foobar")) {
     assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has
-                                                       // definition for CS \jobname
+  // definition for CS \jobname
   } else {
     panic!("Failed to lookup installed meaning!");
   }

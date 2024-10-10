@@ -9,16 +9,16 @@ use crate::common::arena::SymHashMap as HashMap;
 use crate::common::error::*;
 use crate::common::font;
 use crate::common::font::Font;
+use crate::definition::Definition;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
-use crate::definition::Definition;
 use crate::list::List;
 use crate::mouth::{Mouth, MouthOptions};
 use crate::state::*;
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::{gullet, Digested, TexMode};
+use crate::{Digested, TexMode, gullet};
 
 static MAXSTACK: usize = 200;
 

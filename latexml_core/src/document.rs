@@ -2,8 +2,8 @@ pub mod helpers;
 pub mod resource;
 pub mod tag;
 
-use libxml::tree::set_node_rc_guard;
 use libxml::tree::Document as XmlDoc;
+use libxml::tree::set_node_rc_guard;
 use libxml::tree::{Namespace, Node, NodeType};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -16,26 +16,26 @@ use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::rc::Rc;
 
+use crate::TexMode;
 use crate::common::arena::{
-  self, SymHashMap, SymStr, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM,
+  self, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, SymHashMap, SymStr,
   XML_ID_SYM,
 };
 use crate::common::error::*;
-use crate::common::font::{Font, FONT_TEXT_DEFAULT};
+use crate::common::font::{FONT_TEXT_DEFAULT, Font};
 use crate::common::locator::Locator;
 use crate::common::model;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::xml::{self, XPath, XML_NS};
+use crate::common::xml::{self, XML_NS, XPath};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
 use crate::state;
-use crate::TexMode;
 
+use crate::Tbox;
 use crate::document::resource::Resource;
 use crate::document::tag::{TagConstructionClosure, TagOptionName};
-use crate::Tbox;
 use crate::{BoxOps, Digested, DigestedData};
 
 static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());

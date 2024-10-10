@@ -96,7 +96,7 @@ impl ValidationPragmatics {
   /// All levels must validate for the full tree to be valid.
   pub fn validate_recursive(&self, tree: &XM) -> Result<(), Box<dyn Error>> {
     self.validate(tree)?; // top-level check
-                          // Recursive check:
+    // Recursive check:
     match tree {
       XM::Choices(subtrees) => {
         for subtree in subtrees.iter() {

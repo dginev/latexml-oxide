@@ -1,9 +1,9 @@
-use super::glue::{glue_string, new_setup, spec_setup, FillCode};
+use super::glue::{FillCode, glue_string, new_setup, spec_setup};
+use crate::Object;
 use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::RegisterType;
 use crate::tokens::Tokens;
-use crate::Object;
 use std::fmt;
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]

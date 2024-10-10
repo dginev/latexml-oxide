@@ -21,7 +21,7 @@ LoadDefinitions!({
   DefMacro!("\\Nameref", "\\nameref"); //\def\Nameref#1{‘\nameref{#1}’ on page~\pageref{#1}}
   DefMacro!("\\Sectionformat{}{}", "#1");
   DefMacro!("\\Ref", "\\ref"); // can be improved if "varioref.sty" is loaded?
-                               //The original nameref docs say: "Overload an AMS LaTEX command, which uses \newlabel. Sigh!"
+  //The original nameref docs say: "Overload an AMS LaTEX command, which uses \newlabel. Sigh!"
   DefMacro!("\\slabel", "\\label");
   // We can improve if we had \vpageref
   DefMacro!("\\vnameref", "\\nameref");

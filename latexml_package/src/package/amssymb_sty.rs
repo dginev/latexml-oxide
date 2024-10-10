@@ -331,12 +331,12 @@ LoadDefinitions!({
   DefMath!("\\downdownarrows",   "\u{21CA}", role => "ARROW"); // DOWNWARDS PAIRED ARROWS
   DefMath!("\\upharpoonright",   "\u{21BE}", role => "ARROW"); // UPWARDS HARPOON WITH BARB RIGHTWARDS
   DefMath!("\\restriction",      "\u{21BE}", role => "ARROW"); // UPWARDS HARPOON WITH BARB RIGHTWARDS
-                                                               // (same as \upharpoonright)
+  // (same as \upharpoonright)
   DefMath!("\\downharpoonleft",  "\u{21C3}", role => "ARROW"); // DOWNWARDS HARPOON WITH BARB LEFTWARDS
   DefMath!("\\multimap",         "\u{22B8}", role => "ARROW"); // MULTIMAP
   DefMath!("\\leftrightsquigarrow", "\u{21AD}", role => "ARROW"); // LEFT RIGHT WAVE ARROW
   DefMath!("\\downharpoonright", "\u{21C2}", role => "ARROW"); // DOWNWARDS HARPOON WITH BARB RIGHTWARDS
-                                                               // \rightsquigarrow amsfonts
+  // \rightsquigarrow amsfonts
 
   //======================================================================
   // Negated arrows
