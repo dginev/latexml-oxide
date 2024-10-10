@@ -858,8 +858,14 @@
 <a href="#857" id="857">857</a>
 <a href="#858" id="858">858</a>
 <a href="#859" id="859">859</a>
-<a href="#860" id="860">860</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::package::url_sty::LEADING_BACKSLASH_RE;
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::url_sty::LEADING_BACKSLASH_RE;
+<span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">// Some of the requirements not yet applicable/supported in latexml
@@ -1091,7 +1097,10 @@
   // # Additional User Macros
 
   // \href{url}{text}
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\href HyperVerbatim {}"</span>, <span class="string">"\\lx@hyper@url@\\href{}{}{#1}{#2}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\href HyperVerbatim {}"</span>,
+    <span class="string">"\\lx@hyper@url@\\href{}{}{#1}{#2}"
+  </span>);
 
   <span class="comment">// Redefine \url{url} from url.sty...
   // It's slightly different in that it expands the argument
@@ -1102,7 +1111,7 @@
     state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>), <span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"~"</span>), <span class="prelude-val">None</span>); <span class="comment">// Needs special protection?
     </span><span class="kw">let </span>(open,close,url) = <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN {
       ( <span class="macro">T_OTHER!</span>(<span class="string">"{"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"}"</span>),
-        gullet::read_balanced(ExpansionLevel::Partial,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>.unwrap_or_default()) <span class="comment">// Expand as we go!
+        read_balanced(ExpansionLevel::Partial,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>.unwrap_or_default()) <span class="comment">// Expand as we go!
     </span>} <span class="kw">else </span>{
       ( <span class="macro">T_OTHER!</span>(<span class="string">"{"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"}"</span>),
         <span class="macro">Tokens!</span>(open.as_other()) )
@@ -1143,8 +1152,10 @@
     sizer     =&gt; <span class="string">"#5"</span>,
     reversion =&gt; <span class="string">"#1#2#4#3"</span>);
   <span class="comment">// \nolinkurl{url}
-  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\nolinkurl Semiverbatim"</span>,
-    <span class="string">"&lt;ltx:ref href='#1' class='ltx_nolink' &gt;#1&lt;/ltx:ref&gt;"</span>);
+  </span><span class="macro">DefConstructor!</span>(
+    <span class="string">"\\nolinkurl Semiverbatim"</span>,
+    <span class="string">"&lt;ltx:ref href='#1' class='ltx_nolink' &gt;#1&lt;/ltx:ref&gt;"
+  </span>);
 
   <span class="comment">// \hyperbaseurl{url}
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\hyperbaseurl Semiverbatim"</span>, sub[(url)] {
@@ -1301,7 +1312,8 @@
 \Hy@pdftoolbartrue
 \Hy@typexmlfalse
 \Hy@unicodetrue
-"</span>);
+"
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\@bookmarksopenlevel"</span>, <span class="string">"\\maxdimen"</span>);
   <span class="comment">// This only approximates the "contextual label" that should precede the number,
   // and ignores the user-definable macros.

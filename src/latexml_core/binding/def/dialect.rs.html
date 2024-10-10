@@ -1476,31 +1476,7 @@
 <a href="#1475" id="1475">1475</a>
 <a href="#1476" id="1476">1476</a>
 <a href="#1477" id="1477">1477</a>
-<a href="#1478" id="1478">1478</a>
-<a href="#1479" id="1479">1479</a>
-<a href="#1480" id="1480">1480</a>
-<a href="#1481" id="1481">1481</a>
-<a href="#1482" id="1482">1482</a>
-<a href="#1483" id="1483">1483</a>
-<a href="#1484" id="1484">1484</a>
-<a href="#1485" id="1485">1485</a>
-<a href="#1486" id="1486">1486</a>
-<a href="#1487" id="1487">1487</a>
-<a href="#1488" id="1488">1488</a>
-<a href="#1489" id="1489">1489</a>
-<a href="#1490" id="1490">1490</a>
-<a href="#1491" id="1491">1491</a>
-<a href="#1492" id="1492">1492</a>
-<a href="#1493" id="1493">1493</a>
-<a href="#1494" id="1494">1494</a>
-<a href="#1495" id="1495">1495</a>
-<a href="#1496" id="1496">1496</a>
-<a href="#1497" id="1497">1497</a>
-<a href="#1498" id="1498">1498</a>
-<a href="#1499" id="1499">1499</a>
-<a href="#1500" id="1500">1500</a>
-<a href="#1501" id="1501">1501</a>
-<a href="#1502" id="1502">1502</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#1478" id="1478">1478</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::rc::Rc;
@@ -1508,14 +1484,16 @@
 <span class="kw">use </span>regex::Regex;
 
 <span class="comment">// use crate::common::error::*;
-</span><span class="kw">use </span><span class="kw">crate</span>::binding::content::merge_font;
+</span><span class="kw">use </span><span class="kw">crate</span>::Digested;
+<span class="kw">use </span><span class="kw">crate</span>::binding::content::merge_font;
 <span class="kw">use </span><span class="kw">crate</span>::binding::counter::dialect::step_counter;
 <span class="kw">use </span><span class="kw">crate</span>::binding::def::traits::{IntoDigestedResult, IntoOption};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap;
+<span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
-<span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::{Constructor, ConstructorOptions};
 <span class="kw">use </span><span class="kw">crate</span>::definition::expandable::{Expandable, ExpandableOptions};
@@ -1524,23 +1502,20 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{
   Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
 };
-<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
   ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion, SizingClosure,
 };
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
+<span class="kw">use </span><span class="kw">crate</span>::gullet;
+<span class="kw">use </span><span class="kw">crate</span>::mouth;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::gullet;
+<span class="kw">use </span><span class="kw">crate</span>::stomach::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tbox::Tbox;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
-<span class="kw">use </span><span class="kw">crate</span>::mouth;
-<span class="kw">use </span><span class="kw">crate</span>::stomach::<span class="kw-2">*</span>;
-
 
 <span class="kw">const </span>MATH_CONSTRUCTOR_ATTRIBUTES: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
   <span class="string">"name"</span>,
@@ -1588,7 +1563,7 @@
       Stored::Primitive(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
       Stored::Constructor(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
       Stored::Register(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">"\\relax"</span>,
-      other =&gt; <span class="macro">panic!</span>(<span class="string">"TODO: unexpected case for is_defined_token, got: {other:?}"</span>)
+      other =&gt; <span class="macro">panic!</span>(<span class="string">"TODO: unexpected case for is_defined_token, got: {other:?}"</span>),
     },
     <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
   }
@@ -1598,8 +1573,9 @@
 </span><span class="kw">pub fn </span>is_definable(token: <span class="kw-2">&amp;</span>Token) -&gt; bool {
   <span class="kw">let </span>meaning = lookup_meaning(token);
   token.with_str(|name| name != <span class="string">"\\relax" </span>&amp;&amp; !name.starts_with(<span class="string">"\\end"</span>))
-    &amp;&amp; (meaning.is_none() || (meaning == lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX))
-        || lookup_bool(<span class="string">"2.09_COMPATIBILITY"</span>))
+    &amp;&amp; (meaning.is_none()
+      || (meaning == lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX))
+      || lookup_bool(<span class="string">"2.09_COMPATIBILITY"</span>))
 }
 
 <span class="doccomment">/// unconditionally wraps a CS token around a string
@@ -1609,8 +1585,8 @@
 <span class="comment">//======================================================================
 // Defining Conditional Control Sequences.
 //======================================================================
-</span><span class="doccomment">/// Define a conditional control sequence. 
-/// 
+</span><span class="doccomment">/// Define a conditional control sequence.
+///
 /// Its processing takes place in the Gullet.
 /// The test is applied to the arguments (if any),
 /// which determines which branch is executed.
@@ -1661,14 +1637,14 @@
           <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}true"</span>, name)),
           <span class="prelude-val">None</span>,
           <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), cs, <span class="macro">T_CS!</span>(<span class="string">"\\iftrue"</span>)),
-          <span class="prelude-val">None
-        </span>)<span class="question-mark">?</span>;
+          <span class="prelude-val">None</span>,
+        )<span class="question-mark">?</span>;
         def_macro(
           <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}false"</span>, name)),
           <span class="prelude-val">None</span>,
           <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), cs, <span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>)),
-          <span class="prelude-val">None
-        </span>)<span class="question-mark">?</span>;
+          <span class="prelude-val">None</span>,
+        )<span class="question-mark">?</span>;
         let_i(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>), <span class="prelude-val">None</span>);
       } <span class="kw">else </span>{
         <span class="comment">//  For \ifcase, the parameter list better be a single Number !!
@@ -1699,7 +1675,7 @@
 }
 
 <span class="doccomment">/// Defines the macro expansion for a command sequence.
-/// 
+///
 /// A macro control sequence that reads parameters
 /// as specified by `paramlist` and is expanded during macro expansion time in the `Gullet`.
 /// See `ExpansionBody` for the possible kinds of `expansion` material.
@@ -1745,19 +1721,19 @@
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>RegisterOptions {
   <span class="doccomment">/// closure to obtain the current register value
-  </span><span class="kw">pub </span>getter: <span class="prelude-ty">Option</span>&lt;RegisterGetterClosure&gt;,
+  </span><span class="kw">pub </span>getter:   <span class="prelude-ty">Option</span>&lt;RegisterGetterClosure&gt;,
   <span class="doccomment">/// closure to set the current register value
-  </span><span class="kw">pub </span>setter: <span class="prelude-ty">Option</span>&lt;RegisterSetterClosure&gt;,
+  </span><span class="kw">pub </span>setter:   <span class="prelude-ty">Option</span>&lt;RegisterSetterClosure&gt;,
   <span class="doccomment">/// is this register meant as read-only? (default: false)
   </span><span class="kw">pub </span>readonly: bool,
   <span class="doccomment">/// an optional name for the register (default: the cs)
-  </span><span class="kw">pub </span>address: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  </span><span class="kw">pub </span>address:  <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="doccomment">/// an optional allocation for the register (default: None)
-  </span><span class="kw">pub </span>allocate: <span class="prelude-ty">Option</span>&lt;String&gt;
+  </span><span class="kw">pub </span>allocate: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="doccomment">/// Defines a register with an initial value.
-/// 
+///
 /// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
 /// Usually, the `prototype` is just the control sequence,
 /// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
@@ -1777,7 +1753,7 @@
     <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>options.allocate {
       <span class="prelude-val">Some</span>(v) =&gt; allocate_register(<span class="kw-2">&amp;</span>v)<span class="question-mark">?</span>.unwrap_or_default(),
       <span class="prelude-val">None </span>=&gt; String::new(),
-    }
+    },
   };
   <span class="comment">// by adding this check here, we no longer need to use Register::new in the Rust version
   </span><span class="kw">if </span>address.is_empty() {
@@ -1802,15 +1778,15 @@
       value: <span class="prelude-val">None</span>,
       role: <span class="prelude-val">None</span>,
       locator: gullet::get_locator(),
-      mathglyph: <span class="prelude-val">None
-    </span>},
+      mathglyph: <span class="prelude-val">None</span>,
+    },
     <span class="prelude-val">Some</span>(Scope::Global),
   );
   <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Defines a primitive control sequence
-/// 
+///
 /// A primitive is processed during
 /// digestion (in the  `Stomach`), after macro expansion but before Construction time.
 /// Primitive control sequences generate Boxes or Lists, generally
@@ -1830,15 +1806,13 @@
 
   <span class="kw">if </span>options.require_math {
     <span class="kw">let </span>cs_name_cloned = cs_name.clone();
-    <span class="kw">let </span>require_math_closure =
-      <span class="macro">before_digest_simple!</span>({ <span class="macro">requireMath!</span>(cs_name_cloned) });
+    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>({ <span class="macro">requireMath!</span>(cs_name_cloned) });
     before_digest_env.push(require_math_closure);
   }
 
   <span class="kw">if </span>options.forbid_math {
     <span class="kw">let </span>cs_name_cloned = cs_name.clone();
-    <span class="kw">let </span>forbid_math_closure =
-      <span class="macro">before_digest_simple!</span>({ <span class="macro">forbidMath!</span>(cs_name_cloned) });
+    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>({ <span class="macro">forbidMath!</span>(cs_name_cloned) });
     before_digest_env.push(forbid_math_closure);
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mode) = options.mode {
@@ -1963,7 +1937,7 @@
         dtks.push(<span class="macro">T_BEGIN!</span>());
         <span class="kw">for </span>carg <span class="kw">in </span>cargs.into_iter().flatten() {
           <span class="comment">// if let Some(carg) = carg_opt {
-            </span>dtks.extend(carg.unlist());
+          </span>dtks.extend(carg.unlist());
           <span class="comment">//} else {}
           // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         </span>}
@@ -1974,7 +1948,7 @@
         dtks.push(<span class="macro">T_BEGIN!</span>());
         <span class="kw">for </span>parg <span class="kw">in </span>pargs.into_iter().flatten() {
           <span class="comment">// if let Some(parg) = parg_opt {
-            </span>dtks.extend(parg.unlist());
+          </span>dtks.extend(parg.unlist());
           <span class="comment">//} else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         </span>}
         dtks.push(<span class="macro">T_END!</span>());
@@ -2176,13 +2150,7 @@
       )
     })
   } <span class="kw">else </span>{
-    Rc::new(<span class="kw">move </span>|_whatsit| {
-      <span class="prelude-val">Ok</span>(
-        lookup_font()
-          .unwrap()
-          .specialize(<span class="kw-2">&amp;</span>presentation_for_font),
-      )
-    })
+    Rc::new(<span class="kw">move </span>|_whatsit| <span class="prelude-val">Ok</span>(lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>presentation_for_font)))
   }));
   <span class="kw">let </span>compiled_replacement: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="prelude-val">Some</span>(<span class="kw">if </span>nargs == <span class="number">0 </span>{
     <span class="comment">// If trivial presentation, allow it in Text
@@ -2220,9 +2188,7 @@
     )
   } <span class="kw">else </span>{
     Rc::new(
-      <span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document,
-            args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
-            props: <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;| {
+      <span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document, args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;, props: <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;| {
         <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
         <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"role"</span>, <span class="string">"scriptpos"</span>, <span class="string">"stretchy"</span>] {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
@@ -2333,7 +2299,7 @@
 }
 
 <span class="doccomment">/// Binding definition connecting a TeX command sequence with a structured XML output.
-/// 
+///
 /// The Constructor is where LaTeXML really starts getting interesting;
 /// invoking the control sequence will generate an arbitrary XML
 /// fragment in the document tree.  More specifically: during digestion, the arguments
@@ -2360,24 +2326,22 @@
 
   <span class="kw">if </span>options.require_math {
     <span class="kw">let </span>cs_name_cloned = cs_name.clone();
-    <span class="kw">let </span>require_math_closure =
-      <span class="macro">before_digest_simple!</span>( { <span class="macro">requireMath!</span>(cs_name_cloned) });
+    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>({ <span class="macro">requireMath!</span>(cs_name_cloned) });
     before_digest_closures.push(require_math_closure);
   }
   <span class="kw">if </span>options.forbid_math {
     <span class="kw">let </span>cs_name_cloned = cs_name;
-    <span class="kw">let </span>forbid_math_closure =
-      <span class="macro">before_digest_simple!</span>( { <span class="macro">forbidMath!</span>(cs_name_cloned) });
+    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>({ <span class="macro">forbidMath!</span>(cs_name_cloned) });
     before_digest_closures.push(forbid_math_closure);
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mode) = options.mode {
     <span class="kw">let </span>mode_clone = mode.clone();
-    <span class="kw">let </span>begin_mode_closure = <span class="macro">before_digest_simple!</span>( {
+    <span class="kw">let </span>begin_mode_closure = <span class="macro">before_digest_simple!</span>({
       begin_mode(<span class="kw-2">&amp;</span>mode_clone)<span class="question-mark">?</span>;
     });
     before_digest_closures.push(begin_mode_closure);
   } <span class="kw">else if </span>options.bounded {
-    <span class="kw">let </span>bgroup_closure = <span class="macro">before_digest_simple!</span>( {
+    <span class="kw">let </span>bgroup_closure = <span class="macro">before_digest_simple!</span>({
       bgroup();
     });
     before_digest_closures.push(bgroup_closure);
@@ -2388,13 +2352,13 @@
   //  Can we consolidate into a single, top-level, font handler?
   </span><span class="kw">match </span>options.font {
     <span class="prelude-val">Some</span>(FontDirective::Asset(chosen_font)) =&gt; {
-      <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>( {
+      <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>({
         merge_font((<span class="kw-2">*</span>chosen_font).clone());
       });
       before_digest_closures.push(merge_font_closure);
     },
     <span class="prelude-val">Some</span>(FontDirective::Closure(font_closure)) =&gt; {
-      <span class="kw">let </span>execute_font_closure = <span class="macro">before_digest_simple!</span>( {
+      <span class="kw">let </span>execute_font_closure = <span class="macro">before_digest_simple!</span>({
         merge_font(font_closure(<span class="prelude-val">None</span>)<span class="question-mark">?</span>);
       });
       before_digest_closures.push(execute_font_closure);
@@ -2406,12 +2370,12 @@
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_closures: Vec&lt;DigestionClosure&gt; = options.after_digest;
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mode) = options.mode {
     <span class="kw">let </span>mode_clone = mode.clone();
-    <span class="kw">let </span>end_mode_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>( _whatsit, {
+    <span class="kw">let </span>end_mode_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(_whatsit, {
       end_mode(<span class="kw-2">&amp;</span>mode_clone)<span class="question-mark">?</span>;
     });
     after_digest_closures.push(end_mode_closure);
   } <span class="kw">else if </span>options.bounded {
-    <span class="kw">let </span>egroup_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>( _whatsit, {
+    <span class="kw">let </span>egroup_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(_whatsit, {
       egroup()<span class="question-mark">?</span>;
     });
     after_digest_closures.push(egroup_closure);
@@ -2443,7 +2407,7 @@
 }
 
 <span class="doccomment">/// Defines an Environment that generates a specific XML fragment.
-/// 
+///
 /// `compiled_replacement` is of the same form as for DefConstructor, but will generally include
 /// reference to the `#body` property.
 /// Upon encountering a `\begin{env}`:  the mode is switched, if needed, else a new group is opened;
@@ -2466,22 +2430,20 @@
   <span class="kw">let </span><span class="kw-2">mut </span>before_digest_env: Vec&lt;BeforeDigestClosure&gt; = Vec::new();
   <span class="kw">if </span>options.require_math {
     <span class="kw">let </span>require_name = begin_name.clone();
-    <span class="kw">let </span>require_math_closure =
-      <span class="macro">before_digest_simple!</span>( { <span class="macro">requireMath!</span>(require_name) });
+    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>({ <span class="macro">requireMath!</span>(require_name) });
     before_digest_env.push(require_math_closure);
   }
   <span class="kw">if </span>options.forbid_math {
     <span class="kw">let </span>forbid_name = begin_name.clone();
-    <span class="kw">let </span>forbid_math_closure =
-      <span class="macro">before_digest_simple!</span>( { <span class="macro">forbidMath!</span>(forbid_name) });
+    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>({ <span class="macro">forbidMath!</span>(forbid_name) });
     before_digest_env.push(forbid_math_closure);
   }
-  <span class="kw">let </span>bgroup_closure = <span class="macro">before_digest_simple!</span>( {
+  <span class="kw">let </span>bgroup_closure = <span class="macro">before_digest_simple!</span>({
     bgroup();
   });
   before_digest_env.push(bgroup_closure);
   <span class="kw">let </span>atbegin_key = <span class="macro">s!</span>(<span class="string">"@environment@{name}@atbegin"</span>);
-  <span class="kw">let </span>atbegin_hook_closure = <span class="macro">before_digest_simple!</span>( {
+  <span class="kw">let </span>atbegin_hook_closure = <span class="macro">before_digest_simple!</span>({
     <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = lookup_tokens(<span class="kw-2">&amp;</span>atbegin_key) {
       <span class="macro">vec!</span>[digest(b.unlist())<span class="question-mark">?</span>]
     } <span class="kw">else </span>{
@@ -2492,14 +2454,14 @@
   before_digest_env.push(atbegin_hook_closure);
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mode) = options.mode {
     <span class="kw">let </span>bmode = mode.clone();
-    <span class="kw">let </span>mode_closure = <span class="macro">before_digest_simple!</span>( {
+    <span class="kw">let </span>mode_closure = <span class="macro">before_digest_simple!</span>({
       set_mode(<span class="kw-2">&amp;</span>bmode)<span class="question-mark">?</span>;
     });
     before_digest_env.push(mode_closure);
   }
 
   <span class="kw">let </span>env_name = name.clone();
-  <span class="kw">let </span>current_environment_closure = <span class="macro">before_digest_simple!</span>( {
+  <span class="kw">let </span>current_environment_closure = <span class="macro">before_digest_simple!</span>({
     assign_value(<span class="string">"current_environment"</span>, env_name.clone(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>body = <span class="macro">T_LETTER!</span>(env_name.clone());
     def_macro(
@@ -2512,7 +2474,7 @@
   before_digest_env.push(current_environment_closure);
 
   <span class="kw">if let </span><span class="prelude-val">Some</span>(chosen_font_directive) = options.font {
-    <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>( {
+    <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>({
       <span class="kw">if let </span>FontDirective::Asset(<span class="kw-2">ref </span>chosen_font) = chosen_font_directive {
         merge_font((<span class="kw-2">**</span>chosen_font).clone());
       }
@@ -2521,51 +2483,47 @@
   }
   before_digest_env.extend(options.before_digest);
 
-  <span class="kw">let </span>push_frame_closure = Rc::new(
-    |_document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit| {
-      push_frame();
-      <span class="prelude-val">Ok</span>(())
-    },
-  );
+  <span class="kw">let </span>push_frame_closure = Rc::new(|_document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit| {
+    push_frame();
+    <span class="prelude-val">Ok</span>(())
+  });
   <span class="kw">let </span><span class="kw-2">mut </span>before_construct_with_frame: Vec&lt;ConstructionClosure&gt; = <span class="macro">vec!</span>[push_frame_closure];
   before_construct_with_frame.extend(options.before_construct);
 
   <span class="kw">let </span><span class="kw-2">mut </span>after_construct_with_frame: Vec&lt;ConstructionClosure&gt; = options.after_construct;
 
-  <span class="kw">let </span>pop_frame_closure = Rc::new(
-    |_document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit| {
-      pop_frame()<span class="question-mark">?</span>;
-      <span class="prelude-val">Ok</span>(())
-    },
-  );
+  <span class="kw">let </span>pop_frame_closure = Rc::new(|_document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit| {
+    pop_frame()<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+  });
   after_construct_with_frame.push(pop_frame_closure);
 
   <span class="kw">let </span>begin_name_constructor = Rc::new(Constructor {
-    cs: <span class="macro">T_CS!</span>(begin_name),
-    paramlist: paramlist.clone(),
-    replacement: compiled_replacement.clone(),
-    nargs: options.nargs,
-    before_digest: before_digest_env,
-    after_digest: options.after_digest_begin,
+    cs:                <span class="macro">T_CS!</span>(begin_name),
+    paramlist:         paramlist.clone(),
+    replacement:       compiled_replacement.clone(),
+    nargs:             options.nargs,
+    before_digest:     before_digest_env,
+    after_digest:      options.after_digest_begin,
     after_digest_body: options.after_digest_body,
-    before_construct: before_construct_with_frame,
+    before_construct:  before_construct_with_frame,
     <span class="comment">// Curiously, it's the \begin whose afterConstruct gets called.
-    </span>after_construct: after_construct_with_frame,
-    capture_body: <span class="bool-val">true</span>,
-    properties: options.properties.clone(),
+    </span>after_construct:   after_construct_with_frame,
+    capture_body:      <span class="bool-val">true</span>,
+    properties:        options.properties.clone(),
     <span class="comment">// (defined $options{reversion} ? (reversion =&gt; $options{reversion}) : ()),
     // (defined $sizer ? (sizer =&gt; $sizer) : ()),
     // ), $options{scope});
-    </span>sizer: infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
-    reversion: options.reversion,
-    alias: options.alias,
+    </span>sizer:             infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
+    reversion:         options.reversion,
+    alias:             options.alias,
   });
   install_definition(begin_name_constructor, options.scope);
 
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_env = options.after_digest.clone();
   <span class="kw">let </span>name_clone = name.to_string();
   <span class="kw">let </span>end_name_clone = end_name.to_string();
-  <span class="kw">let </span>unexpected_end_closure = <span class="macro">after_digest_simple!</span>( _whatsit, {
+  <span class="kw">let </span>unexpected_end_closure = <span class="macro">after_digest_simple!</span>(_whatsit, {
     <span class="kw">let </span>env = lookup_string(<span class="string">"current_environment"</span>);
     <span class="kw">if </span>env.is_empty() || name_clone != env {
       <span class="kw">let </span>message1 = <span class="macro">s!</span>(<span class="string">"Can't close environment {}"</span>, name_clone);
@@ -2577,12 +2535,7 @@
           .collect::&lt;Vec&lt;String&gt;&gt;()
           .join(<span class="string">", "</span>))
       );
-      <span class="macro">Error!</span>(
-        <span class="string">"unexpected"</span>,
-        end_name_clone,
-        message1,
-        message2
-      );
+      <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, end_name_clone, message1, message2);
     }
     <span class="prelude-val">Ok</span>(Vec::new())
   });
@@ -2591,28 +2544,24 @@
   <span class="kw">match </span>options.mode {
     <span class="prelude-val">Some</span>(mode) =&gt; {
       <span class="kw">let </span>emode = mode;
-      <span class="kw">let </span>emode_closure = Rc::new(
-        <span class="kw">move </span>|_whatsit: <span class="kw-2">&amp;mut </span>Whatsit| {
-          end_mode(<span class="kw-2">&amp;</span>emode)<span class="question-mark">?</span>;
-          <span class="prelude-val">Ok</span>(Vec::new())
-        },
-      );
+      <span class="kw">let </span>emode_closure = Rc::new(<span class="kw">move </span>|_whatsit: <span class="kw-2">&amp;mut </span>Whatsit| {
+        end_mode(<span class="kw-2">&amp;</span>emode)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(Vec::new())
+      });
       after_digest_env.push(emode_closure);
     },
     <span class="prelude-val">None </span>=&gt; {
-      <span class="kw">let </span>egroup_closure = Rc::new(
-        |_whatsit: <span class="kw-2">&amp;mut </span>Whatsit| {
-          egroup()<span class="question-mark">?</span>;
-          <span class="prelude-val">Ok</span>(Vec::new())
-        },
-      );
+      <span class="kw">let </span>egroup_closure = Rc::new(|_whatsit: <span class="kw-2">&amp;mut </span>Whatsit| {
+        egroup()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(Vec::new())
+      });
       after_digest_env.push(egroup_closure);
     },
   };
 
   <span class="kw">let </span><span class="kw-2">mut </span>before_digest_for_endenv = options.before_digest_end;
   <span class="kw">let </span>atend_key = <span class="macro">s!</span>(<span class="string">"@environment@{name}@atend"</span>);
-  <span class="kw">let </span>atend_hook_closure = <span class="macro">before_digest_simple!</span>( {
+  <span class="kw">let </span>atend_hook_closure = <span class="macro">before_digest_simple!</span>({
     <span class="kw">if let </span><span class="prelude-val">Some</span>(e) = lookup_tokens(<span class="kw-2">&amp;</span>atend_key) {
       <span class="macro">vec!</span>[digest(e.unlist())<span class="question-mark">?</span>]
     } <span class="kw">else </span>{
@@ -2657,7 +2606,7 @@
   install_definition(name_constructor, options.scope);
   <span class="kw">let </span>end_name = <span class="macro">s!</span>(<span class="string">"\\end{}"</span>, <span class="kw-2">&amp;</span>name);
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_end = options.after_digest;
-  after_digest_end.push(<span class="macro">after_digest_simple!</span>( _whatsit, {
+  after_digest_end.push(<span class="macro">after_digest_simple!</span>(_whatsit, {
     egroup()<span class="question-mark">?</span>;
   }));
 
@@ -2674,7 +2623,11 @@
   install_definition(Rc::new(end_name_constructor), options.scope);
 
   <span class="kw">if </span>options.locked {
-    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\begin{{{}}}:locked"</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    assign_value(
+      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\begin{{{}}}:locked"</span>, <span class="kw-2">&amp;</span>name),
+      <span class="bool-val">true</span>,
+      <span class="prelude-val">Some</span>(Scope::Global),
+    );
     assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\end{{{}}}:locked"</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
     assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\{}:locked"</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
     assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\end{}:locked"</span>, <span class="kw-2">&amp;</span>name), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
@@ -2691,13 +2644,15 @@
   def_macro(
     <span class="macro">T_CS!</span>(<span class="string">"\\@@lx@xmarg@ID"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(lookup_register(<span class="string">"\\c@@lx@xmarg"</span>, Vec::new())<span class="question-mark">?
-      </span>.unwrap()
-      .value_of())),
+    <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(
+      lookup_register(<span class="string">"\\c@@lx@xmarg"</span>, Vec::new())<span class="question-mark">?
+        </span>.unwrap()
+        .value_of()
+    )),
     <span class="prelude-val">Some</span>(ExpandableOptions {
       scope: <span class="prelude-val">Some</span>(Scope::Global),
       ..ExpandableOptions::default()
-    })
+    }),
   )<span class="question-mark">?</span>;
   gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\the@lx@xmarg@ID"</span>))
 }
@@ -2709,14 +2664,14 @@
 /// return two lists
 ///   (1) The Tokens' wrapped in an XMAarg, with an ID added
 ///   (2) a corresponding list of Tokens creating XMRef's to those IDs
-/// 
+///
 /// Ah, but there are complications!!!
 /// On the one hand, arguments may be hidden, never appearing on the presentation side
 /// (all will be passed to the content side); This argues for putting the XMArg's on the content
-/// side. OTOH, they ought to be on the presentation side, so that they can be expanded &amp; digested in
-/// the proper context they will be presented, and pick up all the styling (font size,
-/// displaystyle..) I don't know how to work around the latter, so we'll put args on the presentation
-/// side, UNLESS they are hidden, in which case they'll be on the content side.
+/// side. OTOH, they ought to be on the presentation side, so that they can be expanded &amp; digested
+/// in the proper context they will be presented, and pick up all the styling (font size,
+/// displaystyle..) I don't know how to work around the latter, so we'll put args on the
+/// presentation side, UNLESS they are hidden, in which case they'll be on the content side.
 /// So, how do we know if they're hidden? We'll scan the presentation for #\d, that's how!
 </span><span class="kw">pub fn </span>dualize_arglist(
   presentation: <span class="kw-2">&amp;</span>str,
@@ -2786,7 +2741,7 @@
 }
 
 <span class="doccomment">/// Define a Mathematical symbol or function.
-/// 
+///
 /// There are two sets of cases:
 ///  (1) If the presentation appears to be TeX code, we create an XMDual,
 /// since the presentation may end up with structure, etc.
@@ -2912,17 +2867,16 @@
   <span class="comment">//
   // before_digest
   //
-  </span><span class="kw">let </span><span class="kw-2">mut </span>before_digest_closures: Vec&lt;BeforeDigestClosure&gt; =
-    <span class="macro">vec!</span>[<span class="macro">before_digest_simple!</span>( {
-      <span class="macro">requireMath!</span>(cs_str);
-    })];
+  </span><span class="kw">let </span><span class="kw-2">mut </span>before_digest_closures: Vec&lt;BeforeDigestClosure&gt; = <span class="macro">vec!</span>[<span class="macro">before_digest_simple!</span>({
+    <span class="macro">requireMath!</span>(cs_str);
+  })];
   <span class="kw">if </span>!options.nogroup {
-    before_digest_closures.push(<span class="macro">before_digest_simple!</span>( {
+    before_digest_closures.push(<span class="macro">before_digest_simple!</span>({
       bgroup();
     }));
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(font) = options.font {
-    before_digest_closures.push(<span class="macro">before_digest_simple!</span>( {
+    before_digest_closures.push(<span class="macro">before_digest_simple!</span>({
       <span class="kw">if let </span>FontDirective::Asset(<span class="kw-2">ref </span>chosen_font) = font {
         merge_font((<span class="kw-2">**</span>chosen_font).clone());
       }
@@ -2935,7 +2889,7 @@
   //
   </span><span class="kw">let </span><span class="kw-2">mut </span>after_digest_closures = options.after_digest;
   <span class="kw">if </span>!options.nogroup {
-    after_digest_closures.push(<span class="macro">after_digest_simple!</span>( _args, {
+    after_digest_closures.push(<span class="macro">after_digest_simple!</span>(_args, {
       egroup()<span class="question-mark">?</span>;
     }));
   }
@@ -2959,13 +2913,7 @@
           )
         })
       } <span class="kw">else </span>{
-        Rc::new(<span class="kw">move </span>|_whatsit| {
-          <span class="prelude-val">Ok</span>(
-            lookup_font()
-              .unwrap()
-              .specialize(<span class="kw-2">&amp;</span>presentation_for_font),
-          )
-        })
+        Rc::new(<span class="kw">move </span>|_whatsit| <span class="prelude-val">Ok</span>(lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>presentation_for_font)))
       },
     )),
   );
@@ -2978,27 +2926,31 @@
 // We ASSUME the same set of \count positions used by TeX &amp; LaTeX
 // for recording the next available position in \count,\dimen,\skip,\muskip.
 
-</span><span class="kw">pub fn </span>allocate_register(rtype:<span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; {
+</span><span class="kw">pub fn </span>allocate_register(rtype: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; {
   <span class="kw">let </span>addr = <span class="kw">match </span>rtype {
     <span class="string">"\\count" </span>=&gt; <span class="string">"\\count10"</span>,
     <span class="string">"\\dimen" </span>=&gt; <span class="string">"\\count11"</span>,
     <span class="string">"\\skip" </span>=&gt; <span class="string">"\\count12"</span>,
     <span class="string">"\\muskip" </span>=&gt; <span class="string">"\\count13"</span>,
-    <span class="string">"\\box"   </span>=&gt; <span class="string">"\\count14"</span>,
-    <span class="string">"\\toks"  </span>=&gt; <span class="string">"\\count15"</span>,
-    <span class="kw">_ </span>=&gt; <span class="string">""
-  </span>};
-  <span class="kw">if </span>!addr.is_empty() { <span class="comment">// addr is a Register but MUST be stored as \count&lt;#&gt;
+    <span class="string">"\\box" </span>=&gt; <span class="string">"\\count14"</span>,
+    <span class="string">"\\toks" </span>=&gt; <span class="string">"\\count15"</span>,
+    <span class="kw">_ </span>=&gt; <span class="string">""</span>,
+  };
+  <span class="kw">if </span>!addr.is_empty() {
+    <span class="comment">// addr is a Register but MUST be stored as \count&lt;#&gt;
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(n) = lookup_number(addr) {
       <span class="kw">let </span>next = n.value_of() + <span class="number">1</span>;
       assign_value(addr, Number::new(next), <span class="prelude-val">Some</span>(Scope::Global));
       <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"{rtype}{next}"</span>)))
-    }
-    <span class="kw">else </span>{
+    } <span class="kw">else </span>{
       <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
   } <span class="kw">else </span>{
-    <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, rtype, <span class="macro">format!</span>(<span class="string">"Type {rtype} is not an allocated register type"</span>));
+    <span class="macro">Error!</span>(
+      <span class="string">"misdefined"</span>,
+      rtype,
+      <span class="macro">format!</span>(<span class="string">"Type {rtype} is not an allocated register type"</span>)
+    );
     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
   }
 }

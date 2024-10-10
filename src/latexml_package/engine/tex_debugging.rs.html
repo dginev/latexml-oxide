@@ -253,22 +253,23 @@
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Debugging
-//! 
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Debugging
+//!
 //! Core TeX Implementation for LaTeXML
 </span><span class="kw">static </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">"^\\\\(?:(?:un)?expanded|detokenize)$"</span>).unwrap());
 <span class="kw">static </span>LEAD_W_COLON_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^(\w+):"</span>).unwrap());
 <span class="kw">static </span>UNTIL_SPEC: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">"^\\w?Until(\\w*):"</span>).unwrap());
-  
+
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Debugging Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@ERROR{}{}"</span>, <span class="string">"&lt;ltx:ERROR class='ltx_#1'&gt;#2&lt;/ltx:ERROR&gt;"</span>);
-  
+
   <span class="comment">//======================================================================
   // running modes
   //----------------------------------------------------------------------
@@ -276,8 +277,9 @@
   // \errorstopmode    c  switches to normal interaction for processing errors.
   // \nonstopmode      c  acts like pressing R in response to an error.
   // \scrollmode       c  acts like pressing S in response to an error.
-  // \pausing          pi if positive, the program halts after every line is read from the input file and waits for a response from the user.
-  
+  // \pausing          pi if positive, the program halts after every line is read from the input
+  // file and waits for a response from the user.
+
   // These are no-ops; Basically, LaTeXML runs in scrollmode
   </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\errorstopmode"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\scrollmode"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
@@ -290,8 +292,8 @@
   //----------------------------------------------------------------------
   // \message          c  writes an expanded token list on the terminal and to the log file.
   // \errmessage       c  displays text on the terminal and interrupts the program.
-  // \errhelp          pt is text displayed on the terminal if h is pressed after an \errmessage     .
-  // \errorcontextlines pi is the number of lines to display on the terminal at an error.
+  // \errhelp          pt is text displayed on the terminal if h is pressed after an \errmessage
+  // . \errorcontextlines pi is the number of lines to display on the terminal at an error.
 
   // Converts $tokens to a string in the fashion of \message and others:
   // doubles #, converts to string; optionally adds spaces after control sequences
@@ -412,7 +414,7 @@
                 }
               }
             }
-            <span class="kw">if </span>!continue_flag { 
+            <span class="kw">if </span>!continue_flag {
               spec_parts.push(p_spec);
             }
           }
@@ -456,9 +458,9 @@
   // \show             c  writes a token's definition on the terminal and to the log file.
   // \showbox          c  writes the contents of a box to the log file.
   // \showlists        c  writes information about current lists to the log file.
-  // \showthe          c  writes a value on the terminal and to the log file and interrupts the program.
-  // \showboxbreadth   pi is the maximum number of items per level written by \showbox and \showlists.
-  // \showboxdepth     pi is the maximum level written by \showbox and \showlists.
+  // \showthe          c  writes a value on the terminal and to the log file and interrupts the
+  // program. \showboxbreadth   pi is the maximum number of items per level written by \showbox
+  // and \showlists. \showboxdepth     pi is the maximum level written by \showbox and \showlists.
 
   // Debugging aids; Ignored!
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\show Token"</span>, sub[(arg)] {
@@ -484,27 +486,28 @@
   // Tracing
   //----------------------------------------------------------------------
   // \tracingcommands  pi if positive, writes commands to the log file.
-  // \tracinglostchars pi if positive, writes characters not in the current font to the log file     .
-  // \tracingmacros    pi    if positive, writes to the log file when expanding macros and arguments .
-  // \tracingonline    pi    if positive, writes diagnostic output to the terminal as well as to the log file.
-  // \tracingoutput    pi    if positive, writes contents of shipped out boxes to the log file.
-  // \tracingpages     pi    if positive, writes the page-cost calculations to the log file.
-  // \tracingparagraphs pi   if positive, writes a summary of the line-breaking calculations to the  log     file.
-  // \tracingrestores  pi    if positive, writes save-stack details to the log file.
-  // \tracingstats     pi    if positive, writes memory usage statistics to the log file.
+  // \tracinglostchars pi if positive, writes characters not in the current font to the log file
+  // . \tracingmacros    pi    if positive, writes to the log file when expanding macros and
+  // arguments . \tracingonline    pi    if positive, writes diagnostic output to the terminal as
+  // well as to the log file. \tracingoutput    pi    if positive, writes contents of shipped out
+  // boxes to the log file. \tracingpages     pi    if positive, writes the page-cost calculations
+  // to the log file. \tracingparagraphs pi   if positive, writes a summary of the line-breaking
+  // calculations to the  log     file. \tracingrestores  pi    if positive, writes save-stack
+  // details to the log file. \tracingstats     pi    if positive, writes memory usage statistics
+  // to the log file.
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\tracingmacros"</span>, <span class="macro">Number!</span>(<span class="number">0</span>),
     getter =&gt; { <span class="macro">LookupNumber!</span>(<span class="string">"TRACINGMACROS"</span>) },
-    setter =&gt; sub[value, scope, _args] { <span class="macro">AssignValue!</span>(<span class="string">"TRACINGMACROS" </span>=&gt; value.value_of(), scope); });
+    setter =&gt; sub[value,scope,_args] { <span class="macro">AssignValue!</span>(<span class="string">"TRACINGMACROS" </span>=&gt; value.value_of(), scope); });
   <span class="macro">DefRegister!</span>(<span class="string">"\\tracingcommands"</span>, <span class="macro">Number!</span>(<span class="number">0</span>),
     getter =&gt; { <span class="macro">LookupNumber!</span>(<span class="string">"TRACINGCOMMANDS"</span>) },
-    setter =&gt; sub[value, scope, _args] { <span class="macro">AssignValue!</span>(<span class="string">"TRACINGCOMMANDS" </span>=&gt; value.value_of(), scope); });
+    setter =&gt; sub[value,scope,_args] { <span class="macro">AssignValue!</span>(<span class="string">"TRACINGCOMMANDS" </span>=&gt; value.value_of(), scope);});
 
-    <span class="macro">DefRegister!</span>(<span class="string">"\\tracingonline"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-    <span class="macro">DefRegister!</span>(<span class="string">"\\tracingstats"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-    <span class="macro">DefRegister!</span>(<span class="string">"\\tracingparagraphs"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-    <span class="macro">DefRegister!</span>(<span class="string">"\\tracingpages"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-    <span class="macro">DefRegister!</span>(<span class="string">"\\tracingoutput"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-    <span class="macro">DefRegister!</span>(<span class="string">"\\tracinglostchars"</span>, <span class="macro">Number!</span>(<span class="number">1</span>));
-    <span class="macro">DefRegister!</span>(<span class="string">"\\tracingrestores"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-  
-});</code></pre></div></section></main></body></html>
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingonline"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingstats"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingparagraphs"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingpages"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingoutput"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracinglostchars"</span>, <span class="macro">Number!</span>(<span class="number">1</span>));
+  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingrestores"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+});
+</code></pre></div></section></main></body></html>

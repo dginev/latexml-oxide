@@ -114,6 +114,7 @@
 <span class="kw">pub mod </span>font;
 <span class="kw">pub mod </span>glue;
 <span class="kw">pub mod </span>ligature;
+<span class="kw">pub mod </span>local_assignments;
 <span class="kw">pub mod </span>locator;
 <span class="kw">pub mod </span>model;
 <span class="kw">pub mod </span>mudimension;
@@ -124,7 +125,6 @@
 <span class="kw">pub mod </span>relaxng;
 <span class="kw">pub mod </span>store;
 <span class="kw">pub mod </span>xml;
-<span class="kw">pub mod </span>local_assignments;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::fmt;
@@ -185,27 +185,27 @@
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Config {
-  <span class="kw">pub </span>verbosity: i32,
-  <span class="kw">pub </span>format: OutputFormat,
-  <span class="kw">pub </span>whatsin: DataSize,
-  <span class="kw">pub </span>whatsout: DataSize,
-  <span class="kw">pub </span>preamble: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>postamble: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>mode: <span class="prelude-ty">Option</span>&lt;DigestionMode&gt;,
-  <span class="kw">pub </span>bindings_dispatch: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
+  <span class="kw">pub </span>verbosity:               i32,
+  <span class="kw">pub </span>format:                  OutputFormat,
+  <span class="kw">pub </span>whatsin:                 DataSize,
+  <span class="kw">pub </span>whatsout:                DataSize,
+  <span class="kw">pub </span>preamble:                <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>postamble:               <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>mode:                    <span class="prelude-ty">Option</span>&lt;DigestionMode&gt;,
+  <span class="kw">pub </span>bindings_dispatch:       <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
   <span class="kw">pub </span>extra_bindings_dispatch: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Config {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Config {
-      verbosity: <span class="number">1</span>,
-      format: OutputFormat::XML,
-      whatsin: DataSize::Document,
-      whatsout: DataSize::Document,
-      preamble: <span class="prelude-val">None</span>,
-      postamble: <span class="prelude-val">None</span>,
-      mode: <span class="prelude-val">Some</span>(DigestionMode::LaTeX),
-      bindings_dispatch: <span class="prelude-val">None</span>,
+      verbosity:               <span class="number">1</span>,
+      format:                  OutputFormat::XML,
+      whatsin:                 DataSize::Document,
+      whatsout:                DataSize::Document,
+      preamble:                <span class="prelude-val">None</span>,
+      postamble:               <span class="prelude-val">None</span>,
+      mode:                    <span class="prelude-val">Some</span>(DigestionMode::LaTeX),
+      bindings_dispatch:       <span class="prelude-val">None</span>,
       extra_bindings_dispatch: <span class="prelude-val">None</span>,
     }
   }

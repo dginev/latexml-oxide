@@ -129,38 +129,76 @@
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="comment">//======================================================================
 // C.9.2 Marginal Notes
 //======================================================================
 </span><span class="macro">LoadDefinitions!</span>({
-  
   <span class="macro">DefConditional!</span>(<span class="string">"\\if@reversemargin"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\reversemarginpar"</span>, <span class="string">"\\@reversemargintrue"</span>);
-  <span class="macro">Let!</span>(<span class="string">"\\normalmarginpar"</span>,  <span class="string">"\\@reversemarginfalse"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\normalmarginpar"</span>, <span class="string">"\\@reversemarginfalse"</span>);
   <span class="comment">// TODO: Can we find an ergonomic rust way to write multi-line XML strings for constructors?
-  //       maybe have a "proper" template capability, as most Rust web frameworks do? 
+  //       maybe have a "proper" template capability, as most Rust web frameworks do?
   //       consider the view! macro of Leptos for example:
   //       https://docs.rs/leptos/latest/leptos/macro.view.html
-  // 
+  //
   // DefConstructor!("\\marginpar[]{}", r###"\
-  // ?#1(&lt;ltx:note role='margin' class='ltx_marginpar_left'&gt;&lt;ltx:inline-logical-block&gt;#1&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;\
-  // ?#2(&lt;ltx:note role='margin' class='ltx_marginpar_right'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;))\
-  // (&lt;ltx:note role='margin' class='ltx_marginpar'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;)"###);
-  
+  // ?#1(&lt;ltx:note role='margin'
+  // class='ltx_marginpar_left'&gt;&lt;ltx:inline-logical-block&gt;#1&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;\
+  // ?#2(&lt;ltx:note role='margin'
+  // class='ltx_marginpar_right'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:
+  // note&gt;))\ (&lt;ltx:note role='margin'
+  // class='ltx_marginpar'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;)"###);
+
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\marginparpush"</span>, Dimension::new(<span class="number">0</span>));
-  
+
   <span class="comment">//**********************************************************************
   // C.10 Lining It Up in Columns
   //**********************************************************************
-  
+
   //======================================================================
   // C.10.1 The tabbing Environment
   //======================================================================
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\tabbingsep" </span>=&gt; Dimension::new(<span class="number">0</span>));
-  
-  <span class="macro">DefMacro!</span>(<span class="string">"\\tabbing"</span>, <span class="string">r"\par\@tabbing@bindings\@@tabbing\lx@begin@alignment"</span>);
+
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\tabbing"</span>,
+    <span class="string">r"\par\@tabbing@bindings\@@tabbing\lx@begin@alignment"
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\endtabbing"</span>, <span class="string">r"\lx@end@alignment\@end@tabbing\par"</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\@end@tabbing"</span>, { stomach::egroup() });
   <span class="macro">DefConstructor!</span>(<span class="string">"\\@@tabbing SkipSpaces DigestedBody"</span>,
@@ -168,65 +206,93 @@
     reversion    =&gt; <span class="string">r"\begin{tabbing}#1\end{tabbing}"</span>,
     before_digest =&gt; { stomach::bgroup(); },
     mode         =&gt; <span class="string">"text"</span>);
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\@tabbing@tabset"</span>, <span class="string">r"\@tabbing@tabset@marker&amp;"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\@tabbing@nexttab"</span>, <span class="string">r"\@tabbing@nexttab@marker&amp;"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabbing@newline OptionalMatch:* [Dimension]"</span>, <span class="string">r"\@tabbing@newline@marker\cr"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabbing@kill"</span>, <span class="string">r"\@tabbing@kill@marker\cr\@tabbing@start@tabs"</span>);
-  
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\@tabbing@newline OptionalMatch:* [Dimension]"</span>,
+    <span class="string">r"\@tabbing@newline@marker\cr"
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\@tabbing@kill"</span>,
+    <span class="string">r"\@tabbing@kill@marker\cr\@tabbing@start@tabs"
+  </span>);
+
   <span class="macro">DefConstructor!</span>(<span class="string">"\\@tabbing@tabset@marker"</span>, <span class="string">""</span>, reversion =&gt; <span class="string">r"\="</span>,
     properties =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"alignmentSkippable" </span>=&gt; <span class="bool-val">true</span>))});
   <span class="macro">DefConstructor!</span>(<span class="string">"\\@tabbing@nexttab@marker"</span>, <span class="string">""</span>, reversion =&gt; <span class="string">r"\&gt;"</span>,
     properties =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"alignmentSkippable" </span>=&gt; <span class="bool-val">true</span>)) });
   <span class="macro">DefConstructor!</span>(<span class="string">"\\@tabbing@newline@marker"</span>, <span class="string">""</span>, reversion =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>), <span class="macro">T_CR!</span>()));
   <span class="macro">DefConstructor!</span>(<span class="string">"\\@tabbing@kill@marker"</span>, <span class="string">""</span>, reversion =&gt; <span class="string">"\\kill"</span>,
-    after_digest =&gt; sub[_args] { 
+    after_digest =&gt; sub[_args] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(env)) = lookup_alignment().as_ref().map(Digested::alignment_cell) {
         env.borrow_mut().remove_row();
       }
       <span class="prelude-val">Ok</span>(Vec::new())
     },
     properties  =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"alignmentSkippable" </span>=&gt; <span class="bool-val">true </span>)) });
-  
+
   <span class="macro">AssignValue!</span>(<span class="string">"tabbing_start_tabs" </span>=&gt; <span class="macro">Tokens!</span>());
-  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabbing@start@tabs"</span>, { lookup_tokens(<span class="string">"tabbing_start_tabs"</span>).unwrap_or_default().unlist() });
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabbing@start@tabs"</span>, {
+    lookup_tokens(<span class="string">"tabbing_start_tabs"</span>)
+      .unwrap_or_default()
+      .unlist()
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@increment"</span>, {
-      <span class="kw">let </span>tabs = lookup_tokens(<span class="string">"tabbing_start_tabs"</span>).unwrap_or_default().unlist();
-      assign_value(<span class="string">"tabbing_start_tabs" </span>, <span class="macro">Tokens!</span>(tabs, <span class="macro">T_CS!</span>(<span class="string">"\\&gt;"</span>)), <span class="prelude-val">Some</span>(Scope::Global)); });
+    <span class="kw">let </span>tabs = lookup_tokens(<span class="string">"tabbing_start_tabs"</span>)
+      .unwrap_or_default()
+      .unlist();
+    assign_value(
+      <span class="string">"tabbing_start_tabs"</span>,
+      <span class="macro">Tokens!</span>(tabs, <span class="macro">T_CS!</span>(<span class="string">"\\&gt;"</span>)),
+      <span class="prelude-val">Some</span>(Scope::Global),
+    );
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@decrement"</span>, {
-      <span class="kw">let </span>starts = lookup_tokens(<span class="string">"tabbing_start_tabs"</span>).unwrap_or_default().unlist();
-      <span class="kw">let </span>tabs = starts[<span class="number">1</span>];
-      assign_value(<span class="string">"tabbing_start_tabs" </span>, <span class="macro">Tokens!</span>(tabs), <span class="prelude-val">Some</span>(Scope::Global)); });
-  
+    <span class="kw">let </span>starts = lookup_tokens(<span class="string">"tabbing_start_tabs"</span>)
+      .unwrap_or_default()
+      .unlist();
+    <span class="kw">let </span>tabs = starts[<span class="number">1</span>];
+    assign_value(<span class="string">"tabbing_start_tabs"</span>, <span class="macro">Tokens!</span>(tabs), <span class="prelude-val">Some</span>(Scope::Global));
+  });
+
   <span class="comment">// NOTE: \&lt; is NOT currently handled!!!
   // Ugh!! The way we're setting the initial tabs, we can't really handle this!
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@untab"</span>, <span class="prelude-val">None</span>);
-  
+
   <span class="comment">// NOTE: \' and \` are NOT currently handled
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@flushright"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@hfil"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// NOTE: \pushtabs and \poptabs are NOT currently handled.
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@pushtabs"</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@poptabs"</span>,  <span class="prelude-val">None</span>);
-  
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@poptabs"</span>, <span class="prelude-val">None</span>);
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\@tabbing@accent{}"</span>, sub[(arg)] { <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@tabbing@{}"</span>, arg)) });
-    
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\pushtabs"</span>, <span class="string">""</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\poptabs"</span>,  <span class="string">""</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\kill"</span>,     <span class="string">""</span>);
-  
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@bindings"</span>, { tabbing_bindings(); });
+  <span class="macro">DefMacro!</span>(<span class="string">"\\poptabs"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\kill"</span>, <span class="string">""</span>);
+
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@bindings"</span>, {
+    tabbing_bindings();
+  });
   <span class="comment">// NOTE: Do it!!
 
   // Internals of tabbing, as an experiment (e.g. files using program.sty raw as in cs/0003026)
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@startfield"</span>, <span class="string">r"\global\setbox\@curfield\hbox\bgroup\color@begingroup"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\@stopfield"</span>,  <span class="string">r"\color@endgroup\egroup"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\@contfield"</span>,  <span class="string">r"\global\setbox\@curfield\hbox\bgroup\color@begingroup\unhbox\@curfield"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\@addfield"</span>,   <span class="string">r"\global\setbox\@curline\hbox{\unhbox\@curline\unhbox\@curfield}"</span>);
-      
-
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\@startfield"</span>,
+    <span class="string">r"\global\setbox\@curfield\hbox\bgroup\color@begingroup"
+  </span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@stopfield"</span>, <span class="string">r"\color@endgroup\egroup"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\@contfield"</span>,
+    <span class="string">r"\global\setbox\@curfield\hbox\bgroup\color@begingroup\unhbox\@curfield"
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\@addfield"</span>,
+    <span class="string">r"\global\setbox\@curline\hbox{\unhbox\@curline\unhbox\@curfield}"
+  </span>);
 });
-
 
 <span class="comment">// Should there be some rowsep/colsep set here?
 // Note that {tabbign} really shouldn't be handled by a tabular AT ALL....

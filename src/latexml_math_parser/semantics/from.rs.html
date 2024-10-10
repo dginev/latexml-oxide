@@ -159,7 +159,7 @@
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::metadata::Meta;
-<span class="kw">use </span><span class="kw">super</span>::tree::{Args, Operator, XProps, XM};
+<span class="kw">use </span><span class="kw">super</span>::tree::{Args, Operator, XM, XProps};
 <span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>Operator {
@@ -286,7 +286,7 @@
 <span class="kw">impl </span>From&lt;(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)&gt; <span class="kw">for </span>Args {
   <span class="kw">fn </span>from(args: (<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)) -&gt; Args {
     Args(
-      &lt;[<span class="kw-2">&amp;</span>str;<span class="number">2</span>]&gt;::from(args)
+      &lt;[<span class="kw-2">&amp;</span>str; <span class="number">2</span>]&gt;::from(args)
         .iter()
         .map(|<span class="kw-2">&amp;</span>x| x.into())
         .map(Option::Some)

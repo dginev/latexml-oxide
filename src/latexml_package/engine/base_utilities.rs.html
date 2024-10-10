@@ -505,8 +505,11 @@
 <a href="#504" id="504">504</a>
 <a href="#505" id="505">505</a>
 <a href="#506" id="506">506</a>
-<a href="#507" id="507">507</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base Utilities
-//! 
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base Utilities
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
@@ -528,7 +531,8 @@
   // LaTeX has a very particular, but useful, notion of "Undefined",
   //    so let's get that squared away at the outset; it's useful for TeX, too!
   //
-  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
+  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as
+  // \relax
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@ifundefined{}{}{}"</span>, sub[(name, if_token, else_token)] {
     <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}"</span>, <span class="macro">Expand!</span>(name).to_string()));
     <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs) {
@@ -549,9 +553,9 @@
       <span class="kw">while </span>!boxes.is_empty() {
         <span class="kw">if match </span>boxes[<span class="number">0</span>].get_property(<span class="string">"isSpace"</span>) {
           <span class="prelude-val">Some</span>(Cow::Borrowed(Stored::Bool(space_bool))) =&gt; <span class="kw-2">*</span>space_bool,
-          <span class="prelude-val">Some</span>(Cow::Owned(Stored::Bool(<span class="kw-2">ref </span>space_bool)))  =&gt; <span class="kw-2">*</span>space_bool,
-          <span class="kw">_ </span>=&gt; <span class="bool-val">false
-        </span>} {
+          <span class="prelude-val">Some</span>(Cow::Owned(Stored::Bool(<span class="kw-2">ref </span>space_bool))) =&gt; <span class="kw-2">*</span>space_bool,
+          <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+        } {
           boxes = boxes[<span class="number">1</span>..].to_vec();
         } <span class="kw">else </span>{
           <span class="kw">break</span>;
@@ -563,7 +567,6 @@
     }
     <span class="prelude-val">Ok</span>(boxes)
   });
-
 
   <span class="macro">DefConstructor!</span>(<span class="string">"\\@ADDCLASS Semiverbatim"</span>, sub[document,args] {
       document.add_class(<span class="kw-2">&amp;mut </span>document.get_element().unwrap(), 
@@ -608,7 +611,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = keys_opt {
       <span class="kw">let </span>known_key = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashTagData(<span class="kw-2">ref mut </span>frnt)) = lookup_value(<span class="string">"frontmatter"</span>) {
         frnt.contains_key(<span class="kw-2">&amp;</span>tag)
-      } <span class="kw">else </span>{ <span class="bool-val">false </span>}; 
+      } <span class="kw">else </span>{ <span class="bool-val">false </span>};
       <span class="comment">// if replace and previous entries
       // remove previous entries
       </span><span class="kw">if </span>known_key &amp;&amp; keys.has_key(<span class="string">"replace"</span>) {
@@ -624,7 +627,7 @@
         <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
       }
     }
-    
+
     <span class="kw">let </span>attrs_digested = <span class="kw">if let </span><span class="prelude-val">Some</span>(attr_kvs) = attrs_opt {
       <span class="kw">if let </span>DigestedData::KeyVals(digested) = attr_kvs.be_digested()<span class="question-mark">?</span>.data() {
         <span class="prelude-val">Some</span>(digested.get_hash_digested())
@@ -683,15 +686,17 @@
   <span class="comment">// This is called by afterOpen (by default on &lt;ltx:document&gt;) to
   // output any frontmatter that was accumulated.
 
-  // TODO: Porting confusion at this point -- is this now to be phased out in favor of insert_frontmatter ?
-  // original latexml may have moved here...
+  // TODO: Porting confusion at this point -- is this now to be phased out in favor of
+  // insert_frontmatter ? original latexml may have moved here...
   </span><span class="macro">Tag!</span>(<span class="string">"ltx:document"</span>, after_open_late =&gt; sub[document, _node] {
     <span class="comment">// this happens only once per conversion, so not a big deal to keep it in the closure
-    </span><span class="kw">let </span>frontmatter_elements_set: HashSet&lt;String&gt; = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
+    </span><span class="kw">let </span>frontmatter_elements_set: HashSet&lt;String&gt; =
+      FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
     <span class="kw">let </span><span class="kw-2">mut </span>frontmatter = <span class="kw">match </span>state::remove_value(<span class="string">"frontmatter"</span>) {
       <span class="prelude-val">Some</span>(Stored::HashTagData(frnt)) =&gt; frnt,
-      <span class="kw">_ </span>=&gt; <span class="macro">fatal!</span>(TexPool, Expected, <span class="string">"Global TeX Frontmatter hash was not available, should never happen"</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">fatal!</span>(TexPool, Expected,
+            <span class="string">"Global TeX Frontmatter hash was not available, should never happen"</span>),
     };
     state::assign_value(<span class="string">"frontmatter"</span>, Stored::HashTagData(HashMap::default()), <span class="prelude-val">Some</span>(Scope::Global));
 
@@ -707,7 +712,8 @@
     <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>all_keys {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(list) = frontmatter.remove(key) {
         <span class="comment">// Dubious, but assures that frontmatter appears in text mode...
-        </span>document.set_box_to_absorb(Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, lookup_font(), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_SPACE!</span>()), SymHashMap::default()).into());
+        </span>document.set_box_to_absorb(Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, lookup_font(), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_SPACE!</span>()),
+          SymHashMap::default()).into());
         <span class="kw">for </span>(tag, attr, stuff) <span class="kw">in </span>list {
           document.open_element(<span class="kw-2">&amp;</span>tag, attr, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
           <span class="comment">// TODO:  (scalar(@stuff) &amp;&amp; $document-&gt;canHaveAttribute($tag, 'font')
@@ -733,7 +739,7 @@
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@frontmatterhere"</span>, sub[doc,_args] { insert_frontmatter(doc)<span class="question-mark">? </span>},
     after_digest =&gt; { state::assign_value(<span class="string">"frontmatter_deferred"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global)); });
 
-    <span class="comment">// Maintain a list of classes that apply to the document root.
+  <span class="comment">// Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
   </span><span class="macro">Tag!</span>(<span class="string">"ltx:document"</span>, after_open_late =&gt; sub[document, root] {
     <span class="kw">let </span>classes = with_mapping_keys(<span class="string">"DOCUMENT_CLASSES"</span>, |keys| arena::join(<span class="kw-2">&amp;</span>keys,<span class="string">" "</span>));
@@ -799,7 +805,7 @@
   });
 
   <span class="comment">// Remove the last closed node, if it's empty.
-  </span><span class="kw">let </span>remove_empty_element: Vec&lt;ConstructionClosure&gt; = <span class="macro">construct!</span>(document, _whatsit,{
+  </span><span class="kw">let </span>remove_empty_element: Vec&lt;ConstructionClosure&gt; = <span class="macro">construct!</span>(document, _whatsit, {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(node) = document.get_node().get_last_child() {
       <span class="comment">// This should be the wrapper just added.
       </span><span class="kw">if </span>node.get_child_nodes().is_empty() {
@@ -971,13 +977,13 @@
     <span class="string">"\\lx@add@Preamble@PI Undigested"</span>,
     <span class="string">"&lt;?latexml preamble='#1'?&gt;"
   </span>);
-
 });
 
 <span class="doccomment">/// Insert FrontMatter into document, if not already added
 </span><span class="kw">pub fn </span>insert_frontmatter(_document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  
-  <span class="kw">if </span>lookup_bool(<span class="string">"frontmatter_done"</span>) { <span class="kw">return </span><span class="prelude-val">Ok</span>(()); }
+  <span class="kw">if </span>lookup_bool(<span class="string">"frontmatter_done"</span>) {
+    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+  }
   <span class="comment">// TODO: Continue
   // if let Some(frontmatter) = lookup_value("frontmatter");
   // my @set_keys    = $frontmatter ? (keys %$frontmatter) : ();
@@ -1003,9 +1009,9 @@
   //           ? (font =&gt; $stuff[0]-&gt;getFont, _force_font =&gt; 'true') : ()));
   //       map { $document-&gt;absorb($_) } @stuff;
   //       my $completed_node = $document-&gt;closeElement($tag);
-  //       # At this time, the frontmatter element should really carry the actual literal values intended.
-  //       # Thus, if we see an empty element, something went wrong -- including our bindings are too verbose,
-  //       # as e.g. \preprint{} always generates a ltx:note element.
+  //       # At this time, the frontmatter element should really carry the actual literal values
+  // intended.       # Thus, if we see an empty element, something went wrong -- including our
+  // bindings are too verbose,       # as e.g. \preprint{} always generates a ltx:note element.
   //       #
   //       # To solve this in a single location: prune here!
   //       if (($tag ne "ltx:rdf") &amp;&amp; !scalar($completed_node-&gt;childNodes)) {

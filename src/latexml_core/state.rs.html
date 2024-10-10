@@ -2216,56 +2216,7 @@
 <a href="#2215" id="2215">2215</a>
 <a href="#2216" id="2216">2216</a>
 <a href="#2217" id="2217">2217</a>
-<a href="#2218" id="2218">2218</a>
-<a href="#2219" id="2219">2219</a>
-<a href="#2220" id="2220">2220</a>
-<a href="#2221" id="2221">2221</a>
-<a href="#2222" id="2222">2222</a>
-<a href="#2223" id="2223">2223</a>
-<a href="#2224" id="2224">2224</a>
-<a href="#2225" id="2225">2225</a>
-<a href="#2226" id="2226">2226</a>
-<a href="#2227" id="2227">2227</a>
-<a href="#2228" id="2228">2228</a>
-<a href="#2229" id="2229">2229</a>
-<a href="#2230" id="2230">2230</a>
-<a href="#2231" id="2231">2231</a>
-<a href="#2232" id="2232">2232</a>
-<a href="#2233" id="2233">2233</a>
-<a href="#2234" id="2234">2234</a>
-<a href="#2235" id="2235">2235</a>
-<a href="#2236" id="2236">2236</a>
-<a href="#2237" id="2237">2237</a>
-<a href="#2238" id="2238">2238</a>
-<a href="#2239" id="2239">2239</a>
-<a href="#2240" id="2240">2240</a>
-<a href="#2241" id="2241">2241</a>
-<a href="#2242" id="2242">2242</a>
-<a href="#2243" id="2243">2243</a>
-<a href="#2244" id="2244">2244</a>
-<a href="#2245" id="2245">2245</a>
-<a href="#2246" id="2246">2246</a>
-<a href="#2247" id="2247">2247</a>
-<a href="#2248" id="2248">2248</a>
-<a href="#2249" id="2249">2249</a>
-<a href="#2250" id="2250">2250</a>
-<a href="#2251" id="2251">2251</a>
-<a href="#2252" id="2252">2252</a>
-<a href="#2253" id="2253">2253</a>
-<a href="#2254" id="2254">2254</a>
-<a href="#2255" id="2255">2255</a>
-<a href="#2256" id="2256">2256</a>
-<a href="#2257" id="2257">2257</a>
-<a href="#2258" id="2258">2258</a>
-<a href="#2259" id="2259">2259</a>
-<a href="#2260" id="2260">2260</a>
-<a href="#2261" id="2261">2261</a>
-<a href="#2262" id="2262">2262</a>
-<a href="#2263" id="2263">2263</a>
-<a href="#2264" id="2264">2264</a>
-<a href="#2265" id="2265">2265</a>
-<a href="#2266" id="2266">2266</a>
-<a href="#2267" id="2267">2267</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#2218" id="2218">2218</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::borrow::Cow;
@@ -2275,28 +2226,28 @@
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr, SymHashMap, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM};
+<span class="kw">use </span><span class="kw">crate</span>::common::BindingDispatcher;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, SymHashMap, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::glue::Glue;
+<span class="kw">use </span><span class="kw">crate</span>::common::model::{<span class="self">self</span>, compute_indirect_model_aux};
 <span class="kw">use </span><span class="kw">crate</span>::common::model::{IndirectModel, Model};
 <span class="kw">use </span><span class="kw">crate</span>::common::muglue::MuGlue;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
-<span class="kw">use </span><span class="kw">crate</span>::common::model::{<span class="self">self</span>,compute_indirect_model_aux};
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">pub use </span><span class="kw">crate</span>::common::store::Stored; <span class="comment">// reexport for convenience
-</span><span class="kw">use </span><span class="kw">crate</span>::common::BindingDispatcher;
+</span><span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::ConditionalType;
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
 <span class="kw">use </span><span class="kw">crate</span>::definition::expandable::Expandable;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{Register, RegisterValue};
-<span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::document::resource::Resource;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::TagOptions;
-<span class="kw">use </span><span class="kw">crate</span>::mouth;
 <span class="kw">use </span><span class="kw">crate</span>::gullet;
+<span class="kw">use </span><span class="kw">crate</span>::mouth;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::util::pathname;
@@ -2362,22 +2313,18 @@
 }
 <span class="kw">impl </span>Display <span class="kw">for </span>TableName {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
-    <span class="macro">write!</span>(
-      f,
-      <span class="string">"{}"</span>,
-      <span class="kw">match </span><span class="self">self </span>{
-        TableName::Meaning =&gt; <span class="string">"Meaning"</span>,
-        TableName::Value =&gt; <span class="string">"Value"</span>,
-        TableName::Catcode =&gt; <span class="string">"Catcode"</span>,
-        TableName::Mathcode =&gt; <span class="string">"Mathcode"</span>,
-        TableName::Sfcode =&gt; <span class="string">"Sfcode"</span>,
-        TableName::Lccode =&gt; <span class="string">"Lccode"</span>,
-        TableName::Uccode =&gt; <span class="string">"Uccode"</span>,
-        TableName::Delcode =&gt; <span class="string">"Delcode"</span>,
-        TableName::Stash =&gt; <span class="string">"Stash"</span>,
-        TableName::StashActive =&gt; <span class="string">"StashActive"</span>,
-      }
-    )
+    <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="kw">match </span><span class="self">self </span>{
+      TableName::Meaning =&gt; <span class="string">"Meaning"</span>,
+      TableName::Value =&gt; <span class="string">"Value"</span>,
+      TableName::Catcode =&gt; <span class="string">"Catcode"</span>,
+      TableName::Mathcode =&gt; <span class="string">"Mathcode"</span>,
+      TableName::Sfcode =&gt; <span class="string">"Sfcode"</span>,
+      TableName::Lccode =&gt; <span class="string">"Lccode"</span>,
+      TableName::Uccode =&gt; <span class="string">"Uccode"</span>,
+      TableName::Delcode =&gt; <span class="string">"Delcode"</span>,
+      TableName::Stash =&gt; <span class="string">"Stash"</span>,
+      TableName::StashActive =&gt; <span class="string">"StashActive"</span>,
+    })
   }
 }
 <span class="kw">impl </span>TableName {
@@ -2418,16 +2365,16 @@
 </span><span class="doccomment">/// For each of several tables (being "value", "meaning", "catcode" or other space of names),
 /// each table maintains the bound values, and "undo" defines the stack frames
 </span><span class="kw">pub struct </span>UndoFrame {
-  locked: bool,
-  meaning: AssignmentCount,
-  value: AssignmentCount,
-  catcode: AssignmentCount,
-  mathcode: AssignmentCount,
-  sfcode: AssignmentCount,
-  lccode: AssignmentCount,
-  uccode: AssignmentCount,
-  delcode: AssignmentCount,
-  stash: AssignmentCount,
+  locked:       bool,
+  meaning:      AssignmentCount,
+  value:        AssignmentCount,
+  catcode:      AssignmentCount,
+  mathcode:     AssignmentCount,
+  sfcode:       AssignmentCount,
+  lccode:       AssignmentCount,
+  uccode:       AssignmentCount,
+  delcode:      AssignmentCount,
+  stash:        AssignmentCount,
   stash_active: AssignmentCount,
 }
 
@@ -2467,9 +2414,9 @@
 }
 
 <span class="doccomment">/// The type of values that are storable by the different namespaced "tables" in State.
-/// 
+///
 /// There are tables for:
-/// 
+///
 ///  catcode: keys are char;
 ///     Also, `math:char` =1 when `char` is active in math.
 ///  mathcode, sfcode, lccode, uccode, delcode : are similar to catcode but store
@@ -2481,53 +2428,53 @@
 </span><span class="kw">pub type </span>Table = HashMap&lt;SymStr, VecDeque&lt;Stored&gt;&gt;;
 
 <span class="doccomment">/// The state efficiently bookkeeps the bindings in a TeX-like fashion.
-/// 
+///
 /// Bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
 /// until the current group (opened by \bgroup) is closed (by \egroup).
 </span><span class="kw">pub struct </span>State {
   <span class="comment">// Tables
   </span><span class="doccomment">/// bookkeeps arbitrary Stored values
-  </span>value: Table,
+  </span>value:                       Table,
   <span class="doccomment">/// The definition assocated with a key, usually a control-sequence.
-  </span>meaning: Table,
-  stash: Table,
-  stash_active: Table,
-  catcode: Table,
-  mathcode: Table,
-  sfcode: Table,
-  lccode: Table,
-  uccode: Table,
-  delcode: Table,
+  </span>meaning:                     Table,
+  stash:                       Table,
+  stash_active:                Table,
+  catcode:                     Table,
+  mathcode:                    Table,
+  sfcode:                      Table,
+  lccode:                      Table,
+  uccode:                      Table,
+  delcode:                     Table,
   <span class="comment">// Table bookkeeping
-  </span>undo: VecDeque&lt;UndoFrame&gt;,
+  </span>undo:                        VecDeque&lt;UndoFrame&gt;,
   <span class="comment">// stateful runtime - data structures
   </span><span class="doccomment">/// the schema-derived model used for the current document
-  </span>prefixes: HashMap&lt;SymStr, bool&gt;, <span class="comment">// ?
-  </span><span class="kw">pub </span>tag_properties: HashMap&lt;SymStr, TagOptions&gt;,
+  </span>prefixes:                    HashMap&lt;SymStr, bool&gt;, <span class="comment">// ?
+  </span><span class="kw">pub </span>tag_properties:          HashMap&lt;SymStr, TagOptions&gt;,
   <span class="doccomment">/// an optional indirect model for long-distance relationships
-  </span><span class="kw">pub </span>indirect_model: <span class="prelude-ty">Option</span>&lt;IndirectModel&gt;,
+  </span><span class="kw">pub </span>indirect_model:          <span class="prelude-ty">Option</span>&lt;IndirectModel&gt;,
   <span class="doccomment">/// Document-related resources declared during core conversion, pending until XML is finalized
-  </span><span class="kw">pub </span>pending_resources: Vec&lt;Resource&gt;,
+  </span><span class="kw">pub </span>pending_resources:       Vec&lt;Resource&gt;,
   <span class="comment">// stateful runtime - simple fields
   // TODO: Maybe group these in a "SessionFlags" struct?
   //       we can then reset that if we reimplement a daemon app
-  </span><span class="kw">pub </span>verbosity: i32,
-  <span class="kw">pub </span>input_encoding: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  </span><span class="kw">pub </span>verbosity:               i32,
+  <span class="kw">pub </span>input_encoding:          <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="comment">// strict: bool,
   // include_comments: bool,
   </span><span class="doccomment">/// current paths to search for TeX inputs
-  </span><span class="kw">pub </span>search_paths: VecDeque&lt;String&gt;,
+  </span><span class="kw">pub </span>search_paths:            VecDeque&lt;String&gt;,
   <span class="doccomment">/// current paths to search for graphics
-  </span><span class="kw">pub </span>graphics_paths: VecDeque&lt;String&gt;,
+  </span><span class="kw">pub </span>graphics_paths:          VecDeque&lt;String&gt;,
   <span class="comment">// include_styles: bool,
   </span><span class="doccomment">/// flag to disable math parsing
-  </span><span class="kw">pub </span>nomathparse: bool,
+  </span><span class="kw">pub </span>nomathparse:             bool,
   <span class="comment">// TODO: We can make this a Vec&lt;BindingDispatcher&gt; if we want to accumulate more definitions
   </span><span class="doccomment">/// A dispatcher routing to the compiled code of the in-distro latexml bindings
-  </span><span class="kw">pub </span>bindings_dispatch: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
+  </span><span class="kw">pub </span>bindings_dispatch:       <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
   <span class="doccomment">/// Auxiliary convenience -- extra dispatch
-  </span><span class="kw">pub </span>extra_bindings_dispatch: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;
+  </span><span class="kw">pub </span>extra_bindings_dispatch: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
 }
 <span class="kw">unsafe impl </span>Send <span class="kw">for </span>State {}
 <span class="comment">// State is NOT Sync!
@@ -2544,81 +2491,95 @@
 
     State {
       <span class="comment">// Tables
-      </span>value: HashMap::default(),
-      meaning: HashMap::default(),
-      stash: HashMap::default(),
-      stash_active: HashMap::default(),
-      catcode: HashMap::default(),
-      mathcode: HashMap::default(),
-      sfcode: HashMap::default(),
-      lccode: HashMap::default(),
-      uccode: HashMap::default(),
-      delcode: HashMap::default(),
+      </span>value:                   HashMap::default(),
+      meaning:                 HashMap::default(),
+      stash:                   HashMap::default(),
+      stash_active:            HashMap::default(),
+      catcode:                 HashMap::default(),
+      mathcode:                HashMap::default(),
+      sfcode:                  HashMap::default(),
+      lccode:                  HashMap::default(),
+      uccode:                  HashMap::default(),
+      delcode:                 HashMap::default(),
       <span class="comment">// Table bookkeeping
-      </span>undo: undo_vdq,
+      </span>undo:                    undo_vdq,
       <span class="comment">// stateful runtime - data structures
-      </span>prefixes: HashMap::default(),
-      tag_properties: HashMap::default(),
-      indirect_model: <span class="prelude-val">None</span>,
-      pending_resources: Vec::new(),
+      </span>prefixes:                HashMap::default(),
+      tag_properties:          HashMap::default(),
+      indirect_model:          <span class="prelude-val">None</span>,
+      pending_resources:       Vec::new(),
       <span class="comment">// stateful runtime - simple fields
-      </span>verbosity: <span class="number">0</span>,
-      input_encoding: <span class="prelude-val">None</span>,
+      </span>verbosity:               <span class="number">0</span>,
+      input_encoding:          <span class="prelude-val">None</span>,
       <span class="comment">// strict: false,
       // include_comments: true,
-      </span>search_paths: VecDeque::new(),
-      graphics_paths: VecDeque::new(),
+      </span>search_paths:            VecDeque::new(),
+      graphics_paths:          VecDeque::new(),
       <span class="comment">// include_styles: false,
-      </span>nomathparse: <span class="bool-val">false</span>,
-      bindings_dispatch: <span class="prelude-val">None</span>,
+      </span>nomathparse:             <span class="bool-val">false</span>,
+      bindings_dispatch:       <span class="prelude-val">None</span>,
       extra_bindings_dispatch: <span class="prelude-val">None</span>,
     }
   }
 }
 
 <span class="attr">#[thread_local]
-</span><span class="kw">static </span>STD_STATE : Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| RefCell::new(State::new(StateOptions {
-  catcodes: <span class="prelude-val">Some</span>(Catcodes::Standard),
-  ..StateOptions::default()
-})));
+</span><span class="kw">static </span>STD_STATE: Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| {
+  RefCell::new(State::new(StateOptions {
+    catcodes: <span class="prelude-val">Some</span>(Catcodes::Standard),
+    ..StateOptions::default()
+  }))
+});
 <span class="attr">#[thread_local]
-</span><span class="kw">static </span>STY_STATE : Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| RefCell::new(State::new(StateOptions {
-  catcodes: <span class="prelude-val">Some</span>(Catcodes::Style),
-  ..StateOptions::default()
-})));
+</span><span class="kw">static </span>STY_STATE: Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| {
+  RefCell::new(State::new(StateOptions {
+    catcodes: <span class="prelude-val">Some</span>(Catcodes::Style),
+    ..StateOptions::default()
+  }))
+});
 <span class="attr">#[thread_local]
-</span><span class="kw">static </span>STATE : Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| RefCell::new(State::new(StateOptions {
-  catcodes: <span class="prelude-val">Some</span>(Catcodes::Standard),
-  ..StateOptions::default()
-})));
+</span><span class="kw">static </span>STATE: Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| {
+  RefCell::new(State::new(StateOptions {
+    catcodes: <span class="prelude-val">Some</span>(Catcodes::Standard),
+    ..StateOptions::default()
+  }))
+});
 
 <span class="macro">macro_rules!</span> state {
-  () =&gt; ((<span class="kw-2">*</span>STATE).borrow())
+  () =&gt; {
+    (<span class="kw-2">*</span>STATE).borrow()
+  };
 }
 <span class="macro">macro_rules!</span> state_mut {
-  () =&gt; ((<span class="kw-2">*</span>STATE).borrow_mut())
+  () =&gt; {
+    (<span class="kw-2">*</span>STATE).borrow_mut()
+  };
 }
 <span class="macro">macro_rules!</span> sty_state_mut {
-  () =&gt; ((<span class="kw-2">*</span>STY_STATE).borrow_mut())
+  () =&gt; {
+    (<span class="kw-2">*</span>STY_STATE).borrow_mut()
+  };
 }
 <span class="macro">macro_rules!</span> std_state_mut {
-  () =&gt; ((<span class="kw-2">*</span>STD_STATE).borrow_mut())
+  () =&gt; {
+    (<span class="kw-2">*</span>STD_STATE).borrow_mut()
+  };
 }
 
 <span class="doccomment">/// state fields allowed for customization during construction
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>StateOptions {
-  <span class="kw">pub </span>model: <span class="prelude-ty">Option</span>&lt;Model&gt;,
-  <span class="kw">pub </span>verbosity: <span class="prelude-ty">Option</span>&lt;i32&gt;,
-  <span class="kw">pub </span>strict: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>model:            <span class="prelude-ty">Option</span>&lt;Model&gt;,
+  <span class="kw">pub </span>verbosity:        <span class="prelude-ty">Option</span>&lt;i32&gt;,
+  <span class="kw">pub </span>strict:           <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>include_comments: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>include_styles: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>nomathparse: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>documentid: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>search_paths: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
-  <span class="kw">pub </span>graphics_paths: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
-  <span class="kw">pub </span>catcodes: <span class="prelude-ty">Option</span>&lt;Catcodes&gt;,
-  <span class="kw">pub </span>input_encoding: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>include_styles:   <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>nomathparse:      <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>documentid:       <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>search_paths:     <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+  <span class="kw">pub </span>graphics_paths:   <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+  <span class="kw">pub </span>catcodes:         <span class="prelude-ty">Option</span>&lt;Catcodes&gt;,
+  <span class="kw">pub </span>input_encoding:   <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="comment">// Public interface: package-access methods, for an implied thread-local singleton STATE
@@ -2665,7 +2626,9 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>value_table = HashMap::default();
     <span class="kw">let </span><span class="kw-2">mut </span>specials_vdq = VecDeque::new();
-    specials_vdq.push_front(Stored::Chars(Box::new([<span class="string">'^'</span>, <span class="string">'_'</span>, <span class="string">'~'</span>, <span class="string">'&amp;'</span>, <span class="string">'$'</span>, <span class="string">'#'</span>, <span class="string">'\''</span>])));
+    specials_vdq.push_front(Stored::Chars(Box::new([
+      <span class="string">'^'</span>, <span class="string">'_'</span>, <span class="string">'~'</span>, <span class="string">'&amp;'</span>, <span class="string">'$'</span>, <span class="string">'#'</span>, <span class="string">'\''</span>,
+    ])));
     value_table.insert(arena::pin_static(<span class="string">"SPECIALS"</span>), specials_vdq);
 
     <span class="kw">let </span><span class="kw-2">mut </span>catcodes_typed: Table = HashMap::default();
@@ -2821,7 +2784,7 @@
         <span class="comment">// whatever is left -- if anything -- should be bindings below the locked frame.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(frame) = last_frame {
           frame.table_mut(table_name).insert(key, <span class="number">1</span>); <span class="comment">// Note that there's only one
-                                                      // value in the stack, now
+          // value in the stack, now
         </span>}
 
         <span class="comment">// Undo the bindings, if `key` was bound in this frame
@@ -2844,7 +2807,7 @@
 
           is_replace = current_frame_table.get(<span class="kw-2">&amp;</span>key).unwrap_or(<span class="kw-2">&amp;</span><span class="number">0</span>) &gt; <span class="kw-2">&amp;</span><span class="number">0</span>;
           <span class="kw">if </span>is_replace { <span class="comment">// If the value was previously assigned in this frame
-             // we do this in 2.1, then proceed to 2.2
+            // we do this in 2.1, then proceed to 2.2
           </span>} <span class="kw">else </span>{
             <span class="comment">// Otherwise, push new value &amp; set 1 to be undone
             </span>current_frame_table.insert(key, <span class="number">1</span>);
@@ -2897,7 +2860,7 @@
     key: <span class="kw-2">&amp;</span>str,
     value: T,
     scope: S,
-    ) {
+  ) {
     <span class="kw">let </span>value = value.into();
     <span class="kw">let </span>scope = scope.into();
     <span class="kw">let </span>key_sym = arena::pin(key);
@@ -2985,11 +2948,7 @@
     <span class="kw">let </span>cc = key.get_catcode();
     <span class="kw">let </span>name = key.get_sym();
     <span class="kw">let </span>lookupname: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = <span class="kw">if </span>(cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      <span class="kw">if </span>name == <span class="kw-2">*</span>EMPTY_SYM {
-        <span class="prelude-val">None
-      </span>} <span class="kw">else </span>{
-        <span class="prelude-val">Some</span>(name)
-      }
+      <span class="kw">if </span>name == <span class="kw-2">*</span>EMPTY_SYM { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(name) }
     } <span class="kw">else </span>{
       key.get_executable_primitive_name().map(arena::pin)
     };
@@ -3001,21 +2960,18 @@
     </span>}
   }
   <span class="kw">pub fn </span>ensure_tag_property(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: SymStr) -&gt; <span class="kw-2">&amp;mut </span>TagOptions {
-    <span class="self">self
-    </span>.tag_properties
-    .entry(tag)
-    .or_default()
+    <span class="self">self</span>.tag_properties.entry(tag).or_default()
   }
 }
 
-<span class="attr">#[derive(Debug,Copy,Clone,PartialEq)]
+<span class="attr">#[derive(Debug, Copy, Clone, PartialEq)]
 </span><span class="kw">enum </span>RotateState {
   Main,
   Std,
-  Sty
+  Sty,
 }
 <span class="attr">#[thread_local]
-</span><span class="kw">static </span><span class="kw-2">mut </span>STATE_IN_USE : RotateState = RotateState::Main;
+</span><span class="kw">static </span><span class="kw-2">mut </span>STATE_IN_USE: RotateState = RotateState::Main;
 
 <span class="kw">pub fn </span>use_sty_state() {
   <span class="kw">unsafe </span>{
@@ -3051,8 +3007,8 @@
         <span class="kw">let </span><span class="kw-2">mut </span>main_state = <span class="macro">state_mut!</span>();
         std::mem::swap(<span class="kw-2">&amp;mut *</span>std_state, <span class="kw-2">&amp;mut *</span>main_state);
         STATE_IN_USE = RotateState::Main;
-      }
-      RotateState::Main =&gt; {}
+      },
+      RotateState::Main =&gt; {},
     };
   }
 }
@@ -3079,8 +3035,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(s)) = <span class="macro">state!</span>().lookup_value(<span class="string">"SOURCEFILE"</span>) {
       <span class="comment">// report if the redefinition seems to come from document source
       </span><span class="kw">if </span>arena::with(<span class="kw-2">*</span>s, |txt| {
-        txt == <span class="string">"Anonymous String"
-          </span>|| TEX_OR_BIB_EXT_RE.is_match(txt) &amp;&amp; !txt.ends_with(CODE_TEX_EXT)
+        txt == <span class="string">"Anonymous String" </span>|| TEX_OR_BIB_EXT_RE.is_match(txt) &amp;&amp; !txt.ends_with(CODE_TEX_EXT)
       }) {
         <span class="macro">Info!</span>(<span class="string">"ignore"</span>, lock_key, <span class="string">"Ignoring redefinition of {lock_key}"</span>);
       }
@@ -3095,7 +3050,7 @@
 </span><span class="kw">pub fn </span>generate_error_stub(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Token&gt; {
   <span class="kw">let </span>cs = token.with_cs_name(ToString::to_string);
   note_status(LogStatus::Undefined, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cs));
-                                      <span class="comment">// To minimize chatter, go ahead and define it...
+  <span class="comment">// To minimize chatter, go ahead and define it...
   </span><span class="kw">if </span>cs.starts_with(<span class="string">"\\if"</span>) {
     <span class="comment">// Apparently an \ifsomething ???
     </span><span class="kw">let </span>name = cs.replace(<span class="string">"\\if"</span>, <span class="string">""</span>);
@@ -3112,8 +3067,8 @@
         <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}true"</span>, name)),
         <span class="prelude-val">None</span>,
         <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"\\let{}\\iftrue"</span>, cs).into()),
-        <span class="prelude-val">None
-      </span>)<span class="question-mark">?</span>,
+        <span class="prelude-val">None</span>,
+      )<span class="question-mark">?</span>,
       <span class="prelude-val">Some</span>(Scope::Global),
     );
     install_definition(
@@ -3121,8 +3076,8 @@
         <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}false"</span>, name)),
         <span class="prelude-val">None</span>,
         <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"\\let{}\\iffalse"</span>, cs).into()),
-        <span class="prelude-val">None
-      </span>)<span class="question-mark">?</span>,
+        <span class="prelude-val">None</span>,
+      )<span class="question-mark">?</span>,
       <span class="prelude-val">Some</span>(Scope::Global),
     );
     let_i(token, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>), <span class="prelude-val">Some</span>(Scope::Global));
@@ -3139,7 +3094,8 @@
       Constructor {
         cs: <span class="kw-2">*</span>token,
         replacement: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|document, _args, _props| {
-          document.make_error(<span class="string">"undefined"</span>, <span class="kw-2">&amp;</span>cs) })),
+          document.make_error(<span class="string">"undefined"</span>, <span class="kw-2">&amp;</span>cs)
+        })),
         ..Constructor::default()
       },
       <span class="comment">//TODO: sizer =&gt; "X"),
@@ -3149,7 +3105,6 @@
   <span class="prelude-val">Ok</span>(<span class="kw-2">*</span>token)
 }
 
-
 <span class="comment">// SAFETY
 // any method which does not return a borrowed piece of data should be package-level
 // so that the global singleton State can get locked+unlocked during the same call
@@ -3157,20 +3112,12 @@
 // TODO: Should this be a prelude?
 
 </span><span class="doccomment">/// assigns a `Stored` value at the given key and scope
-</span><span class="kw">pub fn </span>assign_value&lt;T: Into&lt;Stored&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(
-  key: <span class="kw-2">&amp;</span>str,
-  value: T,
-  scope: S,
-  ) {
-  <span class="macro">state_mut!</span>().assign_value(key,value,scope)
+</span><span class="kw">pub fn </span>assign_value&lt;T: Into&lt;Stored&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(key: <span class="kw-2">&amp;</span>str, value: T, scope: S) {
+  <span class="macro">state_mut!</span>().assign_value(key, value, scope)
 }
 
 <span class="doccomment">/// assigns a `Stored` value at the given (arena ticket!) key and scope
-</span><span class="kw">pub fn </span>assign_value_sym&lt;T: Into&lt;Stored&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(
-  key: SymStr,
-  value: T,
-  scope: S,
-) {
+</span><span class="kw">pub fn </span>assign_value_sym&lt;T: Into&lt;Stored&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(key: SymStr, value: T, scope: S) {
   <span class="kw">let </span>value = value.into();
   <span class="kw">let </span>scope = scope.into();
   <span class="macro">state_mut!</span>().assign_internal(TableName::Value, key, value, scope);
@@ -3285,15 +3232,13 @@
   }
 }
 
-<span class="kw">pub fn </span>lookup_value(key:<span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
-  <span class="macro">state!</span>().lookup_value(key).cloned()
-}
-<span class="kw">pub fn </span>with_value&lt;R, FnR&gt;(key:<span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;) -&gt; R  {
+<span class="kw">pub fn </span>lookup_value(key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; { <span class="macro">state!</span>().lookup_value(key).cloned() }
+<span class="kw">pub fn </span>with_value&lt;R, FnR&gt;(key: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;) -&gt; R {
   caller(<span class="macro">state!</span>().lookup_value(key))
 }
-<span class="kw">pub fn </span>with_value_mut&lt;R, FnR&gt;(key:<span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt;) -&gt; R  {
+<span class="kw">pub fn </span>with_value_mut&lt;R, FnR&gt;(key: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt;) -&gt; R {
   caller(<span class="macro">state_mut!</span>().lookup_value_mut(key))
 }
 <span class="doccomment">/// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
@@ -3434,7 +3379,12 @@
   assign_value(<span class="string">"Alignment"</span>, alignment, scope);
 }
 
-<span class="kw">pub fn </span>assign_register(cs:<span class="kw-2">&amp;</span>str, value: RegisterValue, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;, parameters: Vec&lt;ArgWrap&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>assign_register(
+  cs: <span class="kw-2">&amp;</span>str,
+  value: RegisterValue,
+  scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+  parameters: Vec&lt;ArgWrap&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(cs);
   <span class="kw">let </span>defn_opt = lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">?</span>;
   <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = defn_opt {
@@ -3443,14 +3393,16 @@
       <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
   }
-  <span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"register"</span>,
-      <span class="macro">format!</span>(<span class="string">"The control sequence '{cs}' is not a register"</span>));
+  <span class="macro">Warn!</span>(
+    <span class="string">"expected"</span>,
+    <span class="string">"register"</span>,
+    <span class="macro">format!</span>(<span class="string">"The control sequence '{cs}' is not a register"</span>)
+  );
   <span class="prelude-val">Ok</span>(())
 }
 <span class="kw">pub fn </span>lookup_register(cs: <span class="kw-2">&amp;</span>str, parameters: Vec&lt;ArgWrap&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
   <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(cs);
-  <span class="prelude-val">Ok</span>(
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">? </span>{
+  <span class="prelude-val">Ok</span>(<span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">? </span>{
     <span class="kw">if </span>defn.is_register() {
       defn.value_of(parameters)
     } <span class="kw">else </span>{
@@ -3465,12 +3417,17 @@
   </span>})
 }
 
-<span class="kw">pub fn </span>lookup_expandable(token: <span class="kw-2">&amp;</span>Token, toplevel_opt: <span class="prelude-ty">Option</span>&lt;bool&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;<span class="kw">dyn </span>Definition&gt;&gt;&gt; {
+<span class="kw">pub fn </span>lookup_expandable(
+  token: <span class="kw-2">&amp;</span>Token,
+  toplevel_opt: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;<span class="kw">dyn </span>Definition&gt;&gt;&gt; {
   <span class="kw">let </span>toplevel = toplevel_opt.unwrap_or(<span class="bool-val">true</span>); <span class="comment">// Default, for full expansion, same as read_x_token
   // Can only be a token or definition; we want defns!
   // is this the right logic here? don't expand unless digesting?
-  </span><span class="prelude-val">Ok</span>(lookup_definition(token)<span class="question-mark">?
-    </span>.filter(|defn| (<span class="kw-2">*</span>defn).is_expandable() &amp;&amp; (toplevel || !(<span class="kw-2">*</span>defn).is_protected())))
+  </span><span class="prelude-val">Ok</span>(
+    lookup_definition(token)<span class="question-mark">?
+      </span>.filter(|defn| (<span class="kw-2">*</span>defn).is_expandable() &amp;&amp; (toplevel || !(<span class="kw-2">*</span>defn).is_protected())),
+  )
 }
 
 <span class="doccomment">/// Whether token is affected by \noexpand
@@ -3560,18 +3517,19 @@
     )
   }
   <span class="prelude-val">Ok</span>(
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::VecDequeStored(<span class="kw-2">ref mut </span>front)) =
-    state.value.get_mut(<span class="kw-2">&amp;</span>key_sym).unwrap().front_mut()
-  {
-    front.pop_front()
-  } <span class="kw">else </span>{
-    <span class="macro">Error!</span>(
-      <span class="string">"State"</span>,
-      <span class="string">"Stored"</span>,
-      <span class="string">"BUG: Tried to shift_value from a non-vecdeque value key!"
-    </span>);
-    <span class="prelude-val">None
-  </span>})
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::VecDequeStored(<span class="kw-2">ref mut </span>front)) =
+      state.value.get_mut(<span class="kw-2">&amp;</span>key_sym).unwrap().front_mut()
+    {
+      front.pop_front()
+    } <span class="kw">else </span>{
+      <span class="macro">Error!</span>(
+        <span class="string">"State"</span>,
+        <span class="string">"Stored"</span>,
+        <span class="string">"BUG: Tried to shift_value from a non-vecdeque value key!"
+      </span>);
+      <span class="prelude-val">None
+    </span>},
+  )
 }
 
 <span class="kw">pub fn </span>assign_mapping&lt;T: Into&lt;Stored&gt;&gt;(map: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str, value: <span class="prelude-ty">Option</span>&lt;T&gt;) {
@@ -3599,7 +3557,7 @@
 }
 
 <span class="kw">pub fn </span>lookup_mapping(map: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
-  <span class="macro">state!</span>().lookup_mapping(map,key).cloned()
+  <span class="macro">state!</span>().lookup_mapping(map, key).cloned()
 }
 
 <span class="comment">//======================================================================
@@ -3703,11 +3661,7 @@
   }
 }
 <span class="doccomment">/// like `assign_catcode` but targets Lccode and its table
-</span><span class="kw">pub fn </span>assign_lccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;&gt;(
-    key: C,
-  value: T,
-  scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-) {
+</span><span class="kw">pub fn </span>assign_lccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;&gt;(key: C, value: T, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
   <span class="kw">let </span>c: char = key.into();
   <span class="macro">state_mut!</span>().assign_internal(
     TableName::Lccode,
@@ -3729,11 +3683,7 @@
   }
 }
 <span class="doccomment">/// like `assign_catcode` but targets Uccode and its table
-</span><span class="kw">pub fn </span>assign_uccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;&gt;(
-    key: C,
-  value: T,
-  scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-) {
+</span><span class="kw">pub fn </span>assign_uccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;&gt;(key: C, value: T, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
   <span class="kw">let </span>c: char = key.into();
   <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
   <span class="kw">let </span>s = arena::pin(c.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
@@ -3761,9 +3711,7 @@
 /// this may give the definition object (if defined) or another token (if \let) or undef
 /// Any other token is returned as is.
 </span><span class="kw">pub fn </span>lookup_meaning(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
-  <span class="kw">if </span>token.get_catcode().is_active_or_cs()
-    &amp;&amp; token.text != <span class="kw-2">*</span>EMPTY_SYM
-  {
+  <span class="kw">if </span>token.get_catcode().is_active_or_cs() &amp;&amp; token.text != <span class="kw-2">*</span>EMPTY_SYM {
     <span class="kw">match </span><span class="macro">state!</span>().meaning.get(<span class="kw-2">&amp;</span>token.text) {
       <span class="prelude-val">Some</span>(entry) =&gt; <span class="kw">match </span>entry.front() {
         <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; <span class="prelude-val">None</span>,
@@ -3780,22 +3728,18 @@
 </span><span class="kw">pub fn </span>lookup_vecdeque(key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;VecDeque&lt;Stored&gt;&gt; {
   <span class="kw">match </span><span class="macro">state!</span>().lookup_value(key) {
     <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; <span class="prelude-val">None</span>,
-    <span class="prelude-val">Some</span>(v) =&gt; &lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>VecDeque&lt;Stored&gt;&gt;&gt;::from(v).cloned()
+    <span class="prelude-val">Some</span>(v) =&gt; &lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>VecDeque&lt;Stored&gt;&gt;&gt;::from(v).cloned(),
   }
 }
 
 <span class="kw">pub fn </span>with_vecdeque&lt;R, FnR&gt;(key: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>VecDeque&lt;Stored&gt;&gt;) -&gt; R  {
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>VecDeque&lt;Stored&gt;&gt;) -&gt; R {
   caller(<span class="macro">state!</span>().lookup_vecdeque(key))
 }
 
 <span class="doccomment">/// $meaning should be a definition (for defining active control sequences)
 /// or another token, for \let
-</span><span class="kw">pub fn </span>assign_meaning&lt;T: Into&lt;Stored&gt;&gt;(
-    token: <span class="kw-2">&amp;</span>Token,
-  meaning: T,
-  scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-) {
+</span><span class="kw">pub fn </span>assign_meaning&lt;T: Into&lt;Stored&gt;&gt;(token: <span class="kw-2">&amp;</span>Token, meaning: T, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
   <span class="kw">let </span>meaning = meaning.into();
   <span class="comment">// HACK!!!????
   // short-circuit guard to avoid e.g. T_MATH let to itself
@@ -3810,9 +3754,7 @@
 
 <span class="comment">// keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 </span><span class="kw">pub fn </span>has_meaning(token: <span class="kw-2">&amp;</span>Token) -&gt; bool {
-  <span class="kw">if </span>token.get_catcode().is_active_or_cs()
-    &amp;&amp; token.text != <span class="kw-2">*</span>EMPTY_SYM
-  {
+  <span class="kw">if </span>token.get_catcode().is_active_or_cs() &amp;&amp; token.text != <span class="kw-2">*</span>EMPTY_SYM {
     <span class="kw">match </span><span class="macro">state!</span>().meaning.get(<span class="kw-2">&amp;</span>token.text) {
       <span class="prelude-val">Some</span>(entry) =&gt; <span class="kw">match </span>entry.front() {
         <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; <span class="bool-val">false</span>,
@@ -3829,33 +3771,35 @@
 /// Since we're not doing digestion here, we don't need to handle mathactive,
 /// nor cs let to executable tokens
 /// This returns a definition object, or undef
-</span><span class="kw">pub fn </span>lookup_definition(key: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;<span class="kw">dyn </span>Definition&gt;&gt;&gt; {<span class="prelude-val">Ok</span>(
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(defs) = <span class="macro">state!</span>().lookup_definition_internal(key) {
-    <span class="kw">match </span>defs.front() {
-      <span class="prelude-val">Some</span>(Stored::Conditional(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-      <span class="prelude-val">Some</span>(Stored::Constructor(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-      <span class="prelude-val">Some</span>(Stored::Expandable(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-      <span class="prelude-val">Some</span>(Stored::MathPrimitive(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-      <span class="prelude-val">Some</span>(Stored::Primitive(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-      <span class="prelude-val">Some</span>(Stored::Register(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-      <span class="prelude-val">Some</span>(Stored::None) | <span class="prelude-val">Some</span>(Stored::Token(<span class="kw">_</span>)) | <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-      <span class="prelude-val">Some</span>(v) =&gt; {
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"in lookup_definition for {:?}. Value was: {:?}"</span>, key, v);
-        <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"value"</span>, message);
-        <span class="prelude-val">None
-      </span>},
-    }
-  } <span class="kw">else </span>{
-    <span class="prelude-val">None
-  </span>})
+</span><span class="kw">pub fn </span>lookup_definition(key: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;<span class="kw">dyn </span>Definition&gt;&gt;&gt; {
+  <span class="prelude-val">Ok</span>(
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(defs) = <span class="macro">state!</span>().lookup_definition_internal(key) {
+      <span class="kw">match </span>defs.front() {
+        <span class="prelude-val">Some</span>(Stored::Conditional(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
+        <span class="prelude-val">Some</span>(Stored::Constructor(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
+        <span class="prelude-val">Some</span>(Stored::Expandable(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
+        <span class="prelude-val">Some</span>(Stored::MathPrimitive(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
+        <span class="prelude-val">Some</span>(Stored::Primitive(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
+        <span class="prelude-val">Some</span>(Stored::Register(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
+        <span class="prelude-val">Some</span>(Stored::None) | <span class="prelude-val">Some</span>(Stored::Token(<span class="kw">_</span>)) | <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+        <span class="prelude-val">Some</span>(v) =&gt; {
+          <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"in lookup_definition for {:?}. Value was: {:?}"</span>, key, v);
+          <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"value"</span>, message);
+          <span class="prelude-val">None
+        </span>},
+      }
+    } <span class="kw">else </span>{
+      <span class="prelude-val">None
+    </span>},
+  )
 }
 
 <span class="doccomment">/// Returns a definition as `Stored` so that one can call `.read_arguments`
-/// 
+///
 /// This can't be specialized during compile-time over a trait object?
 /// Instead we'll dispatch via `Stored` at runtime, to allow generic calls.
-</span><span class="kw">pub fn </span>lookup_definition_stored(key: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Stored&gt;&gt; {<span class="prelude-val">Ok</span>(
-  <span class="kw">match </span><span class="macro">state!</span>().lookup_definition_internal(key) {
+</span><span class="kw">pub fn </span>lookup_definition_stored(key: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Stored&gt;&gt; {
+  <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="macro">state!</span>().lookup_definition_internal(key) {
     <span class="prelude-val">Some</span>(defs) =&gt; <span class="kw">match </span>defs.front() {
       <span class="comment">// Still, good time to handle the Token case and catch weird storage errors
       </span><span class="prelude-val">Some</span>(Stored::Conditional(entry)) =&gt; <span class="prelude-val">Some</span>(Stored::Conditional(Rc::clone(entry))),
@@ -3912,10 +3856,7 @@
   <span class="comment">// Debug!("Looking up digestable {:?}", lookupname);
   </span><span class="kw">let </span>state = <span class="macro">state!</span>();
   <span class="kw">let </span>entry_opt = state.meaning.get(<span class="kw-2">&amp;</span>lookup_sym);
-  <span class="kw">if </span>lookup_sym != <span class="kw-2">*</span>EMPTY_SYM
-    &amp;&amp; entry_opt.is_some()
-    &amp;&amp; !entry_opt.as_ref().unwrap().is_empty()
-  {
+  <span class="kw">if </span>lookup_sym != <span class="kw-2">*</span>EMPTY_SYM &amp;&amp; entry_opt.is_some() &amp;&amp; !entry_opt.as_ref().unwrap().is_empty() {
     <span class="comment">// Debug!("Found definition for: {:?}", lookupname);
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = entry_opt {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(front) = entry.front() {
@@ -3985,12 +3926,16 @@
 }
 
 <span class="doccomment">/// Determine depth of group nesting.
-/// 
+///
 /// nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
 </span><span class="kw">pub fn </span>get_frame_depth() -&gt; usize {
-  <span class="macro">state!</span>().undo.iter().filter(|frame| !frame.locked).count()
+  <span class="macro">state!</span>()
+    .undo
+    .iter()
+    .filter(|frame| !frame.locked)
+    .count()
     .saturating_sub(<span class="number">1</span>)
 }
 <span class="doccomment">/// begins a semiverbatim frame, neutralizing the usual + requested characters
@@ -4069,9 +4014,7 @@
 </span><span class="doccomment">/// Set one of the definition prefixes global, etc (only global matters!)
 </span><span class="kw">pub fn </span>set_prefix(prefix: <span class="kw-2">&amp;</span>str) { <span class="macro">state_mut!</span>().prefixes.insert(arena::pin(prefix), <span class="bool-val">true</span>); }
 <span class="doccomment">/// gets the current value of a named prefix
-</span><span class="kw">pub fn </span>get_prefix(prefix: <span class="kw-2">&amp;</span>str) -&gt; bool {
-  <span class="macro">state!</span>().get_prefix(prefix)
-}
+</span><span class="kw">pub fn </span>get_prefix(prefix: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="macro">state!</span>().get_prefix(prefix) }
 
 <span class="doccomment">/// clears the global prefixes
 </span><span class="kw">pub fn </span>clear_prefixes() { <span class="macro">state_mut!</span>().prefixes = HashMap::default(); }
@@ -4117,10 +4060,7 @@
     <span class="kw">let </span>frame_table = frame.table_mut(table_name);
     <span class="kw">let </span>entry = frame_table.entry(key).or_insert(<span class="number">0</span>);
     <span class="kw-2">*</span>entry += <span class="number">1</span>; <span class="comment">// Note that this many values must be undone
-    </span><span class="kw">let </span>key_table = state
-      .table_mut(table_name)
-      .entry(key)
-      .or_default();
+    </span><span class="kw">let </span>key_table = state.table_mut(table_name).entry(key).or_default();
     key_table.push_front(value); <span class="comment">// And push new binding.
   </span>}
 }
@@ -4179,28 +4119,24 @@
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = arena::with(key, |key_str| {
         <span class="macro">s!</span>(
-        <span class="string">"Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
+          <span class="string">"Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
           is {:?}"</span>,
-        key_str,
-        table_name,
-        value,
-        table_entry
-          .iter()
-          .map(ToString::to_string)
-          .collect::&lt;Vec&lt;String&gt;&gt;()
-          .join(<span class="string">", "</span>)
-      )
+          key_str,
+          table_name,
+          value,
+          table_entry
+            .iter()
+            .map(ToString::to_string)
+            .collect::&lt;Vec&lt;String&gt;&gt;()
+            .join(<span class="string">", "</span>)
+        )
       });
-      arena::with(key, |key_str| {
-        <span class="macro">Warn!</span>(<span class="string">"internal"</span>, key_str, message)
-      });
+      arena::with(key, |key_str| <span class="macro">Warn!</span>(<span class="string">"internal"</span>, key_str, message));
     }
   }
 }
 <span class="doccomment">/// return all known named scopes
-</span><span class="kw">pub fn </span>get_known_scopes() -&gt; Vec&lt;SymStr&gt; {
-  <span class="macro">state!</span>().stash.keys().copied().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-}
+</span><span class="kw">pub fn </span>get_known_scopes() -&gt; Vec&lt;SymStr&gt; { <span class="macro">state!</span>().stash.keys().copied().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;() }
 <span class="doccomment">/// return the currently activated named scopes
 </span><span class="kw">pub fn </span>get_active_scopes() -&gt; Vec&lt;SymStr&gt; {
   <span class="macro">state!</span>().stash_active.keys().copied().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
@@ -4270,14 +4206,13 @@
 //   return $code; }
 // #======================================================================
 
-
 // TODO: Continue here -- need to diagnoze why the indirect model is not returning
 // an intermediate "ltx:p" when asking for "#PCDATA" inside "ltx:_CaptureBlock_",
 // instead getting an intermediate "ltx:para".
 
 </span><span class="doccomment">/// The indirect model includes all elements allowed as direct children,
 /// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
-/// 
+///
 /// This model therefor includes information from the Schema, as well as
 /// `auto_open` information that may be introduced in binding files.
 </span><span class="comment">// [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]
@@ -4301,15 +4236,11 @@
     <span class="kw">for </span>kid <span class="kw">in </span>desc_keys {
       <span class="comment">// Find best path to `kid`.
       </span><span class="kw">let </span><span class="kw-2">mut </span>best = <span class="number">0</span>;
-      <span class="kw">let </span><span class="kw-2">mut </span>desc_kid_keys: Vec&lt;SymStr&gt; = desc
-        .entry_sym(kid)
-        .or_default()
-        .keys()
-        .copied()
-        .collect();
+      <span class="kw">let </span><span class="kw-2">mut </span>desc_kid_keys: Vec&lt;SymStr&gt; =
+        desc.entry_sym(kid).or_default().keys().copied().collect();
       <span class="comment">// TODO: why sort?
       // Update: it appears that "ltx:p" and "ltx:para" in ltx:_CaptureBlock_ is one reason!!!
-      </span>desc_kid_keys.sort_by(|a,b| arena::with2(<span class="kw-2">*</span>a,<span class="kw-2">*</span>b,|astr,bstr| astr.cmp(bstr))); 
+      </span>desc_kid_keys.sort_by(|a, b| arena::with2(<span class="kw-2">*</span>a, <span class="kw-2">*</span>b, |astr, bstr| astr.cmp(bstr)));
       <span class="kw">for </span>start <span class="kw">in </span>desc_kid_keys {
         <span class="kw">if </span>tag != kid &amp;&amp; tag != start {
           <span class="kw">let </span>start_entry = {
@@ -4343,11 +4274,7 @@
 
 <span class="comment">// Package helpers used in core need to be localized here -- as state methods
 </span><span class="doccomment">/// `Let` macro setter
-</span><span class="kw">pub fn </span>let_i(
-  token1: <span class="kw-2">&amp;</span>Token,
-  token2: <span class="kw-2">&amp;</span>Token,
-  scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-) {
+</span><span class="kw">pub fn </span>let_i(token1: <span class="kw-2">&amp;</span>Token, token2: <span class="kw-2">&amp;</span>Token, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
   <span class="kw">let </span>meaning =<span class="comment">// if token2.get_dont_expand().is_some() {
   //   Stored::Token(token2.clone())
   // } else {
@@ -4363,8 +4290,8 @@
   </span><span class="kw">let </span>def2_opt = lookup_meaning(token2); <span class="comment">// ditto
   </span><span class="kw">match </span>(def1_opt, def2_opt) {
     (<span class="prelude-val">Some</span>(def1), <span class="prelude-val">Some</span>(def2)) =&gt; def1 == def2, <span class="comment">// If both have defns, must be same defn!
-    </span>(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="bool-val">true</span>,                       <span class="comment">// true if both undefined
-    </span>(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,                            <span class="comment">// False, if only one has 'meaning'
+    </span>(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="bool-val">true</span>,                     <span class="comment">// true if both undefined
+    </span>(..) =&gt; <span class="bool-val">false</span>,                            <span class="comment">// False, if only one has 'meaning'
   </span>}
 }
 
@@ -4387,52 +4314,37 @@
 
 <span class="comment">// Ported from Perl's "local" declarations
 
-
-</span><span class="kw">pub fn </span>get_tag_property(tag: SymStr) -&gt; TagOptions {
-  <span class="macro">state_mut!</span>().ensure_tag_property(tag).clone()
-}
-<span class="kw">pub fn </span>ensure_tag_property(tag: SymStr) {
-  <span class="macro">state_mut!</span>().ensure_tag_property(tag);
-}
+</span><span class="kw">pub fn </span>get_tag_property(tag: SymStr) -&gt; TagOptions { <span class="macro">state_mut!</span>().ensure_tag_property(tag).clone() }
+<span class="kw">pub fn </span>ensure_tag_property(tag: SymStr) { <span class="macro">state_mut!</span>().ensure_tag_property(tag); }
 
 <span class="kw">pub fn </span>with_tag_property&lt;R, FnR&gt;(tag: SymStr, caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>TagOptions&gt;) -&gt; R  {
-    caller(<span class="macro">state!</span>().tag_properties.get(<span class="kw-2">&amp;</span>tag))
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>TagOptions&gt;) -&gt; R {
+  caller(<span class="macro">state!</span>().tag_properties.get(<span class="kw-2">&amp;</span>tag))
 }
 <span class="kw">pub fn </span>with_tag_property_mut&lt;R, FnR&gt;(tag: SymStr, caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>TagOptions) -&gt; R  {
+<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>TagOptions) -&gt; R {
   ensure_tag_property(tag);
   caller(<span class="macro">state_mut!</span>().tag_properties.get_mut(<span class="kw-2">&amp;</span>tag).unwrap())
 }
 
-<span class="kw">pub fn </span>has_indirect_model() -&gt; bool {
-  <span class="macro">state!</span>().indirect_model.is_some()
-}
+<span class="kw">pub fn </span>has_indirect_model() -&gt; bool { <span class="macro">state!</span>().indirect_model.is_some() }
 <span class="kw">pub fn </span>set_indirect_model(im: IndirectModel) {
   <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
   state.indirect_model = <span class="prelude-val">Some</span>(im);
 }
-<span class="kw">pub fn </span>get_nomathparse_flag() -&gt; bool {
-  <span class="macro">state!</span>().nomathparse
-}
+<span class="kw">pub fn </span>get_nomathparse_flag() -&gt; bool { <span class="macro">state!</span>().nomathparse }
 <span class="kw">pub fn </span>set_nomathparse_flag(val: bool) {
   <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
   state.nomathparse = val;
 }
 
-<span class="kw">pub fn </span>current_verbosity() -&gt; i32 {
-  <span class="macro">state!</span>().verbosity
-}
+<span class="kw">pub fn </span>current_verbosity() -&gt; i32 { <span class="macro">state!</span>().verbosity }
 
-<span class="kw">pub fn </span>push_pending_resource(value: Resource) {
-  <span class="macro">state_mut!</span>().pending_resources.push(value);
-}
+<span class="kw">pub fn </span>push_pending_resource(value: Resource) { <span class="macro">state_mut!</span>().pending_resources.push(value); }
 <span class="kw">pub fn </span>take_pending_resources() -&gt; Vec&lt;Resource&gt; {
   <span class="macro">state_mut!</span>().pending_resources.drain(..).collect()
 }
-<span class="kw">pub fn </span>reset_pending_resources() {
-  <span class="macro">state_mut!</span>().pending_resources = Vec::new();
-}
+<span class="kw">pub fn </span>reset_pending_resources() { <span class="macro">state_mut!</span>().pending_resources = Vec::new(); }
 <span class="kw">pub fn </span>get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
   <span class="kw">match </span><span class="macro">state!</span>().indirect_model.as_ref().unwrap().get_sym(<span class="kw-2">&amp;</span>tag) {
     <span class="prelude-val">Some</span>(sub_m) =&gt; sub_m.get_sym(<span class="kw-2">&amp;</span>childtag).copied(),
@@ -4440,9 +4352,7 @@
   }
 }
 
-<span class="kw">pub fn </span>get_bindings_dispatch() -&gt; <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt; {
-  <span class="macro">state!</span>().bindings_dispatch.clone()
-}
+<span class="kw">pub fn </span>get_bindings_dispatch() -&gt; <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt; { <span class="macro">state!</span>().bindings_dispatch.clone() }
 <span class="kw">pub fn </span>get_extra_bindings_dispatch() -&gt; <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt; {
   <span class="macro">state!</span>().extra_bindings_dispatch.clone()
 }
@@ -4455,9 +4365,7 @@
   state.extra_bindings_dispatch = <span class="prelude-val">Some</span>(dispatcher);
 }
 
-<span class="kw">pub fn </span>get_search_paths() -&gt; Vec&lt;String&gt; {
-  <span class="macro">state!</span>().search_paths.iter().cloned().collect()
-}
+<span class="kw">pub fn </span>get_search_paths() -&gt; Vec&lt;String&gt; { <span class="macro">state!</span>().search_paths.iter().cloned().collect() }
 <span class="kw">pub fn </span>with_search_paths&lt;R, FnR&gt;(caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>VecDeque&lt;String&gt;) -&gt; R {
   caller(<span class="kw-2">&amp;</span><span class="macro">state!</span>().search_paths)
@@ -4466,23 +4374,19 @@
   <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
   state.search_paths.push_back(path);
 }
-<span class="kw">pub fn </span>search_paths_push_front(path:String) {
+<span class="kw">pub fn </span>search_paths_push_front(path: String) {
   <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
   state.search_paths.push_front(path);
 }
-<span class="kw">pub fn </span>has_search_paths() -&gt; bool {
-  ! <span class="macro">state!</span>().search_paths.is_empty()
-}
-<span class="kw">pub fn </span>get_graphics_paths() -&gt; Vec&lt;String&gt; {
-  <span class="macro">state!</span>().graphics_paths.iter().cloned().collect()
-}
-<span class="kw">pub fn </span>graphics_paths_push_front(path:String) {
+<span class="kw">pub fn </span>has_search_paths() -&gt; bool { !<span class="macro">state!</span>().search_paths.is_empty() }
+<span class="kw">pub fn </span>get_graphics_paths() -&gt; Vec&lt;String&gt; { <span class="macro">state!</span>().graphics_paths.iter().cloned().collect() }
+<span class="kw">pub fn </span>graphics_paths_push_front(path: String) {
   <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
   state.graphics_paths.push_front(path);
 }
 
 <span class="doccomment">/// manage a (global) hash of values
-</span><span class="kw">pub fn </span>with_mapping&lt;R,FnR&gt;(map: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
+</span><span class="kw">pub fn </span>with_mapping&lt;R, FnR&gt;(map: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;) -&gt; R {
   <span class="kw">let </span>map_sym = arena::pin(map);
   caller(<span class="kw">match </span><span class="macro">state!</span>().value.get(<span class="kw-2">&amp;</span>map_sym) {
@@ -4494,7 +4398,7 @@
   })
 }
 
-<span class="kw">pub fn </span>with_mapping_sym&lt;R,FnR&gt;(map: SymStr, key: SymStr, caller: FnR) -&gt; R
+<span class="kw">pub fn </span>with_mapping_sym&lt;R, FnR&gt;(map: SymStr, key: SymStr, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;) -&gt; R {
   caller(<span class="kw">match </span><span class="macro">state!</span>().value.get(<span class="kw-2">&amp;</span>map) {
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
@@ -4505,25 +4409,23 @@
   })
 }
 
-<span class="kw">pub fn </span>with_mapping_keys&lt;R,FnR&gt;(map: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
+<span class="kw">pub fn </span>with_mapping_keys&lt;R, FnR&gt;(map: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(Vec&lt;SymStr&gt;) -&gt; R {
   caller(<span class="macro">state!</span>().lookup_mapping_keys(map))
 }
 
-<span class="kw">pub fn </span>with_font_info&lt;R,FnR&gt;(key: <span class="kw-2">&amp;</span>Token, caller: FnR) -&gt; R
-  <span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;&gt;) -&gt; R {
-   caller(<span class="macro">state!</span>().lookup_font_info(key))
+<span class="kw">pub fn </span>with_font_info&lt;R, FnR&gt;(key: <span class="kw-2">&amp;</span>Token, caller: FnR) -&gt; R
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;&gt;) -&gt; R {
+  caller(<span class="macro">state!</span>().lookup_font_info(key))
 }
 
-<span class="kw">pub fn </span>get_input_encoding() -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
-  <span class="macro">state!</span>().input_encoding.as_ref().map(arena::pin)
-}
+<span class="kw">pub fn </span>get_input_encoding() -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; { <span class="macro">state!</span>().input_encoding.as_ref().map(arena::pin) }
 <span class="kw">pub fn </span>set_input_encoding(val: <span class="prelude-ty">Option</span>&lt;String&gt;) {
   <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
   state.input_encoding = val;
 }
 
-<span class="kw">pub fn </span>with_stacked_values&lt;R,FnR&gt;(key: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
+<span class="kw">pub fn </span>with_stacked_values&lt;R, FnR&gt;(key: <span class="kw-2">&amp;</span>str, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(Vec&lt;<span class="kw-2">&amp;</span>Stored&gt;) -&gt; R {
   caller(<span class="macro">state!</span>().lookup_stacked_values(key))
 }

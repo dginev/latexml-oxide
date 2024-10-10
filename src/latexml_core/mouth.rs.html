@@ -817,12 +817,13 @@
 <a href="#816" id="816">816</a>
 <a href="#817" id="817">817</a>
 <a href="#818" id="818">818</a>
-<a href="#819" id="819">819</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::VecDeque;
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::io;
-<span class="kw">use </span>std::io::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::io::BufReader;
+<span class="kw">use </span>std::io::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::str;
 
 <span class="kw">use </span>core::ops::RangeBounds;
@@ -839,7 +840,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::state;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::tokens::{Tokens, NO_TOKENS};
+<span class="kw">use </span><span class="kw">crate</span>::tokens::{NO_TOKENS, Tokens};
 <span class="kw">use </span><span class="kw">crate</span>::util::pathname;
 <span class="kw">use </span><span class="kw">crate</span>::util::text::trim_end_in_place;
 
@@ -882,32 +883,32 @@
 <span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>MouthOptions {
   <span class="kw">pub </span>fordefinitions: bool,
-  <span class="kw">pub </span>notes: bool,
-  <span class="kw">pub </span>content: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>foodtype: <span class="prelude-ty">Option</span>&lt;FoodType&gt;,
-  <span class="kw">pub </span>source: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>shortsource: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>notes:          bool,
+  <span class="kw">pub </span>content:        <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>foodtype:       <span class="prelude-ty">Option</span>&lt;FoodType&gt;,
+  <span class="kw">pub </span>source:         <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>shortsource:    <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Mouth {
-  fordefinitions: bool,
-  notes: bool,
-  at_eof: bool,
-  nchars: usize,
-  colno: usize,
-  lineno: usize,
-  foodtype: FoodType,
-  saved_at_cc: <span class="prelude-ty">Option</span>&lt;Catcode&gt;,
+  fordefinitions:         bool,
+  notes:                  bool,
+  at_eof:                 bool,
+  nchars:                 usize,
+  colno:                  usize,
+  lineno:                 usize,
+  foodtype:               FoodType,
+  saved_at_cc:            <span class="prelude-ty">Option</span>&lt;Catcode&gt;,
   saved_include_comments: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  note_message: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  source: String,
-  shortsource: String,
-  skipping_spaces: bool,
+  note_message:           <span class="prelude-ty">Option</span>&lt;String&gt;,
+  source:                 String,
+  shortsource:            String,
+  skipping_spaces:        bool,
   <span class="comment">// pub handle : Option&lt;File&gt;,
-  </span>chars: VecDeque&lt;char&gt;,
-  buffer: VecDeque&lt;String&gt;,
-  reader: <span class="prelude-ty">Option</span>&lt;BufReader&lt;File&gt;&gt;,
+  </span>chars:                  VecDeque&lt;char&gt;,
+  buffer:                 VecDeque&lt;String&gt;,
+  reader:                 <span class="prelude-ty">Option</span>&lt;BufReader&lt;File&gt;&gt;,
 }
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>Mouth {
@@ -917,23 +918,23 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Mouth {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Mouth {
-      notes: <span class="bool-val">false</span>,
-      note_message: <span class="prelude-val">None</span>,
-      fordefinitions: <span class="bool-val">false</span>,
-      at_eof: <span class="bool-val">false</span>,
-      skipping_spaces: <span class="bool-val">false</span>,
-      lineno: <span class="number">0</span>,
-      colno: <span class="number">0</span>,
-      chars: VecDeque::new(),
-      nchars: <span class="number">0</span>,
-      source: <span class="macro">s!</span>(<span class="string">"Anonymous String {}"</span>, <span class="kw-2">&amp;</span>Mouth::gid()),
-      shortsource: <span class="macro">s!</span>(<span class="string">"String"</span>),
+      notes:                  <span class="bool-val">false</span>,
+      note_message:           <span class="prelude-val">None</span>,
+      fordefinitions:         <span class="bool-val">false</span>,
+      at_eof:                 <span class="bool-val">false</span>,
+      skipping_spaces:        <span class="bool-val">false</span>,
+      lineno:                 <span class="number">0</span>,
+      colno:                  <span class="number">0</span>,
+      chars:                  VecDeque::new(),
+      nchars:                 <span class="number">0</span>,
+      source:                 <span class="macro">s!</span>(<span class="string">"Anonymous String {}"</span>, <span class="kw-2">&amp;</span>Mouth::gid()),
+      shortsource:            <span class="macro">s!</span>(<span class="string">"String"</span>),
       <span class="comment">// handle : None,
-      </span>foodtype: FoodType::File,
-      saved_at_cc: <span class="prelude-val">None</span>,
+      </span>foodtype:               FoodType::File,
+      saved_at_cc:            <span class="prelude-val">None</span>,
       saved_include_comments: <span class="prelude-val">None</span>,
-      buffer: VecDeque::new(),
-      reader: <span class="prelude-val">None</span>,
+      buffer:                 VecDeque::new(),
+      reader:                 <span class="prelude-val">None</span>,
     }
   }
 }
@@ -1103,7 +1104,7 @@
       }
     }
     <span class="self">self</span>.reader.take(); <span class="comment">// if we have a reader, this will force a Drop at the end of finish(), which
-                        // will close the file handle
+    // will close the file handle
   </span>}
   <span class="comment">// Auxiliaries
 
@@ -1136,7 +1137,7 @@
           <span class="prelude-val">Ok</span>(count) =&gt; count,
           <span class="prelude-val">Err</span>(e) =&gt; {
             <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"BufReader::read_to_end returned an error: {:?}"</span>, e);
-            <span class="macro">Warn!</span>(<span class="string">"mouth"</span>, <span class="string">"io"</span>, message,<span class="string">""</span>,<span class="string">""</span>,<span class="self">self</span>.get_location());
+            <span class="macro">Warn!</span>(<span class="string">"mouth"</span>, <span class="string">"io"</span>, message, <span class="string">""</span>, <span class="string">""</span>, <span class="self">self</span>.get_location());
             <span class="number">0
           </span>},
         };
@@ -1160,7 +1161,7 @@
             },
             <span class="prelude-val">Err</span>(e) =&gt; {
               <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"input isn't valid under encoding utf8: {:?}"</span>, e);
-              <span class="macro">Info!</span>(<span class="string">"misdefined"</span>, <span class="string">"utf8"</span>, message, <span class="string">""</span>,<span class="string">""</span>,<span class="self">self</span>.get_location());
+              <span class="macro">Info!</span>(<span class="string">"misdefined"</span>, <span class="string">"utf8"</span>, message, <span class="string">""</span>, <span class="string">""</span>, <span class="self">self</span>.get_location());
               <span class="kw">let </span>file_str = String::from_utf8_lossy(<span class="kw-2">&amp;</span>file_bytes);
               <span class="self">self</span>.buffer = Mouth::split_lines(<span class="kw-2">&amp;</span>file_str);
             },
@@ -1228,9 +1229,15 @@
   /// when performing the check.
   </span><span class="kw">pub fn </span>has_more_input(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
     !<span class="self">self</span>.is_eol()
-    || !<span class="self">self</span>.buffer.is_empty()
-    || (<span class="self">self</span>.reader.is_some() &amp;&amp; !<span class="self">self</span>.reader.as_mut().unwrap().fill_buf()
-           .expect(<span class="string">"fill_buf should have no reason to fail."</span>).is_empty())
+      || !<span class="self">self</span>.buffer.is_empty()
+      || (<span class="self">self</span>.reader.is_some()
+        &amp;&amp; !<span class="self">self
+          </span>.reader
+          .as_mut()
+          .unwrap()
+          .fill_buf()
+          .expect(<span class="string">"fill_buf should have no reason to fail."</span>)
+          .is_empty())
   }
 
   <span class="doccomment">/// Read the next token, or undef if exhausted.
@@ -1303,23 +1310,27 @@
 
         <span class="self">self</span>.chars = line.chars().collect::&lt;VecDeque&lt;char&gt;&gt;();
         <span class="self">self</span>.nchars = <span class="self">self</span>.chars.len();
-        <span class="comment">// In state N, skip leading spaces &amp; ignored, possibly decoding (trailing space removed above)
-        </span><span class="kw">while let </span><span class="prelude-val">Some</span>((_ch,cc)) = <span class="self">self</span>.get_next_char() {  
+        <span class="comment">// In state N, skip leading spaces &amp; ignored, possibly decoding (trailing space removed
+        // above)
+        </span><span class="kw">while let </span><span class="prelude-val">Some</span>((_ch, cc)) = <span class="self">self</span>.get_next_char() {
           <span class="kw">match </span>cc {
-            Catcode::SPACE | Catcode::IGNORE =&gt; { },
-            Catcode::EOL =&gt; { <span class="comment">// Eolch already? empty line!
+            Catcode::SPACE | Catcode::IGNORE =&gt; {},
+            Catcode::EOL =&gt; {
+              <span class="comment">// Eolch already? empty line!
               </span><span class="self">self</span>.colno = <span class="self">self</span>.nchars; <span class="comment">// ignore rest of line.
               </span><span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>));
             },
-            <span class="kw">_ </span>=&gt; <span class="kw">break
-          </span>}
+            <span class="kw">_ </span>=&gt; <span class="kw">break</span>,
+          }
         }
-        <span class="kw">if </span><span class="self">self</span>.nchars == <span class="number">0 </span>|| <span class="self">self</span>.colno &gt; <span class="self">self</span>.nchars { <span class="comment">// Past end of line?
+        <span class="kw">if </span><span class="self">self</span>.nchars == <span class="number">0 </span>|| <span class="self">self</span>.colno &gt; <span class="self">self</span>.nchars {
+          <span class="comment">// Past end of line?
           // If upcoming line is empty, and there is no recognizable EOL, fake one
           </span><span class="kw">if </span>read_mode &amp;&amp; eolch != <span class="prelude-val">Some</span>(<span class="string">'\r'</span>) {
             <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">T_MARKER!</span>(<span class="string">"EOL"</span>));
           }
-        } <span class="kw">else </span>{ <span class="comment">// Back up over peeked char
+        } <span class="kw">else </span>{
+          <span class="comment">// Back up over peeked char
           </span><span class="self">self</span>.colno -= <span class="number">1</span>;
         }
         <span class="comment">// Sneak a comment out, every so often.
@@ -1372,11 +1383,7 @@
     <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="self">self</span>.read_token() {
       tokens.push(token);
     }
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(Token {
-      code: Catcode::SPACE,
-      ..
-    }) = tokens.last()
-    {
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(Token { code: Catcode::SPACE, .. }) = tokens.last() {
       <span class="comment">// Remove trailing space
       </span>tokens.pop();
     }
@@ -1579,7 +1586,6 @@
   /// Careful:
   /// used BOTH for flushing input for `\endinput`
   /// and for detecting line end for `\read`
-  ///
   </span><span class="kw">pub fn </span>is_eol(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
     <span class="kw">let </span>savecolno = <span class="self">self</span>.colno;
     <span class="comment">// We have to peek past any ignored tokens &amp; also spaces, if skipping
@@ -1618,9 +1624,7 @@
     <span class="kw">return </span>NO_TOKENS;
   }
   state::use_std_state();
-  <span class="kw">let </span>result = Mouth::new(text, <span class="prelude-val">None</span>)
-      .unwrap()
-      .read_tokens();
+  <span class="kw">let </span>result = Mouth::new(text, <span class="prelude-val">None</span>).unwrap().read_tokens();
   state::use_main_state();
   result
 }
@@ -1630,9 +1634,7 @@
     <span class="kw">return </span>NO_TOKENS;
   }
   state::use_sty_state();
-  <span class="kw">let </span>result = Mouth::new(text, <span class="prelude-val">None</span>)
-    .unwrap()
-    .read_tokens();
+  <span class="kw">let </span>result = Mouth::new(text, <span class="prelude-val">None</span>).unwrap().read_tokens();
   state::use_main_state();
   result
 }

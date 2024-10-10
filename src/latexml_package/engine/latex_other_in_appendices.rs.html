@@ -491,7 +491,13 @@
 <a href="#490" id="490">490</a>
 <a href="#491" id="491">491</a>
 <a href="#492" id="492">492</a>
-<a href="#493" id="493">493</a></pre></div><pre class="rust"><code><span class="comment">//**********************************************************************
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a></pre></div><pre class="rust"><code><span class="comment">//**********************************************************************
 // Other stuff
 //**********************************************************************
 // Some stuff that got missed in the appendices ?
@@ -523,8 +529,10 @@
     <span class="string">r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
   </span>);
 
-  <span class="comment">// PORT: continue here... \noexpand is passed in as an argument, which seems wrong - it should be #1 ?
-  </span><span class="macro">TeX!</span>(<span class="string">r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
+  <span class="comment">// PORT: continue here... \noexpand is passed in as an argument, which seems wrong - it should be
+  // #1 ?
+  </span><span class="macro">TeX!</span>(
+    <span class="string">r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
   \def\i{I}\def\j{J}%
   \def\reserved@a##1##2{\let##1##2\reserved@a}%
   \expandafter\reserved@a\@uclclist\reserved@b{\reserved@b\@gobble}%
@@ -544,7 +552,8 @@
   \protected@edef\reserved@a{\lowercase{#1}}%
   \reserved@a
 }}
-\protected@edef\MakeLowercase#1{\MakeLowercase{#1}}"</span>);
+\protected@edef\MakeLowercase#1{\MakeLowercase{#1}}"
+  </span>);
 
   <span class="comment">//======================================================================
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\@ehc"</span>, <span class="string">"I can't help"</span>);
@@ -632,7 +641,9 @@
     "###
   </span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\ltx@hard@MessageBreak"</span>, <span class="prelude-val">None</span>, <span class="string">"^^J"</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@onlypreamble{}"</span>, { only_preamble(<span class="string">"\\@onlypreamble"</span>)<span class="question-mark">?</span>; });
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@onlypreamble{}"</span>, {
+    only_preamble(<span class="string">"\\@onlypreamble"</span>)<span class="question-mark">?</span>;
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\GenericError{}{}{}{}"</span>, sub[(_arg1,arg2,arg3,arg4)] {
     make_generic_message(<span class="string">"\\GenericError"</span>, <span class="macro">vec!</span>[arg2, arg3, arg4], <span class="string">"error"</span>)<span class="question-mark">?</span>;
   });
@@ -722,7 +733,8 @@
      }
      \def\@latex@info@no@line#1{%
        \@latex@info{#1\@gobble}}
-     "</span>);
+     "
+  </span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\@setsize{}{}{}{}"</span>, <span class="prelude-val">None</span>);
   <span class="macro">Let!</span>(<span class="string">"\\@warning"</span>, <span class="string">"\\@latex@warning"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\@@warning"</span>, <span class="string">"\\@latex@warning@no@line"</span>);

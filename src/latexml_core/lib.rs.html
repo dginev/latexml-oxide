@@ -398,14 +398,7 @@
 <a href="#397" id="397">397</a>
 <a href="#398" id="398">398</a>
 <a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a></pre></div><pre class="rust"><code><span class="doccomment">//! The Core of latexml - roughly the equivalent of TeX conversion.
+<a href="#400" id="400">400</a></pre></div><pre class="rust"><code><span class="doccomment">//! The Core of latexml - roughly the equivalent of TeX conversion.
 </span><span class="attr">#![feature(thread_local)]
 #![allow(missing_docs)]
 </span><span class="kw">extern crate </span>rustc_hash;
@@ -474,6 +467,7 @@
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">pub use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -482,7 +476,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterValue;
 <span class="kw">use </span><span class="kw">crate</span>::digested::{Digested, DigestedData};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
@@ -504,27 +497,27 @@
 </span><span class="kw">pub struct </span>CoreOptions {
   <span class="comment">// First, state::related options:
   </span><span class="doccomment">/// a custom schema-induced model (default is `None`) for the final XML
-  </span><span class="kw">pub </span>model: <span class="prelude-ty">Option</span>&lt;Model&gt;,
+  </span><span class="kw">pub </span>model:            <span class="prelude-ty">Option</span>&lt;Model&gt;,
   <span class="doccomment">/// default is 0, sub-zero values are quiet, positive values are verbose
-  </span><span class="kw">pub </span>verbosity: <span class="prelude-ty">Option</span>&lt;i32&gt;,
+  </span><span class="kw">pub </span>verbosity:        <span class="prelude-ty">Option</span>&lt;i32&gt;,
   <span class="doccomment">/// strict error-reporting (is this still used?)
-  </span><span class="kw">pub </span>strict: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  </span><span class="kw">pub </span>strict:           <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="doccomment">/// toggle preserving comments in the XML on/off
   </span><span class="kw">pub </span>include_comments: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="doccomment">/// toggle loading raw .sty modules on/off
-  </span><span class="kw">pub </span>include_styles: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  </span><span class="kw">pub </span>include_styles:   <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="doccomment">/// disable math parsing (enabled by default)
-  </span><span class="kw">pub </span>nomathparse: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  </span><span class="kw">pub </span>nomathparse:      <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="doccomment">/// an optional, fixed id prefix for all xml:id attributes
-  </span><span class="kw">pub </span>documentid: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  </span><span class="kw">pub </span>documentid:       <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="doccomment">/// the list of paths used for loading TeX sources and packages
-  </span><span class="kw">pub </span>search_paths: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+  </span><span class="kw">pub </span>search_paths:     <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
   <span class="doccomment">/// the list of paths used for loading graphics assets
-  </span><span class="kw">pub </span>graphics_paths: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+  </span><span class="kw">pub </span>graphics_paths:   <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
   <span class="doccomment">/// set an explicit encoding of the input text
-  </span><span class="kw">pub </span>input_encoding: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  </span><span class="kw">pub </span>input_encoding:   <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="doccomment">/// a list of package names to preload before processing start
-  </span><span class="kw">pub </span>preload: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+  </span><span class="kw">pub </span>preload:          <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
 }
 
 <span class="kw">impl </span>Core {
@@ -547,9 +540,7 @@
     };
     stomach::set_stomach(Stomach::default());
     set_state(State::new(state_options));
-    Core {
-      preload
-    }
+    Core { preload }
   }
 }
 <span class="doccomment">/// Common operations for Box-like (digested) data
@@ -581,9 +572,7 @@
   </span><span class="kw">fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;Stored&gt; { <span class="macro">todo!</span>() }
   <span class="doccomment">/// set a named property (allows all `Stored` types for values)
   </span><span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
-    <span class="self">self
-      </span>.get_properties_mut()
-      .insert(key, value.into());
+    <span class="self">self</span>.get_properties_mut().insert(key, value.into());
   }
   <span class="doccomment">/// get a single named property (with special "isSpace" check)
   </span><span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; {
@@ -610,7 +599,10 @@
     })
   }
   <span class="kw">fn </span>get_property_string(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; String {
-    <span class="self">self</span>.get_property(key).map(|v| v.to_string()).unwrap_or_default()
+    <span class="self">self
+      </span>.get_property(key)
+      .map(|v| v.to_string())
+      .unwrap_or_default()
   }
   <span class="doccomment">/// get a mutable reference to a single named property (does NOT have the "isSpace" check)
   </span><span class="kw">fn </span>get_property_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt; {
@@ -649,14 +641,11 @@
   // However, when requesting the size of a box, you'd get either (w/ explicit size overriding)
 
   </span><span class="doccomment">/// gets the "width" property value, if any
-  </span><span class="kw">fn </span>get_width(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;Stored&gt;&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
+  </span><span class="kw">fn </span>get_width(<span class="kw-2">&amp;</span><span class="self">self</span>, options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;Stored&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
     <span class="kw">if </span>!<span class="self">self</span>.has_property(<span class="string">"width"</span>) &amp;&amp; !<span class="self">self</span>.has_property(<span class="string">"cached_width"</span>) {
       <span class="comment">// TODO: Restore caching?
       // self.compute_size_store(options.unwrap_or_default())?
-      </span><span class="kw">let </span>(w, <span class="kw">_</span>, <span class="kw">_</span>) = <span class="self">self</span>.compute_size(options.unwrap_or_default())<span class="question-mark">?</span>;
+      </span><span class="kw">let </span>(w, ..) = <span class="self">self</span>.compute_size(options.unwrap_or_default())<span class="question-mark">?</span>;
       <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(RegisterValue::Dimension(w)));
     }
 
@@ -798,10 +787,7 @@
   }
 
   <span class="doccomment">/// computes and returns the size of a box-like object
-  </span><span class="kw">fn </span>compute_size(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    options: HashMap&lt;Stored&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt;;
+  </span><span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt;;
 }
 
 <span class="doccomment">/// The current TeX processing mode

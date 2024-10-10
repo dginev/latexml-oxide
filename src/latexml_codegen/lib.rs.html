@@ -64,7 +64,7 @@
 </span><span class="kw">extern crate </span>proc_macro; <span class="comment">// workaround until proc_macro becomes available normally
 
 </span><span class="kw">use </span>proc_macro::TokenStream;
-<span class="kw">use </span>syn::{parse_macro_input, DeriveInput};
+<span class="kw">use </span>syn::{DeriveInput, parse_macro_input};
 
 <span class="kw">mod </span>constructable;
 <span class="kw">mod </span>modelable;

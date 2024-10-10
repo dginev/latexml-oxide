@@ -1238,37 +1238,37 @@
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 
 <span class="kw">pub struct </span>MetricData {
-  <span class="kw">pub </span>file: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
-  <span class="kw">pub </span>encoding: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
-  <span class="kw">pub </span>space: f64,
-  <span class="kw">pub </span>spaceshrink: f64,
-  <span class="kw">pub </span>emwidth: f64,
+  <span class="kw">pub </span>file:         <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+  <span class="kw">pub </span>encoding:     <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+  <span class="kw">pub </span>space:        f64,
+  <span class="kw">pub </span>spaceshrink:  f64,
+  <span class="kw">pub </span>emwidth:      f64,
   <span class="kw">pub </span>spacestretch: f64,
-  <span class="kw">pub </span>quad: f64,
-  <span class="kw">pub </span>extraspace: f64,
-  <span class="kw">pub </span>exheight: f64,
-  <span class="kw">pub </span>ligatures: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, (<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, f64, f64, f64)&gt;,
-  <span class="kw">pub </span>sizes: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, (f64, f64, f64, f64)&gt;,
-  <span class="kw">pub </span>kerns: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, f64&gt;,
-  <span class="kw">pub </span>slant: f64,
+  <span class="kw">pub </span>quad:         f64,
+  <span class="kw">pub </span>extraspace:   f64,
+  <span class="kw">pub </span>exheight:     f64,
+  <span class="kw">pub </span>ligatures:    HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, (<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, f64, f64, f64)&gt;,
+  <span class="kw">pub </span>sizes:        HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, (f64, f64, f64, f64)&gt;,
+  <span class="kw">pub </span>kerns:        HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, f64&gt;,
+  <span class="kw">pub </span>slant:        f64,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>MetricData {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     MetricData {
-      file: <span class="string">""</span>,
-      encoding: <span class="string">""</span>,
-      space: <span class="number">0.0</span>,
-      spaceshrink: <span class="number">0.0</span>,
-      emwidth: <span class="number">0.0</span>,
+      file:         <span class="string">""</span>,
+      encoding:     <span class="string">""</span>,
+      space:        <span class="number">0.0</span>,
+      spaceshrink:  <span class="number">0.0</span>,
+      emwidth:      <span class="number">0.0</span>,
       spacestretch: <span class="number">0.0</span>,
-      quad: <span class="number">0.0</span>,
-      extraspace: <span class="number">0.0</span>,
-      exheight: <span class="number">0.0</span>,
-      ligatures: HashMap::default(),
-      sizes: HashMap::default(),
-      kerns: HashMap::default(),
-      slant: <span class="number">0.0</span>,
+      quad:         <span class="number">0.0</span>,
+      extraspace:   <span class="number">0.0</span>,
+      exheight:     <span class="number">0.0</span>,
+      ligatures:    HashMap::default(),
+      sizes:        HashMap::default(),
+      kerns:        HashMap::default(),
+      slant:        <span class="number">0.0</span>,
     }
   }
 }

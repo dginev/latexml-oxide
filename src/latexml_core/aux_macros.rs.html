@@ -149,7 +149,8 @@
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a></pre></div><pre class="rust"><code><span class="doccomment">//! Helper macros for quicker and more idiomatic construction and access to data structures.
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a></pre></div><pre class="rust"><code><span class="doccomment">//! Helper macros for quicker and more idiomatic construction and access to data structures.
 
 /// A flexary macro for constructing `HashMap&lt;&amp;'static str, &amp;'static str&gt;` maps
 </span><span class="attr">#[macro_export]
@@ -175,7 +176,8 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> stored_map {
   ($( <span class="macro-nonterminal">$key</span>:expr =&gt; <span class="macro-nonterminal">$val</span>:expr ),<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>map : <span class="macro-nonterminal">$crate::common::arena::SymHashMap</span>&lt;<span class="macro-nonterminal">$crate::common::store::Stored</span>&gt; = <span class="macro-nonterminal">$crate::common::arena::SymHashMap::default</span>();
+    <span class="kw">let </span><span class="kw-2">mut </span>map : <span class="macro-nonterminal">$crate::common::arena::SymHashMap</span>&lt;<span class="macro-nonterminal">$crate::common::store::Stored</span>&gt; =
+      <span class="macro-nonterminal">$crate::common::arena::SymHashMap::default</span>();
     $( map.insert(<span class="macro-nonterminal">$key</span>, <span class="macro-nonterminal">$val</span>.into()); )*
     map
   }}

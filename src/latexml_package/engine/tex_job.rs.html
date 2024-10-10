@@ -62,18 +62,19 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Job
-//! 
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Job
+//!
 //! Core TeX Implementation for LaTeXML
 
-</span><span class="kw">use </span>chrono::prelude::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+</span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>chrono::prelude::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Job Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // The current Job
   //----------------------------------------------------------------------
@@ -108,7 +109,9 @@
   // \everyjob         pt holds tokens which are inserted at the start of every job.
   // \deadcycles       iq is the number of times \output was called since the last \shipout.
   // \maxdeadcycles    pi is the maximum allowed value of \deadcycles before an error is generated.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\end"</span>, { gullet::flush(); });
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\end"</span>, {
+    gullet::flush();
+  });
   <span class="macro">DefRegister!</span>(<span class="string">"\\everyjob"</span>, <span class="macro">Tokens!</span>());
   <span class="macro">DefRegister!</span>(<span class="string">"\\deadcycles"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\maxdeadcycles"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
@@ -124,5 +127,5 @@
 
   <span class="comment">// TODO: load_dump
   // TODO: load_latex
-  
-</span>});</code></pre></div></section></main></body></html>
+</span>});
+</code></pre></div></section></main></body></html>

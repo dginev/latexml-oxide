@@ -3371,93 +3371,44 @@
 <a href="#3370" id="3370">3370</a>
 <a href="#3371" id="3371">3371</a>
 <a href="#3372" id="3372">3372</a>
-<a href="#3373" id="3373">3373</a>
-<a href="#3374" id="3374">3374</a>
-<a href="#3375" id="3375">3375</a>
-<a href="#3376" id="3376">3376</a>
-<a href="#3377" id="3377">3377</a>
-<a href="#3378" id="3378">3378</a>
-<a href="#3379" id="3379">3379</a>
-<a href="#3380" id="3380">3380</a>
-<a href="#3381" id="3381">3381</a>
-<a href="#3382" id="3382">3382</a>
-<a href="#3383" id="3383">3383</a>
-<a href="#3384" id="3384">3384</a>
-<a href="#3385" id="3385">3385</a>
-<a href="#3386" id="3386">3386</a>
-<a href="#3387" id="3387">3387</a>
-<a href="#3388" id="3388">3388</a>
-<a href="#3389" id="3389">3389</a>
-<a href="#3390" id="3390">3390</a>
-<a href="#3391" id="3391">3391</a>
-<a href="#3392" id="3392">3392</a>
-<a href="#3393" id="3393">3393</a>
-<a href="#3394" id="3394">3394</a>
-<a href="#3395" id="3395">3395</a>
-<a href="#3396" id="3396">3396</a>
-<a href="#3397" id="3397">3397</a>
-<a href="#3398" id="3398">3398</a>
-<a href="#3399" id="3399">3399</a>
-<a href="#3400" id="3400">3400</a>
-<a href="#3401" id="3401">3401</a>
-<a href="#3402" id="3402">3402</a>
-<a href="#3403" id="3403">3403</a>
-<a href="#3404" id="3404">3404</a>
-<a href="#3405" id="3405">3405</a>
-<a href="#3406" id="3406">3406</a>
-<a href="#3407" id="3407">3407</a>
-<a href="#3408" id="3408">3408</a>
-<a href="#3409" id="3409">3409</a>
-<a href="#3410" id="3410">3410</a>
-<a href="#3411" id="3411">3411</a>
-<a href="#3412" id="3412">3412</a>
-<a href="#3413" id="3413">3413</a>
-<a href="#3414" id="3414">3414</a>
-<a href="#3415" id="3415">3415</a>
-<a href="#3416" id="3416">3416</a>
-<a href="#3417" id="3417">3417</a>
-<a href="#3418" id="3418">3418</a>
-<a href="#3419" id="3419">3419</a>
-<a href="#3420" id="3420">3420</a>
-<a href="#3421" id="3421">3421</a>
-<a href="#3422" id="3422">3422</a></pre></div><pre class="rust"><code><span class="kw">pub mod </span>helpers;
+<a href="#3373" id="3373">3373</a></pre></div><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
 
-<span class="kw">use </span>std::backtrace::Backtrace;
-<span class="kw">use </span>libxml::tree::set_node_rc_guard;
 <span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
+<span class="kw">use </span>libxml::tree::set_node_rc_guard;
 <span class="kw">use </span>libxml::tree::{Namespace, Node, NodeType};
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
+<span class="kw">use </span>std::backtrace::Backtrace;
 
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt::Write <span class="kw">as _</span>;
 <span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::TexMode;
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::{
-  <span class="self">self</span>, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, XML_ID_SYM,
-  SymHashMap,SymStr
+  <span class="self">self</span>, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, SymHashMap, SymStr,
+  XML_ID_SYM,
 };
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::common::font::{Font, FONT_TEXT_DEFAULT};
+<span class="kw">use </span><span class="kw">crate</span>::common::font::{FONT_TEXT_DEFAULT, Font};
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
+<span class="kw">use </span><span class="kw">crate</span>::common::model;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::common::model;
-<span class="kw">use </span><span class="kw">crate</span>::common::xml::{<span class="self">self</span>, XPath, XML_NS};
+<span class="kw">use </span><span class="kw">crate</span>::common::xml::{<span class="self">self</span>, XML_NS, XPath};
 <span class="kw">use </span><span class="kw">crate</span>::definition::FontDirective;
 <span class="kw">use </span><span class="kw">crate</span>::ligature::Ligature;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
 <span class="kw">use </span><span class="kw">crate</span>::state;
-<span class="kw">use </span><span class="kw">crate</span>::TexMode;
 
+<span class="kw">use </span><span class="kw">crate</span>::Tbox;
 <span class="kw">use </span><span class="kw">crate</span>::document::resource::Resource;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::{TagConstructionClosure, TagOptionName};
-<span class="kw">use </span><span class="kw">crate</span>::Tbox;
 <span class="kw">use crate</span>::{BoxOps, Digested, DigestedData};
 
 <span class="kw">static </span>HAS_NONSPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\S"</span>).unwrap());
@@ -3513,28 +3464,31 @@
 </span><span class="kw">pub static </span>MATH_HINT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| arena::pin_static(<span class="string">"ltx:XMHint"</span>));
 
 <span class="kw">pub struct </span>Document {
-  <span class="kw">pub </span>document: XmlDoc,
-  <span class="kw">pub </span>pending: Vec&lt;Node&gt;,
-  context: <span class="prelude-ty">Option</span>&lt;XPath&gt;,
-  <span class="kw">pub </span>node: Node,
-  <span class="kw">pub </span>node_boxes: HashMap&lt;usize, Digested&gt;, <span class="comment">// used to be _box attribute
-  </span><span class="kw">pub </span>node_fonts: HashMap&lt;u64, Font&gt;,       <span class="comment">// used to be _font attribute
-  </span><span class="kw">pub </span>idstore: HashMap&lt;String, Node&gt;,
+  <span class="kw">pub </span>document:                XmlDoc,
+  <span class="kw">pub </span>pending:                 Vec&lt;Node&gt;,
+  context:                     <span class="prelude-ty">Option</span>&lt;XPath&gt;,
+  <span class="kw">pub </span>node:                    Node,
+  <span class="kw">pub </span>node_boxes:              HashMap&lt;usize, Digested&gt;, <span class="comment">// used to be _box attribute
+  </span><span class="kw">pub </span>node_fonts:              HashMap&lt;u64, Font&gt;,       <span class="comment">// used to be _font attribute
+  </span><span class="kw">pub </span>idstore:                 HashMap&lt;String, Node&gt;,
   <span class="comment">// the rewrite labels used to be in each rewrite rule, but they make more sense in doc
-  </span><span class="kw">pub </span>rewrite_labels: HashMap&lt;String, String&gt;,
+  </span><span class="kw">pub </span>rewrite_labels:          HashMap&lt;String, String&gt;,
   <span class="comment">// the following are internal "local"-based declarations in Perl
   </span>localized_constructed_nodes: Vec&lt;Vec&lt;Node&gt;&gt;,
-  constructed_nodes: Vec&lt;Node&gt;,
-  localized_boxes: Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
-  box_to_absorb: <span class="prelude-ty">Option</span>&lt;Digested&gt;, <span class="comment">// local $LaTeXML::BOX;
-  </span>localized_fonts: Vec&lt;Rc&lt;Font&gt;&gt;,
+  constructed_nodes:           Vec&lt;Node&gt;,
+  localized_boxes:             Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
+  box_to_absorb:               <span class="prelude-ty">Option</span>&lt;Digested&gt;, <span class="comment">// local $LaTeXML::BOX;
+  </span>localized_fonts:             Vec&lt;Rc&lt;Font&gt;&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Document {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{ <span class="self">Self</span>::new() }
 }
 <span class="kw">impl </span>Object <span class="kw">for </span>Document {
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Locator {
-    <span class="self">self</span>.get_node_box(<span class="kw-2">&amp;</span><span class="self">self</span>.node).map(|tbox| tbox.get_locator()).unwrap_or_default()
+    <span class="self">self
+      </span>.get_node_box(<span class="kw-2">&amp;</span><span class="self">self</span>.node)
+      .map(|tbox| tbox.get_locator())
+      .unwrap_or_default()
   }
 }
 <span class="kw">impl </span>Document {
@@ -3546,19 +3500,19 @@
       <span class="prelude-val">None </span>=&gt; doc_scaffold.as_node(), <span class="comment">// when empty, set the document node as a node.
     </span>};
     Document {
-      document: doc_scaffold,
-      node: root,
-      node_boxes: HashMap::default(),
-      node_fonts: HashMap::default(),
-      idstore: HashMap::default(),
-      rewrite_labels: HashMap::default(),
-      pending: Vec::new(),
+      document:                    doc_scaffold,
+      node:                        root,
+      node_boxes:                  HashMap::default(),
+      node_fonts:                  HashMap::default(),
+      idstore:                     HashMap::default(),
+      rewrite_labels:              HashMap::default(),
+      pending:                     Vec::new(),
       localized_constructed_nodes: Vec::new(),
-      constructed_nodes: Vec::new(),
-      box_to_absorb: <span class="prelude-val">None</span>,
-      context: <span class="prelude-val">None</span>,
-      localized_boxes: Vec::new(),
-      localized_fonts: Vec::new(),
+      constructed_nodes:           Vec::new(),
+      box_to_absorb:               <span class="prelude-val">None</span>,
+      context:                     <span class="prelude-val">None</span>,
+      localized_boxes:             Vec::new(),
+      localized_fonts:             Vec::new(),
     }
   }
 
@@ -3579,11 +3533,7 @@
 
   <span class="doccomment">/// Find the nodes according to the given `xpath` expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  </span><span class="kw">pub fn </span>findnodes(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    xpath: <span class="kw-2">&amp;</span>str,
-    node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;,
-  ) -&gt; Vec&lt;Node&gt; {
+  </span><span class="kw">pub fn </span>findnodes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;) -&gt; Vec&lt;Node&gt; {
     <span class="kw">let </span>node = <span class="kw">match </span>node_opt {
       <span class="prelude-val">Some</span>(node) =&gt; Cow::Borrowed(node),
       <span class="prelude-val">None </span>=&gt; <span class="kw">match </span><span class="self">self</span>.document.get_root_element() {
@@ -3600,13 +3550,16 @@
       ctxt
     } <span class="kw">else </span>{
       <span class="kw">let </span><span class="kw-2">mut </span>context = XPath::new(<span class="kw-2">&amp;</span><span class="self">self</span>.document, HashMap::default());
-      model::with_code_namespaces(|code_ns| <span class="kw">for </span>(prefix, ns) <span class="kw">in </span>code_ns {
-        <span class="comment">// TODO: Is this too slow? We may need to store an active context in the state as an
-        // alternative
-        </span>arena::with2(<span class="kw-2">*</span>prefix,<span class="kw-2">*</span>ns, |p_str, ns_str| {
-           context.register_namespace(p_str, ns_str)
-            .expect(<span class="string">"register_namespace has no reason to fail during get_xpath?"</span>);
-        });
+      model::with_code_namespaces(|code_ns| {
+        <span class="kw">for </span>(prefix, ns) <span class="kw">in </span>code_ns {
+          <span class="comment">// TODO: Is this too slow? We may need to store an active context in the state as an
+          // alternative
+          </span>arena::with2(<span class="kw-2">*</span>prefix, <span class="kw-2">*</span>ns, |p_str, ns_str| {
+            context
+              .register_namespace(p_str, ns_str)
+              .expect(<span class="string">"register_namespace has no reason to fail during get_xpath?"</span>);
+          });
+        }
       });
       <span class="self">self</span>.context = <span class="prelude-val">Some</span>(context);
       <span class="self">self</span>.context.as_mut().unwrap()
@@ -3624,11 +3577,7 @@
   }
 
   <span class="doccomment">/// Like findnodes, but expects an xpath that evaluates to a literal value (e.g. for attributes)
-  </span><span class="kw">pub fn </span>findvalues(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    xpath: <span class="kw-2">&amp;</span>str,
-    node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;,
-  ) -&gt; Vec&lt;String&gt; {
+  </span><span class="kw">pub fn </span>findvalues(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;) -&gt; Vec&lt;String&gt; {
     <span class="kw">match </span>node_opt {
       <span class="prelude-val">Some</span>(node) =&gt; <span class="self">self</span>.get_xpath().findvalues(xpath, <span class="prelude-val">Some</span>(node)),
       <span class="prelude-val">None </span>=&gt; {
@@ -3715,7 +3664,7 @@
               value = arena::with(value, |value_str| arena::pin(<span class="macro">s!</span>(<span class="string">"{value_str} {ovalue}"</span>)))
             }
           }
-          arena::with2(key, value, |key_str,value_str| {
+          arena::with2(key, value, |key_str, value_str| {
             <span class="self">self</span>.set_attribute(node, key_str, value_str)
           })<span class="question-mark">?</span>;
         }
@@ -3728,9 +3677,7 @@
     </span><span class="kw">if </span>qname != arena::pin_static(<span class="string">"ltx:document"</span>)
       &amp;&amp; state::lookup_bool(<span class="string">"GENERATE_IDS"</span>)
       &amp;&amp; !node.has_attribute(<span class="string">"xml:id"</span>)
-      &amp;&amp; arena::with(qname, |qname_str| {
-        can_have_attribute(qname_str, <span class="string">"xml:id"</span>)
-      })
+      &amp;&amp; arena::with(qname, |qname_str| can_have_attribute(qname_str, <span class="string">"xml:id"</span>))
     {
       <span class="self">self</span>.generate_id(node, <span class="string">""</span>)<span class="question-mark">?</span>;
     }
@@ -3812,11 +3759,7 @@
   /// $box can also be a plain string (Digested::Postponed)
   /// which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  </span><span class="kw">pub fn </span>absorb(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    object: <span class="kw-2">&amp;</span>Digested,
-    props_opt: <span class="prelude-ty">Option</span>&lt;SymHashMap&lt;Stored&gt;&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">pub fn </span>absorb(<span class="kw-2">&amp;mut </span><span class="self">self</span>, object: <span class="kw-2">&amp;</span>Digested, props_opt: <span class="prelude-ty">Option</span>&lt;SymHashMap&lt;Stored&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">let </span>props = props_opt.unwrap_or_default();
     <span class="kw">let </span><span class="kw-2">mut </span>boxes = <span class="macro">vec!</span>[Cow::Borrowed(object)];
@@ -3951,9 +3894,7 @@
       </span><span class="kw">let </span>font_math_opt = <span class="kw">match </span>props.get(<span class="string">"font"</span>) {
         <span class="prelude-val">Some</span>(Stored::Font(fnt)) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>fnt)),
         <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Asset(fnt))) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>fnt)),
-        <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Closure(code))) =&gt; {
-          <span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">None</span>)<span class="question-mark">?</span>))
-        },
+        <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Closure(code))) =&gt; <span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">None</span>)<span class="question-mark">?</span>)),
         <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
       };
       <span class="kw">if let </span><span class="prelude-val">Some</span>(font_math) = font_math_opt {
@@ -3961,13 +3902,13 @@
           object,
           HashMap::default(),
           <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>font_math),
-              )<span class="question-mark">?</span>))
+        )<span class="question-mark">?</span>))
       } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.insert_math_token(
           object,
           HashMap::default(),
           <span class="prelude-val">None</span>,
-              )<span class="question-mark">?</span>))
+        )<span class="question-mark">?</span>))
       }
     }
   }
@@ -4233,7 +4174,9 @@
       <span class="comment">// Didn't find $node at all!!
       </span><span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Attempt to close {:?}, which isn't open"</span>, node.get_name());
       arena::with(get_node_qname(node), |qname_str| {
-        {<span class="macro">Error!</span>(<span class="string">"malformed"</span>, qname_str, message)};
+        {
+          <span class="macro">Error!</span>(<span class="string">"malformed"</span>, qname_str, message)
+        };
         <span class="prelude-val">Ok</span>(())
       })<span class="question-mark">?</span>;
     <span class="comment">//     "Currently in " . $self-&gt;getInsertionContext()) unless $ifopen;
@@ -4252,7 +4195,9 @@
             .join(<span class="string">","</span>)
         );
         arena::with(qname, |qname_str| {
-          {<span class="macro">Error!</span>(<span class="string">"malformed"</span>, qname_str, message)};
+          {
+            <span class="macro">Error!</span>(<span class="string">"malformed"</span>, qname_str, message)
+          };
           <span class="prelude-val">Ok</span>(())
         })<span class="question-mark">?</span>;
       }
@@ -4272,11 +4217,7 @@
     <span class="self">self</span>.close_node_with_strictness(<span class="bool-val">false</span>, node)
   }
 
-  <span class="kw">pub fn </span>close_node_with_strictness(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    strict: bool,
-    node: <span class="kw-2">&amp;</span>Node,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>close_node_with_strictness(<span class="kw-2">&amp;mut </span><span class="self">self</span>, strict: bool, node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// my ($t, @cant_close) = ();
     </span><span class="kw">let </span><span class="kw-2">mut </span>cant_close: Vec&lt;Node&gt; = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>n = <span class="self">self</span>.node.clone();
@@ -4299,7 +4240,9 @@
             qname_str,
             <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>)<span class="question-mark">?
           </span>);
-          {<span class="macro">Error!</span>(<span class="string">"malformed"</span>, qname_str, message)};
+          {
+            <span class="macro">Error!</span>(<span class="string">"malformed"</span>, qname_str, message)
+          };
           <span class="prelude-val">Ok</span>(())
         })<span class="question-mark">?</span>;
       }
@@ -4421,8 +4364,7 @@
           serialized.push_str(<span class="kw-2">&amp;</span>child_serialized);
           <span class="kw">let </span><span class="kw-2">mut </span>current_child = child;
           <span class="kw">while let </span><span class="prelude-val">Some</span>(sibling) = current_child.get_next_sibling() {
-            <span class="kw">let </span>sibling_serialized =
-              <span class="self">self</span>.serialize_aux(<span class="kw-2">&amp;</span>sibling, depth, noindent, heuristic);
+            <span class="kw">let </span>sibling_serialized = <span class="self">self</span>.serialize_aux(<span class="kw-2">&amp;</span>sibling, depth, noindent, heuristic);
             serialized.push_str(<span class="kw-2">&amp;</span>sibling_serialized);
             current_child = sibling;
           }
@@ -4454,8 +4396,7 @@
           <span class="kw">if </span>key == <span class="string">"id" </span>{
             <span class="kw">continue</span>;
           } <span class="comment">// HACK for xml:id
-          </span><span class="kw">let </span>key_sym = model::get_node_document_qname(
-            <span class="kw-2">&amp;</span>node.get_attribute_node(key).unwrap());
+          </span><span class="kw">let </span>key_sym = model::get_node_document_qname(<span class="kw-2">&amp;</span>node.get_attribute_node(key).unwrap());
           <span class="kw">let </span>val_serialized = serialize_attr(<span class="kw-2">&amp;</span>node.get_property(key).unwrap_or_default());
           arena::with(key_sym, |key_str| {
             <span class="macro">write!</span>(open_tag, <span class="string">" {key_str}=\"{val_serialized}\""</span>)
@@ -4496,7 +4437,7 @@
               depth + <span class="number">1</span>,
               noindent_children,
               heuristic,
-                      ));
+            ));
           }
           <span class="kw">if </span>!noindent_children {
             serialized.push_str(<span class="kw-2">&amp;</span>indent)
@@ -4665,8 +4606,7 @@
       <span class="comment">// Ignore initial whitespace
       </span><span class="kw">if </span>(text.is_empty() || ONLY_SPACE_RE.is_match(text))
         &amp;&amp; (node_type == <span class="prelude-val">Some</span>(NodeType::DocumentNode)
-          || (node_type == <span class="prelude-val">Some</span>(NodeType::ElementNode)
-            &amp;&amp; !can_contain(<span class="kw-2">&amp;</span><span class="self">self</span>.node, <span class="string">"#PCDATA"</span>)))
+          || (node_type == <span class="prelude-val">Some</span>(NodeType::ElementNode) &amp;&amp; !can_contain(<span class="kw-2">&amp;</span><span class="self">self</span>.node, <span class="string">"#PCDATA"</span>)))
       {
         <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
       }
@@ -4674,10 +4614,14 @@
     <span class="kw">if </span><span class="macro">matches!</span>(<span class="kw-2">&amp;</span>font.family.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"nullfont"</span>)) {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
     };
-    <span class="macro">Debug!</span>(<span class="string">"document"</span>,<span class="string">"open_text"</span>,
-      <span class="macro">s!</span>(<span class="string">"Insert text {:?} at {:?}"</span>,
-      text,
-      <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span><span class="self">self</span>.node))
+    <span class="macro">Debug!</span>(
+      <span class="string">"document"</span>,
+      <span class="string">"open_text"</span>,
+      <span class="macro">s!</span>(
+        <span class="string">"Insert text {:?} at {:?}"</span>,
+        text,
+        <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span><span class="self">self</span>.node)
+      )
     );
 
     <span class="comment">// Get the desired font attributes, particularly the desired element
@@ -4729,7 +4673,7 @@
           elementname,
           <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"_fontswitch" </span>=&gt; <span class="string">"true"</span>, <span class="string">"_autoopened" </span>=&gt; <span class="string">"true"</span>)),
           <span class="prelude-val">Some</span>(font),
-              )<span class="question-mark">?</span>;
+        )<span class="question-mark">?</span>;
       }
     }
 
@@ -4746,16 +4690,17 @@
       <span class="kw">let </span>font = <span class="self">self</span>.get_node_font(<span class="kw-2">&amp;</span>parent);
       <span class="kw">let </span>ocontent = <span class="self">self</span>.node.get_content();
       <span class="kw">let </span><span class="kw-2">mut </span>content = Cow::Borrowed(<span class="kw-2">&amp;</span>ocontent);
-      state::with_value(<span class="string">"TEXT_LIGATURES"</span>, |value_opt|
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(ligatures)) = value_opt {
-        <span class="kw">for </span>stored_ligature <span class="kw">in </span>ligatures.iter() {
-          <span class="kw">if let </span>Stored::Ligature(ligature) = stored_ligature {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font_test) = ligature.font_test {
-              <span class="kw">if </span>!(font_test)(font) {
-                <span class="kw">continue</span>; <span class="comment">// if the font test fails, skip the ligature
-              </span>}
+      state::with_value(<span class="string">"TEXT_LIGATURES"</span>, |value_opt| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(ligatures)) = value_opt {
+          <span class="kw">for </span>stored_ligature <span class="kw">in </span>ligatures.iter() {
+            <span class="kw">if let </span>Stored::Ligature(ligature) = stored_ligature {
+              <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font_test) = ligature.font_test {
+                <span class="kw">if </span>!(font_test)(font) {
+                  <span class="kw">continue</span>; <span class="comment">// if the font test fails, skip the ligature
+                </span>}
+              }
+              content = Cow::Owned((ligature.code.as_ref().unwrap())(<span class="kw-2">&amp;</span>content));
             }
-            content = Cow::Owned((ligature.code.as_ref().unwrap())(<span class="kw-2">&amp;</span>content));
           }
         }
       });
@@ -4859,10 +4804,14 @@
     }
     <span class="kw">if </span><span class="self">self</span>.node.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
       <span class="comment">// current node already is a text node.
-      </span><span class="macro">Debug!</span>(<span class="string">"document"</span>,<span class="string">"open_text_internal"</span>,
-        <span class="macro">s!</span>(<span class="string">"Appending text {:?} to {:?}"</span>,
-        text,
-        <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span><span class="self">self</span>.node))
+      </span><span class="macro">Debug!</span>(
+        <span class="string">"document"</span>,
+        <span class="string">"open_text_internal"</span>,
+        <span class="macro">s!</span>(
+          <span class="string">"Appending text {:?} to {:?}"</span>,
+          text,
+          <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span><span class="self">self</span>.node)
+        )
       );
 
       <span class="kw">let </span>parent = <span class="self">self</span>.node.get_parent().unwrap();
@@ -4875,10 +4824,14 @@
     } <span class="kw">else if </span>HAS_NONSPACE_RE.is_match(text) || can_contain(<span class="kw-2">&amp;</span><span class="self">self</span>.node, <span class="string">"#PCDATA"</span>) {
       <span class="comment">// or text allowed here
       </span><span class="kw">let </span><span class="kw-2">mut </span>point = <span class="self">self</span>.find_insertion_point(<span class="string">"#PCDATA"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-      <span class="macro">Debug!</span>(<span class="string">"document"</span>,<span class="string">"open_text_internal"</span>,
-        <span class="macro">s!</span>(<span class="string">"Inserting text node for {:?} into {:?}"</span>,
-        text,
-        <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span>point))
+      <span class="macro">Debug!</span>(
+        <span class="string">"document"</span>,
+        <span class="string">"open_text_internal"</span>,
+        <span class="macro">s!</span>(
+          <span class="string">"Inserting text node for {:?} into {:?}"</span>,
+          text,
+          <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span>point)
+        )
       );
       <span class="kw">let </span><span class="kw-2">mut </span>node = Node::new_text(text, <span class="kw-2">&amp;</span><span class="self">self</span>.document)<span class="question-mark">?</span>;
       point.add_child(<span class="kw-2">&amp;mut </span>node)<span class="question-mark">?</span>;
@@ -4964,14 +4917,8 @@
   }
 
   <span class="doccomment">/// Apply ligature operation to `node`, presumed the last insertion into it's parent(?)
-  </span><span class="kw">fn </span>apply_math_ligature(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    node: <span class="kw-2">&amp;mut </span>Node,
-    ligature: <span class="kw-2">&amp;</span>Ligature,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>((nmatched, newstring, attr)) =
-      (ligature.matcher.as_ref().unwrap())(<span class="self">self</span>, node)<span class="question-mark">?
-    </span>{
+  </span><span class="kw">fn </span>apply_math_ligature(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, ligature: <span class="kw-2">&amp;</span>Ligature) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>((nmatched, newstring, attr)) = (ligature.matcher.as_ref().unwrap())(<span class="self">self</span>, node)<span class="question-mark">? </span>{
       <span class="kw">let </span><span class="kw-2">mut </span>boxes = VecDeque::new();
       boxes.push_front(<span class="self">self</span>.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(<span class="kw-2">&amp;</span>newstring)<span class="question-mark">?</span>;
@@ -5125,23 +5072,26 @@
         </span><span class="kw">let </span>node_font = <span class="self">self</span>.get_node_font(<span class="kw-2">&amp;</span><span class="self">self</span>.node).clone();
         <span class="comment">// TODO: avoid this clone?
         </span><span class="kw">let </span>inter_string = arena::to_string(inter);
-        <span class="self">self</span>.open_element(<span class="kw-2">&amp;</span>inter_string, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"_autoopened" </span>=&gt; <span class="string">"true"</span>)),
-         <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node_font))<span class="question-mark">?</span>;
+        <span class="self">self</span>.open_element(
+          <span class="kw-2">&amp;</span>inter_string,
+          <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"_autoopened" </span>=&gt; <span class="string">"true"</span>)),
+          <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node_font),
+        )<span class="question-mark">?</span>;
         <span class="comment">// And retry insertion (should work now).
-        </span><span class="kw">return </span><span class="self">self</span>.find_insertion_point_qsym(qsym, <span class="prelude-val">Some</span>(inter)); 
+        </span><span class="kw">return </span><span class="self">self</span>.find_insertion_point_qsym(qsym, <span class="prelude-val">Some</span>(inter));
       }
-    } 
+    }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(has_opened) = has_opened_opt {
       <span class="comment">// out of options if already inside an auto-open chain
-      </span><span class="kw">let </span>message: String = arena::with2(has_opened, cur_qname,|has_opened_str,cur_qname_str|
-        <span class="prelude-val">Ok</span>::&lt;String,<span class="kw">crate</span>::common::error::Error&gt;(
-          <span class="macro">format!</span>(
+      </span><span class="kw">let </span>message: String =
+        arena::with2(has_opened, cur_qname, |has_opened_str, cur_qname_str| {
+          <span class="prelude-val">Ok</span>::&lt;String, <span class="kw">crate</span>::common::error::Error&gt;(<span class="macro">format!</span>(
             <span class="string">"failed auto-open through &lt;{}&gt; at inadmissible &lt;{}&gt;. Currently in {}"</span>,
             has_opened_str,
             cur_qname_str,
             <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>)<span class="question-mark">?
           </span>))
-      )<span class="question-mark">?</span>;
+        })<span class="question-mark">?</span>;
       <span class="macro">Error!</span>(<span class="string">"malformed"</span>, arena::to_string(qsym), message);
       <span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone()) <span class="comment">// But we'll do it anyway, unless Error =&gt; Fatal.
     </span>} <span class="kw">else </span>{
@@ -5170,7 +5120,12 @@
       </span>} <span class="kw">else </span>{
         <span class="comment">// Didn't find a legit place.
         </span><span class="kw">let </span>message = arena::with2(cur_qname, qsym, |cur_qname_str, qname| {
-          <span class="macro">s!</span>(<span class="string">"{:?} isn't allowed in &lt;{}&gt;\n{}"</span>, qname, cur_qname_str,Backtrace::capture())
+          <span class="macro">s!</span>(
+            <span class="string">"{:?} isn't allowed in &lt;{}&gt;\n{}"</span>,
+            qname,
+            cur_qname_str,
+            Backtrace::capture()
+          )
         });
         <span class="comment">//"Currently in " self.getInsertionContext());
         </span><span class="macro">Error!</span>(<span class="string">"malformed"</span>, arena::to_string(qsym), message);
@@ -5307,12 +5262,7 @@
   // Set any allowed attribute on a node, decoding the prefix, if any.
   // Also records, and checks, any id attributes.
   // [xml:id and namespaced attributes are always allowed]
-  </span><span class="kw">pub fn </span>set_attribute(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    node: <span class="kw-2">&amp;mut </span>Node,
-    key: <span class="kw-2">&amp;</span>str,
-    value: <span class="kw-2">&amp;</span>str,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">pub fn </span>set_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, key: <span class="kw-2">&amp;</span>str, value: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span>value.is_empty() {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(()); <span class="comment">// skip if empty
     </span>}
@@ -5366,12 +5316,7 @@
     </span><span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">pub fn </span>add_ss_values(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    node: <span class="kw-2">&amp;mut </span>Node,
-    key: <span class="kw-2">&amp;</span>str,
-    values_str: <span class="kw-2">&amp;</span>str,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>add_ss_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, key: <span class="kw-2">&amp;</span>str, values_str: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// $values = $values-&gt;toAttribute if ref $values;
     </span><span class="kw">if </span>!values_str.is_empty() {
       <span class="comment">// Skip if `empty'; but 0 is OK!
@@ -5530,12 +5475,7 @@
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">fn </span>mark_xmnode_visibility_aux(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    <span class="kw-2">mut </span>node: Node,
-    cvis: bool,
-    <span class="kw-2">mut </span>pvis: bool,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">fn </span>mark_xmnode_visibility_aux(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>node: Node, cvis: bool, <span class="kw-2">mut </span>pvis: bool) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span>(!cvis || node.has_attribute(<span class="string">"_cvis"</span>)) &amp;&amp; (!pvis || node.has_attribute(<span class="string">"_pvis"</span>)) {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
@@ -5577,7 +5517,7 @@
             <span class="macro">Warn!</span>(
               <span class="string">"expected"</span>,
               <span class="string">"node"</span>,
-                <span class="macro">s!</span>(<span class="string">"No node found with id='{id}' (referred to from ltx:XMRef)"</span>)
+              <span class="macro">s!</span>(<span class="string">"No node found with id='{id}' (referred to from ltx:XMRef)"</span>)
             );
           },
           <span class="prelude-val">Some</span>(reffed) =&gt; {
@@ -5611,10 +5551,7 @@
       <span class="kw">let </span>presentation = dual_children.pop().unwrap();
       <span class="kw">let </span>content = dual_children.pop().unwrap();
       <span class="kw">if </span><span class="self">self
-        </span>.findnode(
-          <span class="string">"descendant-or-self::*[@_pvis or @_cvis]"</span>,
-          <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>content),
-              )
+        </span>.findnode(<span class="string">"descendant-or-self::*[@_pvis or @_cvis]"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>content))
         .is_none()
       {
         <span class="comment">// content never seen
@@ -5623,7 +5560,7 @@
         </span>.findnode(
           <span class="string">"descendant-or-self::*[@_pvis or @_cvis]"</span>,
           <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>presentation),
-              )
+        )
         .is_none()
       {
         <span class="comment">// pres.
@@ -5696,11 +5633,7 @@
   }
 
   <span class="doccomment">/// Replace an XMDual with one of its branches
-  </span><span class="kw">fn </span>collapse_xmdual(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    dual: Node,
-    <span class="kw-2">mut </span>branch: Node,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">fn </span>collapse_xmdual(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dual: Node, <span class="kw-2">mut </span>branch: Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// The other branch is not visible, nor referenced,
     // but the dual may have an id and be referenced
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(dualid) = dual.get_attribute_ns(<span class="string">"id"</span>, XML_NS) {
@@ -6020,8 +5953,7 @@
         <span class="kw">match </span>point.lookup_namespace_prefix(<span class="kw-2">&amp;</span>ns_uri) {
           <span class="comment">// namespace not already declared?
           </span><span class="prelude-val">None </span>=&gt; {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(prefix) = model::get_document_namespace_prefix(<span class="kw-2">&amp;</span>ns_uri, <span class="bool-val">false</span>, <span class="bool-val">false</span>)
-            {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(prefix) = model::get_document_namespace_prefix(<span class="kw-2">&amp;</span>ns_uri, <span class="bool-val">false</span>, <span class="bool-val">false</span>) {
               <span class="kw">if </span>prefix != <span class="kw-2">*</span>EMPTY_SYM {
                 <span class="kw">let </span><span class="kw-2">mut </span>root = <span class="self">self</span>.document.get_root_element().unwrap();
                 <span class="kw">match </span>arena::with(prefix, |prefix_str| {
@@ -6082,9 +6014,7 @@
   <span class="doccomment">/// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  </span><span class="kw">pub fn </span>close_element_at(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="self">self</span>.after_close(node)
-  }
+  </span><span class="kw">pub fn </span>close_element_at(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { <span class="self">self</span>.after_close(node) }
 
   <span class="kw">pub fn </span>after_open(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// Set current point to this node, just in case the afterOpen's use it.
@@ -6122,11 +6052,7 @@
   // since otherwise they may be duplicated.
 
   // # Should have variants here for prepend, insert before, insert after.... ???
-  </span><span class="kw">pub fn </span>append_clone(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    node: <span class="kw-2">&amp;mut </span>Node,
-    new_children: Vec&lt;Node&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">pub fn </span>append_clone(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, new_children: Vec&lt;Node&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// Expand any document fragments
     </span><span class="kw">let </span>new_children = new_children
       .into_iter()
@@ -6163,7 +6089,7 @@
             node,
             child.get_namespace().map(|ns| ns.get_href()),
             <span class="kw-2">&amp;</span>child.get_name(),
-                  )<span class="question-mark">?</span>;
+          )<span class="question-mark">?</span>;
           <span class="kw">for </span>(key, val) <span class="kw">in </span>child.get_attributes() {
             <span class="kw">match </span>key.as_str() {
               <span class="string">"xml:id" </span>| <span class="string">"id" </span>=&gt; {
@@ -6203,11 +6129,7 @@
   // [this makes most sense if `nodes` are a sequence of siblings]
   // Returns undef if $qname isn't allowed in the parent, or if `nodes` aren't allowed in `qname`,
   // otherwise, returns the newly created `qname`.
-  </span><span class="kw">pub fn </span>wrap_nodes(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    qname: <span class="kw-2">&amp;</span>str,
-    nodes: Vec&lt;Node&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
+  </span><span class="kw">pub fn </span>wrap_nodes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, qname: <span class="kw-2">&amp;</span>str, nodes: Vec&lt;Node&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
     <span class="kw">if </span>nodes.is_empty() {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
     }
@@ -6261,22 +6183,31 @@
   <span class="comment">// initially since $node-&gt;setNodeName was broken in XML::LibXML 1.58
   // but this can provide for more options &amp; correctness?
   </span><span class="kw">pub fn </span>rename_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: Node, newname: <span class="kw-2">&amp;</span>str, reinsert: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
-    <span class="kw">let </span>(ns,tag) = model::decode_qname(newname)<span class="question-mark">?</span>;
+    <span class="kw">let </span>(ns, tag) = model::decode_qname(newname)<span class="question-mark">?</span>;
     <span class="kw">let </span>newsym = arena::pin(newname);
     <span class="self">self</span>.rename_node_internal(node, newsym, ns, tag, reinsert)
   }
   <span class="kw">pub fn </span>rename_node_qsym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: Node, newsym: SymStr, reinsert: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
-    <span class="kw">let </span>(ns,tag) = model::decode_qname_sym(newsym)<span class="question-mark">?</span>;
+    <span class="kw">let </span>(ns, tag) = model::decode_qname_sym(newsym)<span class="question-mark">?</span>;
     <span class="self">self</span>.rename_node_internal(node, newsym, ns, tag, reinsert)
   }
-  <span class="kw">fn </span>rename_node_internal(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: Node, newname: SymStr, ns:<span class="prelude-ty">Option</span>&lt;String&gt;, tag: String, reinsert: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>parent = node.get_parent().expect(<span class="string">"rename should never be called on an orphan or root node."</span>);
+  <span class="kw">fn </span>rename_node_internal(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    <span class="kw-2">mut </span>node: Node,
+    newname: SymStr,
+    ns: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    tag: String,
+    reinsert: bool,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>parent = node
+      .get_parent()
+      .expect(<span class="string">"rename should never be called on an orphan or root node."</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_internal(<span class="kw-2">&amp;mut </span>parent, ns, <span class="kw-2">&amp;</span>tag)<span class="question-mark">?</span>;
     <span class="comment">// Move to the position AFTER node
     </span>node.add_next_sibling(<span class="kw-2">&amp;mut </span>new)<span class="question-mark">?</span>;
     <span class="comment">// Copy ALL attributes from `node` to `newnode`
     </span><span class="kw">let </span><span class="kw-2">mut </span>id = <span class="prelude-val">None</span>;
-    <span class="kw">for </span>(key,value) <span class="kw">in </span>node.get_attributes() {
+    <span class="kw">for </span>(key, value) <span class="kw">in </span>node.get_attributes() {
       <span class="kw">if </span>model::can_have_attribute(newname, arena::pin(<span class="kw-2">&amp;</span>key)) {
         new.set_attribute(<span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span>value)<span class="question-mark">?</span>;
       }
@@ -6296,11 +6227,11 @@
         child.unbind();
         <span class="kw">if </span>child.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
           <span class="self">self</span>.open_text_internal(<span class="kw-2">&amp;</span>child.get_content())<span class="question-mark">?</span>;
-          <span class="self">self</span>.close_text_internal()<span class="question-mark">?</span>; 
+          <span class="self">self</span>.close_text_internal()<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
           <span class="kw">let </span><span class="kw-2">mut </span>point = <span class="self">self</span>.find_insertion_point_qsym(get_node_qname(<span class="kw-2">&amp;</span>child), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
           point.add_child(<span class="kw-2">&amp;mut </span>child)<span class="question-mark">?</span>;
-        } 
+        }
       }
       std::mem::swap(<span class="kw-2">&amp;mut </span><span class="self">self</span>.node, <span class="kw-2">&amp;mut </span>new);
     }
@@ -6362,11 +6293,7 @@
     </span>} <span class="kw">else </span>{
       <span class="prelude-val">None
     </span>};
-    <span class="self">self</span>.open_element(
-      <span class="string">"ltx:ERROR"</span>,
-      <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"class"</span>=&gt;error_class)),
-      <span class="prelude-val">None</span>,
-      )<span class="question-mark">?</span>;
+    <span class="self">self</span>.open_element(<span class="string">"ltx:ERROR"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"class"</span>=&gt;error_class)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     <span class="self">self</span>.close_element(<span class="string">"ltx:ERROR"</span>)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(savenode) = savenode_opt {
       <span class="self">self</span>.set_node(<span class="kw-2">&amp;</span>savenode);
@@ -6386,8 +6313,8 @@
 
   </span><span class="doccomment">/// Find a node in the document that can contain an element `qname`
   </span><span class="kw">pub fn </span>float_to_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, qname: <span class="kw-2">&amp;</span>str, closeifpossible: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>candidates : VecDeque&lt;Node&gt; = VecDeque::from(<span class="self">self</span>.get_insertion_candidates(<span class="kw-2">&amp;</span><span class="self">self</span>.node));
-    <span class="kw">let </span><span class="kw-2">mut </span>closeable  = <span class="bool-val">true</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>candidates: VecDeque&lt;Node&gt; = VecDeque::from(<span class="self">self</span>.get_insertion_candidates(<span class="kw-2">&amp;</span><span class="self">self</span>.node));
+    <span class="kw">let </span><span class="kw-2">mut </span>closeable = <span class="bool-val">true</span>;
     <span class="comment">// If the current node can contain already, we're fine right here - just return
     </span><span class="kw">if </span>!candidates.is_empty() &amp;&amp; can_contain(<span class="kw-2">&amp;</span>candidates[<span class="number">0</span>], qname) {
       <span class="comment">// Edge case: Don't resume at a text node, if it is current.
@@ -6414,8 +6341,12 @@
         </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(savenode));
       }
     } <span class="kw">else if </span>can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>.node, qname).is_some() {
-        <span class="macro">Warn!</span>(<span class="string">"malformed"</span>, qname, <span class="macro">s!</span>(<span class="string">"No open node can contain element '{}'"</span>, qname));
-        <span class="comment">// self.get_insertion_context())
+      <span class="macro">Warn!</span>(
+        <span class="string">"malformed"</span>,
+        qname,
+        <span class="macro">s!</span>(<span class="string">"No open node can contain element '{}'"</span>, qname)
+      );
+      <span class="comment">// self.get_insertion_context())
     </span>}
     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
   }
@@ -6434,9 +6365,7 @@
     <span class="comment">// Should we only accept a node that already has an id, or should we create an id?
     </span><span class="kw">let </span><span class="kw-2">mut </span>node_opt: <span class="prelude-ty">Option</span>&lt;Cow&lt;Node&gt;&gt; = <span class="prelude-val">None</span>;
     <span class="kw">while let </span><span class="prelude-val">Some</span>(candidate) = candidates.pop_front() {
-      <span class="kw">if </span>can_node_have_attribute(candidate, key)
-        &amp;&amp; candidate.has_attribute_ns(<span class="string">"id"</span>, xml::XML_NS)
-      {
+      <span class="kw">if </span>can_node_have_attribute(candidate, key) &amp;&amp; candidate.has_attribute_ns(<span class="string">"id"</span>, xml::XML_NS) {
         node_opt = <span class="prelude-val">Some</span>(Cow::Borrowed(candidate));
         <span class="kw">break</span>;
       }
@@ -6449,9 +6378,7 @@
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       };
       <span class="kw">if let </span><span class="prelude-val">Some</span>(sibling) = sib {
-        <span class="kw">if </span>can_node_have_attribute(<span class="kw-2">&amp;</span>sibling, key)
-          &amp;&amp; sibling.has_attribute_ns(<span class="string">"id"</span>, xml::XML_NS)
-        {
+        <span class="kw">if </span>can_node_have_attribute(<span class="kw-2">&amp;</span>sibling, key) &amp;&amp; sibling.has_attribute_ns(<span class="string">"id"</span>, xml::XML_NS) {
           node_opt = <span class="prelude-val">Some</span>(Cow::Owned(sibling));
         } <span class="kw">else if </span>!ancestors.is_empty() {
           <span class="comment">// just take root element?
@@ -6515,11 +6442,7 @@
   /// The parent node (the one with `ID=&lt;parentid&gt;`) also maintains a counter
   /// stored in an attribute `_ID_counter_&lt;prefix&gt;` recording the last used
   /// `number` for `prefix` amongst its descendents.
-  </span><span class="kw">pub fn </span>generate_id(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    node: <span class="kw-2">&amp;mut </span>Node,
-    <span class="kw-2">mut </span>prefix: <span class="kw-2">&amp;</span>str,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">pub fn </span>generate_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, <span class="kw-2">mut </span>prefix: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// If node doesn't already have an id, and can
     // but isn't a _Capture_ node (which ultimately should disappear)
     </span><span class="kw">let </span>qname = get_node_qname(node);
@@ -6565,11 +6488,7 @@
   // THESE SHOULD BE PART OF A COMMON BASE CLASS; DUPLICATED IN Post::Document
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  </span><span class="kw">pub fn </span>replace_tree(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    new: Node,
-    old: Node,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
+  </span><span class="kw">pub fn </span>replace_tree(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new: Node, old: Node) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>parent) = old.get_parent() {
       <span class="kw">let </span><span class="kw-2">mut </span>following = VecDeque::new(); <span class="comment">// Collect the matching and following nodes
       </span><span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>sib) = parent.get_last_child() {
@@ -6711,7 +6630,6 @@
   <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;SymStr&gt; { <span class="self">self </span>}
 }
 
-
 <span class="comment">// containment checks are package-level (and maybe can be moved in a new submodule?)
 
 </span><span class="kw">pub fn </span>can_contain(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
@@ -6725,25 +6643,18 @@
   model::can_contain_sym(tag, child_tag)
 }
 
-<span class="kw">pub fn </span>can_contain_qname(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool {
-  model::can_contain(tag, child)
-}
+<span class="kw">pub fn </span>can_contain_qname(tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str) -&gt; bool { model::can_contain(tag, child) }
 
 <span class="kw">pub fn </span>node_can_contain_sym(node: <span class="kw-2">&amp;</span>Node, child: SymStr) -&gt; bool {
   <span class="kw">let </span>tag = model::get_node_qname(node);
   model::can_contain_sym(tag, child)
 }
-<span class="kw">pub fn </span>can_contain_qsym(tag: SymStr, child: SymStr) -&gt; bool {
-  model::can_contain_sym(tag, child)
-}
+<span class="kw">pub fn </span>can_contain_qsym(tag: SymStr, child: SymStr) -&gt; bool { model::can_contain_sym(tag, child) }
 
 <span class="doccomment">/// Can an element with (qualified name) `tag` contain a `childtag` element indirectly?
 /// That is, by openning some number of autoOpen'able tags?
 /// And if so, return the tag to open.
-</span><span class="kw">pub fn </span>can_contain_indirect(
-  tag: SymStr,
-  child: SymStr,
-) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
+</span><span class="kw">pub fn </span>can_contain_indirect(tag: SymStr, child: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
   <span class="comment">// $tag = $model-&gt;getNodeQName($tag) if ref $tag;          // In case tag is a
   // node. $child = $model-&gt;getNodeQName($child) if ref $child;    // In case
   // child is a node.
@@ -6751,7 +6662,7 @@
     <span class="kw">let </span>i_model = state::compute_indirect_model();
     state::set_indirect_model(i_model);
   }
-  state::get_indirect_model_relationship(tag,child)
+  state::get_indirect_model_relationship(tag, child)
 }
 
 <span class="kw">pub fn </span>can_contain_node_somehow(node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
@@ -6769,18 +6680,14 @@
 /// - `None`: There is no known structure that allows `child` as a descendant of `tag`
 /// - `Some(None)`: `child` is directly allowed inside `tag`
 /// - `Some(Some(inter_tag))`: `child` is allowed inside `inter_tag`, which is allowed in `tag`
-/// 
+///
 /// This could also (maybe more naturally?) be represented with a custom 3-valued enum.
 /// That said, I think it may be wiser to refactor the method entirely, always requiring a `bool`
 /// check, followed by an explicit request for the `inner_tag` name, which can be `Option&lt;SymStr&gt;`.
-</span><span class="kw">pub fn </span>sym_can_contain_somehow(
-  tag: SymStr,
-  child: SymStr,
-) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
+</span><span class="kw">pub fn </span>sym_can_contain_somehow(tag: SymStr, child: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SymStr&gt;&gt; {
   <span class="kw">match </span>model::can_contain_sym(tag, child) {
     <span class="bool-val">true </span>=&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>),
-    <span class="bool-val">false </span>=&gt; can_contain_indirect(tag, child)
-      .map(<span class="prelude-val">Some</span>)
+    <span class="bool-val">false </span>=&gt; can_contain_indirect(tag, child).map(<span class="prelude-val">Some</span>),
   }
 }
 
@@ -6791,10 +6698,7 @@
 <span class="kw">pub fn </span>can_have_attribute(tag: <span class="kw-2">&amp;</span>str, attrib: <span class="kw-2">&amp;</span>str) -&gt; bool {
   model::can_have_attribute(arena::pin(tag), arena::pin(attrib))
 }
-<span class="kw">pub fn </span>sym_can_have_attribute(
-  tag: SymStr,
-  attrib: SymStr,
-) -&gt; bool {
+<span class="kw">pub fn </span>sym_can_have_attribute(tag: SymStr, attrib: SymStr) -&gt; bool {
   model::can_have_attribute(tag, attrib)
 }
 
@@ -6815,13 +6719,13 @@
         <span class="kw">if </span>node.has_attribute(<span class="string">"_autoclose"</span>) {
           <span class="bool-val">true
         </span>} <span class="kw">else </span>{
-          state::with_tag_property(get_node_qname(node), |props_opt|
+          state::with_tag_property(get_node_qname(node), |props_opt| {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(props) = props_opt {
               props.auto_close.unwrap_or(<span class="bool-val">false</span>)
             } <span class="kw">else </span>{
               <span class="bool-val">false
             </span>}
-          )
+          })
         }
       } <span class="kw">else </span>{
         <span class="bool-val">false
@@ -6831,14 +6735,13 @@
   }
 }
 <span class="doccomment">/// Get the node's qualified name in standard form.
-/// 
+///
 /// Ie. using the registered prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
 /// NOTE: Should Deprecate! (use model)
-</span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr {
-  model::get_node_qname(node)
-}
+</span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr { model::get_node_qname(node) }
 <span class="kw">pub fn </span>with_node_qname&lt;R, FnR&gt;(node: <span class="kw-2">&amp;</span>Node, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
   model::with_node_qname(node, caller)
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

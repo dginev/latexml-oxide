@@ -167,25 +167,30 @@
 <a href="#166" id="166">166</a>
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Glue
-//! 
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Glue
+//!
 //! Core TeX Implementation for LaTeXML
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<span class="kw">static </span>UNICODE_EM_SPACES : [(f64,char); <span class="number">7</span>] = [ <span class="comment">// Spaces to fake spacing, with width in ems
-  </span>(<span class="number">0.100</span>, <span class="string">'\u{200A}'</span>),    <span class="comment">// Hair space (thinner than thin space)
-  </span>(<span class="number">0.167</span>, <span class="string">'\u{2006}'</span>),    <span class="comment">// six-per-em
-  </span>(<span class="number">0.200</span>, <span class="string">'\u{2009}'</span>),    <span class="comment">// five-per-em, thin space
-  </span>(<span class="number">0.250</span>, <span class="string">'\u{2005}'</span>),    <span class="comment">// four-per-em, mid space
-  </span>(<span class="number">0.333</span>, <span class="string">'\u{2004}'</span>),    <span class="comment">// three-per-em, thick space
-  </span>(<span class="number">0.500</span>, <span class="string">'\u{2002}'</span>),    <span class="comment">// en-quad, "nut"
-  </span>(<span class="number">1.000</span>, <span class="string">'\u{2003}'</span>),    <span class="comment">// em-quad, "mutton"
+<span class="kw">static </span>UNICODE_EM_SPACES: [(f64, char); <span class="number">7</span>] = [
+  <span class="comment">// Spaces to fake spacing, with width in ems
+  </span>(<span class="number">0.100</span>, <span class="string">'\u{200A}'</span>), <span class="comment">// Hair space (thinner than thin space)
+  </span>(<span class="number">0.167</span>, <span class="string">'\u{2006}'</span>), <span class="comment">// six-per-em
+  </span>(<span class="number">0.200</span>, <span class="string">'\u{2009}'</span>), <span class="comment">// five-per-em, thin space
+  </span>(<span class="number">0.250</span>, <span class="string">'\u{2005}'</span>), <span class="comment">// four-per-em, mid space
+  </span>(<span class="number">0.333</span>, <span class="string">'\u{2004}'</span>), <span class="comment">// three-per-em, thick space
+  </span>(<span class="number">0.500</span>, <span class="string">'\u{2002}'</span>), <span class="comment">// en-quad, "nut"
+  </span>(<span class="number">1.000</span>, <span class="string">'\u{2003}'</span>), <span class="comment">// em-quad, "mutton"
 </span>];
 <span class="doccomment">/// String of spacing chars with width roughly equivalent to $dimen
 </span><span class="kw">fn </span>dimension_to_spaces(dimen: Dimension) -&gt; String {
-  <span class="kw">let </span>fs      = lookup_font().unwrap().get_size().unwrap_or(<span class="number">1.0</span>);    <span class="comment">// 1 em
-  </span><span class="kw">let </span><span class="kw-2">mut </span>ems     = dimen.pt_value(<span class="prelude-val">None</span>) / fs;
-  <span class="kw">let </span><span class="kw-2">mut </span>s       = String::default();
-  <span class="kw">for </span>(w,space_char) <span class="kw">in </span>UNICODE_EM_SPACES.into_iter().rev() {
+  <span class="kw">let </span>fs = lookup_font().unwrap().get_size().unwrap_or(<span class="number">1.0</span>); <span class="comment">// 1 em
+  </span><span class="kw">let </span><span class="kw-2">mut </span>ems = dimen.pt_value(<span class="prelude-val">None</span>) / fs;
+  <span class="kw">let </span><span class="kw-2">mut </span>s = String::default();
+  <span class="kw">for </span>(w, space_char) <span class="kw">in </span>UNICODE_EM_SPACES.into_iter().rev() {
     <span class="kw">if </span>ems &lt;= <span class="number">0.0 </span>{
       <span class="kw">break</span>;
     }
@@ -199,7 +204,6 @@
   }
   s
 }
-
 
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -224,19 +228,10 @@
     <span class="kw">let </span>parent = document.get_node();
     <span class="comment">//    Debug("HSKIP ".ToString($length)." at ".$document-&gt;getNodeQName($parent));
     </span><span class="kw">if </span>document::with_node_qname(parent, |name| name == <span class="string">"svg:g"</span>) {
-      <span class="macro">todo!</span>();
-  <span class="comment">//     if (my $x = $length-&gt;pxValue) {
-  //       # HACK HACK HACK
-  //       my $transform = $parent-&gt;getAttribute('transform');
-  //       $parent-&gt;setAttribute(transform =&gt; ($transform ? $transform . ' ' : '') . "translate($x,0)");
-  //   } }
-  //   elsif (inSVG()) {
-  //     Warn('unexpected', 'kern', $_[0], "Lost hskip in SVG " . ToString($length)); }
-  //   elsif ($props{isMath}) {
-  //     $document-&gt;insertElement('ltx:XMHint', undef, width =&gt; $length); }
+      <span class="macro">todo!</span>(); <span class="comment">// copy over perl
     </span>} <span class="kw">else </span>{
-      document.absorb_string(<span class="kw-2">&amp;</span>dimension_to_spaces(length), <span class="kw-2">&amp;</span>SymHashMap::default())<span class="question-mark">?</span>; 
-    } 
+      document.absorb_string(<span class="kw-2">&amp;</span>dimension_to_spaces(length), <span class="kw-2">&amp;</span>SymHashMap::default())<span class="question-mark">?</span>;
+    }
   },
   properties =&gt; sub[args] {
     <span class="macro">unref!</span>(args =&gt; length);
@@ -244,7 +239,6 @@
       <span class="string">"width" </span>=&gt; length, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"isSkip" </span>=&gt; <span class="bool-val">true</span>))
   });
 
- 
   <span class="comment">//======================================================================
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
@@ -272,37 +266,52 @@
         comments.push(last_box);
       } <span class="kw">else if </span>last_box.get_property_bool(<span class="string">"isSkip"</span>) {
         <span class="kw">break</span>;
-      } <span class="kw">else </span>{ <span class="comment">// return a non-skip box to the list.
+      } <span class="kw">else </span>{
+        <span class="comment">// return a non-skip box to the list.
         </span>push_box_list(last_box);
         <span class="kw">break</span>;
       }
     }
   });
-  
+
   <span class="comment">//======================================================================
   // Horizontal skips
   //----------------------------------------------------------------------
-  // \hfil             d  inserts first order infinitely stretchable horizontal glue in a horizontal or math list.
-  // \hfill            d  inserts second order infinitely stretchable horizontal glue in a horizontal or math list.
-  // \hfilneg          d  cancels the stretchability of \hfil.
-  // \hss              d  inserts infinitely stretchable and shrinkable horizontal glue in a horizontal or math list.
+  // \hfil             d  inserts first order infinitely stretchable horizontal glue in a horizontal
+  // or math list. \hfill            d  inserts second order infinitely stretchable horizontal
+  // glue in a horizontal or math list. \hfilneg          d  cancels the stretchability of \hfil.
+  // \hss              d  inserts infinitely stretchable and shrinkable horizontal glue in a
+  // horizontal or math list.
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\hss"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\hfilneg"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\hfil"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">" "</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>)),
-    <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"isFill" </span>=&gt; <span class="bool-val">true</span>))});
+    Tbox::new(
+      arena::pin_static(<span class="string">" "</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"isFill" </span>=&gt; <span class="bool-val">true</span>),
+    )
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\hfill"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">" "</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfill"</span>)),
-    <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"isFill" </span>=&gt; <span class="bool-val">true</span>)) });
+    Tbox::new(
+      arena::pin_static(<span class="string">" "</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfill"</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"isFill" </span>=&gt; <span class="bool-val">true</span>),
+    )
+  });
 
   <span class="comment">//======================================================================
   // Vertical skips
   //----------------------------------------------------------------------
-  // \vfil             d  inserts first order infinitely stretchable vertical glue in a vertical list.
-  // \vfill            d  inserts second order infinitely stretchable vertical glue in a vertical list.
-  // \vfilneg          d  cancels the stretchability of \vfil.
-  // \vss              d  insert infinitely stretchable and shrinkable vertical glue in a vertical list.
-  
+  // \vfil             d  inserts first order infinitely stretchable vertical glue in a vertical
+  // list. \vfill            d  inserts second order infinitely stretchable vertical glue in a
+  // vertical list. \vfilneg          d  cancels the stretchability of \vfil.
+  // \vss              d  insert infinitely stretchable and shrinkable vertical glue in a vertical
+  // list.
+
   // Stuff to ignore for now...
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\vfil"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\vfill"</span>, <span class="prelude-val">None</span>);
@@ -320,7 +329,7 @@
       <span class="kw">for </span>box_in_list <span class="kw">in </span>box_iter {
         <span class="kw">if </span>!<span class="macro">matches!</span>(box_in_list.data(), DigestedData::Comment(<span class="kw">_</span>)) {
           <span class="kw">if </span>box_in_list.get_property_bool(<span class="string">"isSkip"</span>) {
-            <span class="kw">let </span>width_stored = box_in_list.get_property(<span class="string">"width"</span>).unwrap(); 
+            <span class="kw">let </span>width_stored = box_in_list.get_property(<span class="string">"width"</span>).unwrap();
             <span class="kw">if let </span>Stored::Dimension(<span class="kw-2">ref </span>width_d) = <span class="kw-2">*</span>width_stored {
               <span class="kw">return </span><span class="kw-2">*</span>width_d;
             } <span class="kw">else </span>{
@@ -334,5 +343,5 @@
       Dimension::new(<span class="number">0</span>)
     })
   });
-
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

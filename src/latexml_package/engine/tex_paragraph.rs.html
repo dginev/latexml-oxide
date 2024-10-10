@@ -192,7 +192,7 @@
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Paragraph
-//! 
+//!
 //! Core TeX Implementation for LaTeXML
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>latexml_core::document::helpers::prune_empty_para;
@@ -205,8 +205,8 @@
   //======================================================================
   // Spacing tweaks
   //----------------------------------------------------------------------
-  // \ignorespaces           c  makes TeX read and expand tokens but do nothing until a nonspace token is reached.
-  // \noboundary             c  if present, breaks ligatures and kerns.
+  // \ignorespaces           c  makes TeX read and expand tokens but do nothing until a nonspace
+  // token is reached. \noboundary             c  if present, breaks ligatures and kerns.
   // \vadjust                c  inserts a vertical list between two lines in a paragraph.
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ignorespaces SkipSpaces"</span>, <span class="prelude-val">None</span>);
@@ -222,7 +222,7 @@
   // \indent                 c  begins a new paragraph indented by \parindent.
   // \noindent               c  begins a new paragraph that is not indented.
   // \par                    c  is an explicit command to end a paragraph.
-  </span><span class="macro">DefRegister!</span>(<span class="string">"\\everypar"</span>, <span class="macro">Tokens!</span>());  
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\everypar"</span>, <span class="macro">Tokens!</span>());
   <span class="comment">// These determine whether the _next_ paragraph gets indented!
   // thus it needs \par to check whether such indentation has been set.
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\indent"</span>, sub[document] {
@@ -252,7 +252,7 @@
     </span>}
   });
 
-    <span class="comment">// &lt;ltx:para&gt; represents a Logical Paragraph, whereas &lt;ltx:p&gt; is a `physical paragraph'.
+  <span class="comment">// &lt;ltx:para&gt; represents a Logical Paragraph, whereas &lt;ltx:p&gt; is a `physical paragraph'.
   // A para can contain both p and displayed equations and such.
 
   // Remember; \par _closes_, not opens, paragraphs!
@@ -262,7 +262,7 @@
   // ignored in the preamble.
   </span><span class="kw">let </span><span class="kw-2">mut </span>skippable_props: SymHashMap&lt;Stored&gt; = SymHashMap::default();
   skippable_props.insert(<span class="string">"alignmentSkippable"</span>, Stored::Bool(<span class="bool-val">true</span>));
-    
+
   <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@normal@par"</span>,
     sub[document, _args, props] {
       <span class="kw">if </span>!<span class="macro">prop_bool!</span>(props, <span class="string">"inPreamble"</span>) {
@@ -336,29 +336,31 @@
   <span class="comment">//======================================================================
   // Paragraph Shape
   //----------------------------------------------------------------------
-  // \prevgraf               iq is the number of lines in the paragraph most recently completed or partially completed.
-  // \spacefactor            iq controls interword spacing.
+  // \prevgraf               iq is the number of lines in the paragraph most recently completed or
+  // partially completed. \spacefactor            iq controls interword spacing.
   // \emergencystretch       pd is glue used in the third pass made for bad paragraphs.
   // \hangindent             pd is the amount of hanging indentation.
   // \hsize                  pd is the width of normal lines in a paragraph.
   // \lineskiplimit          pd is the cutoff used to select between \baselineskip and \lineskip.
   // \parindent              pd is the width of indentation at the beginning of a paragraph.
-  // \baselineskip           pg is glue added between lines to keep their baselines consistently spaced.
-  // \leftskip               pg is glue added at the left of every line in a paragraph.
+  // \baselineskip           pg is glue added between lines to keep their baselines consistently
+  // spaced. \leftskip               pg is glue added at the left of every line in a paragraph.
   // \rightskip              pg is glue added at the right of every line in a paragraph.
-  // \lineskip               pg is alternate interline glue used if the \baselineskip glue is not feasible   .
-  // \parskip                pg is extra glue put between paragraphs.
+  // \lineskip               pg is alternate interline glue used if the \baselineskip glue is not
+  // feasible   . \parskip                pg is extra glue put between paragraphs.
   // \parfillskip            pg is glue which finishs the last line of a paragraph.
   // \spaceskip              pg is alternate interword glue.
   // \xspaceskip             pg is alternate intersentence glue.
   // \adjdemerits            pi holds the demerits for visually incompatible adjacent lines.
-  // \doublehyphendemerits   pi holds the demerits added if two consecutive lines end with discretionary breaks.
-  // \finalhyphendemerits    pi holds the demerits added if the penultimate line in a paragraph ends with a discretionary break.
-  // \hangafter              pi is the number of lines before hanging indentation changes.
-  // \looseness              pi tells TeX to try and increase or decrease the number of lines in a paragraph.
-  
+  // \doublehyphendemerits   pi holds the demerits added if two consecutive lines end with
+  // discretionary breaks. \finalhyphendemerits    pi holds the demerits added if the penultimate
+  // line in a paragraph ends with a discretionary break. \hangafter              pi is the number
+  // of lines before hanging indentation changes. \looseness              pi tells TeX to try and
+  // increase or decrease the number of lines in a paragraph.
+
   // \tolerance              pi is the acceptable \badness of lines after hyphenation.
-  // \pretolerance           pi is the acceptable \badness of lines in a paragraph before hyphenation is attempted.
+  // \pretolerance           pi is the acceptable \badness of lines in a paragraph before
+  // hyphenation is attempted.
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\spacefactor"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\prevgraf"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\emergencystretch"</span>, <span class="macro">Dimension!</span>(<span class="string">"0"</span>));
@@ -381,6 +383,5 @@
   <span class="macro">DefRegister!</span>(<span class="string">"\\looseness"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\tolerance"</span>, <span class="macro">Number!</span>(<span class="number">200</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\pretolerance"</span>, <span class="macro">Number!</span>(<span class="number">100</span>));
-
-
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

@@ -307,15 +307,18 @@
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a></pre></div><pre class="rust"><code><span class="kw">use </span>latexml_core::common::error::<span class="kw-2">*</span>;
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a></pre></div><pre class="rust"><code><span class="kw">use </span>latexml_core::common::arena;
+<span class="kw">use </span>latexml_core::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span>latexml_core::common::object::Object;
-<span class="kw">use </span>latexml_core::common::arena;
 <span class="kw">use </span>latexml_core::common::{Config, DataSize, OutputFormat};
 <span class="kw">use </span>latexml_core::digested::Digested;
 <span class="kw">use </span>latexml_core::document::Document;
 <span class="kw">use </span>latexml_core::list::List;
 <span class="kw">use </span>latexml_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
-<span class="kw">use </span>latexml_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut};
+<span class="kw">use </span>latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report, report_mut, s};
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::core_interface::DigestionAPI;
@@ -323,20 +326,20 @@
 <span class="kw">const </span>CONVERTER_IDENTITY: <span class="kw-2">&amp;</span>str = <span class="string">"latexml_oxide (v0.4.0)"</span>;
 
 <span class="kw">pub struct </span>ConversionResponse {
-  <span class="kw">pub </span>result: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>log: String,
-  <span class="kw">pub </span>status: String,
+  <span class="kw">pub </span>result:      <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>log:         String,
+  <span class="kw">pub </span>status:      String,
   <span class="kw">pub </span>status_code: usize,
 }
 <span class="kw">pub struct </span>Runtime {
-  <span class="kw">pub </span>status: String,
+  <span class="kw">pub </span>status:      String,
   <span class="kw">pub </span>status_code: usize,
 }
 <span class="kw">pub struct </span>Converter {
   runtime: Runtime,
-  ready: bool,
-  opts: Config,
-  core: Core,
+  ready:   bool,
+  opts:    Config,
+  core:    Core,
 }
 
 <span class="kw">impl </span>Converter {
@@ -344,7 +347,7 @@
   </span><span class="kw">pub fn </span>from_config(opts: Config) -&gt; Converter {
     Converter {
       runtime: Runtime {
-        status: String::new(),
+        status:      String::new(),
         status_code: <span class="number">3</span>,
       },
       ready: <span class="bool-val">false</span>,
@@ -383,9 +386,9 @@
       }
       <span class="kw">if </span>!<span class="self">self</span>.ready {
         <span class="kw">return </span>ConversionResponse {
-          result: <span class="prelude-val">None</span>,
-          log: <span class="self">self</span>.flush_log(),
-          status: <span class="macro">s!</span>(<span class="string">"Initialization failed."</span>),
+          result:      <span class="prelude-val">None</span>,
+          log:         <span class="self">self</span>.flush_log(),
+          status:      <span class="macro">s!</span>(<span class="string">"Initialization failed."</span>),
           status_code: <span class="number">3</span>,
         };
       }
@@ -493,9 +496,9 @@
           <span class="prelude-val">Ok</span>(tex) =&gt; tex,
           <span class="prelude-val">Err</span>(e) =&gt; {
             <span class="kw">return </span>ConversionResponse {
-              result: <span class="prelude-val">None</span>,
-              log: <span class="self">self</span>.flush_log(),
-              status: <span class="macro">s!</span>(<span class="string">"fatal:untex:{:?}"</span>, e),
+              result:      <span class="prelude-val">None</span>,
+              log:         <span class="self">self</span>.flush_log(),
+              status:      <span class="macro">s!</span>(<span class="string">"fatal:untex:{:?}"</span>, e),
               status_code: <span class="number">3</span>,
             };
           },
@@ -514,7 +517,10 @@
           <span class="prelude-val">Ok</span>(dom) =&gt; dom.serialize_to_string(),
           <span class="prelude-val">Err</span>(e) =&gt; {
             <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
-            <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"document"</span>, <span class="string">"convert"</span>, message); <span class="prelude-val">Ok</span>(()) };
+            <span class="kw">let </span>err = || {
+              <span class="macro">Error!</span>(<span class="string">"document"</span>, <span class="string">"convert"</span>, message);
+              <span class="prelude-val">Ok</span>(())
+            };
             err().ok();
             String::new()
           },
@@ -592,7 +598,7 @@
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
     </span><span class="kw">if </span><span class="self">self</span>.opts.verbosity &gt;= <span class="number">0 </span>{
-      <span class="macro">Info!</span>(<span class="string">"arena"</span>,<span class="string">"strings_allocated"</span>, arena::len());
+      <span class="macro">Info!</span>(<span class="string">"arena"</span>, <span class="string">"strings_allocated"</span>, arena::len());
     }
     <span class="macro">Info!</span>(<span class="string">"status"</span>, <span class="string">"conversion"</span>, <span class="self">self</span>.runtime.status_code);
     <span class="kw">let </span>log = <span class="self">self</span>.flush_log();

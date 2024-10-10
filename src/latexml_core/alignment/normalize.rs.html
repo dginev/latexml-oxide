@@ -461,46 +461,44 @@
 <a href="#460" id="460">460</a>
 <a href="#461" id="461">461</a>
 <a href="#462" id="462">462</a>
-<a href="#463" id="463">463</a>
-<a href="#464" id="464">464</a>
-<a href="#465" id="465">465</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::template::Align;
-<span class="kw">use </span><span class="kw">super</span>::Alignment;
+<a href="#463" id="463">463</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::Alignment;
+<span class="kw">use </span><span class="kw">super</span>::template::Align;
+<span class="kw">use </span><span class="kw">crate</span>::BoxOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::digested::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
-<span class="kw">use </span><span class="kw">crate</span>::BoxOps;
 <span class="kw">use </span>std::collections::VecDeque;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 
 <span class="doccomment">/// Normalize an alignment before construction
-/// 
+///
 /// * consolodating column &amp; row spanning information
 /// * scanning for empty rows &amp; columns and collapsing them (while accounting for spanning, and
 ///   copying borders appropriately)
-/// 
+///
 /// Note that a trailing \\ in allignment (often needed to effect \hline)
 ///    causes an empty row at the end. Other fancy layout fine-tuning often
 ///    involves adding extra rows &amp; columsn for spacing.  HTML's table model
 ///    is more forgiving that TeX's, so we don't need these extras
 ///    and, in fact, they often mess up the html layout!
-/// 
+///
 /// However, math alignments, and those with expected structure (eg. eqnarray)
 ///    should generally NOT have rows &amp; columns collapsed --- except the last row!
 ///
 /// Also note the inconsistency between TeX &amp; HTML's table models regarding spans.
-/// 
+///
 /// \multicolumn creates a cell that covers a certain number of columns
 ///     which are then omitted from the LaTeX AND the HTML.
-/// 
+///
 /// OTOH, \multirow creates a cell which overlaps following rows!
-/// 
+///
 /// The &amp; is still needed to allocate the cells in those rows.
 /// And in fact they need not even be empty! TeX will just pile them up!
-/// 
+///
 /// However, in HTML the spanned rows ARE omitted!
 </span><span class="kw">pub fn </span>normalize_alignment(alignment: <span class="kw-2">&amp;mut </span>Alignment) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>!alignment.is_normalized {
@@ -521,11 +519,9 @@
     <span class="comment">// Do we need to account for any space in the $$row{before} or $$row{after}?
     </span><span class="kw">for </span>cell <span class="kw">in </span>row.get_columns_mut() {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>boxes) = <span class="kw-2">&amp;mut </span>cell.boxes {
-        <span class="kw">let </span>(w, h, d, cw, _ch, _cd) = boxes.get_size(
-          <span class="prelude-val">Some</span>(<span class="macro">stored_map!</span>(
+        <span class="kw">let </span>(w, h, d, cw, _ch, _cd) = boxes.get_size(<span class="prelude-val">Some</span>(<span class="macro">stored_map!</span>(
             <span class="string">"align" </span>=&gt; cell.align.map(|a| a.char_code()), <span class="string">"width" </span>=&gt; cell.width,
-            <span class="string">"vattach" </span>=&gt; cell.vattach.clone() )),
-              )<span class="question-mark">?</span>;
+            <span class="string">"vattach" </span>=&gt; cell.vattach.clone() )))<span class="question-mark">?</span>;
         <span class="comment">// Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width
         // vattach))     . ") size " . showSize($w,  $h,  $d)
         //     . " csize " . showSize($cw, $ch, $cd)
@@ -576,7 +572,7 @@
         filtered.push_back(row);
         <span class="kw">continue</span>;
       } <span class="comment">// don't remove inner rows from math EXCEPT last row!!
-        // let (mut pruneh, mut pruned) = (0, 0);
+      // let (mut pruneh, mut pruned) = (0, 0);
       </span><span class="kw">for </span>(j, col) <span class="kw">in </span>row.get_columns().iter().enumerate() {
         <span class="comment">// TODO: add cached_height and cached_depth
         // if let Some(cached_height) = col.cached_height {
@@ -764,13 +760,13 @@
         }
       }
       <span class="kw">if </span>j &gt; <span class="number">0 </span>{ <span class="comment">// If not 1st row, add right padding to previous column
-         //         foreach my $row (@rows) {
-         //           if (my $col = $$row{columns}[$j - 1]) {
-         //             $$col{rpadding} = Dimension($prunew); } } }
-         //       else {       // Else add left padding to (newly) first column
-         //         foreach my $row (@rows) {    // And add the padding to previous column
-         //           if (my $col = $$row{columns}[0]) {
-         //             $$col{lpadding} = Dimension($prunew); } } }
+        //         foreach my $row (@rows) {
+        //           if (my $col = $$row{columns}[$j - 1]) {
+        //             $$col{rpadding} = Dimension($prunew); } } }
+        //       else {       // Else add left padding to (newly) first column
+        //         foreach my $row (@rows) {    // And add the padding to previous column
+        //           if (my $col = $$row{columns}[0]) {
+        //             $$col{lpadding} = Dimension($prunew); } } }
       </span>}
     }
   }
@@ -847,7 +843,7 @@
     <span class="comment">// NOTE: Should be storing column widths to; individually, as well as per-column!
     </span>rowheights.push(rowh + rowd);
   } <span class="comment">// somehow our heights are way too short????
-    // Now compute the positions
+  // Now compute the positions
   </span><span class="kw">let </span><span class="kw-2">mut </span>rowpos = Vec::new();
   <span class="kw">let </span><span class="kw-2">mut </span>colpos = Vec::new();
   <span class="kw">let </span><span class="kw-2">mut </span>y = <span class="number">0</span>;

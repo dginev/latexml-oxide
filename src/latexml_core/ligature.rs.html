@@ -44,8 +44,7 @@
 <a href="#43" id="43">43</a>
 <a href="#44" id="44">44</a>
 <a href="#45" id="45">45</a>
-<a href="#46" id="46">46</a>
-<a href="#47" id="47">47</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<a href="#46" id="46">46</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
 
@@ -55,14 +54,13 @@
 
 <span class="kw">pub type </span>LigatureClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; String&gt;;
 <span class="kw">pub type </span>FontTestClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>Font) -&gt; bool&gt;;
-<span class="kw">pub type </span>LigatureMatcher = Rc&lt;
-  <span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;(usize, String, MathLigatureOptions)&gt;&gt;,
-&gt;;
+<span class="kw">pub type </span>LigatureMatcher =
+  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;(usize, String, MathLigatureOptions)&gt;&gt;&gt;;
 
 <span class="attr">#[derive(Debug, Default, Clone, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>MathLigatureOptions {
-  <span class="kw">pub </span>role: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>role:    <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>name:    <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="kw">pub </span>meaning: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
@@ -78,11 +76,11 @@
 
 <span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>Ligature {
-  <span class="kw">pub </span>id: usize,
-  <span class="kw">pub </span>regex: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>code: <span class="prelude-ty">Option</span>&lt;LigatureClosure&gt;,
+  <span class="kw">pub </span>id:        usize,
+  <span class="kw">pub </span>regex:     <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>code:      <span class="prelude-ty">Option</span>&lt;LigatureClosure&gt;,
   <span class="kw">pub </span>font_test: <span class="prelude-ty">Option</span>&lt;FontTestClosure&gt;,
-  <span class="kw">pub </span>matcher: <span class="prelude-ty">Option</span>&lt;LigatureMatcher&gt;,
+  <span class="kw">pub </span>matcher:   <span class="prelude-ty">Option</span>&lt;LigatureMatcher&gt;,
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Ligature {

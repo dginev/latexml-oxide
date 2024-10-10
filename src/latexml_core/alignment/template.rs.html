@@ -336,10 +336,10 @@
 <a href="#335" id="335">335</a>
 <a href="#336" id="336">336</a></pre></div><pre class="rust"><code><span class="doccomment">//! Support for tabular/array environments
 </span><span class="kw">use </span><span class="kw">super</span>::cell::Cell;
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::token::Token;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt::{<span class="self">self</span>, Debug, Display};
@@ -504,38 +504,38 @@
 
 <span class="attr">#[derive(Debug, Clone, Default)]
 </span><span class="kw">pub struct </span>TemplateConfig {
-  <span class="kw">pub </span>repeating: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>pseudorow: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>repeating:     <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>pseudorow:     <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>non_repeating: usize,
-  <span class="kw">pub </span>repeated: Vec&lt;Cell&gt;,
-  <span class="kw">pub </span>reversion: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-  <span class="kw">pub </span>columns: <span class="prelude-ty">Option</span>&lt;Vec&lt;Cell&gt;&gt;,
-  <span class="kw">pub </span>tokens: <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt;,
-  <span class="kw">pub </span>save_before: <span class="prelude-ty">Option</span>&lt;VecDeque&lt;Token&gt;&gt;,
-  <span class="kw">pub </span>save_between: <span class="prelude-ty">Option</span>&lt;VecDeque&lt;Token&gt;&gt;,
+  <span class="kw">pub </span>repeated:      Vec&lt;Cell&gt;,
+  <span class="kw">pub </span>reversion:     <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+  <span class="kw">pub </span>columns:       <span class="prelude-ty">Option</span>&lt;Vec&lt;Cell&gt;&gt;,
+  <span class="kw">pub </span>tokens:        <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt;,
+  <span class="kw">pub </span>save_before:   <span class="prelude-ty">Option</span>&lt;VecDeque&lt;Token&gt;&gt;,
+  <span class="kw">pub </span>save_between:  <span class="prelude-ty">Option</span>&lt;VecDeque&lt;Token&gt;&gt;,
 }
 
 <span class="attr">#[derive(Debug, Clone, Default, PartialEq)]
 </span><span class="kw">pub struct </span>Template {
-  repeating: bool,
-  pseudorow: bool,
-  non_repeating: usize,
-  repeated: Vec&lt;Cell&gt;,
-  reversion: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-  columns: Vec&lt;Cell&gt;,
-  <span class="kw">pub </span>tokens: Vec&lt;Token&gt;,
-  padding: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>top_padding: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  repeating:          bool,
+  pseudorow:          bool,
+  non_repeating:      usize,
+  repeated:           Vec&lt;Cell&gt;,
+  reversion:          <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+  columns:            Vec&lt;Cell&gt;,
+  <span class="kw">pub </span>tokens:         Vec&lt;Token&gt;,
+  padding:            <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>top_padding:    <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
   <span class="kw">pub </span>bottom_padding: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>before: VecDeque&lt;Digested&gt;,
-  <span class="kw">pub </span>after: VecDeque&lt;Digested&gt;,
-  save_before: VecDeque&lt;Token&gt;,
-  save_between: VecDeque&lt;Token&gt;,
-  <span class="kw">pub </span>cached_width: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>cached_height: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>cached_depth: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>x: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>y: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>before:         VecDeque&lt;Digested&gt;,
+  <span class="kw">pub </span>after:          VecDeque&lt;Digested&gt;,
+  save_before:        VecDeque&lt;Token&gt;,
+  save_between:       VecDeque&lt;Token&gt;,
+  <span class="kw">pub </span>cached_width:   <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>cached_height:  <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>cached_depth:   <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>x:              <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>y:              <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>Template {

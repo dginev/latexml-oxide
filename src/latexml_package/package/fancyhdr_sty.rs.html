@@ -56,12 +56,11 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a></pre></div><pre class="rust"><code><span class="comment">// Thanks to Kim Philipp Jablonski &lt;kpjkpjkpjkpjkpjkpj@gmail.com&gt;      
-// of the arXMLiv group for initial implementation                     
-//    http://arxmliv.kwarc.info/                                       
-// Released under the Gnu Public License                               
-// Released to the Public Domain                                       
+<a href="#58" id="58">58</a></pre></div><pre class="rust"><code><span class="comment">// Thanks to Kim Philipp Jablonski &lt;kpjkpjkpjkpjkpjkpj@gmail.com&gt;
+// of the arXMLiv group for initial implementation
+//    http://arxmliv.kwarc.info/
+// Released under the Gnu Public License
+// Released to the Public Domain
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -69,50 +68,50 @@
   <span class="macro">DefMacro!</span>(<span class="string">"\\fancyhead[]{}"</span>, <span class="string">""</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\fancyfoot[]{}"</span>, <span class="string">""</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\fancyhf[]{}"</span>, <span class="string">""</span>);
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\fancyheadoffset[]{}"</span>, <span class="string">""</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\fancyfootoffset[]{}"</span>, <span class="string">""</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\fancyhfoffset[]{}"</span>, <span class="string">""</span>);
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\headrulewidth"</span>, <span class="string">"0.4pt"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\footrulewidth"</span>, <span class="string">"0pt"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\headruleskip"</span>,  <span class="string">"0pt"</span>); <span class="comment">// since 4.0
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\footruleskip"</span>,  <span class="string">".3\\normalbaselineskip"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\headrule"</span>,      <span class="string">""</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\footrule"</span>,      <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\headruleskip"</span>, <span class="string">"0pt"</span>); <span class="comment">// since 4.0
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\footruleskip"</span>, <span class="string">".3\\normalbaselineskip"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\headrule"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\footrule"</span>, <span class="string">""</span>);
   <span class="macro">DefRegister!</span>(<span class="string">"\\headwidth" </span>=&gt; Dimension(<span class="number">0</span>)); <span class="comment">// maybe need some other value here?
-  
+
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\fancyheadinit{}"</span>, <span class="string">""</span>); <span class="comment">// since 4.0
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\fancyfootinit{}"</span>, <span class="string">""</span>); <span class="comment">// since 4.0
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fancyhfinit{}"</span>, <span class="string">""</span>);   <span class="comment">// since 4.0
-  
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fancyhfinit{}"</span>, <span class="string">""</span>); <span class="comment">// since 4.0
+
   // not implemented yet: \fancycenter[][]{}{}{}, since 4.0
-  
+
   // always false as LaTeXML does not paginate
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\iffloatpage{}{}"</span>, <span class="string">"#2"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\iftopfloat{}{}"</span>, <span class="string">"#2"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\ifbotfloat{}{}"</span>, <span class="string">"#2"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\iffootnote{}{}"</span>, <span class="string">"#2"</span>); <span class="comment">// since 3.8
-  // DefConditional("\\iffootnote", undef);     # pre-3.8 implementation
-  
+
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\fancypagestyle{}[]{}"</span>, <span class="string">""</span>);
-  
+
   <span class="comment">// extramarks.sty not implemented, as its commands can only be used in headers and footers
-  
+
   // not defined outside of headers and footers
   // DefMacro!("\\nouppercase", "");
-  
+
   // deprecated commands
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\lhead[]{}"</span>, <span class="string">""</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\chead[]{}"</span>, <span class="string">""</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\rhead[]{}"</span>, <span class="string">""</span>);
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\lfoot[]{}"</span>, <span class="string">""</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\cfoot[]{}"</span>, <span class="string">""</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\rfoot[]{}"</span>, <span class="string">""</span>);
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\fancyplain{}{}"</span>, <span class="string">""</span>);
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\plainheadrulewidth"</span>, <span class="string">"0pt"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\plainfootrulewidth"</span>, <span class="string">"0pt"</span>);
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

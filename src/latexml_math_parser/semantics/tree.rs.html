@@ -890,11 +890,16 @@
 <a href="#889" id="889">889</a>
 <a href="#890" id="890">890</a>
 <a href="#891" id="891">891</a>
-<a href="#892" id="892">892</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<a href="#892" id="892">892</a>
+<a href="#893" id="893">893</a>
+<a href="#894" id="894">894</a>
+<a href="#895" id="895">895</a>
+<a href="#896" id="896">896</a>
+<a href="#897" id="897">897</a></pre></div><pre class="rust"><code><span class="kw">use </span>latexml_core::Info;
 <span class="kw">use </span>latexml_core::common::font::Font;
 <span class="kw">use </span>latexml_core::common::xml::element_nodes;
 <span class="kw">use </span>latexml_core::document::Document;
-<span class="kw">use </span>latexml_core::Info;
+<span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::cmp::Ordering;
@@ -902,9 +907,9 @@
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Display;
 
+<span class="kw">use </span><span class="kw">super</span>::ActionContext;
 <span class="kw">use </span><span class="kw">super</span>::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 <span class="kw">use </span><span class="kw">super</span>::metadata::Meta;
-<span class="kw">use </span><span class="kw">super</span>::ActionContext;
 <span class="kw">use </span><span class="kw">crate</span>::parser::{p_get_value, realize_xmnode};
 <span class="kw">use </span><span class="kw">crate</span>::pragmatics::ValidationPragmatics;
 
@@ -918,25 +923,25 @@
 /// during grammatical processing
 </span><span class="kw">pub struct </span>XProps {
   <span class="doccomment">/// text content of the node
-  </span><span class="kw">pub </span>content: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  </span><span class="kw">pub </span>content:   <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
   <span class="doccomment">/// grammatical role used during math parsing
-  </span><span class="kw">pub </span>role: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  </span><span class="kw">pub </span>role:      <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
   <span class="doccomment">/// conceptual meaning of a construct, used in disambiguation and Content output
-  </span><span class="kw">pub </span>meaning: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  </span><span class="kw">pub </span>meaning:   <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
   <span class="doccomment">/// similar to `meaning`, but more fixed, usually associated with constants
-  </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  </span><span class="kw">pub </span>name:      <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
   <span class="doccomment">/// script position w.r.t to baseline
   </span><span class="kw">pub </span>scriptpos: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
   <span class="doccomment">/// a unique identifier, in the `xml:id` sense
-  </span><span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  </span><span class="kw">pub </span>id:        <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
   <span class="doccomment">/// a pointer to a different node, usually for `XMRef`
-  </span><span class="kw">pub </span>idref: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  </span><span class="kw">pub </span>idref:     <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
   <span class="doccomment">/// an intermediate key to be fully realized as an id at a later time
-  </span><span class="kw">pub </span>xmkey: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  </span><span class="kw">pub </span>xmkey:     <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
   <span class="doccomment">/// an optional subtree-specific Font
-  </span><span class="kw">pub </span>font: <span class="prelude-ty">Option</span>&lt;Font&gt;,
+  </span><span class="kw">pub </span>font:      <span class="prelude-ty">Option</span>&lt;Font&gt;,
   <span class="doccomment">/// usually associated with the internal `_font` attribute references
-  </span><span class="kw">pub </span>fontref: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  </span><span class="kw">pub </span>fontref:   <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
 }
 <span class="kw">impl </span>Display <span class="kw">for </span>XProps {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
@@ -1036,7 +1041,7 @@
   <span class="kw">pub fn </span>unconstrain_recursive(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.<span class="number">0</span>.unconstrain_recursive(); }
 
   <span class="kw">fn </span>fmt_indented(<span class="kw-2">&amp;</span><span class="self">self</span>, level: <span class="kw-2">&amp;</span>[bool], f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
-    <span class="kw">if let </span>XM::Lexeme(<span class="kw">_</span>, <span class="kw">_</span>) = <span class="kw-2">&amp;*</span><span class="self">self</span>.<span class="number">0 </span>{
+    <span class="kw">if let </span>XM::Lexeme(..) = <span class="kw-2">&amp;*</span><span class="self">self</span>.<span class="number">0 </span>{
       <span class="self">self</span>.<span class="number">0</span>.fmt_indented(level, f)
     } <span class="kw">else </span>{
       <span class="kw">let </span>indent = <span class="kw">if </span>level.is_empty() {
@@ -1141,13 +1146,13 @@
       XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
       XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
       XM::Choices(cs) =&gt; cs[<span class="number">0</span>].get_meta_mut(), <span class="comment">// Should we return a none type instead?
-      </span>XM::Ref(<span class="kw">_</span>)| XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
+      </span>XM::Ref(<span class="kw">_</span>) | XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
     }
   }
   <span class="kw">pub fn </span>get_inner_meta(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Meta&gt; {
     <span class="kw">match </span><span class="self">self </span>{
       XM::Lexeme(_atom, meta) =&gt; <span class="macro">vec!</span>[meta],
-      XM::Apply(op, args, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[op.get_meta()]
+      XM::Apply(op, args, ..) =&gt; <span class="macro">vec!</span>[op.get_meta()]
         .into_iter()
         .chain(
           args
@@ -1157,7 +1162,7 @@
             .map(|arg| arg.as_ref().unwrap().get_meta()),
         )
         .collect(),
-      XM::Dual(content, presentation, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[content.get_meta(), presentation.get_meta()],
+      XM::Dual(content, presentation, ..) =&gt; <span class="macro">vec!</span>[content.get_meta(), presentation.get_meta()],
       <span class="kw">_ </span>=&gt; Vec::new(),
     }
   }
@@ -1174,7 +1179,7 @@
           }
         },
       },
-      XM::Apply(op, args, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; Cow::Owned(<span class="macro">format!</span>(
+      XM::Apply(op, args, ..) =&gt; Cow::Owned(<span class="macro">format!</span>(
         <span class="string">"{}{}"</span>,
         op.<span class="number">0</span>.get_value(nodes)<span class="question-mark">?</span>,
         args
@@ -1184,13 +1189,13 @@
           .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
           .join(<span class="string">""</span>)
       )),
-      XM::Choices(<span class="kw">_</span>)| XM::Arg(<span class="kw">_</span>)=&gt; <span class="macro">todo!</span>(),
-      XM::Dual(content, pres, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; Cow::Owned(<span class="macro">format!</span>(
+      XM::Choices(<span class="kw">_</span>) | XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
+      XM::Dual(content, pres, ..) =&gt; Cow::Owned(<span class="macro">format!</span>(
         <span class="string">"{}{}"</span>,
         content.get_value(nodes).expect(<span class="string">"inner"</span>),
         pres.get_value(nodes).expect(<span class="string">"inner"</span>)
       )),
-      XM::Wrap(args, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; Cow::Owned(
+      XM::Wrap(args, ..) =&gt; Cow::Owned(
         args
           .iter()
           .map(|a| a.get_value(nodes).expect(<span class="string">"oof"</span>))
@@ -1274,7 +1279,7 @@
           // (otherwise, it's already built in)
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>expr) = new_meta.curry_level {
             <span class="kw">match </span>expr {
-              CurryTerm::Add(<span class="kw">_</span>, <span class="kw">_</span>) | CurryTerm::Sub(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+              CurryTerm::Add(..) | CurryTerm::Sub(..) =&gt; {
                 new_meta.curry_constraints.insert(CurryConstraint((
                   expr.clone(),
                   Ordering::Greater,
@@ -1298,8 +1303,8 @@
         }
         <span class="prelude-val">Ok</span>(new_tree)
       },
-      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
-      XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
+      XM::Dual(..) =&gt; <span class="macro">todo!</span>(),
+      XM::Wrap(..) =&gt; <span class="macro">todo!</span>(),
       XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
       XM::Choices(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="string">"can not specialize choices"</span>.into()),
     }
@@ -1330,7 +1335,7 @@
   </span><span class="kw">pub fn </span>base_operator_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
     <span class="kw">match </span><span class="self">self </span>{
       XM::Lexeme(<span class="kw-2">ref </span>name, <span class="kw">_</span>) =&gt; name.to_string(),
-      XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+      XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, ..) =&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;*</span>op.<span class="number">0 </span>{
           XM::Lexeme(<span class="kw-2">ref </span>name, <span class="kw">_</span>) <span class="kw">if </span>name == <span class="string">"unknown.subscript" </span>=&gt; {
             <span class="kw">let </span>arg_base = args.<span class="number">0</span>.first().unwrap().as_ref().unwrap().clone();
@@ -1345,7 +1350,7 @@
             arg_base.base_operator_name()
           },
           XM::Lexeme(other, <span class="kw">_</span>) =&gt; other.to_string(),
-          XM::Apply(sub_other, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">format!</span>(<span class="string">"reduced__{}"</span>, sub_other.<span class="number">0</span>.base_operator_name()),
+          XM::Apply(sub_other, ..) =&gt; <span class="macro">format!</span>(<span class="string">"reduced__{}"</span>, sub_other.<span class="number">0</span>.base_operator_name()),
           <span class="kw">_ </span>=&gt; String::new(),
         }
       },
@@ -1355,10 +1360,10 @@
 
   <span class="kw">pub fn </span>get_baseline(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self </span>{
     <span class="kw">match </span><span class="self">self </span>{
-      XM::Lexeme(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="self">self</span>,
-      XM::Token(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="self">self</span>,
+      XM::Lexeme(..) =&gt; <span class="self">self</span>,
+      XM::Token(..) =&gt; <span class="self">self</span>,
       XM::Ref(<span class="kw">_</span>) =&gt; <span class="self">self</span>,
-      XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+      XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, ..) =&gt; {
         <span class="kw">if let </span>XM::Lexeme(name, <span class="kw">_</span>) = <span class="kw-2">&amp;*</span>op.<span class="number">0 </span>{
           <span class="kw">if </span>name == <span class="string">"unknown.subscript" </span>|| name == <span class="string">"unknown.superscript" </span>{
             args.trees().first().unwrap().get_baseline()
@@ -1369,8 +1374,8 @@
           <span class="self">self
         </span>}
       },
-      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
-      XM::Wrap(_inner, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
+      XM::Dual(..) =&gt; <span class="macro">todo!</span>(),
+      XM::Wrap(_inner, ..) =&gt; <span class="macro">todo!</span>(),
       XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
       XM::Choices(args) =&gt; args.first().unwrap().get_baseline(),
     }
@@ -1434,7 +1439,7 @@
         op.fmt_indented(level, f)<span class="question-mark">?</span>;
         args.fmt_indented(<span class="kw-2">&amp;</span>arg_level, f)
       },
-      XM::Dual(content, pres, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+      XM::Dual(content, pres, ..) =&gt; {
         <span class="macro">writeln!</span>(f, <span class="string">"\n{indent}Dual"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>arg_level: Vec&lt;bool&gt; = level.to_vec();
         arg_level.push(<span class="bool-val">true</span>);
@@ -1450,7 +1455,7 @@
         }
         <span class="macro">writeln!</span>(f)
       },
-      XM::Wrap(content, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+      XM::Wrap(content, ..) =&gt; {
         <span class="macro">writeln!</span>(f, <span class="string">"\n{indent}Wrap"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>arg_level: Vec&lt;bool&gt; = level.to_vec();
         arg_level.push(<span class="bool-val">true</span>);
@@ -1587,7 +1592,9 @@
       },
       XM::Choices(<span class="kw-2">mut </span>choices) =&gt; {
         {
-          <span class="macro">Info!</span>(<span class="string">"math_parser"</span>,<span class="string">"choices"</span>,
+          <span class="macro">Info!</span>(
+            <span class="string">"math_parser"</span>,
+            <span class="string">"choices"</span>,
             <span class="string">"to_xmath handler discarded {} parse choices."</span>,
             choices.len() - <span class="number">1
           </span>);
@@ -1604,7 +1611,7 @@
         <span class="kw">return match </span>get_token_meaning(lookup_lex_node(lex, nodes)<span class="question-mark">?</span>) {
           <span class="prelude-val">Some</span>(v) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned(v))),
           <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-        }
+        };
       },
       other =&gt; {
         <span class="macro">dbg!</span>(other);
@@ -1746,7 +1753,10 @@
         XM::Arg(inner_xm)
       },
       <span class="comment">// TODO: continue for the other cases
-      </span>missing_case =&gt; {<span class="macro">dbg!</span>(missing_case); <span class="macro">todo!</span>()},
+      </span>missing_case =&gt; {
+        <span class="macro">dbg!</span>(missing_case);
+        <span class="macro">todo!</span>()
+      },
     }
   }
 }

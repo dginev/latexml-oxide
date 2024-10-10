@@ -896,68 +896,112 @@
 <a href="#895" id="895">895</a>
 <a href="#896" id="896">896</a>
 <a href="#897" id="897">897</a>
-<a href="#898" id="898">898</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Math
-//! 
+<a href="#898" id="898">898</a>
+<a href="#899" id="899">899</a>
+<a href="#900" id="900">900</a>
+<a href="#901" id="901">901</a>
+<a href="#902" id="902">902</a>
+<a href="#903" id="903">903</a>
+<a href="#904" id="904">904</a>
+<a href="#905" id="905">905</a>
+<a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a>
+<a href="#908" id="908">908</a>
+<a href="#909" id="909">909</a>
+<a href="#910" id="910">910</a>
+<a href="#911" id="911">911</a>
+<a href="#912" id="912">912</a>
+<a href="#913" id="913">913</a>
+<a href="#914" id="914">914</a>
+<a href="#915" id="915">915</a>
+<a href="#916" id="916">916</a>
+<a href="#917" id="917">917</a>
+<a href="#918" id="918">918</a>
+<a href="#919" id="919">919</a>
+<a href="#920" id="920">920</a>
+<a href="#921" id="921">921</a>
+<a href="#922" id="922">922</a>
+<a href="#923" id="923">923</a>
+<a href="#924" id="924">924</a>
+<a href="#925" id="925">925</a>
+<a href="#926" id="926">926</a>
+<a href="#927" id="927">927</a>
+<a href="#928" id="928">928</a>
+<a href="#929" id="929">929</a>
+<a href="#930" id="930">930</a>
+<a href="#931" id="931">931</a>
+<a href="#932" id="932">932</a>
+<a href="#933" id="933">933</a>
+<a href="#934" id="934">934</a>
+<a href="#935" id="935">935</a>
+<a href="#936" id="936">936</a>
+<a href="#937" id="937">937</a>
+<a href="#938" id="938">938</a>
+<a href="#939" id="939">939</a>
+<a href="#940" id="940">940</a>
+<a href="#941" id="941">941</a>
+<a href="#942" id="942">942</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Math
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
-
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Math Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // NOT YET IMPLEMENTED !?!?!
   //----------------------------------------------------------------------
-  // \radical                c  makes a radical atom from the delimiter (27-bit number) and the math field.
-  // \muskipdef              c  creates a symbolic name for a \muskip register.
+  // \radical                c  makes a radical atom from the delimiter (27-bit number) and the math
+  // field. \muskipdef              c  creates a symbolic name for a \muskip register.
   // \muskip                 iq assigns &lt;muglue&gt; to a \muskip register.
-  // \nonscript              c  ignores immediately following glue or kern in script and scriptscript styles.
-  
+  // \nonscript              c  ignores immediately following glue or kern in script and
+  // scriptscript styles.
+
   //======================================================================
   // The next two sections are the basic LaTeXML Infrastructure for math.
   // There are several internal control sequences which need to be renamed!
   //======================================================================
-  
+
   // Decide whether we're going into or out of math, inline or display.
   </span><span class="macro">Tag!</span>(<span class="string">"ltx:XMText"</span>, auto_open =&gt; <span class="bool-val">true</span>, auto_close =&gt; <span class="bool-val">true</span>);
   <span class="comment">// This really should be T_MATH
   // and it should (or not) check for a second $ only if not in restricted horizontal mode!
   // (and then all the \lx@dollar@in@(text|math|normal)mode defns would not be needed.
   </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@dollar@in@normalmode"</span>), <span class="prelude-val">None</span>, {
-      <span class="kw">let </span><span class="kw-2">mut </span>op = <span class="string">"\\lx@begin@inline@math"</span>;
-      {
-        <span class="kw">let </span>mode = state::lookup_string(<span class="string">"MODE"</span>);
-        <span class="macro">Debug!</span>(<span class="string">"T_MATH primitive current mode: {:?}"</span>, mode);
-        <span class="kw">if </span>mode == <span class="string">"display_math" </span>{
-          <span class="kw">if </span>gullet::if_next(<span class="macro">T_MATH!</span>())<span class="question-mark">? </span>{
-            gullet::read_token()<span class="question-mark">?</span>;
-            op = <span class="string">"\\lx@end@display@math"</span>;
-          } <span class="kw">else </span>{
-            <span class="comment">// Avoid a Fatal, but we're likely in trouble.
-            // Should we switch to text mode? (LaTeX normally wouldn't)
-            // Did we miss something and would should have already been in text mode? Possibly...
-            </span><span class="macro">Error!</span>(
-              <span class="string">"expected"</span>,
-              <span class="string">"$"</span>,
-              <span class="string">"Missing $ closing display math.\nIgnoring; expect to be in wrong math/text mode."
-            </span>);
-            op = <span class="string">""</span>;
-          }
-        } <span class="kw">else if </span>mode == <span class="string">"inline_math" </span>{
-          op = <span class="string">"\\lx@end@inline@math"</span>;
-        } <span class="kw">else if </span>gullet::if_next(<span class="macro">T_MATH!</span>())<span class="question-mark">? </span>{
+    <span class="kw">let </span><span class="kw-2">mut </span>op = <span class="string">"\\lx@begin@inline@math"</span>;
+    {
+      <span class="kw">let </span>mode = state::lookup_string(<span class="string">"MODE"</span>);
+      <span class="macro">Debug!</span>(<span class="string">"T_MATH primitive current mode: {:?}"</span>, mode);
+      <span class="kw">if </span>mode == <span class="string">"display_math" </span>{
+        <span class="kw">if </span>gullet::if_next(<span class="macro">T_MATH!</span>())<span class="question-mark">? </span>{
           gullet::read_token()<span class="question-mark">?</span>;
-          op = <span class="string">"\\lx@begin@display@math"</span>;
+          op = <span class="string">"\\lx@end@display@math"</span>;
+        } <span class="kw">else </span>{
+          <span class="comment">// Avoid a Fatal, but we're likely in trouble.
+          // Should we switch to text mode? (LaTeX normally wouldn't)
+          // Did we miss something and would should have already been in text mode? Possibly...
+          </span><span class="macro">Error!</span>(
+            <span class="string">"expected"</span>,
+            <span class="string">"$"</span>,
+            <span class="string">"Missing $ closing display math.\nIgnoring; expect to be in wrong math/text mode."
+          </span>);
+          op = <span class="string">""</span>;
         }
+      } <span class="kw">else if </span>mode == <span class="string">"inline_math" </span>{
+        op = <span class="string">"\\lx@end@inline@math"</span>;
+      } <span class="kw">else if </span>gullet::if_next(<span class="macro">T_MATH!</span>())<span class="question-mark">? </span>{
+        gullet::read_token()<span class="question-mark">?</span>;
+        op = <span class="string">"\\lx@begin@display@math"</span>;
       }
-      <span class="kw">if </span>!op.is_empty() {
-        <span class="prelude-val">Ok</span>(stomach::invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(op))<span class="question-mark">?</span>)
-      } <span class="kw">else </span>{
-        <span class="prelude-val">Ok</span>(Vec::new())
-      }
-    });
+    }
+    <span class="kw">if </span>!op.is_empty() {
+      <span class="prelude-val">Ok</span>(stomach::invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(op))<span class="question-mark">?</span>)
+    } <span class="kw">else </span>{
+      <span class="prelude-val">Ok</span>(Vec::new())
+    }
+  });
   <span class="comment">// Let this be the default, conventional $
   </span><span class="macro">Let!</span>(<span class="macro">T_MATH!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@dollar@in@normalmode"</span>));
 
@@ -970,8 +1014,11 @@
   // This is the "normal" case: $ appearing with an alignment that is in text mode.
   // It's just like regular $, except it doesn't look for $$ (no display math).
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@dollar@in@textmode"</span>, {
-    <span class="kw">let </span>mathcs = <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) { <span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inline@math"</span>) }
-      <span class="kw">else </span>{<span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@inline@math"</span>) };
+    <span class="kw">let </span>mathcs = <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+      <span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inline@math"</span>)
+    } <span class="kw">else </span>{
+      <span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@inline@math"</span>)
+    };
     stomach::invoke_token(<span class="kw-2">&amp;</span>mathcs)
   });
 
@@ -989,9 +1036,11 @@
   // This would be complicated by the need to hide these $ from untex.
   </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@dollar@in@mathmode"</span>), <span class="prelude-val">None</span>, {
     <span class="kw">let </span>level = stomach::get_boxing_level();
-    <span class="kw">if </span>lookup_int(<span class="string">"MATH_ALIGN_$_BEGUN"</span>) == (level <span class="kw">as </span>i64) { <span class="comment">// If we're begun making _something_ with $.
-      </span><span class="kw">let </span>l = <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) { <span class="comment">// But we're somehow in math?
-        </span>stomach::invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inline@math"</span>)) 
+    <span class="kw">if </span>lookup_int(<span class="string">"MATH_ALIGN_$_BEGUN"</span>) == (level <span class="kw">as </span>i64) {
+      <span class="comment">// If we're begun making _something_ with $.
+      </span><span class="kw">let </span>l = <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+        <span class="comment">// But we're somehow in math?
+        </span>stomach::invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inline@math"</span>))
       } <span class="kw">else </span>{
         stomach::invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inmath@text"</span>))
       };
@@ -999,19 +1048,20 @@
       </span>l
     } <span class="kw">else </span>{
       assign_value(<span class="string">"MATH_ALIGN_$_BEGUN"</span>, level + <span class="number">1</span>, <span class="prelude-val">None</span>); <span class="comment">// Note that we've begun something
-      </span><span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) { <span class="comment">// If we're "still" in math
+      </span><span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+        <span class="comment">// If we're "still" in math
         </span>stomach::invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@inmath@text"</span>))
       } <span class="kw">else </span>{
         stomach::invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@inline@math"</span>))
       }
-    } 
+    }
   });
   <span class="comment">//======================================================================
   // For inserting (non-trivial?) text while in math mode
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@begin@inmath@text"</span>,
     <span class="string">"&lt;ltx:XMText&gt;#body&lt;/ltx:XMText&gt;"</span>,
     <span class="comment">// alias =&gt; T_MATH ? do we support that ?
-    </span>alias =&gt; <span class="string">"$"</span>, 
+    </span>alias =&gt; <span class="string">"$"</span>,
     before_digest =&gt; sub { stomach::begin_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>; },
     capture_body =&gt; <span class="bool-val">true
   </span>);
@@ -1094,16 +1144,16 @@
   <span class="macro">Tag!</span>(<span class="string">"ltx:Math"</span>, after_close =&gt; sub[document, node] {
     cleanup_math(document, node.clone())<span class="question-mark">?</span>;
   });
-  
+
   <span class="comment">//======================================================================
   // General
   //----------------------------------------------------------------------
-  // \everydisplay         pt holds tokens inserted at the start of every switch to display math mode.
-  // \everymath            pt holds tokens inserted at the start of every switch to math mode.
+  // \everydisplay         pt holds tokens inserted at the start of every switch to display math
+  // mode. \everymath            pt holds tokens inserted at the start of every switch to math
+  // mode.
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\everymath"</span>, <span class="macro">Tokens!</span>());
   <span class="macro">DefRegister!</span>(<span class="string">"\\everydisplay"</span>, <span class="macro">Tokens!</span>());
 
-    
   <span class="comment">// Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\mathchar Number"</span>, <span class="string">"?#glyph(&lt;ltx:XMTok role='#role'&gt;#glyph&lt;/ltx:XMTok&gt;)"</span>,
@@ -1147,10 +1197,10 @@
     <span class="kw">let </span>value  = gullet::read_number().unwrap_or_default();
     <span class="kw">let </span>(role, glyph) = decode_math_char(value.value_of() <span class="kw">as </span>u16)<span class="question-mark">?</span>;
     <span class="comment">// eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
-    </span>state::install_definition(Register::new_chardef(newcs,<span class="prelude-val">Some</span>(value.into()), glyph, role.map(arena::pin)), <span class="prelude-val">None</span>);
+    </span>state::install_definition(
+      Register::new_chardef(newcs,<span class="prelude-val">Some</span>(value.into()), glyph, role.map(arena::pin)), <span class="prelude-val">None</span>);
     state::after_assignment();
   });
-  
 
   <span class="macro">DefConstructor!</span>(<span class="string">"\\mathaccent Number Digested"</span>,
   <span class="string">"&lt;ltx:XMApp&gt;&lt;ltx:XMTok role='OVERACCENT'&gt;#glyph&lt;/ltx:XMTok&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;"</span>,
@@ -1200,15 +1250,16 @@
   <span class="comment">//======================================================================
   // TeX-level grammatical roles
   //----------------------------------------------------------------------
-  // \mathbin                c  assigns class 2 (binary operation) to the following character or subformula.
-  // \mathclose              c  assigns class 5 (closing) to the following character or subformula.
-  // \mathinner              c  makes an inner atom holding the math field.
-  // \mathop                 c  assigns class 1 (large operator) to following character or subformula.
-  // \mathopen               c  assigns class 4 (opening) to following character or subformula.
-  // \mathord                c  assigns class 0 (ordinary) to following character or subformula.
-  // \mathpunct              c  assigns class 6 (punctuation) to following character or subformula.
-  // \mathrel                c  assigns class 3 (relation) to following character or subformula.
-  
+  // \mathbin                c  assigns class 2 (binary operation) to the following character or
+  // subformula. \mathclose              c  assigns class 5 (closing) to the following character
+  // or subformula. \mathinner              c  makes an inner atom holding the math field.
+  // \mathop                 c  assigns class 1 (large operator) to following character or
+  // subformula. \mathopen               c  assigns class 4 (opening) to following character or
+  // subformula. \mathord                c  assigns class 0 (ordinary) to following character or
+  // subformula. \mathpunct              c  assigns class 6 (punctuation) to following character
+  // or subformula. \mathrel                c  assigns class 3 (relation) to following character
+  // or subformula.
+
   // Is XMWrap the right thing to wrap with (instead of XMArg)?
   // We can't really assume that the stuff inside is sensible math.
   // NOTE that \mathord and \mathbin aren't really right here.
@@ -1318,14 +1369,14 @@
       <span class="prelude-val">Ok</span>(Vec::new())
     },
     alias =&gt; <span class="string">"\\right"</span>);
-  
+
   <span class="comment">//======================================================================
   // Limit placement
   //----------------------------------------------------------------------
   // \limits                 c  displays limits above and below large operators (class 1).
   // \nolimits               c  displays limits to the right of large operators (class 1).
   // \displaylimits          c  restores normal conventions for using limits with operators.
-    
+
   // TODO:
   // DefConstructor('\limits', undef, sub {
   //     my $node = $_[0]-&gt;getElement;
@@ -1395,24 +1446,48 @@
   // \scriptscriptstyle      c  selects scriptscript style: SS or SS'.
   // \scriptstyle            c  selects script style: S or S'.
   // \textstyle              c  selects text style: T or T'.
-  
+
   // Also record that this explicitly sets the mathstyle (support for \over, etal)
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\displaystyle"</span>, {
     <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"display"</span>);
-    Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\displaystyle"</span>)),
-      <span class="macro">stored_map!</span>(<span class="string">"explicit_mathstyle" </span>=&gt; <span class="bool-val">true</span>)) });
+    Tbox::new(
+      <span class="kw-2">*</span>EMPTY_SYM,
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\displaystyle"</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"explicit_mathstyle" </span>=&gt; <span class="bool-val">true</span>),
+    )
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\textstyle"</span>, {
     <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"text"</span>);
-    Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\textstyle"</span>)),
-      <span class="macro">stored_map!</span>(<span class="string">"explicit_mathstyle" </span>=&gt; <span class="bool-val">true</span>)) });
+    Tbox::new(
+      <span class="kw-2">*</span>EMPTY_SYM,
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\textstyle"</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"explicit_mathstyle" </span>=&gt; <span class="bool-val">true</span>),
+    )
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\scriptstyle"</span>, {
     <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"script"</span>);
-    Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\scriptstyle"</span>)),
-      <span class="macro">stored_map!</span>(<span class="string">"explicit_mathstyle" </span>=&gt; <span class="bool-val">true</span>)) });
+    Tbox::new(
+      <span class="kw-2">*</span>EMPTY_SYM,
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\scriptstyle"</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"explicit_mathstyle" </span>=&gt; <span class="bool-val">true</span>),
+    )
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\scriptscriptstyle"</span>, {
     <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"scriptscript"</span>);
-    Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\scriptscriptstyle"</span>)),
-      <span class="macro">stored_map!</span>(<span class="string">"explicit_mathstyle" </span>=&gt; <span class="bool-val">true</span>)) });
+    Tbox::new(
+      <span class="kw-2">*</span>EMPTY_SYM,
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\scriptscriptstyle"</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"explicit_mathstyle" </span>=&gt; <span class="bool-val">true</span>),
+    )
+  });
 
   <span class="comment">//======================================================================
   //
@@ -1440,17 +1515,23 @@
   //----------------------------------------------------------------------
   // \overline               c  puts a line over the following character or subformula.
   // \underline              c  puts a line under the following character or subformula.
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\overline Digested"</span>, <span class="string">"\u{00AF}"</span>,  operator_role =&gt; <span class="string">"OVERACCENT"</span>);    <span class="comment">// MACRON
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\overline Digested"</span>, <span class="string">"\u{00AF}"</span>,  operator_role =&gt; <span class="string">"OVERACCENT"</span>); <span class="comment">// MACRON
   </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@math@underline{}"</span>, <span class="string">"\u{00AF}"</span>, operator_role =&gt; <span class="string">"UNDERACCENT"</span>,
     name =&gt; <span class="string">"underline"</span>, alias =&gt; <span class="string">"\\underline"</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@text@underline{}"</span>, <span class="string">"&lt;ltx:text framed='underline' _noautoclose='true'&gt;#1&lt;/ltx:text&gt;"</span>);
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">"\\lx@text@underline{}"</span>,
+    <span class="string">"&lt;ltx:text framed='underline' _noautoclose='true'&gt;#1&lt;/ltx:text&gt;"
+  </span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@overrightarrow{}"</span>, <span class="string">"\u{2192}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>,
     name =&gt; <span class="string">"overrightarrow"</span>, alias =&gt; <span class="string">"\\overrightarrow"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\lx@math@overleftarrow{}"</span>, <span class="string">"\u{2190}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>,
     name =&gt; <span class="string">"overleftarrow"</span>, alias =&gt; <span class="string">"\\overleftarrow"</span>);
 
   <span class="comment">// Careful: Use \protect so that it doesn"t expand too early in alignments, etc.
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\underline{}"</span>, <span class="string">r"\protect\ifmmode\lx@math@underline{#1}\else\lx@text@underline{#1}\fi"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\underline{}"</span>,
+    <span class="string">r"\protect\ifmmode\lx@math@underline{#1}\else\lx@text@underline{#1}\fi"
+  </span>);
 
   <span class="comment">//======================================================================
   // fraction-like things
@@ -1460,9 +1541,9 @@
   // \atop                   d  is equivalent to `\atopwithdelims..'.
   // \atopwithdelims         d  is a generalized fraction command with an invisible fraction bar.
   // \over                   d  is equivalent to `\overwithdelims..'.
-  // \overwithdelims         d  is a generalized fraction command with preset fraction bar thickness.
-  // After digesting the \choose (or whatever), grab the previous and following material
-  // and store as args in the whatsit.
+  // \overwithdelims         d  is a generalized fraction command with preset fraction bar
+  // thickness. After digesting the \choose (or whatever), grab the previous and following
+  // material and store as args in the whatsit.
 
   // Increment the mathstyle stored in any boxes &amp; whatsits.
   // The tricky part is to know when NOT to increment!
@@ -1472,7 +1553,7 @@
   // We don't have a clear API to find the displayable Boxes within;
   // and we don't have a good handle on grouping...
 
-    // # ARGH!!!!!!!!! RETHINK!!!!!!
+  // # ARGH!!!!!!!!! RETHINK!!!!!!
   // sub adjustMathstyle {
   //   my ($outerstyle, $adjusted, @boxes) = @_;
   //   foreach my $box (@boxes) {
@@ -1500,10 +1581,11 @@
   // # This isn't the same as just shifting the mathstyle!
   // # we're sorta trying to infer WHY the box has a given style...?
   // our %mathstyle_adjust_map = (
-  //   display =&gt; { display =&gt; 'text', text =&gt; 'script', script =&gt; 'script', scriptscript =&gt; 'scriptscript' },
-  //   text =&gt; { display =&gt; 'text', text =&gt; 'script', script =&gt; 'scriptscript', scriptscript =&gt; 'scriptscript' },
-  //   script =&gt; { display =&gt; 'display', text =&gt; 'text', script =&gt; 'scriptscript', scriptscript =&gt; 'scriptscript' },
-  //   scriptscript =&gt; { display =&gt; 'display', text =&gt; 'text', script =&gt; 'scriptscript', scriptscript =&gt; 'scriptscript' });
+  //   display =&gt; { display =&gt; 'text', text =&gt; 'script', script =&gt; 'script', scriptscript =&gt;
+  // 'scriptscript' },   text =&gt; { display =&gt; 'text', text =&gt; 'script', script =&gt; 'scriptscript',
+  // scriptscript =&gt; 'scriptscript' },   script =&gt; { display =&gt; 'display', text =&gt; 'text', script
+  // =&gt; 'scriptscript', scriptscript =&gt; 'scriptscript' },   scriptscript =&gt; { display =&gt;
+  // 'display', text =&gt; 'text', script =&gt; 'scriptscript', scriptscript =&gt; 'scriptscript' });
 
   // sub adjustMathStyle_internal {
   //   my ($outerstyle, $box) = @_;
@@ -1537,8 +1619,8 @@
   //     . "&lt;ltx:XMWrap&gt;"
   //     . "#left)()"
   //     . "&lt;ltx:XMApp&gt;"
-  //     . "&lt;ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/&gt;"
-  //     . "&lt;ltx:XMArg _xmkey='#xmkey1'&gt;#top&lt;/ltx:XMArg&gt;"
+  //     . "&lt;ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle'
+  // thickness='#thickness'/&gt;"     . "&lt;ltx:XMArg _xmkey='#xmkey1'&gt;#top&lt;/ltx:XMArg&gt;"
   //     . "&lt;ltx:XMArg _xmkey='#xmkey2'&gt;#bottom&lt;/ltx:XMArg&gt;"
   //     . "&lt;/ltx:XMApp&gt;"
   //     . "?#needXMDual(#right"
@@ -1594,16 +1676,17 @@
   // DefMacro('\above Dimension',
   //   '\lx@generalized@over{\above #1}{meaning=divide,thickness=#1}');
   // DefMacro('\abovewithdelims Token Token Dimension',
-  // '\lx@generalized@over{\abovewithdelims #1 #2 #3}{left={\@left#1},right={\@right#2},meaning=divide,thickness=#3}');
-  // DefMacro('\atop',
+  // '\lx@generalized@over{\abovewithdelims #1 #2
+  // #3}{left={\@left#1},right={\@right#2},meaning=divide,thickness=#3}'); DefMacro('\atop',
   //   '\lx@generalized@over{\atop}{thickness=0pt}');
   // DefMacro('\atopwithdelims Token Token',
-  //   '\lx@generalized@over{\atopwithdelims #1 #2}{thickness=0pt,left={\@left#1},right={\@right#2}}');
-  // DefMacro('\over',
+  //   '\lx@generalized@over{\atopwithdelims #1
+  // #2}{thickness=0pt,left={\@left#1},right={\@right#2}}'); DefMacro('\over',
   //   '\lx@generalized@over{\over}{meaning=divide}');
   // DefMacro('\overwithdelims Token Token',
-  //   '\lx@generalized@over{\overwithdelims #1 #2}{left={\@left#1},right={\@right#2},meaning=divide}');
-  // // My thinking was that this is a "fraction" providing the dimension is &gt; 0!
+  //   '\lx@generalized@over{\overwithdelims #1
+  // #2}{left={\@left#1},right={\@right#2},meaning=divide}'); // My thinking was that this is a
+  // "fraction" providing the dimension is &gt; 0!
 
   //======================================================================
   //
@@ -1643,17 +1726,18 @@
   // \postdisplaypenalty     pi is the penalty added immediately after a math display.
   // \predisplaypenalty      pi is the penalty added immediately before a math display.
   // \relpenalty             pi is the penalty for a line break after a relation.
-  // \displaywidowpenalty    pi is the penalty added after the penultimate line immediately preceeding a display.
-  // \skewchar               iq is -1 or the character used to fine-tune the positioning of math accents     .
-  // \defaultskewchar        pi is -1 or the \skewchar value for a font when it is loaded.
-  // \delimitershortfall     pd is the second parameter used to compute the size of delimeters required by \left and \right.
-  // \displayindent          pd is the amount to shift a line holding a displayed equation.
-  // \displaywidth           pd is the width of the line holding a displayed equation.
-  // \mathsurround           pd is extra space added when switching in and out of math mode.
-  // \nulldelimiterspace     pd is the width of a null or missing delimiter.
-  // \predisplaysize         pd is the effective width of the line preceeding a displayed equation.
-  // \scriptspace            pd is extra space added after a subscript or a superscript.
-  // \delimiterfactor        pi is the first parameter used to compute the size of delimeters required by \left and \right.
+  // \displaywidowpenalty    pi is the penalty added after the penultimate line immediately
+  // preceeding a display. \skewchar               iq is -1 or the character used to fine-tune the
+  // positioning of math accents     . \defaultskewchar        pi is -1 or the \skewchar value for
+  // a font when it is loaded. \delimitershortfall     pd is the second parameter used to compute
+  // the size of delimeters required by \left and \right. \displayindent          pd is the amount
+  // to shift a line holding a displayed equation. \displaywidth           pd is the width of the
+  // line holding a displayed equation. \mathsurround           pd is extra space added when
+  // switching in and out of math mode. \nulldelimiterspace     pd is the width of a null or
+  // missing delimiter. \predisplaysize         pd is the effective width of the line preceeding a
+  // displayed equation. \scriptspace            pd is extra space added after a subscript or a
+  // superscript. \delimiterfactor        pi is the first parameter used to compute the size of
+  // delimeters required by \left and \right.
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\binoppenalty"</span>, <span class="macro">Number!</span>(<span class="number">700</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\relpenalty"</span>, <span class="macro">Number!</span>(<span class="number">500</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\displaywidowpenalty"</span>, <span class="macro">Number!</span>(<span class="number">50</span>));
@@ -1672,7 +1756,7 @@
   //       $$info{skewchar} = $value; } }
   // );
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\defaultskewchar"</span>, <span class="macro">Number!</span>(-<span class="number">1</span>));
-  
+
   <span class="comment">// Dimen registers; TeXBook p. 274
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\delimitershortfall"</span>, <span class="macro">Dimension!</span>(<span class="string">"5pt"</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\nulldelimiterspace"</span>, <span class="macro">Dimension!</span>(<span class="string">"1.2pt"</span>));
@@ -1697,20 +1781,20 @@
   // Even a \begin{array} ends up expanding into a $ !!!
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\eqno"</span>, {
     <span class="comment">// my $locator  = $gullet-&gt;getLocator;
-    </span><span class="kw">let </span><span class="kw-2">mut </span>stuff    = Vec::new();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>stuff = Vec::new();
     <span class="comment">// This is risky!!!
 
     </span><span class="kw">while let </span><span class="prelude-val">Some</span>(t) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="kw">if </span>t == <span class="macro">T_BEGIN!</span>() {
         stuff.push(t);
-        <span class="kw">let </span>balanced_arg = gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>balanced_arg = gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
         <span class="kw">if </span>!balanced_arg.is_empty() {
           stuff.extend(balanced_arg.unlist());
         }
         stuff.push(<span class="macro">T_END!</span>());
       }
       <span class="comment">// What do I need to explicitly list here!?!?!? UGGH!
-      </span><span class="kw">else if  </span>t == <span class="macro">T_MATH!</span>()
+      </span><span class="kw">else if </span>t == <span class="macro">T_MATH!</span>()
         || t == <span class="macro">T_CS!</span>(<span class="string">"\\]"</span>)
         <span class="comment">// UGH from 2022: also don"t jump over rows
         </span>|| t == <span class="macro">T_CS!</span>(<span class="string">"\\cr"</span>)
@@ -1720,7 +1804,7 @@
         || t == <span class="macro">T_CS!</span>(<span class="string">"\\begingroup"</span>) <span class="comment">// Totally wrong, but to catch expanded environments
         // any sort of environ begin or end???
         </span>|| t.with_str(|tstr| tstr.starts_with(<span class="string">"\\begin{"</span>) || tstr.starts_with(<span class="string">"\\end{"</span>))
-        <span class="comment">// This seems needed within AmSTeX environs
+      <span class="comment">// This seems needed within AmSTeX environs
       </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>invoked = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@eqno"</span>), <span class="macro">vec!</span>[Tokens::new(stuff)]).unlist();
         invoked.push(t);
@@ -1729,8 +1813,12 @@
         stuff.push(t);
       }
     }
-    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\eqno"</span>, <span class="string">"Fell of the end reading tag for \\eqno!"</span>);
-      <span class="comment">// s!("started {locator}"));
+    <span class="macro">Error!</span>(
+      <span class="string">"unexpected"</span>,
+      <span class="string">"\\eqno"</span>,
+      <span class="string">"Fell of the end reading tag for \\eqno!"
+    </span>);
+    <span class="comment">// s!("started {locator}"));
     </span>Tokens::new(stuff)
   });
 
@@ -1739,59 +1827,59 @@
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@eqno{}"</span>,
     <span class="string">"^ &lt;ltx:tags&gt;&lt;ltx:tag&gt;&lt;ltx:Math&gt;&lt;ltx:XMath&gt;#1&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;&lt;/ltx:tag&gt;&lt;/ltx:tags&gt;"</span>,
     reversion =&gt; <span class="string">""</span>);
-
 });
 
 <span class="doccomment">/// A shorthand data structure for delimiter metadata
 </span><span class="kw">pub struct </span>DelimiterMeta {
-  char: char,
-  left_role: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+  char:       char,
+  left_role:  <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
   right_role: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
-  name: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
-
+  name:       <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
 }
 <span class="doccomment">/// This duplicates in slightly different way what DefMath has put together.
-</span><span class="kw">pub static </span>DELIMITER_MAP : Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, DelimiterMeta&gt;&gt; = Lazy::new(|| <span class="macro">raw_map!</span>(
-  <span class="string">"(" </span>=&gt; DelimiterMeta{char: <span class="string">'('</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">")" </span>=&gt; DelimiterMeta{char: <span class="string">')'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">"[" </span>=&gt; DelimiterMeta{char: <span class="string">'['</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">"]" </span>=&gt; DelimiterMeta{ char: <span class="string">']'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">"\\{" </span>=&gt; DelimiterMeta{ char: <span class="string">'{'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">"\\}" </span>=&gt; DelimiterMeta{ char: <span class="string">'}'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
-  <span class="string">"\\lfloor"</span>=&gt; DelimiterMeta{ char: <span class="string">'\u{230A}'</span>,
-                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"lfloor"</span>) },
-  <span class="string">"\\rfloor"</span>=&gt; DelimiterMeta{ char: <span class="string">'\u{230B}'</span>,
-                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rfloor"</span>) },
-  <span class="string">"\\lceil" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2308}'</span>,
-                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"lceil"</span>) },
-  <span class="string">"\\rceil" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2309}'</span>,
-                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rceil"</span>) },
-  <span class="string">"\\langle"</span>=&gt; DelimiterMeta{ char: <span class="string">'\u{27E8}'</span>,
-                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"langle"</span>) },
-  <span class="string">"\\rangle"</span>=&gt; DelimiterMeta{ char: <span class="string">'\u{27E9}'</span>,
-                left_role: <span class="string">"OPEN"</span>,  right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rangle"</span>) },
-  <span class="string">"&lt;"      </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{27E8}'</span>,
-                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"langle"</span>) },
-  <span class="string">"&gt;"      </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{27E9}'</span>,
-                left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rangle"</span>) },
-  <span class="string">"/"      </span>=&gt; DelimiterMeta{ char: <span class="string">'/'</span>, left_role: <span class="string">"MULOP"</span>,   right_role: <span class="string">"MULOP"</span>, name: <span class="prelude-val">None </span>},
-  <span class="string">"\\backslash" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{005C}'</span>,
-                left_role: <span class="string">"MULOP"</span>,   right_role: <span class="string">"MULOP"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"backslash"</span>) },
-  <span class="string">"|"      </span>=&gt; DelimiterMeta{ char: <span class="string">'|'</span>,
-                left_role: <span class="string">"VERTBAR"</span>, right_role: <span class="string">"VERTBAR"</span>, name: <span class="prelude-val">None </span>},
-  <span class="string">"\\|"     </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2225}'</span>,
-                left_role: <span class="string">"VERTBAR"</span>, right_role: <span class="string">"VERTBAR"</span>, name: <span class="prelude-val">None </span>},
-  <span class="string">"\\uparrow"   </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2191}'</span>,
-                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"uparrow"</span>) },
-  <span class="string">"\\Uparrow"   </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{21D1}'</span>,
-                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Uparrow"</span>) },
-  <span class="string">"\\downarrow" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2193}'</span>,
-                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"downarrow"</span>) },
-  <span class="string">"\\Downarrow" </span>=&gt;  DelimiterMeta{ char: <span class="string">'\u{21D3}'</span>,
-                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Downarrow"</span>) },
-  <span class="string">"\\updownarrow" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2195}'</span>,
-                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"updownarrow"</span>) },
-  <span class="string">"\\Updownarrow" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{21D5}'</span>,
-                    left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Updownarrow"</span>) }
-));
+</span><span class="kw">pub static </span>DELIMITER_MAP: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, DelimiterMeta&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
+    <span class="string">"(" </span>=&gt; DelimiterMeta{char: <span class="string">'('</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+    <span class="string">")" </span>=&gt; DelimiterMeta{char: <span class="string">')'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+    <span class="string">"[" </span>=&gt; DelimiterMeta{char: <span class="string">'['</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+    <span class="string">"]" </span>=&gt; DelimiterMeta{ char: <span class="string">']'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+    <span class="string">"\\{" </span>=&gt; DelimiterMeta{ char: <span class="string">'{'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+    <span class="string">"\\}" </span>=&gt; DelimiterMeta{ char: <span class="string">'}'</span>, left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name:<span class="prelude-val">None</span>},
+    <span class="string">"\\lfloor"</span>=&gt; DelimiterMeta{ char: <span class="string">'\u{230A}'</span>,
+                  left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"lfloor"</span>) },
+    <span class="string">"\\rfloor"</span>=&gt; DelimiterMeta{ char: <span class="string">'\u{230B}'</span>,
+                  left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rfloor"</span>) },
+    <span class="string">"\\lceil" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2308}'</span>,
+                  left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"lceil"</span>) },
+    <span class="string">"\\rceil" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2309}'</span>,
+                  left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rceil"</span>) },
+    <span class="string">"\\langle"</span>=&gt; DelimiterMeta{ char: <span class="string">'\u{27E8}'</span>,
+                  left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"langle"</span>) },
+    <span class="string">"\\rangle"</span>=&gt; DelimiterMeta{ char: <span class="string">'\u{27E9}'</span>,
+                  left_role: <span class="string">"OPEN"</span>,  right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rangle"</span>) },
+    <span class="string">"&lt;"      </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{27E8}'</span>,
+                  left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"langle"</span>) },
+    <span class="string">"&gt;"      </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{27E9}'</span>,
+                  left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"rangle"</span>) },
+    <span class="string">"/"      </span>=&gt; DelimiterMeta{ char: <span class="string">'/'</span>, left_role: <span class="string">"MULOP"</span>,   right_role: <span class="string">"MULOP"</span>, name: <span class="prelude-val">None </span>},
+    <span class="string">"\\backslash" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{005C}'</span>,
+                  left_role: <span class="string">"MULOP"</span>,   right_role: <span class="string">"MULOP"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"backslash"</span>) },
+    <span class="string">"|"      </span>=&gt; DelimiterMeta{ char: <span class="string">'|'</span>,
+                  left_role: <span class="string">"VERTBAR"</span>, right_role: <span class="string">"VERTBAR"</span>, name: <span class="prelude-val">None </span>},
+    <span class="string">"\\|"     </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2225}'</span>,
+                  left_role: <span class="string">"VERTBAR"</span>, right_role: <span class="string">"VERTBAR"</span>, name: <span class="prelude-val">None </span>},
+    <span class="string">"\\uparrow"   </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2191}'</span>,
+                      left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"uparrow"</span>) },
+    <span class="string">"\\Uparrow"   </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{21D1}'</span>,
+                      left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Uparrow"</span>) },
+    <span class="string">"\\downarrow" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2193}'</span>,
+                      left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"downarrow"</span>) },
+    <span class="string">"\\Downarrow" </span>=&gt;  DelimiterMeta{ char: <span class="string">'\u{21D3}'</span>,
+                      left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Downarrow"</span>) },
+    <span class="string">"\\updownarrow" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{2195}'</span>,
+                      left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"updownarrow"</span>) },
+    <span class="string">"\\Updownarrow" </span>=&gt; DelimiterMeta{ char: <span class="string">'\u{21D5}'</span>,
+                      left_role: <span class="string">"OPEN"</span>, right_role: <span class="string">"CLOSE"</span>, name: <span class="prelude-val">Some</span>(<span class="string">"Updownarrow"</span>) }
+  )
+});
 </code></pre></div></section></main></body></html>

@@ -439,7 +439,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::{Reversion, SizingClosure};
 <span class="kw">use </span><span class="kw">crate</span>::keyvals::KeyVals;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
-<span class="kw">use </span><span class="kw">crate</span>::state::{Scope,lookup_font};
+<span class="kw">use </span><span class="kw">crate</span>::state::{Scope, lookup_font};
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
 <span class="kw">use crate</span>::<span class="kw-2">*</span>;
@@ -487,7 +487,10 @@
       <span class="prelude-val">Some</span>(Reversion::Tokens(<span class="macro">Tokens!</span>()))
     } <span class="kw">else </span>{
       <span class="prelude-val">Some</span>(Reversion::Tokens(
-        mouth::tokenize_internal(<span class="self">self</span>).pack_parameters().ok().unwrap(),
+        mouth::tokenize_internal(<span class="self">self</span>)
+          .pack_parameters()
+          .ok()
+          .unwrap(),
       ))
     }
   }
@@ -570,7 +573,7 @@
             text: arena::pin(<span class="kw-2">&amp;</span>sized_data),
             ..Tbox::default()
           })],
-          HashMap::default()
+          HashMap::default(),
         )
       }))
     }
@@ -604,7 +607,7 @@
   <span class="kw">fn </span>into_tokens_result(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">match </span><span class="self">self </span>{
       <span class="prelude-val">Ok</span>(()) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()),
-      <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e)
+      <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
     }
   }
 }
@@ -631,8 +634,7 @@
   </span><span class="kw">fn </span>into_result_argwrap(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt;;
 }
 
-<span class="kw">impl </span>IntoResultArgWrap&lt;<span class="prelude-ty">Result</span>&lt;ArgWrap&gt;&gt; <span class="kw">for </span><span class="kw">crate</span>::common::error::Error
-{
+<span class="kw">impl </span>IntoResultArgWrap&lt;<span class="prelude-ty">Result</span>&lt;ArgWrap&gt;&gt; <span class="kw">for </span><span class="kw">crate</span>::common::error::Error {
   <span class="kw">fn </span>into_result_argwrap(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt; { <span class="prelude-val">Err</span>(<span class="self">self</span>) }
 }
 
@@ -757,9 +759,7 @@
 }
 
 <span class="kw">impl </span>IntoDigestedOptionResult&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;&gt; <span class="kw">for </span>() {
-  <span class="kw">fn </span>into_digested_option_result(<span class="self">self</span>: ()) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-  }
+  <span class="kw">fn </span>into_digested_option_result(<span class="self">self</span>: ()) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) }
 }
 
 <span class="kw">impl </span>IntoDigestedOptionResult&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;&gt; <span class="kw">for </span>Glue {

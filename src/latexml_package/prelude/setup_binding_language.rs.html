@@ -2269,78 +2269,7 @@
 <a href="#2268" id="2268">2268</a>
 <a href="#2269" id="2269">2269</a>
 <a href="#2270" id="2270">2270</a>
-<a href="#2271" id="2271">2271</a>
-<a href="#2272" id="2272">2272</a>
-<a href="#2273" id="2273">2273</a>
-<a href="#2274" id="2274">2274</a>
-<a href="#2275" id="2275">2275</a>
-<a href="#2276" id="2276">2276</a>
-<a href="#2277" id="2277">2277</a>
-<a href="#2278" id="2278">2278</a>
-<a href="#2279" id="2279">2279</a>
-<a href="#2280" id="2280">2280</a>
-<a href="#2281" id="2281">2281</a>
-<a href="#2282" id="2282">2282</a>
-<a href="#2283" id="2283">2283</a>
-<a href="#2284" id="2284">2284</a>
-<a href="#2285" id="2285">2285</a>
-<a href="#2286" id="2286">2286</a>
-<a href="#2287" id="2287">2287</a>
-<a href="#2288" id="2288">2288</a>
-<a href="#2289" id="2289">2289</a>
-<a href="#2290" id="2290">2290</a>
-<a href="#2291" id="2291">2291</a>
-<a href="#2292" id="2292">2292</a>
-<a href="#2293" id="2293">2293</a>
-<a href="#2294" id="2294">2294</a>
-<a href="#2295" id="2295">2295</a>
-<a href="#2296" id="2296">2296</a>
-<a href="#2297" id="2297">2297</a>
-<a href="#2298" id="2298">2298</a>
-<a href="#2299" id="2299">2299</a>
-<a href="#2300" id="2300">2300</a>
-<a href="#2301" id="2301">2301</a>
-<a href="#2302" id="2302">2302</a>
-<a href="#2303" id="2303">2303</a>
-<a href="#2304" id="2304">2304</a>
-<a href="#2305" id="2305">2305</a>
-<a href="#2306" id="2306">2306</a>
-<a href="#2307" id="2307">2307</a>
-<a href="#2308" id="2308">2308</a>
-<a href="#2309" id="2309">2309</a>
-<a href="#2310" id="2310">2310</a>
-<a href="#2311" id="2311">2311</a>
-<a href="#2312" id="2312">2312</a>
-<a href="#2313" id="2313">2313</a>
-<a href="#2314" id="2314">2314</a>
-<a href="#2315" id="2315">2315</a>
-<a href="#2316" id="2316">2316</a>
-<a href="#2317" id="2317">2317</a>
-<a href="#2318" id="2318">2318</a>
-<a href="#2319" id="2319">2319</a>
-<a href="#2320" id="2320">2320</a>
-<a href="#2321" id="2321">2321</a>
-<a href="#2322" id="2322">2322</a>
-<a href="#2323" id="2323">2323</a>
-<a href="#2324" id="2324">2324</a>
-<a href="#2325" id="2325">2325</a>
-<a href="#2326" id="2326">2326</a>
-<a href="#2327" id="2327">2327</a>
-<a href="#2328" id="2328">2328</a>
-<a href="#2329" id="2329">2329</a>
-<a href="#2330" id="2330">2330</a>
-<a href="#2331" id="2331">2331</a>
-<a href="#2332" id="2332">2332</a>
-<a href="#2333" id="2333">2333</a>
-<a href="#2334" id="2334">2334</a>
-<a href="#2335" id="2335">2335</a>
-<a href="#2336" id="2336">2336</a>
-<a href="#2337" id="2337">2337</a>
-<a href="#2338" id="2338">2338</a>
-<a href="#2339" id="2339">2339</a>
-<a href="#2340" id="2340">2340</a>
-<a href="#2341" id="2341">2341</a>
-<a href="#2342" id="2342">2342</a></pre></div><pre class="rust"><code><span class="attr">#[macro_export]
+<a href="#2271" id="2271">2271</a></pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LoadDefinitions {
   (<span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="kw">pub fn </span>load_definitions() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -2367,13 +2296,10 @@
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LoadPool {
   (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
-    input_definitions(
-      <span class="macro-nonterminal">$name</span>,
-      InputDefinitionOptions {
-        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
-        ..InputDefinitionOptions::default()
-      }
-    )<span class="question-mark">?
+    input_definitions(<span class="macro-nonterminal">$name</span>, InputDefinitionOptions {
+      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
+      ..InputDefinitionOptions::default()
+    })<span class="question-mark">?
   </span>}};
 }
 
@@ -2392,7 +2318,7 @@
 </span><span class="macro">macro_rules!</span> InnerPool {
   (<span class="macro-nonterminal">$name</span>:ident) =&gt; {
     <span class="macro-nonterminal">$crate::engine</span>::<span class="macro-nonterminal">$name::load_definitions</span>()<span class="question-mark">?
-  </span>}
+  </span>};
 }
 
 <span class="attr">#[macro_export]
@@ -2410,9 +2336,7 @@
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LoadClass {
-  (<span class="macro-nonterminal">$class</span>:expr, <span class="macro-nonterminal">$options</span>:expr, <span class="macro-nonterminal">$after</span>:expr) =&gt; {{
-    load_class(<span class="macro-nonterminal">$class</span>, <span class="macro-nonterminal">$options</span>, <span class="macro-nonterminal">$after</span>)
-  }};
+  (<span class="macro-nonterminal">$class</span>:expr, <span class="macro-nonterminal">$options</span>:expr, <span class="macro-nonterminal">$after</span>:expr) =&gt; {{ load_class(<span class="macro-nonterminal">$class</span>, <span class="macro-nonterminal">$options</span>, <span class="macro-nonterminal">$after</span>) }};
 }
 
 <span class="attr">#[macro_export]
@@ -2435,8 +2359,13 @@
     find_file(<span class="macro-nonterminal">$name</span>, <span class="prelude-val">None</span>)
   };
   (<span class="macro-nonterminal">$name</span>:expr, <span class="kw">type </span>=&gt; <span class="macro-nonterminal">$ext</span>:literal) =&gt; {
-    find_file(<span class="macro-nonterminal">$name</span>, <span class="prelude-val">Some</span>(FindFileOptions{
-      ext_type: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="macro-nonterminal">$ext</span>)), ..FindFileOptions::default()}))
+    find_file(
+      <span class="macro-nonterminal">$name</span>,
+      <span class="prelude-val">Some</span>(FindFileOptions {
+        ext_type: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="macro-nonterminal">$ext</span>)),
+        ..FindFileOptions::default()
+      }),
+    )
   };
 }
 
@@ -2999,9 +2928,7 @@
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> RelaxNGSchema {
-  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
-    select_relaxng_schema(<span class="macro-nonterminal">$name</span>, <span class="prelude-val">None</span>)
-  }};
+  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{ select_relaxng_schema(<span class="macro-nonterminal">$name</span>, <span class="prelude-val">None</span>) }};
 }
 
 <span class="attr">#[macro_export]
@@ -3063,9 +2990,7 @@
 
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> CounterValue {
-  (<span class="macro-nonterminal">$ctr</span>:expr) =&gt; {{
-    counter_value(<span class="macro-nonterminal">$ctr</span>)<span class="question-mark">?
-  </span>}};
+  (<span class="macro-nonterminal">$ctr</span>:expr) =&gt; {{ counter_value(<span class="macro-nonterminal">$ctr</span>)<span class="question-mark">? </span>}};
   (<span class="macro-nonterminal">$ctr</span>:expr) =&gt; {
     counter_value(<span class="macro-nonterminal">$ctr</span>)<span class="question-mark">?
   </span>};
@@ -3075,7 +3000,7 @@
 </span><span class="macro">macro_rules!</span> AddToCounter {
   (<span class="macro-nonterminal">$ctr</span>:expr, <span class="macro-nonterminal">$value</span>:expr) =&gt; {
     add_to_counter(<span class="macro-nonterminal">$ctr</span>, <span class="macro-nonterminal">$value</span>.into())<span class="question-mark">?
-  </span>}
+  </span>};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> StepCounter {
@@ -3104,12 +3029,8 @@
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> ResetCounter {
-  (<span class="macro-nonterminal">$ctr</span>:literal) =&gt; {{
-    reset_counter(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="macro-nonterminal">$ctr</span>))<span class="question-mark">?
-  </span>}};
-  (<span class="macro-nonterminal">$ctr</span>:expr) =&gt; {{
-    reset_counter(<span class="macro-nonterminal">$ctr</span>)<span class="question-mark">?
-  </span>}};
+  (<span class="macro-nonterminal">$ctr</span>:literal) =&gt; {{ reset_counter(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="macro-nonterminal">$ctr</span>))<span class="question-mark">? </span>}};
+  (<span class="macro-nonterminal">$ctr</span>:expr) =&gt; {{ reset_counter(<span class="macro-nonterminal">$ctr</span>)<span class="question-mark">? </span>}};
   (<span class="macro-nonterminal">$ctr</span>:expr) =&gt; {
     reset_counter(<span class="macro-nonterminal">$ctr</span>)<span class="question-mark">?
   </span>};
@@ -3120,34 +3041,27 @@
 </span><span class="macro">macro_rules!</span> Expand {
   (<span class="macro-nonterminal">$tokens</span>:expr) =&gt; {
     do_expand(<span class="macro-nonterminal">$tokens</span>)<span class="question-mark">?
-  </span>}
+  </span>};
 }
 
 <span class="doccomment">/// Return `tokens` with all partial expandsion
 </span><span class="macro">macro_rules!</span> ExpandPartially {
   (<span class="macro-nonterminal">$tokens</span>:expr) =&gt; {
     do_expand_partially(<span class="macro-nonterminal">$tokens</span>)<span class="question-mark">?
-  </span>}
+  </span>};
 }
 <span class="doccomment">/// Builds a representation of a single command sequence invoked on a
 /// `Vec&lt;Token&gt;` of its arguments.
 /// A leading string argument is interpreted as `T_CS`.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> Invocation {
-  (<span class="macro-nonterminal">$csname</span>:literal) =&gt; {{
-    <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="macro-nonterminal">$csname</span>))
-  }};
-  (<span class="macro-nonterminal">$csname</span>:literal, <span class="macro-nonterminal">$args</span>:expr) =&gt; {{
-    <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="macro-nonterminal">$csname</span>), <span class="macro-nonterminal">$args</span>)
-  }};
+  (<span class="macro-nonterminal">$csname</span>:literal) =&gt; {{ <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="macro-nonterminal">$csname</span>)) }};
+  (<span class="macro-nonterminal">$csname</span>:literal, <span class="macro-nonterminal">$args</span>:expr) =&gt; {{ <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="macro-nonterminal">$csname</span>), <span class="macro-nonterminal">$args</span>) }};
   (<span class="macro-nonterminal">$token</span>:expr) =&gt; {
     <span class="macro">Invocation!</span>(<span class="macro-nonterminal">$token</span>, <span class="macro">vec!</span>[<span class="prelude-val">None</span>])
   };
   (<span class="macro-nonterminal">$token</span>:expr, <span class="macro-nonterminal">$args</span>:expr) =&gt; {
-    build_invocation(
-      <span class="macro-nonterminal">$token</span>,
-      <span class="macro-nonterminal">$args</span>.into_iter().map(Into::into).collect()
-    )<span class="question-mark">?
+    build_invocation(<span class="macro-nonterminal">$token</span>, <span class="macro-nonterminal">$args</span>.into_iter().map(Into::into).collect())<span class="question-mark">?
   </span>};
 }
 <span class="attr">#[macro_export]
@@ -3156,30 +3070,28 @@
     <span class="kw">let </span>regex_compiled = Regex::new(<span class="macro-nonterminal">$regex</span>).unwrap();
     <span class="kw">let </span>test_closure: <span class="prelude-ty">Option</span>&lt;FontTestClosure&gt; = <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|<span class="macro-nonterminal">$font</span>| <span class="macro-nonterminal">$body</span>));
     <span class="kw">let </span>new_ligature_id = generate_ligature_id();
-    unshift_value(
-      <span class="string">"TEXT_LIGATURES"</span>,
-      <span class="macro">vec!</span>[Ligature {
-        id: new_ligature_id,
-        regex: <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$regex</span>.to_string()),
-        code: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|text|regex_compiled.replace_all(text, <span class="macro-nonterminal">$replacement</span>).to_string())),
-        font_test: test_closure,
-        matcher: <span class="prelude-val">None</span>,
-      }],
-    );
+    unshift_value(<span class="string">"TEXT_LIGATURES"</span>, <span class="macro">vec!</span>[Ligature {
+      id:        new_ligature_id,
+      regex:     <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$regex</span>.to_string()),
+      code:      <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|text| {
+        regex_compiled.replace_all(text, <span class="macro-nonterminal">$replacement</span>).to_string()
+      })),
+      font_test: test_closure,
+      matcher:   <span class="prelude-val">None</span>,
+    }]);
   };
   (<span class="macro-nonterminal">$regex</span>:expr, <span class="macro-nonterminal">$replacement</span>:expr) =&gt; {
     <span class="kw">let </span>regex_compiled = Regex::new(<span class="macro-nonterminal">$regex</span>).unwrap();
     <span class="kw">let </span>new_ligature_id = generate_ligature_id();
-    unshift_value(
-      <span class="string">"TEXT_LIGATURES"</span>,
-      <span class="macro">vec!</span>[Ligature {
-        id: new_ligature_id,
-        regex: <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$regex</span>.to_string()),
-        code: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|text|regex_compiled.replace_all(text, <span class="macro-nonterminal">$replacement</span>).to_string())),
-        font_test: <span class="prelude-val">None</span>,
-        matcher: <span class="prelude-val">None</span>,
-      }],
-    );
+    unshift_value(<span class="string">"TEXT_LIGATURES"</span>, <span class="macro">vec!</span>[Ligature {
+      id:        new_ligature_id,
+      regex:     <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$regex</span>.to_string()),
+      code:      <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|text| {
+        regex_compiled.replace_all(text, <span class="macro-nonterminal">$replacement</span>).to_string()
+      })),
+      font_test: <span class="prelude-val">None</span>,
+      matcher:   <span class="prelude-val">None</span>,
+    }]);
   };
 }
 
@@ -3223,33 +3135,23 @@
 //
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LookupBool {
-  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
-    state::lookup_bool(<span class="macro-nonterminal">$name</span>)
-  }};
+  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{ state::lookup_bool(<span class="macro-nonterminal">$name</span>) }};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LookupFont {
-  () =&gt; {{
-    state::lookup_font()
-  }};
+  () =&gt; {{ state::lookup_font() }};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LookupString {
-  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
-    state::lookup_string(<span class="macro-nonterminal">$name</span>)
-  }};
+  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{ state::lookup_string(<span class="macro-nonterminal">$name</span>) }};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LookupNumber {
-  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
-    state::lookup_number(<span class="macro-nonterminal">$name</span>)
-  }};
+  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{ state::lookup_number(<span class="macro-nonterminal">$name</span>) }};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LookupTokens {
-  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
-    state::lookup_tokens(<span class="macro-nonterminal">$name</span>)
-  }};
+  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{ state::lookup_tokens(<span class="macro-nonterminal">$name</span>) }};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> AssignValue {
@@ -3259,12 +3161,8 @@
   (<span class="macro-nonterminal">$name</span>:expr =&gt; <span class="macro-nonterminal">$value</span>:expr, <span class="macro-nonterminal">$scope</span>:expr) =&gt; {
     <span class="macro">AssignValue!</span>(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$scope</span>)
   };
-  (<span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$value</span>:expr) =&gt; {{
-    state::assign_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$value</span>, <span class="prelude-val">None</span>)
-  }};
-  (<span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$value</span>:expr, <span class="macro-nonterminal">$scope</span>:expr) =&gt; {{
-    state::assign_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$scope</span>)
-  }};
+  (<span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$value</span>:expr) =&gt; {{ state::assign_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$value</span>, <span class="prelude-val">None</span>) }};
+  (<span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$value</span>:expr, <span class="macro-nonterminal">$scope</span>:expr) =&gt; {{ state::assign_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$scope</span>) }};
   (<span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$value</span>:expr, <span class="macro-nonterminal">$scope</span>:expr) =&gt; {
     state::assign_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$scope</span>)
   };
@@ -3281,40 +3179,32 @@
   (<span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$val</span>:expr) =&gt; {
     <span class="macro">AssignMeaning!</span>(<span class="macro-nonterminal">$key</span>, <span class="macro-nonterminal">$val</span>, <span class="prelude-val">None</span>)
   };
-  (<span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$val</span>:expr, <span class="macro-nonterminal">$scope</span>: expr) =&gt; {{
-    assign_meaning(<span class="macro-nonterminal">$key</span>, <span class="macro-nonterminal">$val</span>, <span class="macro-nonterminal">$scope</span>)
-  }};
+  (<span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$val</span>:expr, <span class="macro-nonterminal">$scope</span>: expr) =&gt; {{ assign_meaning(<span class="macro-nonterminal">$key</span>, <span class="macro-nonterminal">$val</span>, <span class="macro-nonterminal">$scope</span>) }};
 }
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LookupCatcode {
-  (<span class="macro-nonterminal">$c</span>:expr) =&gt; {{
-    state::lookup_catcode(<span class="macro-nonterminal">$c</span>)
-  }};
+  (<span class="macro-nonterminal">$c</span>:expr) =&gt; {{ state::lookup_catcode(<span class="macro-nonterminal">$c</span>) }};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> AssignCatcode {
   (<span class="macro-nonterminal">$name</span>:expr =&gt; <span class="macro-nonterminal">$value</span>:expr) =&gt; {
     <span class="macro">AssignCatcode!</span>(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$value</span>)
   };
-  (<span class="macro-nonterminal">$c</span>:expr, <span class="macro-nonterminal">$catcode</span>:expr) =&gt; {{
-    <span class="macro">AssignCatcode!</span>(<span class="macro-nonterminal">$c</span>, <span class="macro-nonterminal">$catcode</span>, <span class="prelude-val">None</span>)
-  }};
-  (<span class="macro-nonterminal">$c</span>:expr, <span class="macro-nonterminal">$catcode</span>:expr, <span class="macro-nonterminal">$scope</span>:expr) =&gt; {{
-    assign_catcode(<span class="macro-nonterminal">$c</span>, <span class="macro-nonterminal">$catcode</span>, <span class="macro-nonterminal">$scope</span>)
-  }};
+  (<span class="macro-nonterminal">$c</span>:expr, <span class="macro-nonterminal">$catcode</span>:expr) =&gt; {{ <span class="macro">AssignCatcode!</span>(<span class="macro-nonterminal">$c</span>, <span class="macro-nonterminal">$catcode</span>, <span class="prelude-val">None</span>) }};
+  (<span class="macro-nonterminal">$c</span>:expr, <span class="macro-nonterminal">$catcode</span>:expr, <span class="macro-nonterminal">$scope</span>:expr) =&gt; {{ assign_catcode(<span class="macro-nonterminal">$c</span>, <span class="macro-nonterminal">$catcode</span>, <span class="macro-nonterminal">$scope</span>) }};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LookupMeaning {
   (<span class="macro-nonterminal">$name</span>:expr) =&gt; {
     state::lookup_meaning(<span class="macro-nonterminal">$name</span>)
-  }
+  };
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> LookupDefinition {
   (<span class="macro-nonterminal">$name</span>:expr) =&gt; {
     state::lookup_definition(<span class="macro-nonterminal">$name</span>)<span class="question-mark">?
-  </span>}
+  </span>};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> InstallDefinition {
@@ -3326,7 +3216,7 @@
 </span><span class="macro">macro_rules!</span> XEquals {
   (<span class="macro-nonterminal">$token1</span>:expr, <span class="macro-nonterminal">$token2</span>:expr) =&gt; {
     state::x_equals(<span class="macro-nonterminal">$token1</span>, <span class="macro-nonterminal">$token2</span>)
-  }
+  };
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> IsDefined {
@@ -3336,9 +3226,7 @@
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> IsDefinedToken {
-  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{
-    is_defined_token(<span class="macro-nonterminal">$name</span>)
-  }};
+  (<span class="macro-nonterminal">$name</span>:expr) =&gt; {{ is_defined_token(<span class="macro-nonterminal">$name</span>) }};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> IsDefinable {
@@ -3350,25 +3238,13 @@
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> Let {
   (<span class="macro-nonterminal">$token1</span>:literal, <span class="macro-nonterminal">$token2</span>:literal) =&gt; {
-    state::let_i(
-      <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>),
-      <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>),
-      <span class="prelude-val">None
-    </span>)
+    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>), <span class="prelude-val">None</span>)
   };
   (<span class="macro-nonterminal">$token1</span>:literal, <span class="macro-nonterminal">$token2</span>:literal, <span class="prelude-val">None</span>) =&gt; {
-    state::let_i(
-      <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>),
-      <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>),
-      <span class="prelude-val">None
-    </span>)
+    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>), <span class="prelude-val">None</span>)
   };
   (<span class="macro-nonterminal">$token1</span>:literal, <span class="macro-nonterminal">$token2</span>:literal, <span class="macro-nonterminal">$scope</span>:expr) =&gt; {
-    state::let_i(
-      <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>),
-      <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>),
-      <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$scope</span>)
-    )
+    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>), <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$scope</span>))
   };
   <span class="comment">// half-packaged args
   </span>(<span class="macro-nonterminal">$token1</span>:literal, <span class="macro-nonterminal">$token2</span>:expr) =&gt; {
@@ -3406,7 +3282,7 @@
     merge_font(<span class="macro-nonterminal">$kv</span>)
   };
   (<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$val</span>:expr) =&gt; {
-    merge_font(<span class="macro">fontmap!</span>(<span class="macro-nonterminal">$key </span>=&gt; <span class="macro-nonterminal">$val</span>))
+merge_font(<span class="macro">fontmap!</span>(<span class="macro-nonterminal">$key </span>=&gt; <span class="macro-nonterminal">$val</span>))
   };
 }
 
@@ -3562,7 +3438,7 @@
 }
 
 <span class="doccomment">/// Defines a register with `value` as the initial value
-/// 
+///
 /// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
 /// Usually, the `prototype` is just the control sequence,
 /// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
@@ -3775,9 +3651,7 @@
   (<span class="macro-nonterminal">$thing</span>:literal) =&gt; {
     <span class="macro">Explode!</span>(<span class="macro-nonterminal">$thing</span>)
   };
-  (<span class="macro-nonterminal">$thing</span>:expr) =&gt; {{
-    <span class="macro-nonterminal">$thing</span>.revert()<span class="question-mark">?</span>.unlist()
-  }};
+  (<span class="macro-nonterminal">$thing</span>:expr) =&gt; {{ <span class="macro-nonterminal">$thing</span>.revert()<span class="question-mark">?</span>.unlist() }};
 }
 
 <span class="attr">#[macro_export]
@@ -3809,26 +3683,24 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> DefKeyVal {
   (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr) =&gt; {{
-    ::latexml_core::keyval::define(
-      KeyvalConfig {
-        prefix: <span class="string">"KV"</span>,
-        keyset: <span class="macro-nonterminal">$keyset</span>,
-        key: <span class="macro-nonterminal">$key</span>,
-        vtype: <span class="macro-nonterminal">$vtype</span>,
-        default: <span class="prelude-val">None</span>,
-        ..KeyvalConfig::default()
-      })<span class="question-mark">?</span>;
+    ::latexml_core::keyval::define(KeyvalConfig {
+      prefix: <span class="string">"KV"</span>,
+      keyset: <span class="macro-nonterminal">$keyset</span>,
+      key: <span class="macro-nonterminal">$key</span>,
+      vtype: <span class="macro-nonterminal">$vtype</span>,
+      default: <span class="prelude-val">None</span>,
+      ..KeyvalConfig::default()
+    })<span class="question-mark">?</span>;
   }};
   (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr, <span class="macro-nonterminal">$default</span>:expr) =&gt; {{
-    ::latexml_core::keyval::define(
-      KeyvalConfig {
-        prefix: <span class="string">"KV"</span>,
-        keyset: <span class="macro-nonterminal">$keyset</span>,
-        key: <span class="macro-nonterminal">$key</span>,
-        vtype: <span class="macro-nonterminal">$vtype</span>,
-        default: <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$default</span>),
-        ..KeyvalConfig::default()
-      })<span class="question-mark">?</span>;
+    ::latexml_core::keyval::define(KeyvalConfig {
+      prefix: <span class="string">"KV"</span>,
+      keyset: <span class="macro-nonterminal">$keyset</span>,
+      key: <span class="macro-nonterminal">$key</span>,
+      vtype: <span class="macro-nonterminal">$vtype</span>,
+      default: <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$default</span>),
+      ..KeyvalConfig::default()
+    })<span class="question-mark">?</span>;
   }};
   (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr, <span class="macro-nonterminal">$default</span>:expr, <span class="macro-nonterminal">$options</span>:tt) =&gt; {
     <span class="comment">// TODO: explicit $options with prefix logic
@@ -3849,16 +3721,12 @@
     stomach::digest(tokenized)
   }};
 
-  (<span class="macro-nonterminal">$tokens</span>:expr) =&gt; {{
-    stomach::digest(<span class="macro-nonterminal">$tokens</span>)
-  }};
+  (<span class="macro-nonterminal">$tokens</span>:expr) =&gt; {{ stomach::digest(<span class="macro-nonterminal">$tokens</span>) }};
 }
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> DigestText {
-  (<span class="macro-nonterminal">$tokens</span>:expr) =&gt; {{
-    digest_text(<span class="macro-nonterminal">$tokens</span>)
-  }};
+  (<span class="macro-nonterminal">$tokens</span>:expr) =&gt; {{ digest_text(<span class="macro-nonterminal">$tokens</span>) }};
 }
 
 <span class="doccomment">/// Tokenize($string); Tokenizes the string using the standard cattable, returning a
@@ -3893,7 +3761,7 @@
 </span><span class="macro">macro_rules!</span> RawTeX {
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     ::latexml_core::stomach::raw_tex(<span class="macro-nonterminal">$text</span>)<span class="question-mark">?</span>;
-  }
+  };
 }
 
 <span class="attr">#[macro_export]
@@ -3902,7 +3770,7 @@
     <span class="kw">let </span>tokenized;
     <span class="macro">compile_tokenize_internal!</span>(tokenized, <span class="macro-nonterminal">$text</span>);
     ::latexml_core::stomach::digest(tokenized)<span class="question-mark">?</span>;
-  }
+  };
 }
 
 <span class="attr">#[macro_export]
@@ -3914,16 +3782,12 @@
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> Glue {
-  (<span class="macro-nonterminal">$spec</span>:expr) =&gt; {{
-    Glue::new_spec(<span class="macro-nonterminal">$spec</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
-  }};
+  (<span class="macro-nonterminal">$spec</span>:expr) =&gt; {{ Glue::new_spec(<span class="macro-nonterminal">$spec</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>) }};
 }
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> MuGlue {
-  (<span class="macro-nonterminal">$spec</span>:expr) =&gt; {{
-    MuGlue::new_spec(<span class="macro-nonterminal">$spec</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
-  }};
+  (<span class="macro-nonterminal">$spec</span>:expr) =&gt; {{ MuGlue::new_spec(<span class="macro-nonterminal">$spec</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>) }};
 }
 
 <span class="attr">#[macro_export]
@@ -3942,9 +3806,7 @@
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> Today {
-  () =&gt; {{
-    today()<span class="question-mark">?
-  </span>}};
+  () =&gt; {{ today()<span class="question-mark">? </span>}};
 }
 
 <span class="attr">#[macro_export]
@@ -3956,8 +3818,8 @@
   (<span class="prelude-val">None</span>, $(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="kw">let </span>cs = String::from(<span class="string">"\\default@ds"</span>);
     <span class="comment">// block case, create a primitive
-    </span><span class="kw">let </span>code: PrimitiveBody = PrimitiveBody::Closure(
-      Rc::new(<span class="kw">move </span>|_args| <span class="macro-nonterminal">$body</span>.into_digested_result()));
+    </span><span class="kw">let </span>code: PrimitiveBody =
+      PrimitiveBody::Closure(Rc::new(<span class="kw">move </span>|_args| <span class="macro-nonterminal">$body</span>.into_digested_result()));
     def_primitive(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(code), PrimitiveOptions::default())<span class="question-mark">?</span>;
   };
   (<span class="macro-nonterminal">$option</span>:expr, <span class="macro-nonterminal">$tex</span>:literal) =&gt; {
@@ -3966,22 +3828,22 @@
     state::push_value(<span class="string">"@declaredoptions"</span>, <span class="macro-nonterminal">$option</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>cs = <span class="macro">s!</span>(<span class="string">"\\ds@{}"</span>, <span class="macro-nonterminal">$option</span>);
     <span class="comment">// literal case, create a macro
-    </span>def_macro(<span class="macro">T_CS!</span>(cs),<span class="prelude-val">None</span>,tokenized,<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+    </span>def_macro(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, tokenized, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   };
   (<span class="macro-nonterminal">$option</span>:expr, <span class="macro-nonterminal">$tokenized</span>:ident) =&gt; {
     state::push_value(<span class="string">"@declaredoptions"</span>, <span class="macro-nonterminal">$option</span>.to_string())<span class="question-mark">?</span>;
     <span class="kw">let </span>cs = <span class="macro">s!</span>(<span class="string">"\\ds@{}"</span>, <span class="macro-nonterminal">$option</span>);
     <span class="comment">// literal case, create a macro
-    </span>def_macro(<span class="macro">T_CS!</span>(cs),<span class="prelude-val">None</span>, <span class="macro-nonterminal">$tokenized</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+    </span>def_macro(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="macro-nonterminal">$tokenized</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   };
   (<span class="macro-nonterminal">$option</span>:expr, $(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block) =&gt; {
     state::push_value(<span class="string">"@declaredoptions"</span>, <span class="macro-nonterminal">$option</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>cs = <span class="macro">s!</span>(<span class="string">"\\ds@{}"</span>, <span class="macro-nonterminal">$option</span>);
     <span class="comment">// block case, create a primitive
-    </span><span class="kw">let </span>code: PrimitiveBody = PrimitiveBody::Closure(
-      Rc::new(<span class="kw">move </span>|_args| <span class="macro-nonterminal">$body</span>.into_digested_result()));
+    </span><span class="kw">let </span>code: PrimitiveBody =
+      PrimitiveBody::Closure(Rc::new(<span class="kw">move </span>|_args| <span class="macro-nonterminal">$body</span>.into_digested_result()));
     def_primitive(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(code), PrimitiveOptions::default())<span class="question-mark">?</span>;
-  }
+  };
 }
 
 <span class="attr">#[macro_export]
@@ -4017,11 +3879,7 @@
              This is usually in error!"</span>,
             <span class="macro-nonterminal">$cs
           </span>);
-          <span class="macro">Warn!</span>(
-            <span class="string">"unexpected"</span>,
-            <span class="string">"ExpandableBody::Closure"</span>,
-            message
-          );
+          <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"ExpandableBody::Closure"</span>, message);
           Vec::new()
         },
         <span class="prelude-val">None </span>=&gt; Vec::new(),
@@ -4035,7 +3893,7 @@
           scope: <span class="prelude-val">Some</span>(Scope::Global),
           nopack_parameters: <span class="bool-val">true</span>,
           ..ExpandableOptions::default()
-        })
+        }),
       )<span class="question-mark">?</span>;
     }
   }};
@@ -4043,13 +3901,7 @@
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> BeginItemize {
-  (<span class="macro-nonterminal">$itype</span>:literal, <span class="macro-nonterminal">$counter</span>:literal) =&gt; {{
-    begin_itemize(
-      <span class="macro-nonterminal">$itype</span>,
-      <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$counter</span>),
-      BeginItemizeOptions::default()
-    )
-  }};
+  (<span class="macro-nonterminal">$t</span>:literal, <span class="macro-nonterminal">$c</span>:literal) =&gt; {{ begin_itemize(<span class="macro-nonterminal">$t</span>, <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$c</span>), BeginItemizeOptions::default()) }};
 }
 
 <span class="comment">//
@@ -4075,9 +3927,10 @@
   -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
     <span class="macro">defi_opts!</span>(@reversion (sub[<span class="macro-nonterminal">$whatsit</span>,<span class="macro-nonterminal">$args</span>] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )<span class="kw-2">*</span>})
   };
-  (@munch ( $(,)<span class="question-mark">? </span>reversion $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub[<span class="macro-nonterminal">$arg</span>:ident, <span class="macro-nonterminal">$inner</span>:ident, <span class="macro-nonterminal">$extra</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
+  (@munch ( $(,)<span class="question-mark">? </span>reversion $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">?
+    </span>sub[<span class="macro-nonterminal">$arg</span>:ident, <span class="macro-nonterminal">$inner</span>:ident, <span class="macro-nonterminal">$extra</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
     -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
-    <span class="macro">defi_opts!</span>(@reversion (sub[<span class="macro-nonterminal">$arg</span>,<span class="macro-nonterminal">$inner</span>,<span class="macro-nonterminal">$extra</span>] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )<span class="kw-2">*</span>})
+    <span class="macro">defi_opts!</span>(@reversion (sub[<span class="macro-nonterminal">$arg</span>,<span class="macro-nonterminal">$inner</span>,<span class="macro-nonterminal">$extra</span>] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $([ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>])<span class="kw-2">*</span>})
   };
   (@munch ( $(,)<span class="question-mark">? </span>reversion $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>$(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
     -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
@@ -4436,7 +4289,7 @@
   };
   (@munch ( $(,)<span class="question-mark">? </span>allocate $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$idval</span>:expr)
     -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
-    <span class="macro">defi_opts!</span>(@munch ()  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ allocate @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$idval</span>.to_string()) ] })
+    <span class="macro">defi_opts!</span>(@munch ()  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [allocate @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$idval</span>.to_string()) ]})
   };
   <span class="comment">// for defmath
   // stretchy: bool
@@ -4451,16 +4304,19 @@
   <span class="comment">// operator_role: string
   </span>(@munch ( $(,)<span class="question-mark">? </span>operator_role $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
   -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
-  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ operator_role @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
+  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )*
+    [ operator_role @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
   };
   (@munch ( $(,)<span class="question-mark">? </span>operator_role $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
   -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
-  <span class="macro">defi_opts!</span>(@munch ()  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ operator_role @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
+  <span class="macro">defi_opts!</span>(@munch ()  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )*
+    [ operator_role @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
   };
   <span class="comment">// operator_stretchy: bool
   </span>(@munch ( $(,)<span class="question-mark">? </span>operator_stretchy $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
   -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
-  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ operator_stretchy @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>) ] })
+  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )*
+    [ operator_stretchy @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>) ] })
   };
   (@munch ( $(,)<span class="question-mark">? </span>operator_stretchy $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
   -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
@@ -4469,7 +4325,8 @@
   <span class="comment">// scriptpos: string
   </span>(@munch ( $(,)<span class="question-mark">? </span>scriptpos $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
   -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
-  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ scriptpos @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
+  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )*
+    [ scriptpos @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
   };
   (@munch ( $(,)<span class="question-mark">? </span>scriptpos $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
   -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
@@ -4499,7 +4356,8 @@
     <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $([<span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val</span>])*
       [before_digest @ <span class="macro">before_digest!</span>(<span class="macro-nonterminal">$body</span>)]})
   };
-  (@before_digest ($(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
+  (@before_digest ($(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident,
+    $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
     <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $([<span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val</span>])*
       [before_digest @ <span class="macro">before_digest!</span>(<span class="macro-nonterminal">$body</span>)]})
   };

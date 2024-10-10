@@ -147,9 +147,9 @@
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="kw">pub type </span>TagConstructionClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;&gt;;
 <span class="kw">pub type </span>TagData = (String, <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, String&gt;&gt;, Digested);
@@ -191,14 +191,14 @@
 
 <span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>TagOptions {
-  <span class="kw">pub </span>auto_open: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>auto_close: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>after_open: <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
-  <span class="kw">pub </span>after_close: <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
-  <span class="kw">pub </span>after_open_early: <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
+  <span class="kw">pub </span>auto_open:         <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>auto_close:        <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>after_open:        <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
+  <span class="kw">pub </span>after_close:       <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
+  <span class="kw">pub </span>after_open_early:  <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
   <span class="kw">pub </span>after_close_early: <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
-  <span class="kw">pub </span>after_open_late: <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
-  <span class="kw">pub </span>after_close_late: <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
+  <span class="kw">pub </span>after_open_late:   <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
+  <span class="kw">pub </span>after_close_late:  <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
 }
 
 <span class="kw">impl </span>TagOptions {

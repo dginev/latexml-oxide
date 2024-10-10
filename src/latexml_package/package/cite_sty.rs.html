@@ -83,43 +83,43 @@
   <span class="comment">// Copy of natbib's \citet
   // DefMacro!("\\citen OptionalMatch:* [][] Semiverbatim",
   //   sub[(_star,_pre,_post,_tkeys)] {
-      // my ($style, $open, $close, $ns)
-      //   = map { LookupValue($_) } qw(CITE_STYLE CITE_OPEN CITE_CLOSE CITE_NOTE_SEPARATOR);
-      // if (!$post) { ($pre, $post) = (undef, $pre); }
-      // $pre  = undef unless $pre  &amp;&amp; $pre-&gt;unlist;
-      // $post = undef unless $post &amp;&amp; $post-&gt;unlist;
-      // my $author = ($star ? "FullAuthors" : "Authors");
-      // if ($style eq 'numbers') {
-      //   Invocation(T_CS('\@@cite'),
-      //     Tokens(Explode('citet')),
-      //     Tokens(    #($pre ? ($pre, T_SPACE) : ()),
-      //       Invocation(T_CS('\@@bibref'),
-      //         Tokens(Explode("$author Phrase1NumberPhrase2")),
-      //         $keys,
-      //         Invocation(T_CS('\@@citephrase'),
-      //           Tokens($open, ($pre ? ($pre, T_SPACE) : ()))),
-      //         Invocation(T_CS('\@@citephrase'),
-      //           Tokens(($post ? ($ns-&gt;unlist, T_SPACE, $post-&gt;unlist) : ()), $close-&gt;unlist))
-      //       )))-&gt;unlist; }
-      // elsif ($style eq 'super') {
-      //   Invocation(T_CS('\@@cite'),
-      //     Tokens(Explode('citet')),
-      //     Tokens(($pre ? ($pre, T_SPACE) : ()),
-      //       Invocation(T_CS('\@@bibref'),
-      //         Tokens(Explode("$author Phrase1SuperPhrase2")),
-      //         $keys, undef, undef)-&gt;unlist,
-      //       ($post ? ($ns, T_SPACE, $post-&gt;unlist) : ()))); }
-      // else {
-      //   Invocation(T_CS('\@@cite'),
-      //     Tokens(Explode('citet')),
-      //     Invocation(T_CS('\@@bibref'),
-      //       Tokens(Explode("$author Phrase1YearPhrase2")),
-      //       $keys,
-      //       Invocation(T_CS('\@@citephrase'),
-      //         Tokens($open, ($pre ? ($pre, T_SPACE) : ()))),
-      //       Invocation(T_CS('\@@citephrase'),
-      //         Tokens(($post ? ($ns, T_SPACE, $post) : ()), $close)))); }
-// });
+  // my ($style, $open, $close, $ns)
+  //   = map { LookupValue($_) } qw(CITE_STYLE CITE_OPEN CITE_CLOSE CITE_NOTE_SEPARATOR);
+  // if (!$post) { ($pre, $post) = (undef, $pre); }
+  // $pre  = undef unless $pre  &amp;&amp; $pre-&gt;unlist;
+  // $post = undef unless $post &amp;&amp; $post-&gt;unlist;
+  // my $author = ($star ? "FullAuthors" : "Authors");
+  // if ($style eq 'numbers') {
+  //   Invocation(T_CS('\@@cite'),
+  //     Tokens(Explode('citet')),
+  //     Tokens(    #($pre ? ($pre, T_SPACE) : ()),
+  //       Invocation(T_CS('\@@bibref'),
+  //         Tokens(Explode("$author Phrase1NumberPhrase2")),
+  //         $keys,
+  //         Invocation(T_CS('\@@citephrase'),
+  //           Tokens($open, ($pre ? ($pre, T_SPACE) : ()))),
+  //         Invocation(T_CS('\@@citephrase'),
+  //           Tokens(($post ? ($ns-&gt;unlist, T_SPACE, $post-&gt;unlist) : ()), $close-&gt;unlist))
+  //       )))-&gt;unlist; }
+  // elsif ($style eq 'super') {
+  //   Invocation(T_CS('\@@cite'),
+  //     Tokens(Explode('citet')),
+  //     Tokens(($pre ? ($pre, T_SPACE) : ()),
+  //       Invocation(T_CS('\@@bibref'),
+  //         Tokens(Explode("$author Phrase1SuperPhrase2")),
+  //         $keys, undef, undef)-&gt;unlist,
+  //       ($post ? ($ns, T_SPACE, $post-&gt;unlist) : ()))); }
+  // else {
+  //   Invocation(T_CS('\@@cite'),
+  //     Tokens(Explode('citet')),
+  //     Invocation(T_CS('\@@bibref'),
+  //       Tokens(Explode("$author Phrase1YearPhrase2")),
+  //       $keys,
+  //       Invocation(T_CS('\@@citephrase'),
+  //         Tokens($open, ($pre ? ($pre, T_SPACE) : ()))),
+  //       Invocation(T_CS('\@@citephrase'),
+  //         Tokens(($post ? ($ns, T_SPACE, $post) : ()), $close)))); }
+  // });
 
   </span><span class="macro">Let!</span>(<span class="string">"\\citenum"</span>, <span class="string">"\\citen"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\citeonline"</span>, <span class="string">"\\citen"</span>);

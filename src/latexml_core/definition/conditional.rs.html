@@ -409,16 +409,7 @@
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
 <a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a></pre></div><pre class="rust"><code><span class="doccomment">//! Conditionals Control sequence definitions.
+<a href="#411" id="411">411</a></pre></div><pre class="rust"><code><span class="doccomment">//! Conditionals Control sequence definitions.
 //! These represent the control sequences for conditionals, as well as
 //! `\else`, `\or` and `\fi`.
 
@@ -432,15 +423,15 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="comment">// use crate::common::numeric_ops::NumericOps;
-</span><span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
+</span><span class="kw">use </span><span class="kw">crate</span>::Digested;
+<span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
-<span class="kw">use crate</span>::{gullet,state};
+<span class="kw">use crate</span>::{gullet, state};
 
 <span class="comment">// Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
@@ -482,9 +473,9 @@
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>ConditionalOptions {
   <span class="doccomment">/// scope to install in state
-  </span><span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+  </span><span class="kw">pub </span>scope:   <span class="prelude-ty">Option</span>&lt;Scope&gt;,
   <span class="doccomment">/// is this definition locked?
-  </span><span class="kw">pub </span>locked: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  </span><span class="kw">pub </span>locked:  <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="doccomment">/// skipper, currently only used for \ifcase.
   </span><span class="comment">// TODO: implement this?
   </span><span class="kw">pub </span>skipper: <span class="prelude-ty">Option</span>&lt;bool&gt;,
@@ -494,24 +485,24 @@
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Conditional {
   <span class="doccomment">/// the command sequence
-  </span><span class="kw">pub </span>cs: Token,
+  </span><span class="kw">pub </span>cs:               Token,
   <span class="doccomment">/// list of parameters, if any
-  </span><span class="kw">pub </span>paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+  </span><span class="kw">pub </span>paramlist:        <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
   <span class="doccomment">/// a test closure, if implemented in a binding
-  </span><span class="kw">pub </span>test: <span class="prelude-ty">Option</span>&lt;ConditionalClosure&gt;,
+  </span><span class="kw">pub </span>test:             <span class="prelude-ty">Option</span>&lt;ConditionalClosure&gt;,
   <span class="doccomment">/// the kind of piece in the syntax (if,else,fi...)
   </span><span class="kw">pub </span>conditional_type: ConditionalType,
   <span class="doccomment">/// a skipper for \ifcase
-  </span><span class="kw">pub </span>skipper: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  </span><span class="kw">pub </span>skipper:          <span class="prelude-ty">Option</span>&lt;bool&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Conditional {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Conditional {
-      cs: <span class="macro">T_CS!</span>(<span class="string">"Conditional"</span>),
-      paramlist: <span class="prelude-val">None</span>,
-      test: <span class="prelude-val">None</span>,
+      cs:               <span class="macro">T_CS!</span>(<span class="string">"Conditional"</span>),
+      paramlist:        <span class="prelude-val">None</span>,
+      test:             <span class="prelude-val">None</span>,
       conditional_type: ConditionalType::Unknown,
-      skipper: <span class="prelude-val">None</span>,
+      skipper:          <span class="prelude-val">None</span>,
     }
   }
 }
@@ -560,16 +551,10 @@
   <span class="kw">fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;str&gt; { Cow::Owned(<span class="self">self</span>.cs.with_cs_name(ToString::to_string)) }
   <span class="kw">fn </span>get_alias(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt; { <span class="prelude-val">None </span>}
   <span class="comment">// Not implemented for expandable
-  </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-    <span class="macro">todo!</span>()
-  }
+  </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; { <span class="macro">todo!</span>() }
   <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">None </span>}
-  <span class="kw">fn </span>do_absorbtion(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    _document: <span class="kw-2">&amp;mut </span>Document,
-    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="macro">fatal!</span>(
       Definition,
       Unexpected,
@@ -582,15 +567,15 @@
 </span><span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>IfFrame {
   <span class="doccomment">/// the token which started the conditional
-  </span><span class="kw">pub </span>token: Token,
+  </span><span class="kw">pub </span>token:   Token,
   <span class="doccomment">/// source location of the conditional start
-  </span><span class="kw">pub </span>start: Locator,
+  </span><span class="kw">pub </span>start:   Locator,
   <span class="doccomment">/// flag: currently parsing the test
   </span><span class="kw">pub </span>parsing: bool,
   <span class="doccomment">/// flag: already seen an else at this level
-  </span><span class="kw">pub </span>elses: bool,
+  </span><span class="kw">pub </span>elses:   bool,
   <span class="doccomment">/// in nested conditionals, give each an id
-  </span><span class="kw">pub </span>ifid: i64,
+  </span><span class="kw">pub </span>ifid:    i64,
 }
 
 <span class="kw">impl </span>Conditional {
@@ -666,11 +651,7 @@
   //   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // The inner \ifx should expand to "XY junk", since A==A
   // Return the token we've skipped to, and the frame that this applies to.
-  </span><span class="kw">fn </span>skip_conditional_body(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    nskips: i64,
-
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  </span><span class="kw">fn </span>skip_conditional_body(<span class="kw-2">&amp;</span><span class="self">self</span>, nskips: i64) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">1</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>n_ors = <span class="number">0</span>;
     <span class="kw">let </span>_start = gullet::get_locator();
@@ -687,7 +668,7 @@
         </span><span class="prelude-val">Some</span>(ConditionalType::Fi) =&gt; {
           <span class="comment">// Found a \fi
           </span><span class="kw">let </span>local_frame = get_ifframe();
-          <span class="kw">let </span>maybe_last = with_value_mut(<span class="string">"if_stack"</span>,|value_opt| {
+          <span class="kw">let </span>maybe_last = with_value_mut(<span class="string">"if_stack"</span>, |value_opt| {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = value_opt {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.pop_front() {
                 <span class="kw">if </span><span class="kw-2">*</span>stack_frame.borrow() != <span class="kw-2">*</span>local_frame.as_ref().unwrap().borrow() {
@@ -752,7 +733,7 @@
   }
 
   <span class="kw">fn </span>invoke_else(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="kw">let </span>stack_frame_opt = with_value_mut(<span class="string">"if_stack"</span>, |stack_opt|
+    <span class="kw">let </span>stack_frame_opt = with_value_mut(<span class="string">"if_stack"</span>, |stack_opt| {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = stack_opt {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.front() {
           <span class="prelude-val">Some</span>(Rc::clone(stack_frame))
@@ -761,7 +742,8 @@
         </span>}
       } <span class="kw">else </span>{
         <span class="prelude-val">None
-      </span>});
+      </span>}
+    });
     <span class="kw">let </span>local_token = get_current_token().unwrap();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(stack_frame) = stack_frame_opt {
       <span class="kw">if </span>stack_frame.borrow().parsing {
@@ -802,17 +784,17 @@
   }
 
   <span class="kw">fn </span>invoke_fi(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="kw">let </span>stack_frame_opt: <span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;IfFrame&gt;&gt;&gt; =
-      with_value(<span class="string">"if_stack"</span>, |stack_opt|
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>stack)) = stack_opt {
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(frame)) = stack.front() {
-            <span class="prelude-val">Some</span>(Rc::clone(frame))
-          } <span class="kw">else </span>{
-            <span class="prelude-val">None
-          </span>}
+    <span class="kw">let </span>stack_frame_opt: <span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;IfFrame&gt;&gt;&gt; = with_value(<span class="string">"if_stack"</span>, |stack_opt| {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>stack)) = stack_opt {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(frame)) = stack.front() {
+          <span class="prelude-val">Some</span>(Rc::clone(frame))
         } <span class="kw">else </span>{
           <span class="prelude-val">None
-        </span>});
+        </span>}
+      } <span class="kw">else </span>{
+        <span class="prelude-val">None
+      </span>}
+    });
     <span class="kw">if let </span><span class="prelude-val">Some</span>(stack_frame) = stack_frame_opt {
       <span class="kw">if </span>stack_frame.borrow().parsing {
         <span class="comment">// Defer expanding the \else if we're still parsing the test

@@ -155,9 +155,8 @@
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Kern
-//! 
+<a href="#157" id="157">157</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Kern
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -165,7 +164,7 @@
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Kern Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // Basic kerning
   //----------------------------------------------------------------------
@@ -201,8 +200,8 @@
     } <span class="kw">else if </span>props.get(<span class="string">"isMath"</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)) {
       <span class="comment">// TODO: Reconsider if the insert_element API needs to be based around
       // Stored map values, rather than String map values.
-      </span>document.insert_element(<span class="string">"ltx:XMHint"</span>, Vec::new(), <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">"width" </span>=&gt; length.to_string())))<span class="question-mark">?</span>; 
-    } <span class="kw">else </span>{ 
+      </span>document.insert_element(<span class="string">"ltx:XMHint"</span>, Vec::new(), <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">"width" </span>=&gt; length.to_string())))<span class="question-mark">?</span>;
+    } <span class="kw">else </span>{
       <span class="comment">// Add space to document?
       </span>document.absorb_string(<span class="kw-2">&amp;</span>dimension_to_spaces(length), <span class="kw-2">&amp;</span>SymHashMap::default())<span class="question-mark">?</span>;
     }
@@ -231,14 +230,14 @@
     }
   });
   <span class="comment">// Get kern, if last on LIST
-  </span><span class="macro">DefRegister!</span>(<span class="string">"\\lastkern" </span>=&gt; Dimension::new(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>, 
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\lastkern" </span>=&gt; Dimension::new(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>,
   getter =&gt; {
     stomach::with_box_list(|stomach_box_list| {
       <span class="kw">let </span>box_iter = stomach_box_list.iter().rev();
       <span class="kw">for </span>box_in_list <span class="kw">in </span>box_iter {
         <span class="kw">if </span>!<span class="macro">matches!</span>(box_in_list.data(), DigestedData::Comment(<span class="kw">_</span>)) {
           <span class="kw">if </span>box_in_list.get_property_bool(<span class="string">"isKern"</span>) {
-            <span class="kw">let </span>width_stored = box_in_list.get_property(<span class="string">"width"</span>).unwrap(); 
+            <span class="kw">let </span>width_stored = box_in_list.get_property(<span class="string">"width"</span>).unwrap();
             <span class="kw">if let </span>Stored::Dimension(<span class="kw-2">ref </span>width_d) = <span class="kw-2">*</span>width_stored {
               <span class="kw">return </span><span class="kw-2">*</span>width_d;
             } <span class="kw">else </span>{
@@ -299,18 +298,18 @@
   // \moveleft&lt;dimen&gt;&lt;box&gt;, \moveright&lt;dimen&gt;&lt;box&gt;
   // \moveleft&lt;dimen&gt;&lt;box&gt;, \moveright&lt;dimen&gt;&lt;box&gt;
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\moveleft Dimension MoveableBox"</span>,
-    <span class="string">"&lt;ltx:text xoffset='#x' _noautoclose='true'&gt;#2&lt;/ltx:text&gt;"</span>,
-    after_digest =&gt; sub[whatsit] {
-      <span class="kw">if let </span>DigestedData::RegisterValue(d) = whatsit.get_arg(<span class="number">1</span>).unwrap().data() {
-        whatsit.set_property(<span class="string">"x"</span>, d.clone().multiply(Number::new(-<span class="number">1</span>)));
-      }
-    });
+  <span class="string">"&lt;ltx:text xoffset='#x' _noautoclose='true'&gt;#2&lt;/ltx:text&gt;"</span>,
+  after_digest =&gt; sub[whatsit] {
+    <span class="kw">if let </span>DigestedData::RegisterValue(d) = whatsit.get_arg(<span class="number">1</span>).unwrap().data() {
+      whatsit.set_property(<span class="string">"x"</span>, d.clone().multiply(Number::new(-<span class="number">1</span>)));
+    }
+  });
   <span class="macro">DefConstructor!</span>(<span class="string">"\\moveright Dimension MoveableBox"</span>,
-    <span class="string">"&lt;ltx:text xoffset='#x' _noautoclose='true'&gt;#2&lt;/ltx:text&gt;"</span>,
-    after_digest =&gt; sub[whatsit] {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(dimension) = whatsit.get_arg(<span class="number">1</span>) {
-        whatsit.set_property(<span class="string">"x"</span>, dimension.clone());
-      }
-    });
-  
-});</code></pre></div></section></main></body></html>
+  <span class="string">"&lt;ltx:text xoffset='#x' _noautoclose='true'&gt;#2&lt;/ltx:text&gt;"</span>,
+  after_digest =&gt; sub[whatsit] {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(dimension) = whatsit.get_arg(<span class="number">1</span>) {
+      whatsit.set_property(<span class="string">"x"</span>, dimension.clone());
+    }
+  });
+});
+</code></pre></div></section></main></body></html>

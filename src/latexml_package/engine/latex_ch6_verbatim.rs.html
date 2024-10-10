@@ -208,9 +208,23 @@
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
 <a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">static </span>SEMIVERBATIM_CHARS: [char;<span class="number">4</span>] = [<span class="string">'%'</span>, <span class="string">'\\'</span>, <span class="string">'{'</span>, <span class="string">'}'</span>];
+<span class="kw">static </span>SEMIVERBATIM_CHARS: [char; <span class="number">4</span>] = [<span class="string">'%'</span>, <span class="string">'\\'</span>, <span class="string">'{'</span>, <span class="string">'}'</span>];
 
 <span class="comment">//======================================================================
 // C.6.4 Verbatim
@@ -366,30 +380,31 @@
   <span class="prelude-val">Ok</span>(stuff)
 }
 
-<span class="kw">fn </span>after_digest_verbatim(starred: bool, whatsit: <span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { 
+<span class="kw">fn </span>after_digest_verbatim(starred: bool, whatsit: <span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// makes you wonder if the `get_font` API should be working with Rc&lt;Font&gt; in the first place...
-  </span><span class="kw">let </span>font : <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; = whatsit.get_font()<span class="question-mark">?</span>.map(|ft| Rc::new((<span class="kw-2">*</span>ft).to_owned()));
+  </span><span class="kw">let </span>font: <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; = whatsit.get_font()<span class="question-mark">?</span>.map(|ft| Rc::new((<span class="kw-2">*</span>ft).to_owned()));
   <span class="kw">let </span>loc = whatsit.get_locator();
-  <span class="kw">let </span>(end,space) = <span class="kw">if </span>starred {
+  <span class="kw">let </span>(end, space) = <span class="kw">if </span>starred {
     (<span class="string">"\\end{verbatim*}"</span>, <span class="string">'\u{2423}'</span>)
   } <span class="kw">else </span>{
     (<span class="string">"\\end{verbatim}"</span>, <span class="string">' '</span>)
   };
-  <span class="kw">let </span><span class="kw-2">mut </span>lines : Vec&lt;<span class="kw">_</span>&gt; = Vec::new();
+  <span class="kw">let </span><span class="kw-2">mut </span>lines: Vec&lt;<span class="kw">_</span>&gt; = Vec::new();
   <span class="kw">while let </span><span class="prelude-val">Some</span>(next_line) = gullet::read_raw_line() {
     <span class="kw">let </span><span class="kw-2">mut </span>line = next_line.as_str();
     <span class="kw">let </span><span class="kw-2">mut </span>exiting = <span class="bool-val">false</span>;
-    <span class="kw">if let </span><span class="prelude-val">Some</span>((final_line,remaining)) = line.split_once(end) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>((final_line, remaining)) = line.split_once(end) {
       line = final_line;
       gullet::unread_one(<span class="macro">T_CR!</span>());
       gullet::unread(<span class="macro">Tokenize!</span>(remaining));
       exiting = <span class="bool-val">true</span>;
     }
     <span class="comment">// The raw chars will still have to be decoded (but not space!!)
-    </span><span class="kw">let </span><span class="kw-2">mut </span>decoded_line : String = String::new();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>decoded_line: String = String::new();
     <span class="kw">for </span>c <span class="kw">in </span>line.chars() {
-      <span class="kw">if </span>c == <span class="string">' ' </span>{ decoded_line.push(space); }
-      <span class="kw">else </span>{
+      <span class="kw">if </span>c == <span class="string">' ' </span>{
+        decoded_line.push(space);
+      } <span class="kw">else </span>{
         <span class="kw">let </span>decoded_c = font::decode_string(arena::pin_char(c), <span class="prelude-val">Some</span>(<span class="string">"OT1_typewriter"</span>), <span class="bool-val">true</span>);
         arena::with(decoded_c, |c_str| decoded_line.push_str(c_str));
       }
@@ -398,7 +413,7 @@
     lines.push(arena::pin(decoded_line));
     <span class="kw">if </span>exiting {
       <span class="kw">break</span>;
-    } 
+    }
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(last_line) = lines.last() {
     <span class="kw">if </span><span class="kw-2">*</span>last_line == arena::pin_static(<span class="string">"\n"</span>) {
@@ -411,10 +426,24 @@
   }
   egroup()<span class="question-mark">?</span>;
   lines.push(arena::pin_static(end));
-  <span class="kw">let </span>boxes = lines.into_iter().map(|line|
-    Tbox::new(line, font.clone(), <span class="prelude-val">Some</span>(loc),
-      Token{text: line, code:Catcode::OTHER}.into(), SymHashMap::default()).into()
-  ).collect();
+  <span class="kw">let </span>boxes = lines
+    .into_iter()
+    .map(|line| {
+      Tbox::new(
+        line,
+        font.clone(),
+        <span class="prelude-val">Some</span>(loc),
+        Token {
+          text: line,
+          code: Catcode::OTHER,
+        }
+        .into(),
+        SymHashMap::default(),
+      )
+      .into()
+    })
+    .collect();
   whatsit.set_body(boxes);
   <span class="prelude-val">Ok</span>(())
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

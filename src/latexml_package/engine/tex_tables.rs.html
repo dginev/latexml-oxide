@@ -846,8 +846,16 @@
 <a href="#845" id="845">845</a>
 <a href="#846" id="846">846</a>
 <a href="#847" id="847">847</a>
-<a href="#848" id="848">848</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Tables
-//! 
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Tables
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -890,10 +898,12 @@
   <span class="comment">// Seems odd to need both end markers here...
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@end@alignment"</span>, <span class="string">r"\lx@hidden@crcr\lx@close@alignment"</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@close@alignment"</span>, <span class="prelude-val">None</span>);
-  
+
   <span class="comment">// &amp; gives an error except within the right context
   // (which should redefine it!)
-  </span><span class="macro">DefConstructor!</span>(<span class="string">"&amp;"</span>, { <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"&amp;"</span>, <span class="string">"Stray alignment \"&amp;\""</span>); });
+  </span><span class="macro">DefConstructor!</span>(<span class="string">"&amp;"</span>, {
+    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"&amp;"</span>, <span class="string">"Stray alignment \"&amp;\""</span>);
+  });
 
   <span class="macro">Tag!</span>(<span class="string">"ltx:td"</span>, after_close =&gt; sub[doc, node] { doc.trim_node_whitespace(node)<span class="question-mark">?</span>; });
 
@@ -901,23 +911,36 @@
   // Primitive column types;
   // This is really LaTeX, but the mechanisms are used behind-the-scenes here, too.
   </span><span class="macro">DefColumnType!</span>(<span class="string">"|"</span>, {
-    with_current_build_template(|template_opt| template_opt.unwrap().
-      add_between_column(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\vrule"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)]));
+    with_current_build_template(|template_opt| {
+      template_opt
+        .unwrap()
+        .add_between_column(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\vrule"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)])
+    });
   });
   <span class="macro">DefColumnType!</span>(<span class="string">"l"</span>, {
-    with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
-      after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))), ..Cell::default()}));
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(Cell {
+        after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
+        ..Cell::default()
+      })
+    });
   });
   <span class="macro">DefColumnType!</span>(<span class="string">"c"</span>, {
-    with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
-      before: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
-      after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))), ..Cell::default()}));
-  });
-  <span class="macro">DefColumnType!</span>(<span class="string">"r"</span>, {
-    with_current_build_template(|template_opt|
+    with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
         before: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
-        ..Cell::default()}));
+        after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
+        ..Cell::default()
+      })
+    });
+  });
+  <span class="macro">DefColumnType!</span>(<span class="string">"r"</span>, {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(Cell {
+        before: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
+        ..Cell::default()
+      })
+    });
   });
 
   <span class="macro">DefColumnType!</span>(<span class="string">"p{Dimension}"</span>, sub[(width)] {
@@ -938,8 +961,8 @@
   });
 
   <span class="macro">DefColumnType!</span>(<span class="string">"@{}"</span>, sub[(filler)] {
-    with_current_build_template(|template_opt| template_opt.unwrap().add_between_column(filler.unlist()));
-  });
+    with_current_build_template(|template_opt| 
+      template_opt.unwrap().add_between_column(filler.unlist())); });
 
   <span class="comment">//======================================================================
   // Table Line endings
@@ -963,35 +986,40 @@
   // Aligment exceptions
   //----------------------------------------------------------------------
   // \noalign          c  inserts vertical mode material after a \cr in a table.
-  // \omit             c  is used in the body of a table to change an entry's template from the one in the preamble.
-  // \span             c  combines adjacent entries in a table into a single entry.
+  // \omit             c  is used in the body of a table to change an entry's template from the one
+  // in the preamble. \span             c  combines adjacent entries in a table into a single
+  // entry.
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\noalign"</span>, {
     bgroup();
     <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\noalign"</span>, <span class="string">"\\noalign cannot be used here"</span>);
-    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ALIGN!</span>(),          <span class="macro">T_RELAX!</span>());
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ALIGN!</span>(), <span class="macro">T_RELAX!</span>());
     <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\noalign"</span>), <span class="macro">T_RELAX!</span>());
-    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\omit"</span>),    <span class="macro">T_RELAX!</span>());
-    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\span"</span>),    <span class="macro">T_RELAX!</span>()); });
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\omit"</span>), <span class="macro">T_RELAX!</span>());
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\span"</span>), <span class="macro">T_RELAX!</span>());
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\omit"</span>, {
-      <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\omit"</span>, <span class="string">"\\omit cannot be used here"</span>);
-      bgroup();
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ALIGN!</span>(),          <span class="macro">T_RELAX!</span>());
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\noalign"</span>), <span class="macro">T_RELAX!</span>());
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\omit"</span>),    <span class="macro">T_RELAX!</span>());
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\span"</span>),    <span class="macro">T_RELAX!</span>()); });
+    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\omit"</span>, <span class="string">"\\omit cannot be used here"</span>);
+    bgroup();
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ALIGN!</span>(), <span class="macro">T_RELAX!</span>());
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\noalign"</span>), <span class="macro">T_RELAX!</span>());
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\omit"</span>), <span class="macro">T_RELAX!</span>());
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\span"</span>), <span class="macro">T_RELAX!</span>());
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\span"</span>, {
-      bgroup();
-      <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\span"</span>, <span class="string">"\\span cannot be used here"</span>);
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ALIGN!</span>(),          <span class="macro">T_RELAX!</span>());
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\noalign"</span>), <span class="macro">T_RELAX!</span>());
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\omit"</span>),    <span class="macro">T_RELAX!</span>());
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\span"</span>),    <span class="macro">T_RELAX!</span>()); });
+    bgroup();
+    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\span"</span>, <span class="string">"\\span cannot be used here"</span>);
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ALIGN!</span>(), <span class="macro">T_RELAX!</span>());
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\noalign"</span>), <span class="macro">T_RELAX!</span>());
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\omit"</span>), <span class="macro">T_RELAX!</span>());
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\span"</span>), <span class="macro">T_RELAX!</span>());
+  });
 
   <span class="comment">//======================================================================
   // Horizontal alignments
   //----------------------------------------------------------------------
-  // \halign           c  begins the horizontal alignment of material (i.e., makes a table containing rows).
-  
+  // \halign           c  begins the horizontal alignment of material (i.e., makes a table
+  // containing rows).
+
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Now, for \halign itself
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1001,7 +1029,7 @@
   // But also see others for different handling of (eg) open@row, etc.
   // Probably we have to handle these cases by more generic default code
   // and appropriate tweaks of alignment data????
-  
+
   // Algorithm:
   //   open@alignment
   //     Loop while read_column
@@ -1039,7 +1067,8 @@
   <span class="comment">//======================================================================
   // Vertical alignments
   //----------------------------------------------------------------------
-  // \valign           c  begins the vertical alignment of material (i.e., makes a table containing columns).
+  // \valign           c  begins the vertical alignment of material (i.e., makes a table containing
+  // columns).
 
   // Implement ???
   // DefMacro('\vrule','\relax');
@@ -1133,7 +1162,7 @@
   //     my $w = (($defn = $STATE-&gt;lookupDefinition(T_CS('\arraycolsep'))) &amp;&amp; $defn-&gt;isRegister
   //       ? $defn-&gt;valueOf : Dimension(0));
   //     (width =&gt; $w, isSpace =&gt; 1); });
-  
+
   //======================================================================
   // Various decorations within alignments, rules, headers, etc
 
@@ -1150,7 +1179,7 @@
         props.insert(<span class="string">"alignmentPreserve"</span>, preserve.as_ref().unwrap().into());
       }
       <span class="prelude-val">Ok</span>(props) });
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\hline"</span>, <span class="string">"\\noalign{\\@@alignment@hline}"</span>);
   <span class="macro">DefConstructor!</span>(<span class="string">"\\@@alignment@hline"</span>, <span class="string">""</span>,
     after_digest =&gt; sub[_whatsit] {
@@ -1163,15 +1192,23 @@
     sizer      =&gt; <span class="number">0</span>, alias =&gt; <span class="string">"\\hline"</span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\@tabular@begin@heading"</span>, {
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_stored) = lookup_alignment() {
-    alignment_stored.alignment_cell().unwrap().borrow_mut()
-      .set_in_tabular_head();
-  }});
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_stored) = lookup_alignment() {
+      alignment_stored
+        .alignment_cell()
+        .unwrap()
+        .borrow_mut()
+        .set_in_tabular_head();
+    }
+  });
   <span class="macro">DefMacro!</span>(<span class="string">"\\@tabular@end@heading"</span>, {
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_stored) = lookup_alignment() {
-    alignment_stored.alignment_cell().unwrap().borrow_mut()
-      .unset_in_tabular_head();
-  }});
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_stored) = lookup_alignment() {
+      alignment_stored
+        .alignment_cell()
+        .unwrap()
+        .borrow_mut()
+        .unset_in_tabular_head();
+    }
+  });
 
   <span class="comment">//======================================================================
   // Multicolumn support
@@ -1203,15 +1240,14 @@
   // DefPrimitive('\@alignment@bindings AlignmentTemplate []', sub {
   //     my ($stomach, $template, $mode) = @_;
   //     alignmentBindings($template, $mode); });
-  
+
   // This removes trailing whitespace from the current digested list.
   // It is useful as the 1st thing in the rhs template of things like {tabular}.
   // But note that \halign does NOT remove this trailing space!
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@column@trimright"</span>, {
     <span class="kw">let </span><span class="kw-2">mut </span>save = Vec::new();
     <span class="kw">while let </span><span class="prelude-val">Some</span>(tbox) = pop_box_list() {
-      <span class="kw">if </span>tbox.get_property_bool(<span class="string">"alignmentSkippable"</span>)
-        || tbox.get_property_bool(<span class="string">"isFill"</span>) {
+      <span class="kw">if </span>tbox.get_property_bool(<span class="string">"alignmentSkippable"</span>) || tbox.get_property_bool(<span class="string">"isFill"</span>) {
         save.push(tbox);
       } <span class="kw">else if </span>!tbox.is_empty()<span class="question-mark">? </span>{
         push_box_list(tbox);
@@ -1223,7 +1259,6 @@
     }
     <span class="prelude-val">Ok</span>(Vec::new())
   });
-
 });
 
 <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1235,7 +1270,7 @@
   template: Template,
   mode: String,
   properties: SymHashMap&lt;Stored&gt;,
-  xml_attributes: HashMap&lt;String, String&gt;
+  xml_attributes: HashMap&lt;String, String&gt;,
 ) {
   <span class="kw">let </span>mode = <span class="kw">if </span>mode.is_empty() {
     state::lookup_string(<span class="string">"MODE"</span>)
@@ -1281,13 +1316,11 @@
     } <span class="kw">else </span>{
       <span class="macro">T_CS!</span>(<span class="string">"\\lx@dollar@in@textmode"</span>)
     },
-    <span class="prelude-val">None
-  </span>);
+    <span class="prelude-val">None</span>,
+  );
 }
 
-<span class="kw">pub fn </span>digest_alignment_body(
-  whatsit: <span class="kw-2">&amp;mut </span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>digest_alignment_body(whatsit: <span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// Now read &amp; digest the body.
   // Note that the body MUST end with a \cr, and that we've made Special Arrangments
   // with \alignment@cr to recognize the end of the \halign
@@ -1311,20 +1344,17 @@
   <span class="kw">let </span><span class="kw-2">mut </span>creversion: Vec&lt;Token&gt; = Vec::new();
   <span class="kw">let </span>alignment_cell = alignment_stored.alignment_cell().unwrap();
   <span class="kw">loop </span>{
-    <span class="kw">let </span>(cell_opt, next, vtype, hidden) =
-      digest_alignment_column(alignment_cell, lastwascr)<span class="question-mark">?</span>;
+    <span class="kw">let </span>(cell_opt, next, vtype, hidden) = digest_alignment_column(alignment_cell, lastwascr)<span class="question-mark">?</span>;
     <span class="comment">//     Debug("Halign $alignment: BODY got CELL"
     //         . "[" . $alignment-&gt;currentRowNumber . "," . $alignment-&gt;currentColumnNumber . "]"
     //         . ToString($cell) . " ended at " . Stringify($next)) if $LaTeXML::DEBUG{halign};
 
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(cell) = cell_opt {
       reversion.extend(
-        trim_column_template(alignment_cell.borrow_mut(), p_revert(cell.clone())<span class="question-mark">?</span>)
-          .unlist()
+        trim_column_template(alignment_cell.borrow_mut(), p_revert(cell.clone())<span class="question-mark">?</span>).unlist(),
       );
       creversion.extend(
-        trim_column_template(alignment_cell.borrow_mut(), c_revert(cell.clone())<span class="question-mark">?</span>)
-          .unlist()
+        trim_column_template(alignment_cell.borrow_mut(), c_revert(cell.clone())<span class="question-mark">?</span>).unlist(),
       );
       extract_alignment_column(alignment_cell.borrow_mut(), cell)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
@@ -1361,11 +1391,7 @@
       lastwascr = <span class="bool-val">true</span>;
     } <span class="kw">else if let </span><span class="prelude-val">Some</span>(next_tok) = next {
       <span class="comment">// Note, in case next is \crcr
-      </span><span class="macro">Error!</span>(
-        <span class="string">"unexpected"</span>,
-        next_tok,
-        <span class="macro">s!</span>(<span class="string">"Column ended with {next_tok}"</span>)
-      );
+      </span><span class="macro">Error!</span>(<span class="string">"unexpected"</span>, next_tok, <span class="macro">s!</span>(<span class="string">"Column ended with {next_tok}"</span>));
     }
   }
   alignment_cell.borrow_mut().end_row()<span class="question-mark">?</span>;
@@ -1386,10 +1412,7 @@
 // accommodating the current template and any special cs's
 // Returns the column's digested boxes, the ending token, and it's alignment type.
 </span><span class="kw">type </span>DigestedColumn = <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;Digested&gt;, <span class="prelude-ty">Option</span>&lt;Token&gt;, <span class="prelude-ty">Option</span>&lt;String&gt;, bool)&gt;;
-<span class="kw">pub fn </span>digest_alignment_column(
-  alignment: <span class="kw-2">&amp;</span>RefCell&lt;Alignment&gt;,
-  lastwascr: bool,
-  ) -&gt; DigestedColumn {
+<span class="kw">pub fn </span>digest_alignment_column(alignment: <span class="kw-2">&amp;</span>RefCell&lt;Alignment&gt;, lastwascr: bool) -&gt; DigestedColumn {
   new_local_box_list();
   <span class="kw">let </span>ismath = lookup_bool(<span class="string">"IN_MATH"</span>);
   <span class="comment">// Scan for leading \omit, skipping over (&amp; saving) \hline.
@@ -1400,8 +1423,7 @@
   <span class="kw">loop </span>{
     <span class="comment">// Outer loop; collects 1 column (possibly multiple spans) return from within!
     // Scan till we get something NOT \omit, \noalign
-    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(xtoken) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?
-    </span>{
+    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(xtoken) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       last_token = <span class="prelude-val">Some</span>(xtoken);
       <span class="kw">let </span>token = last_token.as_ref().unwrap();
       <span class="comment">// Skip leading space. Skip \par or blank line(?). Or \crcr following a \cr
@@ -1430,7 +1452,7 @@
         alignment.borrow_mut().end_row()<span class="question-mark">?</span>;
         expire_local_box_list();
         <span class="kw">return </span><span class="prelude-val">Ok</span>((<span class="prelude-val">Some</span>(r), <span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">"\\cr"</span>)), <span class="macro">some!</span>(<span class="string">"cr"</span>), <span class="bool-val">false</span>)); <span class="comment">// Pretend this is a whole
-                                                                       // row???
+      // row???
       </span>} <span class="kw">else if </span><span class="kw-2">*</span>token == <span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@noalign"</span>) {
         <span class="comment">// \puts something in vertical list
         //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
@@ -1464,8 +1486,7 @@
     );
     <span class="comment">// eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     </span>gullet::unread(to_unread);
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?
-    </span>{
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="kw">if let </span><span class="prelude-val">Some</span>((_atoken, vtype, hidden)) = gullet::is_column_end(<span class="kw-2">&amp;</span>token) {
         <span class="kw">if </span>vtype == <span class="string">"span" </span>{
           <span class="comment">// next column, but continue accumulating
@@ -1661,10 +1682,7 @@
 //  As if: \lx@alignment@newline OptionalMatch:* [Dimension]
 // Read arguments for \\, namely * and/or [Dimension]
 // BUT optionally do it while skipping spaces (latex style) or not (ams style)
-</span><span class="kw">fn </span>read_newline_args(
-
-  skipspaces: bool,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(bool, <span class="prelude-ty">Option</span>&lt;Tokens&gt;)&gt; {
+</span><span class="kw">fn </span>read_newline_args(skipspaces: bool) -&gt; <span class="prelude-ty">Result</span>&lt;(bool, <span class="prelude-ty">Option</span>&lt;Tokens&gt;)&gt; {
   <span class="kw">if </span>lookup_alignment().is_some() {
     local_align_group_count(<span class="number">1000000</span>);
     <span class="kw">if </span>skipspaces {
@@ -1689,9 +1707,7 @@
     expire_align_group_count();
     <span class="prelude-val">Ok</span>((star, optional))
   } <span class="kw">else </span>{
-    <span class="prelude-val">Err</span>(
-      <span class="string">"read_newline_args should only be called with a proper 'Alignment' active in state"</span>.into(),
-    )
+    <span class="prelude-val">Err</span>(<span class="string">"read_newline_args should only be called with a proper 'Alignment' active in state"</span>.into())
   }
 }
 </code></pre></div></section></main></body></html>

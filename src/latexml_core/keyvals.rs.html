@@ -697,70 +697,129 @@
 <a href="#696" id="696">696</a>
 <a href="#697" id="697">697</a>
 <a href="#698" id="698">698</a>
-<a href="#699" id="699">699</a></pre></div><pre class="rust"><code><span class="kw">use </span>core::slice::Iter;
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a></pre></div><pre class="rust"><code><span class="kw">use </span>core::slice::Iter;
 <span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 
+<span class="kw">use </span><span class="kw">super</span>::keyval::{has_keyval, keyval_get, keyval_qname};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::gullet::{<span class="self">self</span>, ExpansionLevel};
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
+<span class="kw">use </span><span class="kw">crate</span>::gullet::{<span class="self">self</span>, ExpansionLevel};
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{BoxOps, Digested, NO_PROPERTIES};
-<span class="kw">use </span><span class="kw">super</span>::keyval::{keyval_qname, keyval_get,has_keyval};
 
-<span class="attr">#[derive(Debug,Clone)]
+<span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">struct </span>KVData {
-  key: String,
-  value: <span class="prelude-ty">Option</span>&lt;ArgWrap&gt;,
-  use_default: bool,
+  key:            String,
+  value:          <span class="prelude-ty">Option</span>&lt;ArgWrap&gt;,
+  use_default:    bool,
   primary_keyset: String,
-  keysets: Vec&lt;String&gt;,
-  digested_value: <span class="prelude-ty">Option</span>&lt;Digested&gt;  
+  keysets:        Vec&lt;String&gt;,
+  digested_value: <span class="prelude-ty">Option</span>&lt;Digested&gt;,
 }
 
 <span class="attr">#[allow(dead_code)] </span><span class="comment">// TODO: remove when KeyVals is fully implemented
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>KeyVals {
   <span class="comment">// which KeyVals are we parsing and how do we behave?
-  </span>prefix: String,
+  </span>prefix:               String,
   <span class="doccomment">/// `keysets should be a list of keysets to find keys inside of.
   /// It defaults to ["_anonymous_"] if empty.
-  </span>keysets: Vec&lt;String&gt;,
-  skip: Vec&lt;String&gt;,
-  set_all: bool,
-  set_internals: bool,
-  skip_missing: SkipMissing,
-  was_digested: bool,
-  hook_missing: <span class="prelude-ty">Option</span>&lt;Token&gt;,
+  </span>keysets:              Vec&lt;String&gt;,
+  skip:                 Vec&lt;String&gt;,
+  set_all:              bool,
+  set_internals:        bool,
+  skip_missing:         SkipMissing,
+  was_digested:         bool,
+  hook_missing:         <span class="prelude-ty">Option</span>&lt;Token&gt;,
   <span class="comment">// all the internal representations
-  </span>tuples: Vec&lt;KVData&gt;,
-  cached_pairs: Vec&lt;(String, ArgWrap)&gt;,
-  cached_hash: HashMap&lt;String, Vec&lt;ArgWrap&gt;&gt;,
+  </span>tuples:               Vec&lt;KVData&gt;,
+  cached_pairs:         Vec&lt;(String, ArgWrap)&gt;,
+  cached_hash:          HashMap&lt;String, Vec&lt;ArgWrap&gt;&gt;,
   cached_hash_digested: HashMap&lt;String, Vec&lt;Digested&gt;&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>KeyVals {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     KeyVals {
-      prefix: <span class="string">"KV"</span>.to_string(),
-      keysets: <span class="macro">vec!</span>[<span class="string">"_anonymous_"</span>.to_string()],
-      skip: Vec::new(),
-      set_all: <span class="bool-val">false</span>,
-      set_internals: <span class="bool-val">false</span>,
-      skip_missing: SkipMissing::None,
-      was_digested: <span class="bool-val">false</span>,
-      hook_missing: <span class="prelude-val">None</span>,
-      tuples: Vec::new(),
-      cached_pairs: Vec::new(),
-      cached_hash: HashMap::default(),
+      prefix:               <span class="string">"KV"</span>.to_string(),
+      keysets:              <span class="macro">vec!</span>[<span class="string">"_anonymous_"</span>.to_string()],
+      skip:                 Vec::new(),
+      set_all:              <span class="bool-val">false</span>,
+      set_internals:        <span class="bool-val">false</span>,
+      skip_missing:         SkipMissing::None,
+      was_digested:         <span class="bool-val">false</span>,
+      hook_missing:         <span class="prelude-val">None</span>,
+      tuples:               Vec::new(),
+      cached_pairs:         Vec::new(),
+      cached_hash:          HashMap::default(),
       cached_hash_digested: HashMap::default(),
     }
   }
@@ -790,27 +849,38 @@
       </span>);
     } <span class="kw">else </span>{
       <span class="kw">crate</span>::stomach::digest(<span class="self">self</span>.set_keys_expansion())<span class="question-mark">?</span>;
-    }  
+    }
 
     <span class="comment">// iterate over the tuples, digesting the values
     </span><span class="kw">for </span>tuple <span class="kw">in </span><span class="self">self</span>.tuples.iter_mut() {
-      <span class="kw">let </span>KVData {key, value, primary_keyset, digested_value, ..} = tuple;
-      <span class="kw">if </span>digested_value.is_none() {<span class="comment">// avoid accidental repeats?
+      <span class="kw">let </span>KVData {
+        key,
+        value,
+        primary_keyset,
+        digested_value,
+        ..
+      } = tuple;
+      <span class="kw">if </span>digested_value.is_none() {
+        <span class="comment">// avoid accidental repeats?
         </span><span class="kw">let </span>keytype_opt = keyval_get(<span class="kw-2">&amp;</span>keyval_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.prefix, primary_keyset, key), <span class="string">"type"</span>);
-        <span class="kw">let </span>v       = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(keytype)) = keytype_opt {
+        <span class="kw">let </span>v = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(keytype)) = keytype_opt {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = value.take() {
             keytype.digest(v, <span class="prelude-val">None</span>)<span class="question-mark">?
-          </span>} <span class="kw">else </span>{ <span class="prelude-val">None </span>}
+          </span>} <span class="kw">else </span>{
+            <span class="prelude-val">None
+          </span>}
         } <span class="kw">else if let </span><span class="prelude-val">Some</span>(v) = value.take() {
           <span class="prelude-val">Some</span>(v.be_digested()<span class="question-mark">?</span>)
-        } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+        } <span class="kw">else </span>{
+          <span class="prelude-val">None
+        </span>};
         tuple.digested_value = v;
       }
     }
     <span class="comment">// TODO: DG: KeyVals digestion feels very iffy while porting it over to Rust.
-    // had to add an explicit "rebuild" to cache the digested values in the new "cached_hash_digested"
-    // It feels like the entire object should be reorganized to leverage a little more of the well-typed
-    // capabilities we have here.
+    // had to add an explicit "rebuild" to cache the digested values in the new
+    // "cached_hash_digested" It feels like the entire object should be reorganized to leverage
+    // a little more of the well-typed capabilities we have here.
     </span><span class="self">self</span>.rebuild(<span class="prelude-val">None</span>);
     <span class="self">self</span>.was_digested = <span class="bool-val">true</span>;
     <span class="prelude-val">Ok</span>(<span class="self">self</span>.into())
@@ -826,9 +896,7 @@
   <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str, _value: T) {
     <span class="macro">todo!</span>();
   }
-  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-    <span class="prelude-val">Ok</span>(Vec::new())
-  } <span class="comment">// TODO
+  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; { <span class="prelude-val">Ok</span>(Vec::new()) } <span class="comment">// TODO
   </span><span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) } <span class="comment">// TODO
   </span><span class="kw">fn </span>compute_size(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -841,7 +909,7 @@
     <span class="macro">todo!</span>() <span class="comment">// TODO
   </span>}
 }
-<span class="attr">#[derive(Debug,Clone,Default,PartialEq)]
+<span class="attr">#[derive(Debug, Clone, Default, PartialEq)]
 </span><span class="kw">pub enum </span>SkipMissing {
   <span class="attr">#[default]
   </span><span class="doccomment">/// throw errors
@@ -849,18 +917,18 @@
   <span class="doccomment">/// silently ignore all missing keys
   </span>All,
   <span class="doccomment">/// store all missing keys under the provided token
-  </span>Store(Token)
+  </span>Store(Token),
 }
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>KeyvalsConfig {
-  <span class="kw">pub </span>prefix: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>keysets: Vec&lt;String&gt;,
-  <span class="kw">pub </span>set_all: bool,
+  <span class="kw">pub </span>prefix:        <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>keysets:       Vec&lt;String&gt;,
+  <span class="kw">pub </span>set_all:       bool,
   <span class="kw">pub </span>set_internals: bool,
-  <span class="kw">pub </span>skip: Vec&lt;String&gt;,
-  <span class="kw">pub </span>skip_missing: SkipMissing,
-  <span class="kw">pub </span>hook_missing: <span class="prelude-ty">Option</span>&lt;Token&gt;,
+  <span class="kw">pub </span>skip:          Vec&lt;String&gt;,
+  <span class="kw">pub </span>skip_missing:  SkipMissing,
+  <span class="kw">pub </span>hook_missing:  <span class="prelude-ty">Option</span>&lt;Token&gt;,
 }
 
 <span class="kw">impl </span>KeyVals {
@@ -874,7 +942,15 @@
   ///**********************************************************************
   </span><span class="kw">pub fn </span>new(options: KeyvalsConfig) -&gt; <span class="self">Self </span>{
     <span class="comment">// parse all the arguments
-    </span><span class="kw">let </span>KeyvalsConfig { prefix, <span class="kw-2">mut </span>keysets, set_all, set_internals, skip, skip_missing, hook_missing } = options;
+    </span><span class="kw">let </span>KeyvalsConfig {
+      prefix,
+      <span class="kw-2">mut </span>keysets,
+      set_all,
+      set_internals,
+      skip,
+      skip_missing,
+      hook_missing,
+    } = options;
     <span class="kw">let </span>prefix = prefix.unwrap_or_else(|| String::from(<span class="string">"KV"</span>));
     <span class="kw">if </span>keysets.is_empty() {
       keysets = <span class="macro">vec!</span>[String::from(<span class="string">"_anonymous_"</span>)];
@@ -894,54 +970,63 @@
   <span class="comment">//======================================================================
   // Resolution to KeySets
   //======================================================================
-  
+
   </span><span class="doccomment">/// Return a list of the keysets in which this key is defined
   </span><span class="kw">fn </span>resolve_keyval_for(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;String&gt; {
-    <span class="kw">let </span>prefix     = <span class="kw-2">&amp;</span><span class="self">self</span>.prefix;
+    <span class="kw">let </span>prefix = <span class="kw-2">&amp;</span><span class="self">self</span>.prefix;
     <span class="kw">let </span>allkeysets = <span class="kw-2">&amp;</span><span class="self">self</span>.keysets;
-    <span class="kw">let </span>keysets : Vec&lt;<span class="kw">_</span>&gt; = <span class="self">self</span>.keysets.iter().filter(|kset| has_keyval(prefix, kset, key)).collect();
+    <span class="kw">let </span>keysets: Vec&lt;<span class="kw">_</span>&gt; = <span class="self">self
+      </span>.keysets
+      .iter()
+      .filter(|kset| has_keyval(prefix, kset, key))
+      .collect();
     <span class="comment">// throw an error (not really), unless we record the missing macros
     // Since we're not as obsessive about declaring ALL keys, we'll soften the blow
     </span><span class="kw">if </span>keysets.is_empty() {
       <span class="kw">let </span>all_joined = allkeysets.join(<span class="string">","</span>);
       <span class="kw">if </span><span class="self">self</span>.skip_missing == SkipMissing::None {
-        <span class="macro">Info!</span>(<span class="string">"undefined"</span>, <span class="string">"Encountered unknown KeyVals key"</span>,
-          <span class="macro">s!</span>(<span class="string">"'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"</span>));
+        <span class="macro">Info!</span>(
+          <span class="string">"undefined"</span>,
+          <span class="string">"Encountered unknown KeyVals key"</span>,
+          <span class="macro">s!</span>(
+            <span class="string">"'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"
+          </span>)
+        );
       }
-      <span class="kw">return </span>Vec::new(); 
+      <span class="kw">return </span>Vec::new();
     }
     <span class="comment">// return either the first or all of the KeyVal objects
     // TODO: SymStr would avoid the allocation.
-    </span><span class="kw">if </span><span class="self">self</span>.set_all { 
+    </span><span class="kw">if </span><span class="self">self</span>.set_all {
       keysets.into_iter().cloned().collect()
     } <span class="kw">else </span>{
-      <span class="macro">vec!</span>[keysets[<span class="number">0</span>].clone()] 
+      <span class="macro">vec!</span>[keysets[<span class="number">0</span>].clone()]
     }
   }
 
-  <span class="kw">fn </span>can_resolve_keyval_for(<span class="kw-2">&amp;</span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str) -&gt; bool {
+  <span class="kw">fn </span>can_resolve_keyval_for(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="comment">// iterate over the keysets
-    </span><span class="self">self</span>.keysets.iter().any(|keyset| has_keyval(<span class="kw-2">&amp;</span><span class="self">self</span>.prefix, keyset, key) )
+    </span><span class="self">self
+      </span>.keysets
+      .iter()
+      .any(|keyset| has_keyval(<span class="kw-2">&amp;</span><span class="self">self</span>.prefix, keyset, key))
   }
 
   <span class="doccomment">/// Return the 1st of the keysets, or the 1st one of the KeyVals itself
   </span><span class="kw">fn </span>get_primary_keyval&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, keysets: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[String]) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str {
     <span class="kw">match </span>keysets.first() {
       <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.keysets[<span class="number">0</span>].as_str(),
-      <span class="prelude-val">Some</span>(kset) =&gt; kset.as_str()
+      <span class="prelude-val">Some</span>(kset) =&gt; kset.as_str(),
     }
   }
 
-  <span class="kw">fn </span>read_keyword_from(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    close: Token,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Tokens, <span class="prelude-ty">Option</span>&lt;Token&gt;)&gt; {
+  <span class="kw">fn </span>read_keyword_from(<span class="kw-2">&amp;</span><span class="self">self</span>, close: Token) -&gt; <span class="prelude-ty">Result</span>&lt;(Tokens, <span class="prelude-ty">Option</span>&lt;Token&gt;)&gt; {
     <span class="comment">// set of tokens we will expand
     </span><span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
     <span class="kw">let </span>delim = <span class="kw-2">&amp;</span>[close, <span class="macro">T_OTHER!</span>(<span class="string">","</span>), <span class="macro">T_OTHER!</span>(<span class="string">"="</span>)];
     <span class="comment">// skip leading spaces
     </span>gullet::skip_spaces()<span class="question-mark">?</span>;
-    
+
     <span class="kw">let </span><span class="kw-2">mut </span>last_token = <span class="prelude-val">None</span>;
     <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="comment">// skip to the next iteration if we have a paragraph
@@ -1097,29 +1182,50 @@
     // and return the list of tokens
     </span>Tokens::new(tokens)
   }
-  
-  <span class="kw">pub fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {  
+
+  <span class="kw">pub fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
     <span class="comment">// iterate over the key-value pairs
     </span><span class="kw">for </span>tuple <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.tuples {
-      <span class="kw">let </span>KVData { key, value, use_default, keysets:<span class="kw">_</span>, primary_keyset, digested_value:<span class="kw">_ </span>} = tuple;
+      <span class="kw">let </span>KVData {
+        key,
+        value,
+        use_default,
+        keysets: <span class="kw">_</span>,
+        primary_keyset,
+        digested_value: <span class="kw">_</span>,
+      } = tuple;
       <span class="kw">if </span>!primary_keyset.is_empty() {
-        <span class="kw">let </span>reverted = <span class="self">self</span>.revert_keyval(key, primary_keyset, value.as_ref(), <span class="kw-2">*</span>use_default, !tokens.is_empty())<span class="question-mark">?</span>;
-        tokens.extend(reverted); 
+        <span class="kw">let </span>reverted = <span class="self">self</span>.revert_keyval(
+          key,
+          primary_keyset,
+          value.as_ref(),
+          <span class="kw-2">*</span>use_default,
+          !tokens.is_empty(),
+        )<span class="question-mark">?</span>;
+        tokens.extend(reverted);
       }
     }
     <span class="comment">// and return the list of tokens
     </span><span class="prelude-val">Ok</span>(Tokens::new(tokens))
   }
 
-  <span class="kw">fn </span>revert_keyval(<span class="kw-2">&amp;</span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str, keyset: <span class="kw-2">&amp;</span>str, value_opt:<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ArgWrap&gt;, use_default:bool, is_first:bool) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+  <span class="kw">fn </span>revert_keyval(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    key: <span class="kw-2">&amp;</span>str,
+    keyset: <span class="kw-2">&amp;</span>str,
+    value_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ArgWrap&gt;,
+    use_default: bool,
+    is_first: bool,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
     <span class="comment">// get the key-value definition
     </span><span class="kw">let </span>keytype_stored = keyval_get(<span class="kw-2">&amp;</span>keyval_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.prefix, keyset, key), <span class="string">"type"</span>);
     <span class="comment">// define the tokens
     </span><span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
     <span class="comment">// write comma and key, unless in the first iteration
     </span><span class="kw">if </span>!is_first {
-      tokens.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>)); }
+      tokens.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
+    }
     tokens.extend(<span class="macro">Explode!</span>(key));
     <span class="comment">// write the default (if applicable)
     </span><span class="kw">if </span>!use_default {
@@ -1127,7 +1233,8 @@
         tokens.push(<span class="macro">T_OTHER!</span>(<span class="string">"="</span>));
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(keytype)) = keytype_stored {
           <span class="comment">// TODO: The types here are a little curious. The stored value must be cast back into
-          // Tokens if Parameter's revert works on Tokens. Or should that revert call work on ArgWrap?
+          // Tokens if Parameter's revert works on Tokens. Or should that revert call work on
+          // ArgWrap?
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(reverted) = keytype.revert(<span class="prelude-val">Some</span>(value.revert()<span class="question-mark">?</span>))<span class="question-mark">? </span>{
             tokens.extend(reverted.unlist());
           }
@@ -1138,7 +1245,6 @@
     }
     <span class="prelude-val">Ok</span>(tokens)
   }
-  
 
   <span class="comment">//======================================================================
   // Changing contained values
@@ -1149,7 +1255,7 @@
     key: <span class="kw-2">&amp;</span>str,
     value_arg: ArgWrap,
     use_default: bool,
-    no_rebuild: bool
+    no_rebuild: bool,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// figure out the keyset(s) for the key to be added
     </span><span class="kw">let </span>keysets = <span class="self">self</span>.resolve_keyval_for(key);
@@ -1157,20 +1263,24 @@
 
     <span class="comment">// and add the new tuple to the set of tuples
     </span><span class="kw">let </span>value = <span class="kw">if </span>use_default {
-      <span class="kw">match </span>keyval_get(<span class="kw-2">&amp;</span>keyval_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.prefix,<span class="kw-2">&amp;</span>primary_keyset,key),<span class="string">"default"</span>) {
+      <span class="kw">match </span>keyval_get(<span class="kw-2">&amp;</span>keyval_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.prefix, <span class="kw-2">&amp;</span>primary_keyset, key), <span class="string">"default"</span>) {
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
         <span class="prelude-val">Some</span>(v) =&gt; {
           <span class="kw">let </span>arg: <span class="prelude-ty">Result</span>&lt;ArgWrap&gt; = v.into();
           <span class="prelude-val">Some</span>(arg<span class="question-mark">?</span>)
-        }
+        },
       }
     } <span class="kw">else </span>{
       <span class="prelude-val">Some</span>(value_arg)
     };
-    <span class="self">self
-      </span>.tuples
-      .push(KVData{key: key.to_string(), value, use_default, keysets,
-         primary_keyset, digested_value: <span class="prelude-val">None</span>});
+    <span class="self">self</span>.tuples.push(KVData {
+      key: key.to_string(),
+      value,
+      use_default,
+      keysets,
+      primary_keyset,
+      digested_value: <span class="prelude-val">None</span>,
+    });
     <span class="comment">// we now need to rebuild, unless we were asked not to
     // TODO: Maybe only update the last element?
     </span><span class="kw">if </span>!no_rebuild {
@@ -1195,7 +1305,14 @@
 
     <span class="kw">for </span>tuple <span class="kw">in </span><span class="self">self</span>.tuples.drain(..) {
       <span class="comment">// take all the elements we need from the stack
-      </span><span class="kw">let </span>KVData {key, value, use_default, primary_keyset, keysets, digested_value} = tuple;
+      </span><span class="kw">let </span>KVData {
+        key,
+        value,
+        use_default,
+        primary_keyset,
+        keysets,
+        digested_value,
+      } = tuple;
       <span class="comment">// if we want to skip some values, we need to store new tuples
       </span><span class="kw">let </span>key_str = key.as_str();
       <span class="kw">if let </span><span class="prelude-val">Some</span>(skip) = skip_opt {
@@ -1216,7 +1333,7 @@
         <span class="kw">let </span>entry = hash_digested.entry(key.to_string()).or_default();
         entry.push(dvalue.clone());
       }
-      
+
       <span class="comment">// Record.
       </span>newtuples.push(KVData {
         key,
@@ -1224,14 +1341,14 @@
         use_default,
         primary_keyset,
         keysets,
-        digested_value
+        digested_value,
       });
     }
     <span class="comment">// store all of the values
     </span><span class="self">self</span>.cached_pairs = pairs;
     <span class="self">self</span>.cached_hash = hash;
     <span class="self">self</span>.cached_hash_digested = hash_digested;
-    <span class="self">self</span>.tuples = newtuples;   
+    <span class="self">self</span>.tuples = newtuples;
   }
 
   <span class="comment">//======================================================================
@@ -1249,28 +1366,29 @@
     <span class="comment">// if we want to silence all missing errors, store them in a hook
     </span><span class="kw">if </span>silence_missing {
       <span class="self">self</span>.skip_missing = SkipMissing::All;
-      <span class="self">self</span>.hook_missing = <span class="prelude-val">None</span>; 
-    }    
+      <span class="self">self</span>.hook_missing = <span class="prelude-val">None</span>;
+    }
 
     <span class="comment">// read the opening token and figure out where we are
     </span><span class="kw">let </span>startloc = gullet::get_locator();
     <span class="comment">// set and read tokens
     </span><span class="kw">let </span>_open = gullet::read_token()<span class="question-mark">?</span>;
-        
+
     <span class="kw">let </span>punct_tks = <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
     <span class="kw">let </span>until_tks = <span class="macro">Tokens!</span>(until);
     <span class="comment">// iterate over all the key-value pairs to read
     </span><span class="kw">loop </span>{
       <span class="comment">// gobble leading spaces
       </span>gullet::skip_spaces()<span class="question-mark">?</span>;
-      <span class="kw">if </span>gullet::if_next(<span class="macro">T_BEGIN!</span>())<span class="question-mark">? </span>{ <span class="comment">// Protect against redundant {} wrapping
+      <span class="kw">if </span>gullet::if_next(<span class="macro">T_BEGIN!</span>())<span class="question-mark">? </span>{
+        <span class="comment">// Protect against redundant {} wrapping
         </span>gullet::read_token()<span class="question-mark">?</span>;
-        gullet::unread(gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>.strip_braces());
-        gullet::skip_spaces()<span class="question-mark">?</span>; 
+        gullet::unread(gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>.strip_braces());
+        gullet::skip_spaces()<span class="question-mark">?</span>;
       }
       <span class="comment">// Read a single keyword, get a delimiter and a set of keyword tokens
-      </span><span class="kw">let </span>(ktoks, <span class="kw-2">mut </span>delim_opt) = <span class="self">self</span>.read_keyword_from(until)<span class="question-mark">?</span>; 
-  
+      </span><span class="kw">let </span>(ktoks, <span class="kw-2">mut </span>delim_opt) = <span class="self">self</span>.read_keyword_from(until)<span class="question-mark">?</span>;
+
       <span class="comment">// if there was no delimiter at the end, we throw an error
       </span><span class="kw">if </span>delim_opt.is_none() {
         <span class="kw">let </span>message = <span class="macro">s!</span>(
@@ -1283,10 +1401,10 @@
 
       <span class="comment">// turn the key tokens into a string and trim whitespace
       </span><span class="kw">let </span>key_str = ktoks.to_string();
-      <span class="kw">let </span>key = key_str.trim();      
+      <span class="kw">let </span>key = key_str.trim();
 
       <span class="comment">// if we have a non-empty key
-      </span><span class="kw">if </span>!key.is_empty() {        
+      </span><span class="kw">if </span>!key.is_empty() {
         <span class="kw">let </span><span class="kw-2">mut </span>value = ArgWrap::None;
         <span class="comment">// if we have an '=', we explcity assign a value
         </span><span class="kw">let </span>is_explicit = delim_opt == <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">"="</span>));
@@ -1302,9 +1420,9 @@
           </span><span class="kw">let </span><span class="kw-2">mut </span>toks = Vec::new();
           <span class="kw">loop </span>{
             <span class="comment">// TODO: The types are a bit unnatural here - we need the plural Tokens for read_match,
-            //       but we expect the singular Token as a delimiter result, since we are matching on a char separator
-            </span>delim_opt = gullet::read_match(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>punct_tks, <span class="kw-2">&amp;</span>until_tks])<span class="question-mark">?
-              </span>.map(|tks| tks.into());
+            //       but we expect the singular Token as a delimiter result, since we are matching
+            // on a char separator
+            </span>delim_opt = gullet::read_match(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>punct_tks, <span class="kw-2">&amp;</span>until_tks])<span class="question-mark">?</span>.map(|tks| tks.into());
             <span class="kw">if </span>delim_opt.is_some() {
               <span class="kw">break</span>; <span class="comment">// only until we hit a delim.
             </span>}
@@ -1312,7 +1430,7 @@
               <span class="comment">// Copy next token to args
               </span>toks.push(tok);
               <span class="kw">if </span>tok.get_catcode() == Catcode::BEGIN {
-                <span class="kw">let </span>balanced_arg = gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+                <span class="kw">let </span>balanced_arg = gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
                 <span class="kw">if </span>!balanced_arg.is_empty() {
                   toks.extend(balanced_arg.unlist());
                 }
@@ -1355,8 +1473,8 @@
 
     <span class="comment">// restore all settings if we silenced the missing keys
     </span><span class="kw">if </span>silence_missing {
-     <span class="self">self</span>.skip_missing = skip_missing;
-     <span class="self">self</span>.hook_missing = hook_missing;
+      <span class="self">self</span>.skip_missing = skip_missing;
+      <span class="self">self</span>.hook_missing = hook_missing;
     }
     <span class="prelude-val">Ok</span>(())
   }

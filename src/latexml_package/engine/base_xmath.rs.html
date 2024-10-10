@@ -798,8 +798,26 @@
 <a href="#797" id="797">797</a>
 <a href="#798" id="798">798</a>
 <a href="#799" id="799">799</a>
-<a href="#800" id="800">800</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base XMath
-//! 
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base XMath
+//!
 //! Core TeX Implementation for LaTeXML
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::collections::hash_map::Entry;
@@ -821,7 +839,7 @@
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Some of this stuff is more semantic versions of declarations in
   // plain or latex. Is this the right place for them?
-  
+
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Normally, the content branch contains the pure structure and meaning of a construct,
   // and the presentation is generated from lower level TeX macros that only concern
@@ -834,12 +852,12 @@
   // whereever it seems sensible on the presentation branch, after it has been generated.
   // This appears to be obsolete/no-longer-used, but keep for future reference.
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@assert@meaning{}{}"</span>, <span class="string">"#2"</span>,
-    reversion      =&gt; <span class="string">"#2"</span>,
-    after_construct =&gt; sub[document,whatsit] {
-      <span class="kw">let </span>node    = document.get_node().clone(); <span class="comment">// This should be the wrapper just added.
-      </span><span class="kw">let </span>meaning = whatsit.get_arg(<span class="number">1</span>).unwrap().to_string();
-      add_meaning_rec(document, node, meaning)<span class="question-mark">?</span>;
-    });
+  reversion      =&gt; <span class="string">"#2"</span>,
+  after_construct =&gt; sub[document,whatsit] {
+    <span class="kw">let </span>node    = document.get_node().clone(); <span class="comment">// This should be the wrapper just added.
+    </span><span class="kw">let </span>meaning = whatsit.get_arg(<span class="number">1</span>).unwrap().to_string();
+    add_meaning_rec(document, node, meaning)<span class="question-mark">?</span>;
+  });
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Support for constructing mathematical expressions
   // # Common XMath pattern for assigning attributes from Whatsit properties.
@@ -898,7 +916,8 @@
 
   // sub I_symbol {
   //   my ($kv, $text) = @_;
-  //   return Tokens(T_CS('\lx@symbol'), I_keyvals($kv), T_BEGIN, (defined $text ? $text : ()), T_END); }
+  //   return Tokens(T_CS('\lx@symbol'), I_keyvals($kv), T_BEGIN, (defined $text ? $text : ()),
+  // T_END); }
 
   // sub I_wrap {
   //   my ($kv, @stuff) = @_;
@@ -907,13 +926,13 @@
   // # These two accept key operator_meaning, operator_omcd to give a meaning to the sub/superscript
   // # NOTE (BUG): We SHOULD nest paired sub/superscripts, but avoid conflicting double scripts
   // # To do that we need to sniff at the base, whether it already contains scripts.
-  // # However, IsScript isn't quite sufficient if the scripts are hidden within Whatsits, duals, etc.
-  // # Currently, LaTeXML manages to deal with the double scripts anyway;
-  // # The reversion ALWAYS wraps the base (which will render non-optimally in images but avoid Errors)
-  // DefConstructor('\lx@superscript OptionalKeyVals:XMath {} InScriptStyle',
+  // # However, IsScript isn't quite sufficient if the scripts are hidden within Whatsits, duals,
+  // etc. # Currently, LaTeXML manages to deal with the double scripts anyway;
+  // # The reversion ALWAYS wraps the base (which will render non-optimally in images but avoid
+  // Errors) DefConstructor('\lx@superscript OptionalKeyVals:XMath {} InScriptStyle',
   //   "&lt;ltx:XMApp $XMath_attributes&gt;"
-  //     . "&lt;ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/&gt;"
-  //     . "&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;"
+  //     . "&lt;ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd'
+  // scriptpos='#scriptpos'/&gt;"     . "&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;"
   //     . "&lt;ltx:XMArg rule='Superscript'&gt;#3&lt;/ltx:XMArg&gt;"
   //     . "&lt;/ltx:XMApp&gt;",
   //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); },
@@ -923,19 +942,20 @@
   //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
   //     (IsEmpty($sup)
   //       ? Revert($base)
-  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUPER, revertScript($sup))); },
-  //   properties =&gt; sub {
+  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUPER,
+  // revertScript($sup))); },   properties =&gt; sub {
   //     my ($stomach, $kv, $base, $script) = @_;
   //     my $basetype = IsScript($base);
   //     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq 'SUPERSCRIPT') ? 1 : 0);
   //     (scriptpos =&gt; "post" . ($_[0]-&gt;getScriptLevel + $bump),
   //       bump =&gt; $bump); },
-  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, 'SUPERSCRIPT', 'post'); });
+  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, 'SUPERSCRIPT', 'post');
+  // });
 
   // DefConstructor('\lx@subscript OptionalKeyVals:XMath {} InScriptStyle',
   //   "&lt;ltx:XMApp $XMath_attributes&gt;"
-  //     . "&lt;ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/&gt;"
-  //     . "&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;"
+  //     . "&lt;ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd'
+  // scriptpos='#scriptpos'/&gt;"     . "&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;"
   //     . "&lt;ltx:XMArg rule='Subscript'&gt;#3&lt;/ltx:XMArg&gt;"
   //     . "&lt;/ltx:XMApp&gt;",
   //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); },
@@ -945,29 +965,37 @@
   //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
   //     (IsEmpty($sub)
   //       ? Revert($base)
-  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUB, revertScript($sub))); },
-  //   properties =&gt; sub {
+  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUB,
+  // revertScript($sub))); },   properties =&gt; sub {
   //     my ($stomach, $kv, $base, $script) = @_;
   //     my $basetype = IsScript($base);
   //     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq 'SUBSCRIPT') ? 1 : 0);
   //     (scriptpos =&gt; "post" . ($_[0]-&gt;getScriptLevel + $bump),
   //       bump =&gt; $bump); },
-  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, 'SUBSCRIPT', 'post'); });
+  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, 'SUBSCRIPT', 'post');
+  // });
 
   // # Ignore $kv for the moment?????
   // sub I_subscript {
   //   my ($kv, $base, $script) = @_;
-  //   return Tokens(T_CS('\lx@subscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script, T_END); }
+  //   return Tokens(T_CS('\lx@subscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script,
+  // T_END); }
 
   // sub I_superscript {
   //   my ($kv, $base, $script) = @_;
-  //   return Tokens(T_CS('\lx@superscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script, T_END); }
+  //   return Tokens(T_CS('\lx@superscript'), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN,
+  // $script, T_END); }
 
   // Superscript meaning power
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@power{}{}"</span>, <span class="string">"\\lx@superscript[operator_meaning=power]{#1}{#2}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\lx@power{}{}"</span>,
+    <span class="string">"\\lx@superscript[operator_meaning=power]{#1}{#2}"
+  </span>);
   <span class="comment">// Superscript meaning functional (or applicative) power; iterated function/operator application
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@functionalpower{}{}"</span>,
-    <span class="string">"\\lx@superscript[operator_meaning=functional-power]{#1}{#2}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\lx@functionalpower{}{}"</span>,
+    <span class="string">"\\lx@superscript[operator_meaning=functional-power]{#1}{#2}"
+  </span>);
 
   <span class="comment">// These to be used in presentation side
   </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@ApplyFunction"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2061}"</span>, reversion =&gt; <span class="string">""</span>, name =&gt; <span class="string">""</span>, role =&gt;<span class="string">"APPLYOP"</span>);
@@ -997,8 +1025,8 @@
   // # Building XMDuals for Mathematical Parallel markup
   // # Used when the content and presentation forms have different structure.
 
-  </span><span class="macro">DefKeyVal!</span>(<span class="string">"XMath"</span>, <span class="string">"reversion"</span>,              <span class="string">"UndigestedDefKey"</span>);
-  <span class="macro">DefKeyVal!</span>(<span class="string">"XMath"</span>, <span class="string">"content_reversion"</span>,      <span class="string">"UndigestedDefKey"</span>);
+  </span><span class="macro">DefKeyVal!</span>(<span class="string">"XMath"</span>, <span class="string">"reversion"</span>, <span class="string">"UndigestedDefKey"</span>);
+  <span class="macro">DefKeyVal!</span>(<span class="string">"XMath"</span>, <span class="string">"content_reversion"</span>, <span class="string">"UndigestedDefKey"</span>);
   <span class="macro">DefKeyVal!</span>(<span class="string">"XMath"</span>, <span class="string">"presentation_reversion"</span>, <span class="string">"UndigestedDefKey"</span>);
 
   <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@dual OptionalKeyVals:XMath {}{}"</span>,
@@ -1199,11 +1227,13 @@
   //======================================================================
 
   // We OUGHT to be able to do this using \llap,\rlap,\hss...
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@tweaked{}{}"</span>,
-  <span class="string">r"\ifmmode\lx@math@tweaked{#1}{#2}\else\lx@text@tweaked{#1}{#2}\fi"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\lx@tweaked{}{}"</span>,
+    <span class="string">r"\ifmmode\lx@math@tweaked{#1}{#2}\else\lx@text@tweaked{#1}{#2}\fi"
+  </span>);
   <span class="comment">// TODO:
-  // DefConstructor!("\\lx@math@tweaked RequiredKeyVals {}", "&lt;ltx:XMWrap $XMath_attributes&gt;#2&lt;/ltx:XMWrap&gt;",
-  //   afterDigest =&gt; sub {
+  // DefConstructor!("\\lx@math@tweaked RequiredKeyVals {}", "&lt;ltx:XMWrap
+  // $XMath_attributes&gt;#2&lt;/ltx:XMWrap&gt;",   afterDigest =&gt; sub {
   //     my ($stomach, $whatsit) = @_;
   //     my ($kv,      $body)    = $whatsit-&gt;getArgs;
   //     XMath_copy_keyvals($stomach, $whatsit);
@@ -1474,11 +1504,15 @@
   //     Let("\\\\", '\lx@alignment@newline');
   // });
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@end@gen@matrix"</span>, { egroup()<span class="question-mark">?</span>; });
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@end@gen@matrix"</span>, {
+    egroup()<span class="question-mark">?</span>;
+  });
 
-  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@gen@plain@matrix{}{}"</span>,
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\lx@gen@plain@matrix{}{}"</span>,
     <span class="string">"\\lx@gen@matrix@bindings{#1}\
-      \\lx@gen@plain@matrix@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}\\lx@end@gen@matrix"</span>);
+      \\lx@gen@plain@matrix@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}\\lx@end@gen@matrix"
+  </span>);
 
   <span class="comment">// # The delimiters on a matrix are presumably just for notation or readability (not an operator);
   // # the array data itself is the matrix.
@@ -1514,7 +1548,7 @@
   //     $whatsit-&gt;setProperties(alignment =&gt; LookupValue('Alignment'));
   //     return; });
 
-    //----------------------------------------------------------------------
+  //----------------------------------------------------------------------
   // Cases: Generalized
   // keys are
   //  name  : the name of the command (for reversion)
@@ -1548,15 +1582,19 @@
   //               T_CS('\hfil')) }]),
   //       'math');
   //     Let("\\\\", '\lx@alignment@newline');
-  //     DefMacro('\lx@alignment@row@before', '');    # Don't inherit counter stepping from containing environments
-  //     DefMacro('\lx@alignment@row@after',  '');
+  //     DefMacro('\lx@alignment@row@before', '');    # Don't inherit counter stepping from
+  // containing environments     DefMacro('\lx@alignment@row@after',  '');
   // });
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@gen@plain@cases{}{}"</span>,
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\lx@gen@plain@cases{}{}"</span>,
     <span class="string">"\\lx@gen@cases@bindings{#1}\
       \\lx@gen@plain@cases@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}
-      \\lx@end@gen@cases"</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@end@gen@cases"</span>, { egroup()<span class="question-mark">?</span>; });
+      \\lx@end@gen@cases"
+  </span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@end@gen@cases"</span>, {
+    egroup()<span class="question-mark">?</span>;
+  });
 
   <span class="comment">// The logical structure for cases extracts the columns of the alignment
   // to give alternating value,condition (an empty condition is replaced by "otherwise" !?!?!)
@@ -1567,8 +1605,8 @@
   //     my ($document) = @_;
   //     if (my $point = $document-&gt;getElement-&gt;lastChild) {
   //       # Get the sequence of alternating (case, condition).
-  //       # Expecting ltx:XMArray/ltx:XMRow/ltx:XMCell [should have /ltx:XMArg, but could be empty!!!]
-  //       my @cells = $document-&gt;findnodes('ltx:XMArray/ltx:XMRow/ltx:XMCell', $point);
+  //       # Expecting ltx:XMArray/ltx:XMRow/ltx:XMCell [should have /ltx:XMArg, but could be
+  // empty!!!]       my @cells = $document-&gt;findnodes('ltx:XMArray/ltx:XMRow/ltx:XMCell', $point);
   //       my @stuff = map { ($_-&gt;hasChildNodes ? createXMRefs($document, element_nodes($_))
   //           : ['ltx:XMText', {}, 'otherwise']) } @cells;
   //       $document-&gt;replaceTree(['ltx:XMDual', {},
@@ -1581,9 +1619,7 @@
   //     (T_CS('\cases'), T_BEGIN, Revert($body), T_END); });
 
   // TODO: Continue MathFork and equationgroup
-
 </span>});
-
 
 <span class="kw">pub fn </span>add_meaning_rec(_document: <span class="kw-2">&amp;mut </span>Document, _node: Node, _meaning: String) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// if ($node-&gt;nodeType == XML_ELEMENT_NODE) {
@@ -1595,7 +1631,7 @@
   //       $document-&gt;setAttribute($node, meaning =&gt; $meaning); } }
   //   else {
   //     foreach my $c ($node-&gt;childNodes) {
-        // addMeaningRec($document, $c, $meaning); } } }
-    </span><span class="macro">todo!</span>()
+  // addMeaningRec($document, $c, $meaning); } } }
+  </span><span class="macro">todo!</span>()
 }
 </code></pre></div></section></main></body></html>

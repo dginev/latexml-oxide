@@ -12,14 +12,11 @@
 <a href="#11" id="11">11</a>
 <a href="#12" id="12">12</a>
 <a href="#13" id="13">13</a>
-<a href="#14" id="14">14</a>
-<a href="#15" id="15">15</a>
-<a href="#16" id="16">16</a></pre></div><pre class="rust"><code><span class="comment">//**********************************************************************
+<a href="#14" id="14">14</a></pre></div><pre class="rust"><code><span class="comment">//**********************************************************************
 // See amsldoc
 //**********************************************************************
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
-
   <span class="macro">RequirePackage!</span>(<span class="string">"amsgen"</span>);
 
   <span class="macro">DefConstructor!</span>(<span class="string">"\\boldsymbol{}"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>, font =&gt; { forcebold =&gt; <span class="bool-val">true </span>});
@@ -28,5 +25,5 @@
   // a bold for those glyphs.  Since we're just forcing the glyph to be bold,
   // \pmb is probably \boldsymbol. or... ??
   </span><span class="macro">Let!</span>(<span class="string">"\\pmb"</span>, <span class="string">"\\boldsymbol"</span>);
-
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

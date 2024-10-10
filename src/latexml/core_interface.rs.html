@@ -373,44 +373,34 @@
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
 <a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#375" id="375">375</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::{Captures, Regex};
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::path::Path;
 <span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">use </span>latexml_core::common::arena;
-<span class="kw">use </span>latexml_core::common::error::{<span class="self">self</span>, note_begin, note_end, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>latexml_core::common::DigestionMode;
-<span class="kw">use </span>latexml_core::common::store::Stored;
+<span class="kw">use </span>latexml_core::common::arena;
+<span class="kw">use </span>latexml_core::common::error::{<span class="self">self</span>, <span class="prelude-ty">Result</span>, note_begin, note_end};
 <span class="kw">use </span>latexml_core::common::model;
+<span class="kw">use </span>latexml_core::common::store::Stored;
 <span class="kw">use </span>latexml_core::definition::expandable::Expandable;
 <span class="kw">use </span>latexml_core::digested::Digested;
 <span class="kw">use </span>latexml_core::document::Document;
-<span class="kw">use </span>latexml_core::list::List;
-<span class="kw">use </span>latexml_core::stomach;
 <span class="kw">use </span>latexml_core::gullet;
-<span class="kw">use </span>latexml_core::state::{<span class="self">self</span>,Scope};
+<span class="kw">use </span>latexml_core::list::List;
+<span class="kw">use </span>latexml_core::state::{<span class="self">self</span>, Scope};
+<span class="kw">use </span>latexml_core::stomach;
 <span class="kw">use </span>latexml_core::token::{Catcode, Token};
 <span class="kw">use </span>latexml_core::tokens::Tokens;
 <span class="kw">use </span>latexml_core::util::pathname;
 <span class="kw">use </span>latexml_core::util::pathname::PathnameFindOptions;
 <span class="comment">// TODO: Clean up these imports -- what belongs where?
-</span><span class="kw">use </span>latexml_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
-<span class="kw">use </span>latexml_codegen::LoadModel;
+</span><span class="kw">use </span>latexml_codegen::LoadModel;
+<span class="kw">use </span>latexml_core::{CharToken, Core, Debug, Explode, T_CS, T_SPACE, Token, fatal, map, s};
 <span class="kw">use </span>latexml_math_parser::MathParser;
 <span class="kw">use </span>latexml_package::prelude::{
-  input_content, input_definitions, InputDefinitionOptions, InputOptions,
+  InputDefinitionOptions, InputOptions, input_content, input_definitions,
 };
 
 <span class="kw">static </span>CLS_EXT_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\.cls$"</span>).unwrap());
@@ -419,10 +409,10 @@
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>DigestionOptions {
-  <span class="kw">pub </span>mode: <span class="prelude-ty">Option</span>&lt;DigestionMode&gt;,
+  <span class="kw">pub </span>mode:         <span class="prelude-ty">Option</span>&lt;DigestionMode&gt;,
   <span class="kw">pub </span>noinitialize: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>preamble: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>postamble: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>preamble:     <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>postamble:    <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="kw">pub trait </span>DigestionAPI {
@@ -456,9 +446,7 @@
     <span class="comment">// let paths = state::search_paths;
     </span>state::assign_value(<span class="string">"InitialPreloads"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="kw">for </span>preload <span class="kw">in </span>preloads {
-      input_definitions(
-        <span class="kw-2">&amp;</span>preload,
-        InputDefinitionOptions::default())<span class="question-mark">?</span>;
+      input_definitions(<span class="kw-2">&amp;</span>preload, InputDefinitionOptions::default())<span class="question-mark">?</span>;
     }
     state::assign_value(<span class="string">"InitialPreloads"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="prelude-val">Ok</span>(())
@@ -508,7 +496,6 @@
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(dir) = dir_opt {
       <span class="kw">let </span>dir = dir.to_str().unwrap_or(<span class="string">"."</span>);
       {
-
         state::assign_value(<span class="string">"SOURCEDIRECTORY"</span>, arena::pin(dir), <span class="prelude-val">None</span>);
         state::add_search_path(dir.to_string());
       }
@@ -530,9 +517,7 @@
     );
 
     <span class="comment">// $self-&gt;loadPostamble($options{postamble}) if $options{postamble};
-    </span>input_content(
-      <span class="kw-2">&amp;</span>request,
-      InputOptions::default())<span class="question-mark">?</span>;
+    </span>input_content(<span class="kw-2">&amp;</span>request, InputOptions::default())<span class="question-mark">?</span>;
     <span class="comment">// $self-&gt;loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -558,7 +543,6 @@
     note_begin(<span class="string">"Building"</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>document = Document::new();
     {
-
       <span class="comment">// TODO: Can we disentangle the ownership to avoid the clone?
       </span><span class="kw">let </span>paths_stored = state::get_search_paths();
       <span class="kw">let </span>schema_paths = paths_stored
@@ -579,11 +563,13 @@
       <span class="kw">if </span>state::has_search_paths() {
         {
           <span class="kw">if </span>state::lookup_bool(<span class="string">"INCLUDE_COMMENTS"</span>) {
-            <span class="kw">let </span>paths_string = state::with_search_paths(|paths| paths
-              .iter()
-              .map(String::as_str)
-              .collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;()
-              .join(<span class="string">","</span>));
+            <span class="kw">let </span>paths_string = state::with_search_paths(|paths| {
+              paths
+                .iter()
+                .map(String::as_str)
+                .collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;()
+                .join(<span class="string">","</span>)
+            });
             <span class="kw">let </span>attributes = <span class="macro">map!</span> {<span class="macro">s!</span>(<span class="string">"paths"</span>) =&gt; paths_string};
             document.insert_pi(<span class="string">"latexml"</span>, <span class="prelude-val">Some</span>(attributes))<span class="question-mark">?</span>;
           }
@@ -623,9 +609,9 @@
       <span class="comment">// TODO: What is the right way to do rewrites in a daemon-safe manner?
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(rules)) = state::remove_value(<span class="string">"DOCUMENT_REWRITE_RULES"</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = document.get_document().get_root_element() {
-          <span class="comment">// Step 1: copy the rules locally through Rc, to be able to invoke them with mutable state.
-          // (TODO: obviously, this could be avoided if they never needed mutable state.
-          // When do they?)
+          <span class="comment">// Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
+          // state. (TODO: obviously, this could be avoided if they never needed mutable
+          // state. When do they?)
           </span><span class="kw">let </span><span class="kw-2">mut </span>rewrites = Vec::new();
           <span class="kw">for </span>rule <span class="kw">in </span>rules {
             <span class="kw">if let </span>Stored::Rewrite(<span class="kw-2">mut </span>rewrite_rule) = rule {
@@ -642,7 +628,7 @@
       note_end(<span class="string">"Rewriting"</span>);
     }
 
-    <span class="kw">if </span>! state::get_nomathparse_flag() {
+    <span class="kw">if </span>!state::get_nomathparse_flag() {
       <span class="kw">let </span><span class="kw-2">mut </span>parser = MathParser::default();
       parser.parse_math(<span class="kw-2">&amp;mut </span>document)<span class="question-mark">?</span>;
     }
@@ -696,13 +682,10 @@
         request
       };
 
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(pathname) = pathname::find(
-        <span class="kw-2">&amp;</span>request_base,
-        PathnameFindOptions {
-          extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[mode.extension(), String::new()]),
-          ..PathnameFindOptions::default()
-        },
-      ) {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(pathname) = pathname::find(<span class="kw-2">&amp;</span>request_base, PathnameFindOptions {
+        extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[mode.extension(), String::new()]),
+        ..PathnameFindOptions::default()
+      }) {
         request = pathname;
         dir = pathname::directory(<span class="kw-2">&amp;</span>request);
         name = pathname::file_stem(<span class="kw-2">&amp;</span>request);
@@ -721,7 +704,6 @@
       <span class="self">self</span>.initialize_singletons(preloads)<span class="question-mark">?</span>;
     }
     {
-
       <span class="kw">if </span>!pathname::is_literaldata(<span class="kw-2">&amp;</span>request) {
         state::assign_value(<span class="string">"SOURCEFILE"</span>, request.clone(), <span class="prelude-val">None</span>);
       }
@@ -748,9 +730,7 @@
 
     {
       <span class="comment">// Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
-      </span>input_content(
-        <span class="kw-2">&amp;</span>request,
-        InputOptions::default())<span class="question-mark">?</span>;
+      </span>input_content(<span class="kw-2">&amp;</span>request, InputOptions::default())<span class="question-mark">?</span>;
     }
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(preamble) = options.preamble {

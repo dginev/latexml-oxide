@@ -83,13 +83,12 @@
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#85" id="85">85</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">// port of TeX.pool.ltxml
   // commit 4cd73e7584c5f0422293ba38f9b757332584afec
   // Author: Bruce Miller &lt;nebconinc@gmail.com&gt;
-  // Date:   Thu May 9 13:19:32 2024 -0400  
+  // Date:   Thu May 9 13:19:32 2024 -0400
   </span><span class="macro">InnerPool!</span>(base_schema);
   <span class="macro">InnerPool!</span>(base_parameter_types);
   <span class="macro">InnerPool!</span>(base_utilities);
@@ -124,16 +123,16 @@
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Orphans?
   //======================================================================
-  
+
   // This is LaTeX, but used a little in the Primitives?
   // define it here (only approxmiately), since it's already useful.
-  
+
   </span><span class="macro">Let!</span>(<span class="string">"\\protect"</span>, <span class="string">"\\relax"</span>);
   <span class="macro">DefRegister!</span>(<span class="string">"\\everyhelp"</span>, <span class="macro">Tokens!</span>());
-  <span class="macro">DefMacro!</span>(<span class="string">"\\hiderel{}"</span>, <span class="string">"#1"</span>);    <span class="comment">// Just ignore, for now...
-  
+  <span class="macro">DefMacro!</span>(<span class="string">"\\hiderel{}"</span>, <span class="string">"#1"</span>); <span class="comment">// Just ignore, for now...
+
   </span><span class="macro">InnerPool!</span>(latex_hook);
-  
+
   <span class="comment">//======================================================================
   // After all other rewrites have acted, a little cleanup
   // [This suggests that it should be (one of) the LAST (math) rewrite applied?
@@ -168,6 +167,5 @@
   //       ## WHY THIS????
   //       $document-&gt;getNode-&gt;appendChild($node);
   // } });
-
 </span>});
 </code></pre></div></section></main></body></html>

@@ -157,65 +157,65 @@
 <a href="#156" id="156">156</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{EMPTY_SYM, SymHashMap};
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use </span><span class="kw">crate</span>::state::Scope;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{SymHashMap,EMPTY_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::definition::{
   BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
 };
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
+<span class="kw">use </span><span class="kw">crate</span>::state::Scope;
 <span class="kw">use </span><span class="kw">crate</span>::tbox::Tbox;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>PrimitiveOptions {
-  <span class="kw">pub </span>bounded: bool,
-  <span class="kw">pub </span>is_prefix: bool,
-  <span class="kw">pub </span>require_math: bool,
-  <span class="kw">pub </span>forbid_math: bool,
-  <span class="kw">pub </span>robust: bool,
-  <span class="kw">pub </span>locked: bool,
-  <span class="kw">pub </span>nargs: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-  <span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-  <span class="kw">pub </span>font: <span class="prelude-ty">Option</span>&lt;FontDirective&gt;,
-  <span class="kw">pub </span>mode: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>alias: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>bounded:       bool,
+  <span class="kw">pub </span>is_prefix:     bool,
+  <span class="kw">pub </span>require_math:  bool,
+  <span class="kw">pub </span>forbid_math:   bool,
+  <span class="kw">pub </span>robust:        bool,
+  <span class="kw">pub </span>locked:        bool,
+  <span class="kw">pub </span>nargs:         <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>scope:         <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+  <span class="kw">pub </span>font:          <span class="prelude-ty">Option</span>&lt;FontDirective&gt;,
+  <span class="kw">pub </span>mode:          <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>alias:         <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="kw">pub </span>before_digest: Vec&lt;BeforeDigestClosure&gt;,
-  <span class="kw">pub </span>after_digest: Vec&lt;DigestionClosure&gt;,
-  <span class="kw">pub </span>reversion: <span class="prelude-ty">Option</span>&lt;Reversion&gt;,
+  <span class="kw">pub </span>after_digest:  Vec&lt;DigestionClosure&gt;,
+  <span class="kw">pub </span>reversion:     <span class="prelude-ty">Option</span>&lt;Reversion&gt;,
 }
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Primitive {
-  <span class="kw">pub </span>cs: Token,
-  <span class="kw">pub </span>paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+  <span class="kw">pub </span>cs:            Token,
+  <span class="kw">pub </span>paramlist:     <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
   <span class="comment">// TODO: we have a case where the replacement is a simple string/character
   //       which gets auto-wrapped with a Tbox during invoke.
-  </span><span class="kw">pub </span>replacement: <span class="prelude-ty">Option</span>&lt;PrimitiveBody&gt;,
+  </span><span class="kw">pub </span>replacement:   <span class="prelude-ty">Option</span>&lt;PrimitiveBody&gt;,
   <span class="kw">pub </span>before_digest: Vec&lt;BeforeDigestClosure&gt;,
-  <span class="kw">pub </span>after_digest: Vec&lt;DigestionClosure&gt;,
-  <span class="kw">pub </span>alias: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>nargs: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-  <span class="kw">pub </span>reversion: <span class="prelude-ty">Option</span>&lt;Reversion&gt;,
-  <span class="kw">pub </span>is_prefix: bool,
+  <span class="kw">pub </span>after_digest:  Vec&lt;DigestionClosure&gt;,
+  <span class="kw">pub </span>alias:         <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>nargs:         <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>reversion:     <span class="prelude-ty">Option</span>&lt;Reversion&gt;,
+  <span class="kw">pub </span>is_prefix:     bool,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Primitive {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Primitive {
-      cs: <span class="macro">T_CS!</span>(<span class="string">"Primitive"</span>),
-      paramlist: <span class="prelude-val">None</span>,
-      replacement: <span class="prelude-val">None</span>,
-      alias: <span class="prelude-val">None</span>,
+      cs:            <span class="macro">T_CS!</span>(<span class="string">"Primitive"</span>),
+      paramlist:     <span class="prelude-val">None</span>,
+      replacement:   <span class="prelude-val">None</span>,
+      alias:         <span class="prelude-val">None</span>,
       before_digest: Vec::new(),
-      after_digest: Vec::new(),
-      nargs: <span class="prelude-val">None</span>,
-      reversion: <span class="prelude-val">None</span>,
-      is_prefix: <span class="bool-val">false</span>,
+      after_digest:  Vec::new(),
+      nargs:         <span class="prelude-val">None</span>,
+      reversion:     <span class="prelude-val">None</span>,
+      is_prefix:     <span class="bool-val">false</span>,
     }
   }
 }
@@ -230,16 +230,13 @@
 // }
 </span><span class="kw">impl </span>Object <span class="kw">for </span>Primitive {
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { &lt;<span class="self">Self </span><span class="kw">as </span>Definition&gt;::stringify_type(<span class="self">self</span>, <span class="string">"Primitive"</span>) }
-
 }
 <span class="kw">impl </span>Definition <span class="kw">for </span>Primitive {
   <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.before_digest) }
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.after_digest) }
   <span class="kw">fn </span>is_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.is_prefix }
 
-  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-  }
+  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
   <span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
     <span class="macro">Debug!</span>(<span class="string">"primitive invoke for {:?}"</span>, <span class="self">self</span>.cs);
     <span class="comment">// my $profiled = $state-&gt;lookupValue('PROFILING') &amp;&amp; ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -252,7 +249,11 @@
     </span><span class="kw">match </span><span class="self">self</span>.replacement {
       <span class="prelude-val">Some</span>(PrimitiveBody::Closure(<span class="kw-2">ref </span>closure)) =&gt; invoked_boxes.extend(closure(args)<span class="question-mark">?</span>),
       <span class="prelude-val">Some</span>(PrimitiveBody::String(symbol)) =&gt; {
-        <span class="kw">let </span>cs_token = <span class="self">self</span>.alias.as_ref().map(|alias| <span class="macro">T_CS!</span>(alias)).unwrap_or(<span class="self">self</span>.cs);
+        <span class="kw">let </span>cs_token = <span class="self">self
+          </span>.alias
+          .as_ref()
+          .map(|alias| <span class="macro">T_CS!</span>(alias))
+          .unwrap_or(<span class="self">self</span>.cs);
         <span class="kw">let </span>box_tokens = <span class="macro">vec!</span>[cs_token];
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_params) = <span class="self">self</span>.paramlist {
           <span class="macro">todo!</span>(); <span class="comment">// we need to generalize the revert functions to take ArgWrap-typed arguments
@@ -263,12 +264,15 @@
         } <span class="kw">else </span>{
           <span class="macro">stored_map!</span>(<span class="string">"isEmpty" </span>=&gt; <span class="bool-val">true</span>)
         };
-        invoked_boxes.push(Digested::from(
-          Tbox::new(symbol, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, Tokens::new(box_tokens),
-          box_props))
-        );
+        invoked_boxes.push(Digested::from(Tbox::new(
+          symbol,
+          <span class="prelude-val">None</span>,
+          <span class="prelude-val">None</span>,
+          Tokens::new(box_tokens),
+          box_props,
+        )));
       },
-      <span class="prelude-val">None </span>=&gt; {}
+      <span class="prelude-val">None </span>=&gt; {},
     }
     <span class="kw">if </span>!<span class="self">self</span>.after_digest.is_empty() {
       <span class="comment">// optimize to avoid needless generation of whatsits
@@ -281,11 +285,7 @@
     </span><span class="prelude-val">Ok</span>(invoked_boxes)
   }
 
-  <span class="kw">fn </span>do_absorbtion(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    _document: <span class="kw-2">&amp;mut </span>Document,
-    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="macro">fatal!</span>(
       Definition,
       Unexpected,

@@ -64,16 +64,13 @@
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a></pre></div><pre class="rust"><code><span class="attr">#[macro_use]
+<a href="#66" id="66">66</a></pre></div><pre class="rust"><code><span class="attr">#[macro_use]
 </span><span class="kw">extern crate </span>latexml_core;
 <span class="kw">use </span>libxml::tree::SaveOptions;
 <span class="kw">use </span>std::env;
 <span class="kw">use </span>std::process;
 
-<span class="kw">use </span>latexml::util::test::{new_test_engine,lex_single_tex_formula};
+<span class="kw">use </span>latexml::util::test::{lex_single_tex_formula, new_test_engine};
 <span class="kw">use </span>latexml_core::common::error::Result;
 <span class="kw">use </span>latexml_core::state;
 <span class="kw">use </span>latexml_math_parser::<span class="kw-2">*</span>;
@@ -101,7 +98,8 @@
     },
   };
   <span class="kw">let </span><span class="kw-2">mut </span>core_engine = new_test_engine();
-  <span class="kw">let </span>(lexemes, <span class="kw-2">mut </span>lex_nodes, xmath_opt, <span class="kw-2">mut </span>doc) = lex_single_tex_formula(<span class="kw-2">&amp;</span>source, <span class="kw-2">&amp;mut </span>core_engine);
+  <span class="kw">let </span>(lexemes, <span class="kw-2">mut </span>lex_nodes, xmath_opt, <span class="kw-2">mut </span>doc) =
+    lex_single_tex_formula(<span class="kw-2">&amp;</span>source, <span class="kw-2">&amp;mut </span>core_engine);
   <span class="macro">assert!</span>(!lexemes.is_empty());
   <span class="macro">eprintln!</span>(<span class="string">"\n\nlexemes: {lexemes:?}\n"</span>);
 
@@ -127,11 +125,7 @@
       })
     );
   } <span class="kw">else </span>{
-    <span class="macro">Warn!</span>(
-      <span class="string">"math"</span>,
-      <span class="string">"parse"</span>,
-      <span class="string">"Grammar did not recognize expression."
-    </span>);
+    <span class="macro">Warn!</span>(<span class="string">"math"</span>, <span class="string">"parse"</span>, <span class="string">"Grammar did not recognize expression."</span>);
     process::exit(<span class="number">1</span>);
   }
   <span class="prelude-val">Ok</span>(())

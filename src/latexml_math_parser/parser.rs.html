@@ -869,19 +869,7 @@
 <a href="#868" id="868">868</a>
 <a href="#869" id="869">869</a>
 <a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
-<a href="#874" id="874">874</a>
-<a href="#875" id="875">875</a>
-<a href="#876" id="876">876</a>
-<a href="#877" id="877">877</a>
-<a href="#878" id="878">878</a>
-<a href="#879" id="879">879</a>
-<a href="#880" id="880">880</a>
-<a href="#881" id="881">881</a>
-<a href="#882" id="882">882</a>
-<a href="#883" id="883">883</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::{Node, NodeType};
+<a href="#871" id="871">871</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
@@ -889,10 +877,10 @@
 <span class="kw">use </span>std::io::Cursor;
 
 <span class="kw">use </span>latexml_core::common::arena::{<span class="self">self</span>, SymHashMap};
-<span class="kw">use </span>latexml_core::common::error::{note_begin, note_end, note_progress, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>latexml_core::common::error::{<span class="prelude-ty">Result</span>, note_begin, note_end, note_progress};
 <span class="kw">use </span>latexml_core::common::xml::<span class="kw-2">*</span>;
-<span class="kw">use </span>latexml_core::document::{get_node_qname,sym_can_have_attribute,with_node_qname,Document};
-<span class="kw">use </span>latexml_core::{map, sym_map, s, static_map, Error, Fatal, fatal};
+<span class="kw">use </span>latexml_core::document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname};
+<span class="kw">use </span>latexml_core::{Error, Fatal, fatal, map, s, static_map, sym_map};
 
 <span class="kw">use </span><span class="kw">crate</span>::grammar::builder::init_grammar;
 <span class="kw">use </span><span class="kw">crate</span>::pragmatics::ValidationPragmatics;
@@ -930,19 +918,19 @@
 
 <span class="kw">pub struct </span>MathParser {
   <span class="comment">// grammar: MarpaGrammar,
-  </span>actions: Actions,
-  builder: TreeBuilder,
-  engine: Parser,
-  <span class="kw">pub </span>expert_pragmatics: Vec&lt;ValidationPragmatics&gt;,
+  </span>actions:                Actions,
+  builder:                TreeBuilder,
+  engine:                 Parser,
+  <span class="kw">pub </span>expert_pragmatics:  Vec&lt;ValidationPragmatics&gt;,
   <span class="kw">pub </span>student_pragmatics: Vec&lt;ValidationPragmatics&gt;,
-  passed: SymHashMap&lt;usize&gt;,
-  failed: SymHashMap&lt;usize&gt;,
-  unknowns: SymHashMap&lt;usize&gt;,
+  passed:                 SymHashMap&lt;usize&gt;,
+  failed:                 SymHashMap&lt;usize&gt;,
+  unknowns:               SymHashMap&lt;usize&gt;,
   <span class="comment">// punctuation: HashMap&lt;String, usize&gt;,
   // lostnodes: HashMap&lt;String, Node&gt;,
   // idrefs: Vec&lt;(String, Node)&gt;,
-  </span>maybe_functions: SymHashMap&lt;usize&gt;,
-  n_parsed: usize,
+  </span>maybe_functions:        SymHashMap&lt;usize&gt;,
+  n_parsed:               usize,
   <span class="comment">// strict: bool,
   // warned: bool,
   // xnode: Option&lt;Node&gt;,
@@ -1129,7 +1117,7 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>p = xnode.get_parent().unwrap();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(result) = <span class="self">self</span>.parse_rec(xnode, <span class="string">"Anything,"</span>, document)<span class="question-mark">? </span>{
       <span class="comment">// Add text representation to the containing Math element.
-      
+
       // This is a VERY screwy situation? How can the parent be a document fragment??
       // This has got to be a LibXML bug???
       </span><span class="kw">if </span>p.get_type() == <span class="prelude-val">Some</span>(NodeType::DocumentFragNode) {
@@ -1241,9 +1229,7 @@
           attr.insert(String::from(<span class="string">"xml:id"</span>), nid.to_owned());
         }
         <span class="kw">for </span>(key, value) <span class="kw">in </span>attr {
-          <span class="kw">if </span>!(key.starts_with(<span class="string">'_'</span>)
-            || sym_can_have_attribute(rtag, arena::pin(<span class="kw-2">&amp;</span>key)))
-          {
+          <span class="kw">if </span>!(key.starts_with(<span class="string">'_'</span>) || sym_can_have_attribute(rtag, arena::pin(<span class="kw-2">&amp;</span>key))) {
             <span class="kw">continue</span>;
           }
           <span class="kw">if </span>key == <span class="string">"xml:id" </span>{
@@ -1282,15 +1268,11 @@
   }
 
   <span class="comment">// Depth first parsing of XMArg nodes.
-  </span><span class="kw">fn </span>parse_children(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    node: <span class="kw-2">&amp;</span>Node,
-    document: <span class="kw-2">&amp;mut </span>Document,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">fn </span>parse_children(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">for </span>child <span class="kw">in </span>element_nodes(node) {
       <span class="kw">let </span>tag = get_node_qname(<span class="kw-2">&amp;</span>child);
       <span class="kw">if </span>tag == arena::pin_static(<span class="string">"ltx:XMArg"</span>) || tag == arena::pin_static(<span class="string">"ltx:XMWrap"</span>) {
-        <span class="self">self</span>.parse_rec( child, <span class="string">"Anything"</span>, document)<span class="question-mark">?</span>;
+        <span class="self">self</span>.parse_rec(child, <span class="string">"Anything"</span>, document)<span class="question-mark">?</span>;
       } <span class="kw">else if </span>tag == arena::pin_static(<span class="string">"ltx:XMApp"</span>)
         || tag == arena::pin_static(<span class="string">"ltx:XMArray"</span>)
         || tag == arena::pin_static(<span class="string">"ltx:XMRow"</span>)
@@ -1460,9 +1442,7 @@
 // Mostly for debugging information?
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-</span><span class="kw">pub fn </span>text_form(node: <span class="kw-2">&amp;</span>Node, document: <span class="kw-2">&amp;</span>Document) -&gt; String {
-  textrec(node, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document)
-}
+</span><span class="kw">pub fn </span>text_form(node: <span class="kw-2">&amp;</span>Node, document: <span class="kw-2">&amp;</span>Document) -&gt; String { textrec(node, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document) }
 
 <span class="comment">// ================================================================================
 // Some more XML utilities, but math specific (?)
@@ -1538,18 +1518,18 @@
       .first()
       .expect(<span class="string">"XMDual should always have 2 child elements."</span>);
     textrec(content, <span class="prelude-val">Some</span>(outer_bp), <span class="prelude-val">Some</span>(outer_name), document) <span class="comment">// Just send out the
-                                                                        // semantic form
-                                                                        // Fall back to
-                                                                        // presentation, if
-                                                                        // content has poor
-                                                                        // semantics (eg. from
-                                                                        // replacement patterns)
-                                                                        // TODO
-                                                                        // return ($text =~
-                                                                        // /^\(*Unknown/ ?
-                                                                        // textrec($presentation,
-                                                                        // $outer_bp, $outer_name)
-                                                                        // : $text); }
+  // semantic form
+  // Fall back to
+  // presentation, if
+  // content has poor
+  // semantics (eg. from
+  // replacement patterns)
+  // TODO
+  // return ($text =~
+  // /^\(*Unknown/ ?
+  // textrec($presentation,
+  // $outer_bp, $outer_name)
+  // : $text); }
   </span>} <span class="kw">else if </span>tag == arena::pin_static(<span class="string">"ltx:XMTok"</span>) {
     <span class="kw">let </span>name = <span class="kw">match </span>get_token_meaning(<span class="kw-2">&amp;</span>node, document) {
       <span class="prelude-val">Some</span>(meaning) =&gt; meaning,
@@ -1584,12 +1564,7 @@
   }
 }
 
-<span class="kw">fn </span>textrec_apply(
-  name: <span class="kw-2">&amp;</span>str,
-  op: <span class="kw-2">&amp;</span>Node,
-  args: Vec&lt;Node&gt;,
-  document: <span class="kw-2">&amp;</span>Document,
-) -&gt; (usize, String) {
+<span class="kw">fn </span>textrec_apply(name: <span class="kw-2">&amp;</span>str, op: <span class="kw-2">&amp;</span>Node, args: Vec&lt;Node&gt;, document: <span class="kw-2">&amp;</span>Document) -&gt; (usize, String) {
   <span class="kw">let </span>role = op
     .get_attribute(<span class="string">"role"</span>)
     .unwrap_or_else(|| <span class="string">"Unknown"</span>.to_string());
@@ -1640,8 +1615,7 @@
   } <span class="kw">else if </span>role == <span class="string">"POSTFIX" </span>{
     (
       <span class="number">10000</span>,
-      textrec(<span class="kw-2">&amp;</span>args[<span class="number">0</span>], <span class="prelude-val">Some</span>(<span class="number">10000</span>), <span class="prelude-val">Some</span>(name), document)
-        + <span class="kw-2">&amp;</span>textrec(op, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document),
+      textrec(<span class="kw-2">&amp;</span>args[<span class="number">0</span>], <span class="prelude-val">Some</span>(<span class="number">10000</span>), <span class="prelude-val">Some</span>(name), document) + <span class="kw-2">&amp;</span>textrec(op, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document),
     )
   } <span class="kw">else if </span>name == <span class="string">"multirelation" </span>{
     <span class="kw">let </span>joined = args
@@ -1733,8 +1707,7 @@
 <span class="comment">//================================================================================
 
 </span><span class="kw">pub fn </span>realize_xmnode&lt;<span class="lifetime">'a</span>&gt;(node: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Node, document: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Document) -&gt; Cow&lt;<span class="lifetime">'a</span>, Node&gt; {
-  <span class="kw">if </span>with_node_qname(node, |name| name == <span class="string">"ltx:XMRef"</span>)
-  {
+  <span class="kw">if </span>with_node_qname(node, |name| name == <span class="string">"ltx:XMRef"</span>) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(idref) = node.get_attribute(<span class="string">"idref"</span>) {
       <span class="comment">// Can it happen that $realnode is, itself, an XMRef?
       // Then we should recurse recurse!
@@ -1746,7 +1719,10 @@
         // LaTeXML::MathParser::IDREFS{$idref}
         // ? "Previously bound to " .
         // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-        </span><span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"id"</span>, message); <span class="prelude-val">Ok</span>(()) };
+        </span><span class="kw">let </span>err = || {
+          <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"id"</span>, message);
+          <span class="prelude-val">Ok</span>(())
+        };
         err().ok();
         <span class="comment">//       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
       </span>}

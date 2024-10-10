@@ -203,10 +203,10 @@
 /// capable of servicing arbitrary field names.
 </span><span class="attr">#[derive(Debug, Clone, Default)]
 </span><span class="kw">pub struct </span>Meta {
-  <span class="kw">pub </span>syntax_trace: Vec&lt;String&gt;,
-  <span class="kw">pub </span>fenced: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>specialize: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>curry_level: <span class="prelude-ty">Option</span>&lt;CurryTerm&gt;,
+  <span class="kw">pub </span>syntax_trace:      Vec&lt;String&gt;,
+  <span class="kw">pub </span>fenced:            <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>specialize:        <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>curry_level:       <span class="prelude-ty">Option</span>&lt;CurryTerm&gt;,
   <span class="kw">pub </span>curry_constraints: CurryConstraints,
 }
 

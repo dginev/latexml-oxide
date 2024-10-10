@@ -294,9 +294,7 @@
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#296" id="296">296</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">//**********************************************************************
   // C.8 Definitions, Numbering and Programming
@@ -432,19 +430,18 @@
 
   <span class="comment">// #------------------------------------------------------------
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareTextSymbol DefToken {}{Number}"</span>,
-    sub[(cs, encoding, code)] {
-      <span class="kw">let </span>code_value = code.value_of() <span class="kw">as </span>u8;
-      <span class="kw">let </span>cs_str = cs.to_string();
-      <span class="kw">let </span>encoding_str = <span class="macro">Expand!</span>(encoding).to_string();
-      <span class="kw">if </span><span class="macro">IsDefinable!</span>(<span class="kw-2">&amp;</span>cs) {    <span class="comment">// If not already defined...
-        </span><span class="macro">DefMacro!</span>(cs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
-        \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi"</span>).into()));
-      }
-      <span class="kw">let </span>ecs = <span class="macro">T_CS!</span>(<span class="string">"\\{encoding}{cs_str}"</span>);
-      <span class="kw">let </span>replacement_value = font::decode(code_value, <span class="prelude-val">Some</span>(encoding_str), <span class="bool-val">false</span>).unwrap();
-      <span class="kw">let </span>replacement = PrimitiveBody::from(replacement_value);
-      def_primitive(ecs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(replacement), PrimitiveOptions::default())<span class="question-mark">?</span>;
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareTextSymbol DefToken {}{Number}"</span>, sub[(cs, encoding, code)] {
+    <span class="kw">let </span>code_value = code.value_of() <span class="kw">as </span>u8;
+    <span class="kw">let </span>cs_str = cs.to_string();
+    <span class="kw">let </span>encoding_str = <span class="macro">Expand!</span>(encoding).to_string();
+    <span class="kw">if </span><span class="macro">IsDefinable!</span>(<span class="kw-2">&amp;</span>cs) {    <span class="comment">// If not already defined...
+      </span><span class="macro">DefMacro!</span>(cs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
+      \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi"</span>).into()));
+    }
+    <span class="kw">let </span>ecs = <span class="macro">T_CS!</span>(<span class="string">"\\{encoding}{cs_str}"</span>);
+    <span class="kw">let </span>replacement_value = font::decode(code_value, <span class="prelude-val">Some</span>(encoding_str), <span class="bool-val">false</span>).unwrap();
+    <span class="kw">let </span>replacement = PrimitiveBody::from(replacement_value);
+    def_primitive(ecs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(replacement), PrimitiveOptions::default())<span class="question-mark">?</span>;
   });
 
   <span class="comment">// hmmm... what needs doing here; basically it means use this encoding as the default for the
@@ -462,7 +459,6 @@
   <span class="macro">DefMacro!</span>(<span class="string">"\\cf@encoding"</span>, {
     <span class="macro">ExplodeText!</span>(<span class="macro">LookupFont!</span>().unwrap().get_encoding().unwrap())
   });
-
 
   <span class="comment">// #------------------------------------------------------------
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareTextComposite{}{}{}{}"</span>, <span class="prelude-val">None</span>);

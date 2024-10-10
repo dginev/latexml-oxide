@@ -566,8 +566,31 @@
 <a href="#565" id="565">565</a>
 <a href="#566" id="566">566</a>
 <a href="#567" id="567">567</a>
-<a href="#568" id="568">568</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Box
-//! 
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Box
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -583,9 +606,18 @@
   // remain in the constructed tree.
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"{"</span>, {
     bgroup();
-    <span class="kw">let </span>open = Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-        <span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>()), <span class="macro">stored_map!</span>(<span class="string">"isEmpty" </span>=&gt; <span class="bool-val">true</span>));
-    <span class="kw">let </span>mode = <span class="prelude-val">Some</span>(<span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) { TexMode::Math} <span class="kw">else </span>{TexMode::Text});
+    <span class="kw">let </span>open = Tbox::new(
+      <span class="kw-2">*</span>EMPTY_SYM,
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>()),
+      <span class="macro">stored_map!</span>(<span class="string">"isEmpty" </span>=&gt; <span class="bool-val">true</span>),
+    );
+    <span class="kw">let </span>mode = <span class="prelude-val">Some</span>(<span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+      TexMode::Math
+    } <span class="kw">else </span>{
+      TexMode::Text
+    });
     <span class="kw">let </span>body = stomach::digest_next_body(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>boxes = <span class="macro">vec!</span>[Digested::from(open)];
     boxes.extend(body);
@@ -601,14 +633,20 @@
       mode,
       font,
       locator: Locator::default(),
-      properties: SymHashMap::default()
+      properties: SymHashMap::default(),
     }
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"}"</span>, {
     <span class="kw">let </span>f = <span class="macro">LookupFont!</span>();
     egroup()<span class="question-mark">?</span>;
-    Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, f, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_END!</span>()), <span class="macro">stored_map!</span>(<span class="string">"isEmpty"</span>=&gt;<span class="bool-val">true</span>))
+    Tbox::new(
+      <span class="kw-2">*</span>EMPTY_SYM,
+      f,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_END!</span>()),
+      <span class="macro">stored_map!</span>(<span class="string">"isEmpty"</span>=&gt;<span class="bool-val">true</span>),
+    )
   });
 
   <span class="comment">// These are for those screwy cases where you need to create a group like box,
@@ -628,14 +666,22 @@
     reversion =&gt; <span class="string">""
   </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@nounicode {}"</span>, <span class="string">r"\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi"</span>);
-
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@framed[]{}"</span>,
-    <span class="string">"&lt;ltx:text framed='#frame' _noautoclose='1'&gt;#2&lt;/ltx:text&gt;" </span><span class="comment">// TODO
-  //   properties =&gt; { frame =&gt; sub { ToString($_[1] || 'rectangle'); }}
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\lx@nounicode {}"</span>,
+    <span class="string">r"\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi"
   </span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@hflipped{}"</span>,
-    <span class="string">"&lt;ltx:text class='ltx_hflipped' _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>);
+
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">"\\lx@framed[]{}"</span>,
+    <span class="string">"&lt;ltx:text framed='#frame' _noautoclose='1'&gt;#2&lt;/ltx:text&gt;" </span><span class="comment">/* TODO
+                                                                *   properties =&gt; { frame =&gt; sub
+                                                                * { ToString($_[1] ||
+                                                                * 'rectangle'); }} */
+  </span>);
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">"\\lx@hflipped{}"</span>,
+    <span class="string">"&lt;ltx:text class='ltx_hflipped' _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"
+  </span>);
 
   <span class="comment">// sub reportNoUnicode {
   //   my ($cs) = @_;
@@ -667,7 +713,6 @@
   // \everyhbox      pt holds tokens inserted at the start of every hbox.
   // \everyvbox      pt holds tokens inserted at the start of every vbox.
   // ======================================================================
-  
 
   </span><span class="macro">DefParameterType!</span>(BoxSpecification, sub[_inner, _extra] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = gullet::read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"to"</span>, <span class="string">"spread"</span>])<span class="question-mark">? </span>{
@@ -719,16 +764,20 @@
   </span><span class="macro">AssignValue!</span>(<span class="string">"TEXT_MODE_BINDINGS"  </span>=&gt; Stored::VecDequeStored(VecDeque::new()));
   <span class="macro">AssignValue!</span>(<span class="string">"HTEXT_MODE_BINDINGS" </span>=&gt; Stored::VecDequeStored(VecDeque::new()));
   <span class="macro">AssignValue!</span>(<span class="string">"VTEXT_MODE_BINDINGS" </span>=&gt; Stored::VecDequeStored(VecDeque::new()));
-  push_value(<span class="string">"HTEXT_MODE_BINDINGS"</span>, <span class="macro">Tokens!</span>(<span class="macro">T_MATH!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@dollar@in@textmode"</span>)))<span class="question-mark">?</span>;
-  push_value(<span class="string">"VTEXT_MODE_BINDINGS"</span>, <span class="macro">Tokens!</span>(<span class="macro">T_MATH!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@dollar@in@normalmode"</span>)))<span class="question-mark">?</span>;
-
+  push_value(
+    <span class="string">"HTEXT_MODE_BINDINGS"</span>,
+    <span class="macro">Tokens!</span>(<span class="macro">T_MATH!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@dollar@in@textmode"</span>)),
+  )<span class="question-mark">?</span>;
+  push_value(
+    <span class="string">"VTEXT_MODE_BINDINGS"</span>,
+    <span class="macro">Tokens!</span>(<span class="macro">T_MATH!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@dollar@in@normalmode"</span>)),
+  )<span class="question-mark">?</span>;
 
   <span class="comment">// TODO: collapseSVGGroup
   </span><span class="macro">Tag!</span>(<span class="string">"svg:g"</span>, after_close =&gt; sub[_document, _node] {
     <span class="prelude-val">Err</span>(<span class="macro">unported!</span>())<span class="question-mark">?
     </span><span class="comment">// collapse_svg_group(document, node)
   </span>});
-
 
   <span class="macro">DefConstructor!</span>(<span class="string">"\\hbox BoxSpecification HBoxContents"</span>, sub[document, args, props] {
     <span class="comment">// "&lt;ltx:text width='#width' _noautoclose='1'&gt;#2&lt;/ltx:text&gt;",
@@ -831,7 +880,7 @@
       //   return; });
     </span>}
   );
-    
+
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Commands to store and use boxes
   // ----------------------------------------------------------------------
@@ -848,8 +897,8 @@
   // \lastbox        c  is void or the last hbox or vbox on the current list.
   // ======================================================================
 
-
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lastbox"</span>, {<span class="comment">// Hopefully, the correct box got seen!
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lastbox"</span>, {
+    <span class="comment">// Hopefully, the correct box got seen!
     </span>pop_box_list().map(|b| <span class="macro">vec!</span>[b]).unwrap_or_default()
   });
 
@@ -877,7 +926,6 @@
     state::assign_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"box{}"</span>, number.value_of()), stuff, scope);
     rest
   });
-
 
   <span class="comment">// # &lt;box dimension&gt; = \ht | \wd | \dp
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\ht Number"</span>, Dimension::new(<span class="number">0</span>),
@@ -1031,7 +1079,7 @@
   },
   optional =&gt; <span class="bool-val">true</span>,
   predigest =&gt; sub[arg] { <span class="prelude-val">Ok</span>(arg.undigested()) });
-  
+
   <span class="comment">// \hrule, \vrule are awkward in trying to deal with 3 cases
   //  * as rules within an alignment/table
   //  * as separating lines within text
@@ -1113,9 +1161,7 @@
 
 <span class="comment">// Risky: I think this needs to be digested as a body to work like TeX (?)
 // but parameter think's it's just parsing from gullet...
-</span><span class="kw">pub fn </span>read_box_contents(
-  everybox_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+</span><span class="kw">pub fn </span>read_box_contents(everybox_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = gullet::read_token()<span class="question-mark">? </span>{
     <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
       <span class="kw">break</span>;

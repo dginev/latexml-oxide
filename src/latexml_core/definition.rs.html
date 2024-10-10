@@ -368,34 +368,7 @@
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a></pre></div><pre class="rust"><code><span class="attr">#[macro_use]
+<a href="#370" id="370">370</a></pre></div><pre class="rust"><code><span class="attr">#[macro_use]
 </span><span class="kw">pub mod </span>expandable;
 <span class="kw">pub mod </span>argument;
 <span class="kw">pub mod </span>conditional;
@@ -409,43 +382,38 @@
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymHashMap, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>,SymHashMap,SymStr};
 
 <span class="kw">use </span><span class="self">self</span>::argument::ArgWrap;
 <span class="kw">use </span><span class="self">self</span>::register::{RegisterType, RegisterValue};
 
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::mouth;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
-<span class="kw">use </span><span class="kw">crate</span>::state::{expire_state_unlocked, local_state_unlocked, Scope};
+<span class="kw">use </span><span class="kw">crate</span>::state::{Scope, expire_state_unlocked, local_state_unlocked};
 <span class="kw">use </span><span class="kw">crate</span>::token::Token;
-<span class="kw">use </span><span class="kw">crate</span>::tokens::{Tokens, NO_TOKENS};
+<span class="kw">use </span><span class="kw">crate</span>::tokens::{NO_TOKENS, Tokens};
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="kw">pub type </span>ExpansionClosure = Rc&lt;<span class="kw">dyn </span>Fn(Vec&lt;ArgWrap&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
 <span class="kw">pub type </span>ConditionalClosure = Rc&lt;<span class="kw">dyn </span>Fn(Vec&lt;ArgWrap&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt;&gt;;
 <span class="kw">pub type </span>PrimitiveFn = <span class="kw">dyn </span>Fn(Vec&lt;ArgWrap&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt;;
 <span class="kw">pub type </span>PrimitiveClosure = Rc&lt;PrimitiveFn&gt;;
 <span class="kw">pub type </span>BeforeDigestClosure = Rc&lt;<span class="kw">dyn </span>Fn() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt;&gt;;
-<span class="kw">pub type </span>PropertiesClosure =
-  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;SymHashMap&lt;Stored&gt;&gt;&gt;;
-<span class="kw">pub type </span>DigestionClosure =
-  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt;&gt;;
-<span class="kw">pub type </span>ReplacementClosure = Rc&lt;
-  <span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;, <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;,
-&gt;;
+<span class="kw">pub type </span>PropertiesClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;SymHashMap&lt;Stored&gt;&gt;&gt;;
+<span class="kw">pub type </span>DigestionClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt;&gt;;
+<span class="kw">pub type </span>ReplacementClosure =
+  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;, <span class="kw-2">&amp;</span>SymHashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;&gt;;
 <span class="kw">pub type </span>ConstructionClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;&gt;;
-<span class="kw">pub type </span>DigestedReversionClosure =
-  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>Whatsit, <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
-<span class="kw">pub type </span>SizingClosure =
-  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt;&gt;;
+<span class="kw">pub type </span>DigestedReversionClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>Whatsit, <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
+<span class="kw">pub type </span>SizingClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt;&gt;;
 <span class="kw">pub type </span>FontClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Whatsit&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Font&gt;&gt;;
 
 <span class="attr">#[derive(Clone)]
@@ -505,12 +473,10 @@
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub enum </span>PrimitiveBody {
   Closure(PrimitiveClosure),
-  String(SymStr)
+  String(SymStr),
 }
 <span class="kw">impl </span>From&lt;char&gt; <span class="kw">for </span>PrimitiveBody {
-  <span class="kw">fn </span>from(c: char) -&gt; <span class="self">Self </span>{
-    PrimitiveBody::String(arena::pin_char(c))
-  }
+  <span class="kw">fn </span>from(c: char) -&gt; <span class="self">Self </span>{ PrimitiveBody::String(arena::pin_char(c)) }
 }
 
 <span class="attr">#[derive(Clone)]
@@ -533,7 +499,9 @@
 }
 
 <span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>Reversion {
-  <span class="kw">fn </span>from(t: <span class="kw-2">&amp;</span>str) -&gt; Reversion { Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters().ok().unwrap()) }
+  <span class="kw">fn </span>from(t: <span class="kw-2">&amp;</span>str) -&gt; Reversion {
+    Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters().ok().unwrap())
+  }
 }
 <span class="kw">impl </span>From&lt;Tokens&gt; <span class="kw">for </span>Reversion {
   <span class="kw">fn </span>from(ts: Tokens) -&gt; Reversion { Reversion::Tokens(ts) }
@@ -552,13 +520,7 @@
 }
 
 <span class="kw">impl </span>From&lt;Tokens&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; {
-  <span class="kw">fn </span>from(t: Tokens) -&gt; <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; {
-    <span class="kw">if </span>t.is_empty() {
-      <span class="prelude-val">None
-    </span>} <span class="kw">else </span>{
-      <span class="prelude-val">Some</span>(t.into())
-    }
-  }
+  <span class="kw">fn </span>from(t: Tokens) -&gt; <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; { <span class="kw">if </span>t.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(t.into()) } }
 }
 
 <span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>ExpansionBody {
@@ -662,11 +624,7 @@
 
   <span class="comment">// ======================================================================
   // Return the Tokens that would invoke the given definition with arguments.
-  </span><span class="kw">fn </span>invocation(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;,
-    _gullet: <span class="kw-2">&amp;mut </span>Gullet,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  </span><span class="kw">fn </span>invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;, _gullet: <span class="kw-2">&amp;mut </span>Gullet) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>invocation_result: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="self">self</span>.get_cs().into_owned()];
 
     <span class="kw">match </span><span class="self">self</span>.get_parameters() {
@@ -682,19 +640,13 @@
 
   <span class="kw">fn </span>get_num_args(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize { <span class="number">0 </span>}
 
-  <span class="kw">fn </span>do_absorbtion(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    _document: <span class="kw-2">&amp;mut </span>Document,
-    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt;;
+  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt;;
   <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>after_digest_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>capture_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">false </span>}
 
-  <span class="kw">fn </span>execute_before_digest(
-    <span class="kw-2">&amp;</span><span class="self">self
-  </span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+  <span class="kw">fn </span>execute_before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
     local_state_unlocked(<span class="bool-val">true</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>before_digested = Vec::new();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(pre_list) = <span class="self">self</span>.before_digest() {
@@ -705,10 +657,7 @@
     expire_state_unlocked();
     <span class="prelude-val">Ok</span>(before_digested)
   }
-  <span class="kw">fn </span>execute_after_digest(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    whatsit: <span class="kw-2">&amp;mut </span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+  <span class="kw">fn </span>execute_after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>, whatsit: <span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
     local_state_unlocked(<span class="bool-val">true</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>after_digested = Vec::new();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(post_list) = <span class="self">self</span>.after_digest() {
@@ -720,10 +669,7 @@
     <span class="prelude-val">Ok</span>(after_digested)
   }
 
-  <span class="kw">fn </span>execute_after_digest_body(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    whatsit: <span class="kw-2">&amp;mut </span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+  <span class="kw">fn </span>execute_after_digest_body(<span class="kw-2">&amp;</span><span class="self">self</span>, whatsit: <span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
     local_state_unlocked(<span class="bool-val">true</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>after_body_digested = Vec::new();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(post_list) = <span class="self">self</span>.after_digest_body() {
@@ -738,11 +684,11 @@
     <span class="prelude-val">Ok</span>(after_body_digested)
   }
 
-  <span class="kw">fn </span>value_of(<span class="kw-2">&amp;</span><span class="self">self</span>, _args: Vec&lt;ArgWrap&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
-    <span class="macro">todo!</span>()
-  }
+  <span class="kw">fn </span>value_of(<span class="kw-2">&amp;</span><span class="self">self</span>, _args: Vec&lt;ArgWrap&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; { <span class="macro">todo!</span>() }
   <span class="doccomment">/// runs the setter to assign the value for a register
-  </span><span class="kw">fn </span>set_value(<span class="kw-2">&amp;</span><span class="self">self</span>, _value: RegisterValue, _scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;, _args: Vec&lt;ArgWrap&gt;) { <span class="macro">todo!</span>(); }
+  </span><span class="kw">fn </span>set_value(<span class="kw-2">&amp;</span><span class="self">self</span>, _value: RegisterValue, _scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;, _args: Vec&lt;ArgWrap&gt;) {
+    <span class="macro">todo!</span>();
+  }
   <span class="kw">fn </span>register_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterType&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>get_reversion_spec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Reversion&gt; { <span class="macro">todo!</span>() }
   <span class="kw">fn </span>get_expansion(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ExpansionBody&gt; { <span class="prelude-val">None </span>}
@@ -791,4 +737,5 @@
       }, <span class="comment">// what is the right way to serialize this, e.g. for the \meaning macro
     </span>}
   }
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

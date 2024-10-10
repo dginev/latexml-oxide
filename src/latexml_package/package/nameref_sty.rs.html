@@ -26,8 +26,7 @@
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
 <a href="#27" id="27">27</a>
-<a href="#28" id="28">28</a>
-<a href="#29" id="29">29</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#28" id="28">28</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">// TODO:
   // RequirePackage!("refcount");
@@ -39,21 +38,20 @@
   //
   // TODO: The star forms prevent nested double links.
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\nameref OptionalMatch:* Semiverbatim"</span>,
-    <span class="string">"&lt;ltx:ref ?#1(class='ltx_refmacro_nameref ltx_nolink')(class='ltx_refmacro_nameref')\
-      show='title' labelref='#label' _force_font='true'/&gt;"</span>,
-    properties =&gt; sub[args] {
-      <span class="kw">let </span>label_arg = args[<span class="number">1</span>].as_ref().map(ToString::to_string).unwrap_or_default();
-      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(
-        <span class="string">"label" </span>=&gt; clean_label(<span class="kw-2">&amp;</span>label_arg, <span class="prelude-val">None</span>)))
-    });
+  <span class="string">"&lt;ltx:ref ?#1(class='ltx_refmacro_nameref ltx_nolink')(class='ltx_refmacro_nameref')\
+    show='title' labelref='#label' _force_font='true'/&gt;"</span>,
+  properties =&gt; sub[args] {
+    <span class="kw">let </span>label_arg = args[<span class="number">1</span>].as_ref().map(ToString::to_string).unwrap_or_default();
+    <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(
+      <span class="string">"label" </span>=&gt; clean_label(<span class="kw-2">&amp;</span>label_arg, <span class="prelude-val">None</span>)))
+  });
 
-  <span class="macro">DefMacro!</span>(<span class="string">"\\Nameref"</span>, <span class="string">"\\nameref"</span>);   <span class="comment">//\def\Nameref#1{‘\nameref{#1}’ on page~\pageref{#1}}
+  <span class="macro">DefMacro!</span>(<span class="string">"\\Nameref"</span>, <span class="string">"\\nameref"</span>); <span class="comment">//\def\Nameref#1{‘\nameref{#1}’ on page~\pageref{#1}}
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\Sectionformat{}{}"</span>, <span class="string">"#1"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\Ref"</span>, <span class="string">"\\ref"</span>);            <span class="comment">// can be improved if "varioref.sty" is loaded?
+  <span class="macro">DefMacro!</span>(<span class="string">"\\Ref"</span>, <span class="string">"\\ref"</span>); <span class="comment">// can be improved if "varioref.sty" is loaded?
   //The original nameref docs say: "Overload an AMS LaTEX command, which uses \newlabel. Sigh!"
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\slabel"</span>, <span class="string">"\\label"</span>);
   <span class="comment">// We can improve if we had \vpageref
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\vnameref"</span>, <span class="string">"\\nameref"</span>);
-
 });
 </code></pre></div></section></main></body></html>

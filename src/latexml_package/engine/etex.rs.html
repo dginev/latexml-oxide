@@ -268,12 +268,7 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#270" id="270">270</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">// See http://tex.loria.fr/moteurs/etex_ref.html
@@ -454,10 +449,8 @@
   // # since we don't know where it ends, we can't easily use Parse::RecDescent.
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
-  </span><span class="kw">fn </span>etex_readexpr(
-    rtype: RegisterType,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
-    <span class="kw">let </span>value = etex_readexpr_i( rtype, <span class="number">0</span>)<span class="question-mark">?</span>;
+  </span><span class="kw">fn </span>etex_readexpr(rtype: RegisterType) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
+    <span class="kw">let </span>value = etex_readexpr_i(rtype, <span class="number">0</span>)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet::read_token()<span class="question-mark">? </span>{
       <span class="comment">// Skip \relax
       </span><span class="kw">if </span>token != <span class="kw-2">*</span>TOKEN_RELAX {
@@ -467,17 +460,14 @@
     <span class="prelude-val">Ok</span>(value)
   }
 
-  <span class="kw">fn </span>etex_readexpr_i(
-    rtype: RegisterType,
-    prec: usize,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
+  <span class="kw">fn </span>etex_readexpr_i(rtype: RegisterType, prec: usize) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
     <span class="comment">// Read a first value
     </span><span class="kw">let </span>token = <span class="kw">match </span>gullet::read_x_non_space()<span class="question-mark">? </span>{
       <span class="prelude-val">Some</span>(t) =&gt; t,
       <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(RegisterValue::default()),
     };
     <span class="kw">let </span><span class="kw-2">mut </span>value = <span class="kw">if </span>token == <span class="macro">T_OTHER!</span>(<span class="string">"("</span>) {
-      <span class="kw">let </span>i_value = etex_readexpr_i( rtype, <span class="number">0</span>)<span class="question-mark">?</span>;
+      <span class="kw">let </span>i_value = etex_readexpr_i(rtype, <span class="number">0</span>)<span class="question-mark">?</span>;
       <span class="kw">let </span>close = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
       <span class="comment">// close parenthesis should have terminated recursive call
       </span><span class="kw">if </span>close.is_none() || close != <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">")"</span>)) {
@@ -498,15 +488,15 @@
         gullet::unread_one(next); <span class="comment">// leave the \relax for top-level to strip off.
         </span><span class="kw">break</span>;
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">"+"</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{
-        value = value.add(etex_readexpr_i( rtype, <span class="number">1</span>)<span class="question-mark">?</span>);
+        value = value.add(etex_readexpr_i(rtype, <span class="number">1</span>)<span class="question-mark">?</span>);
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">"-"</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{
-        value = value.subtract(etex_readexpr_i( rtype, <span class="number">1</span>)<span class="question-mark">?</span>);
+        value = value.subtract(etex_readexpr_i(rtype, <span class="number">1</span>)<span class="question-mark">?</span>);
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">"*"</span>) &amp;&amp; prec &lt; <span class="number">2 </span>{
         <span class="comment">// multiplier should be pure number
-        </span>value = value.multiply(etex_readexpr_i( RegisterType::Number, <span class="number">2</span>)<span class="question-mark">?</span>);
+        </span>value = value.multiply(etex_readexpr_i(RegisterType::Number, <span class="number">2</span>)<span class="question-mark">?</span>);
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">"/"</span>) &amp;&amp; prec &lt; <span class="number">2 </span>{
         <span class="comment">// denominator should be pure number
-        </span>value = value.divideround(etex_readexpr_i( RegisterType::Number, <span class="number">2</span>)<span class="question-mark">?</span>);
+        </span>value = value.divideround(etex_readexpr_i(RegisterType::Number, <span class="number">2</span>)<span class="question-mark">?</span>);
       } <span class="kw">else </span>{
         <span class="comment">// anything else, we're done.
         </span>gullet::unread_one(next);

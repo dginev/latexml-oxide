@@ -417,27 +417,16 @@
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
+<a href="#419" id="419">419</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::cell::RefCell;
 </span><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
@@ -446,7 +435,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::{Definition, FontDirective, Reversion};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
-<span class="kw">use </span><span class="kw">crate</span>::state::{get_dual_branch,lookup_font};
+<span class="kw">use </span><span class="kw">crate</span>::state::{get_dual_branch, lookup_font};
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{BoxOps, Digested, DigestedData, TexMode};
@@ -455,29 +444,29 @@
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Whatsit {
   <span class="doccomment">/// arguments
-  </span><span class="kw">pub </span>args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
+  </span><span class="kw">pub </span>args:           Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
   <span class="doccomment">/// additional properties, such as font information or sizing
-  </span><span class="kw">pub </span>properties: HashMap&lt;Stored&gt;,
+  </span><span class="kw">pub </span>properties:     HashMap&lt;Stored&gt;,
   <span class="doccomment">/// the definition responsible for creating this object
-  </span><span class="kw">pub </span>definition: Rc&lt;<span class="kw">dyn </span>Definition&gt;,
+  </span><span class="kw">pub </span>definition:     Rc&lt;<span class="kw">dyn </span>Definition&gt;,
   <span class="doccomment">/// cached tokens for reverting back
   ///  (note that the "reversion" _property_ is currently also used)
-  </span><span class="kw">pub </span>reversion: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+  </span><span class="kw">pub </span>reversion:      <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
   <span class="doccomment">/// special-case reversion tokens for whatsits representing Dual math structures
   </span><span class="kw">pub </span>dual_reversion: <span class="prelude-ty">Option</span>&lt;HashMap&lt;Tokens&gt;&gt;,
   <span class="doccomment">/// point of origin in the source file
-  </span><span class="kw">pub </span>locator: Locator,
+  </span><span class="kw">pub </span>locator:        Locator,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Whatsit {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Whatsit {
-      args: Vec::new(),
-      properties: HashMap::default(),
-      definition: Rc::new(Expandable::default()),
-      reversion: <span class="prelude-val">None</span>,
+      args:           Vec::new(),
+      properties:     HashMap::default(),
+      definition:     Rc::new(Expandable::default()),
+      reversion:      <span class="prelude-val">None</span>,
       dual_reversion: <span class="prelude-val">None</span>,
-      locator: Locator::default(),
+      locator:        Locator::default(),
     }
   }
 }
@@ -511,16 +500,20 @@
   <span class="doccomment">/// A Whatsit is empty if it is marked empty, or space-like, or has an empty body.
   </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
     <span class="prelude-val">Ok</span>(
-    <span class="comment">// 1. A space-like thing
-    // 2. An environment-like structure with an empty body
-    // TODO: For now it is difficult to pass in a state with an initialized TeX.pool.
-    </span><span class="self">self</span>.get_property_bool(<span class="string">"isEmpty"</span>)
-      || <span class="self">self</span>.get_property_bool(<span class="string">"isSpace"</span>)
-      || (<span class="self">self</span>.get_definition().get_cs_name() == <span class="string">"Begin"
-        </span>&amp;&amp; <span class="kw">match </span><span class="self">self</span>.get_body()<span class="question-mark">? </span>{
-            <span class="prelude-val">Some</span>(b) =&gt; b.unlist_ref().iter().all(|inner| inner.is_empty().unwrap_or(<span class="bool-val">false</span>)),
+      <span class="comment">// 1. A space-like thing
+      // 2. An environment-like structure with an empty body
+      // TODO: For now it is difficult to pass in a state with an initialized TeX.pool.
+      </span><span class="self">self</span>.get_property_bool(<span class="string">"isEmpty"</span>)
+        || <span class="self">self</span>.get_property_bool(<span class="string">"isSpace"</span>)
+        || (<span class="self">self</span>.get_definition().get_cs_name() == <span class="string">"Begin"
+          </span>&amp;&amp; <span class="kw">match </span><span class="self">self</span>.get_body()<span class="question-mark">? </span>{
+            <span class="prelude-val">Some</span>(b) =&gt; b
+              .unlist_ref()
+              .iter()
+              .all(|inner| inner.is_empty().unwrap_or(<span class="bool-val">false</span>)),
             <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
-        }))
+          }),
+    )
   }
   <span class="doccomment">/// sets a pre-assembled HashMap of properties
   </span><span class="kw">pub fn </span>set_properties(<span class="kw-2">&amp;mut </span><span class="self">self</span>, props: HashMap&lt;Stored&gt;) {
@@ -571,9 +564,7 @@
     <span class="kw">if </span><span class="self">self</span>.is_math() {
       list.mode = <span class="prelude-val">Some</span>(mode);
     }
-    <span class="self">self
-      </span>.properties
-      .insert(<span class="string">"body"</span>, Digested::from(list).into());
+    <span class="self">self</span>.properties.insert(<span class="string">"body"</span>, Digested::from(list).into());
     <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = trailer_opt {
       <span class="kw">if let </span>DigestedData::Whatsit(<span class="kw-2">ref </span>trailer) = digested.data() {
         <span class="comment">// And copy any otherwise undefined properties from the trailer
@@ -585,9 +576,7 @@
             .entry_sym(<span class="kw-2">*</span>prop)
             .or_insert_with(|| value.clone());
         }
-        <span class="self">self
-          </span>.properties
-          .insert(<span class="string">"trailer"</span>, digested.clone().into());
+        <span class="self">self</span>.properties.insert(<span class="string">"trailer"</span>, digested.clone().into());
       }
     }
   }
@@ -659,9 +648,7 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Whatsit {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.revert().unwrap())
-  }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.revert().unwrap()) }
 }
 
 <span class="kw">impl </span>Object <span class="kw">for </span>Whatsit {
@@ -788,9 +775,7 @@
     <span class="self">self</span>.properties.get(key).map(Cow::Borrowed)
   }
   <span class="kw">fn </span>get_property_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt; { <span class="self">self</span>.properties.get_mut(key) }
-  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; {
-    <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert()<span class="question-mark">?</span>.to_string()))
-  }
+  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert()<span class="question-mark">?</span>.to_string())) }
 
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="comment">// Significant time is consumed here, and associated with a specific CS,
@@ -822,16 +807,9 @@
     }
   }
 
-  <span class="kw">fn </span>set_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, font: Rc&lt;Font&gt;) {
-    <span class="self">self
-      </span>.properties
-      .insert(<span class="string">"font"</span>, Stored::Font(font));
-  }
+  <span class="kw">fn </span>set_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, font: Rc&lt;Font&gt;) { <span class="self">self</span>.properties.insert(<span class="string">"font"</span>, Stored::Font(font)); }
 
-  <span class="kw">fn </span>compute_size(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    options: HashMap&lt;Stored&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">let </span>defn = <span class="self">self</span>.get_definition();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = defn.get_sizer() {
       sizer(<span class="self">self</span>)

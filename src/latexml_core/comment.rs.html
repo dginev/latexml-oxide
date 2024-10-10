@@ -55,13 +55,7 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<a href="#57" id="57">57</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 
@@ -74,8 +68,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterValue;
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
-<span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::NO_TOKENS;
+<span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{BoxOps, NO_PROPERTIES};
 
 <span class="attr">#[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -100,17 +94,11 @@
     <span class="prelude-val">Ok</span>(Vec::new())
   }
   <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) }
-  <span class="kw">fn </span>get_width(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    _options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;Stored&gt;&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
+  <span class="kw">fn </span>get_width(<span class="kw-2">&amp;</span><span class="self">self</span>, _options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;Stored&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(RegisterValue::Dimension(Dimension::new(<span class="number">0</span>))))
   }
 
-  <span class="kw">fn </span>compute_size(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    _options: HashMap&lt;Stored&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, _options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="prelude-val">Ok</span>((
       Dimension::default(),
       Dimension::default(),

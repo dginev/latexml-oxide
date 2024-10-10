@@ -15,21 +15,23 @@
 <a href="#14" id="14">14</a>
 <a href="#15" id="15">15</a>
 <a href="#16" id="16">16</a>
-<a href="#17" id="17">17</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#17" id="17">17</a>
+<a href="#18" id="18">18</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="comment">//======================================================================
 // C.7.2 Common Structures
 //======================================================================
 // sub, superscript and prime are in TeX.pool
 // Underlying support in TeX.pool.ltxml
 </span><span class="macro">LoadDefinitions!</span>({
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\frac InFractionStyle InFractionStyle"</span>,
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">"\\frac InFractionStyle InFractionStyle"</span>,
     <span class="string">"&lt;ltx:XMApp&gt;\
       &lt;ltx:XMTok meaning='divide' role='FRACOP' mathstyle='#mathstyle'/&gt;\
       &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;\
-      &lt;/ltx:XMApp&gt;"
-      </span><span class="comment">// TODO
-    // sizer      =&gt; sub[whatsit] { frac_sizer(whatsit.get_arg(1), whatsit.get_arg(2)) },
-    // properties =&gt; { "mathstyle" =&gt; lookup_font().get_mathstyle() }
+      &lt;/ltx:XMApp&gt;" </span><span class="comment">/* TODO
+                     * sizer      =&gt; sub[whatsit] { frac_sizer(whatsit.get_arg(1),
+                     * whatsit.get_arg(2)) }, properties =&gt; { "mathstyle" =&gt;
+                     * lookup_font().get_mathstyle() } */
   </span>);
 });
 </code></pre></div></section></main></body></html>

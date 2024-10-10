@@ -204,19 +204,8 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::engine::tex_tables::alignment_bindings;
+<a href="#206" id="206">206</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::engine::tex_tables::alignment_bindings;
+<span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">static </span>NOTE_TEXT_END: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">"^(\\w+?)text$"</span>).unwrap());
 <span class="kw">static </span>NOTE_MARK_END: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">"^(\\w+?)mark$"</span>).unwrap());
@@ -259,7 +248,7 @@
   counter: <span class="kw-2">&amp;</span>str,
   mark_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Digested&gt;,
   tag_opt: <span class="prelude-ty">Option</span>&lt;Cow&lt;Digested&gt;&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;SymHashMap&lt;Stored&gt;&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;SymHashMap&lt;Stored&gt;&gt; {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(tag) = tag_opt {
     <span class="kw">let </span><span class="kw-2">mut </span>props = ref_step_id(counter)<span class="question-mark">?</span>;
     <span class="kw">let </span>mark = <span class="kw">match </span>mark_opt {
@@ -269,29 +258,27 @@
     props.insert(<span class="string">"mark"</span>, mark.into());
     props.insert(
       <span class="string">"tags"</span>,
-     stomach::digest(
-          <span class="macro">Tokens!</span>(
-            <span class="macro">T_BEGIN!</span>(),
-            <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
-            <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{counter}"</span>)),
-            <span class="macro">T_BEGIN!</span>(),
-            tag.revert()<span class="question-mark">?</span>,
-            <span class="macro">T_END!</span>(),
-            <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
-            <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\typerefnum@{counter}"</span>)),
-            <span class="macro">T_BEGIN!</span>(),
-            <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{counter}typerefname"</span>)),
-            <span class="macro">T_SPACE!</span>(),
-            tag.revert()<span class="question-mark">?</span>,
-            <span class="macro">T_END!</span>(),
-            <span class="macro">T_CS!</span>(<span class="string">"\\lx@make@tags"</span>),
-            <span class="macro">T_BEGIN!</span>(),
-            <span class="macro">T_OTHER!</span>(counter),
-            <span class="macro">T_END!</span>(),
-            <span class="macro">T_END!</span>()
-          ),
-              )<span class="question-mark">?
-        </span>.into(),
+      stomach::digest(<span class="macro">Tokens!</span>(
+        <span class="macro">T_BEGIN!</span>(),
+        <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
+        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{counter}"</span>)),
+        <span class="macro">T_BEGIN!</span>(),
+        tag.revert()<span class="question-mark">?</span>,
+        <span class="macro">T_END!</span>(),
+        <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
+        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\typerefnum@{counter}"</span>)),
+        <span class="macro">T_BEGIN!</span>(),
+        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{counter}typerefname"</span>)),
+        <span class="macro">T_SPACE!</span>(),
+        tag.revert()<span class="question-mark">?</span>,
+        <span class="macro">T_END!</span>(),
+        <span class="macro">T_CS!</span>(<span class="string">"\\lx@make@tags"</span>),
+        <span class="macro">T_BEGIN!</span>(),
+        <span class="macro">T_OTHER!</span>(counter),
+        <span class="macro">T_END!</span>(),
+        <span class="macro">T_END!</span>()
+      ))<span class="question-mark">?
+      </span>.into(),
     );
     <span class="prelude-val">Ok</span>(props)
   } <span class="kw">else </span>{
@@ -307,17 +294,14 @@
 
 <span class="comment">// Find any pairs of footnotemark &amp; footnotetext;
 // Move the contents of the text to the mark, removing the text node.
-</span><span class="kw">pub fn </span>relocate_footnote(
-  document: <span class="kw-2">&amp;mut </span>Document,
-  node: <span class="kw-2">&amp;mut </span>Node,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">pub fn </span>relocate_footnote(document: <span class="kw-2">&amp;mut </span>Document, node: <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = NOTE_TEXT_END.captures(<span class="kw-2">&amp;</span>node.get_attribute(<span class="string">"role"</span>).unwrap_or_default()) {
     <span class="kw">let </span>notetype = caps.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str()); <span class="comment">// Eg "footnote", "endnote",...
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(mark) = node.get_attribute(<span class="string">"mark"</span>) {
       <span class="kw">for </span><span class="kw-2">mut </span>marknote <span class="kw">in </span>document.findnodes(
         <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">".//ltx:note[@role='{notetype}mark'][@mark='{mark}']"</span>),
         <span class="prelude-val">None</span>,
-          ) {
+      ) {
         relocate_footnote_aux(document, notetype, <span class="kw-2">&amp;mut </span>marknote, node)<span class="question-mark">?</span>;
       }
     }
@@ -328,7 +312,7 @@
       <span class="kw">for </span><span class="kw-2">mut </span>textnote <span class="kw">in </span>document.findnodes(
         <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">".//ltx:note[@role='{notetype}text'][@mark='{mark}']"</span>),
         <span class="prelude-val">None</span>,
-          ) {
+      ) {
         relocate_footnote_aux(document, notetype, node, <span class="kw-2">&amp;mut </span>textnote)<span class="question-mark">?</span>;
       }
     }
@@ -368,7 +352,7 @@
 <span class="kw">pub fn </span>tabular_bindings(
   template: Template,
   <span class="kw-2">mut </span>properties: SymHashMap&lt;Stored&gt;,
-  <span class="kw-2">mut </span>xml_attributes: HashMap&lt;String, String&gt;
+  <span class="kw-2">mut </span>xml_attributes: HashMap&lt;String, String&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>!properties.contains_key(<span class="string">"guess_headers"</span>) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = lookup_value(<span class="string">"GUESS_TABULAR_HEADERS"</span>) {
@@ -388,8 +372,7 @@
     }
   }
   <span class="kw">if </span>!xml_attributes.contains_key(<span class="string">"rowsep"</span>) {
-    <span class="kw">let </span>astr = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\arraystretch"</span>))<span class="question-mark">?
-      </span>.to_string();
+    <span class="kw">let </span>astr = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\arraystretch"</span>))<span class="question-mark">?</span>.to_string();
     <span class="kw">if </span>astr != <span class="string">"1" </span>{
       <span class="kw">let </span>astr_int = astr.parse::&lt;i64&gt;().expect(<span class="kw-2">&amp;</span>astr);
       xml_attributes.insert(
@@ -408,12 +391,7 @@
         .into(),
     );
   } <span class="comment">// Account for html space
-  </span>alignment_bindings(
-    template,
-    String::from(<span class="string">"text"</span>),
-    properties,
-    xml_attributes
-  );
+  </span>alignment_bindings(template, String::from(<span class="string">"text"</span>), properties, xml_attributes);
   state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@tabularcr"</span>), <span class="prelude-val">None</span>);
   state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\tabularnewline"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>), <span class="prelude-val">None</span>);
   <span class="comment">// NOTE: Fit this back in!!!!!!!

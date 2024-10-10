@@ -90,7 +90,11 @@
 <a href="#89" id="89">89</a>
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">static </span>OPTS_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r",\s*"</span>).unwrap());
 
@@ -98,8 +102,8 @@
   <span class="comment">// Apparently LaTeX does NOT define \magnification,
   // and babel uses that to determine whether we're runing LaTeX!!!
   </span><span class="macro">Let!</span>(<span class="string">"\\magnification"</span>, <span class="string">"\\@undefined"</span>);
-  <span class="macro">Let!</span>(<span class="string">"\\@empty"</span>,        <span class="string">"\\lx@empty"</span>);
-  <span class="macro">Let!</span>(<span class="string">"\\@ifundefined"</span>,  <span class="string">"\\lx@ifundefined"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@empty"</span>, <span class="string">"\\lx@empty"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\@ifundefined"</span>, <span class="string">"\\lx@ifundefined"</span>);
   <span class="comment">//**********************************************************************
   // Basic \documentclass &amp; \documentstyle
 
@@ -130,8 +134,12 @@
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\warn@unusedclassoptions"</span>, {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Strings(unused)) = lookup_value(<span class="string">"@unusedoptionlist"</span>) {
       <span class="kw">if </span>!unused.is_empty() {
-        <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, <span class="string">"options"</span>,
-              <span class="string">"Unused global options: {}"</span>,unused.join(<span class="string">","</span>));
+        <span class="macro">Info!</span>(
+          <span class="string">"unexpected"</span>,
+          <span class="string">"options"</span>,
+          <span class="string">"Unused global options: {}"</span>,
+          unused.join(<span class="string">","</span>)
+        );
         state::assign_value(<span class="string">"@unusedoptionlist"</span>, Stored::Strings(Rc::new([])), <span class="prelude-val">None</span>);
       }
     }

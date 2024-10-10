@@ -348,41 +348,30 @@
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
 <a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
+<a href="#350" id="350">350</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
-<span class="kw">use </span><span class="kw">crate</span>::state::{Scope};
+<span class="kw">use </span><span class="kw">crate</span>::state::Scope;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">pub type </span>RewriteReplaceClosure =
-  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, Vec&lt;<span class="kw-2">&amp;mut </span>Node&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;&gt;;
+<span class="kw">pub type </span>RewriteReplaceClosure = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, Vec&lt;<span class="kw-2">&amp;mut </span>Node&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;&gt;;
 
 <span class="comment">// ======================================================================
 // Defining Rewrite rules that act on the DOM
 // These are applied after the document is completely constructed
 </span><span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>RewriteOptions {
-  <span class="kw">pub </span>label: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-  <span class="kw">pub </span>xpath: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>on_match: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-  <span class="kw">pub </span>attributes: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>replace: <span class="prelude-ty">Option</span>&lt;RewriteReplaceClosure&gt;,
-  <span class="kw">pub </span>regexp: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>select: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>label:        <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>scope:        <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+  <span class="kw">pub </span>xpath:        <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>on_match:     <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+  <span class="kw">pub </span>attributes:   <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>replace:      <span class="prelude-ty">Option</span>&lt;RewriteReplaceClosure&gt;,
+  <span class="kw">pub </span>regexp:       <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>select:       <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="kw">pub </span>select_count: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>RewriteOptions {
@@ -429,8 +418,8 @@
 <span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>RewriteClause {
   compiled: bool,
-  op: RewriteOperator,
-  pattern: RewritePattern,
+  op:       RewriteOperator,
+  pattern:  RewritePattern,
 }
 
 <span class="attr">#[derive(Debug, Clone, Default)]
@@ -450,51 +439,51 @@
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(xpath) = options.select.take() {
       clauses.push(RewriteClause {
         compiled: <span class="bool-val">true</span>,
-        op: Select,
-        pattern: RewritePattern::String(xpath),
+        op:       Select,
+        pattern:  RewritePattern::String(xpath),
       })
     }
     <span class="comment">// collect the actionable clauses from the options
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(label) = options.label.take() {
       clauses.push(RewriteClause {
         compiled: <span class="bool-val">false</span>,
-        op: Label,
-        pattern: RewritePattern::String(label),
+        op:       Label,
+        pattern:  RewritePattern::String(label),
       });
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(scope) = options.scope.take() {
       clauses.push(RewriteClause {
         compiled: <span class="bool-val">false</span>,
-        op: Scope,
-        pattern: RewritePattern::Scope(scope),
+        op:       Scope,
+        pattern:  RewritePattern::Scope(scope),
       });
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(xpath) = options.xpath.take() {
       clauses.push(RewriteClause {
         compiled: <span class="bool-val">false</span>,
-        op: Xpath,
-        pattern: RewritePattern::String(xpath),
+        op:       Xpath,
+        pattern:  RewritePattern::String(xpath),
       });
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(tokens) = options.on_match.take() {
       clauses.push(RewriteClause {
         compiled: <span class="bool-val">false</span>,
-        op: Match,
-        pattern: RewritePattern::Tokens(tokens),
+        op:       Match,
+        pattern:  RewritePattern::Tokens(tokens),
       });
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(replace) = options.replace.take() {
       clauses.push(RewriteClause {
         compiled: <span class="bool-val">false</span>,
-        op: Replace,
-        pattern: RewritePattern::Closure(replace),
+        op:       Replace,
+        pattern:  RewritePattern::Closure(replace),
       });
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(r) = options.regexp.take() {
       clauses.push(RewriteClause {
         compiled: <span class="bool-val">false</span>,
-        op: Regexp,
-        pattern: RewritePattern::String(r),
+        op:       Regexp,
+        pattern:  RewritePattern::String(r),
       });
     }
     Rewrite { options, clauses }
@@ -570,11 +559,7 @@
     //     $pattern = $self-&gt;compile_regexp($pattern); }
     //   Debug("Compiled clause $oop=&gt;" . ToString($opattern) . "  ==&gt; $op=&gt;" . ToString($pattern))
     //     if $LaTeXML::DEBUG{rewrite};
-    </span>RewriteClause {
-      compiled: <span class="bool-val">true</span>,
-      op,
-      pattern,
-    }
+    </span>RewriteClause { compiled: <span class="bool-val">true</span>, op, pattern }
   }
 
   <span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, root: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -613,12 +598,7 @@
     <span class="kw-2">mut </span>clauses: VecDeque&lt;<span class="kw-2">&amp;</span>RewriteClause&gt;,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">use </span>RewriteOperator::<span class="kw-2">*</span>;
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(RewriteClause {
-      compiled: <span class="kw">_</span>,
-      op,
-      pattern,
-    }) = clauses.pop_front()
-    {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(RewriteClause { compiled: <span class="kw">_</span>, op, pattern }) = clauses.pop_front() {
       <span class="kw">match </span>op {
         Select =&gt; {
           <span class="comment">// my ($xpath, $nnodes, @wilds) = @$pattern;
@@ -638,7 +618,7 @@
                 <span class="kw-2">&amp;</span>node,
                 <span class="self">self</span>.options.select_count.unwrap_or(<span class="number">1</span>),
                 clauses.clone(),
-                          )<span class="question-mark">?</span>;
+              )<span class="question-mark">?</span>;
               <span class="comment">// unmark_wildcards(node, w);
             </span>}
           } <span class="kw">else </span>{

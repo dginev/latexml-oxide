@@ -220,23 +220,13 @@
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<a href="#222" id="222">222</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr, EMPTY_SYM, MATH_SYM, TEXT_SYM};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM, MATH_SYM, SymStr, TEXT_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -245,7 +235,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::gullet;
-<span class="kw">use </span><span class="kw">crate</span>::state::{lookup_bool,lookup_font, with_value};
+<span class="kw">use </span><span class="kw">crate</span>::state::{lookup_bool, lookup_font, with_value};
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{BoxOps, Digested};
@@ -254,25 +244,25 @@
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>Tbox {
   <span class="doccomment">/// plain-text content
-  </span><span class="kw">pub </span>text: SymStr,
+  </span><span class="kw">pub </span>text:       SymStr,
   <span class="doccomment">/// associated font for `text`
-  </span><span class="kw">pub </span>font: Rc&lt;Font&gt;,
+  </span><span class="kw">pub </span>font:       Rc&lt;Font&gt;,
   <span class="doccomment">/// source location where the box originated
-  </span><span class="kw">pub </span>locator: Locator,
+  </span><span class="kw">pub </span>locator:    Locator,
   <span class="doccomment">/// misc properties, such as sizing information
   </span><span class="kw">pub </span>properties: HashMap&lt;Stored&gt;,
   <span class="doccomment">/// a Tokens list containing the TeX that created (or could have) the Tbox.
-  </span><span class="kw">pub </span>tokens: Tokens,
+  </span><span class="kw">pub </span>tokens:     Tokens,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Tbox {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Tbox {
-      text: <span class="kw-2">*</span>EMPTY_SYM,
-      font: Rc::new(Font::text_default()),
-      locator: Locator::default(),
+      text:       <span class="kw-2">*</span>EMPTY_SYM,
+      font:       Rc::new(Font::text_default()),
+      locator:    Locator::default(),
       properties: HashMap::default(),
-      tokens: <span class="macro">Tokens!</span>(),
+      tokens:     <span class="macro">Tokens!</span>(),
     }
   }
 }
@@ -314,10 +304,7 @@
     };
     <span class="kw">let </span>empty_sym = <span class="kw-2">*</span>EMPTY_SYM;
     <span class="kw">let </span>tokens = <span class="kw">if </span>text != empty_sym &amp;&amp; tokens_opt.is_empty() {
-      <span class="macro">Tokens!</span>(Token {
-        text,
-        code: Catcode::OTHER
-    })
+      <span class="macro">Tokens!</span>(Token { text, code: Catcode::OTHER })
     } <span class="kw">else </span>{
       tokens_opt
     };
@@ -340,15 +327,18 @@
     <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
       properties.insert(<span class="string">"mode"</span>, Stored::String(<span class="kw-2">*</span>MATH_SYM));
       <span class="kw">if </span>text != empty_sym {
-        with_value(<span class="kw-2">&amp;</span>arena::with(text, |text_str| {
-          <span class="macro">s!</span>(<span class="string">"math_token_attributes_{}"</span>, text_str) }), |value_opt|
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(attr)) = value_opt {
-          <span class="kw">for </span>(key, value) <span class="kw">in </span>attr.iter() {
-            properties
-              .entry(key)
-              .or_insert_with(|| Stored::String(arena::pin(value)));
-          }
-        });
+        with_value(
+          <span class="kw-2">&amp;</span>arena::with(text, |text_str| <span class="macro">s!</span>(<span class="string">"math_token_attributes_{}"</span>, text_str)),
+          |value_opt| {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(attr)) = value_opt {
+              <span class="kw">for </span>(key, value) <span class="kw">in </span>attr.iter() {
+                properties
+                  .entry(key)
+                  .or_insert_with(|| Stored::String(arena::pin(value)));
+              }
+            }
+          },
+        );
       }
       font = Rc::new(arena::with(text, |text_str| font.specialize(text_str)));
     }
@@ -357,9 +347,8 @@
       font,
       locator,
       properties,
-      tokens
+      tokens,
     }
-
   }
   <span class="doccomment">/// checks if the text content is empty
   </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
@@ -419,7 +408,7 @@
         <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[document.insert_math_token(
           <span class="kw-2">&amp;</span>text,
           Stored::cast_to_string_hash(<span class="kw-2">&amp;</span><span class="self">self</span>.properties),
-          <span class="prelude-val">Some</span>(font)
+          <span class="prelude-val">Some</span>(font),
         )<span class="question-mark">?</span>])
       } <span class="kw">else </span>{
         <span class="kw">match </span>document.open_text(<span class="kw-2">&amp;</span>text, font)<span class="question-mark">? </span>{
@@ -432,14 +421,9 @@
     }
   }
 
-  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; {
-    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.font)))
-  }
+  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.font))) }
 
-  <span class="kw">fn </span>compute_size(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    options: HashMap&lt;Stored&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(body_stored) = <span class="self">self</span>.get_property(<span class="string">"body"</span>) {
       <span class="kw">if let </span>Stored::Digested(<span class="kw-2">ref </span>body) = <span class="kw-2">*</span>body_stored {
         body.compute_size(options)
@@ -447,11 +431,7 @@
         <span class="macro">panic!</span>(<span class="string">"the stored 'body' property should always be a Stored::Digested enum case."</span>);
       }
     } <span class="kw">else </span>{
-      <span class="prelude-val">Ok</span>(
-        <span class="self">self
-          </span>.font
-          .compute_string_size(<span class="kw-2">&amp;</span><span class="self">self</span>.get_string()<span class="question-mark">?</span>, options),
-      )
+      <span class="prelude-val">Ok</span>(<span class="self">self</span>.font.compute_string_size(<span class="kw-2">&amp;</span><span class="self">self</span>.get_string()<span class="question-mark">?</span>, options))
     }
   }
 }

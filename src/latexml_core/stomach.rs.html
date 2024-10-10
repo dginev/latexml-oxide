@@ -750,28 +750,20 @@
 <a href="#749" id="749">749</a>
 <a href="#750" id="750">750</a>
 <a href="#751" id="751">751</a>
-<a href="#752" id="752">752</a>
-<a href="#753" id="753">753</a>
-<a href="#754" id="754">754</a>
-<a href="#755" id="755">755</a>
-<a href="#756" id="756">756</a>
-<a href="#757" id="757">757</a>
-<a href="#758" id="758">758</a>
-<a href="#759" id="759">759</a>
-<a href="#760" id="760">760</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
+<a href="#752" id="752">752</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::rc::Rc;
-<span class="kw">use </span>std::cell::RefCell;
-<span class="kw">use </span>once_cell::sync::Lazy;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
+<span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
 <span class="kw">use </span><span class="kw">crate</span>::definition::expandable::Expandable;
-<span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
 <span class="kw">use </span><span class="kw">crate</span>::mouth::{Mouth, MouthOptions};
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
@@ -786,29 +778,33 @@
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>Stomach {
   <span class="doccomment">/// currently invoked tokens
-  </span><span class="kw">pub </span>token_stack: Vec&lt;Token&gt;,
+  </span><span class="kw">pub </span>token_stack:    Vec&lt;Token&gt;,
   <span class="doccomment">/// tracks the tokens of boxing groups(?)
-  </span><span class="kw">pub </span>boxing: Vec&lt;Token&gt;,
+  </span><span class="kw">pub </span>boxing:         Vec&lt;Token&gt;,
   <span class="doccomment">/// localized box lists for stacked digestion calls
   </span>localized_box_list: Vec&lt;Vec&lt;Digested&gt;&gt;,
   <span class="doccomment">/// collects the intermediate boxes resulting from a `digest` call.
-  </span><span class="kw">pub </span>box_list: Vec&lt;Digested&gt;,
+  </span><span class="kw">pub </span>box_list:       Vec&lt;Digested&gt;,
 }
 
 <span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>STOMACH : Lazy&lt;RefCell&lt;Stomach&gt;&gt; = Lazy::new(|| RefCell::new(Stomach::default()));
+</span><span class="kw">pub static </span>STOMACH: Lazy&lt;RefCell&lt;Stomach&gt;&gt; = Lazy::new(|| RefCell::new(Stomach::default()));
 
 <span class="macro">macro_rules!</span> stomach {
-  () =&gt; ((<span class="kw-2">*</span>STOMACH).borrow())
+  () =&gt; {
+    (<span class="kw-2">*</span>STOMACH).borrow()
+  };
 }
 <span class="macro">macro_rules!</span> stomach_mut {
-  () =&gt; ((<span class="kw-2">*</span>STOMACH).borrow_mut())
+  () =&gt; {
+    (<span class="kw-2">*</span>STOMACH).borrow_mut()
+  };
 }
 
 <span class="doccomment">/// Initialize various stomach parameters, preload, etc.
 </span><span class="kw">pub fn </span>initialize_stomach() {
   <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
-  stomach.boxing      = Vec::new();
+  stomach.boxing = Vec::new();
   stomach.token_stack = Vec::new();
   stomach.box_list = Vec::new();
   stomach.localized_box_list = Vec::new();
@@ -822,11 +818,7 @@
     <span class="prelude-val">Some</span>(Scope::Global),
   );
   assign_value(<span class="string">"afterAssignment"</span>, Stored::None, <span class="prelude-val">Some</span>(Scope::Global)); <span class="comment">// undef ???
-  </span>assign_value(
-    <span class="string">"groupInitiator"</span>,
-    <span class="string">"Initialization"</span>,
-    <span class="prelude-val">Some</span>(Scope::Global),
-  );
+  </span>assign_value(<span class="string">"groupInitiator"</span>, <span class="string">"Initialization"</span>, <span class="prelude-val">Some</span>(Scope::Global));
   <span class="comment">// Setup default fonts.
   </span>assign_value(<span class="string">"font"</span>, Font::text_default(), <span class="prelude-val">Some</span>(Scope::Global));
   assign_value(<span class="string">"mathfont"</span>, Font::math_default(), <span class="prelude-val">Some</span>(Scope::Global));
@@ -898,9 +890,11 @@
   }
   <span class="kw">let </span>after = remove_value(<span class="string">"afterGroup"</span>);
   pop_frame()<span class="question-mark">?</span>;
-  <span class="kw">if </span>!nobox {{
-    <span class="macro">stomach_mut!</span>().boxing.pop(); <span class="comment">// For begingroup/endgroup
-  </span>}}
+  <span class="kw">if </span>!nobox {
+    {
+      <span class="macro">stomach_mut!</span>().boxing.pop(); <span class="comment">// For begingroup/endgroup
+    </span>}
+  }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(after_entries)) = after {
     <span class="kw">for </span>entry <span class="kw">in </span>after_entries.into_iter().rev() {
       <span class="kw">match </span>entry {
@@ -994,7 +988,7 @@
 // Could (should?) be taken up by Stomach by building horizontal, vertical or math lists ?
 
 </span><span class="doccomment">/// Sets the mode without doing any grouping (NOR does it stack the modes!!)
-/// 
+///
 /// Useful for environments, where the group has already been established.
 /// (presumably, in the long run, modes &amp; groups should be much less coupled)
 </span><span class="kw">pub fn </span>set_mode(mode: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -1087,17 +1081,14 @@
   buffer
 }
 
-<span class="kw">pub fn </span>extend_box_list&lt;I&gt;(arg: I) <span class="kw">where </span>I: IntoIterator&lt;Item = Digested&gt; {
+<span class="kw">pub fn </span>extend_box_list&lt;I&gt;(arg: I)
+<span class="kw">where </span>I: IntoIterator&lt;Item = Digested&gt; {
   <span class="macro">stomach_mut!</span>().box_list.extend(arg)
 }
-<span class="kw">pub fn </span>push_box_list(arg: Digested) {
-  <span class="macro">stomach_mut!</span>().box_list.push(arg)
-}
-<span class="kw">pub fn </span>pop_box_list() -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; {
-  <span class="macro">stomach_mut!</span>().box_list.pop()
-}
+<span class="kw">pub fn </span>push_box_list(arg: Digested) { <span class="macro">stomach_mut!</span>().box_list.push(arg) }
+<span class="kw">pub fn </span>pop_box_list() -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; { <span class="macro">stomach_mut!</span>().box_list.pop() }
 <span class="kw">pub fn </span>with_box_list&lt;R, FnR&gt;(caller: FnR) -&gt; R
-  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>[Digested]) -&gt; R {
+<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>[Digested]) -&gt; R {
   <span class="kw">let </span>stomach = <span class="macro">stomach!</span>();
   <span class="kw">let </span>list = <span class="kw-2">&amp;</span>stomach.box_list;
   caller(list)
@@ -1110,9 +1101,7 @@
 </span><span class="doccomment">/// Digest a list of tokens independent from any current Gullet.
 /// Typically used to digest arguments to primitives or constructors.
 /// Returns a List containing the digested material.
-</span><span class="kw">pub fn </span>digest&lt;T: Into&lt;Tokens&gt;&gt;(
-  tokens: T
-) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+</span><span class="kw">pub fn </span>digest&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
   <span class="kw">let </span>tokens: Tokens = tokens.into();
   <span class="kw">if </span>tokens.is_empty() {
     <span class="kw">return </span><span class="prelude-val">Ok</span>(Digested::default());
@@ -1130,9 +1119,8 @@
     new_local_box_list();
     <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="kw">match </span>gullet::get_pending_comment() {
       <span class="prelude-val">Some</span>(comment) =&gt; <span class="prelude-val">Some</span>(comment),
-      <span class="prelude-val">None </span>=&gt; gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?
-    </span>}
-    {
+      <span class="prelude-val">None </span>=&gt; gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>,
+    } {
       <span class="comment">// Done if we run out of tokens
       </span><span class="kw">let </span>invoked = invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
       extend_box_list(invoked);
@@ -1161,10 +1149,7 @@
 
 <span class="doccomment">/// Return the digested `List` after reading and digesting a body from the its Gullet.
 /// The body extends until the current level of boxing or environment is closed.
-</span><span class="kw">pub fn </span>digest_next_body(
-  terminal_opt: <span class="prelude-ty">Option</span>&lt;Token&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-
+</span><span class="kw">pub fn </span>digest_next_body(terminal_opt: <span class="prelude-ty">Option</span>&lt;Token&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
   <span class="kw">let </span>start_location = { gullet::get_locator() };
 
   <span class="kw">let </span>init_depth = { <span class="macro">stomach!</span>().boxing.len() };
@@ -1178,9 +1163,8 @@
   // try reading a executable token
   </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="kw">match </span>gullet::get_pending_comment() {
     <span class="prelude-val">Some</span>(comment) =&gt; <span class="prelude-val">Some</span>(comment),
-    <span class="prelude-val">None </span>=&gt; gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?
-  </span>}
-  {
+    <span class="prelude-val">None </span>=&gt; gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>,
+  } {
     <span class="comment">// done if we run out of tokens
     </span>found_token = <span class="bool-val">true</span>;
     <span class="comment">// first, check for alignment case
@@ -1198,7 +1182,7 @@
     }
     <span class="comment">// normal case
     </span><span class="kw">let </span>invoked = invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-    extend_box_list( invoked);
+    extend_box_list(invoked);
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>terminal) = terminal_opt {
       <span class="kw">if </span><span class="kw-2">&amp;</span>token == terminal {
@@ -1228,7 +1212,6 @@
   </span>}
   <span class="prelude-val">Ok</span>(expire_local_box_list())
 }
-
 
 <span class="doccomment">/// a convenience function for including chunks of raw TeX (or LaTeX) code
 /// It is useful for copying portions of the normal
@@ -1260,14 +1243,12 @@
 }
 
 <span class="doccomment">/// Invoke a token
-/// 
+///
 /// If it is a primitive or constructor, the definition will be invoked,
 /// possibly arguments will be parsed from the Gullet.
 /// Otherwise, the token is simply digested: turned into an appropriate box.
 /// Returns a list of boxes/whatsits.
-</span><span class="kw">pub fn </span>invoke_token&lt;<span class="lifetime">'a</span>&gt;(
-  input_token: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Token,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+</span><span class="kw">pub fn </span>invoke_token&lt;<span class="lifetime">'a</span>&gt;(input_token: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>maybe_token: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'a</span>, Token&gt;&gt; = <span class="prelude-val">Some</span>(Cow::Borrowed(input_token));
   <span class="comment">// Overly complex, but want to avoid recursion/stack
   </span><span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Digested&gt; = Vec::new();
@@ -1277,7 +1258,9 @@
     </span><span class="kw">let </span>token = maybe_token.take().unwrap().into_owned();
     <span class="comment">// info!(target:"invoke_token", "{:?}", token);
     </span>local_current_token(token);
-    { <span class="macro">stomach_mut!</span>().token_stack.push(token); }
+    {
+      <span class="macro">stomach_mut!</span>().token_stack.push(token);
+    }
     <span class="kw">if </span>{ <span class="macro">stomach!</span>().token_stack.len() } &gt; MAXSTACK {
       <span class="macro">fatal!</span>(
         Stomach,
@@ -1325,14 +1308,17 @@
         <span class="comment">// A math-active character will (typically) be a macro,
         // but it isn't expanded in the gullet, but later when digesting, in math mode
         // (? I think)
-        </span><span class="kw">let </span>invoked_meaning = meaning.invoke( <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
         <span class="kw">if </span>!invoked_meaning.is_empty() {
-          { gullet::unread(invoked_meaning); }
+          {
+            gullet::unread(invoked_meaning);
+          }
         }
         <span class="comment">// replace the token by it's expansion!!!
-        </span>maybe_token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?
-          </span>.map(Cow::Owned);
-        { <span class="macro">stomach_mut!</span>().token_stack.pop(); }
+        </span>maybe_token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>.map(Cow::Owned);
+        {
+          <span class="macro">stomach_mut!</span>().token_stack.pop();
+        }
         expire_current_token();
         <span class="kw">continue</span>;
       },
@@ -1340,9 +1326,10 @@
         <span class="comment">// Conditionals are "expandable", use the regular invoke.
         </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
         gullet::unread(invoked_meaning);
-        maybe_token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?
-            </span>.map(Cow::Owned);
-        { <span class="macro">stomach_mut!</span>().token_stack.pop(); }
+        maybe_token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>.map(Cow::Owned);
+        {
+          <span class="macro">stomach_mut!</span>().token_stack.pop();
+        }
         expire_current_token();
         <span class="kw">continue</span>;
       },
@@ -1390,11 +1377,9 @@
   <span class="prelude-val">Ok</span>(result)
 }
 
-<span class="kw">fn </span>invoke_token_undefined(
-  token: <span class="kw-2">&amp;</span>Token,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+<span class="kw">fn </span>invoke_token_undefined(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
   <span class="kw">let </span>cs = token.with_cs_name(|cs| String::from(cs));
-  note_status(LogStatus::Undefined, <span class="prelude-val">Some</span>( <span class="kw-2">&amp;</span>cs));
+  note_status(LogStatus::Undefined, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cs));
 
   <span class="comment">// To minimize chatter, go ahead and define it...
   </span><span class="kw">if </span>cs.starts_with(<span class="string">"\\if"</span>) {
@@ -1414,7 +1399,7 @@
         <span class="prelude-val">None</span>,
         <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs), <span class="macro">T_CS!</span>(<span class="string">"\\iftrue"</span>)).into(),
         <span class="prelude-val">None</span>,
-            )<span class="question-mark">?</span>,
+      )<span class="question-mark">?</span>,
       <span class="prelude-val">None</span>,
     );
     install_definition(
@@ -1423,7 +1408,7 @@
         <span class="prelude-val">None</span>,
         <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(cs), <span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>)).into(),
         <span class="prelude-val">None</span>,
-            )<span class="question-mark">?</span>,
+      )<span class="question-mark">?</span>,
       <span class="prelude-val">None</span>,
     );
 
@@ -1469,7 +1454,7 @@
           <span class="prelude-val">None</span>,
           <span class="macro">Tokens!</span>(meaning),
           HashMap::default(),
-                ))))
+        ))))
       }
     },
     Catcode::COMMENT =&gt; {
@@ -1489,7 +1474,7 @@
         <span class="prelude-val">None</span>,
         <span class="macro">Tokens!</span>(meaning),   <span class="comment">// tokens
         </span>HashMap::default(), <span class="comment">// properties
-            </span>))))
+      </span>))))
     },
   }
 }
@@ -1498,9 +1483,7 @@
   <span class="kw">let </span><span class="kw-2">mut </span>singleton = <span class="macro">stomach_mut!</span>();
   <span class="kw-2">*</span>singleton = new_stomach;
 }
-<span class="kw">pub fn </span>clone_box_list() -&gt; Vec&lt;Digested&gt; {
-  <span class="macro">stomach!</span>().box_list.clone()
-}
+<span class="kw">pub fn </span>clone_box_list() -&gt; Vec&lt;Digested&gt; { <span class="macro">stomach!</span>().box_list.clone() }
 
 <span class="doccomment">/// get the current boxing level
 </span><span class="kw">pub fn </span>get_boxing_level() -&gt; usize { <span class="macro">stomach!</span>().boxing.len() }
@@ -1511,11 +1494,12 @@
 /// Making it relative to the math's level avoids unnecessary changes
 </span><span class="kw">pub fn </span>get_script_level() -&gt; usize {
   <span class="kw">let </span>boxlevel = get_boxing_level();
-  with_value(<span class="string">"script_base_level"</span>,|val_opt|
+  with_value(<span class="string">"script_base_level"</span>, |val_opt| {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Int(prevlevel)) = val_opt {
       boxlevel - (<span class="kw-2">*</span>prevlevel <span class="kw">as </span>usize) + <span class="number">1
     </span>} <span class="kw">else </span>{
       boxlevel
-    })
+    }
+  })
 }
 </code></pre></div></section></main></body></html>

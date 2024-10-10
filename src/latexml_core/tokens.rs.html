@@ -534,17 +534,26 @@
 <a href="#533" id="533">533</a>
 <a href="#534" id="534">534</a>
 <a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a></pre></div><pre class="rust"><code><span class="doccomment">//! Token List constructors.
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a></pre></div><pre class="rust"><code><span class="doccomment">//! Token List constructors.
 </span><span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::fmt;
 <span class="kw">use </span>proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
-<span class="kw">use </span>quote::{quote, ToTokens, TokenStreamExt};
+<span class="kw">use </span>quote::{ToTokens, TokenStreamExt, quote};
 
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
@@ -556,7 +565,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::keyvals::KeyVals;
 <span class="kw">use </span><span class="kw">crate</span>::stomach;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="doccomment">/// If untex is requested to add line-breaks, this is the line length it will allow
 </span><span class="kw">pub const </span>UNTEX_LINELENGTH: usize = <span class="number">78</span>;
@@ -565,7 +573,7 @@
 </span><span class="kw">pub const </span>NO_TOKENS: Tokens = Tokens(Vec::new());
 <span class="kw">pub const </span>NO_BORROWED_TOKENS: <span class="kw-2">&amp;</span>Tokens = <span class="kw-2">&amp;</span>NO_TOKENS;
 <span class="doccomment">/// Tokens are a thin wrapper over a vector of Token objects
-/// 
+///
 /// They are usually read from a `Mouth` and treated as an immutable interface.
 /// For access to the inner Token contents, use one of the `unlist` methods.
 </span><span class="attr">#[derive(Debug, Clone, Default)]
@@ -707,10 +715,7 @@
   </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize { <span class="self">self</span>.<span class="number">0</span>.len() }
 
   <span class="comment">// Just a synonym for unlist in this reversion case
-  </span><span class="kw">pub fn </span>revert(<span class="self">self</span>) -&gt; Vec&lt;Token&gt; {
-    <span class="self">self
-      </span>.<span class="number">0
-  </span>}
+  </span><span class="kw">pub fn </span>revert(<span class="self">self</span>) -&gt; Vec&lt;Token&gt; { <span class="self">self</span>.<span class="number">0 </span>}
 
   <span class="doccomment">/// to_number casts back to a parsed Number (usually via gullet::read_number)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
@@ -783,14 +788,23 @@
 
   <span class="doccomment">/// Methods for overloaded ops.
   </span><span class="kw">pub fn </span>equals(<span class="kw-2">&amp;</span><span class="self">self</span>, other: Tokens) -&gt; bool {
-    <span class="kw">let </span>self_tokens : Vec&lt;<span class="kw-2">&amp;</span>Token&gt; = <span class="self">self</span>.<span class="number">0</span>.iter()
-      .filter(|t| t.code != Catcode::COMMENT &amp;&amp; t.code != Catcode::MARKER).collect();
-    <span class="kw">let </span>other_tokens : Vec&lt;<span class="kw-2">&amp;</span>Token&gt; = other.<span class="number">0</span>.iter()
-    .filter(|t| t.code != Catcode::COMMENT &amp;&amp; t.code != Catcode::MARKER).collect();
+    <span class="kw">let </span>self_tokens: Vec&lt;<span class="kw-2">&amp;</span>Token&gt; = <span class="self">self
+      </span>.<span class="number">0
+      </span>.iter()
+      .filter(|t| t.code != Catcode::COMMENT &amp;&amp; t.code != Catcode::MARKER)
+      .collect();
+    <span class="kw">let </span>other_tokens: Vec&lt;<span class="kw-2">&amp;</span>Token&gt; = other
+      .<span class="number">0
+      </span>.iter()
+      .filter(|t| t.code != Catcode::COMMENT &amp;&amp; t.code != Catcode::MARKER)
+      .collect();
     <span class="kw">if </span>self_tokens.len() != other_tokens.len() {
       <span class="bool-val">false
     </span>} <span class="kw">else </span>{
-      self_tokens.into_iter().zip(other_tokens).all(|(t_self,t_other)| <span class="kw-2">*</span>t_self == <span class="kw-2">*</span>t_other)
+      self_tokens
+        .into_iter()
+        .zip(other_tokens)
+        .all(|(t_self, t_other)| <span class="kw-2">*</span>t_self == <span class="kw-2">*</span>t_other)
     }
   }
 
@@ -812,9 +826,7 @@
     )
   }
   <span class="doccomment">/// digest the current `Tokens`
-  </span><span class="kw">pub fn </span>be_digested(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-    stomach::digest(<span class="self">self</span>)
-  }
+  </span><span class="kw">pub fn </span>be_digested(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; { stomach::digest(<span class="self">self</span>) }
 
   <span class="doccomment">/// neutralize each token
   </span><span class="kw">pub fn </span>neutralize(<span class="self">self</span>, extraspecials: <span class="kw-2">&amp;</span>[char]) -&gt; Tokens {
@@ -943,8 +955,8 @@
     tex_string
   }
 
-  <span class="doccomment">/// Packs repeated CC_PARAM tokens into CC_ARG tokens for use as a macro body (and other token lists)
-  /// Also unwraps \noexpand tokens, since that is also needed for macro bodies
+  <span class="doccomment">/// Packs repeated CC_PARAM tokens into CC_ARG tokens for use as a macro body (and other token
+  /// lists) Also unwraps \noexpand tokens, since that is also needed for macro bodies
   /// (but not strictly part of packing parameters)
   </span><span class="kw">pub fn </span>pack_parameters(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>rescanned = Vec::new();
@@ -957,7 +969,7 @@
           <span class="comment">// only group clear match token cases
           </span>rescanned.push(Token {
             text: next_t.unwrap().get_sym(),
-            code: Catcode::ARG
+            code: Catcode::ARG,
           });
         } <span class="kw">else if </span>next_cc == <span class="prelude-val">Some</span>(Catcode::PARAM) {
           rescanned.push(t);
@@ -988,27 +1000,31 @@
         Catcode::BEGIN =&gt; {
           <span class="kw">while let </span><span class="prelude-val">Some</span>(bt) = walker.next_back() {
             <span class="kw">match </span>bt.get_catcode() {
-              Catcode::SPACE =&gt; {}, <span class="comment">// skip trailing spaces
+              Catcode::SPACE =&gt; {},  <span class="comment">// skip trailing spaces
               </span>Catcode::END =&gt; <span class="kw">break</span>, <span class="comment">// match &amp; skip one }
-              </span><span class="kw">_ </span>=&gt; { <span class="comment">// FAIL: mismatched { ?
+              </span><span class="kw">_ </span>=&gt; {
+                <span class="comment">// FAIL: mismatched { ?
                 </span>back_trailer = <span class="prelude-val">Some</span>(bt);
                 <span class="kw">break</span>;
-              }
+              },
             }
           }
-          <span class="kw">if </span>back_trailer.is_some() { <span class="comment">// bail if non-matching {
+          <span class="kw">if </span>back_trailer.is_some() {
+            <span class="comment">// bail if non-matching {
             </span><span class="kw">break</span>;
-          } <span class="kw">else </span>{ <span class="comment">// move forward on balanced open {
+          } <span class="kw">else </span>{
+            <span class="comment">// move forward on balanced open {
             </span>walker.next();
           }
         },
-        Catcode::SPACE =&gt; { <span class="comment">// skip leading spaces
+        Catcode::SPACE =&gt; {
+          <span class="comment">// skip leading spaces
           </span>walker.next();
         },
-        <span class="kw">_ </span>=&gt; {<span class="kw">break</span>} <span class="comment">// keep any other leading case
+        <span class="kw">_ </span>=&gt; <span class="kw">break</span>, <span class="comment">// keep any other leading case
       </span>}
     }
-    <span class="kw">let </span><span class="kw-2">mut </span>collected : Vec&lt;Token&gt; = walker.collect();
+    <span class="kw">let </span><span class="kw-2">mut </span>collected: Vec&lt;Token&gt; = walker.collect();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(bt) = back_trailer {
       collected.push(bt)
     }
@@ -1048,8 +1064,8 @@
       INVALID =&gt; <span class="string">"INVALID"</span>,
       CS =&gt; <span class="string">"CS"</span>,
       MARKER =&gt; <span class="string">"MARKER"</span>,
-      ARG =&gt; <span class="string">"ARG"
-    </span>};
+      ARG =&gt; <span class="string">"ARG"</span>,
+    };
     stream.append(Ident::new(<span class="string">"Catcode"</span>, Span::call_site()));
     stream.append(Punct::new(<span class="string">':'</span>, Spacing::Joint));
     stream.append(Punct::new(<span class="string">':'</span>, Spacing::Alone));

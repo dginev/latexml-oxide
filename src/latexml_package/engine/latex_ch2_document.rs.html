@@ -165,7 +165,7 @@
   });
 
   <span class="comment">// \document is used directly in e.g. expl3.sty
-  </span><span class="macro">Let!</span>(<span class="string">"\\document"</span>,<span class="string">"\\begin{document}"</span>, Scope::Global);
+  </span><span class="macro">Let!</span>(<span class="string">"\\document"</span>, <span class="string">"\\begin{document}"</span>, Scope::Global);
 
   <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{document}"</span>), <span class="prelude-val">None</span>, sub[document,_args,_props] {
       document.close_element(<span class="string">"ltx:document"</span>)<span class="question-mark">?</span>;
@@ -214,6 +214,6 @@
   });
 
   <span class="comment">// \enddocument is used directly in e.g. standalone.cls
-  </span><span class="macro">Let!</span>(<span class="string">"\\enddocument"</span>,<span class="string">"\\end{document}"</span>,Scope::Global);
+  </span><span class="macro">Let!</span>(<span class="string">"\\enddocument"</span>, <span class="string">"\\end{document}"</span>, Scope::Global);
 });
 </code></pre></div></section></main></body></html>

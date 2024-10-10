@@ -220,7 +220,11 @@
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="comment">//======================================================================
 // C.7.1 Math Mode Environments
@@ -242,7 +246,7 @@
 <span class="kw">fn </span>before_equation() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>has_preset = <span class="bool-val">false</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>is_numbered = <span class="bool-val">false</span>;
-  <span class="kw">let </span>ctr = with_value_mut(<span class="string">"EQUATION_NUMBERING"</span>, |val_opt|
+  <span class="kw">let </span>ctr = with_value_mut(<span class="string">"EQUATION_NUMBERING"</span>, |val_opt| {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>numbering)) = val_opt {
       numbering.insert(<span class="string">"in_equation"</span>, <span class="bool-val">true</span>.into());
       <span class="comment">// MaybePeekLabel();
@@ -255,7 +259,8 @@
       }
     } <span class="kw">else </span>{
       String::from(<span class="string">"equation"</span>)
-    });
+    }
+  });
   <span class="kw">if </span>has_preset {
     <span class="kw">let </span><span class="kw-2">mut </span>tags = <span class="kw">if </span>is_numbered {
       ref_step_counter(<span class="kw-2">&amp;</span>ctr, <span class="bool-val">false</span>)<span class="question-mark">?
@@ -274,13 +279,13 @@
   state::let_i(
     <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@end@display@math"</span>),
     <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@eDM@in@equation"</span>),
-    <span class="prelude-val">None
-  </span>);
+    <span class="prelude-val">None</span>,
+  );
   state::let_i(
     <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@display@math"</span>),
     <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@bDM@in@equation"</span>),
-    <span class="prelude-val">None
-  </span>);
+    <span class="prelude-val">None</span>,
+  );
   <span class="prelude-val">Ok</span>(())
 }
 
@@ -288,56 +293,60 @@
   <span class="kw">let </span><span class="kw-2">mut </span>ctr: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>tags_numbered_update = <span class="bool-val">false</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>is_aligned = <span class="bool-val">false</span>;
-  with_value(<span class="string">"EQUATION_NUMBERING"</span>, |eq_num_opt|
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref </span>numbering)) = eq_num_opt {
-    is_aligned = <span class="macro">matches!</span>(numbering.get(<span class="string">"aligned"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)));
-    with_value(<span class="string">"EQUATIONROW_TAGS"</span>, |tags_opt| <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref </span>tags)) = tags_opt {
-      ctr = <span class="prelude-val">Some</span>(
-        tags.get(<span class="string">"counter"</span>)
-          .map_or_else(|| numbering.get(<span class="string">"counter"</span>), <span class="prelude-val">Some</span>)
-          .map(ToString::to_string)
-          .unwrap_or_else(|| String::from(<span class="string">"equation"</span>)),
-      );
+  with_value(<span class="string">"EQUATION_NUMBERING"</span>, |eq_num_opt| {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref </span>numbering)) = eq_num_opt {
+      is_aligned = <span class="macro">matches!</span>(numbering.get(<span class="string">"aligned"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)));
+      with_value(<span class="string">"EQUATIONROW_TAGS"</span>, |tags_opt| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref </span>tags)) = tags_opt {
+          ctr = <span class="prelude-val">Some</span>(
+            tags
+              .get(<span class="string">"counter"</span>)
+              .map_or_else(|| numbering.get(<span class="string">"counter"</span>), <span class="prelude-val">Some</span>)
+              .map(ToString::to_string)
+              .unwrap_or_else(|| String::from(<span class="string">"equation"</span>)),
+          );
 
-      <span class="kw">if </span>!<span class="macro">matches!</span>(tags.get(<span class="string">"noretract"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
-        &amp;&amp; (<span class="macro">matches!</span>(tags.get(<span class="string">"retract"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
-          || (<span class="macro">matches!</span>(numbering.get(<span class="string">"retract"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
-            &amp;&amp; <span class="macro">matches!</span>(numbering.get(<span class="string">"preset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
-            &amp;&amp; <span class="macro">matches!</span>(tags.get(<span class="string">"preset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))))
-      {
-        retract_equation();
-      } <span class="kw">else if </span><span class="macro">matches!</span>(numbering.get(<span class="string">"postset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
-        &amp;&amp; <span class="macro">matches!</span>(tags.get(<span class="string">"reset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
-      {
-        <span class="comment">//   AssignValue(EQUATIONROW_TAGS =&gt; {
-        //       ($$numbering{numbered} ? RefStepCounter($ctr) : RefStepID($ctr)) }, 'global'); }
-        </span><span class="macro">todo!</span>();
-      } <span class="kw">else if </span>!<span class="macro">matches!</span>(tags.get(<span class="string">"reset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
-        &amp;&amp; <span class="macro">matches!</span>(numbering.get(<span class="string">"numbered"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
-      {
-        tags_numbered_update = <span class="bool-val">true</span>;
-      }
-    });
+          <span class="kw">if </span>!<span class="macro">matches!</span>(tags.get(<span class="string">"noretract"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
+            &amp;&amp; (<span class="macro">matches!</span>(tags.get(<span class="string">"retract"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
+              || (<span class="macro">matches!</span>(numbering.get(<span class="string">"retract"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
+                &amp;&amp; <span class="macro">matches!</span>(numbering.get(<span class="string">"preset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
+                &amp;&amp; <span class="macro">matches!</span>(tags.get(<span class="string">"preset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))))
+          {
+            retract_equation();
+          } <span class="kw">else if </span><span class="macro">matches!</span>(numbering.get(<span class="string">"postset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
+            &amp;&amp; <span class="macro">matches!</span>(tags.get(<span class="string">"reset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
+          {
+            <span class="comment">//   AssignValue(EQUATIONROW_TAGS =&gt; {
+            //       ($$numbering{numbered} ? RefStepCounter($ctr) : RefStepID($ctr)) }, 'global');
+            // }
+            </span><span class="macro">todo!</span>();
+          } <span class="kw">else if </span>!<span class="macro">matches!</span>(tags.get(<span class="string">"reset"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
+            &amp;&amp; <span class="macro">matches!</span>(numbering.get(<span class="string">"numbered"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)))
+          {
+            tags_numbered_update = <span class="bool-val">true</span>;
+          }
+        }
+      });
+    }
   });
 
-  with_value_mut(<span class="string">"EQUATION_NUMBERING"</span>, |eq_num_opt|
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>numbering)) = eq_num_opt
-    {
+  with_value_mut(<span class="string">"EQUATION_NUMBERING"</span>, |eq_num_opt| {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>numbering)) = eq_num_opt {
       numbering.insert(<span class="string">"in_equation"</span>, Stored::Bool(<span class="bool-val">false</span>));
-    });
+    }
+  });
   <span class="kw">if </span>tags_numbered_update {
-    <span class="kw">let </span>invoked_tags = build_invocation(
-      <span class="macro">T_CS!</span>(<span class="string">"\\lx@make@tags"</span>),
-      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::new(<span class="macro">Explode!</span>(ctr.unwrap())))]
-      )<span class="question-mark">?</span>;
+    <span class="kw">let </span>invoked_tags = build_invocation(<span class="macro">T_CS!</span>(<span class="string">"\\lx@make@tags"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::new(
+      <span class="macro">Explode!</span>(ctr.unwrap()),
+    ))])<span class="question-mark">?</span>;
     <span class="kw">let </span>stored_tags_update = Stored::Digested(stomach::digest(invoked_tags)<span class="question-mark">?</span>);
-    with_value_mut(<span class="string">"EQUATIONROW_TAGS"</span>, |tags_opt|
+    with_value_mut(<span class="string">"EQUATIONROW_TAGS"</span>, |tags_opt| {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>tags)) = tags_opt {
         <span class="comment">// TODO: Invocation!() feels really awkward to use, should we reinvent it?
         // especially the magical `.into()` that it does behind the scenes is concerning.
         </span>tags.insert(<span class="string">"tags"</span>, stored_tags_update);
       }
-    );
+    });
   }
   <span class="comment">// Now install the tags in $whatsit or current Row, as appropriate.
   </span><span class="attr">#[allow(clippy::manual_unwrap_or_default)]
@@ -440,6 +449,5 @@
   </span><span class="macro">Tag!</span>(<span class="string">"ltx:Math"</span>, after_open =&gt; sub[document, node] {
     document.generate_id(node, <span class="string">"m"</span>)<span class="question-mark">?</span>;
   });
-  
 });
 </code></pre></div></section></main></body></html>

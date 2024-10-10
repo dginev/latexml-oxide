@@ -647,28 +647,63 @@
 <a href="#646" id="646">646</a>
 <a href="#647" id="647">647</a>
 <a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::common::glue::Glue;
 <span class="kw">use </span><span class="kw">crate</span>::common::font;
+<span class="kw">use </span><span class="kw">crate</span>::common::glue::Glue;
 <span class="kw">use </span><span class="kw">crate</span>::common::mudimension::MuDimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::muglue::MuGlue;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{SymStr, <span class="self">self</span>};
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
+<span class="kw">use </span><span class="kw">crate</span>::gullet;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
 <span class="kw">use </span><span class="kw">crate</span>::state::{Scope, Stored};
 <span class="kw">use </span><span class="kw">crate</span>::tbox::Tbox;
-<span class="kw">use </span><span class="kw">crate</span>::gullet;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
@@ -908,11 +943,11 @@
 <span class="comment">// TODO: Does this successfully emulate the behavior in latexml?
 //   see example use in gullet::read_tokens_value
 </span><span class="kw">impl </span>From&lt;RegisterValue&gt; <span class="kw">for </span>Tokens {
-  <span class="kw">fn </span>from(v: RegisterValue) -&gt; Tokens { 
+  <span class="kw">fn </span>from(v: RegisterValue) -&gt; Tokens {
     <span class="kw">match </span>v {
       RegisterValue::Tokens(tks) =&gt; tks,
       RegisterValue::Token(t) =&gt; <span class="macro">Tokens!</span>(t),
-      <span class="kw">_ </span>=&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(v.value_of().to_string())) 
+      <span class="kw">_ </span>=&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(v.value_of().to_string())),
     }
   }
 }
@@ -933,7 +968,10 @@
         );
         <span class="comment">// silence a potential Fatal from 100 errors,
         // until a better place is reached in the high-level conversion logic
-        </span><span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"dimension"</span>, message); <span class="prelude-val">Ok</span>(()) };
+        </span><span class="kw">let </span>err = || {
+          <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"dimension"</span>, message);
+          <span class="prelude-val">Ok</span>(())
+        };
         err().ok();
         Dimension::new(<span class="number">0</span>)
       },
@@ -953,7 +991,10 @@
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Token register can not be cast into a Glue: {other:?}"</span>);
         <span class="comment">// silence a potential Fatal from 100 errors,
         // until a better place is reached in the high-level conversion logic
-        </span><span class="kw">let </span>err = || { <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"dimension"</span>, message); <span class="prelude-val">Ok</span>(()) };
+        </span><span class="kw">let </span>err = || {
+          <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"dimension"</span>, message);
+          <span class="prelude-val">Ok</span>(())
+        };
         err().ok();
         Glue::new(<span class="number">0</span>)
       },
@@ -969,8 +1010,8 @@
       RegisterValue::Dimension(other) =&gt; MuGlue::new(other.value_of()),
       RegisterValue::MuDimension(other) =&gt; MuGlue::new(other.value_of()),
       RegisterValue::Glue(other) =&gt; MuGlue {
-        skip: other.skip,
-        plus: other.plus,
+        skip:  other.skip,
+        plus:  other.plus,
         pfill: other.pfill,
         minus: other.minus,
         mfill: other.mfill,
@@ -978,7 +1019,10 @@
       RegisterValue::Token(other) =&gt; other.to_number().into(),
       RegisterValue::Tokens(other) =&gt; {
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Token register can not be cast into a Glue: {:?}"</span>, other);
-        <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"dimension"</span>, message); <span class="prelude-val">Ok</span>(())};
+        <span class="kw">let </span>err = || {
+          <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"dimension"</span>, message);
+          <span class="prelude-val">Ok</span>(())
+        };
         err().ok();
         MuGlue::new(<span class="number">0</span>)
       },
@@ -1043,16 +1087,16 @@
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>RegisterType {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
     <span class="kw">use </span>RegisterType::<span class="kw-2">*</span>;
-      <span class="kw">match </span><span class="self">self </span>{
-        Number | CharDef =&gt; <span class="macro">matches!</span>(other, Number | CharDef),
-        Dimension =&gt; <span class="macro">matches!</span>(other, Dimension),
-        MuDimension =&gt; <span class="macro">matches!</span>(other, MuDimension),
-        Glue =&gt; <span class="macro">matches!</span>(other, Glue),
-        MuGlue =&gt; <span class="macro">matches!</span>(other, MuGlue),
-        Token =&gt; <span class="macro">matches!</span>(other, Token),
-        Tokens =&gt; <span class="macro">matches!</span>(other, Tokens),
-        Any =&gt; <span class="macro">matches!</span>(other, Any),
-      }
+    <span class="kw">match </span><span class="self">self </span>{
+      Number | CharDef =&gt; <span class="macro">matches!</span>(other, Number | CharDef),
+      Dimension =&gt; <span class="macro">matches!</span>(other, Dimension),
+      MuDimension =&gt; <span class="macro">matches!</span>(other, MuDimension),
+      Glue =&gt; <span class="macro">matches!</span>(other, Glue),
+      MuGlue =&gt; <span class="macro">matches!</span>(other, MuGlue),
+      Token =&gt; <span class="macro">matches!</span>(other, Token),
+      Tokens =&gt; <span class="macro">matches!</span>(other, Tokens),
+      Any =&gt; <span class="macro">matches!</span>(other, Any),
+    }
   }
 }
 
@@ -1065,46 +1109,46 @@
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Register {
   <span class="doccomment">/// the public command sequence for this register
-  </span><span class="kw">pub </span>cs: Token,
+  </span><span class="kw">pub </span>cs:            Token,
   <span class="doccomment">/// the internal address for this register
-  </span><span class="kw">pub </span>address: String,
+  </span><span class="kw">pub </span>address:       String,
   <span class="doccomment">/// associated parameters, if any
-  </span><span class="kw">pub </span>parameters: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+  </span><span class="kw">pub </span>parameters:    <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
   <span class="doccomment">/// the type of values accepted by this register (Number, Dimension, ...)
   </span><span class="kw">pub </span>register_type: RegisterType,
   <span class="doccomment">/// read-only flag (default: false)
-  </span><span class="kw">pub </span>readonly: bool,
+  </span><span class="kw">pub </span>readonly:      bool,
   <span class="doccomment">/// the current value
-  </span><span class="kw">pub </span>value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
+  </span><span class="kw">pub </span>value:         <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
   <span class="doccomment">/// reader for a value
-  </span><span class="kw">pub </span>getter: <span class="prelude-ty">Option</span>&lt;RegisterGetterClosure&gt;,
+  </span><span class="kw">pub </span>getter:        <span class="prelude-ty">Option</span>&lt;RegisterGetterClosure&gt;,
   <span class="doccomment">/// setter for a value
-  </span><span class="kw">pub </span>setter: <span class="prelude-ty">Option</span>&lt;RegisterSetterClosure&gt;,
+  </span><span class="kw">pub </span>setter:        <span class="prelude-ty">Option</span>&lt;RegisterSetterClosure&gt;,
   <span class="doccomment">/// a default value
-  </span><span class="kw">pub </span>default: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
+  </span><span class="kw">pub </span>default:       <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
   <span class="doccomment">/// the unicode corresponding to the \mathchar of `value` (for chardef)
-  </span><span class="kw">pub </span>mathglyph: <span class="prelude-ty">Option</span>&lt;char&gt;,
+  </span><span class="kw">pub </span>mathglyph:     <span class="prelude-ty">Option</span>&lt;char&gt;,
   <span class="doccomment">/// TODO: what does this do for CharDef ?
-  </span><span class="kw">pub </span>role: <span class="prelude-ty">Option</span>&lt;SymStr&gt;,
+  </span><span class="kw">pub </span>role:          <span class="prelude-ty">Option</span>&lt;SymStr&gt;,
   <span class="doccomment">/// the source point of origin for this register definition
-  </span><span class="kw">pub </span>locator: Locator,
+  </span><span class="kw">pub </span>locator:       Locator,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Register {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Register {
-      cs: <span class="macro">T_CS!</span>(<span class="string">"Register"</span>),
-      address: String::from(<span class="string">"Register"</span>),
-      locator: Locator::default(),
-      parameters: <span class="prelude-val">None</span>,
+      cs:            <span class="macro">T_CS!</span>(<span class="string">"Register"</span>),
+      address:       String::from(<span class="string">"Register"</span>),
+      locator:       Locator::default(),
+      parameters:    <span class="prelude-val">None</span>,
       register_type: RegisterType::Number,
-      getter: <span class="prelude-val">None</span>,
-      setter: <span class="prelude-val">None</span>,
-      readonly: <span class="bool-val">false</span>,
-      value: <span class="prelude-val">None</span>,
-      mathglyph: <span class="prelude-val">None</span>,
-      role: <span class="prelude-val">None</span>,
-      default: <span class="prelude-val">None
-    </span>}
+      getter:        <span class="prelude-val">None</span>,
+      setter:        <span class="prelude-val">None</span>,
+      readonly:      <span class="bool-val">false</span>,
+      value:         <span class="prelude-val">None</span>,
+      mathglyph:     <span class="prelude-val">None</span>,
+      role:          <span class="prelude-val">None</span>,
+      default:       <span class="prelude-val">None</span>,
+    }
   }
 }
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>Register {
@@ -1120,7 +1164,12 @@
     <span class="macro">write!</span>(
       f,
       <span class="string">"Register[cs:{:?}, address:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, value:{:?}, default:{:?}]"</span>,
-      <span class="self">self</span>.cs, <span class="self">self</span>.address, <span class="self">self</span>.parameters, <span class="self">self</span>.register_type, <span class="self">self</span>.readonly, <span class="self">self</span>.value,
+      <span class="self">self</span>.cs,
+      <span class="self">self</span>.address,
+      <span class="self">self</span>.parameters,
+      <span class="self">self</span>.register_type,
+      <span class="self">self</span>.readonly,
+      <span class="self">self</span>.value,
       <span class="self">self</span>.default,
     )
   }
@@ -1131,7 +1180,6 @@
 
 <span class="kw">impl </span>Object <span class="kw">for </span>Register {
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">format!</span>(<span class="string">"{self:?}"</span>) }
-
 }
 
 <span class="kw">impl </span>Definition <span class="kw">for </span>Register {
@@ -1139,20 +1187,21 @@
   <span class="kw">fn </span>is_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">false </span>}
   <span class="kw">fn </span>is_readonly(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.readonly }
   <span class="comment">// not implemented for primitives
-  </span><span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="macro">todo!</span>()
-  }
+  </span><span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="macro">todo!</span>() }
   <span class="kw">fn </span>get_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt; { <span class="self">self</span>.parameters.as_ref() }
   <span class="kw">fn </span>get_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;Token&gt; { Cow::Owned(<span class="self">self</span>.cs) }
   <span class="kw">fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;str&gt; { Cow::Owned(<span class="self">self</span>.cs.with_cs_name(ToString::to_string)) }
   <span class="kw">fn </span>get_alias(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt; { <span class="prelude-val">None </span>}
 
   <span class="kw">fn </span>set_value(<span class="kw-2">&amp;</span><span class="self">self</span>, value: RegisterValue, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;, args: Vec&lt;ArgWrap&gt;) {
-    <span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.register_type,RegisterType::CharDef) {
+    <span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.register_type, RegisterType::CharDef) {
       <span class="kw">let </span>message = <span class="self">self
         </span>.cs
         .with_cs_name(|cs_str| <span class="macro">s!</span>(<span class="string">"Can't assign to chardef {}"</span>, cs_str));
-      <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"chardef"</span>, message); <span class="prelude-val">Ok</span>(()) };
+      <span class="kw">let </span>err = || {
+        <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"chardef"</span>, message);
+        <span class="prelude-val">Ok</span>(())
+      };
       err().ok();
     } <span class="kw">else if let </span><span class="prelude-val">Some</span>(setter) = <span class="kw-2">&amp;</span><span class="self">self</span>.setter {
       setter(value, scope, args);
@@ -1162,18 +1211,20 @@
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Can't assign to register {}"</span>, <span class="self">self</span>.address);
         <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="self">self</span>.address, message);
       } <span class="kw">else </span>{
-        <span class="kw">let </span>loc = <span class="kw">if </span>args.is_empty() { Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.address) } <span class="kw">else </span>{
+        <span class="kw">let </span>loc = <span class="kw">if </span>args.is_empty() {
+          Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.address)
+        } <span class="kw">else </span>{
           <span class="kw">let </span>args_string: String = args
             .into_iter()
             .map(|a| {
               a.as_tokens()
-               .expect(<span class="string">"TODO: handle malformed values here."</span>)
-               .unwrap()
-               .to_string()
-           })
-           .collect::&lt;Vec&lt;String&gt;&gt;()
-           .join(<span class="string">""</span>);
-          Cow::Owned(<span class="macro">format!</span>(<span class="string">"{}{args_string}"</span>,<span class="self">self</span>.address))
+                .expect(<span class="string">"TODO: handle malformed values here."</span>)
+                .unwrap()
+                .to_string()
+            })
+            .collect::&lt;Vec&lt;String&gt;&gt;()
+            .join(<span class="string">""</span>);
+          Cow::Owned(<span class="macro">format!</span>(<span class="string">"{}{args_string}"</span>, <span class="self">self</span>.address))
         };
         state::assign_value(<span class="kw-2">&amp;</span>loc, value, scope);
       }
@@ -1187,21 +1238,39 @@
     // but if defined in the document source, better to use \char ###\relax, so it still "works"
     </span><span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.register_type, RegisterType::CharDef) {
       <span class="kw">let </span><span class="kw-2">mut </span>props = HashMap::default();
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(role) = <span class="self">self</span>.role { 
-        props.insert(<span class="string">"role"</span>,Stored::String(role));
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(role) = <span class="self">self</span>.role {
+        props.insert(<span class="string">"role"</span>, Stored::String(role));
       }
       <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(
         <span class="kw">if let </span><span class="prelude-val">Some</span>(mathglyph) = <span class="self">self</span>.mathglyph {
-          Tbox::new(arena::pin_char(mathglyph), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-            <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\mathchar"</span>), <span class="self">self</span>.value.as_ref().unwrap().revert()<span class="question-mark">?</span>, <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)), 
-            props)
+          Tbox::new(
+            arena::pin_char(mathglyph),
+            <span class="prelude-val">None</span>,
+            <span class="prelude-val">None</span>,
+            <span class="macro">Tokens!</span>(
+              <span class="macro">T_CS!</span>(<span class="string">"\\mathchar"</span>),
+              <span class="self">self</span>.value.as_ref().unwrap().revert()<span class="question-mark">?</span>,
+              <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)
+            ),
+            props,
+          )
         } <span class="kw">else </span>{
-          Tbox::new(arena::pin_char(
-            font::decode(<span class="self">self</span>.value.clone().unwrap().value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>,<span class="bool-val">false</span>).unwrap_or_default()),
-            <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-            <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\char"</span>), <span class="self">self</span>.value.as_ref().unwrap().revert()<span class="question-mark">?</span>, <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)), 
-            props)
-        })])
+          Tbox::new(
+            arena::pin_char(
+              font::decode(<span class="self">self</span>.value.clone().unwrap().value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>)
+                .unwrap_or_default(),
+            ),
+            <span class="prelude-val">None</span>,
+            <span class="prelude-val">None</span>,
+            <span class="macro">Tokens!</span>(
+              <span class="macro">T_CS!</span>(<span class="string">"\\char"</span>),
+              <span class="self">self</span>.value.as_ref().unwrap().revert()<span class="question-mark">?</span>,
+              <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)
+            ),
+            props,
+          )
+        },
+      )]);
     }
 
     <span class="comment">// my $profiled = $state-&gt;lookupValue('PROFILING') &amp;&amp; ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -1229,11 +1298,7 @@
     }
   }
 
-  <span class="kw">fn </span>do_absorbtion(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    _document: <span class="kw-2">&amp;mut </span>Document,
-    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="macro">fatal!</span>(
       Definition,
       Unexpected,
@@ -1254,9 +1319,9 @@
           .map(ToString::to_string)
           .collect::&lt;Vec&lt;String&gt;&gt;()
           .join(<span class="string">""</span>);
-        Cow::Owned(<span class="macro">format!</span>(<span class="string">"{}{args_string}"</span>,<span class="self">self</span>.address))
+        Cow::Owned(<span class="macro">format!</span>(<span class="string">"{}{args_string}"</span>, <span class="self">self</span>.address))
       };
-      state::with_value(<span class="kw-2">&amp;</span>key,|v_opt| <span class="kw">match </span>v_opt {
+      state::with_value(<span class="kw-2">&amp;</span>key, |v_opt| <span class="kw">match </span>v_opt {
         <span class="prelude-val">Some</span>(v) =&gt; v.into(),
         <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.default.clone(),
       })
@@ -1272,7 +1337,12 @@
   /// You can't assign it; when you invoke the control sequence, it returns
   /// the result of evaluating the character (more like a regular primitive).
   /// When `mathglyph` is provided, it is the unicode corresponding to the `\mathchar` of `value`
-  </span><span class="kw">pub fn </span>new_chardef(cs: Token, value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;, mathglyph:<span class="prelude-ty">Option</span>&lt;char&gt;, role:<span class="prelude-ty">Option</span>&lt;SymStr&gt;) -&gt; <span class="self">Self </span>{
+  </span><span class="kw">pub fn </span>new_chardef(
+    cs: Token,
+    value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
+    mathglyph: <span class="prelude-ty">Option</span>&lt;char&gt;,
+    role: <span class="prelude-ty">Option</span>&lt;SymStr&gt;,
+  ) -&gt; <span class="self">Self </span>{
     Register {
       cs,
       parameters: <span class="prelude-val">None</span>,

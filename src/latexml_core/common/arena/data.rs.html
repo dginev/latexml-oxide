@@ -127,57 +127,15 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a></pre></div><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<a href="#129" id="129">129</a></pre></div><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::collections::hash_map::{Entry, IntoIter, Iter, IterMut, Keys};
 <span class="kw">use </span>std::fmt;
-<span class="kw">use </span>std::ops::Index;
 <span class="kw">use </span>std::iter::IntoIterator;
-<span class="kw">use </span>std::collections::hash_map::{Keys,Iter,IterMut,IntoIter, Entry};
+<span class="kw">use </span>std::ops::Index;
 
-<span class="kw">use </span>string_interner::symbol::SymbolU32;
-<span class="kw">use </span>string_interner::Symbol;
 <span class="kw">use </span>std::any::type_name;
+<span class="kw">use </span>string_interner::Symbol;
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
 
@@ -187,7 +145,7 @@
 // is there performance overhead from the extra wrap? It seems borderline usable...
 
 </span><span class="doccomment">/// A convenience abstraction over a String-keyed HashMap
-/// 
+///
 /// typically used for `HashMap&lt;String,Stored&gt;` states.
 /// The goal is to support both a string interface, as well as the interned tickets interface,
 /// while avoiding String allocations internally.
@@ -195,76 +153,42 @@
 </span><span class="kw">pub struct </span>SymHashMap&lt;T&gt;(<span class="kw">pub </span>HashMap&lt;SymStr, T&gt;);
 
 <span class="kw">impl</span>&lt;T&gt; Default <span class="kw">for </span>SymHashMap&lt;T&gt; {
-  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-    SymHashMap(HashMap::default())
-  }
+  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{ SymHashMap(HashMap::default()) }
 }
 
 <span class="kw">impl</span>&lt;T&gt; SymHashMap&lt;T&gt; {
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-    <span class="self">self</span>.<span class="number">0</span>.len()
-  }
+  </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize { <span class="self">self</span>.<span class="number">0</span>.len() }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-    <span class="self">self</span>.<span class="number">0</span>.is_empty()
-  }
+  </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.<span class="number">0</span>.is_empty() }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
-    <span class="self">self</span>.<span class="number">0</span>.get(<span class="kw-2">&amp;</span>arena::pin(key))
-  }
+  </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; { <span class="self">self</span>.<span class="number">0</span>.get(<span class="kw-2">&amp;</span>arena::pin(key)) }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>get_sym(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
-    <span class="self">self</span>.<span class="number">0</span>.get(key)
-  }
+  </span><span class="kw">pub fn </span>get_sym(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; { <span class="self">self</span>.<span class="number">0</span>.get(key) }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
-    <span class="self">self</span>.<span class="number">0</span>.get_mut(<span class="kw-2">&amp;</span>arena::pin(key))
-  }
+  </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; { <span class="self">self</span>.<span class="number">0</span>.get_mut(<span class="kw-2">&amp;</span>arena::pin(key)) }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>get_mut_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key:SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
-    <span class="self">self</span>.<span class="number">0</span>.get_mut(<span class="kw-2">&amp;</span>key)
-  }
+  </span><span class="kw">pub fn </span>get_mut_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SymStr) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; { <span class="self">self</span>.<span class="number">0</span>.get_mut(<span class="kw-2">&amp;</span>key) }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>contains_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str) -&gt; bool {
-    <span class="self">self</span>.<span class="number">0</span>.contains_key(<span class="kw-2">&amp;</span>arena::pin(key))
-  }
+  </span><span class="kw">pub fn </span>contains_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="self">self</span>.<span class="number">0</span>.contains_key(<span class="kw-2">&amp;</span>arena::pin(key)) }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>contains_key_sym(<span class="kw-2">&amp;</span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>SymStr) -&gt; bool {
-    <span class="self">self</span>.<span class="number">0</span>.contains_key(key)
-  }
+  </span><span class="kw">pub fn </span>contains_key_sym(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>SymStr) -&gt; bool { <span class="self">self</span>.<span class="number">0</span>.contains_key(key) }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str, value:T) {
-    <span class="self">self</span>.<span class="number">0</span>.insert(arena::pin(key),value);
-  }
+  </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) { <span class="self">self</span>.<span class="number">0</span>.insert(arena::pin(key), value); }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>insert_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key:SymStr, value:T) {
-    <span class="self">self</span>.<span class="number">0</span>.insert(key,value);
-  }
+  </span><span class="kw">pub fn </span>insert_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SymStr, value: T) { <span class="self">self</span>.<span class="number">0</span>.insert(key, value); }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str) {
-    <span class="self">self</span>.<span class="number">0</span>.remove(<span class="kw-2">&amp;</span>arena::pin(key));
-  }
+  </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) { <span class="self">self</span>.<span class="number">0</span>.remove(<span class="kw-2">&amp;</span>arena::pin(key)); }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>remove_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key:SymStr) {
-    <span class="self">self</span>.<span class="number">0</span>.remove(<span class="kw-2">&amp;</span>key);
-  }
+  </span><span class="kw">pub fn </span>remove_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SymStr) { <span class="self">self</span>.<span class="number">0</span>.remove(<span class="kw-2">&amp;</span>key); }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Keys&lt;<span class="lifetime">'_</span>, SymStr, T&gt; {
-    <span class="self">self</span>.<span class="number">0</span>.keys()
-  }
+  </span><span class="kw">pub fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Keys&lt;<span class="lifetime">'_</span>, SymStr, T&gt; { <span class="self">self</span>.<span class="number">0</span>.keys() }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>entry(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str) -&gt; Entry&lt;SymStr,T&gt; {
-    <span class="self">self</span>.<span class="number">0</span>.entry(arena::pin(key))
-  }
+  </span><span class="kw">pub fn </span>entry(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; Entry&lt;SymStr, T&gt; { <span class="self">self</span>.<span class="number">0</span>.entry(arena::pin(key)) }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>entry_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key:SymStr) -&gt; Entry&lt;SymStr,T&gt; {
-    <span class="self">self</span>.<span class="number">0</span>.entry(key)
-  }
+  </span><span class="kw">pub fn </span>entry_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SymStr) -&gt; Entry&lt;SymStr, T&gt; { <span class="self">self</span>.<span class="number">0</span>.entry(key) }
   <span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'_</span>, SymStr, T&gt; {
-    <span class="self">self</span>.<span class="number">0</span>.iter()
-  }
+  </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'_</span>, SymStr, T&gt; { <span class="self">self</span>.<span class="number">0</span>.iter() }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>SymHashMap&lt;T&gt; {
@@ -272,9 +196,7 @@
   <span class="kw">type </span>IntoIter = Iter&lt;<span class="lifetime">'a</span>, SymStr, T&gt;;
 
   <span class="attr">#[inline]
-  </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'a</span>, SymStr, T&gt; {
-      <span class="self">self</span>.<span class="number">0</span>.iter()
-  }
+  </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">'a</span>, SymStr, T&gt; { <span class="self">self</span>.<span class="number">0</span>.iter() }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SymHashMap&lt;T&gt; {
@@ -282,62 +204,56 @@
   <span class="kw">type </span>IntoIter = IterMut&lt;<span class="lifetime">'a</span>, SymStr, T&gt;;
 
   <span class="attr">#[inline]
-  </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; IterMut&lt;<span class="lifetime">'a</span>, SymStr, T&gt; {
-      <span class="self">self</span>.<span class="number">0</span>.iter_mut()
-  }
+  </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; IterMut&lt;<span class="lifetime">'a</span>, SymStr, T&gt; { <span class="self">self</span>.<span class="number">0</span>.iter_mut() }
 }
 <span class="kw">impl</span>&lt;T&gt; IntoIterator <span class="kw">for </span>SymHashMap&lt;T&gt; {
   <span class="kw">type </span>Item = (SymStr, T);
   <span class="kw">type </span>IntoIter = IntoIter&lt;SymStr, T&gt;;
   <span class="attr">#[inline]
-  </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
-    <span class="self">self</span>.<span class="number">0</span>.into_iter()
-  }
+  </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter { <span class="self">self</span>.<span class="number">0</span>.into_iter() }
 }
 
-<span class="kw">impl</span>&lt;T:fmt::Debug&gt; fmt::Debug <span class="kw">for </span>SymHashMap&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: fmt::Debug&gt; fmt::Debug <span class="kw">for </span>SymHashMap&lt;T&gt; {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="macro">write!</span>(f,<span class="string">"SymHashMap["</span>)<span class="question-mark">?</span>;
+    <span class="macro">write!</span>(f, <span class="string">"SymHashMap["</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>init = <span class="bool-val">true</span>;
-    <span class="kw">for </span>(k,v) <span class="kw">in </span><span class="self">self </span>{
+    <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="self">self </span>{
       <span class="kw">if </span>init {
-        init=<span class="bool-val">false</span>;
+        init = <span class="bool-val">false</span>;
       } <span class="kw">else </span>{
         <span class="macro">write!</span>(f, <span class="string">", "</span>)<span class="question-mark">?</span>;
       }
-      arena::with(<span class="kw-2">*</span>k,|key|
-        <span class="macro">write!</span>(f, <span class="string">"{key}"</span>)
-      )<span class="question-mark">?</span>;
+      arena::with(<span class="kw-2">*</span>k, |key| <span class="macro">write!</span>(f, <span class="string">"{key}"</span>))<span class="question-mark">?</span>;
       <span class="comment">// very temporary hack to get the full trace
       </span><span class="kw">if </span>type_name::&lt;T&gt;() == <span class="string">"string_interner::symbol::SymbolU32" </span>{
-        <span class="kw">let </span>symstr = <span class="macro">format!</span>(<span class="string">"{:?}"</span>,v);
+        <span class="kw">let </span>symstr = <span class="macro">format!</span>(<span class="string">"{:?}"</span>, v);
         <span class="comment">// "SymbolU32 { value: 28104 }"
         </span><span class="kw">let </span><span class="kw-2">mut </span>symiter = symstr.split(<span class="string">' '</span>);
-        symiter.next(); symiter.next(); symiter.next(); 
+        symiter.next();
+        symiter.next();
+        symiter.next();
         <span class="kw">let </span>sym_v_str = symiter.next().unwrap();
         <span class="kw">let </span>sym_val = sym_v_str.parse::&lt;usize&gt;().unwrap();
-        <span class="kw">let </span>sym = Symbol::try_from_usize(sym_val-<span class="number">1</span>).unwrap();
+        <span class="kw">let </span>sym = Symbol::try_from_usize(sym_val - <span class="number">1</span>).unwrap();
         <span class="kw">let </span>vstr = arena::to_string(sym);
-        <span class="macro">write!</span>(f,<span class="string">": {vstr}"</span>)<span class="question-mark">?</span>;
+        <span class="macro">write!</span>(f, <span class="string">": {vstr}"</span>)<span class="question-mark">?</span>;
       } <span class="kw">else </span>{
-        <span class="macro">write!</span>(f,<span class="string">": [{:?}]"</span>,v)<span class="question-mark">?</span>;
+        <span class="macro">write!</span>(f, <span class="string">": [{:?}]"</span>, v)<span class="question-mark">?</span>;
       }
       <span class="comment">// write!(f,": {:?}",v)?;
     </span>}
-    <span class="macro">write!</span>(f,<span class="string">"]"</span>)
+    <span class="macro">write!</span>(f, <span class="string">"]"</span>)
   }
 }
 
 <span class="kw">impl</span>&lt;T&gt; Index&lt;<span class="kw-2">&amp;</span>SymStr&gt; <span class="kw">for </span>SymHashMap&lt;T&gt; {
-    <span class="kw">type </span>Output = T;
-    <span class="doccomment">/// Returns a reference to the value corresponding to the supplied key.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the key is not present in the `HashMap`.
-    </span><span class="attr">#[inline]
-    </span><span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>SymStr) -&gt; <span class="kw-2">&amp;</span>T {
-      <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>[key]
-    }
+  <span class="kw">type </span>Output = T;
+  <span class="doccomment">/// Returns a reference to the value corresponding to the supplied key.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the key is not present in the `HashMap`.
+  </span><span class="attr">#[inline]
+  </span><span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>SymStr) -&gt; <span class="kw-2">&amp;</span>T { <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>[key] }
 }
 </code></pre></div></section></main></body></html>

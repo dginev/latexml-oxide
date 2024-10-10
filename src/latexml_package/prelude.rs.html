@@ -100,8 +100,8 @@
 <span class="kw">pub use </span>std::borrow::Cow;
 <span class="kw">pub use </span>std::collections::VecDeque;
 <span class="kw">pub use </span>std::rc::Rc;
-<span class="kw">pub use </span>std::sync::Arc;
 <span class="kw">pub use </span>std::str::FromStr;
+<span class="kw">pub use </span>std::sync::Arc;
 
 <span class="kw">pub use </span>latexml_core::alignment::cell::Cell;
 <span class="kw">pub use </span>latexml_core::alignment::template::{Align, Template};
@@ -111,18 +111,19 @@
 <span class="kw">pub use </span>latexml_core::common::cleaners::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>latexml_core::common::def_parser::{parse_parameters, parse_prototype};
 <span class="kw">pub use </span>latexml_core::common::dimension::Dimension;
-<span class="kw">pub use </span>latexml_core::common::float::{floatformat, Float};
+<span class="kw">pub use </span>latexml_core::common::float::{Float, floatformat};
 <span class="kw">pub use </span>latexml_core::common::font;
 <span class="kw">pub use </span>latexml_core::common::font::Font;
 <span class="kw">pub use </span>latexml_core::common::glue::Glue;
 <span class="kw">pub use </span>latexml_core::common::locator::Locator;
+<span class="kw">pub use </span>latexml_core::common::model;
 <span class="kw">pub use </span>latexml_core::common::mudimension::MuDimension;
 <span class="kw">pub use </span>latexml_core::common::muglue::MuGlue;
 <span class="kw">pub use </span>latexml_core::common::number::Number;
-<span class="kw">pub use </span>latexml_core::common::model;
-<span class="kw">pub use </span>latexml_core::common::numeric_ops::{NumericOps,UNITY, UNITY_F64};
+<span class="kw">pub use </span>latexml_core::common::numeric_ops::{NumericOps, UNITY, UNITY_F64};
 <span class="kw">pub use </span>latexml_core::common::object::Object;
 <span class="kw">pub use </span>latexml_core::common::xml::XML_NS;
+<span class="kw">pub use </span>latexml_core::definition::ConditionalClosure;
 <span class="kw">pub use </span>latexml_core::definition::argument::ArgWrap;
 <span class="kw">pub use </span>latexml_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 <span class="kw">pub use </span>latexml_core::definition::constructor::ConstructorOptions;
@@ -130,16 +131,15 @@
 <span class="kw">pub use </span>latexml_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 <span class="kw">pub use </span>latexml_core::definition::primitive::{Primitive, PrimitiveOptions};
 <span class="kw">pub use </span>latexml_core::definition::register::{Register, RegisterType, RegisterValue};
-<span class="kw">pub use </span>latexml_core::definition::ConditionalClosure;
 <span class="kw">pub use </span>latexml_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
-  ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveClosure, PrimitiveFn,
-  ReplacementClosure, Reversion, PrimitiveBody,
+  ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveBody, PrimitiveClosure,
+  PrimitiveFn, ReplacementClosure, Reversion,
 };
 <span class="kw">pub use </span>latexml_core::digested::{Digested, DigestedData};
+<span class="kw">pub use </span>latexml_core::document::Document;
 <span class="kw">pub use </span>latexml_core::document::resource::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>latexml_core::document::tag::{TagOptionName, TagOptions};
-<span class="kw">pub use </span>latexml_core::document::Document;
 <span class="kw">pub use </span>latexml_core::gullet::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>latexml_core::keyval::KeyvalConfig;
 <span class="kw">pub use </span>latexml_core::keyvals::{KeyVals, KeyvalsConfig};
@@ -153,7 +153,7 @@
 <span class="kw">pub use </span>latexml_core::stomach::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>latexml_core::tbox::Tbox;
 <span class="kw">pub use </span>latexml_core::token::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>latexml_core::tokens::{Tokens,NO_TOKENS};
+<span class="kw">pub use </span>latexml_core::tokens::{NO_TOKENS, Tokens};
 <span class="kw">pub use </span>latexml_core::util::pathname;
 <span class="kw">pub use </span>latexml_core::util::radix;
 <span class="kw">pub use </span>latexml_core::whatsit::Whatsit;
@@ -161,8 +161,8 @@
 <span class="kw">pub use </span>latexml_core::{BoxOps, Core, TexMode};
 <span class="comment">// Macros:
 </span><span class="kw">pub use </span>latexml_core::{
-  Tokens, T_ACTIVE, T_ALIGN, T_ARG, T_BEGIN, T_COMMENT, T_CR, T_CS, T_LETTER, T_MARKER, T_MATH,
-  T_OTHER, T_PARAM, T_SPACE, T_SUB, T_SUPER,
+  T_ACTIVE, T_ALIGN, T_ARG, T_BEGIN, T_COMMENT, T_CR, T_CS, T_LETTER, T_MARKER, T_MATH, T_OTHER,
+  T_PARAM, T_SPACE, T_SUB, T_SUPER, Tokens,
 };
 
 <span class="comment">// ------------------------------------------------------------------------------------------------

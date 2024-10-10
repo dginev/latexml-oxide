@@ -32,21 +32,26 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
-<a href="#34" id="34">34</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>({
-
   <span class="macro">DefMacro!</span>(<span class="string">"\\@saveprimitive{}{}"</span>, <span class="string">"\\let#2#1"</span>);
 
   <span class="macro">Let!</span>(<span class="string">"\\@xp"</span>, <span class="string">"\\expandafter"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\@nx"</span>, <span class="string">"\\noexpand"</span>);
   <span class="macro">DefRegister!</span>(<span class="string">"\\@emptytoks" </span>=&gt; <span class="macro">Tokens!</span>());
   <span class="macro">DefMacro!</span>(<span class="string">"\\@ifempty {}"</span>, <span class="string">r"\@xifempty#1@@..\@nil"</span>);
-  <span class="macro">TeX!</span>(<span class="string">r"
+  <span class="macro">TeX!</span>(
+    <span class="string">r"
   \def\@oparg#1[#2]{\@ifnextchar[{#1}{#1[#2]}}
   \long\def\@ifempty#1{\@xifempty#1@@..\@nil}
   \long\def\@xifempty#1#2@#3#4#5\@nil{%
     \ifx#3#4\@xp\@firstoftwo\else\@xp\@secondoftwo\fi}
-  \long\def\@ifnotempty#1{\@ifempty{#1}{}}"</span>);
+  \long\def\@ifnotempty#1{\@ifempty{#1}{}}"
+  </span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\FN@"</span>, <span class="string">"\\futurelet\\@let@token"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\DN@"</span>, <span class="string">"\\def\\next@"</span>);
@@ -59,10 +64,14 @@
   <span class="comment">// Do we need to worry about the skip space issues...?
   </span><span class="macro">Let!</span>(<span class="string">"\\new@ifnextchar"</span>, <span class="string">"\\@ifnextchar"</span>);
   <span class="comment">// \@ifstar already in LaTeX.pool
-  </span><span class="macro">DefRegister!</span>(<span class="string">"\\ex@" </span>=&gt; Dimension::from_str(<span class="string">"1pt"</span>)<span class="question-mark">?</span>);    <span class="comment">// Just fake it...
+  </span><span class="macro">DefRegister!</span>(<span class="string">"\\ex@" </span>=&gt; Dimension::from_str(<span class="string">"1pt"</span>)<span class="question-mark">?</span>);
+  <span class="comment">// Just fake it...
   // Hmm.... how should we detect whether there"\s already punctuation?
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\@addpunct{}"</span>, <span class="string">"#1"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">"\\mathhexbox{}{}{}"</span>, <span class="string">r###"\text{$\m@th\mathchar"#1#2#3$}"###</span>);
-
-});</code></pre></div></section></main></body></html>
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\mathhexbox{}{}{}"</span>,
+    <span class="string">r###"\text{$\m@th\mathchar"#1#2#3$}"###
+  </span>);
+});
+</code></pre></div></section></main></body></html>

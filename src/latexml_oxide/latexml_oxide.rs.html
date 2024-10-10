@@ -72,7 +72,15 @@
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
 <a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a></pre></div><pre class="rust"><code><span class="attr">#[macro_use]
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a></pre></div><pre class="rust"><code><span class="attr">#[macro_use]
 </span><span class="kw">extern crate </span>latexml_core;
 <span class="kw">use </span>latexml::converter::Converter;
 <span class="kw">use </span>latexml_core::common::{Config, DataSize, OutputFormat};
@@ -86,11 +94,13 @@
 <span class="kw">fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if </span>latexml_core::util::logger::init(log::LevelFilter::Info).is_err() {
     <span class="kw">let </span>err = || {
-    <span class="macro">Error!</span>(
-      <span class="string">"latexml"</span>,
-      <span class="string">"logger"</span>,
-      <span class="string">"Failed to load logger. Please check latexml_core::util::logger installed correctly."
-    </span>); <span class="prelude-val">Ok</span>(()) };
+      <span class="macro">Error!</span>(
+        <span class="string">"latexml"</span>,
+        <span class="string">"logger"</span>,
+        <span class="string">"Failed to load logger. Please check latexml_core::util::logger installed correctly."
+      </span>);
+      <span class="prelude-val">Ok</span>(())
+    };
     err().ok();
   }
   <span class="kw">let </span><span class="kw-2">mut </span>argv = env::args();
@@ -99,11 +109,14 @@
   <span class="kw">let </span>source = <span class="kw">match </span>argv.next() {
     <span class="prelude-val">Some</span>(s) =&gt; s,
     <span class="prelude-val">None </span>=&gt; {
-      <span class="kw">let </span>err = || {<span class="macro">Error!</span>(
-        <span class="string">"latexml_oxide"</span>,
-        <span class="string">""</span>,
+      <span class="kw">let </span>err = || {
+        <span class="macro">Error!</span>(
+          <span class="string">"latexml_oxide"</span>,
+          <span class="string">""</span>,
           <span class="string">"Please provide a source document! Exiting..."
-      </span>); <span class="prelude-val">Ok</span>(()) };
+        </span>);
+        <span class="prelude-val">Ok</span>(())
+      };
       err().ok();
       process::exit(<span class="number">1</span>);
     },
@@ -111,20 +124,23 @@
   <span class="kw">let </span>target = argv.next();
   <span class="comment">// Prepare to convert:
   </span><span class="kw">let </span>opts = Config {
-    verbosity: <span class="number">0</span>,
-    format: OutputFormat::HTML5,
-    whatsin: DataSize::Document,
-    whatsout: DataSize::Document,
-    preamble: <span class="prelude-val">None</span>,
-    postamble: <span class="prelude-val">None</span>,
-    mode: <span class="prelude-val">None</span>,
-    bindings_dispatch: <span class="prelude-val">Some</span>(Rc::new(latexml_package::dispatch)),
+    verbosity:               <span class="number">0</span>,
+    format:                  OutputFormat::HTML5,
+    whatsin:                 DataSize::Document,
+    whatsout:                DataSize::Document,
+    preamble:                <span class="prelude-val">None</span>,
+    postamble:               <span class="prelude-val">None</span>,
+    mode:                    <span class="prelude-val">None</span>,
+    bindings_dispatch:       <span class="prelude-val">Some</span>(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: <span class="prelude-val">Some</span>(Rc::new(latexml_contrib::dispatch)),
   };
   <span class="kw">let </span><span class="kw-2">mut </span>converter = Converter::from_config(opts.clone());
   <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = converter.prepare_session(<span class="kw-2">&amp;</span>opts) {
     <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Could not prepare converter session! : {}"</span>, e);
-    <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"latexml_oxide"</span>, <span class="string">"session"</span>, message); <span class="prelude-val">Ok</span>(())};
+    <span class="kw">let </span>err = || {
+      <span class="macro">Error!</span>(<span class="string">"latexml_oxide"</span>, <span class="string">"session"</span>, message);
+      <span class="prelude-val">Ok</span>(())
+    };
     err().ok();
     process::exit(<span class="number">1</span>);
   }

@@ -169,7 +169,13 @@
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">//**********************************************************************
@@ -272,19 +278,25 @@
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\selectfont"</span>, {
     <span class="kw">let </span>family = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\f@family"</span>)).to_string();
     <span class="kw">let </span>series = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\f@series"</span>)).to_string();
-    <span class="kw">let </span>shape  = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\f@shape"</span>)).to_string();
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_family(<span class="kw-2">&amp;</span>family) { <span class="macro">MergeFont!</span>(sh.clone()); }
-    <span class="kw">else </span>{
+    <span class="kw">let </span>shape = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\f@shape"</span>)).to_string();
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_family(<span class="kw-2">&amp;</span>family) {
+      <span class="macro">MergeFont!</span>(sh.clone());
+    } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Unrecognized font family {:?}."</span>, family);
-      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, family, message); }
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_series(<span class="kw-2">&amp;</span>series) { <span class="macro">MergeFont!</span>(sh.clone()); }
-    <span class="kw">else </span>{
+      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, family, message);
+    }
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_series(<span class="kw-2">&amp;</span>series) {
+      <span class="macro">MergeFont!</span>(sh.clone());
+    } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Unrecognized font series {:?}."</span>, series);
-      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, series, message); }
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_shape(<span class="kw-2">&amp;</span>shape) { <span class="macro">MergeFont!</span>(sh.clone()); }
-    <span class="kw">else </span>{
+      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, series, message);
+    }
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(sh) = font::lookup_font_shape(<span class="kw-2">&amp;</span>shape) {
+      <span class="macro">MergeFont!</span>(sh.clone());
+    } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Unrecognized font shape {:?}."</span>, shape);
-      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>,shape,message); }
+      <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, shape, message);
+    }
     <span class="prelude-val">Ok</span>(Vec::new())
   });
 

@@ -101,106 +101,173 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<span class="macro">LoadDefinitions!</span>( {
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<span class="macro">LoadDefinitions!</span>({
+  <span class="macro">LoadPool!</span>(<span class="string">"LaTeX"</span>);
+  <span class="comment">//**********************************************************************
+  // Option handling
+  </span><span class="kw">for </span>option <span class="kw">in </span><span class="kw-2">&amp;</span>[
+    <span class="string">"10pt"</span>,
+    <span class="string">"11pt"</span>,
+    <span class="string">"12pt"</span>,
+    <span class="string">"letterpaper"</span>,
+    <span class="string">"legalpaper"</span>,
+    <span class="string">"executivepaper"</span>,
+    <span class="string">"a4paper"</span>,
+    <span class="string">"a5paper"</span>,
+    <span class="string">"b5paper"</span>,
+    <span class="string">"landscape"</span>,
+    <span class="string">"final"</span>,
+    <span class="string">"draft"</span>,
+    <span class="string">"oneside"</span>,
+    <span class="string">"twoside"</span>,
+    <span class="string">"openright"</span>,
+    <span class="string">"openany"</span>,
+    <span class="string">"notitlepage"</span>,
+    <span class="string">"titlepage"</span>,
+  ] {
+    <span class="macro">DeclareOption!</span>(option, <span class="prelude-val">None</span>);
+  }
+  <span class="macro">DeclareOption!</span>(<span class="string">"onecolumn"</span>, <span class="string">r"\@twocolumnfalse\columnwidth\textwidth"</span>);
+  <span class="macro">DeclareOption!</span>(
+    <span class="string">"twocolumn"</span>,
+    <span class="string">r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax"
+  </span>);
+  <span class="comment">// DeclareOption!("openbib", sub {
+  //     RequireResource(None, type =&gt; "text/css", content =&gt; ".ltx_bibblock{display:block;}"); });
+  </span><span class="macro">DeclareOption!</span>(<span class="string">"leqno"</span>, sub { <span class="macro">AssignMapping!</span>(<span class="string">"DOCUMENT_CLASSES"</span>, <span class="string">"ltx_leqno" </span>=&gt; <span class="bool-val">true</span>); });
+  <span class="macro">DeclareOption!</span>(<span class="string">"fleqn"</span>, sub { <span class="macro">AssignMapping!</span>(<span class="string">"DOCUMENT_CLASSES"</span>, <span class="string">"ltx_fleqn" </span>=&gt; <span class="bool-val">true</span>); });
 
-<span class="macro">LoadPool!</span>(<span class="string">"LaTeX"</span>);
-<span class="comment">//**********************************************************************
-// Option handling
-</span><span class="kw">for </span>option <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"10pt"</span>,<span class="string">"11pt"</span>,<span class="string">"12pt"</span>,
-  <span class="string">"letterpaper"</span>, <span class="string">"legalpaper"</span>, <span class="string">"executivepaper"</span>, <span class="string">"a4paper"</span>, <span class="string">"a5paper"</span>, <span class="string">"b5paper"</span>,
-  <span class="string">"landscape"</span>,
-  <span class="string">"final"</span>, <span class="string">"draft"</span>,
-  <span class="string">"oneside"</span>, <span class="string">"twoside"</span>,
-  <span class="string">"openright"</span>, <span class="string">"openany"</span>,
-  <span class="string">"notitlepage"</span>, <span class="string">"titlepage"</span>] {
-  <span class="macro">DeclareOption!</span>(option, <span class="prelude-val">None</span>); }
-<span class="macro">DeclareOption!</span>(<span class="string">"onecolumn"</span>,
-  <span class="string">r"\@twocolumnfalse\columnwidth\textwidth"</span>);
-<span class="macro">DeclareOption!</span>(<span class="string">"twocolumn"</span>,
-  <span class="string">r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax"</span>);
-<span class="comment">// DeclareOption!("openbib", sub {
-//     RequireResource(None, type =&gt; "text/css", content =&gt; ".ltx_bibblock{display:block;}"); });
-</span><span class="macro">DeclareOption!</span>(<span class="string">"leqno"</span>, sub { <span class="macro">AssignMapping!</span>(<span class="string">"DOCUMENT_CLASSES"</span>, <span class="string">"ltx_leqno" </span>=&gt; <span class="bool-val">true</span>); });
-<span class="macro">DeclareOption!</span>(<span class="string">"fleqn"</span>, sub { <span class="macro">AssignMapping!</span>(<span class="string">"DOCUMENT_CLASSES"</span>, <span class="string">"ltx_fleqn" </span>=&gt; <span class="bool-val">true</span>); });
+  <span class="macro">ProcessOptions!</span>();
 
-<span class="macro">ProcessOptions!</span>();
+  <span class="comment">//**********************************************************************
+  // Document structure.
+  </span><span class="macro">RelaxNGSchema!</span>(<span class="string">"LaTeXML"</span>);
+  <span class="macro">RequireResource!</span>(<span class="string">"ltx-book.css"</span>);
 
-<span class="comment">//**********************************************************************
-// Document structure.
-</span><span class="macro">RelaxNGSchema!</span>(<span class="string">"LaTeXML"</span>);
-<span class="macro">RequireResource!</span>(<span class="string">"ltx-book.css"</span>);
+  <span class="comment">// This makes the authors appear on 1 line;
+  // for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
+  </span><span class="macro">AddToMacro!</span>(<span class="string">"\\maketitle"</span>, <span class="string">"\\ltx@authors@oneline"</span>);
 
-<span class="comment">// This makes the authors appear on 1 line;
-// for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
-</span><span class="macro">AddToMacro!</span>(<span class="string">"\\maketitle"</span>, <span class="string">"\\ltx@authors@oneline"</span>);
-
-<span class="macro">DefMacro!</span>(<span class="string">"\\@ptsize"</span>, <span class="string">"0"</span>);  <span class="comment">// should depend on options...
-</span><span class="macro">TeX!</span>(<span class="string">r"
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@ptsize"</span>, <span class="string">"0"</span>); <span class="comment">// should depend on options...
+  </span><span class="macro">TeX!</span>(
+    <span class="string">r"
 \newif\if@restonecol
 \newif\if@titlepage
-\@titlepagefalse"</span>);
+\@titlepagefalse"
+  </span>);
 
-<span class="comment">//**********************************************************************
-// The core sectioning commands are defined in LaTeX.pm
-// but the counter setup, etc, depends on article
-</span><span class="macro">SetCounter!</span>(<span class="string">"secnumdepth"</span>, Number::new(<span class="number">2</span>));
-<span class="macro">NewCounter!</span>(<span class="string">"part"</span>,          <span class="string">"document"</span>,      idprefix =&gt; <span class="string">"Pt"</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">"chapter"</span>]);
-<span class="macro">NewCounter!</span>(<span class="string">"chapter"</span>,       <span class="string">"document"</span>,      idprefix =&gt; <span class="string">"Ch"</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">"section"</span>]);
-<span class="macro">NewCounter!</span>(<span class="string">"section"</span>,       <span class="string">"chapter"</span>,       idprefix =&gt; <span class="string">"S"</span>,   nested =&gt; <span class="macro">vec!</span>[<span class="string">"subsection"</span>]);
-<span class="macro">NewCounter!</span>(<span class="string">"subsection"</span>,    <span class="string">"section"</span>,       idprefix =&gt; <span class="string">"SS"</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">"subsubsection"</span>]);
-<span class="macro">NewCounter!</span>(<span class="string">"subsubsection"</span>, <span class="string">"subsection"</span>,    idprefix =&gt; <span class="string">"SSS"</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">"paragraph"</span>]);
-<span class="macro">NewCounter!</span>(<span class="string">"paragraph"</span>,     <span class="string">"subsubsection"</span>, idprefix =&gt; <span class="string">"P"</span>,   nested =&gt; <span class="macro">vec!</span>[<span class="string">"subparagraph"</span>]);
-<span class="macro">NewCounter!</span>(<span class="string">"subparagraph"</span>, <span class="string">"paragraph"</span>, idprefix =&gt; <span class="string">"SP"</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">"equation"</span>, <span class="string">"figure"</span>, <span class="string">"table"</span>]);
-<span class="macro">NewCounter!</span>(<span class="string">"footnote"</span>,     <span class="string">"chapter"</span>);
+  <span class="comment">//**********************************************************************
+  // The core sectioning commands are defined in LaTeX.pm
+  // but the counter setup, etc, depends on article
+  </span><span class="macro">SetCounter!</span>(<span class="string">"secnumdepth"</span>, Number::new(<span class="number">2</span>));
+  <span class="macro">NewCounter!</span>(<span class="string">"part"</span>,          <span class="string">"document"</span>,      idprefix =&gt; <span class="string">"Pt"</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">"chapter"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"chapter"</span>,       <span class="string">"document"</span>,      idprefix =&gt; <span class="string">"Ch"</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">"section"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"section"</span>,       <span class="string">"chapter"</span>,       idprefix =&gt; <span class="string">"S"</span>,   nested =&gt; <span class="macro">vec!</span>[<span class="string">"subsection"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"subsection"</span>,    <span class="string">"section"</span>,       idprefix =&gt; <span class="string">"SS"</span>,  nested =&gt; <span class="macro">vec!</span>[<span class="string">"subsubsection"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"subsubsection"</span>, <span class="string">"subsection"</span>,    idprefix =&gt; <span class="string">"SSS"</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">"paragraph"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"paragraph"</span>,     <span class="string">"subsubsection"</span>, idprefix =&gt; <span class="string">"P"</span>,   nested =&gt; <span class="macro">vec!</span>[<span class="string">"subparagraph"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"subparagraph"</span>, <span class="string">"paragraph"</span>, idprefix =&gt; <span class="string">"SP"</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">"equation"</span>, <span class="string">"figure"</span>, <span class="string">"table"</span>]);
+  <span class="macro">NewCounter!</span>(<span class="string">"footnote"</span>, <span class="string">"chapter"</span>);
 
-<span class="macro">DefMacro!</span>(<span class="string">"\\thepart"</span>,          <span class="string">"\\Roman{part}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\thechapter"</span>,       <span class="string">"\\arabic{chapter}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\thesection"</span>,       <span class="string">"\\thechapter.\\arabic{section}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\thesubsection"</span>,    <span class="string">"\\thesection.\\arabic{subsection}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\thesubsubsection"</span>, <span class="string">"\\thesubsection.\\arabic{subsubsection}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\theparagraph"</span>,     <span class="string">"\\thesubsubsection.\\arabic{paragraph}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\thesubparagraph"</span>,  <span class="string">"\\theparagraph.\\arabic{subparagraph}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thepart"</span>, <span class="string">"\\Roman{part}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thechapter"</span>, <span class="string">"\\arabic{chapter}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thesection"</span>, <span class="string">"\\thechapter.\\arabic{section}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thesubsection"</span>, <span class="string">"\\thesection.\\arabic{subsection}"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\thesubsubsection"</span>,
+    <span class="string">"\\thesubsection.\\arabic{subsubsection}"
+  </span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theparagraph"</span>, <span class="string">"\\thesubsubsection.\\arabic{paragraph}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\thesubparagraph"</span>, <span class="string">"\\theparagraph.\\arabic{subparagraph}"</span>);
 
-<span class="macro">DefMacro!</span>(<span class="string">"\\chaptermark{}"</span>, <span class="string">""</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\chaptermark{}"</span>, <span class="string">""</span>);
 
-<span class="macro">NewCounter!</span>(<span class="string">"equation"</span>,       <span class="string">"chapter"</span>,  idprefix =&gt; <span class="string">"E"</span>);
-<span class="macro">NewCounter!</span>(<span class="string">"@equationgroup"</span>, <span class="string">"document"</span>, idprefix =&gt; <span class="string">"EG"</span>, idwithin =&gt; <span class="string">"section"</span>);
-<span class="macro">NewCounter!</span>(<span class="string">"figure"</span>,         <span class="string">"chapter"</span>,  idprefix =&gt; <span class="string">"F"</span>);
-<span class="macro">NewCounter!</span>(<span class="string">"table"</span>,          <span class="string">"chapter"</span>,  idprefix =&gt; <span class="string">"T"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\theequation"</span>, <span class="string">r"\ifnum\c@chapter&gt;\z@\thechapter.\fi \arabic{equation}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\thefigure"</span>,   <span class="string">r"\ifnum\c@chapter&gt;\z@\thechapter.\fi \arabic{figure}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\thetable"</span>,    <span class="string">r"\ifnum\c@chapter&gt;\z@\thechapter.\fi \arabic{table}"</span>);
-<span class="macro">SetCounter!</span>(<span class="string">"tocdepth" </span>=&gt; Number::new(<span class="number">2</span>));
+  <span class="macro">NewCounter!</span>(<span class="string">"equation"</span>,       <span class="string">"chapter"</span>,  idprefix =&gt; <span class="string">"E"</span>);
+  <span class="macro">NewCounter!</span>(<span class="string">"@equationgroup"</span>, <span class="string">"document"</span>, idprefix =&gt; <span class="string">"EG"</span>, idwithin =&gt; <span class="string">"section"</span>);
+  <span class="macro">NewCounter!</span>(<span class="string">"figure"</span>,         <span class="string">"chapter"</span>,  idprefix =&gt; <span class="string">"F"</span>);
+  <span class="macro">NewCounter!</span>(<span class="string">"table"</span>,          <span class="string">"chapter"</span>,  idprefix =&gt; <span class="string">"T"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\theequation"</span>,
+    <span class="string">r"\ifnum\c@chapter&gt;\z@\thechapter.\fi \arabic{equation}"
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\thefigure"</span>,
+    <span class="string">r"\ifnum\c@chapter&gt;\z@\thechapter.\fi \arabic{figure}"
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\thetable"</span>,
+    <span class="string">r"\ifnum\c@chapter&gt;\z@\thechapter.\fi \arabic{table}"
+  </span>);
+  <span class="macro">SetCounter!</span>(<span class="string">"tocdepth" </span>=&gt; Number::new(<span class="number">2</span>));
 
-<span class="macro">DefMacro!</span>(<span class="string">"\\theenumi"</span>,   <span class="string">"\\arabic{enumi}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\theenumii"</span>,  <span class="string">"\\alph{enumii}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\theenumiii"</span>, <span class="string">"\\roman{enumiii}"</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\theenumiv"</span>,  <span class="string">"\\Alph{enumiv}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theenumi"</span>, <span class="string">"\\arabic{enumi}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theenumii"</span>, <span class="string">"\\alph{enumii}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theenumiii"</span>, <span class="string">"\\roman{enumiii}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theenumiv"</span>, <span class="string">"\\Alph{enumiv}"</span>);
 
-<span class="macro">DefMacro!</span>(<span class="string">"\\bibname"</span>, <span class="string">"Bibliography"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\bibname"</span>, <span class="string">"Bibliography"</span>);
 
-<span class="macro">AssignMapping!</span>(<span class="string">"BACKMATTER_ELEMENT"</span>, <span class="string">"ltx:bibliography" </span>=&gt; <span class="string">"ltx:chapter"</span>);
+  <span class="macro">AssignMapping!</span>(<span class="string">"BACKMATTER_ELEMENT"</span>, <span class="string">"ltx:bibliography" </span>=&gt; <span class="string">"ltx:chapter"</span>);
 
-<span class="macro">Tag!</span>(<span class="string">"ltx:appendix"</span>, auto_close =&gt; <span class="bool-val">true</span>);
-<span class="macro">DefMacro!</span>(<span class="string">"\\appendix"</span>, <span class="string">"\\@appendix"</span>);
-<span class="macro">DefPrimitive!</span>(<span class="string">"\\@appendix"</span>, { start_appendices(<span class="string">"chapter"</span>); });
+  <span class="macro">Tag!</span>(<span class="string">"ltx:appendix"</span>, auto_close =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\appendix"</span>, <span class="string">"\\@appendix"</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@appendix"</span>, {
+    start_appendices(<span class="string">"chapter"</span>);
+  });
 
-<span class="comment">// General document structure:
-// \documentclass{..}
-// preamble
-// \begin{document}
-// \frontmatter
-</span><span class="macro">DefPrimitive!</span>(<span class="string">"\\frontmatter"</span>, { <span class="macro">AssignValue!</span>(<span class="string">"no_number_sections" </span>=&gt; <span class="bool-val">true</span>); });
-<span class="comment">// frontmatter stuff
-// \maketitle
-// \include various preface, introduction, etc
-// \mainmatter
-</span><span class="macro">DefPrimitive!</span>(<span class="string">"\\mainmatter"</span>, { <span class="macro">AssignValue!</span>(<span class="string">"no_number_sections" </span>=&gt; <span class="bool-val">false</span>); });
-<span class="comment">// \include various chapters, appendices
-// \backmatter
-</span><span class="macro">DefPrimitive!</span>(<span class="string">"\\backmatter"</span>, <span class="prelude-val">None</span>);
-<span class="comment">// commands for bibliography, indices
-// \end{document}
-
-</span>});</code></pre></div></section></main></body></html>
+  <span class="comment">// General document structure:
+  // \documentclass{..}
+  // preamble
+  // \begin{document}
+  // \frontmatter
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\frontmatter"</span>, {
+    <span class="macro">AssignValue!</span>(<span class="string">"no_number_sections" </span>=&gt; <span class="bool-val">true</span>);
+  });
+  <span class="comment">// frontmatter stuff
+  // \maketitle
+  // \include various preface, introduction, etc
+  // \mainmatter
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\mainmatter"</span>, {
+    <span class="macro">AssignValue!</span>(<span class="string">"no_number_sections" </span>=&gt; <span class="bool-val">false</span>);
+  });
+  <span class="comment">// \include various chapters, appendices
+  // \backmatter
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\backmatter"</span>, <span class="prelude-val">None</span>);
+  <span class="comment">// commands for bibliography, indices
+  // \end{document}
+</span>});
+</code></pre></div></section></main></body></html>

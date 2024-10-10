@@ -142,10 +142,19 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
-
   <span class="macro">DefKeyVal!</span>(<span class="string">"xargs"</span>, <span class="string">"usedefault"</span>, <span class="string">""</span>, <span class="string">""</span>);
 
   <span class="macro">DefParameterType!</span>(XArgsOptional, sub[_inner, extra] {
@@ -164,13 +173,17 @@
 
   <span class="comment">// Macros
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\CheckCommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(
+    <span class="string">"\\CheckCommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>,
+    <span class="prelude-val">None
+  </span>);
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\newcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>, sub[(star,cs,nargs_opt,defaults,body)] {
     <span class="kw">if </span>!is_definable(<span class="kw-2">&amp;</span>cs) {
       <span class="macro">Info!</span>(<span class="string">"ignore"</span>, cs, <span class="string">"Ignoring redefinition (\\newcommandx) of '{}'"</span>,cs);
     } <span class="kw">else </span>{
-      <span class="kw">let </span>scope = <span class="kw">if </span>get_xargs_is_global(star, defaults.as_ref()) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{<span class="prelude-val">None</span>};
+      <span class="kw">let </span>scope = <span class="kw">if </span>get_xargs_is_global(star, defaults.as_ref()) { <span class="prelude-val">Some</span>(Scope::Global) }
+                  <span class="kw">else </span>{<span class="prelude-val">None</span>};
       <span class="kw">let </span>nargs = <span class="kw">if let </span><span class="prelude-val">Some</span>(nargs_tks) = nargs_opt {
         nargs_tks.to_string().parse::&lt;usize&gt;()<span class="question-mark">?
       </span>} <span class="kw">else </span>{<span class="number">0</span>};
@@ -179,19 +192,20 @@
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\renewcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>, 
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\renewcommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>,
     sub[(star,cs,nargs_opt,defaults,body)] {
     <span class="kw">let </span>scope = <span class="kw">if </span>get_xargs_is_global(star, defaults.as_ref()) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{<span class="prelude-val">None</span>};
     <span class="kw">let </span>nargs = <span class="kw">if let </span><span class="prelude-val">Some</span>(nargs_tks) = nargs_opt {
       nargs_tks.to_string().parse::&lt;usize&gt;()<span class="question-mark">?
-    </span>} <span class="kw">else </span>{<span class="number">0</span>};   
+    </span>} <span class="kw">else </span>{<span class="number">0</span>};
     <span class="macro">DefMacro!</span>(cs, convert_xargs_args(nargs, defaults.as_ref())<span class="question-mark">?</span>, body, scope=&gt;scope);
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\providecommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>, 
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\providecommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>,
     sub[(star,cs,nargs_opt,defaults,body)] {
     <span class="kw">if </span>is_definable(<span class="kw-2">&amp;</span>cs) {
-      <span class="kw">let </span>scope = <span class="kw">if </span>get_xargs_is_global(star, defaults.as_ref()) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{<span class="prelude-val">None</span>};
+      <span class="kw">let </span>scope = <span class="kw">if </span>get_xargs_is_global(star, defaults.as_ref()) { <span class="prelude-val">Some</span>(Scope::Global) }
+                  <span class="kw">else </span>{<span class="prelude-val">None</span>};
       <span class="kw">let </span>nargs = <span class="kw">if let </span><span class="prelude-val">Some</span>(nargs_tks) = nargs_opt {
         nargs_tks.to_string().parse::&lt;usize&gt;()<span class="question-mark">?
       </span>} <span class="kw">else </span>{<span class="number">0</span>};
@@ -199,7 +213,7 @@
     }
   });
 
-<span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareRobustCommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>, 
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareRobustCommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}"</span>,
   sub[(star, cs, nargs_opt, defaults, body)] {
     <span class="kw">let </span>scope = <span class="kw">if </span>get_xargs_is_global(star, defaults.as_ref()) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{<span class="prelude-val">None</span>};
     <span class="kw">let </span>munged = cs.with_str(|cstr| <span class="macro">s!</span>(<span class="string">"{cstr} "</span>));
@@ -209,10 +223,10 @@
     </span>} <span class="kw">else </span>{<span class="number">0</span>};
     <span class="kw">let </span>defaults_tks = defaults.map(|kvs| kvs.revert().ok().unwrap_or_default());
     <span class="macro">DefMacro!</span>(mungedcs, convert_latex_args(nargs, defaults_tks)<span class="question-mark">?</span>, body, scope =&gt; scope);
-    <span class="macro">DefMacro!</span>(cs, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>), mungedcs), scope=&gt;scope); 
+    <span class="macro">DefMacro!</span>(cs, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>), mungedcs), scope=&gt;scope);
   });
 
-<span class="macro">DefPrimitive!</span>(<span class="string">"\\newenvironmentx OptionalMatch:* {} [] OptionalKeyVals:xargs {}{}"</span>, 
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\newenvironmentx OptionalMatch:* {} [] OptionalKeyVals:xargs {}{}"</span>,
   sub[(star,cs_tks,nargs_opt,defaults,preamble,postamble)] {
     <span class="kw">let </span>cs_str = cs_tks.to_string();
     <span class="kw">let </span>cs_full = <span class="macro">s!</span>(<span class="string">"\\{cs_str}"</span>);
@@ -224,11 +238,11 @@
     <span class="kw">let </span>nargs = <span class="kw">if let </span><span class="prelude-val">Some</span>(nargs_tks) = nargs_opt {
       nargs_tks.to_string().parse::&lt;usize&gt;()<span class="question-mark">?
     </span>} <span class="kw">else </span>{<span class="number">0</span>};
-    <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(cs_full), convert_xargs_args(nargs, defaults.as_ref())<span class="question-mark">?</span>, preamble, scope=&gt;scope);
+    <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(cs_full), convert_xargs_args(nargs, defaults.as_ref())<span class="question-mark">?</span>,preamble, scope=&gt;scope);
     <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(end_cs_full), <span class="prelude-val">None</span>, postamble, scope =&gt; scope);
   });
 
-<span class="macro">DefPrimitive!</span>(<span class="string">"\\renewenvironmentx OptionalMatch:* {} [] OptionalKeyVals:xargs {}{}"</span>,
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\renewenvironmentx OptionalMatch:* {} [] OptionalKeyVals:xargs {}{}"</span>,
   sub[(star, cs_tks, nargs_opt, defaults, preamble, postamble)] {
     <span class="kw">let </span>cs_str = cs_tks.to_string();
     <span class="kw">let </span>scope = <span class="kw">if </span>get_xargs_is_global(star, defaults.as_ref()) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{<span class="prelude-val">None</span>};
@@ -243,40 +257,46 @@
 <span class="comment">// Utils
 
 // generate paramlist
-</span><span class="kw">fn </span>convert_xargs_args(nargs:usize, keyval:<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>KeyVals&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
+</span><span class="kw">fn </span>convert_xargs_args(nargs: usize, keyval: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>KeyVals&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>paramlist = Vec::new();
-  <span class="kw">for </span>i <span class="kw">in </span><span class="number">1 </span>..= nargs {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(val) = keyval.map(|kv| kv.get_value(<span class="kw-2">&amp;</span>i.to_string())).unwrap_or(<span class="prelude-val">None</span>) {
-      <span class="kw">let </span>usedef_opt = keyval.map(|kv| kv.get_value(<span class="string">"usedefault"</span>)).unwrap_or_default();
+  <span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..=nargs {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(val) = keyval
+      .map(|kv| kv.get_value(<span class="kw-2">&amp;</span>i.to_string()))
+      .unwrap_or(<span class="prelude-val">None</span>)
+    {
+      <span class="kw">let </span>usedef_opt = keyval
+        .map(|kv| kv.get_value(<span class="string">"usedefault"</span>))
+        .unwrap_or_default();
       <span class="kw">if let </span><span class="prelude-val">Some</span>(usedef) = usedef_opt {
         paramlist.push(Parameter::new(
-              <span class="string">"XArgsOptional"</span>,
-              <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"XArgsOptional:{val}|{usedef}"</span>),
-              <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[val.revert()<span class="question-mark">?</span>, usedef.revert()<span class="question-mark">?</span>])
-          )<span class="question-mark">?</span>); 
+          <span class="string">"XArgsOptional"</span>,
+          <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"XArgsOptional:{val}|{usedef}"</span>),
+          <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[val.revert()<span class="question-mark">?</span>, usedef.revert()<span class="question-mark">?</span>]),
+        )<span class="question-mark">?</span>);
       } <span class="kw">else </span>{
         paramlist.push(Parameter::new(
-              <span class="string">"Optional"</span>,
-              <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Optional:{val}"</span>),
-              <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[val.revert()<span class="question-mark">?</span>])
-          )<span class="question-mark">?</span>);
+          <span class="string">"Optional"</span>,
+          <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Optional:{val}"</span>),
+          <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[val.revert()<span class="question-mark">?</span>]),
+        )<span class="question-mark">?</span>);
       }
     } <span class="kw">else </span>{
-       paramlist.push(Parameter::new(<span class="string">"Plain"</span>, <span class="string">"{}"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
+      paramlist.push(Parameter::new(<span class="string">"Plain"</span>, <span class="string">"{}"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
     }
   }
-  <span class="prelude-val">Ok</span>(
-    <span class="kw">if </span>paramlist.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{
-      <span class="prelude-val">Some</span>(Parameters::new(paramlist))
-    })
+  <span class="prelude-val">Ok</span>(<span class="kw">if </span>paramlist.is_empty() {
+    <span class="prelude-val">None
+  </span>} <span class="kw">else </span>{
+    <span class="prelude-val">Some</span>(Parameters::new(paramlist))
+  })
 }
 
 <span class="doccomment">/// generate command prefix (\global, \long, ...; but not \outer)
-</span><span class="kw">fn </span>get_xargs_is_global(star:<span class="prelude-ty">Option</span>&lt;Tokens&gt;, keyval_opt:<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>KeyVals&gt;) -&gt; bool {
+</span><span class="kw">fn </span>get_xargs_is_global(star: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, keyval_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>KeyVals&gt;) -&gt; bool {
   <span class="kw">let </span><span class="kw-2">mut </span>prefix = String::new();
   <span class="kw">if </span>star.is_none() {
     <span class="comment">// defaults to \long for unstarred form
-    </span>prefix = String::from(<span class="string">"\\long"</span>); 
+    </span>prefix = String::from(<span class="string">"\\long"</span>);
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(keyval) = keyval_opt {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(p) = keyval.get_value(<span class="string">"addprefix"</span>) {
@@ -285,4 +305,5 @@
   }
   <span class="comment">// true if global in prefix
   </span>prefix.contains(<span class="string">"global"</span>)
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

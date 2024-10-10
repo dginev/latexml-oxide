@@ -936,10 +936,8 @@
 <a href="#935" id="935">935</a>
 <a href="#936" id="936">936</a>
 <a href="#937" id="937">937</a>
-<a href="#938" id="938">938</a>
-<a href="#939" id="939">939</a>
-<a href="#940" id="940">940</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base Parameter Types
-//! 
+<a href="#938" id="938">938</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base Parameter Types
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -969,57 +967,57 @@
   });
 
   <span class="macro">DefParameterType!</span>(DefPlain, sub[inner, _extra] {
-      <span class="kw">let </span><span class="kw-2">mut </span>value = ArgWrap::Tokens(gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>);
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
-        value = inner_ps.reparse_argument( value)<span class="question-mark">?</span>.remove(<span class="number">0</span>);
-      }
-      <span class="prelude-val">Ok</span>(value)
-    },
-    reversion =&gt; sub[arg, inner, _extra] {
-    <span class="comment">// let mut reverted_inner;
-    </span><span class="kw">let </span><span class="kw-2">mut </span>read_tokens: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
-    read_tokens.extend(<span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
-      inner_ps.revert_arguments(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::new(arg))])<span class="question-mark">?
-    </span>} <span class="kw">else </span>{
-      arg.iter().map(|t| t.revert()).collect()
-    });
-    read_tokens.push(<span class="macro">T_END!</span>());
-    <span class="prelude-val">Ok</span>(Tokens::new(read_tokens))
-    });
+    <span class="kw">let </span><span class="kw-2">mut </span>value = ArgWrap::Tokens(gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
+      value = inner_ps.reparse_argument( value)<span class="question-mark">?</span>.remove(<span class="number">0</span>);
+    }
+    <span class="prelude-val">Ok</span>(value)
+  },
+  reversion =&gt; sub[arg, inner, _extra] {
+  <span class="comment">// let mut reverted_inner;
+  </span><span class="kw">let </span><span class="kw-2">mut </span>read_tokens: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
+  read_tokens.extend(<span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
+    inner_ps.revert_arguments(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::new(arg))])<span class="question-mark">?
+  </span>} <span class="kw">else </span>{
+    arg.iter().map(|t| t.revert()).collect()
+  });
+  read_tokens.push(<span class="macro">T_END!</span>());
+  <span class="prelude-val">Ok</span>(Tokens::new(read_tokens))
+  });
 
   <span class="macro">DefParameterType!</span>(Optional, sub[inner, default] {
-      <span class="kw">let </span>value = gullet::read_optional(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-      <span class="kw">if </span>value.is_none() &amp;&amp; !default.is_empty() {
-        <span class="comment">// TODO: Is the default really multiple Vec&lt;Tokens&gt; ? Or just a single Tokens?
-        //       the default[0] is suspicious, compared to the original perl "$default"
-        </span>ArgWrap::Tokens(default[<span class="number">0</span>].clone())
-      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
-        <span class="kw">let </span><span class="kw-2">mut </span>reparsed = inner_ps.reparse_argument( value.into())<span class="question-mark">?</span>;
-        <span class="kw">if </span>!reparsed.is_empty() {
-          reparsed.remove(<span class="number">0</span>)
-        } <span class="kw">else </span>{
-          ArgWrap::None
-        }
+    <span class="kw">let </span>value = gullet::read_optional(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+    <span class="kw">if </span>value.is_none() &amp;&amp; !default.is_empty() {
+      <span class="comment">// TODO: Is the default really multiple Vec&lt;Tokens&gt; ? Or just a single Tokens?
+      //       the default[0] is suspicious, compared to the original perl "$default"
+      </span>ArgWrap::Tokens(default[<span class="number">0</span>].clone())
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
+      <span class="kw">let </span><span class="kw-2">mut </span>reparsed = inner_ps.reparse_argument( value.into())<span class="question-mark">?</span>;
+      <span class="kw">if </span>!reparsed.is_empty() {
+        reparsed.remove(<span class="number">0</span>)
       } <span class="kw">else </span>{
-        value.into()
+        ArgWrap::None
       }
-    },
-    optional =&gt; <span class="bool-val">true</span>,
-    reversion =&gt; sub[arg, inner, _extra] {
-      <span class="comment">// TODO: Same question for the type of "arg" as the one above "default" above:
-      //  should this be a single `Tokens` rather than a `Vec&lt;Token&gt;`?
-      </span><span class="kw">if </span>!arg.is_empty() {
-        <span class="kw">let </span><span class="kw-2">mut </span>read_tokens: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"["</span>)];
-        read_tokens.extend(<span class="kw">match </span>inner {
-          <span class="prelude-val">None </span>=&gt; arg.into_iter().map(Token::revert).collect(),
-          <span class="prelude-val">Some</span>(inner_ps) =&gt; inner_ps.revert_arguments(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::new(arg))])<span class="question-mark">?</span>,
-        });
-        read_tokens.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
-        <span class="prelude-val">Ok</span>(Tokens::new(read_tokens))
-      } <span class="kw">else </span>{
-        <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-      }
-    });
+    } <span class="kw">else </span>{
+      value.into()
+    }
+  },
+  optional =&gt; <span class="bool-val">true</span>,
+  reversion =&gt; sub[arg, inner, _extra] {
+    <span class="comment">// TODO: Same question for the type of "arg" as the one above "default" above:
+    //  should this be a single `Tokens` rather than a `Vec&lt;Token&gt;`?
+    </span><span class="kw">if </span>!arg.is_empty() {
+      <span class="kw">let </span><span class="kw-2">mut </span>read_tokens: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"["</span>)];
+      read_tokens.extend(<span class="kw">match </span>inner {
+        <span class="prelude-val">None </span>=&gt; arg.into_iter().map(Token::revert).collect(),
+        <span class="prelude-val">Some</span>(inner_ps) =&gt; inner_ps.revert_arguments(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::new(arg))])<span class="question-mark">?</span>,
+      });
+      read_tokens.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
+      <span class="prelude-val">Ok</span>(Tokens::new(read_tokens))
+    } <span class="kw">else </span>{
+      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+    }
+  });
 
   <span class="comment">// This is a peculiar type of argument of the form
   //   &lt;general text&gt; = &lt;filler&gt;{&lt;balanced text&gt;&lt;right brace&gt;
@@ -1160,7 +1158,6 @@
     tks.push(<span class="macro">T_END!</span>());
     <span class="prelude-val">Ok</span>(Tokens::new(tks))
   });
-
 
   <span class="comment">// Like Expanded, but defers \protected, and \the expanded only once.
   // Similar to when \edef is used.
@@ -1529,7 +1526,6 @@
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
 
-
   //TODO: Refactor and add TeXDelimiter
   </span><span class="macro">DefParameterType!</span>(Digested, sub[_inner, _extra] {
       gullet::skip_spaces()<span class="question-mark">?</span>;
@@ -1692,54 +1688,59 @@
   //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 
   </span><span class="kw">pub fn </span>required_key_vals(
-    star:bool, plus:bool, _inner: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, extra:<span class="kw-2">&amp;</span>[Tokens]) -&gt; <span class="prelude-ty">Result</span>&lt;KeyVals&gt; {
+    star: bool,
+    plus: bool,
+    _inner: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;,
+    extra: <span class="kw-2">&amp;</span>[Tokens],
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;KeyVals&gt; {
     <span class="kw">if </span>gullet::if_next(<span class="macro">T_BEGIN!</span>())<span class="question-mark">? </span>{
       <span class="kw">let </span><span class="kw-2">mut </span>extra_iter = extra.iter();
       <span class="comment">// subtle!!! The first extra is the prefix, according to the Perl use.
       </span><span class="kw">let </span>prefix = extra_iter.next().map(ToString::to_string);
       <span class="comment">// TODO: is the last extra field actually a "skip" ? Example?
       </span><span class="kw">let </span>keysets = extra_iter.map(ToString::to_string).collect();
-      keyvals_aux( <span class="prelude-val">Some</span>(<span class="macro">T_END!</span>()), KVSpec {
-        star, plus,
+      keyvals_aux(<span class="prelude-val">Some</span>(<span class="macro">T_END!</span>()), KVSpec {
+        star,
+        plus,
         prefix,
         keysets,
         ..KVSpec::default()
       })
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">"Expected"</span>,<span class="string">"{"</span>, <span class="string">"Missing keyval arguments"</span>);
+      <span class="macro">Error!</span>(<span class="string">"Expected"</span>, <span class="string">"{"</span>, <span class="string">"Missing keyval arguments"</span>);
       <span class="prelude-val">Ok</span>(KeyVals::default())
     }
   }
 
   <span class="macro">DefParameterType!</span>(RequiredKeyVals, sub[inner, extra] {
-      required_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, extra)
-    },
-    reversion =&gt; sub[arg, _inner, _extra] {
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-    });
+    required_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, extra)
+  },
+  reversion =&gt; sub[arg, _inner, _extra] {
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+  });
   <span class="macro">DefParameterType!</span>(RequiredKeyValsStar, sub[inner, extra] {
-      required_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, extra)
-    },
-    reversion =&gt; sub[arg, _inner, _extra] {
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-    });
+    required_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, extra)
+  },
+  reversion =&gt; sub[arg, _inner, _extra] {
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+  });
   <span class="macro">DefParameterType!</span>(RequiredKeyValsPlus, sub[inner, extra] {
-      required_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, extra)
-    },
-    reversion =&gt; sub[arg, _inner, _extra] {
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-    });
+    required_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, extra)
+  },
+  reversion =&gt; sub[arg, _inner, _extra] {
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+  });
   <span class="macro">DefParameterType!</span>(RequiredKeyValsStarPlus, sub[inner, extra] {
-      required_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, extra)
-    }, reversion =&gt; sub[arg, _inner, _extra] {
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-    });
+    required_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, extra)
+  }, reversion =&gt; sub[arg, _inner, _extra] {
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+  });
 
   <span class="kw">pub fn </span>optional_key_vals(
     star: bool,
     plus: bool,
     _inner: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;,
-    extra: <span class="kw-2">&amp;</span>[Tokens]
+    extra: <span class="kw-2">&amp;</span>[Tokens],
   ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;KeyVals&gt;&gt; {
     <span class="kw">if </span>gullet::if_next(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))<span class="question-mark">? </span>{
       <span class="kw">let </span><span class="kw-2">mut </span>extra_iter = extra.iter();
@@ -1747,16 +1748,13 @@
       </span><span class="kw">let </span>prefix = extra_iter.next().map(ToString::to_string);
       <span class="comment">// TODO: is the last extra field actually a "skip" ? Example?
       </span><span class="kw">let </span>keysets = extra_iter.map(ToString::to_string).collect();
-      <span class="kw">let </span>kvs: KeyVals = keyvals_aux(
-        <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)),
-        KVSpec {
-          star,
-          plus,
-          prefix,
-          keysets,
-          ..KVSpec::default()
-        },
-          )<span class="question-mark">?</span>;
+      <span class="kw">let </span>kvs: KeyVals = keyvals_aux(<span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)), KVSpec {
+        star,
+        plus,
+        prefix,
+        keysets,
+        ..KVSpec::default()
+      })<span class="question-mark">?</span>;
       <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(kvs))
     } <span class="kw">else </span>{
       <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
@@ -1791,14 +1789,14 @@
   <span class="comment">// Not sure that this is the most elegant solution, but...
   // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
   </span><span class="macro">DefParameterType!</span>(DisplayStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
-    before_digest =&gt; {
-      bgroup();
-      <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"display"</span>);
-    },
-    after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
-    reversion =&gt; sub[arg, _inner, _extra] {
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-    });
+  before_digest =&gt; {
+    bgroup();
+    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"display"</span>);
+  },
+  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
+  reversion =&gt; sub[arg, _inner, _extra] {
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+  });
   <span class="comment">// TODO: Add when needed
   // DefParameterType!(TextStyle, sub[inner, _extra] {
   //     $_[0]-&gt;readArg; },
@@ -1827,54 +1825,53 @@
   // # Perverse naming convention: not script style, but in the style of a script relative to
   // current.
   </span><span class="macro">DefParameterType!</span>(InScriptStyle, sub[_inner, _extra] {
-      gullet::read_arg(ExpansionLevel::Off) },
-    before_digest =&gt; {
-      bgroup();
-      <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
-    },
-    after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
-    reversion =&gt; sub[arg, _inner, _extra] {
-        <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-    });
+    gullet::read_arg(ExpansionLevel::Off) },
+  before_digest =&gt; {
+    bgroup();
+    <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
+  },
+  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
+  reversion =&gt; sub[arg, _inner, _extra] {
+      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+  });
   <span class="comment">// # NOTE: the various parameter features don't combine easily!!
   // # I need a ScriptStyleUntil for \root!!!
   // # I also need to redo fractions using these new types....
   </span><span class="macro">DefParameterType!</span>(OptionalInScriptStyle, sub[_inner, _extra] {
-      gullet::read_optional(<span class="prelude-val">None</span>)
-    },
-    before_digest =&gt; {
-      bgroup();
-      <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
-    },
-    after_digest =&gt; {
-      egroup()<span class="question-mark">?</span>;
-    },
-    optional =&gt; <span class="bool-val">true</span>,
-    reversion =&gt; sub[arg,_inner,_extra] {
-      <span class="kw">if </span>arg.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
-      <span class="kw">else </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>tks = <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"["</span>)];
-        tks.extend(arg.into_iter().map(|t| t.revert()));
-        tks.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
-        <span class="prelude-val">Ok</span>(Tokens::new(tks))
-      }
-    });
+    gullet::read_optional(<span class="prelude-val">None</span>)
+  },
+  before_digest =&gt; {
+    bgroup();
+    <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
+  },
+  after_digest =&gt; {
+    egroup()<span class="question-mark">?</span>;
+  },
+  optional =&gt; <span class="bool-val">true</span>,
+  reversion =&gt; sub[arg,_inner,_extra] {
+    <span class="kw">if </span>arg.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
+    <span class="kw">else </span>{
+      <span class="kw">let </span><span class="kw-2">mut </span>tks = <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"["</span>)];
+      tks.extend(arg.into_iter().map(|t| t.revert()));
+      tks.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
+      <span class="prelude-val">Ok</span>(Tokens::new(tks))
+    }
+  });
   <span class="macro">DefParameterType!</span>(InFractionStyle, sub[_inner, _extra] {
-      gullet::read_arg(ExpansionLevel::Off)
-    },
-    before_digest =&gt; {
-      bgroup();
-      <span class="macro">MergeFont!</span>(fraction =&gt; <span class="bool-val">true</span>);
-    },
-    after_digest =&gt; {
-      egroup()<span class="question-mark">?</span>;
-    },
-    reversion =&gt; sub[arg,_inner,_extra] {
-      <span class="kw">let </span><span class="kw-2">mut </span>reverted = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
-      reverted.extend(arg.into_iter().map(Token::revert));
-      reverted.push(<span class="macro">T_END!</span>());
-      <span class="prelude-val">Ok</span>(Tokens::new(reverted))
-    });
-
-
-});</code></pre></div></section></main></body></html>
+    gullet::read_arg(ExpansionLevel::Off)
+  },
+  before_digest =&gt; {
+    bgroup();
+    <span class="macro">MergeFont!</span>(fraction =&gt; <span class="bool-val">true</span>);
+  },
+  after_digest =&gt; {
+    egroup()<span class="question-mark">?</span>;
+  },
+  reversion =&gt; sub[arg,_inner,_extra] {
+    <span class="kw">let </span><span class="kw-2">mut </span>reverted = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
+    reverted.extend(arg.into_iter().map(Token::revert));
+    reverted.push(<span class="macro">T_END!</span>());
+    <span class="prelude-val">Ok</span>(Tokens::new(reverted))
+  });
+});
+</code></pre></div></section></main></body></html>

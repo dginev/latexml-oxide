@@ -20,9 +20,8 @@
 <a href="#19" id="19">19</a>
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
-<a href="#22" id="22">22</a>
-<a href="#23" id="23">23</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Marks
-//! 
+<a href="#22" id="22">22</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Marks
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -37,10 +36,10 @@
   // \topmark          c  is the value of \botmark on the previous page.
   // \botmark          c  is the mark text most recently encountered on a page.
   // \firstmark        c  is the mark text first encountered on a page.
-  
+
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\mark{}"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\topmark"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\firstmark"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\botmark"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
-
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

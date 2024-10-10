@@ -137,10 +137,20 @@
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::{Document, Node, NodeType};
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::error::Result;
+<span class="kw">use </span>libxml::tree::{Document, Node, NodeType};
 <span class="kw">use </span>libxml::xpath::Context;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
-<span class="kw">use </span><span class="kw">crate</span>::common::error::Result;
 <span class="kw">use </span>std::borrow::Cow;
 
 <span class="kw">pub const </span>XMLNS_NS: <span class="kw-2">&amp;</span>str = <span class="string">"http://www.w3.org/2000/xmlns/"</span>;
@@ -177,7 +187,10 @@
       <span class="prelude-val">Ok</span>(nodes) =&gt; nodes,
       <span class="prelude-val">Err</span>(e) =&gt; {
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
-        <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"xpath"</span>, <span class="string">"findnodes"</span>, message); <span class="prelude-val">Ok</span>(()) };
+        <span class="kw">let </span>err = || {
+          <span class="macro">Error!</span>(<span class="string">"xpath"</span>, <span class="string">"findnodes"</span>, message);
+          <span class="prelude-val">Ok</span>(())
+        };
         err().ok();
         <span class="macro">panic!</span>(<span class="string">"this is an external libxml2 error; unwinding..."</span>);
       },
@@ -189,7 +202,10 @@
       <span class="prelude-val">Ok</span>(vals) =&gt; vals,
       <span class="prelude-val">Err</span>(e) =&gt; {
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
-        <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"xpath"</span>, <span class="string">"findvalues"</span>, message); <span class="prelude-val">Ok</span>(())};
+        <span class="kw">let </span>err = || {
+          <span class="macro">Error!</span>(<span class="string">"xpath"</span>, <span class="string">"findvalues"</span>, message);
+          <span class="prelude-val">Ok</span>(())
+        };
         err().ok();
         Vec::new()
       },
@@ -241,8 +257,12 @@
   node
     .get_child_nodes()
     .into_iter()
-    .filter(|n| <span class="macro">matches!</span>(n.get_type(), 
-        <span class="prelude-val">Some</span>(NodeType::ElementNode) | <span class="prelude-val">Some</span>(NodeType::TextNode)))
+    .filter(|n| {
+      <span class="macro">matches!</span>(
+        n.get_type(),
+        <span class="prelude-val">Some</span>(NodeType::ElementNode) | <span class="prelude-val">Some</span>(NodeType::TextNode)
+      )
+    })
     .collect()
 }
 

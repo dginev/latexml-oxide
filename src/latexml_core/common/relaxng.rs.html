@@ -50,7 +50,7 @@
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Relaxng {
   <span class="doccomment">/// the schema name
-  </span><span class="kw">pub </span>name: String,
+  </span><span class="kw">pub </span>name:    String,
   <span class="doccomment">/// dependent modules
   </span><span class="kw">pub </span>modules: Vec&lt;String&gt;,
   <span class="comment">// TODO:
@@ -63,7 +63,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Relaxng {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Relaxng {
-      name: <span class="macro">s!</span>(<span class="string">"LaTeXML"</span>),
+      name:    <span class="macro">s!</span>(<span class="string">"LaTeXML"</span>),
       modules: Vec::new(),
       <span class="comment">// elementdefs: HashMap::default(),
       // defs: HashMap::default(),

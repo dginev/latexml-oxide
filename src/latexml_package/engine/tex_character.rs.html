@@ -220,13 +220,16 @@
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Character
-//! 
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Character
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<span class="kw">use </span>unicode_normalization::char::compose;
 <span class="kw">use </span>unicode_normalization::UnicodeNormalization;
+<span class="kw">use </span>unicode_normalization::char::compose;
 
 <span class="kw">static </span>SPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\s"</span>).unwrap());
 
@@ -234,15 +237,20 @@
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Character Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // \ (ctrl space)    c  inserts a control space.
   // \char           c  provides access to one of the 256 characters in a font.
   //----------------------------------------------------------------------
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ "</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{00A0}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\ "</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{00A0}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\ "</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"space"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
-      <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.5em"</span>)<span class="question-mark">?</span>))
+      <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.5em"</span>)<span class="question-mark">?</span>),
+    )
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\char Number"</span>, sub[(number)] {
@@ -275,8 +283,8 @@
   //     my ($stomach, $num, $letter) = @_;
   //     my $n        = $num-&gt;valueOf;
   //     my $fontinfo = lookupFontinfo(LookupValue('textfont_0'));
-  //     my $acc      = ($fontinfo &amp;&amp; $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : chr($n));
-  //     my $reversion = Invocation(T_CS('\accent'), $num, $letter);
+  //     my $acc      = ($fontinfo &amp;&amp; $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) :
+  // chr($n));     my $reversion = Invocation(T_CS('\accent'), $num, $letter);
   //     # NOTE: REVERSE LOOKUP in above accent list for the non-spacing accent char
   //     # BUT, \accent always (?) makes an above type accent... doesn't it?
   //     if (my $combiner = LookupMapping('accent_combiner_above', $acc)
@@ -286,9 +294,9 @@
   //       Warn('unexpected', "accent$n", $stomach, "Accent '$n' not recognized");
   //       Box(ToString($letter), undef, undef, $reversion); } });
 
-
   //======================================================================
-  // \chardef        iq provides an alternate way to define a control sequence that returns a character.
+  // \chardef        iq provides an alternate way to define a control sequence that returns a
+  // character.
   //----------------------------------------------------------------------
 
   // Almost like a register (and \countdef), but different...
@@ -396,14 +404,12 @@
   // Special character codes
   //----------------------------------------------------------------------
   // \endlinechar    pi is the character added to the end of input lines.
-  // \escapechar     pi is the character used for category 0 characters when outputting control sequences.
-  // \newlinechar    pi is the character which begins a new line of output.
+  // \escapechar     pi is the character used for category 0 characters when outputting control
+  // sequences. \newlinechar    pi is the character which begins a new line of output.
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\endlinechar"</span>, <span class="macro">Number!</span>(<span class="number">13</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\escapechar"</span>, <span class="macro">Number!</span>(<span class="number">92</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\newlinechar"</span>, <span class="macro">Number!</span>(-<span class="number">1</span>));
-
 });
-
 
 <span class="comment">// Create a box applying an accent to a letter
 // Hopefully, we'll get a Box from digestion with a plain string.

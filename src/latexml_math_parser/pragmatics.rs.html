@@ -759,14 +759,14 @@
   /// All levels must validate for the full tree to be valid.
   </span><span class="kw">pub fn </span>validate_recursive(<span class="kw-2">&amp;</span><span class="self">self</span>, tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
     <span class="self">self</span>.validate(tree)<span class="question-mark">?</span>; <span class="comment">// top-level check
-                          // Recursive check:
+    // Recursive check:
     </span><span class="kw">match </span>tree {
       XM::Choices(subtrees) =&gt; {
         <span class="kw">for </span>subtree <span class="kw">in </span>subtrees.iter() {
           <span class="self">self</span>.validate_recursive(subtree)<span class="question-mark">?
         </span>}
       },
-      XM::Apply(Operator(op), args, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+      XM::Apply(Operator(op), args, ..) =&gt; {
         <span class="self">self</span>.validate_recursive(op)<span class="question-mark">?</span>;
         <span class="kw">for </span>arg_subtree <span class="kw">in </span>args.trees() {
           <span class="self">self</span>.validate_recursive(arg_subtree)<span class="question-mark">?</span>;
@@ -846,7 +846,7 @@
 }
 
 <span class="kw">fn </span>pragma_fenced_atoms_are_not_functions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), ..) = tree {
     <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>_lexeme, <span class="kw-2">ref </span>atom_meta) = <span class="kw-2">**</span>op {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>fences) = atom_meta.fenced {
         <span class="kw">if </span>fences.as_str() == <span class="string">"parens" </span>{
@@ -861,7 +861,7 @@
 }
 
 <span class="kw">fn </span>pragma_fenced_letters_are_function_arguments(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
       XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">"x.invisible_operator" </span>=&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(top_lhs) = args.trees().first() {
@@ -928,7 +928,7 @@
 /// pruning, as there are known, albeit rare, counter-examples ("f x").
 </span><span class="kw">fn </span>pragma_unfenced_letter_arguments_require_visual_cues(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">match </span><span class="kw-2">*</span>tree {
-    XM::Apply(Operator(<span class="kw-2">ref </span>op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>=&gt; {
+    XM::Apply(Operator(<span class="kw-2">ref </span>op), <span class="kw-2">ref </span>args, ..) <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>=&gt; {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw-2">ref </span>arg_name, <span class="kw-2">ref </span>atom_meta)) = args.<span class="number">0</span>[<span class="number">0</span>] {
         <span class="kw">if </span>atom_meta.fenced.is_none() {
           <span class="kw">let </span>(arg_base, _sep, lexeme) = distill_lexeme(arg_name);
@@ -976,7 +976,7 @@
 /// appear as list elements.
 </span><span class="kw">fn </span>pragma_opfunctions_are_rarely_arguments(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">match </span><span class="kw-2">*</span>tree {
-    XM::Apply(<span class="kw">_</span>, <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>=&gt; {
+    XM::Apply(<span class="kw">_</span>, <span class="kw-2">ref </span>args, ..) <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>=&gt; {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw-2">ref </span>arg_name, <span class="kw-2">ref </span>atom_meta)) = args.<span class="number">0</span>[<span class="number">0</span>] {
         <span class="kw">if </span>arg_name.starts_with(<span class="string">"OPFUNCTION"</span>) &amp;&amp; atom_meta.fenced.is_none() {
           <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"OPFUNCTIONs are rarely arguments, prune."</span>.into());
@@ -996,7 +996,7 @@
 /// Mostly since we can't enforce IDs to strictly have "curry=1", rather
 /// we need them with "curry &gt;= 1", to stay a little more lenient.
 </span><span class="kw">fn </span>pragma_higher_order_ids_are_exceptions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, ..) = tree {
     <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>{
       <span class="kw">match </span><span class="kw-2">&amp;*</span>op.<span class="number">0 </span>{
         XM::Lexeme(<span class="kw-2">ref </span>op_name, <span class="kw">_</span>) <span class="kw">if </span>op_name.starts_with(<span class="string">"ID:"</span>) =&gt; <span class="kw">match </span>args.<span class="number">0</span>[<span class="number">0</span>] {
@@ -1008,7 +1008,7 @@
               <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ID applied to unfenced ID is highly unusual, prune."</span>.into());
             }
           },
-          <span class="prelude-val">Some</span>(XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>)) =&gt; {
+          <span class="prelude-val">Some</span>(XM::Apply(..)) =&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ID of a higher order shouldn't accept any compound trees."</span>.into());
           },
           <span class="kw">_ </span>=&gt; {},
@@ -1025,7 +1025,7 @@
 /// A right-associative application h(f(x,y)) is instead.
 /// Prune it out if possible.
 </span><span class="kw">fn </span>pragma_higher_order_invisible_ops_are_exceptions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
       XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">"x.invisible_operator" </span>=&gt; {
         <span class="kw">let </span>trees = args.trees();
@@ -1056,7 +1056,7 @@
 /// that they are to be multiplied Prune such parses. We have special rules for some notations, such
 /// as "dlmf_range".
 </span><span class="kw">fn </span>pragma_adjacent_numbers_dont_use_invisible_times(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
       XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">"x.invisible_operator" </span>=&gt; {
         <span class="kw">let </span>arg_trees = args.trees();
@@ -1084,7 +1084,7 @@
 /// The only case (that I currently know) of a standalone "d" is in the Lebnitz derivative notation.
 /// For which we have a special rule. So the generic fraction parse should be pruned.
 </span><span class="kw">fn </span>pragma_standalone_diffops_are_not_numerators(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
       XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme.starts_with(<span class="string">"MULOP"</span>) =&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw-2">ref </span>numlexeme, <span class="kw">_</span>)) = args.trees().first() {
@@ -1103,7 +1103,7 @@
 /// function symbols say " f_i g_j ". This pragma prunes trees that applies two adjacent scripted
 /// constructs.
 </span><span class="kw">fn </span>pragma_adjacent_unfenced_scripts_dont_apply(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
     <span class="kw">if </span>args.trees().len() == <span class="number">1 </span>{
       <span class="kw">if let </span>XM::Apply(Operator(<span class="kw-2">ref </span>op_op), <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>op_meta) = <span class="kw-2">**</span>op {
         <span class="kw">let </span>op_base_name = op_op.base_operator_name();
@@ -1127,7 +1127,7 @@
 <span class="doccomment">/// Adjacent functions don't unify into a single operator
 /// as they are meant to apply right-to-left, one-by-one
 </span><span class="kw">fn </span>pragma_adjacent_functions_dont_unify_into_op(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), ..) = tree {
     <span class="kw">if let </span>XM::Apply(Operator(inner_op), inner_args, <span class="kw">_</span>, inner_meta) = <span class="kw-2">&amp;**</span>op {
       <span class="kw">if </span>inner_meta.fenced.is_none() {
         <span class="kw">if let </span>XM::Lexeme(name, <span class="kw">_</span>) = inner_op.get_baseline() {
@@ -1151,7 +1151,7 @@
 }
 <span class="doccomment">/// Postfix
 </span><span class="kw">fn </span>pragma_postfix_terms_are_fenced_if_single_arg(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
     <span class="kw">let </span>arg_trees = args.trees();
     <span class="kw">if </span>arg_trees.len() == <span class="number">1 </span>{
       <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Apply(Operator(arg_op), <span class="kw">_</span>, <span class="kw">_</span>, arg_meta)) = arg_trees.first() {
@@ -1173,7 +1173,7 @@
 }
 
 <span class="kw">fn </span>pragma_restrict_numeral_fractions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
+  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
       XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme == <span class="string">"arith1.divide" </span>=&gt; {
         <span class="kw">let </span>arg_trees = args.trees();

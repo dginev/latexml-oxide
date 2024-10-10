@@ -158,7 +158,10 @@
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a></pre></div><pre class="rust"><code><span class="doccomment">//! An arena for interning strings
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a></pre></div><pre class="rust"><code><span class="doccomment">//! An arena for interning strings
 //!  (global, mutable, single thread only)
 //!
 //! Note: works under the assumption of a single threaded, short-lived process,
@@ -169,17 +172,22 @@
 
 <span class="kw">use </span>rustc_hash::FxHasher;
 
-<span class="kw">use </span>std::hash::BuildHasherDefault;
-<span class="kw">use </span>string_interner::backend::BufferBackend;
-<span class="kw">use </span>string_interner::StringInterner;
 <span class="kw">use </span>once_cell::sync::Lazy;
+<span class="kw">use </span>std::hash::BuildHasherDefault;
+<span class="kw">use </span>string_interner::StringInterner;
+<span class="kw">use </span>string_interner::backend::BufferBackend;
 
 <span class="kw">pub mod </span>data;
-<span class="kw">pub use </span>data::{SymStr, SymHashMap};
+<span class="kw">pub use </span>data::{SymHashMap, SymStr};
 
 <span class="attr">#[thread_local]
-</span><span class="kw">static </span>ARENA: Lazy&lt;RefCell&lt;StringInterner&lt;BufferBackend, BuildHasherDefault&lt;FxHasher&gt;&gt;&gt;&gt; = Lazy::new(|| RefCell::new(
-  StringInterner::with_capacity_and_hasher(<span class="number">32_768</span>, BuildHasherDefault::&lt;FxHasher&gt;::default())));
+</span><span class="kw">static </span>ARENA: Lazy&lt;RefCell&lt;StringInterner&lt;BufferBackend, BuildHasherDefault&lt;FxHasher&gt;&gt;&gt;&gt; =
+  Lazy::new(|| {
+    RefCell::new(StringInterner::with_capacity_and_hasher(
+      <span class="number">32_768</span>,
+      BuildHasherDefault::&lt;FxHasher&gt;::default(),
+    ))
+  });
 <span class="doccomment">/// the unique symbol for str value "ANY"
 </span><span class="attr">#[thread_local]
 </span><span class="kw">pub static </span>ANY_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ANY"</span>));
@@ -200,56 +208,52 @@
 </span><span class="kw">pub static </span>LTX_P_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:p"</span>));
 <span class="doccomment">/// the unique symbol for str value "\globaldefs"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>GLOBAL_DEFS_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"\\globaldefs"</span>));
+</span><span class="kw">pub static </span>GLOBAL_DEFS_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"\\globaldefs"</span>));
 <span class="doccomment">/// the unique symbol for str value "\dont_expand"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>DONT_EXPAND_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"\\dont_expand"</span>));
+</span><span class="kw">pub static </span>DONT_EXPAND_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"\\dont_expand"</span>));
 <span class="doccomment">/// the unique symbol for str value "_WildCard_"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>WILD_CARD_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"_WildCard_"</span>));
+</span><span class="kw">pub static </span>WILD_CARD_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"_WildCard_"</span>));
 <span class="doccomment">/// the unique symbol for str value "#ProcessingInstruction"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>H_PI_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#ProcessingInstruction"</span>));
+</span><span class="kw">pub static </span>H_PI_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#ProcessingInstruction"</span>));
 <span class="doccomment">/// the unique symbol for str value "#DTD"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>H_DTD_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#DTD"</span>));
+</span><span class="kw">pub static </span>H_DTD_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#DTD"</span>));
 <span class="doccomment">/// the unique symbol for str value "#Document"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>H_DOC_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#Document"</span>));
+</span><span class="kw">pub static </span>H_DOC_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#Document"</span>));
 <span class="doccomment">/// the unique symbol for str value "#default"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>H_DEFAULT_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#default"</span>));
+</span><span class="kw">pub static </span>H_DEFAULT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#default"</span>));
 <span class="doccomment">/// the unique symbol for str value "ltx:_Capture_"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>CAPTURE_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:_Capture_"</span>));
+</span><span class="kw">pub static </span>CAPTURE_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:_Capture_"</span>));
 <span class="doccomment">/// the unique symbol for str value "font"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>FONT_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"font"</span>));
+</span><span class="kw">pub static </span>FONT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"font"</span>));
 <span class="doccomment">/// the unique symbol for str value "xml:id"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>XML_ID_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"xml:id"</span>));
+</span><span class="kw">pub static </span>XML_ID_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"xml:id"</span>));
 <span class="doccomment">/// the unique symbol for str value "DTD"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>DTD_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"DTD"</span>));
+</span><span class="kw">pub static </span>DTD_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"DTD"</span>));
 <span class="doccomment">/// the unique symbol for str value "RelaxNG"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>RELAXNG_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"RelaxNG"</span>));
+</span><span class="kw">pub static </span>RELAXNG_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"RelaxNG"</span>));
 <span class="doccomment">/// the unique symbol for str value "text"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>TEXT_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"text"</span>));
+</span><span class="kw">pub static </span>TEXT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"text"</span>));
 <span class="doccomment">/// the unique symbol for str value "math"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>MATH_SYM : Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"math"</span>));
+</span><span class="kw">pub static </span>MATH_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"math"</span>));
 
 <span class="doccomment">/// Assign a static str into the arena, returning a unique symbol associated with it
-</span><span class="kw">pub fn </span>pin_static(text: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; SymStr {
-  ARENA.borrow_mut().get_or_intern_static(text)
-}
+</span><span class="kw">pub fn </span>pin_static(text: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; SymStr { ARENA.borrow_mut().get_or_intern_static(text) }
 
 <span class="doccomment">/// Assign a string into the arena, returning a unique symbol associated with it
-</span><span class="kw">pub fn </span>pin&lt;S: AsRef&lt;str&gt;&gt;(text: S) -&gt; SymStr {
-  ARENA.borrow_mut().get_or_intern(text)
-}
+</span><span class="kw">pub fn </span>pin&lt;S: AsRef&lt;str&gt;&gt;(text: S) -&gt; SymStr { ARENA.borrow_mut().get_or_intern(text) }
 
 <span class="kw">pub fn </span>pin_char(c: char) -&gt; SymStr {
   <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
@@ -257,64 +261,67 @@
   pin(s)
 }
 
-<span class="kw">pub fn </span>into_pin&lt;T:ToString&gt;(num: T) -&gt; SymStr {
-  pin(num.to_string())
-}
+<span class="kw">pub fn </span>into_pin&lt;T: ToString&gt;(num: T) -&gt; SymStr { pin(num.to_string()) }
 
 <span class="kw">pub fn </span>with&lt;R, FnR&gt;(sym: SymStr, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
-    caller(
-      ARENA
-        .borrow()
-        .resolve(sym)
-        .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>),
-    )
+  caller(
+    ARENA
+      .borrow()
+      .resolve(sym)
+      .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>),
+  )
 }
 
 <span class="kw">pub fn </span>with2&lt;R, FnR&gt;(sym1: SymStr, sym2: SymStr, caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str,<span class="kw-2">&amp;</span>str) -&gt; R {
+<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) -&gt; R {
   <span class="kw">let </span>arena = ARENA.borrow();
-  <span class="kw">let </span>str1 = arena.resolve(sym1)
+  <span class="kw">let </span>str1 = arena
+    .resolve(sym1)
     .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-  <span class="kw">let </span>str2 = arena.resolve(sym2)
+  <span class="kw">let </span>str2 = arena
+    .resolve(sym2)
     .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-  caller(str1,str2)
+  caller(str1, str2)
 }
-<span class="kw">pub fn </span>with3&lt;R, FnR&gt;(sym1: SymStr, sym2: SymStr, sym3:SymStr, caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str,<span class="kw-2">&amp;</span>str,<span class="kw-2">&amp;</span>str) -&gt; R {
+<span class="kw">pub fn </span>with3&lt;R, FnR&gt;(sym1: SymStr, sym2: SymStr, sym3: SymStr, caller: FnR) -&gt; R
+<span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) -&gt; R {
   <span class="kw">let </span>arena = ARENA.borrow();
-  <span class="kw">let </span>str1 = arena.resolve(sym1)
+  <span class="kw">let </span>str1 = arena
+    .resolve(sym1)
     .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-  <span class="kw">let </span>str2 = arena.resolve(sym2)
+  <span class="kw">let </span>str2 = arena
+    .resolve(sym2)
     .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-  <span class="kw">let </span>str3 = arena.resolve(sym3)
+  <span class="kw">let </span>str3 = arena
+    .resolve(sym3)
     .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-  caller(str1,str2,str3)
+  caller(str1, str2, str3)
 }
 
 <span class="kw">pub fn </span>with_many&lt;R, FnR&gt;(syms: <span class="kw-2">&amp;</span>[SymStr], caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(Vec&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; R {
   <span class="kw">let </span>arena = ARENA.borrow();
-  <span class="kw">let </span>many = syms.iter().map(|sym| arena.resolve(<span class="kw-2">*</span>sym)
-    .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>)).collect();
+  <span class="kw">let </span>many = syms
+    .iter()
+    .map(|sym| {
+      arena
+        .resolve(<span class="kw-2">*</span>sym)
+        .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>)
+    })
+    .collect();
   caller(many)
 }
 
 <span class="kw">pub fn </span>to_string(sym: SymStr) -&gt; String {
-  ARENA.borrow()
+  ARENA
+    .borrow()
     .resolve(sym)
-    .expect(
-      <span class="string">"arena::to_string should only be called when the string is guaranteed to be allocated."</span>,
-    )
+    .expect(<span class="string">"arena::to_string should only be called when the string is guaranteed to be allocated."</span>)
     .to_owned()
 }
 
-<span class="kw">pub fn </span>join(syms: <span class="kw-2">&amp;</span>[SymStr], sep:<span class="kw-2">&amp;</span>str) -&gt; String {
-  with_many(syms, |strs| {
-    strs.join(sep)
-  })
-}
+<span class="kw">pub fn </span>join(syms: <span class="kw-2">&amp;</span>[SymStr], sep: <span class="kw-2">&amp;</span>str) -&gt; String { with_many(syms, |strs| strs.join(sep)) }
 
-<span class="kw">pub fn </span>len() -&gt; usize {
-  ARENA.borrow().len()
-}</code></pre></div></section></main></body></html>
+<span class="kw">pub fn </span>len() -&gt; usize { ARENA.borrow().len() }
+</code></pre></div></section></main></body></html>

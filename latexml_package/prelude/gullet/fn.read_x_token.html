@@ -6,8 +6,8 @@
 <p>Note that most tokens pass through here, so be Fast &amp; Clean! readToken is folded in.
 <code>Toplevel' processing, (if </code>toplevel<code>is true), used at the toplevel processing by Stomach,     will step to the next input stream (Mouth) if one is available,    </code>toplevel` when true:</p>
 <ul>
-<li>If a mouth is exhausted, move on to the containing mouth to continue reading
-<code>fully_expand</code> when true, OR when None but <code>toplevel</code> is true</li>
+<li>If a mouth is exhausted, move on to the containing mouth to continue reading <code>fully_expand</code>
+when true, OR when None but <code>toplevel</code> is true</li>
 <li>expand even protected defns, essentially this means expand “for execution”</li>
 </ul>
 <p>Note that, unlike readBalanced, this does NOT defer expansion of \the &amp; friends.</p>

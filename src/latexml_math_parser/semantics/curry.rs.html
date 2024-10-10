@@ -327,7 +327,7 @@
       CurryTerm::Var(v) =&gt; <span class="macro">write!</span>(f, <span class="string">"{v}"</span>),
       CurryTerm::Literal(u) =&gt; <span class="macro">write!</span>(f, <span class="string">"{u}"</span>),
       CurryTerm::Sub(x, y) =&gt; <span class="kw">match </span><span class="kw-2">&amp;**</span>y {
-        CurryTerm::Sub(<span class="kw">_</span>, <span class="kw">_</span>) | CurryTerm::Add(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">write!</span>(f, <span class="string">"{x}-({y})"</span>),
+        CurryTerm::Sub(..) | CurryTerm::Add(..) =&gt; <span class="macro">write!</span>(f, <span class="string">"{x}-({y})"</span>),
         <span class="kw">_ </span>=&gt; <span class="macro">write!</span>(f, <span class="string">"{x}-{y}"</span>),
       },
       CurryTerm::Add(x, y) =&gt; <span class="macro">write!</span>(f, <span class="string">"{x}+{y}"</span>),
@@ -539,7 +539,7 @@
         .simplify();
         new_rhs = Literal(<span class="number">0</span>);
       },
-      Add(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+      Add(..) =&gt; {
         new_lhs = Sub(lhs.clone().into(), rhs.clone().into()).simplify();
         new_rhs = Literal(<span class="number">0</span>);
       },

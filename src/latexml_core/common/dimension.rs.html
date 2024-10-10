@@ -108,20 +108,13 @@
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt;
+<a href="#110" id="110">110</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt;
 
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F64};
+<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{NumericOps, UNITY, UNITY_F64, fixpoint, kround, round_to};
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
@@ -135,12 +128,8 @@
 </span><span class="kw">pub struct </span>Dimension(<span class="kw">pub </span>i64);
 
 <span class="kw">impl </span>Object <span class="kw">for </span>Dimension {
-  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string())))
-  }
-  <span class="kw">fn </span>be_digested(
-    <span class="self">self
-  </span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;
+  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string()))) }
+  <span class="kw">fn </span>be_digested(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;
   <span class="kw">where
     </span><span class="self">Self</span>: Sized,
     <span class="self">Self</span>: fmt::Debug,
@@ -190,12 +179,9 @@
 <span class="kw">impl </span>std::str::FromStr <span class="kw">for </span>Dimension {
   <span class="kw">type </span><span class="prelude-val">Err </span>= <span class="kw">crate</span>::common::Error;
   <span class="kw">fn </span>from_str(spec: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Dimension&gt; {
-    <span class="prelude-val">Ok</span>(Dimension::new_f64(Dimension::spec_to_f64(
-      spec
-    )<span class="question-mark">?</span>))
+    <span class="prelude-val">Ok</span>(Dimension::new_f64(Dimension::spec_to_f64(spec)<span class="question-mark">?</span>))
   }
 }
-
 
 <span class="comment">// Dimension!() macro is in setup.rs, since it binds state
 

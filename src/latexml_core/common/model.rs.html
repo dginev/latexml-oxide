@@ -835,22 +835,7 @@
 <a href="#834" id="834">834</a>
 <a href="#835" id="835">835</a>
 <a href="#836" id="836">836</a>
-<a href="#837" id="837">837</a>
-<a href="#838" id="838">838</a>
-<a href="#839" id="839">839</a>
-<a href="#840" id="840">840</a>
-<a href="#841" id="841">841</a>
-<a href="#842" id="842">842</a>
-<a href="#843" id="843">843</a>
-<a href="#844" id="844">844</a>
-<a href="#845" id="845">845</a>
-<a href="#846" id="846">846</a>
-<a href="#847" id="847">847</a>
-<a href="#848" id="848">848</a>
-<a href="#849" id="849">849</a>
-<a href="#850" id="850">850</a>
-<a href="#851" id="851">851</a>
-<a href="#852" id="852">852</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#837" id="837">837</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::cell::RefCell;
@@ -867,7 +852,8 @@
 <span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">super</span>::arena::{
-  SymHashMap, DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM, RELAXNG_SYM, WILD_CARD_SYM
+  DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM,
+  RELAXNG_SYM, SymHashMap, WILD_CARD_SYM,
 };
 
 <span class="comment">// use common::font::*;
@@ -883,7 +869,7 @@
 
 <span class="attr">#[derive(Default, Debug)]
 </span><span class="kw">pub struct </span>TagFrame {
-  model: HashSet&lt;SymStr&gt;,
+  model:      HashSet&lt;SymStr&gt;,
   attributes: HashSet&lt;SymStr&gt;,
 }
 
@@ -891,30 +877,34 @@
 
 <span class="attr">#[derive(Default, Debug)]
 </span><span class="kw">pub struct </span>Model {
-  <span class="kw">pub </span>schema: <span class="prelude-ty">Option</span>&lt;Relaxng&gt;,
-  <span class="kw">pub </span>schema_data: <span class="prelude-ty">Option</span>&lt;Vec&lt;SymStr&gt;&gt;,
-  <span class="kw">pub </span>schema_class: HashMap&lt;SymStr, HashSet&lt;SymStr&gt;&gt;,
-  <span class="kw">pub </span>code_namespace_prefixes: HashMap&lt;SymStr, SymStr&gt;,
-  <span class="kw">pub </span>code_namespaces: HashMap&lt;SymStr, SymStr&gt;,
+  <span class="kw">pub </span>schema:                      <span class="prelude-ty">Option</span>&lt;Relaxng&gt;,
+  <span class="kw">pub </span>schema_data:                 <span class="prelude-ty">Option</span>&lt;Vec&lt;SymStr&gt;&gt;,
+  <span class="kw">pub </span>schema_class:                HashMap&lt;SymStr, HashSet&lt;SymStr&gt;&gt;,
+  <span class="kw">pub </span>code_namespace_prefixes:     HashMap&lt;SymStr, SymStr&gt;,
+  <span class="kw">pub </span>code_namespaces:             HashMap&lt;SymStr, SymStr&gt;,
   <span class="kw">pub </span>document_namespace_prefixes: HashMap&lt;SymStr, SymStr&gt;,
-  <span class="kw">pub </span>document_namespaces: HashMap&lt;SymStr, SymStr&gt;,
+  <span class="kw">pub </span>document_namespaces:         HashMap&lt;SymStr, SymStr&gt;,
   <span class="comment">// doctype_namespaces: HashMap&lt;SymStr, SymStr&gt;,
   // namespace_errors: usize,
-  </span><span class="kw">pub </span>permissive: bool,
-  <span class="kw">pub </span>no_compiled: bool,
-  <span class="kw">pub </span>debug_mode: bool,
-  <span class="kw">pub </span>namespace_errors: u8,
-  <span class="kw">pub </span>tagprop: HashMap&lt;SymStr, TagFrame&gt;,
+  </span><span class="kw">pub </span>permissive:                  bool,
+  <span class="kw">pub </span>no_compiled:                 bool,
+  <span class="kw">pub </span>debug_mode:                  bool,
+  <span class="kw">pub </span>namespace_errors:            u8,
+  <span class="kw">pub </span>tagprop:                     HashMap&lt;SymStr, TagFrame&gt;,
 }
 
 <span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>MODEL : Lazy&lt;RefCell&lt;Model&gt;&gt; = Lazy::new(|| RefCell::new(Model::new()));
+</span><span class="kw">pub static </span>MODEL: Lazy&lt;RefCell&lt;Model&gt;&gt; = Lazy::new(|| RefCell::new(Model::new()));
 
 <span class="macro">macro_rules!</span> model {
-  () =&gt; ((<span class="kw-2">*</span>MODEL).borrow())
+  () =&gt; {
+    (<span class="kw-2">*</span>MODEL).borrow()
+  };
 }
 <span class="macro">macro_rules!</span> model_mut {
-  () =&gt; ((<span class="kw-2">*</span>MODEL).borrow_mut())
+  () =&gt; {
+    (<span class="kw-2">*</span>MODEL).borrow_mut()
+  };
 }
 
 <span class="kw">pub fn </span>initialize_model() {
@@ -947,11 +937,7 @@
   </span><span class="kw">pub fn </span>register_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, codeprefix: <span class="kw-2">&amp;</span>str, namespace_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) {
     <span class="self">self</span>.register_namespace_sym(arena::pin(codeprefix), namespace_opt.map(arena::pin))
   }
-  <span class="kw">pub fn </span>register_namespace_sym(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    codeprefix: SymStr,
-    namespace_opt: <span class="prelude-ty">Option</span>&lt;SymStr&gt;,
-  ) {
+  <span class="kw">pub fn </span>register_namespace_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, codeprefix: SymStr, namespace_opt: <span class="prelude-ty">Option</span>&lt;SymStr&gt;) {
     <span class="comment">// double-check empty strings are None
     </span><span class="kw">let </span>namespace_opt_checked = namespace_opt.filter(|val| <span class="kw-2">*</span>val != <span class="kw-2">*</span>EMPTY_SYM);
     <span class="kw">match </span>namespace_opt_checked {
@@ -1012,7 +998,7 @@
     <span class="kw">let </span>compiled_fh = File::open(path).unwrap();
     <span class="kw">let </span>compiled_reader = BufReader::new(<span class="kw-2">&amp;</span>compiled_fh);
     <span class="kw">for </span>line_item <span class="kw">in </span>compiled_reader.lines().map_while(std::result::Result::ok) {
-      <span class="kw">let </span>line : String = line_item;
+      <span class="kw">let </span>line: String = line_item;
       <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = TAG_MODEL_LINE_RE.captures(<span class="kw-2">&amp;</span>line) {
         <span class="kw">let </span>tag = caps.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
         <span class="kw">let </span>attr = caps.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str());
@@ -1039,10 +1025,7 @@
     note_end(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Loading compiled schema {path}\n"</span>));
   }
   <span class="kw">pub fn </span>add_tag_content(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, elements: Vec&lt;<span class="kw-2">&amp;</span>str&gt;) {
-    <span class="kw">let </span>frame = <span class="self">self
-      </span>.tagprop
-      .entry(arena::pin(tag))
-      .or_default();
+    <span class="kw">let </span>frame = <span class="self">self</span>.tagprop.entry(arena::pin(tag)).or_default();
 
     <span class="kw">for </span>element <span class="kw">in </span>elements {
       frame.model.insert(arena::pin(element));
@@ -1061,10 +1044,7 @@
   // }
 
   </span><span class="kw">pub fn </span>add_tag_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, attributes: Vec&lt;<span class="kw-2">&amp;</span>str&gt;) {
-    <span class="kw">let </span>frame = <span class="self">self
-      </span>.tagprop
-      .entry(arena::pin(tag))
-      .or_default();
+    <span class="kw">let </span>frame = <span class="self">self</span>.tagprop.entry(arena::pin(tag)).or_default();
 
     <span class="kw">for </span>attribute <span class="kw">in </span>attributes {
       frame.attributes.insert(arena::pin(attribute));
@@ -1076,17 +1056,28 @@
   }
   <span class="kw">pub fn </span>describe_model(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
   <span class="kw">fn </span>load_internal_extensions(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-    <span class="kw">if </span>!<span class="self">self</span>.tagprop.contains_key(<span class="kw-2">&amp;</span>arena::pin_static(<span class="string">"ltx:_CaptureBlock_"</span>)) {
+    <span class="kw">if </span>!<span class="self">self
+      </span>.tagprop
+      .contains_key(<span class="kw-2">&amp;</span>arena::pin_static(<span class="string">"ltx:_CaptureBlock_"</span>))
+    {
       <span class="comment">// Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block, ltx:para,
-      </span><span class="self">self</span>.synthesize_element(<span class="string">"ltx:_CaptureBlock_"</span>,
-        <span class="kw-2">&amp;</span>[<span class="string">"ltx:block"</span>,<span class="string">"ltx:logical-block"</span>,<span class="string">"ltx:sectional-block"</span>,<span class="string">"Caption"</span>]);
-      <span class="kw">let </span>cb_entry = <span class="self">self</span>.tagprop.entry(arena::pin_static(<span class="string">"ltx:_CaptureBlock_"</span>))
+      </span><span class="self">self</span>.synthesize_element(<span class="string">"ltx:_CaptureBlock_"</span>, <span class="kw-2">&amp;</span>[
+        <span class="string">"ltx:block"</span>,
+        <span class="string">"ltx:logical-block"</span>,
+        <span class="string">"ltx:sectional-block"</span>,
+        <span class="string">"Caption"</span>,
+      ]);
+      <span class="kw">let </span>cb_entry = <span class="self">self
+        </span>.tagprop
+        .entry(arena::pin_static(<span class="string">"ltx:_CaptureBlock_"</span>))
         .or_default();
       cb_entry.model.insert(arena::pin_static(<span class="string">"svg:g"</span>));
-      cb_entry.model.insert(arena::pin_static(<span class="string">"svg:foreignObject"</span>));
+      cb_entry
+        .model
+        .insert(arena::pin_static(<span class="string">"svg:foreignObject"</span>));
     }
   }
-  
+
   <span class="doccomment">/// Clone the tagprop's (allowed content &amp; attributes) of @other to $tag
   </span><span class="kw">fn </span>synthesize_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, others: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) {
     <span class="kw">let </span><span class="kw-2">mut </span>to_add_in_model = Vec::new();
@@ -1094,8 +1085,9 @@
     <span class="kw">for </span>other <span class="kw">in </span>others {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = <span class="self">self</span>.schema_class.get(<span class="kw-2">&amp;</span>arena::pin(other)) {
         <span class="kw">for </span>child <span class="kw">in </span>content {
-          to_add_in_model.push(<span class="kw-2">*</span>child); } }
-      <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.tagprop.get(<span class="kw-2">&amp;</span>arena::pin(other)) {
+          to_add_in_model.push(<span class="kw-2">*</span>child);
+        }
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.tagprop.get(<span class="kw-2">&amp;</span>arena::pin(other)) {
         <span class="kw">for </span>child <span class="kw">in </span><span class="kw-2">&amp;</span>entry.model {
           to_add_in_model.push(<span class="kw-2">*</span>child);
         }
@@ -1123,9 +1115,7 @@
   ]);
 }
 
-<span class="kw">pub fn </span>set_relaxng_schema(schema: <span class="kw-2">&amp;</span>str) {
-  <span class="macro">model_mut!</span>().set_relaxng_schema(schema)
-}
+<span class="kw">pub fn </span>set_relaxng_schema(schema: <span class="kw-2">&amp;</span>str) { <span class="macro">model_mut!</span>().set_relaxng_schema(schema) }
 <span class="kw">pub fn </span>add_schema_declaration(document: <span class="kw-2">&amp;mut </span>Document) {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>schema) = <span class="macro">model!</span>().schema {
     schema.add_schema_declaration(document);
@@ -1191,14 +1181,11 @@
     </span>} <span class="kw">else </span>{
       <span class="prelude-val">Some</span>(search_paths.iter().map(ToString::to_string).collect())
     };
-    <span class="kw">let </span>pathname_opt = pathname::find(
-      <span class="kw-2">&amp;</span>name,
-      pathname::PathnameFindOptions {
-        paths,
-        extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"model"</span>)]),
-        installation_subdir: <span class="prelude-val">Some</span>(arena::with(schema_type, |str| <span class="macro">s!</span>(<span class="string">"resources/{str}"</span>))),
-      },
-    );
+    <span class="kw">let </span>pathname_opt = pathname::find(<span class="kw-2">&amp;</span>name, pathname::PathnameFindOptions {
+      paths,
+      extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"model"</span>)]),
+      installation_subdir: <span class="prelude-val">Some</span>(arena::with(schema_type, |str| <span class="macro">s!</span>(<span class="string">"resources/{str}"</span>))),
+    });
 
     <span class="kw">match </span>pathname_opt {
       <span class="prelude-val">Some</span>(compiled_path) =&gt; model.load_compiled_schema(<span class="kw-2">&amp;</span>compiled_path),
@@ -1235,10 +1222,14 @@
   }
 
   <span class="kw">if </span>docprefix.is_none() &amp;&amp; !probe {
-    { <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>; }
+    {
+      <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>;
+    }
     <span class="kw">let </span>ns_err = <span class="macro">s!</span>(<span class="string">"namespace{}"</span>, <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string());
     docprefix = <span class="prelude-val">Some</span>(arena::pin(<span class="kw-2">&amp;</span>ns_err));
-    { <span class="macro">model_mut!</span>().register_document_namespace(<span class="kw-2">&amp;</span>ns_err, <span class="prelude-val">Some</span>(namespace)); }
+    {
+      <span class="macro">model_mut!</span>().register_document_namespace(<span class="kw-2">&amp;</span>ns_err, <span class="prelude-val">Some</span>(namespace));
+    }
     <span class="kw">let </span>message2 = <span class="kw">if let </span><span class="prelude-val">Some</span>(dp) = docprefix {
       arena::with(dp, |dp_str| <span class="macro">s!</span>(<span class="string">"Using '{dp_str}' instead"</span>))
     } <span class="kw">else </span>{
@@ -1274,17 +1265,24 @@
   };
 
   <span class="kw">if </span>docprefix_sym != h_default_sym &amp;&amp; ns_str.is_empty() &amp;&amp; !probe {
-    { <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>; }
+    {
+      <span class="macro">model_mut!</span>().namespace_errors += <span class="number">1</span>;
+    }
     <span class="kw">let </span>ns_error = <span class="macro">s!</span>(
       <span class="string">"http://example.com/namespace{}"</span>,
       <span class="kw-2">&amp;</span><span class="macro">model!</span>().namespace_errors.to_string()
     );
-    { <span class="macro">model_mut!</span>().register_document_namespace(docprefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ns_error)); }
+    {
+      <span class="macro">model_mut!</span>().register_document_namespace(docprefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ns_error));
+    }
     <span class="kw">let </span>msg1 = arena::with(docprefix_sym, |dp_str| {
       <span class="macro">s!</span>(<span class="string">"No namespace has been registered for prefix '{dp_str}' (in document)"</span>)
     });
     <span class="kw">let </span>msg2 = <span class="macro">s!</span>(<span class="string">"Using '{ns_str}' instead"</span>);
-    <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">"malformed"</span>, docprefix, msg1, msg2); <span class="prelude-val">Ok</span>(()) };
+    <span class="kw">let </span>err = || {
+      <span class="macro">Error!</span>(<span class="string">"malformed"</span>, docprefix, msg1, msg2);
+      <span class="prelude-val">Ok</span>(())
+    };
     err().ok();
   }
   <span class="kw">if </span>ns_str.is_empty() {
@@ -1300,12 +1298,8 @@
 /// In the following:
 /// $forattribute is 1 if the namespace is for an attribute (in which case, there must be a
 /// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
-/// if missing. 
-</span><span class="kw">pub fn </span>get_namespace_prefix(
-  namespace: <span class="kw-2">&amp;</span>str,
-  _forattribute: bool,
-  probe: bool,
-) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
+/// if missing.
+</span><span class="kw">pub fn </span>get_namespace_prefix(namespace: <span class="kw-2">&amp;</span>str, _forattribute: bool, probe: bool) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>codeprefix: <span class="prelude-ty">Option</span>&lt;SymStr&gt; = <span class="prelude-val">None</span>;
   <span class="kw">let </span>ns_sym = arena::pin(namespace);
   <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
@@ -1437,8 +1431,7 @@
       <span class="kw">if let </span><span class="prelude-val">Some</span>(ns) = node.get_namespace() {
         <span class="kw">let </span>href = ns.get_href();
         <span class="kw">if </span>!href.is_empty() {
-          prefix = get_document_namespace_prefix(<span class="kw-2">&amp;</span>href, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
-            .unwrap_or(empty_sym);
+          prefix = get_document_namespace_prefix(<span class="kw-2">&amp;</span>href, <span class="bool-val">false</span>, <span class="bool-val">true</span>).unwrap_or(empty_sym);
         }
       }
       <span class="kw">if </span>prefix == empty_sym {
@@ -1493,51 +1486,39 @@
 // However, it would need more context to do that.
 
 </span><span class="doccomment">/// A check for allowed direct element containment, using ticket-based `SymStr` names.
-/// 
-/// TODO: This is a major code smell, experimental prototyping to see how to interoperate 
+///
+/// TODO: This is a major code smell, experimental prototyping to see how to interoperate
 /// strings with the inerned arena.
-/// `can_contain` and `can_contain_sym` should be implemented once, and one should be an 
+/// `can_contain` and `can_contain_sym` should be implemented once, and one should be an
 /// interning-only helper.
 </span><span class="kw">pub fn </span>can_contain_sym(tag: SymStr, child: SymStr) -&gt; bool {
   <span class="comment">// Handle obvious cases explicitly.
-  </span><span class="kw">if </span>tag == <span class="kw-2">*</span>H_PCDATA_SYM
-    || tag == <span class="kw-2">*</span>H_COMMENT_SYM
-    || tag == <span class="kw-2">*</span>EMPTY_SYM
-  {
+  </span><span class="kw">if </span>tag == <span class="kw-2">*</span>H_PCDATA_SYM || tag == <span class="kw-2">*</span>H_COMMENT_SYM || tag == <span class="kw-2">*</span>EMPTY_SYM {
     <span class="kw">return </span><span class="bool-val">false</span>;
   } <span class="kw">else if </span>tag == <span class="kw-2">*</span>WILD_CARD_SYM {
     <span class="kw">return </span><span class="bool-val">true</span>;
   };
   <span class="kw">if </span>arena::with(tag, |tag_str| tag_str.ends_with(<span class="string">"_Capture_"</span>))
-    || arena::with(child, |child_str| child_str.ends_with(<span class="string">"_Capture_"</span>) ||
-      child_str.ends_with(<span class="string">"_CaptureBlock_"</span>))
+    || arena::with(child, |child_str| {
+      child_str.ends_with(<span class="string">"_Capture_"</span>) || child_str.ends_with(<span class="string">"_CaptureBlock_"</span>)
+    })
   {
     <span class="comment">// with or without namespace prefix
     </span><span class="kw">return </span><span class="bool-val">true</span>;
   }
 
-  <span class="kw">if </span>child == <span class="kw-2">*</span>WILD_CARD_SYM
-    || child == <span class="kw-2">*</span>H_COMMENT_SYM
-    || child == <span class="kw-2">*</span>H_PI_SYM
-    || child == <span class="kw-2">*</span>H_DTD_SYM
+  <span class="kw">if </span>child == <span class="kw-2">*</span>WILD_CARD_SYM || child == <span class="kw-2">*</span>H_COMMENT_SYM || child == <span class="kw-2">*</span>H_PI_SYM || child == <span class="kw-2">*</span>H_DTD_SYM
   {
     <span class="kw">return </span><span class="bool-val">true</span>;
   }
 
   <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
-  <span class="kw">if </span>model.permissive
-    &amp;&amp; tag == <span class="kw-2">*</span>H_DOC_SYM
-    &amp;&amp; child != <span class="kw-2">*</span>H_PCDATA_SYM
-  {
+  <span class="kw">if </span>model.permissive &amp;&amp; tag == <span class="kw-2">*</span>H_DOC_SYM &amp;&amp; child != <span class="kw-2">*</span>H_PCDATA_SYM {
     <span class="kw">return </span><span class="bool-val">true</span>; <span class="comment">// No DTD? Punt!
   </span>}
 
   <span class="comment">// Else query tag properties.
-  </span><span class="kw">let </span>model_entry = <span class="kw-2">&amp;mut </span>model
-    .tagprop
-    .entry(tag)
-    .or_default()
-    .model;
+  </span><span class="kw">let </span>model_entry = <span class="kw-2">&amp;mut </span>model.tagprop.entry(tag).or_default().model;
   model_entry.contains(<span class="kw-2">&amp;</span>ANY_SYM) || model_entry.contains(<span class="kw-2">&amp;</span>child)
 }
 
@@ -1549,8 +1530,7 @@
     <span class="string">"_WildCard_" </span>=&gt; <span class="kw">return </span><span class="bool-val">true</span>,
     <span class="kw">_ </span>=&gt; {},
   };
-  <span class="kw">if </span>tag.ends_with(<span class="string">"_Capture_"</span>) || child.ends_with(<span class="string">"_Capture_"</span>) || 
-     tag.ends_with(<span class="string">"_CaptureBlock_"</span>) {
+  <span class="kw">if </span>tag.ends_with(<span class="string">"_Capture_"</span>) || child.ends_with(<span class="string">"_Capture_"</span>) || tag.ends_with(<span class="string">"_CaptureBlock_"</span>) {
     <span class="comment">// with or without namespace prefix
     </span><span class="kw">return </span><span class="bool-val">true</span>;
   }
@@ -1625,11 +1605,9 @@
   <span class="kw">let </span><span class="kw-2">mut </span>model = <span class="macro">model_mut!</span>();
   <span class="kw-2">*</span>model = new_model;
 }
-<span class="kw">pub fn </span>is_permissive() -&gt; bool {
-  <span class="macro">model!</span>().permissive
-}
+<span class="kw">pub fn </span>is_permissive() -&gt; bool { <span class="macro">model!</span>().permissive }
 
-<span class="kw">pub fn </span>with_schema_data&lt;FnR,R&gt;(caller: FnR) -&gt; R
+<span class="kw">pub fn </span>with_schema_data&lt;FnR, R&gt;(caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;SymStr&gt;&gt;) -&gt; R {
   caller(<span class="macro">model!</span>().schema_data.as_ref())
 }
@@ -1665,11 +1643,7 @@
   </span><span class="kw">let </span>tag_contents: Vec&lt;SymStr&gt; = get_tag_contents(<span class="kw-2">&amp;</span>tag);
 
   <span class="kw">for </span>kid <span class="kw">in </span>tag_contents {
-    <span class="kw">if </span>desc
-      .entry_sym(kid)
-      .or_default()
-      .contains_key_sym(<span class="kw-2">&amp;</span>start)
-    {
+    <span class="kw">if </span>desc.entry_sym(kid).or_default().contains_key_sym(<span class="kw-2">&amp;</span>start) {
       <span class="kw">continue</span>;
     } <span class="comment">// Already solved
 
@@ -1681,11 +1655,7 @@
     }
 
     <span class="kw">if </span>kid != <span class="kw-2">*</span>H_PCDATA_SYM &amp;&amp; openable.contains(<span class="kw-2">&amp;</span>kid) {
-      <span class="kw">let </span>inner = <span class="kw">if </span>start != <span class="kw-2">*</span>EMPTY_SYM {
-        start
-      } <span class="kw">else </span>{
-        kid
-      };
+      <span class="kw">let </span>inner = <span class="kw">if </span>start != <span class="kw-2">*</span>EMPTY_SYM { start } <span class="kw">else </span>{ kid };
 
       compute_indirect_model_aux(kid, <span class="prelude-val">Some</span>(inner), desirability, openable, desc);
     }
@@ -1695,10 +1665,10 @@
   <span class="macro">model_mut!</span>().register_document_namespace(docprefix, namespace_opt)
 }
 <span class="kw">pub fn </span>register_namespace(codeprefix: <span class="kw-2">&amp;</span>str, namespace_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) {
-  <span class="macro">model_mut!</span>().register_namespace(codeprefix,namespace_opt)
+  <span class="macro">model_mut!</span>().register_namespace(codeprefix, namespace_opt)
 }
 
-<span class="kw">pub fn </span>with_code_namespaces&lt;FnR,R&gt;(caller: FnR) -&gt; R
+<span class="kw">pub fn </span>with_code_namespaces&lt;FnR, R&gt;(caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;SymStr, SymStr&gt;) -&gt; R {
   caller(<span class="kw-2">&amp;</span><span class="macro">model!</span>().code_namespaces)
 }

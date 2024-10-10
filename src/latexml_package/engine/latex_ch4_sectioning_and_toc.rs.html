@@ -374,8 +374,7 @@
 <a href="#373" id="373">373</a>
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a></pre></div><pre class="rust"><code><span class="comment">//**********************************************************************
+<a href="#376" id="376">376</a></pre></div><pre class="rust"><code><span class="comment">//**********************************************************************
 // C.4 Sectioning and Table of Contents
 //**********************************************************************
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -677,7 +676,7 @@
   //======================================================================
   // Handled in article,report or book.
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\appendixname"</span>, <span class="string">"Appendix"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixesname"</span>, <span class="string">"Appendixes"</span>);  
+  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixesname"</span>, <span class="string">"Appendixes"</span>);
   <span class="comment">// TODO: add the rest...
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\@@appendix"</span>, <span class="string">"\\@startsection{appendix}{0}{}{}{}{}"</span>);
 
@@ -700,34 +699,34 @@
         s_depth.push(<span class="string">"ltx:index"</span>);
         s_depth.push(<span class="string">"ltx:bibliography"</span>);
       }
-      
+
       <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"select" </span>=&gt; s_depth.join(<span class="string">" | "</span>),
         <span class="string">"name" </span>=&gt; digest(<span class="macro">T_CS!</span>(<span class="string">"\\contentsname"</span>))<span class="question-mark">?</span>))
     }
   );
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\listfigurename"</span>, <span class="string">"List of Figures"</span>);
   <span class="macro">DefConstructor!</span>(<span class="string">"\\listoffigures"</span>,
     <span class="string">"&lt;ltx:TOC lists='lof' scope='global'&gt;&lt;ltx:title&gt;#name&lt;/ltx:title&gt;&lt;/ltx:TOC&gt;"</span>,
     properties =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; stomach::digest(<span class="macro">T_CS!</span>(<span class="string">"\\listfigurename"</span>))<span class="question-mark">?</span>)) });
-  
+
   <span class="macro">DefMacro!</span>(<span class="string">"\\listtablename"</span>, <span class="string">"List of Tables"</span>);
   <span class="macro">DefConstructor!</span>(<span class="string">"\\listoftables"</span>,
     <span class="string">"&lt;ltx:TOC lists='lot' scope='global'&gt;&lt;ltx:title&gt;#name&lt;/ltx:title&gt;&lt;/ltx:TOC&gt;"</span>,
     properties =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; stomach::digest(<span class="macro">T_CS!</span>(<span class="string">"\\listtablename"</span>))<span class="question-mark">?</span>)) });
-  
+
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\numberline{}{}"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\addtocontents{}{}"</span>, <span class="prelude-val">None</span>);
-  
+
   <span class="macro">DefConstructor!</span>(<span class="string">"\\addcontentsline{}{}{}"</span>, sub[document,args] {
       <span class="kw">if let </span>[inlist,_vtype,_title @ ..] = args.as_slice() {
         <span class="comment">// Note that the node can be inlist $inlist.
         // Could conceivably want to add $title as toctitle???
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(savenode) = document.float_to_label() {
-          <span class="comment">// DG: The Document+Node mutability API is strange 
+          <span class="comment">// DG: The Document+Node mutability API is strange
           //     w.r.t the original Perl ergonomics.
           // if we use `.get_node_mut()` we can no longer `doc.set_attribute(node)`,
-          // as it induces TWO simultaneous mutable pointers into document. 
+          // as it induces TWO simultaneous mutable pointers into document.
           // cloning Node is now cheap enough (as the Node data lives in C's libxml)
           // but it's not yet an idiomatic Rust interface. Something to ponder...
           </span><span class="kw">let </span><span class="kw-2">mut </span>node  = document.get_node().clone();
@@ -740,12 +739,11 @@
             inlist_str
           };
           document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"inlist"</span>, <span class="kw-2">&amp;</span>inlist_v)<span class="question-mark">?</span>;
-          document.set_node(<span class="kw-2">&amp;</span>savenode); 
+          document.set_node(<span class="kw-2">&amp;</span>savenode);
         }
-      }     
+      }
     }
   );
-  
 
   <span class="comment">//======================================================================
   // C.4.4 Style registers

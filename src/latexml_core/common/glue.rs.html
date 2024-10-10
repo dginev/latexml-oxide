@@ -467,21 +467,18 @@
 <a href="#466" id="466">466</a>
 <a href="#467" id="467">467</a>
 <a href="#468" id="468">468</a>
-<a href="#469" id="469">469</a>
-<a href="#470" id="470">470</a>
-<a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#469" id="469">469</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::error::Result;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::cmp::Ordering;
 <span class="kw">use </span>std::fmt;
-<span class="kw">use </span><span class="kw">crate</span>::common::error::Result;
 
+<span class="kw">use </span><span class="kw">crate</span>::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::attribute_format;
-<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{fixpoint, kround, NumericOps};
+<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{NumericOps, fixpoint, kround};
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{RegisterType, RegisterValue};
 <span class="kw">use </span><span class="kw">crate</span>::digested::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::Object;
 
 <span class="kw">use </span><span class="kw">super</span>::dimension::fixedformat;
 
@@ -575,8 +572,8 @@
 
 <span class="attr">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>Glue {
-  <span class="kw">pub </span>skip: i64,
-  <span class="kw">pub </span>plus: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+  <span class="kw">pub </span>skip:  i64,
+  <span class="kw">pub </span>plus:  <span class="prelude-ty">Option</span>&lt;i64&gt;,
   <span class="kw">pub </span>pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
   <span class="kw">pub </span>minus: <span class="prelude-ty">Option</span>&lt;i64&gt;,
   <span class="kw">pub </span>mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
@@ -591,8 +588,8 @@
   </span><span class="kw">where </span><span class="self">Self</span>: Sized {
     <span class="kw">if </span>other.register_type() != RegisterType::Glue {
       Glue {
-        skip: <span class="self">self</span>.skip + other.value_of(),
-        plus: <span class="self">self</span>.plus,
+        skip:  <span class="self">self</span>.skip + other.value_of(),
+        plus:  <span class="self">self</span>.plus,
         pfill: <span class="self">self</span>.pfill,
         minus: <span class="self">self</span>.minus,
         mfill: <span class="self">self</span>.mfill,
@@ -668,9 +665,7 @@
   }
 }
 <span class="kw">impl </span>Object <span class="kw">for </span>Glue {
-  <span class="kw">fn </span>be_digested(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-    <span class="prelude-val">Ok</span>(RegisterValue::Glue(<span class="self">self</span>).into())
-  }
+  <span class="kw">fn </span>be_digested(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; { <span class="prelude-val">Ok</span>(RegisterValue::Glue(<span class="self">self</span>).into()) }
 }
 
 <span class="kw">pub fn </span>new_setup(
@@ -702,7 +697,7 @@
   <span class="kw-2">mut </span>pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
   minus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
   <span class="kw-2">mut </span>mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
-  unit: <span class="kw-2">&amp;</span>str
+  unit: <span class="kw-2">&amp;</span>str,
 ) -&gt; (
   i64,
   <span class="prelude-ty">Option</span>&lt;i64&gt;,
@@ -752,7 +747,7 @@
 
       <span class="kw">let </span><span class="kw-2">mut </span>plus = <span class="kw">if </span>punit.is_empty() {
         <span class="prelude-val">None </span><span class="comment">// Some(0.0) ?
-             // ? punit = "0";
+      // ? punit = "0";
       </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(code) = FillCode::from(punit) {
         pfill = <span class="prelude-val">Some</span>(code);
         <span class="prelude-val">Some</span>(fixpoint(p, <span class="prelude-val">None</span>))
@@ -769,7 +764,7 @@
 
       <span class="kw">let </span><span class="kw-2">mut </span>minus = <span class="kw">if </span>munit.is_empty() {
         <span class="prelude-val">None </span><span class="comment">// ? Some(0.0);
-             // munit = 0;
+      // munit = 0;
       </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(code) = FillCode::from(munit) {
         mfill = <span class="prelude-val">Some</span>(code);
         <span class="prelude-val">Some</span>(fixpoint(m, <span class="prelude-val">None</span>))
@@ -849,10 +844,9 @@
     plus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
     pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
     minus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
-    mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;
+    mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
   ) -&gt; <span class="self">Self </span>{
-    <span class="kw">let </span>(skip, plus, pfill, minus, mfill) =
-      spec_setup(spec, plus, pfill, minus, mfill, <span class="string">"pt"</span>);
+    <span class="kw">let </span>(skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, <span class="string">"pt"</span>);
     Glue {
       skip,
       plus,

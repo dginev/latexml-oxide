@@ -966,9 +966,37 @@
 <a href="#965" id="965">965</a>
 <a href="#966" id="966">966</a>
 <a href="#967" id="967">967</a>
-<a href="#968" id="968">968</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
+<a href="#970" id="970">970</a>
+<a href="#971" id="971">971</a>
+<a href="#972" id="972">972</a>
+<a href="#973" id="973">973</a>
+<a href="#974" id="974">974</a>
+<a href="#975" id="975">975</a>
+<a href="#976" id="976">976</a>
+<a href="#977" id="977">977</a>
+<a href="#978" id="978">978</a>
+<a href="#979" id="979">979</a>
+<a href="#980" id="980">980</a>
+<a href="#981" id="981">981</a>
+<a href="#982" id="982">982</a>
+<a href="#983" id="983">983</a>
+<a href="#984" id="984">984</a>
+<a href="#985" id="985">985</a>
+<a href="#986" id="986">986</a>
+<a href="#987" id="987">987</a>
+<a href="#988" id="988">988</a>
+<a href="#989" id="989">989</a>
+<a href="#990" id="990">990</a>
+<a href="#991" id="991">991</a>
+<a href="#992" id="992">992</a>
+<a href="#993" id="993">993</a>
+<a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>latexml_core::common::xml::content_nodes;
-<span class="kw">use </span>std::char::{decode_utf16, REPLACEMENT_CHARACTER};
+<span class="kw">use </span>std::char::{REPLACEMENT_CHARACTER, decode_utf16};
 
 <span class="kw">pub fn </span>reenter_text_mode(vertical_mode: bool) {
   <span class="kw">let </span>mode_key = <span class="kw">if </span>vertical_mode {
@@ -983,8 +1011,7 @@
     <span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>vdq)) =&gt; vdq.iter().collect::&lt;VecDeque&lt;<span class="kw-2">&amp;</span>Stored&gt;&gt;(),
     <span class="kw">_ </span>=&gt; VecDeque::new(),
   };
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>vdq)) = text_bindings
-  {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>vdq)) = text_bindings {
     bindings.extend(vdq.iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
   }
   <span class="kw">for </span>binding <span class="kw">in </span>bindings {
@@ -1023,19 +1050,19 @@
     <span class="string">"November"</span>,
     <span class="string">"December"</span>,
   ];
-  <span class="kw">let </span>month =
-    month_names[state::lookup_register(<span class="string">"\\month"</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>.unwrap().value_of() <span class="kw">as </span>usize - <span class="number">1</span>];
+  <span class="kw">let </span>month = month_names[state::lookup_register(<span class="string">"\\month"</span>, <span class="macro">vec!</span>[])<span class="question-mark">?
+    </span>.unwrap()
+    .value_of() <span class="kw">as </span>usize
+    - <span class="number">1</span>];
   <span class="kw">let </span>day = state::lookup_register(<span class="string">"\\day"</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>.unwrap().value_of();
-  <span class="kw">let </span>year = state::lookup_register(<span class="string">"\\year"</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>.unwrap().value_of();
+  <span class="kw">let </span>year = state::lookup_register(<span class="string">"\\year"</span>, <span class="macro">vec!</span>[])<span class="question-mark">?
+    </span>.unwrap()
+    .value_of();
   <span class="prelude-val">Ok</span>(<span class="macro">s!</span>(<span class="string">"{} {}, {}"</span>, month, day, year))
 }
 
-<span class="kw">pub fn </span>parse_def_parameters(
-  cs: <span class="kw-2">&amp;</span>Token,
-  params_in: Tokens,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
-  <span class="kw">let </span><span class="kw-2">mut </span>tokens: VecDeque&lt;Token&gt; =
-    VecDeque::from(params_in.pack_parameters()<span class="question-mark">?</span>.unlist());
+<span class="kw">pub fn </span>parse_def_parameters(cs: <span class="kw-2">&amp;</span>Token, params_in: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
+  <span class="kw">let </span><span class="kw-2">mut </span>tokens: VecDeque&lt;Token&gt; = VecDeque::from(params_in.pack_parameters()<span class="question-mark">?</span>.unlist());
   <span class="comment">// Now, recognize parameters and delimiters.
   </span><span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
   <span class="kw">let </span><span class="kw-2">mut </span>n = <span class="number">0</span>;
@@ -1050,7 +1077,7 @@
             Cow::Borrowed(<span class="string">"RequireBrace"</span>),
             Cow::Borrowed(<span class="string">"RequireBrace"</span>),
             <span class="prelude-val">None</span>,
-                  )<span class="question-mark">?</span>);
+          )<span class="question-mark">?</span>);
           <span class="kw">break</span>;
         } <span class="kw">else </span>{
           n += <span class="number">1</span>;
@@ -1058,7 +1085,7 @@
             t = t_next;
           } <span class="kw">else </span>{
             <span class="macro">todo!</span>(); <span class="comment">// hm, this is a bit of a pain to port without making t into an
-                              // Option&lt;Token&gt;...
+            // Option&lt;Token&gt;...
           </span>}
         }
       } <span class="kw">else </span>{
@@ -1111,10 +1138,10 @@
       } <span class="kw">else if </span>tokens.len() == <span class="number">1 </span>&amp;&amp; tokens.front().unwrap().get_catcode() == Catcode::PARAM {
         <span class="comment">// Special case: trailing sole # =&gt; delimited by next opening brace.
         </span>tokens.pop_front();
-        params.push(Parameter::new(<span class="string">"UntilBrace"</span>,<span class="string">"UntilBrace"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
+        params.push(Parameter::new(<span class="string">"UntilBrace"</span>, <span class="string">"UntilBrace"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
       } <span class="kw">else </span>{
         <span class="comment">// Nothing? Just a plain parameter.
-        </span>params.push(Parameter::new(<span class="string">"Plain"</span>,<span class="string">"{}"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
+        </span>params.push(Parameter::new(<span class="string">"Plain"</span>, <span class="string">"{}"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
       }
     } <span class="kw">else </span>{
       <span class="comment">// Initial delimiting text is required.
@@ -1147,12 +1174,7 @@
   }
 }
 
-<span class="kw">pub fn </span>do_def(
-  globally: bool,
-  cs: Token,
-  params: Tokens,
-  body: Tokens,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>do_def(globally: bool, cs: Token, params: Tokens, body: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>paramlist = parse_def_parameters(<span class="kw-2">&amp;</span>cs, params)<span class="question-mark">?</span>;
   <span class="kw">let </span>scope = <span class="kw">if </span>globally { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
   state::install_definition(
@@ -1163,8 +1185,9 @@
       <span class="prelude-val">Some</span>(ExpandableOptions {
         nopack_parameters: <span class="bool-val">true</span>,
         ..ExpandableOptions::default()
-      }))<span class="question-mark">?</span>,
-    scope
+      }),
+    )<span class="question-mark">?</span>,
+    scope,
   );
   after_assignment();
   <span class="prelude-val">Ok</span>(())
@@ -1174,8 +1197,8 @@
 // We'll assume that a box is horizontal if there's anything at all,
 // but it's not a vbox (!?!?)
 </span><span class="kw">pub fn </span>classify_box(boxnum: Number) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-  with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"box{}"</span>, boxnum.value_of()), |val_opt| <span class="prelude-val">Ok</span>(
-    <span class="kw">match </span>val_opt  {
+  with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"box{}"</span>, boxnum.value_of()), |val_opt| {
+    <span class="prelude-val">Ok</span>(<span class="kw">match </span>val_opt {
       <span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>d)) =&gt; <span class="kw">match </span>d.data() {
         DigestedData::Whatsit(<span class="kw-2">ref </span>w)
           <span class="kw">if </span>w.borrow().definition == lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\vbox"</span>))<span class="question-mark">?</span>.unwrap() =&gt;
@@ -1185,28 +1208,22 @@
         <span class="kw">_ </span>=&gt; <span class="string">"hbox"</span>,
       },
       <span class="kw">_ </span>=&gt; <span class="string">""</span>,
-    }
-  ))
+    })
+  })
 }
 
 <span class="kw">const </span>MATH_CLASS_ROLE: [<span class="kw-2">&amp;</span>str; <span class="number">8</span>] = [<span class="string">""</span>, <span class="string">"BIGOP"</span>, <span class="string">"BINOP"</span>, <span class="string">"RELOP"</span>, <span class="string">"OPEN"</span>, <span class="string">"CLOSE"</span>, <span class="string">"PUNCT"</span>, <span class="string">""</span>];
 <span class="comment">// Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
 // What we're really after is a connectio nto a font encoding mapping.
-</span><span class="kw">pub fn </span>decode_math_char(
-  <span class="kw-2">mut </span>n: u16,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, <span class="prelude-ty">Option</span>&lt;char&gt;)&gt; {
+</span><span class="kw">pub fn </span>decode_math_char(<span class="kw-2">mut </span>n: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, <span class="prelude-ty">Option</span>&lt;char&gt;)&gt; {
   <span class="kw">let </span>class: u16 = n / (<span class="number">16 </span>* <span class="number">256</span>);
   n %= <span class="number">16 </span>* <span class="number">256</span>;
   <span class="kw">let </span>fam: u16 = n / <span class="number">256</span>;
   n %= <span class="number">256</span>;
-  <span class="kw">let </span>font = lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"textfont_{fam}"</span>))
-    .unwrap_or_else(|| {
-        lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"scriptfont_{fam}"</span>))
-        .unwrap_or_else(|| {
-          lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"scriptscriptfont_{fam}"</span>))
-            .unwrap_or(Stored::Bool(<span class="bool-val">false</span>))
-        })
-    });
+  <span class="kw">let </span>font = lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"textfont_{fam}"</span>)).unwrap_or_else(|| {
+    lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"scriptfont_{fam}"</span>))
+      .unwrap_or_else(|| lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"scriptscriptfont_{fam}"</span>)).unwrap_or(Stored::Bool(<span class="bool-val">false</span>)))
+  });
   <span class="comment">// TODO: This function is called with n=20,000, how is the char cast sensible here? Consult Bruce.
   // TODO: confusing types, the 256 arithmetic implies larger than u8 inputs, what for?
   </span><span class="kw">let </span>c = n <span class="kw">as </span>u8 <span class="kw">as </span>char;
@@ -1217,40 +1234,41 @@
     with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"math_token_attributes_{}"</span>, c), |charinfo| {
       <span class="kw">let </span>inner_role = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(<span class="kw-2">ref </span>info)) = charinfo {
         <span class="kw-2">&amp;</span>info[role]
-      } <span class="kw">else </span>{ role };
+      } <span class="kw">else </span>{
+        role
+      };
       <span class="kw">if </span>inner_role.is_empty() {
         <span class="prelude-val">None
       </span>} <span class="kw">else </span>{
         <span class="prelude-val">Some</span>(inner_role.to_string())
-      }})
-    } <span class="kw">else </span>{
-      <span class="prelude-val">Some</span>(role.to_string())
-    };
-  <span class="kw">let </span>font_opt =
-    with_font_info(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(font.to_string()), |fontinfo| {
-      <span class="kw">let </span>cinfo = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo<span class="question-mark">? </span>{
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>data) = info.encoding {
-          font::decode(n <span class="kw">as </span>u8, <span class="prelude-val">Some</span>(data.to_string()), <span class="bool-val">false</span>)
-        } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(c)
-        }
+      }
+    })
+  } <span class="kw">else </span>{
+    <span class="prelude-val">Some</span>(role.to_string())
+  };
+  <span class="kw">let </span>font_opt = with_font_info(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(font.to_string()), |fontinfo| {
+    <span class="kw">let </span>cinfo = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo<span class="question-mark">? </span>{
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>data) = info.encoding {
+        font::decode(n <span class="kw">as </span>u8, <span class="prelude-val">Some</span>(data.to_string()), <span class="bool-val">false</span>)
       } <span class="kw">else </span>{
-        <span class="prelude-val">None
-      </span>};
-      <span class="comment">// Interesting, the compiler needs the explicit error type here?
-      </span><span class="prelude-val">Ok</span>::&lt;<span class="prelude-ty">Option</span>&lt;char&gt;,latexml_core::Error&gt;(cinfo) })<span class="question-mark">?</span>;
+        <span class="prelude-val">Some</span>(c)
+      }
+    } <span class="kw">else </span>{
+      <span class="prelude-val">None
+    </span>};
+    <span class="comment">// Interesting, the compiler needs the explicit error type here?
+    </span><span class="prelude-val">Ok</span>::&lt;<span class="prelude-ty">Option</span>&lt;char&gt;, latexml_core::Error&gt;(cinfo)
+  })<span class="question-mark">?</span>;
   <span class="prelude-val">Ok</span>((role_opt, font_opt))
 }
 
 <span class="doccomment">/// Stomach-level counterpart to `read_box_contents`.
-/// 
+///
 /// Reading a Box's content is crucially dependent on invoking the "{" token and obtaining a
 /// digested result.
 /// Hence it is *always* needed to pair `read_box_contents` with its stomach-level
 /// counterpart, `predigest_box_contents`
-</span><span class="kw">pub fn </span>predigest_box_contents(
-  _tokens: ArgWrap,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+</span><span class="kw">pub fn </span>predigest_box_contents(_tokens: ArgWrap) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>contents = stomach::invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_BEGIN!</span>())<span class="question-mark">?</span>;
   <span class="kw">if </span>contents.is_empty() {
     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
@@ -1283,10 +1301,10 @@
 }
 
 <span class="doccomment">/// This attempts to be a generalize vbox construction;
-/// 
+///
 /// The idea is to receeive block-like material, possibly wrapped in appropriate
 /// container which gets attributes.
-/// 
+///
 /// The contents are constructed in an ltx:_CaptureBlock_ element,
 /// designed to accept all reasonable block material from several levels,
 /// and then determine which container element is most apprpriate for both the conent &amp; context
@@ -1298,7 +1316,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
   <span class="comment">// Create something like:
   // "&lt;ltx:inline-block vattach='$vattach' height='#height'&gt;#2&lt;/ltx:inline-block&gt;"
-  </span><span class="kw">let </span>context_opt = document.get_element();  <span class="comment">// Where we originally start inserting.
+  </span><span class="kw">let </span>context_opt = document.get_element(); <span class="comment">// Where we originally start inserting.
   </span><span class="kw">if </span>context_opt.is_none() {
     <span class="comment">// edge case: if we start the doc with a block, the context is empty
     </span>document.absorb(contents, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
@@ -1307,11 +1325,18 @@
   <span class="kw">let </span><span class="kw-2">mut </span>context = context_opt.unwrap();
   <span class="kw">let </span><span class="kw-2">mut </span>context_tag = document::get_node_qname(<span class="kw-2">&amp;</span>context);
   <span class="comment">// svg is slightly tricky
-  </span><span class="kw">let </span>(is_svg,is_xmath, is_xmtext) = arena::with(context_tag, |tag| (tag.starts_with(<span class="string">"svg:"</span>), tag.starts_with(<span class="string">"ltx:XM"</span>), tag == <span class="string">"ltx:XMText"</span>));
+  </span><span class="kw">let </span>(is_svg, is_xmath, is_xmtext) = arena::with(context_tag, |tag| {
+    (
+      tag.starts_with(<span class="string">"svg:"</span>),
+      tag.starts_with(<span class="string">"ltx:XM"</span>),
+      tag == <span class="string">"ltx:XMText"</span>,
+    )
+  });
   <span class="kw">let </span>ignorable_attr = is_svg || block_attr.is_empty(); <span class="comment">// if we do not REQUIRE the attributes
-  </span><span class="kw">if </span>is_xmath &amp;&amp; !is_xmtext { <span class="comment">// but math always needs this
+  </span><span class="kw">if </span>is_xmath &amp;&amp; !is_xmtext {
+    <span class="comment">// but math always needs this
     </span>context = document.open_element(<span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-    context_tag =  document::get_node_qname(<span class="kw-2">&amp;</span>context);
+    context_tag = document::get_node_qname(<span class="kw-2">&amp;</span>context);
   }
   <span class="kw">let </span>is_inline = is_svg || document::can_contain(<span class="kw-2">&amp;</span>context, <span class="string">"#PCDATA"</span>);
   <span class="kw">let </span><span class="kw-2">mut </span>container_attr = block_attr.clone();
@@ -1320,33 +1345,50 @@
   document.absorb(contents, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 
   <span class="kw">let </span><span class="kw-2">mut </span>nodes = content_nodes(<span class="kw-2">&amp;</span>container);
-  <span class="kw">let </span>node_tags = nodes.iter().map(document::get_node_qname)
+  <span class="kw">let </span>node_tags = nodes
+    .iter()
+    .map(document::get_node_qname)
     .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
   <span class="kw">let </span>nnodes = nodes.len();
   document.close_to_node(<span class="kw-2">&amp;</span>container, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
   document.close_node(<span class="kw-2">&amp;</span>container)<span class="question-mark">?</span>;
   document.close_to_node(<span class="kw-2">&amp;</span>context, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 
-  <span class="kw">if </span>nnodes &lt; <span class="number">1 </span>{ <span class="comment">// Insertion came up empty?
+  <span class="kw">if </span>nnodes &lt; <span class="number">1 </span>{
+    <span class="comment">// Insertion came up empty?
     </span>document.remove_node(container); <span class="comment">// then remove the new block entirely
     </span><span class="kw">return </span><span class="prelude-val">Ok</span>(nodes);
-  } <span class="kw">else if </span>ignorable_attr &amp;&amp; node_tags.iter().all(|tag|  
-    document::can_contain_qsym(context_tag, <span class="kw-2">*</span>tag)) { 
-      <span class="comment">// No attributes, contents allowed in context?
-      </span>document.unwrap_nodes(container)<span class="question-mark">?</span>; <span class="comment">// No container needed, at all.
-      </span><span class="kw">return </span><span class="prelude-val">Ok</span>(nodes);
-  } <span class="kw">else if </span>nnodes==<span class="number">1 </span>{
+  } <span class="kw">else if </span>ignorable_attr
+    &amp;&amp; node_tags
+      .iter()
+      .all(|tag| document::can_contain_qsym(context_tag, <span class="kw-2">*</span>tag))
+  {
+    <span class="comment">// No attributes, contents allowed in context?
+    </span>document.unwrap_nodes(container)<span class="question-mark">?</span>; <span class="comment">// No container needed, at all.
+    </span><span class="kw">return </span><span class="prelude-val">Ok</span>(nodes);
+  } <span class="kw">else if </span>nnodes == <span class="number">1 </span>{
     <span class="kw">if </span>document::can_contain_qsym(context_tag, node_tags[<span class="number">0</span>])
-      &amp;&amp; (ignorable_attr || block_attr.keys().all(|key| document::sym_can_have_attribute(node_tags[<span class="number">0</span>], arena::pin(key)))) {
-        <span class="comment">// IF: Single node, allowed in context &amp; accepts attributes
-        // THEN: Add attributes and unwrap the single node
-        </span><span class="kw">for </span>(k,v) <span class="kw">in </span>block_attr.iter() {
-          document.set_attribute(<span class="kw-2">&amp;mut </span>nodes[<span class="number">0</span>], k, v)<span class="question-mark">?</span>;
-        }
-        document.unwrap_nodes(container)<span class="question-mark">?</span>;
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(nodes);
-    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(newcontainer) = document::sym_can_contain_somehow(context_tag,node_tags[<span class="number">0</span>]) {
-      <span class="kw">if </span>ignorable_attr || block_attr.keys().all(|key| newcontainer.map(|nc| document::sym_can_have_attribute(nc, arena::pin(key))).unwrap_or(<span class="bool-val">false</span>)) {
+      &amp;&amp; (ignorable_attr
+        || block_attr
+          .keys()
+          .all(|key| document::sym_can_have_attribute(node_tags[<span class="number">0</span>], arena::pin(key))))
+    {
+      <span class="comment">// IF: Single node, allowed in context &amp; accepts attributes
+      // THEN: Add attributes and unwrap the single node
+      </span><span class="kw">for </span>(k, v) <span class="kw">in </span>block_attr.iter() {
+        document.set_attribute(<span class="kw-2">&amp;mut </span>nodes[<span class="number">0</span>], k, v)<span class="question-mark">?</span>;
+      }
+      document.unwrap_nodes(container)<span class="question-mark">?</span>;
+      <span class="kw">return </span><span class="prelude-val">Ok</span>(nodes);
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(newcontainer) = document::sym_can_contain_somehow(context_tag, node_tags[<span class="number">0</span>])
+    {
+      <span class="kw">if </span>ignorable_attr
+        || block_attr.keys().all(|key| {
+          newcontainer
+            .map(|nc| document::sym_can_have_attribute(nc, arena::pin(key)))
+            .unwrap_or(<span class="bool-val">false</span>)
+        })
+      {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(nc) = newcontainer {
           <span class="comment">// rename the capture to that container
           </span>document.rename_node_qsym(container, nc, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
@@ -1360,37 +1402,72 @@
 
   // Otherwise, rename the capture
   // MAY need foreignObject wrapper
-  </span><span class="kw">if </span>is_svg &amp;&amp; node_tags.iter().any(|tag| arena::with(<span class="kw-2">*</span>tag, |tag_str| 
-    tag_str.starts_with(<span class="string">"ltx:"</span>))) {
-    context     = document.wrap_nodes(<span class="string">"svg:foreignObject"</span>, <span class="macro">vec!</span>[container.clone()])<span class="question-mark">?
+  </span><span class="kw">if </span>is_svg
+    &amp;&amp; node_tags
+      .iter()
+      .any(|tag| arena::with(<span class="kw-2">*</span>tag, |tag_str| tag_str.starts_with(<span class="string">"ltx:"</span>)))
+  {
+    context = document
+      .wrap_nodes(<span class="string">"svg:foreignObject"</span>, <span class="macro">vec!</span>[container.clone()])<span class="question-mark">?
       </span>.expect(<span class="string">"foreign object wrap should always succeed in SVG"</span>);
     context_tag = document::get_node_qname(<span class="kw-2">&amp;</span>context);
   }
   <span class="kw">let </span>candidates = <span class="kw">if </span>is_inline {
-    [<span class="string">"ltx:inline-block"</span>,<span class="string">"ltx:inline-logical-block"</span>,<span class="string">"ltx:inline-sectional-block"</span>]
-      .map(arena::pin_static).to_vec()
+    [
+      <span class="string">"ltx:inline-block"</span>,
+      <span class="string">"ltx:inline-logical-block"</span>,
+      <span class="string">"ltx:inline-sectional-block"</span>,
+    ]
+    .map(arena::pin_static)
+    .to_vec()
   } <span class="kw">else </span>{
-    [<span class="string">"ltx:block"</span>,<span class="string">"ltx:logical-block"</span>, <span class="string">"ltx:sectional-block"</span>, <span class="string">"ltx:figure"</span>]
-      .map(arena::pin_static).to_vec()
+    [
+      <span class="string">"ltx:block"</span>,
+      <span class="string">"ltx:logical-block"</span>,
+      <span class="string">"ltx:sectional-block"</span>,
+      <span class="string">"ltx:figure"</span>,
+    ]
+    .map(arena::pin_static)
+    .to_vec()
   };
-  <span class="kw">let </span>filtered_candidates = candidates.into_iter().filter(|candidate|
-    node_tags.iter().all(|tag| document::sym_can_contain_somehow(<span class="kw-2">*</span>candidate, <span class="kw-2">*</span>tag).is_some())).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-    <span class="comment">// and are allowed in the context
-  </span><span class="kw">let </span>allowed_candidates = filtered_candidates.iter()
+  <span class="kw">let </span>filtered_candidates = candidates
+    .into_iter()
+    .filter(|candidate| {
+      node_tags
+        .iter()
+        .all(|tag| document::sym_can_contain_somehow(<span class="kw-2">*</span>candidate, <span class="kw-2">*</span>tag).is_some())
+    })
+    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+  <span class="comment">// and are allowed in the context
+  </span><span class="kw">let </span>allowed_candidates = filtered_candidates
+    .iter()
     .filter(|candidate| document::can_contain_qsym(context_tag, <span class="kw-2">**</span>candidate))
     .copied()
     .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(final_tag) = allowed_candidates.first().map_or(filtered_candidates.first(), <span class="prelude-val">Some</span>) {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(final_tag) = allowed_candidates
+    .first()
+    .map_or(filtered_candidates.first(), <span class="prelude-val">Some</span>)
+  {
     <span class="comment">// Rename the capture to the correct container
-    // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free where Symbol tickets and &amp;str
-    // are equally intuitive to use without runtime panics from arena mutability exceptions.
+    // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free
+    // where Symbol tickets and &amp;str are equally intuitive to use without runtime panics from
+    // arena mutability exceptions.
     </span>document.rename_node(container, <span class="kw-2">&amp;</span>arena::to_string(<span class="kw-2">*</span>final_tag), <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-  } <span class="kw">else </span>{ <span class="comment">// we didn't know what to do?
-    </span><span class="kw">let </span>message = arena::with(context_tag, |ctxt_str| 
-      <span class="macro">s!</span>(<span class="string">"Did not find a block-like candidate in {} (with attributes ({})"</span>, ctxt_str, block_attr.iter()
-      .map(|(k,v)| <span class="macro">s!</span>(<span class="string">"{k}={v}"</span>)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">";"</span>)));
+  } <span class="kw">else </span>{
+    <span class="comment">// we didn't know what to do?
+    </span><span class="kw">let </span>message = arena::with(context_tag, |ctxt_str| {
+      <span class="macro">s!</span>(
+        <span class="string">"Did not find a block-like candidate in {} (with attributes ({})"</span>,
+        ctxt_str,
+        block_attr
+          .iter()
+          .map(|(k, v)| <span class="macro">s!</span>(<span class="string">"{k}={v}"</span>))
+          .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+          .join(<span class="string">";"</span>)
+      )
+    });
     <span class="macro">Warn!</span>(<span class="string">"malformed"</span>, <span class="string">"_CaptureBlock_"</span>, message);
-    document.rename_node( container, <span class="string">"ltx:block"</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+    document.rename_node(container, <span class="string">"ltx:block"</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
   }
   <span class="prelude-val">Ok</span>(nodes)
 }
@@ -1401,10 +1478,7 @@
 
   // If the Math ONLY contains XMath/XMText, it apparently isn't math at all!?!
   </span><span class="kw">if </span>document
-    .findnodes(
-      <span class="string">"ltx:XMath/ltx:*[local-name() != 'XMText']"</span>,
-      <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>mathnode),
-      )
+    .findnodes(<span class="string">"ltx:XMath/ltx:*[local-name() != 'XMText']"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>mathnode))
     .is_empty()
   {
     <span class="comment">// So unwrap down to the contents of the XMText's.
@@ -1446,10 +1520,7 @@
 // a single ltx:tabular in an equation (perverse, but people do that).
 // So, we put this one on ltx:Math also, and scan for any contained XMText to fixup.
 
-</span><span class="kw">fn </span>cleanup_xmtext_outer(
-  document: <span class="kw-2">&amp;mut </span>Document,
-  math_node: <span class="kw-2">&amp;</span>Node,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">fn </span>cleanup_xmtext_outer(document: <span class="kw-2">&amp;mut </span>Document, math_node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">for </span>text_node <span class="kw">in </span>document.findnodes(<span class="string">"descendant::ltx:XMText"</span>, <span class="prelude-val">Some</span>(math_node)) {
     cleanup_xmtext(document, text_node)<span class="question-mark">?</span>;
   }
@@ -1470,7 +1541,7 @@
         .findnodes(
           <span class="string">"ltx:text | ltx:inline-block[count(*)=1] | ltx:p"</span>,
           <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>text_node),
-              )
+        )
         .is_empty()
     {
       <span class="kw">break</span>;
@@ -1488,11 +1559,7 @@
 
   <span class="comment">// Now apply a simplifying rule for nested Math
   // If the XMText contains a single Math, pull it's content up in
-  </span><span class="kw">if </span>children.len() == <span class="number">1
-    </span>&amp;&amp; !document
-      .findnodes(<span class="string">"ltx:Math"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>text_node))
-      .is_empty()
-  {
+  </span><span class="kw">if </span>children.len() == <span class="number">1 </span>&amp;&amp; !document.findnodes(<span class="string">"ltx:Math"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>text_node)).is_empty() {
     <span class="comment">// Replace XMText by XMWrap/*  (this should preserve the parse?)
     </span>document.rename_node(text_node, <span class="string">"ltx:XMWrap"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; <span class="comment">// text_node =
     </span><span class="kw">let </span>first_child = children.pop().unwrap();
@@ -1521,8 +1588,8 @@
   // [will alignment attributes be lost?]
   </span>} <span class="kw">else if </span>children.len() == <span class="number">1
     </span>&amp;&amp; model::with_node_qname(children.first().as_ref().unwrap(), |qname| {
-        qname == <span class="string">"ltx:tabular"
-      </span>})
+      qname == <span class="string">"ltx:tabular"
+    </span>})
   <span class="comment">//// Should we ALWAYS do this, or just for some minimal amount of math???
   ////        &amp;&amp; !document.findnodes('ltx:tabular/ltx:tr/ltx:td/text()'
   ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td/text()'
@@ -1531,30 +1598,30 @@
   ////                                 $text_node)
   </span>{
     <span class="macro">todo!</span>(); <span class="comment">// TODO
-                      // // First step is remove any ltx:tbody from the tabular!
-                      // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
-                      //   document.unwrapNodes($tb); }
-                      // // Now, we can start replacing tabular=&gt;XMArray, tr=&gt;XMRow, td=&gt;XMCell
-                      // my $table = document.renameNode($children[0], 'ltx:XMArray');
-                      // foreach my $row ($table-&gt;childNodes) {
-                      //   $row = document.renameNode($row, 'ltx:XMRow');
-                      //   foreach my $cell ($row-&gt;childNodes) {
-                      //     $cell = document.renameNode($cell, 'ltx:XMCell');
-                      //     foreach my $m ($cell-&gt;childNodes) {
-                      //       if ($model-&gt;getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap
-                      // the Math/XMath layer         document.replaceNode($m,
-                      // map { $_-&gt;childNodes } $m-&gt;childNodes); }       else
-                      // {                                           // Otherwise, wrap whatever it
-                      // is in an XMText         document.wrapNodes('ltx:
-                      // XMText', $m); } } } }
-                      // And now we don't need the XMText any more.
-                      // foreach my $attr ($text_node-&gt;attributes) {    // Copy the child's
-                      // attributes (should Merge!!)
-                      //   $table-&gt;setAttribute($attr-&gt;nodeName =&gt; $attr-&gt;getValue); }
-                      // my $newtable = document.unwrapNodes($text_node);
-                      // if (my $id = $text_node-&gt;getAttribute('xml:id')) {
-                      //   document.unRecordID($id);
-                      //   document.recordID($id, $newtable); } }
+    // // First step is remove any ltx:tbody from the tabular!
+    // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
+    //   document.unwrapNodes($tb); }
+    // // Now, we can start replacing tabular=&gt;XMArray, tr=&gt;XMRow, td=&gt;XMCell
+    // my $table = document.renameNode($children[0], 'ltx:XMArray');
+    // foreach my $row ($table-&gt;childNodes) {
+    //   $row = document.renameNode($row, 'ltx:XMRow');
+    //   foreach my $cell ($row-&gt;childNodes) {
+    //     $cell = document.renameNode($cell, 'ltx:XMCell');
+    //     foreach my $m ($cell-&gt;childNodes) {
+    //       if ($model-&gt;getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap
+    // the Math/XMath layer         document.replaceNode($m,
+    // map { $_-&gt;childNodes } $m-&gt;childNodes); }       else
+    // {                                           // Otherwise, wrap whatever it
+    // is in an XMText         document.wrapNodes('ltx:
+    // XMText', $m); } } } }
+    // And now we don't need the XMText any more.
+    // foreach my $attr ($text_node-&gt;attributes) {    // Copy the child's
+    // attributes (should Merge!!)
+    //   $table-&gt;setAttribute($attr-&gt;nodeName =&gt; $attr-&gt;getValue); }
+    // my $newtable = document.unwrapNodes($text_node);
+    // if (my $id = $text_node-&gt;getAttribute('xml:id')) {
+    //   document.unRecordID($id);
+    //   document.recordID($id, $newtable); } }
   </span>}
   <span class="prelude-val">Ok</span>(())
 }
@@ -1620,7 +1687,7 @@
 }
 
 <span class="doccomment">/// Converts tokens to a string in the fashion of \message and others
-/// 
+///
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
 /// [This could be a $tokens-&gt;unpackParameters, but for the curious space treatment]
@@ -1696,17 +1763,20 @@
 // function to handle all the
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>KVSpec {
-  <span class="kw">pub </span>star: bool,
-  <span class="kw">pub </span>plus: bool,
-  <span class="kw">pub </span>prefix: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>star:    bool,
+  <span class="kw">pub </span>plus:    bool,
+  <span class="kw">pub </span>prefix:  <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="kw">pub </span>keysets: Vec&lt;String&gt;,
-  <span class="kw">pub </span>skip: Vec&lt;String&gt;,
+  <span class="kw">pub </span>skip:    Vec&lt;String&gt;,
 }
-<span class="kw">pub fn </span>keyvals_aux(
-  until: <span class="prelude-ty">Option</span>&lt;Token&gt;,
-  spec: KVSpec,
-) -&gt; <span class="prelude-ty">Result</span>&lt;KeyVals&gt; {
-  <span class="kw">let </span>KVSpec {<span class="kw-2">mut </span>star, plus, <span class="kw-2">mut </span>prefix, <span class="kw-2">mut </span>keysets, skip} = spec;
+<span class="kw">pub fn </span>keyvals_aux(until: <span class="prelude-ty">Option</span>&lt;Token&gt;, spec: KVSpec) -&gt; <span class="prelude-ty">Result</span>&lt;KeyVals&gt; {
+  <span class="kw">let </span>KVSpec {
+    <span class="kw-2">mut </span>star,
+    plus,
+    <span class="kw-2">mut </span>prefix,
+    <span class="kw-2">mut </span>keysets,
+    skip,
+  } = spec;
   <span class="comment">// support both "keysets" and "prefix|keysets"
   </span><span class="kw">if </span>keysets.is_empty() {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(pfx) = prefix.take() {
@@ -1721,31 +1791,29 @@
   }
 
   <span class="comment">// create a new set of Key-Value arguments
-  </span><span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
-    KeyvalsConfig {
-      prefix,
-      keysets,
-      set_all: plus,
-      set_internals: <span class="bool-val">true</span>,
-      skip,
-      skip_missing: <span class="kw">if </span>star { keyvals::SkipMissing::All } <span class="kw">else </span>{ keyvals::SkipMissing::None},
-      hook_missing: <span class="prelude-val">None</span>,
+  </span><span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(KeyvalsConfig {
+    prefix,
+    keysets,
+    set_all: plus,
+    set_internals: <span class="bool-val">true</span>,
+    skip,
+    skip_missing: <span class="kw">if </span>star {
+      keyvals::SkipMissing::All
+    } <span class="kw">else </span>{
+      keyvals::SkipMissing::None
     },
-  );
+    hook_missing: <span class="prelude-val">None</span>,
+  });
   <span class="comment">// and read it from the gullet
   </span><span class="kw">if let </span><span class="prelude-val">Some</span>(until_token) = until {
-    keyvals.read_from(until_token,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+    keyvals.read_from(until_token, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
   }
   <span class="comment">// we still want to make use of the hash
   </span><span class="prelude-val">Ok</span>(keyvals)
 }
 
-<span class="kw">pub fn </span>uppercase_token(token: Token) -&gt; Token {
-  either_case_token(token, <span class="bool-val">true</span>)
-}
-<span class="kw">pub fn </span>lowercase_token(token: Token) -&gt; Token {
-  either_case_token(token, <span class="bool-val">false</span>)
-}
+<span class="kw">pub fn </span>uppercase_token(token: Token) -&gt; Token { either_case_token(token, <span class="bool-val">true</span>) }
+<span class="kw">pub fn </span>lowercase_token(token: Token) -&gt; Token { either_case_token(token, <span class="bool-val">false</span>) }
 
 <span class="kw">fn </span>either_case_token(token: Token, is_upper: bool) -&gt; Token {
   <span class="kw">let </span>(chars_count, thischar) = token.with_str(|s| (s.chars().count(), s.chars().next()));
@@ -1781,7 +1849,7 @@
 }
 
 <span class="doccomment">/// a candidate for use by \hskip, \hspace, etc... ?
-</span><span class="kw">pub fn </span>dimension_to_spaces&lt;T:NumericOps&gt;(dimen: T) -&gt; Cow&lt;<span class="lifetime">'static</span>, str&gt; {
+</span><span class="kw">pub fn </span>dimension_to_spaces&lt;T: NumericOps&gt;(dimen: T) -&gt; Cow&lt;<span class="lifetime">'static</span>, str&gt; {
   <span class="kw">let </span>fs = lookup_font().unwrap().get_size(); <span class="comment">// 1 em
   </span><span class="kw">let </span>pt = dimen.pt_value(<span class="prelude-val">None</span>);
   <span class="kw">let </span>ems = pt / fs.unwrap();
@@ -1830,34 +1898,22 @@
   <span class="kw">if </span>qname == arena::pin_static(<span class="string">"ltx:tag"</span>) {
   }
   <span class="comment">// HACK
-  </span><span class="kw">else if </span>!align.is_empty()
-    &amp;&amp; model::can_have_attribute(qname, arena::pin_static(<span class="string">"align"</span>))
-  {
+  </span><span class="kw">else if </span>!align.is_empty() &amp;&amp; model::can_have_attribute(qname, arena::pin_static(<span class="string">"align"</span>)) {
     node.set_attribute(<span class="string">"align"</span>, align)<span class="question-mark">?</span>;
-  } <span class="kw">else if </span>!class.is_empty()
-    &amp;&amp; model::can_have_attribute(qname, arena::pin_static(<span class="string">"class"</span>))
-  {
+  } <span class="kw">else if </span>!class.is_empty() &amp;&amp; model::can_have_attribute(qname, arena::pin_static(<span class="string">"class"</span>)) {
     document.add_class(node, class)<span class="question-mark">?</span>;
   }
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">pub fn </span>make_generic_message(
-  cmd: <span class="kw-2">&amp;</span>str,
-  args: Vec&lt;Tokens&gt;,
-  kind: <span class="kw-2">&amp;</span>str,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>make_generic_message(cmd: <span class="kw-2">&amp;</span>str, args: Vec&lt;Tokens&gt;, kind: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   bgroup();
-  state::let_i(
-    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>),
-    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\string"</span>),
-    <span class="prelude-val">None
-  </span>);
+  state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\string"</span>), <span class="prelude-val">None</span>);
   state::let_i(
     <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\MessageBreak"</span>),
     <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\ltx@hard@MessageBreak"</span>),
-    <span class="prelude-val">None
-  </span>); <span class="comment">// tricky, we need Expand() to execute it
+    <span class="prelude-val">None</span>,
+  ); <span class="comment">// tricky, we need Expand() to execute it
   </span><span class="kw">let </span><span class="kw-2">mut </span>message = String::new();
   <span class="kw">for </span>arg <span class="kw">in </span>args.into_iter() {
     <span class="kw">let </span><span class="kw-2">mut </span>arg_toks = arg.unlist();
@@ -1884,7 +1940,7 @@
 }
 
 <span class="doccomment">/// Convert a vertical positioning, optional argument.
-/// 
+///
 ///  t = "top", b = "bottom"; default is "middle".
 /// Note that the default for vattach attribute is "baseline".
 /// Utility, not really TeX, but used by LaTeX, AmSTeX.
@@ -1901,23 +1957,23 @@
 
 <span class="kw">pub fn </span>in_svg(document: <span class="kw-2">&amp;</span>Document) -&gt; bool {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(context) = document.get_element() {
-    document::with_node_qname(<span class="kw-2">&amp;</span>context,
-      |qname| qname.starts_with(<span class="string">"svg:"</span>))
-  } <span class="kw">else </span>{ <span class="bool-val">false </span>}
+    document::with_node_qname(<span class="kw-2">&amp;</span>context, |qname| qname.starts_with(<span class="string">"svg:"</span>))
+  } <span class="kw">else </span>{
+    <span class="bool-val">false
+  </span>}
 }
 
 <span class="kw">pub fn </span>adjust_box_color(tbox: <span class="kw-2">&amp;</span>Digested) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">let </span>color_opt = lookup_font().and_then(|f| f.get_color()
-    .map(|c| c.clone().into_owned()));
+  <span class="kw">let </span>color_opt = lookup_font().and_then(|f| f.get_color().map(|c| c.clone().into_owned()));
   <span class="kw">if let </span><span class="prelude-val">Some</span>(color) = color_opt {
     <span class="kw">if </span>color != <span class="string">"black" </span>{
-       adjust_box_color_rec(<span class="kw-2">&amp;</span>color, HashMap::default(), tbox);
+      adjust_box_color_rec(<span class="kw-2">&amp;</span>color, HashMap::default(), tbox);
     }
   }
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>adjust_box_color_rec(_color: <span class="kw-2">&amp;</span>str, _props: HashMap&lt;String,String&gt;, _tbox: <span class="kw-2">&amp;</span>Digested) {
+<span class="kw">fn </span>adjust_box_color_rec(_color: <span class="kw-2">&amp;</span>str, _props: HashMap&lt;String, String&gt;, _tbox: <span class="kw-2">&amp;</span>Digested) {
   <span class="macro">todo!</span>();
 }
 
@@ -1933,4 +1989,5 @@
   } <span class="kw">else </span>{
     String::new()
   }
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

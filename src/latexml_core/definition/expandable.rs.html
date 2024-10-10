@@ -262,51 +262,51 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
 
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::tokens::{Tokens, NO_TOKENS};
+<span class="kw">use </span><span class="kw">crate</span>::tokens::{NO_TOKENS, Tokens};
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="attr">#[derive(Debug, Clone, Default)]
 </span><span class="kw">pub struct </span>ExpandableOptions {
-  <span class="kw">pub </span>locked: bool,
-  <span class="kw">pub </span>protected: bool,
-  <span class="kw">pub </span>outer: bool,
-  <span class="kw">pub </span>long: bool,
-  <span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-  <span class="kw">pub </span>alias: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>mathactive: bool,
-  <span class="kw">pub </span>robust: bool,
+  <span class="kw">pub </span>locked:            bool,
+  <span class="kw">pub </span>protected:         bool,
+  <span class="kw">pub </span>outer:             bool,
+  <span class="kw">pub </span>long:              bool,
+  <span class="kw">pub </span>scope:             <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+  <span class="kw">pub </span>alias:             <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>mathactive:        bool,
+  <span class="kw">pub </span>robust:            bool,
   <span class="kw">pub </span>nopack_parameters: bool,
 }
 
 <span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>Expandable {
   <span class="kw">pub </span>is_protected: bool,
-  <span class="kw">pub </span>is_long: bool,
-  <span class="kw">pub </span>is_outer: bool,
-  <span class="kw">pub </span>has_cc_arg: bool,
-  <span class="kw">pub </span>alias: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>locator: Locator,
-  <span class="kw">pub </span>cs: Token,
-  <span class="kw">pub </span>paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
-  <span class="kw">pub </span>expansion: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt;,
+  <span class="kw">pub </span>is_long:      bool,
+  <span class="kw">pub </span>is_outer:     bool,
+  <span class="kw">pub </span>has_cc_arg:   bool,
+  <span class="kw">pub </span>alias:        <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>locator:      Locator,
+  <span class="kw">pub </span>cs:           Token,
+  <span class="kw">pub </span>paramlist:    <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+  <span class="kw">pub </span>expansion:    <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Expandable {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Expandable {
       is_protected: <span class="bool-val">false</span>,
-      is_long: <span class="bool-val">false</span>,
-      is_outer: <span class="bool-val">false</span>,
-      has_cc_arg: <span class="bool-val">false</span>,
-      alias: <span class="prelude-val">None</span>,
-      locator: Locator::default(),
-      cs: <span class="macro">T_CS!</span>(<span class="string">"Expandable"</span>),
-      paramlist: <span class="prelude-val">None</span>,
-      expansion: <span class="prelude-val">None</span>,
+      is_long:      <span class="bool-val">false</span>,
+      is_outer:     <span class="bool-val">false</span>,
+      has_cc_arg:   <span class="bool-val">false</span>,
+      alias:        <span class="prelude-val">None</span>,
+      locator:      Locator::default(),
+      cs:           <span class="macro">T_CS!</span>(<span class="string">"Expandable"</span>),
+      paramlist:    <span class="prelude-val">None</span>,
+      expansion:    <span class="prelude-val">None</span>,
     }
   }
 }
@@ -411,9 +411,12 @@
             //     ? ($$expansion[0], $$expansion[1]) : ($expansion, undef));
             //   if ($t0 &amp;&amp; ($t0-&gt;equals($$self{cs})
             //       || ($t1 &amp;&amp; $t1-&gt;equals($$self{cs}) &amp;&amp; $t0-&gt;equals(T_CS('\protect'))))) {
-            </span><span class="macro">Error!</span>(<span class="string">"recursion"</span>, <span class="self">self</span>.cs,
-                  <span class="macro">format!</span>(<span class="string">"Token {} expands into itself!"</span>,<span class="self">self</span>.cs),
-                  <span class="string">"defining as empty"</span>);
+            </span><span class="macro">Error!</span>(
+              <span class="string">"recursion"</span>,
+              <span class="self">self</span>.cs,
+              <span class="macro">format!</span>(<span class="string">"Token {} expands into itself!"</span>, <span class="self">self</span>.cs),
+              <span class="string">"defining as empty"
+            </span>);
             <span class="comment">//     $expansion = TokensI(); } }
             </span><span class="macro">Tokens!</span>()
           } <span class="kw">else </span>{
@@ -425,7 +428,8 @@
           </span>} <span class="kw">else </span>{
             Vec::new()
           };
-          <span class="kw">if </span><span class="self">self</span>.has_cc_arg {  <span class="comment">// Do we actually need to substitute the args in?
+          <span class="kw">if </span><span class="self">self</span>.has_cc_arg {
+            <span class="comment">// Do we actually need to substitute the args in?
             </span><span class="kw">let </span><span class="kw-2">mut </span>args_tks = Vec::new();
             <span class="kw">for </span>arg <span class="kw">in </span>args.iter() {
               args_tks.push(arg.as_tokens()<span class="question-mark">?</span>);
@@ -453,16 +457,10 @@
   }
 
   <span class="comment">// Not implemented for expandable
-  </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-    <span class="prelude-val">Ok</span>(Vec::new())
-  }
+  </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; { <span class="prelude-val">Ok</span>(Vec::new()) }
   <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">None </span>}
-  <span class="kw">fn </span>do_absorbtion(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    _document: <span class="kw-2">&amp;mut </span>Document,
-    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="macro">fatal!</span>(
       Definition,
       Unexpected,
@@ -476,7 +474,7 @@
     cs: Token,
     paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
     <span class="kw-2">mut </span>expansion_opt: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt;,
-    traits: <span class="prelude-ty">Option</span>&lt;ExpandableOptions&gt;
+    traits: <span class="prelude-ty">Option</span>&lt;ExpandableOptions&gt;,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     <span class="kw">let </span>traits = traits.unwrap_or_default();
     <span class="kw">if </span>!traits.nopack_parameters {
@@ -485,10 +483,12 @@
       }
     }
     <span class="kw">let </span>has_cc_arg = <span class="kw">match </span>expansion_opt {
-      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="kw-2">ref </span>tks)) =&gt; {
-        tks.unlist_ref().iter().any(|t| t.get_catcode() == Catcode::ARG ) },
-      <span class="kw">_ </span>=&gt; <span class="bool-val">false
-    </span>};
+      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="kw-2">ref </span>tks)) =&gt; tks
+        .unlist_ref()
+        .iter()
+        .any(|t| t.get_catcode() == Catcode::ARG),
+      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+    };
     <span class="comment">// simplify: treat empty tokens as None
     </span><span class="kw">let </span>expansion = <span class="kw">match </span>expansion_opt {
       <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) <span class="kw">if </span>tks.is_empty() =&gt; <span class="prelude-val">None</span>,

@@ -232,7 +232,10 @@
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a></pre></div><pre class="rust"><code><span class="kw">use </span>glob::glob;
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a></pre></div><pre class="rust"><code><span class="kw">use </span>glob::glob;
 <span class="kw">use </span>libxml::parser::Parser;
 <span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
 <span class="kw">use </span>libxml::tree::{Node, SaveOptions};
@@ -241,11 +244,11 @@
 <span class="kw">use </span>std::sync::Once;
 
 <span class="kw">use </span><span class="kw">crate</span>::core_interface::DigestionAPI;
+<span class="kw">use </span>latexml_codegen::LoadModel;
 <span class="kw">use </span>latexml_core::common::BindingDispatcher;
 <span class="kw">use </span>latexml_core::document::Document;
-<span class="kw">use </span>latexml_core::{s, Core, CoreOptions, state};
+<span class="kw">use </span>latexml_core::{Core, CoreOptions, s, state};
 <span class="kw">use </span>latexml_math_parser::node_to_grammar_lexemes;
-<span class="kw">use </span>latexml_codegen::LoadModel;
 
 <span class="kw">pub fn </span>latexml_tests(
   dirpath: <span class="kw-2">&amp;</span>str,
@@ -320,8 +323,8 @@
   </span><span class="bool-val">true
 </span>}
 
-<span class="comment">// fn latexml_ok(tex_path: &amp;str, xml_path: &amp;str, name: &amp;str) { latexml_ok_internal(tex_path, xml_path, name,
-// None) }
+<span class="comment">// fn latexml_ok(tex_path: &amp;str, xml_path: &amp;str, name: &amp;str) { latexml_ok_internal(tex_path,
+// xml_path, name, None) }
 
 </span><span class="kw">fn </span>latexml_ok_internal(
   tex_path: <span class="kw-2">&amp;</span>str,
@@ -426,7 +429,10 @@
 
 <span class="doccomment">/// Simple tokenization of a single formula, without any custom preloads
 /// beyond latex and amsmath
-</span><span class="kw">pub fn </span>lex_single_tex_formula(tex: <span class="kw-2">&amp;</span>str, latexml: <span class="kw-2">&amp;mut </span>Core) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;, <span class="prelude-ty">Option</span>&lt;Node&gt;, Document) {
+</span><span class="kw">pub fn </span>lex_single_tex_formula(
+  tex: <span class="kw-2">&amp;</span>str,
+  latexml: <span class="kw-2">&amp;mut </span>Core,
+) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;, <span class="prelude-ty">Option</span>&lt;Node&gt;, Document) {
   <span class="kw">let </span>xml_result = latexml.convert_file(<span class="macro">format!</span>(<span class="string">"literal:\\[ {tex} \\]"</span>));
   <span class="macro">assert!</span>(xml_result.is_ok(), <span class="string">"{:?}"</span>, xml_result.err());
   <span class="kw">let </span><span class="kw-2">mut </span>doc = xml_result.unwrap();

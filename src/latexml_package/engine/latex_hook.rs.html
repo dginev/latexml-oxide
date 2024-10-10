@@ -81,7 +81,6 @@
 <a href="#80" id="80">80</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
-
   <span class="comment">// No, \documentclass isn't really a primitive -- It's not even TeX!
   // But we define a number of stubs here that will automatically load
   // the LaTeX pool (or AmSTeX.pool) (which will presumably redefine them), and then
@@ -109,15 +108,17 @@
   }
   <span class="comment">// TODO: Port and use `DefAutoload` instead of this single-purpose macro
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@load@latex@pool"</span>, {
-    input_definitions(
-      <span class="string">"LaTeX"</span>,
-      InputDefinitionOptions {
-        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
-        ..InputDefinitionOptions::default()
-      })<span class="question-mark">?</span>;
+    input_definitions(<span class="string">"LaTeX"</span>, InputDefinitionOptions {
+      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
+      ..InputDefinitionOptions::default()
+    })<span class="question-mark">?</span>;
   });
 
-  <span class="kw">for </span>_ltx3trigger <span class="kw">in </span>[<span class="string">"\\ExplSyntaxOn"</span>,<span class="string">"\\ProvidesExplClass"</span>,<span class="string">"\\ProvidesExplPackage"</span>] {
+  <span class="kw">for </span>_ltx3trigger <span class="kw">in </span>[
+    <span class="string">"\\ExplSyntaxOn"</span>,
+    <span class="string">"\\ProvidesExplClass"</span>,
+    <span class="string">"\\ProvidesExplPackage"</span>,
+  ] {
     <span class="comment">// DG: note that these auto-loads are not perfect --
     //     if they are triggered with a raw .sty file for example,
     //     the expl3 support will "expire" at the end of the current scope,
@@ -155,7 +156,6 @@
   </span>);
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@currnamestack"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
   <span class="macro">Let!</span>(<span class="string">"\\@currname"</span>, <span class="string">"\\lx@empty"</span>);
-  <span class="macro">Let!</span>(<span class="string">"\\@currext"</span>,  <span class="string">"\\lx@empty"</span>);
-
+  <span class="macro">Let!</span>(<span class="string">"\\@currext"</span>, <span class="string">"\\lx@empty"</span>);
 });
 </code></pre></div></section></main></body></html>

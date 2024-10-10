@@ -8,11 +8,12 @@
 <a href="#7" id="7">7</a>
 <a href="#8" id="8">8</a>
 <a href="#9" id="9">9</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<span class="macro">LoadDefinitions!</span>( {
+<span class="macro">LoadDefinitions!</span>({
   <span class="comment">// Ignore the options
-  </span><span class="kw">for </span>option <span class="kw">in </span>[<span class="string">"in"</span>,<span class="string">"cm"</span>,<span class="string">"plain"</span>, <span class="string">"empty"</span>, <span class="string">"headings"</span>, <span class="string">"myheadings"</span>] {
+  </span><span class="kw">for </span>option <span class="kw">in </span>[<span class="string">"in"</span>, <span class="string">"cm"</span>, <span class="string">"plain"</span>, <span class="string">"empty"</span>, <span class="string">"headings"</span>, <span class="string">"myheadings"</span>] {
     <span class="macro">DeclareOption!</span>(option, <span class="prelude-val">None</span>);
   }
   <span class="macro">ProcessOptions!</span>();
   <span class="comment">// Nothing else to do....
-</span>});</code></pre></div></section></main></body></html>
+</span>});
+</code></pre></div></section></main></body></html>

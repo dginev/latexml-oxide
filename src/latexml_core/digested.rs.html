@@ -524,31 +524,7 @@
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
-<a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a></pre></div><pre class="rust"><code><span class="doccomment">//! Interface layer for the full range of digested objects
+<a href="#526" id="526">526</a></pre></div><pre class="rust"><code><span class="doccomment">//! Interface layer for the full range of digested objects
 </span><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::cell::RefCell;
@@ -557,8 +533,8 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
 <span class="kw">use </span><span class="kw">crate</span>::comment::Comment;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -913,18 +889,9 @@
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b
-        .borrow()
-        .get_string()
-        .map(|v| Cow::Owned(v.into_owned())),
-      List(<span class="kw-2">ref </span>l) =&gt; l
-        .borrow()
-        .get_string()
-        .map(|v| Cow::Owned(v.into_owned())),
-      Whatsit(<span class="kw-2">ref </span>w) =&gt; w
-        .borrow()
-        .get_string()
-        .map(|v| Cow::Owned(v.into_owned())),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
       <span class="kw">_ </span>=&gt; <span class="macro">todo!</span>(),
     }
   }
@@ -974,21 +941,9 @@
   <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; <span class="prelude-val">Ok</span>(
-        b.borrow()
-          .get_font()<span class="question-mark">?
-          </span>.map(|v| Cow::Owned(v.into_owned())),
-      ),
-      List(<span class="kw-2">ref </span>l) =&gt; <span class="prelude-val">Ok</span>(
-        l.borrow()
-          .get_font()<span class="question-mark">?
-          </span>.map(|v| Cow::Owned(v.into_owned())),
-      ),
-      Whatsit(<span class="kw-2">ref </span>w) =&gt; <span class="prelude-val">Ok</span>(
-        w.borrow()
-          .get_font()<span class="question-mark">?
-          </span>.map(|t| Cow::Owned(t.into_owned())),
-      ),
+      TBox(<span class="kw-2">ref </span>b) =&gt; <span class="prelude-val">Ok</span>(b.borrow().get_font()<span class="question-mark">?</span>.map(|v| Cow::Owned(v.into_owned()))),
+      List(<span class="kw-2">ref </span>l) =&gt; <span class="prelude-val">Ok</span>(l.borrow().get_font()<span class="question-mark">?</span>.map(|v| Cow::Owned(v.into_owned()))),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; <span class="prelude-val">Ok</span>(w.borrow().get_font()<span class="question-mark">?</span>.map(|t| Cow::Owned(t.into_owned()))),
       Postponed(<span class="kw-2">ref </span>_tks) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
       <span class="kw">_ </span>=&gt; <span class="macro">todo!</span>(),
     }
@@ -997,10 +952,7 @@
   <span class="doccomment">/// Note the difference between calling `compute_size` on a Digested object, and calling it on a
   /// concrete box type. When called on `Digested` it will opt for caching the computed sizes,
   /// but when called on the concrete types it will always compute sizes fresh.
-  </span><span class="kw">fn </span>compute_size(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    options: HashMap&lt;Stored&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  </span><span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow_mut().compute_size_and_cache(options),

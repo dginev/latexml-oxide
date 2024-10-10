@@ -243,7 +243,9 @@
 <a href="#242" id="242">242</a>
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::cmp::Ordering;
 
 <span class="macro">LoadDefinitions!</span>({
@@ -347,7 +349,7 @@
     </span>} <span class="kw">else </span>{
       <span class="macro">Tokens!</span>() } });
   <span class="macro">DefMacro!</span>(<span class="string">"\\pdffilemoddate {}"</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\pdffiledump {}"</span>,<span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\pdffiledump {}"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
@@ -366,7 +368,6 @@
   <span class="macro">DefRegister!</span>(<span class="string">"\\pdfshellescape"          </span>=&gt; Number::new(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\pdflastximagecolordepth" </span>=&gt; Number::new(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\pdfretval"               </span>=&gt; Number::new(<span class="number">0</span>));
-
 
   <span class="comment">// \pdfximage [ image attr spec ] general text (h, v, m)
   // \pdfrefximage object number (h, v, m)
@@ -402,21 +403,25 @@
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\quitvmode"</span>, <span class="string">""</span>);
   <span class="comment">// \pdfliteral [ pdfliteral spec ] general text (h, v, m)
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText"</span>, <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(
+    <span class="string">"\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText"</span>,
+    <span class="prelude-val">None
+  </span>);
   <span class="comment">// \special pdfspecial spec
   // \pdfresettimer
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimer"</span>,           <span class="prelude-val">None</span>);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimer"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimerresettimer"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// \pdfsetrandomseed number
   // \pdfnoligatures font
   // \pdfprimitive control sequence
-  // TODO: https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
+  // TODO:
+  // https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfprimitive DefToken"</span>, <span class="string">"#1"</span>); <span class="comment">// we can just ignore the advanced effects for now.
 
   // \pdfcolorstack stack number stack action general text
   //TODO:
-  // DefPrimitive('\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current', sub {
-  //   # for now, carefully read and discard all arguments
+  // DefPrimitive('\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop
+  // OptionalMatch:current', sub {   # for now, carefully read and discard all arguments
   //   my ($stomach, $number, $set, $push, $pop, $current) = @_;
   //   return if ($pop);
   //   my $gullet = $stomach-&gt;getGullet;
@@ -486,6 +491,5 @@
     }
   });
   <span class="macro">DefMacro!</span>(<span class="string">"\\pdfglyphtounicode{}{}"</span>, <span class="string">""</span>);
-
 });
 </code></pre></div></section></main></body></html>

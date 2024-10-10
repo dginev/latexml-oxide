@@ -517,9 +517,7 @@
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
 <a href="#518" id="518">518</a>
-<a href="#519" id="519">519</a>
-<a href="#520" id="520">520</a>
-<a href="#521" id="521">521</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#519" id="519">519</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="comment">//**********************************************************************
 // C.11 Moving Information Around
@@ -618,8 +616,10 @@
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="macro">DefMacro!</span>(<span class="string">"\\bibliography Semiverbatim"</span>,
-    <span class="string">r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\bibliography Semiverbatim"</span>,
+    <span class="string">r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#
+  </span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ifusebbl{}{}{}"</span>, sub[(bib_files_tks, bbl_clause, bib_clause)] {
     <span class="kw">let </span>bib_files = <span class="macro">Expand!</span>(bib_files_tks).to_string();
@@ -724,7 +724,7 @@
       }
       begin_bibliography(whatsit)<span class="question-mark">?</span>;
     },
-    before_construct =&gt; sub[doc,whatsit] { 
+    before_construct =&gt; sub[doc,whatsit] {
       adjust_backmatter_element(doc, whatsit)<span class="question-mark">?</span>;
     },
     locked =&gt; <span class="bool-val">true
@@ -837,9 +837,9 @@
   </span>});
 
   <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@bibnewblock"</span>, sub[document] {
-    <span class="kw">if </span>document.is_openable(<span class="string">"ltx:bibblock"</span>) {
-      document.open_element(<span class="string">"ltx:bibblock"</span>,<span class="prelude-val">None</span>,<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-    }});
+  <span class="kw">if </span>document.is_openable(<span class="string">"ltx:bibblock"</span>) {
+    document.open_element(<span class="string">"ltx:bibblock"</span>,<span class="prelude-val">None</span>,<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+  }});
   <span class="macro">Let!</span>(<span class="string">"\\newblock"</span>, <span class="string">"\\lx@bibnewblock"</span>);
   <span class="macro">Tag!</span>(<span class="string">"ltx:bibitem"</span>,  auto_open =&gt; <span class="bool-val">true</span>, auto_close =&gt; <span class="bool-val">true</span>);
   <span class="macro">Tag!</span>(<span class="string">"ltx:bibblock"</span>, auto_open =&gt; <span class="bool-val">true</span>, auto_close =&gt; <span class="bool-val">true</span>);
@@ -941,7 +941,6 @@
   // DefConstructor('\nocite Semiverbatim',
   //   "&lt;ltx:cite&gt;&lt;ltx:bibref show='nothing' bibrefs='#bibrefs'/&gt;&lt;/ltx:cite&gt;",
   //   properties =&gt; sub { (bibrefs =&gt; CleanBibKey($_[1])) });
-
 </span>});
 
 <span class="kw">fn </span>note_backmatter_element(whatsit: <span class="kw-2">&amp;mut </span>Whatsit, backelement: <span class="kw-2">&amp;</span>str) {
@@ -951,11 +950,12 @@
 }
 
 <span class="kw">fn </span>adjust_backmatter_element(document: <span class="kw-2">&amp;mut </span>Document, whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">let </span>asif_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(asif_sym)) = whatsit.get_property(<span class="string">"backmatterelement"</span>).as_deref() {
-    <span class="prelude-val">Some</span>(arena::to_string(<span class="kw-2">*</span>asif_sym))
-  } <span class="kw">else </span>{
-    <span class="prelude-val">None
-  </span>};
+  <span class="kw">let </span>asif_opt =
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(asif_sym)) = whatsit.get_property(<span class="string">"backmatterelement"</span>).as_deref() {
+      <span class="prelude-val">Some</span>(arena::to_string(<span class="kw-2">*</span>asif_sym))
+    } <span class="kw">else </span>{
+      <span class="prelude-val">None
+    </span>};
   <span class="comment">// Note: We allocate a string here, since
   // it looks like arena::with can deadlock with find_insertion_point
   // we may need a find_insertion_point_sym to avoid that...
@@ -972,17 +972,17 @@
 // bibliographies with blank lines!
 // So, let's do some redirection!
 </span><span class="kw">fn </span>setup_pseudo_bibitem() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="macro">Let!</span>(<span class="string">"\\save@bibitem"</span>,<span class="string">"\\bibitem"</span>);
-  <span class="macro">Let!</span>(<span class="string">"\\save@par"</span>,<span class="string">"\\par"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\save@bibitem"</span>, <span class="string">"\\bibitem"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\save@par"</span>, <span class="string">"\\par"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\save@backbackslash"</span>, <span class="string">"\\\\"</span>);
-  <span class="macro">Let!</span>(<span class="string">"\\bibitem"</span>,<span class="string">"\\restoring@bibitem"</span>);
-  <span class="macro">Let!</span>(<span class="string">"\\par"</span>,<span class="string">"\\par@in@bibliography"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\bibitem"</span>, <span class="string">"\\restoring@bibitem"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\par"</span>, <span class="string">"\\par@in@bibliography"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\par@in@bibliography"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\vskip"</span>, <span class="string">"\\vskip@in@bibliography"</span>);
   <span class="comment">// Moreover some people use \item instead of \bibitem
-  </span><span class="macro">Let!</span>(<span class="string">"\\item"</span>,<span class="string">"\\item@in@bibliography"</span>);
+  </span><span class="macro">Let!</span>(<span class="string">"\\item"</span>, <span class="string">"\\item@in@bibliography"</span>);
   <span class="comment">// And protect from redefinitions.
-  </span><span class="macro">Let!</span>(<span class="string">"\\newblock"</span>,<span class="string">"\\lx@bibnewblock"</span>);
+  </span><span class="macro">Let!</span>(<span class="string">"\\newblock"</span>, <span class="string">"\\lx@bibnewblock"</span>);
   <span class="comment">// Risky, but when bibliography immediatesly starts with text (no implied \par)
   </span><span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet::read_non_space()<span class="question-mark">? </span>{
     gullet::unread_one(token);
@@ -994,17 +994,13 @@
 }
 <span class="comment">// This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
-</span><span class="kw">fn </span>begin_bibliography(
-  whatsit: <span class="kw-2">&amp;mut </span>Whatsit,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  begin_bibliography_clean( whatsit)<span class="question-mark">?</span>;
+</span><span class="kw">fn </span>begin_bibliography(whatsit: <span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  begin_bibliography_clean(whatsit)<span class="question-mark">?</span>;
   <span class="comment">// Fix for missing \bibitems!
   </span>setup_pseudo_bibitem()
 }
 
-<span class="kw">fn </span>begin_bibliography_clean(
-  whatsit: <span class="kw-2">&amp;mut </span>Whatsit,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">fn </span>begin_bibliography_clean(whatsit: <span class="kw-2">&amp;mut </span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// Check if \bibsection is defined and try to decipher it.
   // Expecting something like \section*{sometext}
 

@@ -135,8 +135,9 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Registers
-//! 
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Registers
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -144,7 +145,7 @@
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Registers Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
+
   //======================================================================
   // Accessing Registers
   //----------------------------------------------------------------------
@@ -159,7 +160,7 @@
   <span class="macro">DefRegister!</span>(<span class="string">"\\skip Number"   </span>=&gt; Glue::new(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\muskip Number" </span>=&gt; MuGlue::new(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\toks Number"   </span>=&gt; <span class="macro">Tokens!</span>());
-    
+
   <span class="comment">//======================================================================
   // Defining Registers, shorthands
   //----------------------------------------------------------------------
@@ -261,14 +262,16 @@
 </span><span class="kw">pub fn </span>shorthand_def(cs: Token, address_type: <span class="kw-2">&amp;</span>str, init: RegisterValue) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// Let w/o AfterAssign
   </span><span class="kw">let </span>relax_meaning = lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap();
-  assign_meaning(<span class="kw-2">&amp;</span>cs, relax_meaning,<span class="prelude-val">None</span>);
+  assign_meaning(<span class="kw-2">&amp;</span>cs, relax_meaning, <span class="prelude-val">None</span>);
   <span class="comment">// define
   </span><span class="kw">let </span>num = gullet::read_number()<span class="question-mark">?</span>;
   <span class="kw">let </span>address = <span class="macro">s!</span>(<span class="string">"{address_type}{}"</span>, num.value_of());
-  <span class="kw">let </span>options = <span class="prelude-val">Some</span>(RegisterOptions{
+  <span class="kw">let </span>options = <span class="prelude-val">Some</span>(RegisterOptions {
     address: <span class="prelude-val">Some</span>(address),
-    ..RegisterOptions::default()});
+    ..RegisterOptions::default()
+  });
   def_register(cs, <span class="prelude-val">None</span>, init, options)<span class="question-mark">?</span>;
   after_assignment();
   <span class="prelude-val">Ok</span>(())
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

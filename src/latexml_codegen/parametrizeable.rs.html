@@ -114,10 +114,11 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a></pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
-<span class="kw">use </span>quote::{format_ident, quote};
-<span class="kw">use </span>latexml_core::common::arena;
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a></pre></div><pre class="rust"><code><span class="kw">use </span>latexml_core::common::arena;
 <span class="kw">use </span>latexml_core::common::def_parser::parse_prototype;
+<span class="kw">use </span>proc_macro::TokenStream;
+<span class="kw">use </span>quote::{format_ident, quote};
 <span class="kw">use </span>syn::{DeriveInput, Lit, Meta};
 
 <span class="doccomment">/// For now this prototype compilation technique is tied tightly to the `TypedMacroWO!` macro from
@@ -158,7 +159,7 @@
           </span>params
             .get_parameters()
             .iter()
-            .filter(|p| !arena::with(p.name,|name|name.starts_with(<span class="string">"Skip"</span>)))
+            .filter(|p| !arena::with(p.name, |name| name.starts_with(<span class="string">"Skip"</span>)))
             .map(|p| {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>inner_p) = p.inner {
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(first_inner) = inner_p.get_parameters().first() {
@@ -185,7 +186,8 @@
           (sub [( $(<span class="macro-nonterminal">$var</span>:ident),* )]
             <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {
             <span class="kw">let </span>these_parameters = #quoted_params;
-            #<span class="macro">inneri!</span>(#csname, these_parameters, sub [( $(<span class="macro-nonterminal">$var</span>),* ):(#(#proto_types),<span class="kw-2">*</span>)] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>)
+            #<span class="macro">inneri!</span>(
+              #csname, these_parameters, sub [( $(<span class="macro-nonterminal">$var</span>),* ):(#(#proto_types),<span class="kw-2">*</span>)] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>)
           }
         }
         )

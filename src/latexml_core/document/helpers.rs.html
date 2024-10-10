@@ -17,9 +17,7 @@
 <a href="#16" id="16">16</a>
 <a href="#17" id="17">17</a>
 <a href="#18" id="18">18</a>
-<a href="#19" id="19">19</a>
-<a href="#20" id="20">20</a>
-<a href="#21" id="21">21</a></pre></div><pre class="rust"><code><span class="kw">use super</span>::{Document,get_node_qname};
+<a href="#19" id="19">19</a></pre></div><pre class="rust"><code><span class="kw">use super</span>::{Document, get_node_qname};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span>libxml::tree::Node;
@@ -30,9 +28,7 @@
   <span class="kw">let </span>children = node.get_child_elements();
   <span class="kw">if </span>children.is_empty() {
     <span class="kw">let </span>prev_opt = node.get_prev_element_sibling();
-    <span class="kw">if </span>prev_opt.is_none()
-      || get_node_qname(<span class="kw-2">&amp;</span>prev_opt.unwrap()) != arena::pin_static(<span class="string">"ltx:para"</span>)
-    {
+    <span class="kw">if </span>prev_opt.is_none() || get_node_qname(<span class="kw-2">&amp;</span>prev_opt.unwrap()) != arena::pin_static(<span class="string">"ltx:para"</span>) {
       <span class="comment">// If `node` WAS the 1st child
       </span>document.add_class(<span class="kw-2">&amp;mut </span>node.get_parent().unwrap(), <span class="string">"ltx_pruned_first"</span>)<span class="question-mark">?</span>;
     }

@@ -2,8 +2,10 @@
     token: T,
     args: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../tokens/struct.Tokens.html" title="struct latexml_package::prelude::tokens::Tokens">Tokens</a>&gt;&gt;,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="../../tokens/struct.Tokens.html" title="struct latexml_package::prelude::tokens::Tokens">Tokens</a>, <a class="struct" href="../../struct.Error.html" title="struct latexml_package::prelude::Error">Error</a>&gt;<div class="where">where
-    T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="struct" href="../../token/struct.Token.html" title="struct latexml_package::prelude::token::Token">Token</a>&gt;,</div></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Creates a single <code>Tokens</code> representing a TeX invocation of the lead <code>token</code> over a list of arguments.</p>
+    T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="struct" href="../../token/struct.Token.html" title="struct latexml_package::prelude::token::Token">Token</a>&gt;,</div></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Creates a single <code>Tokens</code> representing a TeX invocation of the lead <code>token</code> over a list of
+arguments.</p>
 <p>Note: currently this is near the <code>Mouth</code> representation of data, and deals purely with tokens.
 A more generic version of this method may be able to support <code>ArgWrap</code> for the argument list.
-Indeed, the return type may also be lifted to a new generic ArgWrap::Invocation, if there was benefit.</p>
+Indeed, the return type may also be lifted to a new generic ArgWrap::Invocation, if there was
+benefit.</p>
 </div></details></section></div></main></body></html>

@@ -551,9 +551,41 @@
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
 <a href="#552" id="552">552</a>
-<a href="#553" id="553">553</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt::{<span class="self">self</span>, Display};
 
+<span class="kw">use </span><span class="kw">crate</span>::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::alignment::template::Template;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::Result;
@@ -565,12 +597,11 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterValue;
 <span class="kw">use </span><span class="kw">crate</span>::definition::Digested;
+<span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterValue;
 <span class="kw">use </span><span class="kw">crate</span>::keyvals::KeyVals;
 <span class="kw">use </span><span class="kw">crate</span>::token::Token;
-<span class="kw">use </span><span class="kw">crate</span>::tokens::{Tokens, NO_BORROWED_TOKENS};
-<span class="kw">use </span><span class="kw">crate</span>::Locator;
+<span class="kw">use </span><span class="kw">crate</span>::tokens::{NO_BORROWED_TOKENS, Tokens};
 
 <span class="attr">#[derive(Debug, Clone, Default)]
 </span><span class="kw">pub enum </span>ArgWrap {
@@ -955,23 +986,49 @@
       Stored::MuGlue(g) =&gt; ArgWrap::MuGlue(g),
       Stored::Number(n) =&gt; ArgWrap::Number(n),
       Stored::Float(f) =&gt; ArgWrap::Float(f),
-      Stored::Dimension(d) =&gt; ArgWrap::Dimension(d),    
-      <span class="comment">// we could just map "_" to None, but it is safer to enumerate, to avoid missing 
+      Stored::Dimension(d) =&gt; ArgWrap::Dimension(d),
+      <span class="comment">// we could just map "_" to None, but it is safer to enumerate, to avoid missing
       // meaningful cases.
       </span>Stored::None =&gt; ArgWrap::None,
-      Stored::Mouth(<span class="kw">_</span>) | Stored::Primitive(<span class="kw">_</span>) | Stored::Bool(<span class="kw">_</span>) | Stored::Parameter(<span class="kw">_</span>) |
-      Stored::MathPrimitive(<span class="kw">_</span>) | Stored::Conditional(<span class="kw">_</span>) |
-      Stored::Constructor(<span class="kw">_</span>) | Stored::Charcode(<span class="kw">_</span>) | Stored::Expandable(<span class="kw">_</span>) | Stored::Ligature(<span class="kw">_</span>) |
-      Stored::HashStored(<span class="kw">_</span>) | Stored::HashTagData(<span class="kw">_</span>) | Stored::HashString(<span class="kw">_</span>) | Stored::Digested(<span class="kw">_</span>) |
-      Stored::FontDirective(<span class="kw">_</span>) | Stored::Register(<span class="kw">_</span>) | Stored::Rewrite(<span class="kw">_</span>) |
-      Stored::Stash(<span class="kw">_</span>) | Stored::Fontmap(<span class="kw">_</span>) | Stored::Int(<span class="kw">_</span>) | Stored::String(<span class="kw">_</span>) | 
-      Stored::Strings(<span class="kw">_</span>) | Stored::Node(<span class="kw">_</span>) | Stored::IfFrame(<span class="kw">_</span>) | Stored::Font(<span class="kw">_</span>) |
-      Stored::Reversion(<span class="kw">_</span>) | Stored::Catcode(<span class="kw">_</span>) | Stored::Locator(<span class="kw">_</span>) | Stored::VecDequeStored(<span class="kw">_</span>) |
-      Stored::VecDigested(<span class="kw">_</span>) | Stored::Chars(<span class="kw">_</span>)
-      =&gt; {
-        <span class="macro">Error!</span>(<span class="string">"stored"</span>,<span class="string">"type"</span>,<span class="string">"Failed to cast to argument; Found stored {:?}"</span>, t);
-        ArgWrap::None 
-      } 
+      Stored::Mouth(<span class="kw">_</span>)
+      | Stored::Primitive(<span class="kw">_</span>)
+      | Stored::Bool(<span class="kw">_</span>)
+      | Stored::Parameter(<span class="kw">_</span>)
+      | Stored::MathPrimitive(<span class="kw">_</span>)
+      | Stored::Conditional(<span class="kw">_</span>)
+      | Stored::Constructor(<span class="kw">_</span>)
+      | Stored::Charcode(<span class="kw">_</span>)
+      | Stored::Expandable(<span class="kw">_</span>)
+      | Stored::Ligature(<span class="kw">_</span>)
+      | Stored::HashStored(<span class="kw">_</span>)
+      | Stored::HashTagData(<span class="kw">_</span>)
+      | Stored::HashString(<span class="kw">_</span>)
+      | Stored::Digested(<span class="kw">_</span>)
+      | Stored::FontDirective(<span class="kw">_</span>)
+      | Stored::Register(<span class="kw">_</span>)
+      | Stored::Rewrite(<span class="kw">_</span>)
+      | Stored::Stash(<span class="kw">_</span>)
+      | Stored::Fontmap(<span class="kw">_</span>)
+      | Stored::Int(<span class="kw">_</span>)
+      | Stored::String(<span class="kw">_</span>)
+      | Stored::Strings(<span class="kw">_</span>)
+      | Stored::Node(<span class="kw">_</span>)
+      | Stored::IfFrame(<span class="kw">_</span>)
+      | Stored::Font(<span class="kw">_</span>)
+      | Stored::Reversion(<span class="kw">_</span>)
+      | Stored::Catcode(<span class="kw">_</span>)
+      | Stored::Locator(<span class="kw">_</span>)
+      | Stored::VecDequeStored(<span class="kw">_</span>)
+      | Stored::VecDigested(<span class="kw">_</span>)
+      | Stored::Chars(<span class="kw">_</span>) =&gt; {
+        <span class="macro">Error!</span>(
+          <span class="string">"stored"</span>,
+          <span class="string">"type"</span>,
+          <span class="string">"Failed to cast to argument; Found stored {:?}"</span>,
+          t
+        );
+        ArgWrap::None
+      },
     })
   }
 }
@@ -989,9 +1046,14 @@
       ArgWrap::Float(v) =&gt; Stored::Float(v),
       ArgWrap::None =&gt; Stored::None,
       ArgWrap::KV(<span class="kw">_</span>) | ArgWrap::RegisterDefinition(<span class="kw">_</span>) | ArgWrap::AlignmentTemplate(<span class="kw">_</span>) =&gt; {
-        <span class="macro">Error!</span>(<span class="string">"stored"</span>,<span class="string">"type"</span>,<span class="string">"Failed to cast into Stored (no equivalent). Extend Stored if intended; {:?}"</span>, t);
+        <span class="macro">Error!</span>(
+          <span class="string">"stored"</span>,
+          <span class="string">"type"</span>,
+          <span class="string">"Failed to cast into Stored (no equivalent). Extend Stored if intended; {:?}"</span>,
+          t
+        );
         Stored::None
-      }
+      },
     })
   }
 }

@@ -196,8 +196,8 @@
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
 <a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr};
+<a href="#198" id="198">198</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr};
+<span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::util::pathname;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Write <span class="kw">as _</span>;
@@ -214,21 +214,21 @@
 
 </span><span class="attr">#[derive(Copy, Clone, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>Locator {
-  <span class="kw">pub </span>source: SymStr,
-  <span class="kw">pub </span>from_line: u32,
-  <span class="kw">pub </span>to_line: u32,
+  <span class="kw">pub </span>source:      SymStr,
+  <span class="kw">pub </span>from_line:   u32,
+  <span class="kw">pub </span>to_line:     u32,
   <span class="kw">pub </span>from_column: u32,
-  <span class="kw">pub </span>to_column: u32,
+  <span class="kw">pub </span>to_column:   u32,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Locator {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Locator {
-      source: arena::pin(<span class="macro">file!</span>()),
-      from_line: <span class="macro">line!</span>(),
-      to_line: <span class="macro">line!</span>(),
+      source:      arena::pin(<span class="macro">file!</span>()),
+      from_line:   <span class="macro">line!</span>(),
+      to_line:     <span class="macro">line!</span>(),
       from_column: <span class="macro">column!</span>(),
-      to_column: <span class="macro">column!</span>()
+      to_column:   <span class="macro">column!</span>(),
     }
   }
 }
@@ -292,7 +292,7 @@
       from_line: from.from_line,
       from_column: from.from_column,
       to_line,
-      to_column
+      to_column,
     })
   }
 

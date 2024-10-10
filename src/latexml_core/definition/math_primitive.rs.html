@@ -295,26 +295,17 @@
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
 <a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<a href="#297" id="297">297</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="comment">// use crate::common::font::Font;
-</span><span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
+</span><span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::state::Scope;
 
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
   PrimitiveClosure, Reversion,
@@ -324,7 +315,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="kw">use </span><span class="kw">super</span>::SizingClosure;
 
@@ -345,86 +335,86 @@
 
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>MathPrimitiveOptions {
-  <span class="kw">pub </span>bounded: bool,
-  <span class="kw">pub </span>mode: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>before_digest: Vec&lt;BeforeDigestClosure&gt;,
-  <span class="kw">pub </span>after_digest: Vec&lt;DigestionClosure&gt;,
+  <span class="kw">pub </span>bounded:          bool,
+  <span class="kw">pub </span>mode:             <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>before_digest:    Vec&lt;BeforeDigestClosure&gt;,
+  <span class="kw">pub </span>after_digest:     Vec&lt;DigestionClosure&gt;,
   <span class="kw">pub </span>before_construct: Vec&lt;ConstructionClosure&gt;,
-  <span class="kw">pub </span>after_construct: Vec&lt;ConstructionClosure&gt;,
-  <span class="kw">pub </span>is_prefix: bool,
-  <span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-  <span class="kw">pub </span>font: <span class="prelude-ty">Option</span>&lt;FontDirective&gt;,
-  <span class="kw">pub </span>require_math: bool,
-  <span class="kw">pub </span>forbid_math: bool,
-  <span class="kw">pub </span>locked: bool,
-  <span class="kw">pub </span>alias: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>decl_id: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>replace: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>protected: bool,
-  <span class="kw">pub </span>robust: bool,
+  <span class="kw">pub </span>after_construct:  Vec&lt;ConstructionClosure&gt;,
+  <span class="kw">pub </span>is_prefix:        bool,
+  <span class="kw">pub </span>scope:            <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+  <span class="kw">pub </span>font:             <span class="prelude-ty">Option</span>&lt;FontDirective&gt;,
+  <span class="kw">pub </span>require_math:     bool,
+  <span class="kw">pub </span>forbid_math:      bool,
+  <span class="kw">pub </span>locked:           bool,
+  <span class="kw">pub </span>alias:            <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>decl_id:          <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>replace:          <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>protected:        bool,
+  <span class="kw">pub </span>robust:           bool,
 
   <span class="comment">// Math specific
-  </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>meaning: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>omcd: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>reversion: <span class="prelude-ty">Option</span>&lt;Reversion&gt;,
-  <span class="kw">pub </span>sizer: <span class="prelude-ty">Option</span>&lt;SizingClosure&gt;,
-  <span class="kw">pub </span>role: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>operator_role: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>reorder: bool,
-  <span class="kw">pub </span>dual: bool,
-  <span class="kw">pub </span>mathstyle: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>scriptpos: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>operator_scriptpos: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-  <span class="kw">pub </span>stretchy: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>operator_stretchy: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>nogroup: bool,
+  </span><span class="kw">pub </span>name:                   <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>meaning:                <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>omcd:                   <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>reversion:              <span class="prelude-ty">Option</span>&lt;Reversion&gt;,
+  <span class="kw">pub </span>sizer:                  <span class="prelude-ty">Option</span>&lt;SizingClosure&gt;,
+  <span class="kw">pub </span>role:                   <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>operator_role:          <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>reorder:                bool,
+  <span class="kw">pub </span>dual:                   bool,
+  <span class="kw">pub </span>mathstyle:              <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>scriptpos:              <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>operator_scriptpos:     <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>stretchy:               <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>operator_stretchy:      <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>nogroup:                bool,
   <span class="kw">pub </span>hide_content_reversion: bool,
-  <span class="kw">pub </span>revert_as: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
-  <span class="kw">pub </span>lpadding: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-  <span class="kw">pub </span>rpadding: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>revert_as:              <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+  <span class="kw">pub </span>lpadding:               <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>rpadding:               <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>MathPrimitiveOptions {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     MathPrimitiveOptions {
-      bounded: <span class="bool-val">false</span>,
-      before_digest: Vec::new(),
-      after_digest: Vec::new(),
+      bounded:          <span class="bool-val">false</span>,
+      before_digest:    Vec::new(),
+      after_digest:     Vec::new(),
       before_construct: Vec::new(),
-      after_construct: Vec::new(),
-      mode: <span class="prelude-val">None</span>,
-      is_prefix: <span class="bool-val">false</span>,
-      scope: <span class="prelude-val">None</span>,
-      require_math: <span class="bool-val">false</span>,
-      forbid_math: <span class="bool-val">false</span>,
-      locked: <span class="bool-val">false</span>,
-      alias: <span class="prelude-val">None</span>,
-      font: <span class="prelude-val">None</span>,
-      decl_id: <span class="prelude-val">None</span>,
-      replace: <span class="prelude-val">None</span>,
-      protected: <span class="bool-val">false</span>,
-      robust: <span class="bool-val">false</span>,
+      after_construct:  Vec::new(),
+      mode:             <span class="prelude-val">None</span>,
+      is_prefix:        <span class="bool-val">false</span>,
+      scope:            <span class="prelude-val">None</span>,
+      require_math:     <span class="bool-val">false</span>,
+      forbid_math:      <span class="bool-val">false</span>,
+      locked:           <span class="bool-val">false</span>,
+      alias:            <span class="prelude-val">None</span>,
+      font:             <span class="prelude-val">None</span>,
+      decl_id:          <span class="prelude-val">None</span>,
+      replace:          <span class="prelude-val">None</span>,
+      protected:        <span class="bool-val">false</span>,
+      robust:           <span class="bool-val">false</span>,
 
       <span class="comment">// math-specific
-      </span>name: <span class="prelude-val">None</span>,
-      meaning: <span class="prelude-val">None</span>,
-      omcd: <span class="prelude-val">None</span>,
-      reversion: <span class="prelude-val">None</span>,
-      sizer: <span class="prelude-val">None</span>,
-      role: <span class="prelude-val">None</span>,
-      operator_role: <span class="prelude-val">None</span>,
-      reorder: <span class="bool-val">false</span>,
-      dual: <span class="bool-val">false</span>,
-      mathstyle: <span class="prelude-val">None</span>,
-      scriptpos: <span class="prelude-val">None</span>,
-      operator_scriptpos: <span class="prelude-val">None</span>,
-      stretchy: <span class="prelude-val">None</span>,
-      operator_stretchy: <span class="prelude-val">None</span>,
-      nogroup: <span class="bool-val">true</span>,
+      </span>name:                   <span class="prelude-val">None</span>,
+      meaning:                <span class="prelude-val">None</span>,
+      omcd:                   <span class="prelude-val">None</span>,
+      reversion:              <span class="prelude-val">None</span>,
+      sizer:                  <span class="prelude-val">None</span>,
+      role:                   <span class="prelude-val">None</span>,
+      operator_role:          <span class="prelude-val">None</span>,
+      reorder:                <span class="bool-val">false</span>,
+      dual:                   <span class="bool-val">false</span>,
+      mathstyle:              <span class="prelude-val">None</span>,
+      scriptpos:              <span class="prelude-val">None</span>,
+      operator_scriptpos:     <span class="prelude-val">None</span>,
+      stretchy:               <span class="prelude-val">None</span>,
+      operator_stretchy:      <span class="prelude-val">None</span>,
+      nogroup:                <span class="bool-val">true</span>,
       hide_content_reversion: <span class="bool-val">false</span>,
-      revert_as: <span class="prelude-val">None</span>,
-      lpadding: <span class="prelude-val">None</span>,
-      rpadding: <span class="prelude-val">None</span>,
+      revert_as:              <span class="prelude-val">None</span>,
+      lpadding:               <span class="prelude-val">None</span>,
+      rpadding:               <span class="prelude-val">None</span>,
     }
   }
 }
@@ -478,10 +468,7 @@
     }
     <span class="comment">// TODO: Do we want to run the font closures here? Maybe?
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font_directive) = <span class="self">self</span>.font {
-      h.insert(
-        <span class="string">"font"</span>,
-        Stored::FontDirective(font_directive.clone()),
-      );
+      h.insert(<span class="string">"font"</span>, Stored::FontDirective(font_directive.clone()));
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>lpadding) = <span class="self">self</span>.lpadding {
       h.insert(<span class="string">"lpadding"</span>, (<span class="kw-2">*</span>lpadding).into());
@@ -524,22 +511,22 @@
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>MathPrimitive {
-  <span class="kw">pub </span>cs: Token,
-  <span class="kw">pub </span>paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
-  <span class="kw">pub </span>nargs: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>cs:          Token,
+  <span class="kw">pub </span>paramlist:   <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+  <span class="kw">pub </span>nargs:       <span class="prelude-ty">Option</span>&lt;usize&gt;,
   <span class="kw">pub </span>replacement: <span class="prelude-ty">Option</span>&lt;PrimitiveClosure&gt;,
-  <span class="kw">pub </span>options: MathPrimitiveOptions,
-  <span class="kw">pub </span>alias: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>options:     MathPrimitiveOptions,
+  <span class="kw">pub </span>alias:       <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>MathPrimitive {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     MathPrimitive {
-      cs: <span class="macro">T_CS!</span>(<span class="string">"MathPrimitive"</span>),
-      paramlist: <span class="prelude-val">None</span>,
-      nargs: <span class="prelude-val">None</span>,
+      cs:          <span class="macro">T_CS!</span>(<span class="string">"MathPrimitive"</span>),
+      paramlist:   <span class="prelude-val">None</span>,
+      nargs:       <span class="prelude-val">None</span>,
       replacement: <span class="prelude-val">None</span>,
-      options: MathPrimitiveOptions::default(),
-      alias: <span class="prelude-val">None</span>,
+      options:     MathPrimitiveOptions::default(),
+      alias:       <span class="prelude-val">None</span>,
     }
   }
 }
@@ -554,14 +541,11 @@
 // }
 </span><span class="kw">impl </span>Object <span class="kw">for </span>MathPrimitive {
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { &lt;<span class="self">Self </span><span class="kw">as </span>Definition&gt;::stringify_type(<span class="self">self</span>, <span class="string">"MathPrimitive"</span>) }
-
 }
 <span class="kw">impl </span>Definition <span class="kw">for </span>MathPrimitive {
   <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.options.before_digest) }
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.options.after_digest) }
-  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-  }
+  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
   <span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
     <span class="comment">// Info!("MathPrimitive", "invoke", stomach, "invoke for {:?}", self.cs);
     // my $profiled = $state-&gt;lookupValue('PROFILING') &amp;&amp; ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -573,22 +557,18 @@
     <span class="comment">// print STDERR $self-&gt;tracingArgs(@args) . "\n" if $tracing &amp;&amp; @args;
     </span><span class="kw">let </span>replacement_result = <span class="kw">match </span><span class="self">self</span>.replacement {
       <span class="prelude-val">None </span>=&gt; Vec::new(),
-      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>closure) =&gt; closure( args)<span class="question-mark">?</span>,
+      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>closure) =&gt; closure(args)<span class="question-mark">?</span>,
     };
     result.extend(replacement_result);
     <span class="kw">let </span><span class="kw-2">mut </span>w = Whatsit::default();
-    <span class="kw">let </span>after_result = <span class="self">self</span>.execute_after_digest( <span class="kw-2">&amp;mut </span>w)<span class="question-mark">?</span>;
+    <span class="kw">let </span>after_result = <span class="self">self</span>.execute_after_digest(<span class="kw-2">&amp;mut </span>w)<span class="question-mark">?</span>;
     result.extend(after_result);
 
     <span class="comment">// LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
     </span><span class="prelude-val">Ok</span>(result)
   }
 
-  <span class="kw">fn </span>do_absorbtion(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    _document: <span class="kw-2">&amp;mut </span>Document,
-    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="macro">fatal!</span>(
       Definition,
       Unexpected,

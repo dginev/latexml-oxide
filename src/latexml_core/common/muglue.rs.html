@@ -135,18 +135,20 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::glue::{glue_string, new_setup, spec_setup, FillCode};
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::glue::{FillCode, glue_string, new_setup, spec_setup};
+<span class="kw">use </span><span class="kw">crate</span>::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::attribute_format;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
-<span class="kw">use </span><span class="kw">crate</span>::Object;
 <span class="kw">use </span>std::fmt;
 
 <span class="attr">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>MuGlue {
-  <span class="kw">pub </span>skip: i64,
-  <span class="kw">pub </span>plus: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+  <span class="kw">pub </span>skip:  i64,
+  <span class="kw">pub </span>plus:  <span class="prelude-ty">Option</span>&lt;i64&gt;,
   <span class="kw">pub </span>pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
   <span class="kw">pub </span>minus: <span class="prelude-ty">Option</span>&lt;i64&gt;,
   <span class="kw">pub </span>mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
@@ -226,8 +228,7 @@
     minus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
     mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
   ) -&gt; <span class="self">Self </span>{
-    <span class="kw">let </span>(skip, plus, pfill, minus, mfill) =
-      spec_setup(spec, plus, pfill, minus, mfill, <span class="string">"mu"</span>);
+    <span class="kw">let </span>(skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, <span class="string">"mu"</span>);
     MuGlue {
       skip,
       plus,
@@ -270,6 +271,9 @@
   <span class="kw">fn </span>from(v: MuGlue) -&gt; <span class="prelude-ty">Option</span>&lt;Tokens&gt; { <span class="prelude-val">Some</span>(v.into()) }
 }
 <span class="kw">impl </span>From&lt;MuGlue&gt; <span class="kw">for </span>Tokens {
-  <span class="kw">fn </span>from(v: MuGlue) -&gt; Tokens { v.revert().expect(<span class="string">"MuGlue should always be revertable to Tokens."</span>) }
+  <span class="kw">fn </span>from(v: MuGlue) -&gt; Tokens {
+    v.revert()
+      .expect(<span class="string">"MuGlue should always be revertable to Tokens."</span>)
+  }
 }
 </code></pre></div></section></main></body></html>

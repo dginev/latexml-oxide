@@ -33,12 +33,12 @@
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
 <a href="#34" id="34">34</a>
-<a href="#35" id="35">35</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
-
   <span class="macro">NewCounter!</span>(<span class="string">"endnote"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\theendnote"</span>,         <span class="prelude-val">None</span>, <span class="string">"\\arabic{endnote}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\theendnote"</span>, <span class="prelude-val">None</span>, <span class="string">"\\arabic{endnote}"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\endnotetyperefname"</span>, <span class="prelude-val">None</span>, <span class="string">"endnote"</span>);
 
   <span class="comment">// \theenmark  Should be assigned to the mark, by \endnote,\endnotemark !
@@ -47,13 +47,16 @@
   // \@makeentext to format the text of the endnote; not used (yet)!!!
 
   // This is NOT correct; it should be edef"d after the counter is stepped...
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\theenmark"</span>,    <span class="string">"\\theendnote"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\makeenmark"</span>,   <span class="string">r"\hbox{\textsuperscript{\normalfont\theenmark}}"</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\theenmark"</span>, <span class="string">"\\theendnote"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\makeenmark"</span>,
+    <span class="string">r"\hbox{\textsuperscript{\normalfont\theenmark}}"
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\fnum@endnote"</span>, <span class="string">"\\makeenmark"</span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\ext@endnote"</span>, <span class="prelude-val">None</span>, <span class="string">"ent"</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">"\\endnote"</span>,     <span class="string">"\\lx@note{endnote}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\endnote"</span>, <span class="string">"\\lx@note{endnote}"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\endnotemark"</span>, <span class="string">"\\lx@notemark{endnote}"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\endnotetext"</span>, <span class="string">"\\lx@notetext{endnote}"</span>);
 
@@ -66,5 +69,5 @@
   </span><span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\theendnotes"</span>), <span class="prelude-val">None</span>,
     <span class="string">"&lt;ltx:TOC lists='ent' scope='global' show='refnum &gt; note'&gt;&lt;ltx:title&gt;#name&lt;/ltx:title&gt;&lt;/ltx:TOC&gt;"</span>,
     properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; stomach::digest(<span class="macro">T_CS!</span>(<span class="string">"\\notesname"</span>))<span class="question-mark">?</span>) });
-
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

@@ -67,35 +67,37 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>({
   <span class="comment">//**********************************************************************
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
-  </span><span class="kw">let </span>define_excluded: PrimitiveClosure = Rc::new(|<span class="kw-2">mut </span>args : Vec&lt;ArgWrap&gt;| {
+  </span><span class="kw">let </span>define_excluded: PrimitiveClosure = Rc::new(|<span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;| {
     <span class="kw">let </span>name = args.remove(<span class="number">0</span>).owned_tokens().unwrap();
     <span class="kw">let </span>begin_mark = <span class="macro">s!</span>(<span class="string">"\\begin{{{name}}}"</span>);
     <span class="kw">let </span>end_mark = <span class="macro">s!</span>(<span class="string">"\\end{{{name}}}"</span>);
     <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(begin_mark), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-      after_digest =&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>nlines = <span class="number">0</span>;
-        gullet::read_raw_line();    <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
-        </span><span class="kw">while let </span><span class="prelude-val">Some</span>(line) = gullet::read_raw_line() {
-          <span class="kw">if </span>line == end_mark {
-            <span class="kw">break</span>;
-          }
-          nlines += <span class="number">1</span>;
+    after_digest =&gt; {
+      <span class="kw">let </span><span class="kw-2">mut </span>nlines = <span class="number">0</span>;
+      gullet::read_raw_line();    <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
+      </span><span class="kw">while let </span><span class="prelude-val">Some</span>(line) = gullet::read_raw_line() {
+        <span class="kw">if </span>line == end_mark {
+          <span class="kw">break</span>;
         }
-        note_progress(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"[Skipped {name} ({nlines} lines)]"</span>));
-        <span class="prelude-val">Ok</span>(Vec::new())
-      });
+        nlines += <span class="number">1</span>;
+      }
+      note_progress(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"[Skipped {name} ({nlines} lines)]"</span>));
+      <span class="prelude-val">Ok</span>(Vec::new())
+    });
     <span class="prelude-val">Ok</span>(Vec::new())
   });
 
   <span class="comment">// I don't understand Rust closures enough to figure out how to clone one, so instantiating it
   // twice instead, via a macro
-  </span><span class="kw">let </span>define_included: PrimitiveBody = PrimitiveBody::Closure(Rc::new(|<span class="kw-2">mut </span>args : Vec&lt;ArgWrap&gt;| {
+  </span><span class="kw">let </span>define_included: PrimitiveBody = PrimitiveBody::Closure(Rc::new(|<span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;| {
     args.reverse(); <span class="comment">// we'll be using .pop() from the front
     </span><span class="kw">let </span>name = args
       .pop()
@@ -115,8 +117,7 @@
     after_tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\ignorespaces"</span>));
     <span class="comment">// Note that we define the `magic' environment control sequences,
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
-    </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\begin{{{name}}}"</span>)), <span class="prelude-val">None</span>,
-    {
+    </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\begin{{{name}}}"</span>)), <span class="prelude-val">None</span>, {
       gullet::read_raw_line(); <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
       </span>before_tokens.clone()
     });
@@ -131,7 +132,10 @@
   define_excluded(<span class="macro">vec!</span>[ArgWrap::Tokens(<span class="macro">Tokenize!</span>(<span class="string">"comment"</span>))])<span class="question-mark">?</span>;
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\includecomment{}"</span>, <span class="prelude-val">Some</span>(define_included.clone()));
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\excludecomment{}"</span>, <span class="prelude-val">Some</span>(PrimitiveBody::Closure(define_excluded)));
+  <span class="macro">DefPrimitive!</span>(
+    <span class="string">"\\excludecomment{}"</span>,
+    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(define_excluded))
+  );
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\specialcomment{}{}{}"</span>, <span class="prelude-val">Some</span>(define_included));
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\processcomment{}{}{}{}"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\csarg{}{}"</span>, <span class="string">r"\expandafter#1\csname#2\endcsname"</span>);

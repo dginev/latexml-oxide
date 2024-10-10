@@ -48,9 +48,9 @@
 <span class="kw">use </span>std::fmt;
 
 <span class="kw">use </span><span class="kw">super</span>::dimension::fixedformat;
-<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{fixpoint, kround, NumericOps, UNITY_F64};
-<span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
 <span class="kw">use </span><span class="kw">crate</span>::Object;
+<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{NumericOps, UNITY_F64, fixpoint, kround};
+<span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
 
 <span class="kw">static </span>MUDIM_SPEC_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^(-?\d*\.?\d*)mu$"</span>).unwrap());
 

@@ -160,18 +160,14 @@
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
 <a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<a href="#162" id="162">162</a></pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
@@ -183,10 +179,10 @@
 <span class="doccomment">/// Lists can contain any Digested items, such as boxes, whatsits or other lists
 </span><span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>List {
-  <span class="kw">pub </span>boxes: Vec&lt;Digested&gt;,
-  <span class="kw">pub </span>mode: <span class="prelude-ty">Option</span>&lt;TexMode&gt;,
-  <span class="kw">pub </span>font: <span class="prelude-ty">Option</span>&lt;Font&gt;,
-  <span class="kw">pub </span>locator: Locator,
+  <span class="kw">pub </span>boxes:      Vec&lt;Digested&gt;,
+  <span class="kw">pub </span>mode:       <span class="prelude-ty">Option</span>&lt;TexMode&gt;,
+  <span class="kw">pub </span>font:       <span class="prelude-ty">Option</span>&lt;Font&gt;,
+  <span class="kw">pub </span>locator:    Locator,
   <span class="kw">pub </span>properties: HashMap&lt;Stored&gt;,
 }
 
@@ -254,17 +250,10 @@
   }
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.to_string())) }
   <span class="doccomment">/// NOTE: No longer used; Document-&gt;absorb bypasses this for stack efficiency.
-  </span><span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-    <span class="macro">todo!</span>()
-  }
+  </span><span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; { <span class="macro">todo!</span>() }
 
-  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; {
-    <span class="prelude-val">Ok</span>(<span class="self">self</span>.font.as_ref().map(Cow::Borrowed))
-  }
-  <span class="kw">fn </span>compute_size(
-    <span class="kw-2">&amp;</span><span class="self">self</span>,
-    options: HashMap&lt;Stored&gt;,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="self">self</span>.font.as_ref().map(Cow::Borrowed)) }
+  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.font {
       <span class="prelude-val">Some</span>(f) =&gt; f.compute_boxes_size(<span class="kw-2">&amp;</span><span class="self">self</span>.boxes, options)<span class="question-mark">?</span>,
       <span class="kw">_ </span>=&gt; Font::text_default().compute_boxes_size(<span class="kw-2">&amp;</span><span class="self">self</span>.boxes, options)<span class="question-mark">?</span>,
@@ -313,7 +302,10 @@
     // 2. empty contents
     </span><span class="self">self</span>.get_property_bool(<span class="string">"isEmpty"</span>)
       || <span class="self">self</span>.get_property_bool(<span class="string">"isSpace"</span>)
-      || <span class="self">self</span>.boxes.iter().all(|item| item.is_empty().unwrap_or(<span class="bool-val">false</span>))
+      || <span class="self">self
+        </span>.boxes
+        .iter()
+        .all(|item| item.is_empty().unwrap_or(<span class="bool-val">false</span>))
   }
 }
 

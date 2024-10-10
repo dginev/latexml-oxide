@@ -657,10 +657,7 @@
 <a href="#656" id="656">656</a>
 <a href="#657" id="657">657</a>
 <a href="#658" id="658">658</a>
-<a href="#659" id="659">659</a>
-<a href="#660" id="660">660</a>
-<a href="#661" id="661">661</a>
-<a href="#662" id="662">662</a></pre></div><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<a href="#659" id="659">659</a></pre></div><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::error::Error;
 <span class="kw">use </span>std::rc::Rc;
@@ -677,7 +674,7 @@
 <span class="kw">use </span>latexml_core::raw_map;
 
 <span class="kw">use </span><span class="self">self</span>::tree::lookup_lex_node;
-<span class="kw">pub use </span><span class="self">self</span>::tree::{Args, Operator, XProps, XM};
+<span class="kw">pub use </span><span class="self">self</span>::tree::{Args, Operator, XM, XProps};
 <span class="kw">use </span><span class="kw">crate</span>::pragmatics::ValidationPragmatics;
 <span class="kw">use </span><span class="kw">crate</span>::util::create_xmrefs;
 
@@ -692,7 +689,7 @@
 /// Ideally, these are all immutable borrows of various `Core` data.
 </span><span class="kw">pub struct </span>ActionContext&lt;<span class="lifetime">'a</span>&gt; {
   <span class="doccomment">/// The original XML nodes involved in this parse request
-  </span><span class="kw">pub </span>nodes: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[XMLNode],
+  </span><span class="kw">pub </span>nodes:    <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[XMLNode],
   <span class="doccomment">/// The owner document of the parsed nodes
   </span><span class="kw">pub </span>document: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>Document,
 }
@@ -756,14 +753,10 @@
       Node::Tree(<span class="kw-2">ref </span>rule, <span class="kw-2">ref </span>children) =&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>translated_children = Vec::new();
         <span class="kw">for </span>child <span class="kw">in </span>children.iter() {
-          <span class="kw">let </span>translated = <span class="self">self</span>.translate_node(
-            child,
-            pragmas,
-            ActionContext {
-              nodes: ctxt.nodes,
-              document: ctxt.document
-            },
-          )<span class="question-mark">?</span>;
+          <span class="kw">let </span>translated = <span class="self">self</span>.translate_node(child, pragmas, ActionContext {
+            nodes:    ctxt.nodes,
+            document: ctxt.document,
+          })<span class="question-mark">?</span>;
           translated_children.push(translated);
         }
         <span class="self">self</span>.action_on(<span class="kw-2">*</span>rule, translated_children, pragmas, ctxt)
@@ -771,14 +764,10 @@
       Node::Rule(<span class="kw-2">ref </span>rule, <span class="kw-2">ref </span>children) =&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>translated_children = Vec::new();
         <span class="kw">for </span>child <span class="kw">in </span>children.iter() {
-          translated_children.push(<span class="self">self</span>.translate_node(
-            child,
-            pragmas,
-            ActionContext {
-              nodes: ctxt.nodes,
-              document: ctxt.document
-            },
-          )<span class="question-mark">?</span>);
+          translated_children.push(<span class="self">self</span>.translate_node(child, pragmas, ActionContext {
+            nodes:    ctxt.nodes,
+            document: ctxt.document,
+          })<span class="question-mark">?</span>);
         }
         <span class="self">self</span>.action_on(<span class="kw-2">*</span>rule, translated_children, pragmas, ctxt)
       },
@@ -990,17 +979,22 @@
   </span><span class="kw">let </span>o = open.get_value(ctxt.nodes)<span class="question-mark">?</span>;
   <span class="kw">let </span>c = close.get_value(ctxt.nodes)<span class="question-mark">?</span>;
   <span class="kw">let </span>op_name = <span class="macro">format!</span>(<span class="string">"delimited-{}{}"</span>, o, c);
-  
+
   <span class="comment">// TODO: We need a method to figure out how many arguments are nested inside &lt;arg&gt;
   // for now assume 1
   // if arg.len() == 1 &amp;&amp;
-  </span><span class="kw">if </span>op_name == <span class="string">"delimited-()" </span>{ <span class="comment">// Hopefully, can just ignore the parens?
+  </span><span class="kw">if </span>op_name == <span class="string">"delimited-()" </span>{
+    <span class="comment">// Hopefully, can just ignore the parens?
     </span><span class="kw">let </span><span class="kw-2">mut </span>arg_xmrefs = create_xmrefs(<span class="kw-2">&amp;mut </span>[<span class="kw-2">&amp;mut </span>arg], ctxt)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(XM::Dual( 
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(XM::Dual(
       Box::new(arg_xmrefs.remove(<span class="number">0</span>)),
-      Box::new(XM::Wrap(<span class="macro">vec!</span>[open,arg,close], XProps::default(), Meta::default())),
+      Box::new(XM::Wrap(
+        <span class="macro">vec!</span>[open, arg, close],
+        XProps::default(),
+        Meta::default(),
+      )),
       XProps::default(),
-      Meta::default() 
+      Meta::default(),
     )))
   } <span class="kw">else </span>{
     <span class="kw">let </span>op = xnew(op_name);
@@ -1156,7 +1150,7 @@ got {:?}"</span>,
       // if ($nth &amp;&amp; !$node-&gt;isSameNode($onode)) {
       //   return LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT, $nth); }
     </span>},
-    XM::Apply(<span class="kw">_</span>, <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="kw">match </span>args.<span class="number">0</span>.get(n) {
+    XM::Apply(<span class="kw">_</span>, <span class="kw-2">ref </span>args, ..) =&gt; <span class="kw">match </span>args.<span class="number">0</span>.get(n) {
       <span class="prelude-val">Some</span>(t) =&gt; <span class="prelude-val">Ok</span>(t.clone()),
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
     },

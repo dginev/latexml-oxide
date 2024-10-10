@@ -141,7 +141,9 @@
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">fn </span>setup_cyrillic() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="macro">DefMacro!</span>(<span class="string">"\\cyra"</span>, <span class="string">"\u{0430}"</span>);
@@ -249,7 +251,9 @@
 
   </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
     <span class="kw">let </span>current_option = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>)).to_string();
-    unshift_value(<span class="string">"font_encodings"</span>, <span class="macro">vec!</span>[Stored::String(arena::pin(current_option))]);
+    unshift_value(<span class="string">"font_encodings"</span>, <span class="macro">vec!</span>[Stored::String(arena::pin(
+      current_option,
+    ))]);
   });
 
   <span class="comment">// WELL... Actually, some "encodings" map the normal 7bit (or 8)

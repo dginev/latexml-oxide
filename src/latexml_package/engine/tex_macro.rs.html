@@ -221,8 +221,29 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Macro
-//! 
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a></pre></div><pre class="rust"><code><span class="doccomment">//! TeX Macro
+//!
 //! Core TeX Implementation for LaTeXML
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -239,8 +260,12 @@
   // \relax            c  is a control sequence which typesets nothing.
   // \afterassignment  c  saves a token and inserts it after the next assignment.
   // \aftergroup       c  saves a token and inserts it after the current group is complete.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\begingroup"</span>, { begingroup(); });
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\endgroup"</span>, { endgroup()<span class="question-mark">?</span>; });
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\begingroup"</span>, {
+    begingroup();
+  });
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\endgroup"</span>, {
+    endgroup()<span class="question-mark">?</span>;
+  });
   <span class="comment">// This makes \relax disappear completely after digestion
   // (which seems most TeX like).
   </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>), <span class="prelude-val">None</span>, {});
@@ -251,7 +276,7 @@
 
   // NON-STANDARD: Internal token produced by Gullet in response to \dont_expand;
   // Acts like \relax, but isn't equal to it.
-  </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\special_relax"</span>), <span class="prelude-val">None</span>, { });
+  </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\special_relax"</span>), <span class="prelude-val">None</span>, {});
 
   <span class="comment">// \afterassignment saves ONE token (globally!) to execute after the next assignment
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\afterassignment Token"</span>, sub[(t)] {
@@ -264,8 +289,8 @@
   <span class="comment">//======================================================================
   // CSName
   //----------------------------------------------------------------------
-  // \csname           c  forms a control sequence name from the characters making up a collection of tokens.
-  // \endcsname        c  is used with \csname to make a control sequence name.
+  // \csname           c  forms a control sequence name from the characters making up a collection
+  // of tokens. \endcsname        c  is used with \csname to make a control sequence name.
   </span><span class="macro">DefParameterType!</span>(CSName, reader =&gt; <span class="macro">reader!</span>( _inner, _extra, { read_cs_name() }));
   <span class="macro">DefMacro!</span>(<span class="string">"\\csname CSName"</span>, sub[(token)] {
     <span class="kw">if </span>lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
@@ -276,7 +301,7 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\endcsname"</span>, {
-    <span class="macro">Error!</span>(<span class="string">"unexpected" </span>,<span class="string">"\\endcsname"</span>, <span class="string">"Extra \\endcsname"</span>);
+    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\endcsname"</span>, <span class="string">"Extra \\endcsname"</span>);
     <span class="comment">//$stomach-&gt;getGullet-&gt;showUnexpected);
   </span>});
 
@@ -285,8 +310,9 @@
   //----------------------------------------------------------------------
   // \global        c  is an assignment prefix which makes the assignment transcend its group.
   // \long          c  is a prefix for definitions which require multi-paragraph arguments.
-  // \outer         c  is a prefix for a definition which restricts where the definition may be used.
-  // \globaldefs    pi if positive, all assignments are global; if negative, \global is ignored.
+  // \outer         c  is a prefix for a definition which restricts where the definition may be
+  // used. \globaldefs    pi if positive, all assignments are global; if negative, \global is
+  // ignored.
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\global"</span>,{ state::set_prefix(<span class="string">"global"</span>); }, is_prefix =&gt; <span class="bool-val">true</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\long"</span>,  { state::set_prefix(<span class="string">"long"</span>);   }, is_prefix =&gt; <span class="bool-val">true</span>);
@@ -325,8 +351,9 @@
   // Copying definitions
   //----------------------------------------------------------------------
   //  \let       c  gives a control sequence a token's current meaning.
-  // \futurelet  c  `&lt;cs&gt; &lt;token1&gt; &lt;token2&gt;' is equivalent to `\let &lt;cs&gt; = &lt;token2&gt; &lt;token1&gt; &lt;token2&gt;'.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token"</span>, 
+  // \futurelet  c  `&lt;cs&gt; &lt;token1&gt; &lt;token2&gt;' is equivalent to `\let &lt;cs&gt; = &lt;token2&gt; &lt;token1&gt;
+  // &lt;token2&gt;'.
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token"</span>,
   sub[(token1, token2)] {
     <span class="macro">Let!</span>(token1, token2);
   });
@@ -390,41 +417,54 @@
   });
   <span class="comment">// NON-STANDARD:
   </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\dont_expand"</span>), <span class="prelude-val">None</span>, {
-    <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, <span class="string">"\\dont_expand"</span>,
-      <span class="string">"The token \\dont_expand should never reach Stomach!"</span>); });
+    <span class="macro">Error!</span>(
+      <span class="string">"misdefined"</span>,
+      <span class="string">"\\dont_expand"</span>,
+      <span class="string">"The token \\dont_expand should never reach Stomach!"
+    </span>);
+  });
 
   <span class="comment">//======================================================================
   // \the
   //----------------------------------------------------------------------
-  // \the              c  returns character tokens for an internal quantity's or parameter's current value.
-  // The argument to \the is a variety of "Internal Quantities", being parameters,
+  // \the              c  returns character tokens for an internal quantity's or parameter's current
+  // value. The argument to \the is a variety of "Internal Quantities", being parameters,
   // registers, internal registers, codenames, etc. See TeX Book, pp.214--215.
   // [Since \the is expandable, perhaps should just be built into \the's code? Never need to revert]
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\the"</span>, {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
-        <span class="kw">if </span>defn.is_register() { <span class="comment">// SOME kind of register is acceptable
+        <span class="kw">if </span>defn.is_register() {
+          <span class="comment">// SOME kind of register is acceptable
           </span><span class="kw">let </span>args = <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = defn.get_parameters() {
             params.read_arguments(<span class="prelude-val">None</span>)<span class="question-mark">?
-          </span>} <span class="kw">else </span>{ Vec::new() };
+          </span>} <span class="kw">else </span>{
+            Vec::new()
+          };
           <span class="kw">return match </span>defn.value_of(args) {
             <span class="prelude-val">Some</span>(RegisterValue::Token(t)) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(t)),
             <span class="prelude-val">Some</span>(RegisterValue::Tokens(ts)) =&gt; <span class="prelude-val">Ok</span>(ts),
             <span class="prelude-val">Some</span>(other) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(other.to_string()))),
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-          }
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()),
+          };
         } <span class="kw">else if </span>defn.get_cs_name() == <span class="string">"\\font" </span>{
           <span class="comment">// HACK to get the \fontcmd that would have selected the current font (see FontDef)
           </span><span class="macro">todo!</span>();
           <span class="comment">// continue:
-          // return lookup_value("current_FontDef") || T_CS!("\\tenrm"); }    
-        // } else if (defn.is_font_def()) { // Or a propert TeX \fontcmd defined by \font
-        //   return defn.get_cs(); 
-        // }
-        </span>} <span class="kw">else </span>{ <span class="comment">// the argument token is Undefined
-          </span><span class="kw">if </span>token.get_catcode() == Catcode::CS { <span class="comment">// but IS a cs \something
-            </span><span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;register&gt;"</span>,
-              <span class="string">"A &lt;register&gt; was supposed to be here"</span>, <span class="macro">s!</span>(<span class="string">"Got {} Defining it now."</span>, token));
+          // return lookup_value("current_FontDef") || T_CS!("\\tenrm"); }
+          // } else if (defn.is_font_def()) { // Or a propert TeX \fontcmd defined by \font
+          //   return defn.get_cs();
+          // }
+        </span>} <span class="kw">else </span>{
+          <span class="comment">// the argument token is Undefined
+          </span><span class="kw">if </span>token.get_catcode() == Catcode::CS {
+            <span class="comment">// but IS a cs \something
+            </span><span class="macro">Error!</span>(
+              <span class="string">"expected"</span>,
+              <span class="string">"&lt;register&gt;"</span>,
+              <span class="string">"A &lt;register&gt; was supposed to be here"</span>,
+              <span class="macro">s!</span>(<span class="string">"Got {} Defining it now."</span>, token)
+            );
             <span class="comment">// Hackery: to avoid potential repeated errors, define it now as a number register
             </span>def_register(token, <span class="prelude-val">None</span>, <span class="macro">Number!</span>(<span class="number">0</span>), <span class="prelude-val">None</span>)<span class="question-mark">?</span>; <span class="comment">// Dimension, or what?
             </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)));
@@ -432,15 +472,18 @@
         }
       }
       <span class="comment">// If we fall through to here, whatever $token is shouln't have been used with \the
-      </span><span class="kw">let </span>(the_t,msg) = token.with_str(|tstr| 
-        (<span class="macro">s!</span>(<span class="string">"\\the{tstr}"</span>),<span class="macro">s!</span>(<span class="string">"You can't use {tstr} after \\the"</span>)));
+      </span><span class="kw">let </span>(the_t, msg) =
+        token.with_str(|tstr| (<span class="macro">s!</span>(<span class="string">"\\the{tstr}"</span>), <span class="macro">s!</span>(<span class="string">"You can't use {tstr} after \\the"</span>)));
       <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, the_t, msg);
       <span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;register&gt;"</span>,
-        <span class="string">"A &lt;register&gt; was supposed to be here. Got nothing."</span>);
-      <span class="macro">T_OTHER!</span>(<span class="string">"0"</span>) 
+      <span class="macro">Error!</span>(
+        <span class="string">"expected"</span>,
+        <span class="string">"&lt;register&gt;"</span>,
+        <span class="string">"A &lt;register&gt; was supposed to be here. Got nothing."
+      </span>);
+      <span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)
     }
   });
-  
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

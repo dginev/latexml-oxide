@@ -290,7 +290,9 @@
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="comment">//**********************************************************************
 // C.13 Lengths, Spaces and Boxes
@@ -481,7 +483,8 @@
   // );
 
   </span><span class="macro">AssignValue!</span>(<span class="string">"SAVEBOX"</span>, <span class="number">100</span>);
-  <span class="macro">TeX!</span>(<span class="string">r#"""\def\newsavebox#1{\@ifdefinable{#1}{\newbox#1}}
+  <span class="macro">TeX!</span>(
+    <span class="string">r#"""\def\newsavebox#1{\@ifdefinable{#1}{\newbox#1}}
   \DeclareRobustCommand\savebox[1]{%
     \@ifnextchar(%)
       {\@savepicbox#1}{\@ifnextchar[{\@savebox#1}{\sbox#1}}}%
@@ -509,7 +512,8 @@
         \ignorespaces}
   \def\endlrbox{\unskip\color@endgroup}
   \DeclareRobustCommand\usebox[1]{\leavevmode\copy #1\relax}
-  """#</span>);
+  """#
+  </span>);
 
   <span class="comment">// DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
   // DefPrimitive!("\\end{lrbox}", primtiveproc!( args, {stomach.egroup()?; }));

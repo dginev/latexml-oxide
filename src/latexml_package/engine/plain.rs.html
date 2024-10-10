@@ -1813,8 +1813,176 @@
 <a href="#1812" id="1812">1812</a>
 <a href="#1813" id="1813">1813</a>
 <a href="#1814" id="1814">1814</a>
-<a href="#1815" id="1815">1815</a></pre></div><pre class="rust"><code><span class="doccomment">//! plain TeX
-//! 
+<a href="#1815" id="1815">1815</a>
+<a href="#1816" id="1816">1816</a>
+<a href="#1817" id="1817">1817</a>
+<a href="#1818" id="1818">1818</a>
+<a href="#1819" id="1819">1819</a>
+<a href="#1820" id="1820">1820</a>
+<a href="#1821" id="1821">1821</a>
+<a href="#1822" id="1822">1822</a>
+<a href="#1823" id="1823">1823</a>
+<a href="#1824" id="1824">1824</a>
+<a href="#1825" id="1825">1825</a>
+<a href="#1826" id="1826">1826</a>
+<a href="#1827" id="1827">1827</a>
+<a href="#1828" id="1828">1828</a>
+<a href="#1829" id="1829">1829</a>
+<a href="#1830" id="1830">1830</a>
+<a href="#1831" id="1831">1831</a>
+<a href="#1832" id="1832">1832</a>
+<a href="#1833" id="1833">1833</a>
+<a href="#1834" id="1834">1834</a>
+<a href="#1835" id="1835">1835</a>
+<a href="#1836" id="1836">1836</a>
+<a href="#1837" id="1837">1837</a>
+<a href="#1838" id="1838">1838</a>
+<a href="#1839" id="1839">1839</a>
+<a href="#1840" id="1840">1840</a>
+<a href="#1841" id="1841">1841</a>
+<a href="#1842" id="1842">1842</a>
+<a href="#1843" id="1843">1843</a>
+<a href="#1844" id="1844">1844</a>
+<a href="#1845" id="1845">1845</a>
+<a href="#1846" id="1846">1846</a>
+<a href="#1847" id="1847">1847</a>
+<a href="#1848" id="1848">1848</a>
+<a href="#1849" id="1849">1849</a>
+<a href="#1850" id="1850">1850</a>
+<a href="#1851" id="1851">1851</a>
+<a href="#1852" id="1852">1852</a>
+<a href="#1853" id="1853">1853</a>
+<a href="#1854" id="1854">1854</a>
+<a href="#1855" id="1855">1855</a>
+<a href="#1856" id="1856">1856</a>
+<a href="#1857" id="1857">1857</a>
+<a href="#1858" id="1858">1858</a>
+<a href="#1859" id="1859">1859</a>
+<a href="#1860" id="1860">1860</a>
+<a href="#1861" id="1861">1861</a>
+<a href="#1862" id="1862">1862</a>
+<a href="#1863" id="1863">1863</a>
+<a href="#1864" id="1864">1864</a>
+<a href="#1865" id="1865">1865</a>
+<a href="#1866" id="1866">1866</a>
+<a href="#1867" id="1867">1867</a>
+<a href="#1868" id="1868">1868</a>
+<a href="#1869" id="1869">1869</a>
+<a href="#1870" id="1870">1870</a>
+<a href="#1871" id="1871">1871</a>
+<a href="#1872" id="1872">1872</a>
+<a href="#1873" id="1873">1873</a>
+<a href="#1874" id="1874">1874</a>
+<a href="#1875" id="1875">1875</a>
+<a href="#1876" id="1876">1876</a>
+<a href="#1877" id="1877">1877</a>
+<a href="#1878" id="1878">1878</a>
+<a href="#1879" id="1879">1879</a>
+<a href="#1880" id="1880">1880</a>
+<a href="#1881" id="1881">1881</a>
+<a href="#1882" id="1882">1882</a>
+<a href="#1883" id="1883">1883</a>
+<a href="#1884" id="1884">1884</a>
+<a href="#1885" id="1885">1885</a>
+<a href="#1886" id="1886">1886</a>
+<a href="#1887" id="1887">1887</a>
+<a href="#1888" id="1888">1888</a>
+<a href="#1889" id="1889">1889</a>
+<a href="#1890" id="1890">1890</a>
+<a href="#1891" id="1891">1891</a>
+<a href="#1892" id="1892">1892</a>
+<a href="#1893" id="1893">1893</a>
+<a href="#1894" id="1894">1894</a>
+<a href="#1895" id="1895">1895</a>
+<a href="#1896" id="1896">1896</a>
+<a href="#1897" id="1897">1897</a>
+<a href="#1898" id="1898">1898</a>
+<a href="#1899" id="1899">1899</a>
+<a href="#1900" id="1900">1900</a>
+<a href="#1901" id="1901">1901</a>
+<a href="#1902" id="1902">1902</a>
+<a href="#1903" id="1903">1903</a>
+<a href="#1904" id="1904">1904</a>
+<a href="#1905" id="1905">1905</a>
+<a href="#1906" id="1906">1906</a>
+<a href="#1907" id="1907">1907</a>
+<a href="#1908" id="1908">1908</a>
+<a href="#1909" id="1909">1909</a>
+<a href="#1910" id="1910">1910</a>
+<a href="#1911" id="1911">1911</a>
+<a href="#1912" id="1912">1912</a>
+<a href="#1913" id="1913">1913</a>
+<a href="#1914" id="1914">1914</a>
+<a href="#1915" id="1915">1915</a>
+<a href="#1916" id="1916">1916</a>
+<a href="#1917" id="1917">1917</a>
+<a href="#1918" id="1918">1918</a>
+<a href="#1919" id="1919">1919</a>
+<a href="#1920" id="1920">1920</a>
+<a href="#1921" id="1921">1921</a>
+<a href="#1922" id="1922">1922</a>
+<a href="#1923" id="1923">1923</a>
+<a href="#1924" id="1924">1924</a>
+<a href="#1925" id="1925">1925</a>
+<a href="#1926" id="1926">1926</a>
+<a href="#1927" id="1927">1927</a>
+<a href="#1928" id="1928">1928</a>
+<a href="#1929" id="1929">1929</a>
+<a href="#1930" id="1930">1930</a>
+<a href="#1931" id="1931">1931</a>
+<a href="#1932" id="1932">1932</a>
+<a href="#1933" id="1933">1933</a>
+<a href="#1934" id="1934">1934</a>
+<a href="#1935" id="1935">1935</a>
+<a href="#1936" id="1936">1936</a>
+<a href="#1937" id="1937">1937</a>
+<a href="#1938" id="1938">1938</a>
+<a href="#1939" id="1939">1939</a>
+<a href="#1940" id="1940">1940</a>
+<a href="#1941" id="1941">1941</a>
+<a href="#1942" id="1942">1942</a>
+<a href="#1943" id="1943">1943</a>
+<a href="#1944" id="1944">1944</a>
+<a href="#1945" id="1945">1945</a>
+<a href="#1946" id="1946">1946</a>
+<a href="#1947" id="1947">1947</a>
+<a href="#1948" id="1948">1948</a>
+<a href="#1949" id="1949">1949</a>
+<a href="#1950" id="1950">1950</a>
+<a href="#1951" id="1951">1951</a>
+<a href="#1952" id="1952">1952</a>
+<a href="#1953" id="1953">1953</a>
+<a href="#1954" id="1954">1954</a>
+<a href="#1955" id="1955">1955</a>
+<a href="#1956" id="1956">1956</a>
+<a href="#1957" id="1957">1957</a>
+<a href="#1958" id="1958">1958</a>
+<a href="#1959" id="1959">1959</a>
+<a href="#1960" id="1960">1960</a>
+<a href="#1961" id="1961">1961</a>
+<a href="#1962" id="1962">1962</a>
+<a href="#1963" id="1963">1963</a>
+<a href="#1964" id="1964">1964</a>
+<a href="#1965" id="1965">1965</a>
+<a href="#1966" id="1966">1966</a>
+<a href="#1967" id="1967">1967</a>
+<a href="#1968" id="1968">1968</a>
+<a href="#1969" id="1969">1969</a>
+<a href="#1970" id="1970">1970</a>
+<a href="#1971" id="1971">1971</a>
+<a href="#1972" id="1972">1972</a>
+<a href="#1973" id="1973">1973</a>
+<a href="#1974" id="1974">1974</a>
+<a href="#1975" id="1975">1975</a>
+<a href="#1976" id="1976">1976</a>
+<a href="#1977" id="1977">1977</a>
+<a href="#1978" id="1978">1978</a>
+<a href="#1979" id="1979">1979</a>
+<a href="#1980" id="1980">1980</a>
+<a href="#1981" id="1981">1981</a>
+<a href="#1982" id="1982">1982</a>
+<a href="#1983" id="1983">1983</a></pre></div><pre class="rust"><code><span class="doccomment">//! plain TeX
+//!
 //! Core TeX Implementation for LaTeXML
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -1841,7 +2009,7 @@
   <span class="comment">//**********************************************************************
   // Plain;  Extracted from Appendix B.
   //**********************************************************************
-  
+
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   </span>{
     <span class="kw">for </span>letter <span class="kw">in </span><span class="string">b'A'</span>..=<span class="string">b'Z' </span>{
@@ -1854,23 +2022,24 @@
   }
   <span class="macro">DefRegister!</span>(<span class="string">"\\magnification"</span>, <span class="macro">Number!</span>(<span class="number">1000</span>));
   <span class="macro">Let!</span>(<span class="string">"\\bye"</span>, <span class="string">"\\end"</span>);
-  
+
   <span class="comment">// Most of these are ignored, but...
   </span><span class="macro">DefMacro!</span>(
     <span class="string">"\\tracingall"</span>,
     <span class="string">"\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2 \
      \\tracingpages=1 \\tracingoutput=1 \\tracinglostchars=1 \\tracingmacros=2 \
      \\tracingparagraphs=1 \\tracingrestores=1 \\showboxbreadth=\\maxdimen \
-     \\showboxdepth=\\maxdimen \\errorstopmode"</span>);
+     \\showboxdepth=\\maxdimen \\errorstopmode"
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\tracingnone"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\hideoutput"</span>, <span class="prelude-val">None</span>);
-  
+
   <span class="comment">//======================================================================
   // \choose &amp; friends, also need VERY special argument handling
 
   // DefMacro('\choose',
-  //   '\lx@generalized@over{\choose}{meaning=binomial,thickness=0pt,left=\lx@left(,right=\lx@right)}');
-  // DefMacro('\brace',
+  //   '\lx@generalized@over{\choose}{meaning=binomial,thickness=0pt,left=\lx@left(,right=\lx@
+  // right)}'); DefMacro('\brace',
   //   '\lx@generalized@over{\brace}{thickness=0pt,left=\lx@left\{,right=\lx@right\}}');
   // DefMacro('\brack',
   //   '\lx@generalized@over{\brack}{thickness=0pt,left=\lx@left[,right=\lx@right]}');
@@ -1935,27 +2104,39 @@
   // Note: applied in reverse order of definition (latest defined applied first!)
   // Note also, these area only applied in text content, not in attributes!
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@@endash"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{2013}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@endash"</span>)), SymHashMap::default()); });
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2013}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@endash"</span>)),
+      SymHashMap::default(),
+    );
+  });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\@@emdash"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{2014}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@emdash"</span>)), SymHashMap::default()); });
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2014}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@emdash"</span>)),
+      SymHashMap::default(),
+    );
+  });
 
   <span class="comment">// EN DASH (NOTE: With digits before &amp; aft =&gt; \N{FIGURE DASH})
   </span><span class="macro">DefLigature!</span>(<span class="string">r"--"</span>, <span class="string">"\u{2013}"</span>, fontTest =&gt; sub[arg] { non_typewriter(arg) });
   <span class="comment">// EM DASH
   </span><span class="macro">DefLigature!</span>(<span class="string">r"---"</span>, <span class="string">"\u{2014}"</span>, fontTest =&gt; sub[arg] {non_typewriter(arg) });
 
-    <span class="comment">// Ligatures for doubled single left &amp; right quotes to convert to double quotes
+  <span class="comment">// Ligatures for doubled single left &amp; right quotes to convert to double quotes
   // [should ligatures be part of a font, in the first place? (it is in TeX!)
   </span><span class="macro">DefLigature!</span>(<span class="string">"\u{2018}\u{2018}"</span>, <span class="string">"\u{201C}"</span>, 
     fontTest =&gt; sub[arg] {non_typewriter_t1(arg)}); <span class="comment">// double left quote
   </span><span class="macro">DefLigature!</span>(<span class="string">"\u{2019}\u{2019}"</span>, <span class="string">"\u{201D}"</span>, 
     fontTest =&gt; sub[arg] {non_typewriter_t1(arg)}); <span class="comment">// double right quote
   </span><span class="macro">DefLigature!</span>(<span class="string">"[?]\u{2018}"</span>,       <span class="string">"\u{00BF}"</span>,  
-    fontTest =&gt; sub[arg] {non_typewriter_t1(arg)});   <span class="comment">// ? backquote
+    fontTest =&gt; sub[arg] {non_typewriter_t1(arg)}); <span class="comment">// ? backquote
   </span><span class="macro">DefLigature!</span>(<span class="string">"!\u{2018}"</span>,       <span class="string">"\u{00A1}"</span>,  
-    fontTest =&gt; sub[arg] {non_typewriter_t1(arg)});   <span class="comment">// ! backquote
+    fontTest =&gt; sub[arg] {non_typewriter_t1(arg)}); <span class="comment">// ! backquote
   // These ligatures are also handled by TeX.
   // However, it appears that decent modern fonts in modern browsers handle these at that level.
   // So it's likely not worth doing it at the conversion level, possibly adversely affecting search.
@@ -1980,16 +2161,18 @@
   // "Initialized" alignment; presets spacing, but since we're ignoring it anyway...
   </span><span class="macro">Let!</span>(<span class="string">"\\ialign"</span>, <span class="string">"\\halign"</span>);
   <span class="comment">// Overlapping alignments ???
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\oalign{}"</span>,
-    <span class="string">r"\@@oalign{\lx@begin@alignment#1\lx@end@alignment}"</span>);
-  <span class="comment">// TODO: What are the full arguments to alignment_bindings ? 
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\oalign{}"</span>,
+    <span class="string">r"\@@oalign{\lx@begin@alignment#1\lx@end@alignment}"
+  </span>);
+  <span class="comment">// TODO: What are the full arguments to alignment_bindings ?
   // DefConstructor!("\\@@oalign{}", "#1",
   //   reversion    =&gt; "\\oalign{#1}", bounded =&gt; true, mode =&gt; "text",
   //   before_digest =&gt; sub { alignment_bindings('l', ); });
 
   // This is actually different; the lines should lie ontop of each other.
   // How should this be represented?
-  // TODO: What are the full arguments to alignment_bindings ? 
+  // TODO: What are the full arguments to alignment_bindings ?
   // DefMacro("\\ooalign{}",
   //   r"\@@ooalign{\lx@begin@alignment#1\lx@end@alignment}");
   // DefConstructor!("\\@@ooalign{}",
@@ -1997,14 +2180,14 @@
   //   reversion    =&gt; "\\ooalign{#1}", bounded =&gt; true, mode =&gt; "text",
   //   before_digest =&gt; sub { alignment_bindings('l'); });
 
-  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\buildrel Until:\\over {}"</span>,
-  <span class="string">"&lt;ltx:XMApp role='RELOP'&gt;\
+  </span><span class="macro">DefConstructor!</span>(
+    <span class="string">"\\buildrel Until:\\over {}"</span>,
+    <span class="string">"&lt;ltx:XMApp role='RELOP'&gt;\
     &lt;ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/&gt;\
     &lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;\
     &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;\
-    &lt;/ltx:XMApp&gt;"
-    </span><span class="comment">// TODO
-    // properties =&gt; { scriptpos =&gt; sub { "mid" . $_[0]-&gt;getBoxingLevel; } }
+    &lt;/ltx:XMApp&gt;" </span><span class="comment">/* TODO
+                   * properties =&gt; { scriptpos =&gt; sub { "mid" . $_[0]-&gt;getBoxingLevel; } } */
   </span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\hidewidth"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// DefMacro('\multispan{Number}', sub {
@@ -2016,7 +2199,10 @@
   // TeX Book, Appendix B, p. 344
   //======================================================================
   </span><span class="macro">TeX!</span>(<span class="string">r"\outer\def^^L{\par}"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\dospecials"</span>, <span class="string">r"\do\ \do\\\do\{\do\}\do\$\do\&amp;\do\#\do\^\do\^^K\do\_\do\^^A\do\%\do\~"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\dospecials"</span>,
+    <span class="string">r"\do\ \do\\\do\{\do\}\do\$\do\&amp;\do\#\do\^\do\^^K\do\_\do\^^A\do\%\do\~"
+  </span>);
 
   <span class="comment">//======================================================================
   // TeX Book, Appendix B, p. 345
@@ -2117,13 +2303,20 @@
     <span class="string">"\\newlanguage DefToken"</span>,
     <span class="string">r"\alloc@@{language}\global\chardef#1=\allocationnumber"
   </span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\e@alloc{}{}{}{}{}{}"</span>,
-  <span class="string">r"\global\advance#3\@ne
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\e@alloc{}{}{}{}{}{}"</span>,
+    <span class="string">r"\global\advance#3\@ne
   \allocationnumber#3\relax
-  \global#2#6\allocationnumber"</span>);
+  \global#2#6\allocationnumber"
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\alloc@{}{}{}{}"</span>, <span class="string">r"\e@alloc#2#3{\count1#1}#4\float@count"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\newread"</span>,        <span class="string">r"\e@alloc\read \chardef{\count16}\m@ne\sixt@@n"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\newwrite"</span>, <span class="string">r"\e@alloc\write
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\newread"</span>,
+    <span class="string">r"\e@alloc\read \chardef{\count16}\m@ne\sixt@@n"
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\newwrite"</span>,
+    <span class="string">r"\e@alloc\write
                   {\ifnum\allocationnumber=18
                       \advance\count17\@ne
                       \allocationnumber\count17 %
@@ -2131,7 +2324,8 @@
                     \global\chardef}%
                     {\count17}%
                     \m@ne
-                    {128}"</span>);
+                    {128}"
+  </span>);
 
   <span class="comment">// This implementation is quite wrong
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newinsert Token"</span>, sub[(t)] {
@@ -2148,13 +2342,13 @@
   <span class="macro">DefRegister!</span>(<span class="string">"\\p@"</span>, Dimension::new(UNITY));
   <span class="macro">DefRegister!</span>(<span class="string">"\\z@"</span>, Dimension::new(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\z@skip"</span>, Glue::new(<span class="number">0</span>));
-  
+
   <span class="comment">// Spacing stuff
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@"</span>, <span class="string">""</span>);
-  
+
   <span class="comment">// First approximation. till I figure out \newbox
   </span><span class="macro">TeX!</span>(<span class="string">r"\newbox\voidb@x"</span>);
-  
+
   <span class="comment">//======================================================================
   // TeX Book, Appendix B, p. 348
 
@@ -2224,7 +2418,8 @@
  \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
  \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
  \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
- \textfont3=\tenex"</span>);
+ \textfont3=\tenex"
+  </span>);
 
   <span class="comment">// Note: \newfam in math should be font switching(?)
 
@@ -2255,7 +2450,7 @@
     font =&gt; {shape =&gt; <span class="string">"smallcaps"</span>, family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium" </span>});
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\cal"</span>, <span class="prelude-val">None</span>,
     font =&gt; {family =&gt; <span class="string">"caligraphic"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright" </span>});
-  
+
   <span class="comment">// Ideally, we should set these sizes from class files
   </span><span class="macro">AssignValue!</span>(<span class="string">"NOMINAL_FONT_SIZE"</span>, <span class="number">10</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\tiny"</span>,         <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">5 </span>});
@@ -2273,8 +2468,10 @@
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\frenchspacing"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\nonfrenchspacing"</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\normalbaselines"</span>,
-  <span class="string">r"\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\normalbaselines"</span>,
+    <span class="string">r"\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit"
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\space"</span>), <span class="prelude-val">None</span>, <span class="macro">T_SPACE!</span>());
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lq"</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">"`"</span>));
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\rq"</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">"'"</span>));
@@ -2316,38 +2513,75 @@
   \def\loop#1\repeat{\def\body{#1}\iterate}
   \def\iterate{\body \let\next=\iterate \else\let\next=\relax\fi \next}
   \let\repeat=\fi
-  "</span>);
+  "
+  </span>);
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\enskip"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{2002}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\enskip"</span>)),
-    <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"enskip"</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.5em"</span>)<span class="question-mark">?</span>,
-      <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>)) });
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2002}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\enskip"</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"enskip"</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.5em"</span>)<span class="question-mark">?</span>,
+      <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>),
+    )
+  });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\enspace"</span>, {
-      Tbox::new(arena::pin_static(<span class="string">"\u{2002}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\enspace"</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2002}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\enspace"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"enskip"</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.5em"</span>)<span class="question-mark">?</span>,
-        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>)) });
+        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>),
+    )
+  });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\quad"</span>, {
-      Tbox::new(arena::pin_static(<span class="string">"\u{2003}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2003}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"quad"</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"1em"</span>)<span class="question-mark">?</span>,
-        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>)) });
+        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>),
+    )
+  });
 
   <span class="comment">// Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\qquad"</span>, {
-      Tbox::new(arena::pin_static(<span class="string">"\u{2003}\u{2003}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\qquad"</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2003}\u{2003}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\qquad"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"qquad"</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"2em"</span>)<span class="question-mark">?</span>,
-        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>, <span class="string">"asHint" </span>=&gt; <span class="bool-val">true</span>)) });
+        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>, <span class="string">"asHint" </span>=&gt; <span class="bool-val">true</span>),
+    )
+  });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\thinspace"</span>, {
-      Tbox::new(arena::pin_static(<span class="string">"\u{2009}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\thinspace"</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2009}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\thinspace"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"thinspace"</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.16667em"</span>)<span class="question-mark">?</span>,
-        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>)) });
+        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>),
+    )
+  });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\negthinspace"</span>, {
-      Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\negthinspace"</span>)),
+    Tbox::new(
+      <span class="kw-2">*</span>EMPTY_SYM,
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\negthinspace"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"negthinspace"</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"-0.16667em"</span>)<span class="question-mark">?</span>,
-        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>)) });
+        <span class="string">"isSpace"</span>=&gt;<span class="bool-val">true</span>),
+    )
+  });
 
   <span class="comment">// DefConstructor('\hglue Glue', "?#isMath(&lt;ltx:XMHint name='hglue' width='#width'/&gt;)(\x{2003})",
   //   properties =&gt; sub { (stored_map!("isSpace"=&gt;true), width =&gt; $_[1]) });
@@ -2367,9 +2601,14 @@
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\nobreak"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\allowbreak"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\nobreakspace"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{00A0}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-      <span class="macro">Tokens!</span>(<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>)), <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
-      <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.333em"</span>)<span class="question-mark">?</span>))
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{00A0}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
+      <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.333em"</span>)<span class="question-mark">?</span>),
+    )
   });
   <span class="macro">DefMacro!</span>(<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>), <span class="prelude-val">None</span>, <span class="string">"\\nobreakspace{}"</span>);
 
@@ -2390,8 +2629,8 @@
   <span class="macro">DefMacro!</span>(<span class="string">"\\medbreak"</span>, <span class="string">"\\par"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\bigbreak"</span>, <span class="string">"\\par"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\line"</span>, <span class="string">"\\hbox to \\hsize"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\leftline Undigested"</span>,   <span class="string">r"\ltx@leftline{\hbox{#1}}"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\rightline Undigested"</span>,  <span class="string">r"\ltx@rightline{\hbox{#1}}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\leftline Undigested"</span>, <span class="string">r"\ltx@leftline{\hbox{#1}}"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\rightline Undigested"</span>, <span class="string">r"\ltx@rightline{\hbox{#1}}"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\centerline Undigested"</span>, <span class="string">r"\ltx@centerline{\hbox{#1}}"</span>);
   <span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@leftline{}"</span>, sub[doc,args,_props] {
       align_line(doc,args,<span class="string">"left"</span>)<span class="question-mark">?</span>;
@@ -2405,7 +2644,6 @@
       align_line(doc,args,<span class="string">"center"</span>)<span class="question-mark">?</span>;
     },
     alias =&gt; <span class="string">"\\centerline"</span>, bounded =&gt; <span class="bool-val">true</span>);
-  
 
   <span class="comment">// These should be 0 width, but perhaps also shifted?
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\llap{}"</span>, <span class="string">r"\hbox to 0pt{\hss#1}"</span>);
@@ -2430,111 +2668,123 @@
   <span class="comment">// TODO: \item, \itemitem not done!
   // This could probably be adopted from LaTeX, if the &lt;itemize&gt; could auto-open
   // and close!
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hang"</span>,         <span class="string">r"\hangindent\parindent"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\item"</span>,         <span class="string">r"\par\hang\textindent"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\itemitem"</span>,     <span class="string">r"\par\indent \hangindent2\parindent \textindent"</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hang"</span>, <span class="string">r"\hangindent\parindent"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\item"</span>, <span class="string">r"\par\hang\textindent"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\itemitem"</span>,
+    <span class="string">r"\par\indent \hangindent2\parindent \textindent"
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\textindent{}"</span>, <span class="string">r"\indent\llap{#1\enspace}\ignorespaces"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\narrower"</span>, <span class="string">r"\advance\leftskip by\parindent\advance\rightskip by\parindent"</span>);
-
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\narrower"</span>,
+    <span class="string">r"\advance\leftskip by\parindent\advance\rightskip by\parindent"
+  </span>);
 
   <span class="comment">// If folks start using plain TeX macros, and never load LaTeX.pool,
   // they might benefit from a ltx-plain.css?
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\beginsection Until:\\par"</span>, <span class="string">r"\@beginsection{{\bf #1}}"</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\@beginsection {}"</span>,
-    <span class="string">"&lt;ltx:section&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;"</span>);
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">"\\@beginsection {}"</span>,
+    <span class="string">"&lt;ltx:section&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;"
+  </span>);
 
   <span class="comment">// POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   //  If so, how do know when the theorem ends?
-  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\proclaim"</span>), 
+  </span><span class="macro">DefMacro!</span>(
+    <span class="macro">T_CS!</span>(<span class="string">"\\proclaim"</span>),
     parse_def_parameters(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\proclaim"</span>), <span class="macro">Tokenize!</span>(<span class="string">"#1. #2\\par"</span>))<span class="question-mark">?</span>,
-    <span class="prelude-val">Some</span>(<span class="string">r"\@proclaim{{\bf #1}}{{\sl #2}}"</span>.into()));
+    <span class="prelude-val">Some</span>(<span class="string">r"\@proclaim{{\bf #1}}{{\sl #2}}"</span>.into())
+  );
   <span class="macro">DefConstructor!</span>(<span class="string">"\\@proclaim{}{}"</span>,
-    <span class="string">"&lt;ltx:theorem&gt;&lt;ltx:title font='#titlefont' _force_font='true' &gt;#title&lt;/ltx:title&gt;#2"</span>,
-    after_construct =&gt; sub[doc,_args] { doc.maybe_close_element(<span class="string">"ltx:theorem"</span>)<span class="question-mark">?</span>; },
-    properties     =&gt; sub[args] {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>title) = args[<span class="number">0</span>] {
-        <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"title" </span>=&gt; title, <span class="string">"titlefont" </span>=&gt; title.get_font()<span class="question-mark">?</span>)) 
-      } <span class="kw">else </span>{ <span class="prelude-val">Ok</span>(SymHashMap::default()) }
-    });
+  <span class="string">"&lt;ltx:theorem&gt;&lt;ltx:title font='#titlefont' _force_font='true' &gt;#title&lt;/ltx:title&gt;#2"</span>,
+  after_construct =&gt; sub[doc,_args] { doc.maybe_close_element(<span class="string">"ltx:theorem"</span>)<span class="question-mark">?</span>; },
+  properties     =&gt; sub[args] {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>title) = args[<span class="number">0</span>] {
+      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"title" </span>=&gt; title, <span class="string">"titlefont" </span>=&gt; title.get_font()<span class="question-mark">?</span>))
+    } <span class="kw">else </span>{ <span class="prelude-val">Ok</span>(SymHashMap::default()) }
+  });
 
   <span class="comment">//======================================================================
   // TeX Book, Appendix B. p. 356
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\raggedright"</span>,   <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\raggedleft"</span>,    <span class="prelude-val">None</span>);    <span class="comment">// this is actually LaTeX
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\raggedright"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\raggedleft"</span>, <span class="prelude-val">None</span>); <span class="comment">// this is actually LaTeX
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ttraggedright"</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\leavevmode"</span>,    <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\mathhexbox{}{}{}"</span>, <span class="string">r##"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"##</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\leavevmode"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\mathhexbox{}{}{}"</span>,
+    <span class="string">r##"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"##
+  </span>);
   <span class="comment">//----------------------------------------------------------------------
   //  Actually from LaTeX; Table 3.3, Greek, p.41
   //----------------------------------------------------------------------
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\alpha"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03B1}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\beta"</span>,       <span class="prelude-val">None</span>, <span class="string">"\u{03B2}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\gamma"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03B3}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\delta"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03B4}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\epsilon"</span>,    <span class="prelude-val">None</span>, <span class="string">"\u{03F5}"</span>);
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\alpha"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B1}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\beta"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B2}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\gamma"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B3}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\delta"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B4}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\epsilon"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03F5}"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\varepsilon"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B5}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\zeta"</span>,       <span class="prelude-val">None</span>, <span class="string">"\u{03B6}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\eta"</span>,        <span class="prelude-val">None</span>, <span class="string">"\u{03B7}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\theta"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03B8}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\vartheta"</span>,   <span class="prelude-val">None</span>, <span class="string">"\u{03D1}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\iota"</span>,       <span class="prelude-val">None</span>, <span class="string">"\u{03B9}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\kappa"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03BA}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\lambda"</span>,     <span class="prelude-val">None</span>, <span class="string">"\u{03BB}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\mu"</span>,         <span class="prelude-val">None</span>, <span class="string">"\u{03BC}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\nu"</span>,         <span class="prelude-val">None</span>, <span class="string">"\u{03BD}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\xi"</span>,         <span class="prelude-val">None</span>, <span class="string">"\u{03BE}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\pi"</span>,         <span class="prelude-val">None</span>, <span class="string">"\u{03C0}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\varpi"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03D6}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\rho"</span>,        <span class="prelude-val">None</span>, <span class="string">"\u{03C1}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\varrho"</span>,     <span class="prelude-val">None</span>, <span class="string">"\u{03F1}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\sigma"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03C3}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\varsigma"</span>,   <span class="prelude-val">None</span>, <span class="string">"\u{03C2}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\tau"</span>,        <span class="prelude-val">None</span>, <span class="string">"\u{03C4}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\upsilon"</span>,    <span class="prelude-val">None</span>, <span class="string">"\u{03C5}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\phi"</span>,        <span class="prelude-val">None</span>, <span class="string">"\u{03D5}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\varphi"</span>,     <span class="prelude-val">None</span>, <span class="string">"\u{03C6}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\chi"</span>,        <span class="prelude-val">None</span>, <span class="string">"\u{03C7}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\psi"</span>,        <span class="prelude-val">None</span>, <span class="string">"\u{03C8}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\omega"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03C9}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Gamma"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{0393}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Delta"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{0394}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Theta"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{0398}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Lambda"</span>,     <span class="prelude-val">None</span>, <span class="string">"\u{039B}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Xi"</span>,         <span class="prelude-val">None</span>, <span class="string">"\u{039E}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Pi"</span>,         <span class="prelude-val">None</span>, <span class="string">"\u{03A0}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Sigma"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03A3}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Upsilon"</span>,    <span class="prelude-val">None</span>, <span class="string">"\u{03A5}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Phi"</span>,        <span class="prelude-val">None</span>, <span class="string">"\u{03A6}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Psi"</span>,        <span class="prelude-val">None</span>, <span class="string">"\u{03A8}"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\Omega"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{03A9}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\zeta"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B6}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\eta"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B7}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\theta"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B8}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\vartheta"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03D1}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\iota"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03B9}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\kappa"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03BA}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\lambda"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03BB}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\mu"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03BC}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\nu"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03BD}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\xi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03BE}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\pi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C0}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\varpi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03D6}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\rho"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C1}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\varrho"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03F1}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\sigma"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C3}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\varsigma"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C2}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\tau"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C4}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\upsilon"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C5}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\phi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03D5}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\varphi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C6}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\chi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C7}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\psi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C8}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\omega"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03C9}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Gamma"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{0393}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Delta"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{0394}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Theta"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{0398}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Lambda"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{039B}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Xi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{039E}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Pi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03A0}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Sigma"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03A3}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Upsilon"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03A5}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Phi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03A6}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Psi"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03A8}"</span>);
+  <span class="macro">DefMath!</span>(<span class="string">"\\Omega"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{03A9}"</span>);
 
   <span class="comment">//----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
 
   // The following shouldn't appear in math.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\OE"</span>, <span class="string">"\u{0152}"</span>);    <span class="comment">// LATIN CAPITAL LIGATURE OE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\oe"</span>, <span class="string">"\u{0153}"</span>);    <span class="comment">// LATIN SMALL LIGATURE OE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\AE"</span>, <span class="string">"\u{00C6}"</span>);     <span class="comment">// LATIN CAPITAL LETTER AE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ae"</span>, <span class="string">"\u{00E6}"</span>);     <span class="comment">// LATIN SMALL LETTER AE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\AA"</span>, <span class="string">"\u{00C5}"</span>);     <span class="comment">// LATIN CAPITAL LETTER A WITH RING ABOVE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\aa"</span>, <span class="string">"\u{00E5}"</span>);     <span class="comment">// LATIN SMALL LETTER A WITH RING ABOVE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\O"</span>,  <span class="string">"\u{00D8}"</span>);     <span class="comment">// LATIN CAPITAL LETTER O WITH STROKE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\o"</span>,  <span class="string">"\u{00F8}"</span>);     <span class="comment">// LATIN SMALL LETTER O WITH STROKE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\L"</span>,  <span class="string">"\u{0141}"</span>);    <span class="comment">// LATIN CAPITAL LETTER L WITH STROKE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\l"</span>,  <span class="string">"\u{0142}"</span>);    <span class="comment">// LATIN SMALL LETTER L WITH STROKE
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ss"</span>, <span class="string">"\u{00DF}"</span>);     <span class="comment">// LATIN SMALL LETTER SHARP S
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\OE"</span>, <span class="string">"\u{0152}"</span>); <span class="comment">// LATIN CAPITAL LIGATURE OE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\oe"</span>, <span class="string">"\u{0153}"</span>); <span class="comment">// LATIN SMALL LIGATURE OE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\AE"</span>, <span class="string">"\u{00C6}"</span>); <span class="comment">// LATIN CAPITAL LETTER AE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ae"</span>, <span class="string">"\u{00E6}"</span>); <span class="comment">// LATIN SMALL LETTER AE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\AA"</span>, <span class="string">"\u{00C5}"</span>); <span class="comment">// LATIN CAPITAL LETTER A WITH RING ABOVE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\aa"</span>, <span class="string">"\u{00E5}"</span>); <span class="comment">// LATIN SMALL LETTER A WITH RING ABOVE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\O"</span>, <span class="string">"\u{00D8}"</span>); <span class="comment">// LATIN CAPITAL LETTER O WITH STROKE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\o"</span>, <span class="string">"\u{00F8}"</span>); <span class="comment">// LATIN SMALL LETTER O WITH STROKE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\L"</span>, <span class="string">"\u{0141}"</span>); <span class="comment">// LATIN CAPITAL LETTER L WITH STROKE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\l"</span>, <span class="string">"\u{0142}"</span>); <span class="comment">// LATIN SMALL LETTER L WITH STROKE
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ss"</span>, <span class="string">"\u{00DF}"</span>); <span class="comment">// LATIN SMALL LETTER SHARP S
 
   // apparently the rest can appear in math.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@sectionsign"</span>,   <span class="string">"\u{00a7}"</span>, alias=&gt;<span class="string">"\\S"</span>);    <span class="comment">// SECTION SIGN
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@paragraphsign"</span>, <span class="string">"\u{00B6}"</span>, alias=&gt;<span class="string">"\\P"</span>);    <span class="comment">// PILCROW SIGN
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@sectionsign"</span>,   <span class="string">"\u{00a7}"</span>, alias=&gt;<span class="string">"\\S"</span>); <span class="comment">// SECTION SIGN
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@paragraphsign"</span>, <span class="string">"\u{00B6}"</span>, alias=&gt;<span class="string">"\\P"</span>); <span class="comment">// PILCROW SIGN
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\S"</span>, <span class="string">"\\lx@sectionsign"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\P"</span>, <span class="string">"\\lx@paragraphsign"</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\dag"</span>,       <span class="string">"\u{2020}"</span>);          <span class="comment">// DAGGER
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ddag"</span>,      <span class="string">"\u{2021}"</span>);          <span class="comment">// DOUBLE DAGGER
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\copyright"</span>, <span class="string">"\u{00A9}"</span>);           <span class="comment">// COPYRIGHT SIGN
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pounds"</span>,    <span class="string">"\u{00A3}"</span>);           <span class="comment">// POUND SIGN
-  
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\dag"</span>, <span class="string">"\u{2020}"</span>); <span class="comment">// DAGGER
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\ddag"</span>, <span class="string">"\u{2021}"</span>); <span class="comment">// DOUBLE DAGGER
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\copyright"</span>, <span class="string">"\u{00A9}"</span>); <span class="comment">// COPYRIGHT SIGN
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pounds"</span>, <span class="string">"\u{00A3}"</span>); <span class="comment">// POUND SIGN
+
   //======================================================================
   // Specific accents (see TeX-Character)
   //----------------------------------------------------------------------
@@ -2571,8 +2821,14 @@
     </span><span class="macro">unported!</span>()
   });
   <span class="comment">// Note that these two apparently work in Math? BUT the argument is treated as text!!!
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\d{}"</span>, <span class="string">r"\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\b{}"</span>, <span class="string">r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\d{}"</span>,
+    <span class="string">r"\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi"
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\b{}"</span>,
+    <span class="string">r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi"
+  </span>);
 
   <span class="comment">//   DefConstructor('\@math@daccent {}',
   //   "&lt;ltx:XMApp&gt;&lt;ltx:XMTok role='UNDERACCENT'&gt;\x{22c5}&lt;/ltx:XMTok&gt;"
@@ -2602,10 +2858,9 @@
   //       $whatsit-&gt;setProperty(textarg =&gt; $arg); }
   //     return; });
 
-
   //======================================================================
   // TeX Book, Appendix B. p. 357
-  // RIGHTWARDS ARROW??? a bit more explicitly 
+  // RIGHTWARDS ARROW??? a bit more explicitly
   </span><span class="macro">DefMath!</span>(<span class="string">"\\to"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2192}"</span>, role =&gt; <span class="string">"ARROW"</span>);
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\hrulefill"</span>, <span class="prelude-val">None</span>);
@@ -2619,14 +2874,24 @@
   <span class="macro">Let!</span>(<span class="string">"\\sb"</span>, <span class="macro">T_SUB!</span>());
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@thinmuskip"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{2009}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\,"</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2009}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\,"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name"  </span>=&gt; <span class="string">"thinspace"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
-      <span class="string">"width" </span>=&gt; state::lookup_register(<span class="string">"\\thinmuskip"</span>, Vec::new())<span class="question-mark">?</span>))
+      <span class="string">"width" </span>=&gt; state::lookup_register(<span class="string">"\\thinmuskip"</span>, Vec::new())<span class="question-mark">?</span>),
+    )
   });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@thinspace"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{2009}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\,"</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2009}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\,"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; <span class="string">"thinspace"</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"0.16667em"</span>)<span class="question-mark">?</span>,
-       <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>))
+       <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>),
+    )
   });
   <span class="macro">DefMacro!</span>(
     <span class="string">"\\,"</span>,
@@ -2635,26 +2900,46 @@
   </span>);
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\!"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{200B}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\!"</span>)),  <span class="comment">// zero width space
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{200B}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\!"</span>)), <span class="comment">// zero width space
       </span><span class="macro">stored_map!</span>(<span class="string">"name"  </span>=&gt; <span class="string">"negthinspace"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
-      <span class="string">"width" </span>=&gt; lookup_dimension(<span class="string">"\\thinmuskip"</span>).unwrap().negate()))
+      <span class="string">"width" </span>=&gt; lookup_dimension(<span class="string">"\\thinmuskip"</span>).unwrap().negate()),
+    )
   });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\&gt;"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{2005}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\&gt;"</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2005}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\&gt;"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name"  </span>=&gt; <span class="string">"medspace"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
-      <span class="string">"width" </span>=&gt; state::lookup_register(<span class="string">"\\medmuskip"</span>, Vec::new())<span class="question-mark">?</span>))
+      <span class="string">"width" </span>=&gt; state::lookup_register(<span class="string">"\\medmuskip"</span>, Vec::new())<span class="question-mark">?</span>),
+    )
   });
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\;"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{2004}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\;"</span>)),
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{2004}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\;"</span>)),
       <span class="macro">stored_map!</span>(<span class="string">"name"  </span>=&gt; <span class="string">"thickspace"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
-      <span class="string">"width" </span>=&gt; state::lookup_register(<span class="string">"\\thickmuskip"</span>, Vec::new())<span class="question-mark">?</span>))
+      <span class="string">"width" </span>=&gt; state::lookup_register(<span class="string">"\\thickmuskip"</span>, Vec::new())<span class="question-mark">?</span>),
+    )
   });
 
   <span class="macro">Let!</span>(<span class="string">"\\:"</span>, <span class="string">"\\&gt;"</span>);
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\\t"</span>, {
-    Tbox::new(arena::pin_static(<span class="string">"\u{00A0}"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\\t"</span>)),
-      <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"1em"</span>)<span class="question-mark">?</span>))
+    Tbox::new(
+      arena::pin_static(<span class="string">"\u{00A0}"</span>),
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\\t"</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"width" </span>=&gt; Dimension::from_str(<span class="string">"1em"</span>)<span class="question-mark">?</span>),
+    )
   });
 
   <span class="comment">//----------------------------------------------------------------------
@@ -2725,7 +3010,7 @@
     activated.push(<span class="macro">T_END!</span>());
     activated
   },
-  locked =&gt; <span class="bool-val">true</span>);    <span class="comment">// Only in math!
+  locked =&gt; <span class="bool-val">true</span>); <span class="comment">// Only in math!
   </span>assign_mathcode(<span class="string">'\''</span>, <span class="number">0x8000u16</span>, <span class="prelude-val">None</span>);
   <span class="macro">Let!</span>(<span class="string">"'"</span>, <span class="string">"\\active@math@prime"</span>);
 
@@ -2989,11 +3274,11 @@
       }   <span class="comment">// ? Hopefully this is safe.
     </span>}
   });
-  
-    <span class="comment">//----------------------------------------------------------------------
+
+  <span class="comment">//----------------------------------------------------------------------
   // \joinrel
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\relbar"</span>, <span class="prelude-val">None</span>, <span class="string">"-"</span>, role =&gt; <span class="string">"RELOP"</span>);    <span class="comment">// ???
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Relbar"</span>, <span class="prelude-val">None</span>, <span class="string">"="</span>, role =&gt; <span class="string">"RELOP"</span>);    <span class="comment">// ???
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\relbar"</span>, <span class="prelude-val">None</span>, <span class="string">"-"</span>, role =&gt; <span class="string">"RELOP"</span>); <span class="comment">// ???
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Relbar"</span>, <span class="prelude-val">None</span>, <span class="string">"="</span>, role =&gt; <span class="string">"RELOP"</span>); <span class="comment">// ???
 
   // \joinrel is \mathrel{\mkern-3\mu}
   // Ah, but the Effect is to join 2 "relations" into one!
@@ -3001,7 +3286,7 @@
     gullet::skip_spaces()<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(_left) = pop_box_list() {
       <span class="kw">let </span><span class="kw-2">mut </span>stuff = Vec::new();
-      <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>),<span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+      <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
         stuff = stomach::invoke_token(<span class="kw-2">&amp;</span>tok)<span class="question-mark">?</span>;
         <span class="kw">if </span>!stuff.is_empty() {
           <span class="kw">break</span>;
@@ -3051,47 +3336,47 @@
   // Arrows get treated somewhat like relations (or meta-relations),
   // but it's hard to associate any particular "meaning" to them.
 
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\leftarrow"</span>,      <span class="string">"\u{2190}"</span>, role =&gt; <span class="string">"ARROW"</span>);         <span class="comment">// LEFTWARDS ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Leftarrow"</span>,      <span class="string">"\u{21D0}"</span>, role =&gt; <span class="string">"ARROW"</span>);         <span class="comment">// LEFTWARDS DOUBLE ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\rightarrow"</span>,     <span class="string">"\u{2192}"</span>, role =&gt; <span class="string">"ARROW"</span>);         <span class="comment">// RIGHTWARDS ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Rightarrow"</span>,     <span class="string">"\u{21D2}"</span>, role =&gt; <span class="string">"ARROW"</span>);         <span class="comment">// RIGHTWARDS DOUBLE ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\leftrightarrow"</span>, <span class="string">"\u{2194}"</span>, role =&gt; <span class="string">"METARELOP"</span>);     <span class="comment">// LEFT RIGHT ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Leftrightarrow"</span>, <span class="string">"\u{21D4}"</span>, role =&gt; <span class="string">"METARELOP"</span>);     <span class="comment">// LEFT RIGHT DOUBLE ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\leftarrow"</span>,      <span class="string">"\u{2190}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LEFTWARDS ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Leftarrow"</span>,      <span class="string">"\u{21D0}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LEFTWARDS DOUBLE ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\rightarrow"</span>,     <span class="string">"\u{2192}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Rightarrow"</span>,     <span class="string">"\u{21D2}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS DOUBLE ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\leftrightarrow"</span>, <span class="string">"\u{2194}"</span>, role =&gt; <span class="string">"METARELOP"</span>); <span class="comment">// LEFT RIGHT ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Leftrightarrow"</span>, <span class="string">"\u{21D4}"</span>, role =&gt; <span class="string">"METARELOP"</span>); <span class="comment">// LEFT RIGHT DOUBLE ARROW
   </span><span class="macro">DefMath!</span>(<span class="string">"\\iff"</span>, <span class="string">"\u{21D4}"</span>, role =&gt; <span class="string">"METARELOP"</span>, meaning =&gt; <span class="string">"iff"</span>); <span class="comment">// LEFT RIGHT DOUBLE ARROW
   </span><span class="macro">DefMath!</span>(<span class="string">"\\mapsto"</span>,        <span class="string">"\u{21A6}"</span>, role =&gt; <span class="string">"ARROW"</span>, meaning =&gt; <span class="string">"maps-to"</span>);
-  <span class="macro">DefMath!</span>(<span class="string">"\\hookleftarrow"</span>, <span class="string">"\u{21A9}"</span>, role =&gt; <span class="string">"ARROW"</span>);    <span class="comment">// LEFTWARDS ARROW WITH HOOK
+  <span class="macro">DefMath!</span>(<span class="string">"\\hookleftarrow"</span>, <span class="string">"\u{21A9}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LEFTWARDS ARROW WITH HOOK
   </span><span class="macro">DefMath!</span>(<span class="string">"\\leftharpoonup"</span>, <span class="string">"\u{21BC}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LEFTWARDS HARPOON WITH BARB UPWARDS
   </span><span class="macro">DefMath!</span>(<span class="string">"\\leftharpoondown"</span>, <span class="string">"\u{21BD}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LEFTWARDS HARPOON WITH BARB DOWNWARDS
   </span><span class="macro">DefMath!</span>(<span class="string">"\\rightleftharpoons"</span>, <span class="string">"\u{21CC}"</span>, role =&gt; <span class="string">"METARELOP"</span>); <span class="comment">// RIGHTWARDS HARPOON OVER LEFTWARDS HARPOON
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\longleftarrow"</span>,      <span class="string">"\u{27F5}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LONG LEFTWARDS ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Longleftarrow"</span>,      <span class="string">"\u{27F8}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LONG LEFTWARDS DOUBLE ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\longrightarrow"</span>,     <span class="string">"\u{27F6}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LONG RIGHTWARDS ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Longrightarrow"</span>,     <span class="string">"\u{27F9}"</span>, role =&gt; <span class="string">"ARROW"</span>);  <span class="comment">// LONG RIGHTWARDS DOUBLE ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\longleftrightarrow"</span>, <span class="string">"\u{27F7}"</span>, role =&gt; <span class="string">"METARELOP"</span>);    <span class="comment">// LONG LEFT RIGHT ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\longleftarrow"</span>,      <span class="string">"\u{27F5}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LONG LEFTWARDS ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Longleftarrow"</span>,      <span class="string">"\u{27F8}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LONG LEFTWARDS DOUBLE ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\longrightarrow"</span>,     <span class="string">"\u{27F6}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LONG RIGHTWARDS ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Longrightarrow"</span>,     <span class="string">"\u{27F9}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LONG RIGHTWARDS DOUBLE ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\longleftrightarrow"</span>, <span class="string">"\u{27F7}"</span>, role =&gt; <span class="string">"METARELOP"</span>); <span class="comment">// LONG LEFT RIGHT ARROW
   </span><span class="macro">DefMath!</span>(<span class="string">"\\Longleftrightarrow"</span>, <span class="string">"\u{27FA}"</span>, role =&gt; <span class="string">"METARELOP"</span>); <span class="comment">// LONG LEFT RIGHT DOUBLE ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\longmapsto"</span>,     <span class="string">"\u{27FC}"</span>, role =&gt; <span class="string">"ARROW"</span>);    <span class="comment">// LONG RIGHTWARDS ARROW FROM BAR
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\hookrightarrow"</span>, <span class="string">"\u{21AA}"</span>, role =&gt; <span class="string">"ARROW"</span>);    <span class="comment">// RIGHTWARDS ARROW WITH HOOK
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\longmapsto"</span>,     <span class="string">"\u{27FC}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// LONG RIGHTWARDS ARROW FROM BAR
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\hookrightarrow"</span>, <span class="string">"\u{21AA}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS ARROW WITH HOOK
   </span><span class="macro">DefMath!</span>(<span class="string">"\\rightharpoonup"</span>, <span class="string">"\u{21C0}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS HARPOON WITH BARB UPWARDS
   </span><span class="macro">DefMath!</span>(<span class="string">"\\rightharpoondown"</span>, <span class="string">"\u{21C1}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// RIGHTWARDS HARPOON WITH BARB DOWNWARDS
   </span><span class="macro">DefMath!</span>(<span class="string">"\\leadsto"</span>,          <span class="string">"\u{219D}"</span>, role =&gt; <span class="string">"ARROW"</span>, meaning =&gt; <span class="string">"leads-to"</span>);
 
-  <span class="macro">DefMath!</span>(<span class="string">"\\uparrow"</span>,     <span class="string">"\u{2191}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// UPWARDS ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Uparrow"</span>,     <span class="string">"\u{21D1}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// UPWARDS DOUBLE ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\downarrow"</span>,   <span class="string">"\u{2193}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// DOWNWARDS ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Downarrow"</span>,   <span class="string">"\u{21D3}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// DOWNWARDS DOUBLE ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\updownarrow"</span>, <span class="string">"\u{2195}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// UP DOWN ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\Updownarrow"</span>, <span class="string">"\u{21D5}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// UP DOWN DOUBLE ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\nearrow"</span>,     <span class="string">"\u{2197}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// NORTH EAST ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\searrow"</span>,     <span class="string">"\u{2198}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// SOUTH EAST ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\swarrow"</span>,     <span class="string">"\u{2199}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// SOUTH WEST ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\nwarrow"</span>,     <span class="string">"\u{2196}"</span>, role =&gt; <span class="string">"ARROW"</span>);      <span class="comment">// NORTH WEST ARROW
+  <span class="macro">DefMath!</span>(<span class="string">"\\uparrow"</span>,     <span class="string">"\u{2191}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// UPWARDS ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Uparrow"</span>,     <span class="string">"\u{21D1}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// UPWARDS DOUBLE ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\downarrow"</span>,   <span class="string">"\u{2193}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// DOWNWARDS ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Downarrow"</span>,   <span class="string">"\u{21D3}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// DOWNWARDS DOUBLE ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\updownarrow"</span>, <span class="string">"\u{2195}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// UP DOWN ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\Updownarrow"</span>, <span class="string">"\u{21D5}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// UP DOWN DOUBLE ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\nearrow"</span>,     <span class="string">"\u{2197}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// NORTH EAST ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\searrow"</span>,     <span class="string">"\u{2198}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// SOUTH EAST ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\swarrow"</span>,     <span class="string">"\u{2199}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// SOUTH WEST ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\nwarrow"</span>,     <span class="string">"\u{2196}"</span>, role =&gt; <span class="string">"ARROW"</span>); <span class="comment">// NORTH WEST ARROW
 
   // \mapstochar (3237), \lhook(312C), \rhook(312D)
   // These are really wrong; I can't find the right Unicode Glyphs.
   // These are only fragments intended to be assembled into meaningful(?) symbols.
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\mapstochar"</span>, <span class="string">"\u{2E20}"</span>);    <span class="comment">// TeX 3237
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\lhook"</span>,      <span class="string">"\u{2E26}"</span>);    <span class="comment">// TeX 312C
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\rhook"</span>,      <span class="string">"\u{2E27}"</span>);    <span class="comment">// TeX 312D
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\mapstochar"</span>, <span class="string">"\u{2E20}"</span>); <span class="comment">// TeX 3237
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\lhook"</span>, <span class="string">"\u{2E26}"</span>); <span class="comment">// TeX 312C
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\rhook"</span>, <span class="string">"\u{2E27}"</span>); <span class="comment">// TeX 312D
 
   //======================================================================
   // TeX Book, Appendix B. p. 359
@@ -3112,23 +3397,27 @@
         <span class="prelude-val">Ok</span>(SymHashMap::default())
       }
   });
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\vdots"</span>,
-    <span class="string">"?#isMath(&lt;ltx:XMTok name='vdots' font='#font' role='ID'&gt;\u{22EE}&lt;/ltx:XMTok&gt;)(\u{22EE})"</span>);
-    <span class="comment">// TODO:
-    // properties =&gt; sub {
-    //   (LookupValue('IN_MATH')
-    //     ? (font =&gt; LookupValue('font')-&gt;merge(family =&gt; 'serif',
-    //         series =&gt; 'medium', shape =&gt; 'upright')-&gt;specialize("\u{22EE}"))
-    //     : ()); });    # Since not DefMath!
-    //                   # But not these!
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">"\\vdots"</span>,
+    <span class="string">"?#isMath(&lt;ltx:XMTok name='vdots' font='#font' role='ID'&gt;\u{22EE}&lt;/ltx:XMTok&gt;)(\u{22EE})"
+  </span>);
+  <span class="comment">// TODO:
+  // properties =&gt; sub {
+  //   (LookupValue('IN_MATH')
+  //     ? (font =&gt; LookupValue('font')-&gt;merge(family =&gt; 'serif',
+  //         series =&gt; 'medium', shape =&gt; 'upright')-&gt;specialize("\u{22EE}"))
+  //     : ()); });    # Since not DefMath!
+  //                   # But not these!
   </span><span class="macro">DefMath!</span>(<span class="string">"\\cdots"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{22EF}"</span>, role =&gt; <span class="string">"ELIDEOP"</span>); <span class="comment">// MIDLINE HORIZONTAL ELLIPSIS
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\ddots"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{22F1}"</span>, role =&gt; <span class="string">"ID"</span>);           <span class="comment">// DOWN RIGHT DIAGONAL ELLIPSIS
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\colon"</span>, <span class="prelude-val">None</span>, <span class="string">":"</span>,        role =&gt; <span class="string">"METARELOP"</span>);    <span class="comment">// Seems like good default role
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\ddots"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{22F1}"</span>, role =&gt; <span class="string">"ID"</span>); <span class="comment">// DOWN RIGHT DIAGONAL ELLIPSIS
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\colon"</span>, <span class="prelude-val">None</span>, <span class="string">":"</span>,        role =&gt; <span class="string">"METARELOP"</span>); <span class="comment">// Seems like good default role
   //         # Note that amsmath redefines \dots to be `smart'.
   //         # Aha, also can be in text...
-  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\dots"</span>,
-    <span class="string">"?#isMath(&lt;ltx:XMTok name='dots' font='#font' role='ID'&gt;\u{2026}&lt;/ltx:XMTok&gt;)(\u{2026})"</span>);
-    <span class="comment">// TODO:
+  </span><span class="macro">DefConstructor!</span>(
+    <span class="string">"\\dots"</span>,
+    <span class="string">"?#isMath(&lt;ltx:XMTok name='dots' font='#font' role='ID'&gt;\u{2026}&lt;/ltx:XMTok&gt;)(\u{2026})"
+  </span>);
+  <span class="comment">// TODO:
   //   properties =&gt; sub {
   //     (LookupValue('IN_MATH')
   //       ? (font =&gt; LookupValue('font')-&gt;merge(family =&gt; 'serif',
@@ -3154,18 +3443,18 @@
   </span><span class="macro">DefMath!</span>(<span class="string">"\\hat Digested"</span>, <span class="string">"\u{005E}"</span>,
     operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\check Digested"</span>, <span class="string">"\u{02C7}"</span>,
-    operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>);    <span class="comment">// CARON
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\breve Digested"</span>, <span class="string">"\u{02D8}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>);    <span class="comment">// BREVE
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\acute Digested"</span>, <span class="string">"\u{00B4}"</span>,  operator_role =&gt; <span class="string">"OVERACCENT"</span>);    <span class="comment">// ACUTE ACCENT
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\grave Digested"</span>, <span class="string">"\u{0060}"</span>,  operator_role =&gt; <span class="string">"OVERACCENT"</span>);    <span class="comment">// GRAVE ACCENT
+    operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// CARON
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\breve Digested"</span>, <span class="string">"\u{02D8}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>); <span class="comment">// BREVE
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\acute Digested"</span>, <span class="string">"\u{00B4}"</span>,  operator_role =&gt; <span class="string">"OVERACCENT"</span>); <span class="comment">// ACUTE ACCENT
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\grave Digested"</span>, <span class="string">"\u{0060}"</span>,  operator_role =&gt; <span class="string">"OVERACCENT"</span>); <span class="comment">// GRAVE ACCENT
   </span><span class="macro">DefMath!</span>(<span class="string">"\\tilde Digested"</span>, <span class="string">"\u{007E}"</span>,
-    operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>);           <span class="comment">// TILDE
+    operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// TILDE
   </span><span class="macro">DefMath!</span>(<span class="string">"\\bar Digested"</span>, <span class="string">"\u{00AF}"</span>,
-    operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>);           <span class="comment">// MACRON
+    operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// MACRON
   </span><span class="macro">DefMath!</span>(<span class="string">"\\vec Digested"</span>, <span class="string">"\u{2192}"</span>,
-    operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>);           <span class="comment">// RIGHTWARDS ARROW
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\dot Digested"</span>,      <span class="string">"\u{02D9}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>);    <span class="comment">// DOT ABOVE
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\ddot Digested"</span>,     <span class="string">"\u{00A8}"</span>,  operator_role =&gt; <span class="string">"OVERACCENT"</span>);    <span class="comment">// DIAERESIS
+    operator_role =&gt; <span class="string">"OVERACCENT"</span>, operator_stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHTWARDS ARROW
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\dot Digested"</span>,      <span class="string">"\u{02D9}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>); <span class="comment">// DOT ABOVE
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\ddot Digested"</span>,     <span class="string">"\u{00A8}"</span>,  operator_role =&gt; <span class="string">"OVERACCENT"</span>); <span class="comment">// DIAERESIS
   </span><span class="macro">DefMath!</span>(<span class="string">"\\widehat Digested"</span>, <span class="string">"\u{005E}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>); <span class="comment">// CIRCUMFLEX ACCENT [plain? also amsfonts]
   </span><span class="macro">DefMath!</span>(<span class="string">"\\widetilde Digested"</span>, <span class="string">"\u{007E}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>); <span class="comment">// TILDE [plain? also amsfonts]
   // These aren"t handled as simple accents by TeX, so no Digested
@@ -3176,12 +3465,19 @@
 
   <span class="comment">// NOTE that all the above accents REQUIRE math mode
   // EXCEPT underline, overrightarrow and overleftarrow!
-  </span><span class="macro">Let!</span>(<span class="string">"\\underbar"</span>, <span class="string">"\\underline"</span>);    <span class="comment">// Will anyone notice?
+  </span><span class="macro">Let!</span>(<span class="string">"\\underbar"</span>, <span class="string">"\\underline"</span>); <span class="comment">// Will anyone notice?
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\overrightarrow{}"</span>, <span class="string">r"\protect\ifmmode\lx@math@overrightarrow{#1}\else$\lx@math@overrightarrow{#1}$\fi"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\overleftarrow{}"</span>, <span class="string">r"\protect\ifmmode\lx@math@overleftarrow{#1}\else$\lx@math@overleftarrow{#1}$\fi"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\overrightarrow{}"</span>,
+    <span class="string">r"\protect\ifmmode\lx@math@overrightarrow{#1}\else$\lx@math@overrightarrow{#1}$\fi"
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\overleftarrow{}"</span>,
+    <span class="string">r"\protect\ifmmode\lx@math@overleftarrow{#1}\else$\lx@math@overleftarrow{#1}$\fi"
+  </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">"\\skew{}{}{}"</span>, <span class="string">r"{#2{#3\mkern#1mu}\mkern-#1mu}{}"</span>);  <span class="comment">// ignore the subtle spacing for now?
+  <span class="macro">DefMacro!</span>(<span class="string">"\\skew{}{}{}"</span>, <span class="string">r"{#2{#3\mkern#1mu}\mkern-#1mu}{}"</span>); <span class="comment">// ignore the subtle spacing for now?
+  //
   //----------------------------------------------------------------------
   // LaTeX; Table 3.10. Delimiters, p.47
   //----------------------------------------------------------------------
@@ -3229,7 +3525,6 @@
   // sub lookup_delimiter {
   //   my ($delim) = @_;
   //   return $DELIMITER_MAP{$delim}; }
-
 
   // These originally had Token as parameter, rather than {}..... Why?
   // Note that in TeX, \big{((} will only enlarge the 1st paren!!!
@@ -3289,44 +3584,53 @@
   // Note that in TeX, all 4 args get digested(!)
   // and the choice is made when absorbing!
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\mathpalette{}{}"</span>, <span class="string">r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\mathpalette{}{}"</span>,
+    <span class="string">r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}"
+  </span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\phantom{}"</span>,
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">"\\phantom{}"</span>,
     <span class="string">"?#isMath(&lt;ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/&gt;)\
-      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>);    <span class="comment">// !?!?!?!
-    // TODO:
-    // properties  =&gt; { isSpace =&gt; 1 },
-    // afterDigest =&gt; sub {
-    //   my $whatsit = $_[1];
-    //   my ($w, $h, $d) = $whatsit-&gt;getArg(1)-&gt;getSize;
-    //   $whatsit-&gt;setProperties(width =&gt; $w, height =&gt; $h, depth =&gt; $d);
-    //   return; });
+      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"
+  </span>); <span class="comment">// !?!?!?!
+  // TODO:
+  // properties  =&gt; { isSpace =&gt; 1 },
+  // afterDigest =&gt; sub {
+  //   my $whatsit = $_[1];
+  //   my ($w, $h, $d) = $whatsit-&gt;getArg(1)-&gt;getSize;
+  //   $whatsit-&gt;setProperties(width =&gt; $w, height =&gt; $h, depth =&gt; $d);
+  //   return; });
 
-  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\hphantom{}"</span>,
+  </span><span class="macro">DefConstructor!</span>(
+    <span class="string">"\\hphantom{}"</span>,
     <span class="string">"?#isMath(&lt;ltx:XMHint width='#width' name='hphantom'/&gt;)\
-      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>);    <span class="comment">// !?!?!?!
-    // TODO:
-    // properties  =&gt; { isSpace =&gt; 1 },
-    // afterDigest =&gt; sub {
-    //   my $whatsit = $_[1];
-    //   my ($w, $h, $d) = $whatsit-&gt;getArg(1)-&gt;getSize;
-    //   $whatsit-&gt;setProperties(width =&gt; $w, height =&gt; $h, depth =&gt; $d);
-    //   return; });
+      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"
+  </span>); <span class="comment">// !?!?!?!
+  // TODO:
+  // properties  =&gt; { isSpace =&gt; 1 },
+  // afterDigest =&gt; sub {
+  //   my $whatsit = $_[1];
+  //   my ($w, $h, $d) = $whatsit-&gt;getArg(1)-&gt;getSize;
+  //   $whatsit-&gt;setProperties(width =&gt; $w, height =&gt; $h, depth =&gt; $d);
+  //   return; });
 
-  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\vphantom{}"</span>,
+  </span><span class="macro">DefConstructor!</span>(
+    <span class="string">"\\vphantom{}"</span>,
     <span class="string">"?#isMath(&lt;ltx:XMHint height='#height' depth='#depth' name='vphantom'/&gt;)\
-      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>);    <span class="comment">// !?!?!?!
-    // TODO:
-    // properties  =&gt; { isSpace =&gt; 1 },
-    // afterDigest =&gt; sub {
-    //   my $whatsit = $_[1];
-    //   my ($w, $h, $d) = $whatsit-&gt;getArg(1)-&gt;getSize;
-    //   $whatsit-&gt;setProperties(width =&gt; $w, height =&gt; $h, depth =&gt; $d);
-    //   return; });
+      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"
+  </span>); <span class="comment">// !?!?!?!
+  // TODO:
+  // properties  =&gt; { isSpace =&gt; 1 },
+  // afterDigest =&gt; sub {
+  //   my $whatsit = $_[1];
+  //   my ($w, $h, $d) = $whatsit-&gt;getArg(1)-&gt;getSize;
+  //   $whatsit-&gt;setProperties(width =&gt; $w, height =&gt; $h, depth =&gt; $d);
+  //   return; });
 
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\mathstrut"</span>, <span class="string">"?#isMath(&lt;ltx:XMHint name='mathstrut'/&gt;)()"</span>,
     properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) });
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\smash{}"</span>, <span class="string">"#1"</span>);    <span class="comment">// well, what?
+  <span class="macro">DefConstructor!</span>(<span class="string">"\\smash{}"</span>, <span class="string">"#1"</span>); <span class="comment">// well, what?
 
   //======================================================================
   // TeX Book, Appendix B. p. 361
@@ -3374,63 +3678,68 @@
   <span class="macro">DefMath!</span>(<span class="string">"\\deg"</span>, <span class="prelude-val">None</span>, <span class="string">"deg"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>,   meaning =&gt; <span class="string">"degree"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\det"</span>, <span class="prelude-val">None</span>, <span class="string">"det"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"determinant"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
   </span><span class="macro">DefMath!</span>(<span class="string">"\\dim"</span>, <span class="prelude-val">None</span>, <span class="string">"dim"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"dimension"</span>);
 
   <span class="macro">DefMath!</span>(<span class="string">"\\exp"</span>, <span class="prelude-val">None</span>, <span class="string">"exp"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"exponential"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\gcd"</span>, <span class="prelude-val">None</span>, <span class="string">"gcd"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"gcd"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
   </span><span class="macro">DefMath!</span>(<span class="string">"\\hom"</span>, <span class="prelude-val">None</span>, <span class="string">"hom"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\inf"</span>, <span class="prelude-val">None</span>, <span class="string">"inf"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"infimum"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
 
   </span><span class="macro">DefMath!</span>(<span class="string">"\\ker"</span>, <span class="prelude-val">None</span>, <span class="string">"ker"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"kernel"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\lg"</span>, <span class="prelude-val">None</span>, <span class="string">"lg"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\lim"</span>, <span class="prelude-val">None</span>, <span class="string">"lim"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
   </span><span class="macro">DefMath!</span>(<span class="string">"\\liminf"</span>, <span class="prelude-val">None</span>, <span class="string">"lim inf"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit-infimum"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
 
   </span><span class="macro">DefMath!</span>(<span class="string">"\\limsup"</span>, <span class="prelude-val">None</span>, <span class="string">"lim sup"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit-supremum"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
   </span><span class="macro">DefMath!</span>(<span class="string">"\\ln"</span>,  <span class="prelude-val">None</span>, <span class="string">"ln"</span>,  role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"natural-logarithm"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\log"</span>, <span class="prelude-val">None</span>, <span class="string">"log"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"logarithm"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\max"</span>, <span class="prelude-val">None</span>, <span class="string">"max"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"maximum"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
 
   </span><span class="macro">DefMath!</span>(<span class="string">"\\min"</span>, <span class="prelude-val">None</span>, <span class="string">"min"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"minimum"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
   </span><span class="macro">DefMath!</span>(<span class="string">"\\Pr"</span>,  <span class="prelude-val">None</span>, <span class="string">"Pr"</span>,  role =&gt; <span class="string">"OPFUNCTION"</span>,
-  );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
   </span><span class="macro">DefMath!</span>(<span class="string">"\\sec"</span>, <span class="prelude-val">None</span>, <span class="string">"sec"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning   =&gt; <span class="string">"secant"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\sin"</span>, <span class="prelude-val">None</span>, <span class="string">"sin"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning   =&gt; <span class="string">"sine"</span>);
 
   <span class="macro">DefMath!</span>(<span class="string">"\\sinh"</span>, <span class="prelude-val">None</span>, <span class="string">"sinh"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-sine"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\sup"</span>, <span class="prelude-val">None</span>, <span class="string">"sup"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"supremum"</span>,
 
-    );<span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
+  ); <span class="comment">//TODO: scriptpos =&gt; \&amp;doScriptpos);
   </span><span class="macro">DefMath!</span>(<span class="string">"\\tan"</span>,  <span class="prelude-val">None</span>, <span class="string">"tan"</span>,  role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"tangent"</span>);
   <span class="macro">DefMath!</span>(<span class="string">"\\tanh"</span>, <span class="prelude-val">None</span>, <span class="string">"tanh"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-tangent"</span>);
 
   <span class="comment">//----------------------------------------------------------------------
   // Modulo
 
-  </span><span class="macro">DefMath!</span>(<span class="string">"\\pmod{}"</span>, <span class="string">r"\;\;(\mathop{{\rm mod}} #1)"</span>, role =&gt; <span class="string">"MODIFIER"</span>);  <span class="comment">//  , meaning=&gt;"modulo");
+  </span><span class="macro">DefMath!</span>(<span class="string">"\\pmod{}"</span>, <span class="string">r"\;\;(\mathop{{\rm mod}} #1)"</span>, role =&gt; <span class="string">"MODIFIER"</span>); <span class="comment">//  , meaning=&gt;"modulo");
   </span><span class="macro">DefMath!</span>(<span class="string">"\\bmod"</span>, <span class="string">"mod"</span>, role =&gt; <span class="string">"MODIFIEROP"</span>, meaning =&gt; <span class="string">"modulo"</span>);
 
   <span class="comment">//======================================================================
   // TeX Book, Appendix B. p. 362
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\matrix{}"</span>, <span class="string">"\\lx@gen@plain@matrix{name=matrix,datameaning=matrix}{#1}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\matrix{}"</span>,
+    <span class="string">"\\lx@gen@plain@matrix{name=matrix,datameaning=matrix}{#1}"
+  </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">"\\bordermatrix{}"</span>,    <span class="comment">// Semantics?
-    </span><span class="string">r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\bordermatrix{}"</span>, <span class="comment">// Semantics?
+    </span><span class="string">r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"
+  </span>);
   <span class="comment">// HACK the newly created border matrix to add columns for the (spanned) parentheses!!!
   // Assume (for now) that there's no XMDual structure here.
   // What is the semantics, anyway?
@@ -3472,12 +3781,16 @@
   //     return; },
   //   reversion =&gt; '#1');
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pmatrix{}"</span>,
-     <span class="string">r"\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\@left(,right=\@right)}{#1}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\pmatrix{}"</span>,
+    <span class="string">r"\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\@left(,right=\@right)}{#1}"
+  </span>);
 
   <span class="comment">// Note that 2nd column in \cases is in text mode!
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cases{}"</span>,
-    <span class="string">r"\lx@gen@plain@cases{meaning=cases,left=\@left\{,conditionmode=text,style=\textstyle}{#1}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\cases{}"</span>,
+    <span class="string">r"\lx@gen@plain@cases{meaning=cases,left=\@left\{,conditionmode=text,style=\textstyle}{#1}"
+  </span>);
 
   <span class="comment">//----------------------------------------------------------------------
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\openup Dimension"</span>, <span class="prelude-val">None</span>);
@@ -3486,26 +3799,33 @@
   // see https://www.tug.org/TUGboat/tb07-1/tb14beet.pdf
   // use in arXiv:hep-th/0001208
   // TODO:
-  // DefMacro!("\\displaylines{}", r###"\halign{\hbox to\displaywidth{$\hfil\displaystyle##\hfil$}\crcr#1\crcr}"###);
+  // DefMacro!("\\displaylines{}", r###"\halign{\hbox
+  // to\displaywidth{$\hfil\displaystyle##\hfil$}\crcr#1\crcr}"###);
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eqalign{}"</span>,
-    <span class="string">r"\@@eqalign{\lx@begin@alignment#1\lx@end@alignment}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\eqalign{}"</span>,
+    <span class="string">r"\@@eqalign{\lx@begin@alignment#1\lx@end@alignment}"
+  </span>);
   <span class="comment">// DefConstructor('\@@eqalign{}',
   //   '#1',
   //   reversion    =&gt; '\eqalign{#1}', bounded =&gt; 1,
   //   beforeDigest =&gt; sub { alignmentBindings('rl', 'math',
   //       attributes =&gt; { vattach =&gt; 'baseline' }); });
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eqalignno{}"</span>,
-    <span class="string">r"\@@eqalignno{\lx@begin@alignment#1\lx@end@alignment}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\eqalignno{}"</span>,
+    <span class="string">r"\@@eqalignno{\lx@begin@alignment#1\lx@end@alignment}"
+  </span>);
   <span class="comment">// DefConstructor('\@@eqalignno{}',
   //   '#1',
   //   reversion    =&gt; '\eqalignno{#1}', bounded =&gt; 1,
   //   beforeDigest =&gt; sub { alignmentBindings('rll', 'math',
   //       attributes =&gt; { vattach =&gt; 'baseline' }); });
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">"\\leqalignno{}"</span>,
-    <span class="string">r"\@@leqalignno{\lx@begin@alignment#1\lx@end@alignment}"</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">"\\leqalignno{}"</span>,
+    <span class="string">r"\@@leqalignno{\lx@begin@alignment#1\lx@end@alignment}"
+  </span>);
   <span class="comment">// DefConstructor('\@@leqalignno{}',
   //   '#1',
   //   reversion    =&gt; '\leqalignno{#1}', bounded =&gt; 1,
@@ -3515,7 +3835,7 @@
   </span><span class="macro">DefRegister!</span>(<span class="string">"\\pageno"   </span>=&gt; Number::new(<span class="number">0</span>));
   <span class="macro">DefRegister!</span>(<span class="string">"\\headline" </span>=&gt; <span class="macro">Tokens!</span>());
   <span class="macro">DefRegister!</span>(<span class="string">"\\footline" </span>=&gt; <span class="macro">Tokens!</span>());
-  <span class="macro">DefMacro!</span>(<span class="string">"\\folio"</span>, <span class="string">"1"</span>);    <span class="comment">// What else?
+  <span class="macro">DefMacro!</span>(<span class="string">"\\folio"</span>, <span class="string">"1"</span>); <span class="comment">// What else?
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\nopagenumbers"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\advancepageno"</span>, <span class="string">"\\advance\\pageno1\\relax"</span>);
@@ -3549,18 +3869,21 @@
 
   <span class="comment">// Until we can do the "v" properly:
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\vfootnote"</span>, <span class="string">"\\footnote"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\fo@t"</span>,      <span class="string">r"\ifcat\bgroup\noexpand\next \let\next\f@@t  \else\let\next\f@t\fi \next"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\f@@t"</span>,      <span class="string">r"\bgroup\aftergroup\@foot\let\next"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\f@t{}"</span>,     <span class="string">r"#1\@foot"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\@foot"</span>,     <span class="string">r"\strut\egroup"</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">"\\fo@t"</span>,
+    <span class="string">r"\ifcat\bgroup\noexpand\next \let\next\f@@t  \else\let\next\f@t\fi \next"
+  </span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\f@@t"</span>, <span class="string">r"\bgroup\aftergroup\@foot\let\next"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\f@t{}"</span>, <span class="string">r"#1\@foot"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@foot"</span>, <span class="string">r"\strut\egroup"</span>);
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\footstrut"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefRegister!</span>(<span class="string">"\\footins" </span>=&gt; Number::new(<span class="number">0</span>));
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\topinsert"</span>,  <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\midinsert"</span>,  <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\topinsert"</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\midinsert"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\pageinsert"</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\endinsert"</span>,  <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">"\\endinsert"</span>, <span class="prelude-val">None</span>);
   <span class="comment">// \topins ?
 
   //======================================================================
@@ -3576,7 +3899,7 @@
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Stuff that probably doesn't belong here (LaTeX? or nowhere?)
   //DefMacro('\vspace{}', '\vskip#1\relax');
-  
+
   //======================================================================
   // In principle, &lt;ltx:emph&gt; is a nice markup for emphasized.
   // Unfortunately, TeX really just treats it as a font switch.
@@ -3601,7 +3924,6 @@
   <span class="comment">// TODO:
   // beforeDigest =&gt; sub { AssignValue(mathfont =&gt; LookupValue('mathfont')-&gt;merge(forcebold =&gt; 0),
   // 'local'); }, forbidMath =&gt; 1);
-
 </span>});
 
 <span class="kw">fn </span>non_typewriter(font: <span class="kw-2">&amp;</span>Font) -&gt; bool {
@@ -3609,22 +3931,37 @@
 </span>}
 
 <span class="kw">fn </span>non_typewriter_t1(font: <span class="kw-2">&amp;</span>Font) -&gt; bool {
-  non_typewriter(font) &amp;&amp;
-  <span class="macro">matches!</span>(font.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">"OT1"</span>)).as_ref(), <span class="string">"OT1" </span>| <span class="string">"T1"</span>)
+  non_typewriter(font)
+    &amp;&amp; <span class="macro">matches!</span>(
+      font
+        .get_encoding()
+        .unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">"OT1"</span>))
+        .as_ref(),
+      <span class="string">"OT1" </span>| <span class="string">"T1"
+    </span>)
 }
 
-<span class="kw">fn </span>align_line(document: <span class="kw-2">&amp;mut </span>Document, line:<span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;Digested&gt;], alignment:<span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">fn </span>align_line(document: <span class="kw-2">&amp;mut </span>Document, line: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;Digested&gt;], alignment: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>document.is_openable(<span class="string">"ltx:p"</span>) {
     <span class="kw">let </span>line_content = line.iter().filter_map(|c| c.as_ref()).collect();
-    document.insert_element(<span class="string">"ltx:p"</span>, line_content, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
-      <span class="string">"class" </span>=&gt; <span class="macro">s!</span>(<span class="string">"ltx_align_{alignment}"</span>))))<span class="question-mark">?</span>; 
+    document.insert_element(
+      <span class="string">"ltx:p"</span>,
+      line_content,
+      <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
+      <span class="string">"class" </span>=&gt; <span class="macro">s!</span>(<span class="string">"ltx_align_{alignment}"</span>))),
+    )<span class="question-mark">?</span>;
   } <span class="kw">else if </span>document.is_openable(<span class="string">"ltx:text"</span>) {
     <span class="kw">let </span>line_content = line.iter().filter_map(|c| c.as_ref()).collect();
-    document.insert_element(<span class="string">"ltx:text"</span>, line_content, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
-      <span class="string">"class" </span>=&gt; <span class="macro">s!</span>(<span class="string">"ltx_align_{alignment}"</span>))))<span class="question-mark">?</span>;
-    document.insert_element(<span class="string">"ltx:break"</span>,Vec::new(),<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+    document.insert_element(
+      <span class="string">"ltx:text"</span>,
+      line_content,
+      <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
+      <span class="string">"class" </span>=&gt; <span class="macro">s!</span>(<span class="string">"ltx_align_{alignment}"</span>))),
+    )<span class="question-mark">?</span>;
+    document.insert_element(<span class="string">"ltx:break"</span>, Vec::new(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(line_content)) = line.first() {
     document.absorb(line_content, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   }
   <span class="prelude-val">Ok</span>(())
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

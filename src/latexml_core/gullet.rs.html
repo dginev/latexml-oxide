@@ -1743,16 +1743,38 @@
 <a href="#1742" id="1742">1742</a>
 <a href="#1743" id="1743">1743</a>
 <a href="#1744" id="1744">1744</a>
-<a href="#1745" id="1745">1745</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#1745" id="1745">1745</a>
+<a href="#1746" id="1746">1746</a>
+<a href="#1747" id="1747">1747</a>
+<a href="#1748" id="1748">1748</a>
+<a href="#1749" id="1749">1749</a>
+<a href="#1750" id="1750">1750</a>
+<a href="#1751" id="1751">1751</a>
+<a href="#1752" id="1752">1752</a>
+<a href="#1753" id="1753">1753</a>
+<a href="#1754" id="1754">1754</a>
+<a href="#1755" id="1755">1755</a>
+<a href="#1756" id="1756">1756</a>
+<a href="#1757" id="1757">1757</a>
+<a href="#1758" id="1758">1758</a>
+<a href="#1759" id="1759">1759</a>
+<a href="#1760" id="1760">1760</a>
+<a href="#1761" id="1761">1761</a>
+<a href="#1762" id="1762">1762</a>
+<a href="#1763" id="1763">1763</a>
+<a href="#1764" id="1764">1764</a>
+<a href="#1765" id="1765">1765</a>
+<a href="#1766" id="1766">1766</a>
+<a href="#1767" id="1767">1767</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
-<span class="kw">use </span>std::cell::{RefCell,RefMut};
+<span class="kw">use </span>std::cell::{RefCell, RefMut};
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="comment">// use std::mem;
 // use std::rc::Rc;
 
 </span><span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>,DONT_EXPAND_SYM, SymStr};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, DONT_EXPAND_SYM, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
@@ -1761,67 +1783,84 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::mudimension::MuDimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::muglue::MuGlue;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
-<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{fixpoint, NumericOps, UNITY};
+<span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{NumericOps, UNITY, fixpoint};
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use crate</span>::{state, DigestedData};
 <span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
+<span class="kw">use crate</span>::{DigestedData, state};
 
+<span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::ConditionalType;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{RegisterType, RegisterValue};
-<span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::mouth::Mouth;
-<span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token, TOKEN_ENDCSNAME, TOKEN_RELAX};
+<span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, TOKEN_ENDCSNAME, TOKEN_RELAX, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 
 <span class="kw">static </span>DIGIT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"[0-9]"</span>).unwrap());
 <span class="kw">static </span>OCT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"[0-7]"</span>).unwrap());
 <span class="kw">static </span>HEX_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"[0-9A-F]"</span>).unwrap());
 <span class="attr">#[thread_local]
-</span><span class="kw">static </span>DEFERRED_COMMANDS: Lazy&lt;HashSet&lt;SymStr&gt;&gt; = Lazy::new(||
-  <span class="macro">set!</span>(arena::pin_static(<span class="string">"\\the"</span>), arena::pin_static(<span class="string">"\\showthe"</span>),
-    arena::pin_static(<span class="string">"\\unexpanded"</span>), arena::pin_static(<span class="string">"\\detokenize"</span>)));
+</span><span class="kw">static </span>DEFERRED_COMMANDS: Lazy&lt;HashSet&lt;SymStr&gt;&gt; = Lazy::new(|| {
+  <span class="macro">set!</span>(
+    arena::pin_static(<span class="string">"\\the"</span>),
+    arena::pin_static(<span class="string">"\\showthe"</span>),
+    arena::pin_static(<span class="string">"\\unexpanded"</span>),
+    arena::pin_static(<span class="string">"\\detokenize"</span>)
+  )
+});
 
 <span class="comment">// If it is a column ending token, Returns the token, a keyword and whether it is "hidden"
 </span><span class="attr">#[thread_local]
-</span><span class="kw">static </span>COLUMN_ENDS : Lazy&lt;[(Token,<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, bool); <span class="number">6</span>]&gt; = Lazy::new(|| [    <span class="comment">// besides T_ALIGN
-  </span>(<span class="macro">T_CS!</span>(<span class="string">"\\cr"</span>),           <span class="string">"cr"</span>,     <span class="bool-val">false</span>),
-  (<span class="macro">T_CS!</span>(<span class="string">"\\crcr"</span>),         <span class="string">"crcr"</span>,   <span class="bool-val">false</span>),
-  (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@cr"</span>),    <span class="string">"cr"</span>,     <span class="bool-val">true</span>),
-  (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@crcr"</span>),  <span class="string">"crcr"</span>,   <span class="bool-val">true</span>),
-  (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@align"</span>), <span class="string">"insert"</span>, <span class="bool-val">true</span>),
-  (<span class="macro">T_CS!</span>(<span class="string">"\\span"</span>),         <span class="string">"span"</span>,   <span class="bool-val">false</span>)]);
+</span><span class="kw">static </span>COLUMN_ENDS: Lazy&lt;[(Token, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, bool); <span class="number">6</span>]&gt; = Lazy::new(|| {
+  [
+    <span class="comment">// besides T_ALIGN
+    </span>(<span class="macro">T_CS!</span>(<span class="string">"\\cr"</span>), <span class="string">"cr"</span>, <span class="bool-val">false</span>),
+    (<span class="macro">T_CS!</span>(<span class="string">"\\crcr"</span>), <span class="string">"crcr"</span>, <span class="bool-val">false</span>),
+    (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@cr"</span>), <span class="string">"cr"</span>, <span class="bool-val">true</span>),
+    (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@crcr"</span>), <span class="string">"crcr"</span>, <span class="bool-val">true</span>),
+    (<span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@align"</span>), <span class="string">"insert"</span>, <span class="bool-val">true</span>),
+    (<span class="macro">T_CS!</span>(<span class="string">"\\span"</span>), <span class="string">"span"</span>, <span class="bool-val">false</span>),
+  ]
+});
 
 <span class="attr">#[derive(PartialEq, Debug)]
 </span><span class="kw">pub struct </span>MouthRuntime {
   <span class="kw">pub </span>autoclose: bool,
-  <span class="kw">pub </span>mouth: Mouth,
-  <span class="kw">pub </span>pushback: VecDeque&lt;Token&gt;,
+  <span class="kw">pub </span>mouth:     Mouth,
+  <span class="kw">pub </span>pushback:  VecDeque&lt;Token&gt;,
 }
 
 <span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>Gullet {
-  <span class="kw">pub </span>runtime: <span class="prelude-ty">Option</span>&lt;MouthRuntime&gt;,
-  <span class="kw">pub </span>mouthstack: VecDeque&lt;MouthRuntime&gt;,
+  <span class="kw">pub </span>runtime:          <span class="prelude-ty">Option</span>&lt;MouthRuntime&gt;,
+  <span class="kw">pub </span>mouthstack:       VecDeque&lt;MouthRuntime&gt;,
   <span class="kw">pub </span>pending_comments: VecDeque&lt;Token&gt;,
-  <span class="kw">pub </span>token_limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-  <span class="kw">pub </span>pushback_limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-  <span class="kw">pub </span>progress: usize
+  <span class="kw">pub </span>token_limit:      <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>pushback_limit:   <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>progress:         usize,
 }
 
 <span class="attr">#[thread_local]
-</span><span class="kw">pub static </span>GULLET : Lazy&lt;RefCell&lt;Gullet&gt;&gt; = Lazy::new(|| RefCell::new(Gullet::default()));
+</span><span class="kw">pub static </span>GULLET: Lazy&lt;RefCell&lt;Gullet&gt;&gt; = Lazy::new(|| RefCell::new(Gullet::default()));
 
 <span class="macro">macro_rules!</span> gullet {
-  () =&gt; ((<span class="kw-2">*</span>GULLET).borrow())
+  () =&gt; {
+    (<span class="kw-2">*</span>GULLET).borrow()
+  };
 }
 <span class="macro">macro_rules!</span> gullet_mut {
-  () =&gt; ((<span class="kw-2">*</span>GULLET).borrow_mut())
+  () =&gt; {
+    (<span class="kw-2">*</span>GULLET).borrow_mut()
+  };
 }
 <span class="macro">macro_rules!</span> runtime {
-  () =&gt; ((<span class="kw-2">*</span>GULLET).borrow_mut().runtime)
+  () =&gt; {
+    (<span class="kw-2">*</span>GULLET).borrow_mut().runtime
+  };
 }
 <span class="macro">macro_rules!</span> runtime_mut {
-  () =&gt; ((<span class="kw-2">*</span>GULLET).borrow_mut().runtime.as_mut())
+  () =&gt; {
+    (<span class="kw-2">*</span>GULLET).borrow_mut().runtime.as_mut()
+  };
 }
 
 <span class="doccomment">/// Initialize (or reset, if reentrant) a Gullet to its default empty state
@@ -1852,7 +1891,7 @@
     </span>Locator::default()
   }
 }
-  
+
 <span class="doccomment">/// Comment-oriented location string, based on `get_locator`
 </span><span class="kw">pub fn </span>get_location() -&gt; String {
   <span class="kw">let </span>loc = get_locator();
@@ -1866,14 +1905,14 @@
       <span class="kw">return </span><span class="bool-val">true</span>;
     }
   }
-  gullet.mouthstack.iter().any(|runtime| <span class="kw-2">&amp;</span>runtime.mouth == mouth)
+  gullet
+    .mouthstack
+    .iter()
+    .any(|runtime| <span class="kw-2">&amp;</span>runtime.mouth == mouth)
 }
-  
 
 <span class="doccomment">/// Push the `tokens` back into the input stream to be re-read.
-</span><span class="kw">pub fn </span>unread(tokens: Tokens) {
-  unread_vec(tokens.unlist());
-}
+</span><span class="kw">pub fn </span>unread(tokens: Tokens) { unread_vec(tokens.unlist()); }
 <span class="doccomment">/// Variant of `unread`, but drains the contents of `tokens` without taking ownership.
 </span><span class="kw">pub fn </span>unread_mut(tokens: <span class="kw-2">&amp;mut </span>Tokens) {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="macro">gullet_mut!</span>().runtime {
@@ -1959,9 +1998,7 @@
 // Low-level readers: read token, read expanded token
 //**********************************************************************
 // # Get the next pending comment token (if any)
-</span><span class="kw">pub fn </span>get_pending_comment() -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
-  <span class="macro">gullet_mut!</span>().pending_comments.pop_front()
-}
+</span><span class="kw">pub fn </span>get_pending_comment() -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; { <span class="macro">gullet_mut!</span>().pending_comments.pop_front() }
 
 <span class="doccomment">/// Note that every char (token) comes through here (maybe even twice, through args parsing),
 /// So, be Fast &amp; Clean!  This method only reads from the current input stream (Mouth).
@@ -2012,7 +2049,11 @@
 // but always keeps comment tokens pending.
 </span><span class="kw">fn </span>read_internal_token() -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>next_token = <span class="prelude-val">None</span>;
-  <span class="kw">let </span>Gullet {<span class="kw-2">ref mut </span>runtime, <span class="kw-2">ref mut </span>pending_comments, ..} = <span class="kw-2">*</span><span class="macro">gullet_mut!</span>();
+  <span class="kw">let </span>Gullet {
+    <span class="kw-2">ref mut </span>runtime,
+    <span class="kw-2">ref mut </span>pending_comments,
+    ..
+  } = <span class="kw-2">*</span><span class="macro">gullet_mut!</span>();
   <span class="kw">let </span>pushback = <span class="kw-2">&amp;mut </span>runtime.as_mut().unwrap().pushback;
   <span class="comment">// Check in pushback first....
   </span><span class="kw">while let </span><span class="prelude-val">Some</span>(pushback_token) = pushback.pop_front() {
@@ -2044,20 +2085,31 @@
 <span class="kw">pub fn </span>read_token() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Token&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>next_token: <span class="prelude-ty">Option</span>&lt;Token&gt;;
   <span class="kw">loop </span>{
-    { <span class="comment">// each time we try to read, do the defensive checks
+    {
+      <span class="comment">// each time we try to read, do the defensive checks
       </span><span class="kw">let </span>gullet = <span class="macro">gullet!</span>();
       <span class="comment">// If we're without a runtime, bail
-      </span><span class="kw">if </span>gullet.runtime.is_none() { <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>); }
+      </span><span class="kw">if </span>gullet.runtime.is_none() {
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+      }
       <span class="comment">// some infinite loops are hard to predict and may be
       // better guarded against via a global token limit.
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(token_limit) = gullet.token_limit {
         <span class="kw">if </span>gullet.progress &gt; token_limit {
-          <span class="macro">Fatal!</span>(Timeout, TokenLimit, <span class="macro">s!</span>(<span class="string">"Token limit of {token_limit} exceeded, infinite loop?"</span>));
+          <span class="macro">Fatal!</span>(
+            Timeout,
+            TokenLimit,
+            <span class="macro">s!</span>(<span class="string">"Token limit of {token_limit} exceeded, infinite loop?"</span>)
+          );
         }
       }
       <span class="kw">if let </span><span class="prelude-val">Some</span>(pushback_limit) = gullet.pushback_limit {
         <span class="kw">if </span>gullet.runtime.as_ref().unwrap().pushback.len() &gt; pushback_limit {
-          <span class="macro">Fatal!</span>(Timeout, PushbackLimit, <span class="macro">s!</span>(<span class="string">"Pushback limit of {pushback_limit} exceeded, infinite loop?"</span>));
+          <span class="macro">Fatal!</span>(
+            Timeout,
+            PushbackLimit,
+            <span class="macro">s!</span>(<span class="string">"Pushback limit of {pushback_limit} exceeded, infinite loop?"</span>)
+          );
         }
       }
     }
@@ -2102,14 +2154,14 @@
 ///    `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
 ///     will step to the next input stream (Mouth) if one is available,
 ///     `toplevel` when true:
-/// * If a mouth is exhausted, move on to the containing mouth to continue reading
-///   `fully_expand` when true, OR when None but `toplevel` is true
+/// * If a mouth is exhausted, move on to the containing mouth to continue reading `fully_expand`
+///   when true, OR when None but `toplevel` is true
 /// * expand even protected defns, essentially this means expand "for execution"
-/// 
+///
 /// Note that, unlike readBalanced, this does NOT defer expansion of \the &amp; friends.
-/// 
+///
 /// Also, \noexpand'd tokens effectively act ilke \relax
-/// 
+///
 /// For arguments to \if,\ifx, etc use `for_conditional` true,
 ///    which handles \noexpand and CS which have been \let to tokens specially.
 </span><span class="kw">pub fn </span>read_x_token(
@@ -2127,12 +2179,19 @@
     </span><span class="kw">let </span>next_token = read_internal_token();
     <span class="comment">//ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
     </span><span class="kw">if </span>next_token.is_none() {
-      {<span class="kw">let </span>gullet = <span class="macro">gullet!</span>();
-      <span class="kw">if </span>!autoclose
-        || !gullet.runtime.as_ref().map(|r| r.autoclose).unwrap_or(<span class="bool-val">false</span>)
-        || gullet.mouthstack.is_empty() {
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-      }}
+      {
+        <span class="kw">let </span>gullet = <span class="macro">gullet!</span>();
+        <span class="kw">if </span>!autoclose
+          || !gullet
+            .runtime
+            .as_ref()
+            .map(|r| r.autoclose)
+            .unwrap_or(<span class="bool-val">false</span>)
+          || gullet.mouthstack.is_empty()
+        {
+          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+        }
+      }
       close_mouth(<span class="bool-val">false</span>)<span class="question-mark">?</span>; <span class="comment">// Next input stream.
       </span><span class="kw">continue</span>;
     }
@@ -2145,7 +2204,8 @@
           unexpanded
         } <span class="kw">else </span>{
           <span class="macro">T_CS!</span>(<span class="string">"\\special_relax"</span>)
-        }));
+        },
+      ));
     }
     <span class="comment">// Wow!!!!! See TeX the Program \S 309
     // SHOULD count nesting of { }!!! when SCANNED (not digested)
@@ -2159,7 +2219,8 @@
         </span>}
       } <span class="kw">else </span>{
         <span class="prelude-val">None
-      </span>}};
+      </span>}
+    };
     <span class="kw">if let </span><span class="prelude-val">Some</span>((reading_alignment, atype, ahidden)) = check_alignment_data {
       <span class="kw">if let </span>DigestedData::Alignment(data) = reading_alignment.data() {
         handle_template(data.borrow_mut(), token, atype, ahidden)<span class="question-mark">?</span>;
@@ -2170,21 +2231,19 @@
     </span>} <span class="kw">else if </span>token.get_catcode().is_active_or_cs() {
       <span class="kw">match </span>lookup_meaning(<span class="kw-2">&amp;</span>token) {
         <span class="prelude-val">Some</span>(Stored::Token(let_token)) =&gt; {
-          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">if </span>for_conditional {
-            let_token
-          } <span class="kw">else </span>{
-            token
-          }))
+          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">if </span>for_conditional { let_token } <span class="kw">else </span>{ token }));
         },
         <span class="prelude-val">Some</span>(Stored::None) | <span class="prelude-val">None </span>=&gt; {
           <span class="kw">if </span>token.get_catcode() == Catcode::CS {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(generate_error_stub(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>)); <span class="comment">// cs SHOULD have defn by now; report early.
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(generate_error_stub(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>)); <span class="comment">// cs SHOULD have defn by now; report
+          // early.
           </span>} <span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
           }
         },
         <span class="prelude-val">Some</span>(typed_defn) =&gt; {
-          <span class="kw">let </span>defn = typed_defn.to_definition()
+          <span class="kw">let </span>defn = typed_defn
+            .to_definition()
             .expect(<span class="string">"token expansion requires the Stored item to implement trait Definition"</span>);
           <span class="kw">if </span>!defn.is_expandable() || (defn.is_protected() &amp;&amp; !fully_expand) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
@@ -2224,10 +2283,7 @@
     // If we still have peeked tokens, we ONLY want to combine it with the remainder
     // of the current line from the Mouth (NOT reading a new line)
     </span><span class="kw">if </span>!tokens.is_empty() {
-      <span class="prelude-val">Some</span>(
-        Tokens::new(tokens).to_string()
-          + <span class="kw-2">&amp;</span>runtime.mouth.read_raw_line(<span class="bool-val">true</span>).unwrap_or_default(),
-      )
+      <span class="prelude-val">Some</span>(Tokens::new(tokens).to_string() + <span class="kw-2">&amp;</span>runtime.mouth.read_raw_line(<span class="bool-val">true</span>).unwrap_or_default())
     } <span class="kw">else </span>{
       <span class="comment">// Otherwise, read the next line from the Mouth.
       </span>runtime.mouth.read_raw_line(<span class="bool-val">false</span>)
@@ -2279,19 +2335,23 @@
   <span class="doccomment">/// Expands while reading, but deferring `\the` and `\protected`
   </span>Partial,
   <span class="doccomment">/// Expands completely while reading
-  </span>Full
+  </span>Full,
 }
 
 <span class="doccomment">/// Approximates TeX's scan_toks (but doesn't parse \def parameter lists)
 /// and only optionally requires the openning "{".
-/// 
+///
 /// It may return comments in the token lists.
 /// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
 /// If `require_open` is true, the opening T_BEGIN has not yet been read, and is required.
-/// 
-/// If `toplevel` is true, it will automatically close empty mouths as it reads, 
+///
+/// If `toplevel` is true, it will automatically close empty mouths as it reads,
 /// and will also fully expand macros (unless overridden by `expansion_level` being explicitly Off).
-</span><span class="kw">pub fn </span>read_balanced(expansion_level: ExpansionLevel, is_macrodef: bool, require_open:bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+</span><span class="kw">pub fn </span>read_balanced(
+  expansion_level: ExpansionLevel,
+  is_macrodef: bool,
+  require_open: bool,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   <span class="kw">use </span>ExpansionLevel::<span class="kw-2">*</span>;
   <span class="kw">if </span>!require_open {
     decrement_align_group_count();
@@ -2300,30 +2360,37 @@
   <span class="comment">// let startloc = if lookup_verbosity() &gt; 0 { Some(get_locator()) } else { None };
   // Do we need to expand to get the { ???
   </span><span class="kw">if </span>require_open {
-    <span class="kw">let </span>token_opt = <span class="kw">if </span>expansion_level != Off { read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>),<span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>}
-    <span class="kw">else </span>{ read_token()<span class="question-mark">? </span>};
+    <span class="kw">let </span>token_opt = <span class="kw">if </span>expansion_level != Off {
+      read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?
+    </span>} <span class="kw">else </span>{
+      read_token()<span class="question-mark">?
+    </span>};
     <span class="kw">let </span>is_open = <span class="kw">match </span>token_opt {
       <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
       <span class="prelude-val">Some</span>(token) =&gt; {
-        token.get_catcode() == Catcode::BEGIN ||
-        state::lookup_meaning(<span class="kw-2">&amp;</span>token) == <span class="prelude-val">Some</span>(Stored::Token(<span class="macro">T_BEGIN!</span>()))
-      }
+        token.get_catcode() == Catcode::BEGIN
+          || state::lookup_meaning(<span class="kw-2">&amp;</span>token) == <span class="prelude-val">Some</span>(Stored::Token(<span class="macro">T_BEGIN!</span>()))
+      },
     };
     <span class="kw">if </span>!is_open {
-      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"{"</span>, <span class="macro">s!</span>(<span class="string">"Expected opening '{{' got {token_opt:?}"</span>));
+      <span class="macro">Error!</span>(
+        <span class="string">"expected"</span>,
+        <span class="string">"{"</span>,
+        <span class="macro">s!</span>(<span class="string">"Expected opening '{{' got {token_opt:?}"</span>)
+      );
       <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>());
     }
   }
   <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
-  <span class="kw">let </span><span class="kw-2">mut </span>level  = <span class="number">1</span>;
+  <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">1</span>;
   <span class="kw">loop </span>{
     <span class="comment">// we'll keep comments in the result
     </span><span class="kw">let </span><span class="kw-2">mut </span>next_token = <span class="prelude-val">None</span>;
-    <span class="kw">if </span>! <span class="macro">gullet!</span>().pending_comments.is_empty() {
+    <span class="kw">if </span>!<span class="macro">gullet!</span>().pending_comments.is_empty() {
       tokens.extend(<span class="macro">gullet_mut!</span>().pending_comments.drain(..));
     }
     <span class="comment">// Examine pushback first
-  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(pushback_token) = <span class="macro">runtime_mut!</span>().unwrap().pushback.pop_front() {
+    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(pushback_token) = <span class="macro">runtime_mut!</span>().unwrap().pushback.pop_front() {
       <span class="kw">match </span>pushback_token.get_catcode() {
         Catcode::COMMENT =&gt; tokens.push(pushback_token),
         Catcode::MARKER =&gt; handle_marker(pushback_token),
@@ -2353,18 +2420,20 @@
       <span class="prelude-val">Some</span>(token) =&gt; <span class="kw">match </span>token.get_catcode() {
         Catcode::CS <span class="kw">if </span>token.text == <span class="kw-2">*</span>DONT_EXPAND_SYM =&gt; {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(next_t) = read_token()<span class="question-mark">? </span>{
-            tokens.push(next_t);  <span class="comment">// Pass on NEXT token, unchanged.
+            tokens.push(next_t); <span class="comment">// Pass on NEXT token, unchanged.
           </span>}
         },
         Catcode::END =&gt; {
           level -= <span class="number">1</span>;
-          <span class="kw">if </span>level &lt;= <span class="number">0 </span>{ <span class="kw">break</span>; }
+          <span class="kw">if </span>level &lt;= <span class="number">0 </span>{
+            <span class="kw">break</span>;
+          }
           tokens.push(token);
         },
         Catcode::BEGIN =&gt; {
-          level +=<span class="number">1 </span>;
+          level += <span class="number">1</span>;
           tokens.push(token);
-        }
+        },
         cc =&gt; {
           <span class="comment">// Wow!!!!! See TeX the Program \S 309
           // Not sure if this code still applies within scan_toks???
@@ -2383,7 +2452,7 @@
           </span><span class="kw">if </span>expansion_level != Off &amp;&amp; cc.is_active_or_cs() {
             <span class="kw">let </span>meaning_opt = lookup_meaning(<span class="kw-2">&amp;</span>token);
             <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = meaning_opt.as_ref().and_then(|item| item.to_definition()) {
-              <span class="kw">if </span>defn.is_expandable() &amp;&amp; (!defn.is_protected() || expansion_level == Full){
+              <span class="kw">if </span>defn.is_expandable() &amp;&amp; (!defn.is_protected() || expansion_level == Full) {
                 local_current_token(token);
                 <span class="kw">let </span>expansion = defn.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
                 <span class="kw">if </span>expansion.is_empty() {
@@ -2392,15 +2461,16 @@
                 }
                 <span class="comment">// If a special \the type command, push the expansion directly into the result
                 // Well, almost directly: handle any MARKER tokens now, and possibly un-pack T_PARAM
-                </span><span class="kw">if </span><span class="macro">expansion_level!</span>=Full &amp;&amp; DEFERRED_COMMANDS.contains(<span class="kw-2">&amp;</span>defn.get_cs().text) {
+                </span><span class="kw">if </span>expansion_level != Full &amp;&amp; DEFERRED_COMMANDS.contains(<span class="kw-2">&amp;</span>defn.get_cs().text) {
                   <span class="kw">for </span>t <span class="kw">in </span>expansion.unlist() {
                     <span class="kw">match </span>t.get_catcode() {
                       Catcode::MARKER =&gt; handle_marker(t),
-                      Catcode::PARAM <span class="kw">if </span>is_macrodef =&gt; {<span class="comment">// "unpack" to cover the packParameters at end!
+                      Catcode::PARAM <span class="kw">if </span>is_macrodef =&gt; {
+                        <span class="comment">// "unpack" to cover the packParameters at end!
                         </span>tokens.push(t);
                         tokens.push(t);
                       },
-                      <span class="kw">_ </span>=&gt; tokens.push(t)
+                      <span class="kw">_ </span>=&gt; tokens.push(t),
                     }
                   }
                 } <span class="kw">else </span>{
@@ -2417,15 +2487,16 @@
           }
           <span class="comment">// if no special handling triggered above, just return the token
           </span>tokens.push(token);
-        }
-      }
+        },
+      },
     }
   }
   <span class="kw">if </span>level &gt; <span class="number">0 </span>{
-    <span class="comment">// TODO: The current implementation has a limitation where if the balancing end is in a different mouth,
-    //       it will not be recognized.
+    <span class="comment">// TODO: The current implementation has a limitation where if the balancing end is in a
+    // different mouth,       it will not be recognized.
     // TODO: also, add the startloc details
-    // my $loc_message = $startloc ? ("Started at " . ToString($startloc)) : ("Ended at " . ToString($self-&gt;getLocator));
+    // my $loc_message = $startloc ? ("Started at " . ToString($startloc)) : ("Ended at " .
+    // ToString($self-&gt;getLocator));
     </span><span class="macro">Error!</span>(
       <span class="string">"expected"</span>,
       <span class="string">"}"</span>,
@@ -2476,7 +2547,7 @@
 }
 
 <span class="doccomment">/// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
-/// 
+///
 /// Note that Braces on input hides the contents from matching,
 /// so this assumes there wont be braces in $delim!
 /// But, see readUntilBrace for that case.
@@ -2510,7 +2581,7 @@
           <span class="comment">// And if it's a BEGIN, copy till balanced END
           </span>nbraces += <span class="number">1</span>;
           tokens.push(token);
-          <span class="kw">let </span>balanced_arg = read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+          <span class="kw">let </span>balanced_arg = read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
           <span class="kw">if </span>!balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
@@ -2541,7 +2612,7 @@
             tokens.push(r_token);
           }
           tokens.push(token);
-          <span class="kw">let </span>balanced_arg = read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+          <span class="kw">let </span>balanced_arg = read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
           <span class="kw">if </span>!balanced_arg.is_empty() {
             tokens.append(<span class="kw-2">&amp;mut </span>balanced_arg.unlist());
           }
@@ -2574,9 +2645,7 @@
 
 <span class="doccomment">/// Convenience method wrapping around `read_until`
 /// TODO: This seems to be the wrong Rust type interface, we need to rework...
-</span><span class="kw">pub fn </span>read_until_token(t: Token) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-  read_until(<span class="kw-2">&amp;</span><span class="macro">Tokens!</span>(t))
-}
+</span><span class="kw">pub fn </span>read_until_token(t: Token) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { read_until(<span class="kw-2">&amp;</span><span class="macro">Tokens!</span>(t)) }
 <span class="doccomment">/// reads until it encounters a Catcode::BEGIN token
 </span><span class="kw">pub fn </span>read_until_brace() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
@@ -2613,19 +2682,20 @@
     <span class="kw">match </span>token.get_catcode() {
       Catcode::CS =&gt; {
         <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
-          <span class="kw">let </span>message =
-            <span class="macro">s!</span>(<span class="string">"The control sequence {:?} should not appear between \\csname and \\endcsname"</span>,
-              token);
+          <span class="kw">let </span>message = <span class="macro">s!</span>(
+            <span class="string">"The control sequence {:?} should not appear between \\csname and \\endcsname"</span>,
+            token
+          );
           <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, token, message);
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {:?} is not defined"</span>, token);
           <span class="macro">Error!</span>(<span class="string">"undefined"</span>, token, message);
         }
       },
-      Catcode::SPACE =&gt; cs.push(<span class="string">' '</span>),  <span class="comment">// Keep newlines from having \n!
+      Catcode::SPACE =&gt; cs.push(<span class="string">' '</span>), <span class="comment">// Keep newlines from having \n!
       </span><span class="kw">_ </span>=&gt; {
         token.with_str(|s| cs.push_str(s));
-      }
+      },
     };
   }
   <span class="prelude-val">Ok</span>(<span class="macro">T_CS!</span>(cs))
@@ -2649,34 +2719,34 @@
 //**********************************************************************
 
 </span><span class="doccomment">/// Read and return a "normal" TeX argument
-/// 
+///
 /// The next Token or Tokens (if surrounded by braces).
 /// `expansion_level` controls expansion as if the argument were read
 ///  and then expanded in isolation:
-/// 
+///
 /// In the case of a single unbraced expandable token,
 ///  it will **not** read any macro arguments from the following input!
 </span><span class="kw">pub fn </span>read_arg(expansion_level: ExpansionLevel) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   <span class="kw">match </span>read_non_space()<span class="question-mark">? </span>{
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()),
-    <span class="prelude-val">Some</span>(token) =&gt; <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
-        read_balanced(expansion_level,<span class="bool-val">false</span>,<span class="bool-val">false</span>)
+    <span class="prelude-val">Some</span>(token) =&gt; {
+      <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
+        read_balanced(expansion_level, <span class="bool-val">false</span>, <span class="bool-val">false</span>)
       } <span class="kw">else if </span><span class="macro">matches!</span>(expansion_level, ExpansionLevel::Off) {
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(token))
       } <span class="kw">else </span>{
         unread_vec(<span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>(), token, <span class="macro">T_END!</span>()]);
         read_balanced(expansion_level, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
       }
+    },
   }
 }
 <span class="doccomment">/// Read and return a LaTeX optional argument
-/// 
+///
 /// returns `default` if there is no '[', otherwise the contents of the array.
 /// Note that this returns an empty array if `[]` is present,
 /// i.e. `[contents]` in TeX will lead to `Tokens(contents)`, otherwise returns `None`
-</span><span class="kw">pub fn </span>read_optional(
-  default: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
+</span><span class="kw">pub fn </span>read_optional(default: <span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
   <span class="kw">match </span>read_non_space()<span class="question-mark">? </span>{
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
     <span class="prelude-val">Some</span>(t) =&gt; {
@@ -2716,9 +2786,7 @@
 // See TeXBook, Ch.24, pp.269-271.
 //**********************************************************************
 
-</span><span class="kw">pub fn </span>read_value(
-  value_type: RegisterType,
-) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
+</span><span class="kw">pub fn </span>read_value(value_type: RegisterType) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
   <span class="kw">match </span>value_type {
     RegisterType::Number =&gt; <span class="prelude-val">Ok</span>(read_number()<span class="question-mark">?</span>.into()),
     RegisterType::Dimension =&gt; <span class="prelude-val">Ok</span>(read_dimension()<span class="question-mark">?</span>.into()),
@@ -2733,9 +2801,7 @@
   }
 }
 
-<span class="kw">pub fn </span>read_register_value(
-  value_type: RegisterType,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
+<span class="kw">pub fn </span>read_register_value(value_type: RegisterType) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
   <span class="kw">match </span>read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
     <span class="prelude-val">Some</span>(token) =&gt; {
@@ -2827,11 +2893,7 @@
   <span class="kw">let </span>is_negative = read_optional_signs()<span class="question-mark">?</span>;
   <span class="kw">let </span>s = <span class="kw">if </span>is_negative { -<span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">1 </span>};
   <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = read_normal_integer()<span class="question-mark">? </span>{
-    <span class="kw">if </span>is_negative {
-      <span class="prelude-val">Ok</span>(n.negate())
-    } <span class="kw">else </span>{
-      <span class="prelude-val">Ok</span>(n)
-    }
+    <span class="kw">if </span>is_negative { <span class="prelude-val">Ok</span>(n.negate()) } <span class="kw">else </span>{ <span class="prelude-val">Ok</span>(n) }
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(n) = read_internal_dimension()<span class="question-mark">? </span>{
     <span class="prelude-val">Ok</span>(Number::new(s * n.value_of()))
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(n) = read_internal_glue()<span class="question-mark">? </span>{
@@ -2917,8 +2979,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = token {
       unread_one(t); <span class="comment">// Unread
     </span>}
-    read_normal_integer()<span class="question-mark">?
-      </span>.map(|v| v.value_of() <span class="kw">as </span>f64)
+    read_normal_integer()<span class="question-mark">?</span>.map(|v| v.value_of() <span class="kw">as </span>f64)
   };
 
   <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = n_opt {
@@ -3010,9 +3071,7 @@
     <span class="prelude-val">Some</span>(u.value_of() <span class="kw">as </span>f64)
   } <span class="kw">else </span>{
     read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"true"</span>])<span class="question-mark">?</span>; <span class="comment">// But ignore, we're not bothering with mag...
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(u) = read_keyword(
-      <span class="kw-2">&amp;</span>[<span class="string">"pt"</span>, <span class="string">"pc"</span>, <span class="string">"in"</span>, <span class="string">"bp"</span>, <span class="string">"cm"</span>, <span class="string">"mm"</span>, <span class="string">"dd"</span>, <span class="string">"cc"</span>, <span class="string">"sp"</span>, <span class="string">"px"</span>],
-        )<span class="question-mark">? </span>{
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(u) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"pt"</span>, <span class="string">"pc"</span>, <span class="string">"in"</span>, <span class="string">"bp"</span>, <span class="string">"cm"</span>, <span class="string">"mm"</span>, <span class="string">"dd"</span>, <span class="string">"cc"</span>, <span class="string">"sp"</span>, <span class="string">"px"</span>])<span class="question-mark">? </span>{
       skip_one_space()<span class="question-mark">?</span>;
       <span class="prelude-val">Some</span>(convert_unit(<span class="kw-2">&amp;</span>u))
     } <span class="kw">else </span>{
@@ -3031,11 +3090,7 @@
 </span><span class="kw">pub fn </span>read_glue() -&gt; <span class="prelude-ty">Result</span>&lt;Glue&gt; {
   <span class="kw">let </span>is_negative = read_optional_signs()<span class="question-mark">?</span>;
   <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = read_internal_glue()<span class="question-mark">? </span>{
-    <span class="kw">if </span>is_negative {
-      <span class="prelude-val">Ok</span>(n.negate())
-    } <span class="kw">else </span>{
-      <span class="prelude-val">Ok</span>(n)
-    }
+    <span class="kw">if </span>is_negative { <span class="prelude-val">Ok</span>(n.negate()) } <span class="kw">else </span>{ <span class="prelude-val">Ok</span>(n) }
   } <span class="kw">else </span>{
     <span class="kw">let </span><span class="kw-2">mut </span>d = read_dimension()<span class="question-mark">?</span>;
     <span class="kw">if </span>is_negative {
@@ -3056,13 +3111,11 @@
       f1,
       r2.map(|v| v <span class="kw">as </span>f64),
       f2,
-        ))
+    ))
   }
 }
 
-<span class="kw">pub fn </span>read_rubber(
-  mu: bool,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;i64&gt;, <span class="prelude-ty">Option</span>&lt;FillCode&gt;)&gt; {
+<span class="kw">pub fn </span>read_rubber(mu: bool) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;i64&gt;, <span class="prelude-ty">Option</span>&lt;FillCode&gt;)&gt; {
   <span class="kw">let </span>is_negative = read_optional_signs()<span class="question-mark">?</span>;
   <span class="kw">let </span>s = <span class="kw">if </span>is_negative { -<span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">1 </span>};
   <span class="kw">match </span>read_factor()<span class="question-mark">? </span>{
@@ -3164,11 +3217,7 @@
     <span class="kw">let </span>m = <span class="kw">if </span>is_negative { mglue.negate() } <span class="kw">else </span>{ mglue };
     <span class="prelude-val">Ok</span>(MuDimension::new(m.value_of()))
   } <span class="kw">else </span>{
-    <span class="macro">Warn!</span>(
-      <span class="string">"expected"</span>,
-      <span class="string">"&lt;mudimen&gt;"</span>,
-      <span class="string">"Expecting mudimen; assuming 0"
-    </span>);
+    <span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;mudimen&gt;"</span>, <span class="string">"Expecting mudimen; assuming 0"</span>);
     <span class="prelude-val">Ok</span>(MuDimension::new(<span class="number">0</span>))
   }
 }
@@ -3197,7 +3246,7 @@
     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()),
     <span class="prelude-val">Some</span>(token) =&gt; {
       <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
-        <span class="prelude-val">Ok</span>(read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>)
+        <span class="prelude-val">Ok</span>(read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = lookup_register_definition(<span class="kw-2">&amp;</span>token) {
         <span class="kw">match </span>defn.register_type() {
           <span class="prelude-val">Some</span>(RegisterType::Tokens) | <span class="prelude-val">Some</span>(RegisterType::Token) =&gt; {
@@ -3326,28 +3375,26 @@
 
 <span class="kw">pub fn </span>do_expand&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   <span class="kw">let </span>tokens: Tokens = tokens.into();
-  reading_from_mouth(
-    Mouth::default(),
-    <span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-      { unread_one(<span class="macro">T_END!</span>());
-        unread(tokens); 
-        unread_one(<span class="macro">T_BEGIN!</span>()); }
-      read_balanced(ExpansionLevel::Full, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
-    },
-  )
+  reading_from_mouth(Mouth::default(), <span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    {
+      unread_one(<span class="macro">T_END!</span>());
+      unread(tokens);
+      unread_one(<span class="macro">T_BEGIN!</span>());
+    }
+    read_balanced(ExpansionLevel::Full, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
+  })
 }
 
 <span class="kw">pub fn </span>do_expand_partially&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   <span class="kw">let </span>tokens: Tokens = tokens.into();
-  reading_from_mouth(
-    Mouth::default(),
-    <span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-      { unread_one(<span class="macro">T_END!</span>());
-        unread(tokens); 
-        unread_one(<span class="macro">T_BEGIN!</span>()); }
-      read_balanced(ExpansionLevel::Partial, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
-    },
-  )
+  reading_from_mouth(Mouth::default(), <span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    {
+      unread_one(<span class="macro">T_END!</span>());
+      unread(tokens);
+      unread_one(<span class="macro">T_BEGIN!</span>());
+    }
+    read_balanced(ExpansionLevel::Partial, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
+  })
 }
 
 <span class="kw">pub fn </span>is_column_end(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;(Token, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, bool)&gt; {
@@ -3355,15 +3402,11 @@
     Catcode::ALIGN =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>token, <span class="string">"align"</span>, <span class="bool-val">false</span>)),
     Catcode::CS | Catcode::ACTIVE =&gt; {
       <span class="comment">// Embedded version of Equals, knowing both are tokens
-      </span><span class="kw">let </span>defn = lookup_meaning(token)
-        .unwrap_or_else(|| Stored::Token(<span class="kw-2">*</span>token));
+      </span><span class="kw">let </span>defn = lookup_meaning(token).unwrap_or_else(|| Stored::Token(<span class="kw-2">*</span>token));
       <span class="kw">for </span>end <span class="kw">in </span><span class="kw-2">*</span>COLUMN_ENDS {
         <span class="kw">let </span>e = <span class="kw-2">&amp;</span>end.<span class="number">0</span>;
         <span class="comment">// Would be nice to cache the defns, but don't know when they're present &amp; constant!
-        </span><span class="kw">if </span>defn
-          == lookup_meaning(e)
-            .unwrap_or_else(|| Stored::Token(<span class="kw-2">*</span>e))
-        {
+        </span><span class="kw">if </span>defn == lookup_meaning(e).unwrap_or_else(|| Stored::Token(<span class="kw-2">*</span>e)) {
           <span class="kw">return </span><span class="prelude-val">Some</span>(end);
         }
       }
@@ -3382,30 +3425,27 @@
       </span>set_align_group_count(<span class="number">0</span>);
     }, <span class="comment">// switch to column proper!
     </span><span class="string">"after-column" </span>=&gt; { <span class="comment">// Were in before-column template
-       // let alignment = lookup_alignment();
-       // Debug("Halign $alignment: alignment  after column") if $LaTeXML::DEBUG{halign};
+      // let alignment = lookup_alignment();
+      // Debug("Halign $alignment: alignment  after column") if $LaTeXML::DEBUG{halign};
     </span>},
     <span class="kw">_ </span>=&gt; {},
   });
 }
 
 <span class="doccomment">/// Do something, while reading tokens from a specific Mouth.
-/// 
+///
 /// This reads ONLY from that mouth (or any mouth openned by code in that source),
 /// and the mouth should end up empty afterwards, and only be closed here.
-</span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(
-  mouth: Mouth,
-  reader: FnR,
-) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
-<span class="kw">where
-  </span>FnR: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;,
-{
+</span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(mouth: Mouth, reader: FnR) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
+<span class="kw">where </span>FnR: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; {
   <span class="kw">let </span>context_mouth_source = arena::pin(mouth.get_source());
   open_mouth(mouth, <span class="bool-val">false</span>); <span class="comment">// only allow mouth to be explicitly closed here.
   </span><span class="kw">let </span>results: R = { reader()<span class="question-mark">? </span>};
   <span class="comment">// `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
   </span><span class="kw">loop </span>{
-    <span class="kw">let </span>mouth_source = <span class="macro">gullet!</span>().runtime.as_ref()
+    <span class="kw">let </span>mouth_source = <span class="macro">gullet!</span>()
+      .runtime
+      .as_ref()
       .map(|r| arena::pin(r.mouth.get_source()));
     <span class="kw">if </span>mouth_source == <span class="prelude-val">Some</span>(context_mouth_source) {
       close_mouth(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
@@ -3415,24 +3455,28 @@
         <span class="string">"unexpected"</span>,
         <span class="string">"&lt;closed&gt;"</span>,
         <span class="string">"Mouth is unexpectedly already closed"</span>,
-        arena::with(context_mouth_source,|source| <span class="macro">s!</span>(<span class="string">"Reading from {source}, but it has already been closed."</span>))
+        arena::with(context_mouth_source, |source| <span class="macro">s!</span>(
+          <span class="string">"Reading from {source}, but it has already been closed."
+        </span>))
       );
       <span class="kw">break</span>;
     } <span class="kw">else </span>{
       <span class="kw">let </span>has_input_remaining = {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="macro">runtime!</span>() {
-          !runtime.autoclose
-            || !runtime.pushback.is_empty()
-            || runtime.mouth.has_more_input()
-        } <span class="kw">else </span>{ <span class="bool-val">false </span>}};
+          !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input()
+        } <span class="kw">else </span>{
+          <span class="bool-val">false
+        </span>}
+      };
       <span class="kw">if </span>has_input_remaining {
         <span class="kw">let </span>next = read_token()<span class="question-mark">?</span>.unwrap();
         <span class="macro">Error!</span>(
           <span class="string">"unexpected"</span>,
           next,
           <span class="macro">s!</span>(<span class="string">"Unexpected input remaining: '{next}'"</span>),
-          arena::with(context_mouth_source,|source|
-            <span class="macro">s!</span>(<span class="string">"Finished reading from {source}, but it still has input."</span>))
+          arena::with(context_mouth_source, |source| <span class="macro">s!</span>(
+            <span class="string">"Finished reading from {source}, but it still has input."
+          </span>))
         );
         {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="macro">runtime!</span>() {
@@ -3471,15 +3515,15 @@
     }
   }
   g.runtime = <span class="prelude-val">Some</span>(MouthRuntime {
-    mouth: Mouth::default(),
-    pushback: VecDeque::with_capacity(<span class="number">128</span>),
+    mouth:     Mouth::default(),
+    pushback:  VecDeque::with_capacity(<span class="number">128</span>),
     autoclose: <span class="bool-val">true</span>,
   });
   g.mouthstack = VecDeque::new();
 }
 
 <span class="doccomment">/// Execute a function with a mutable reference to the current mouth
-</span><span class="kw">pub fn </span>with_mouth_mut&lt;FnR,R&gt;(caller: FnR) -&gt; R
+</span><span class="kw">pub fn </span>with_mouth_mut&lt;FnR, R&gt;(caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Mouth&gt;) -&gt; R {
   <span class="kw">let </span><span class="kw-2">mut </span>gullet = <span class="macro">gullet_mut!</span>();
   <span class="kw">let </span>mouth_opt = <span class="kw">match </span>gullet.runtime {

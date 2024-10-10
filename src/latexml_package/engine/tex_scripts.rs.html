@@ -389,19 +389,7 @@
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#391" id="391">391</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <span class="kw">static </span>SCRIPT_NAME_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r"^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$"</span>).unwrap());
 
@@ -506,11 +494,7 @@
             <span class="string">"subscript"
           </span>};
           <span class="kw">if </span>!prevspace {
-            <span class="macro">Error!</span>(
-              <span class="string">"unexpected"</span>,
-              <span class="macro">s!</span>(<span class="string">"double-{lcode}"</span>),
-              <span class="macro">s!</span>(<span class="string">"Double {lcode}"</span>)
-            );
+            <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="macro">s!</span>(<span class="string">"double-{lcode}"</span>), <span class="macro">s!</span>(<span class="string">"Double {lcode}"</span>));
           }
           cs = <span class="kw">if </span>cc == Catcode::SUPER {
             <span class="string">"\\lx@floating@superscript"
@@ -552,31 +536,28 @@
     <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
     <span class="comment">// Now, get following boxes (may have to process several tokens!)
     </span><span class="kw">let </span><span class="kw-2">mut </span>stuff = Vec::new();
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?
-    </span>{
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
       stuff = stomach::invoke_token(<span class="kw-2">&amp;</span>tok)<span class="question-mark">?</span>;
       <span class="kw">if </span>!stuff.is_empty() {
         <span class="kw">break</span>;
       }
     }
     <span class="kw">if </span>stuff.is_empty() {
-      <span class="macro">Error!</span>(
-        <span class="string">"expected"</span>,
-        <span class="string">"{"</span>,
-        <span class="string">"Missing sub/superscript argument"
-      </span>); <span class="comment">//$gullet-&gt;showUnexpected);
+      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"{"</span>, <span class="string">"Missing sub/superscript argument"</span>); <span class="comment">//$gullet-&gt;showUnexpected);
       </span>stuff.push(Digested::default());
     }
     <span class="kw">let </span>script = stuff.remove(<span class="number">0</span>); <span class="comment">// ONLY the first box is the script!
 
     </span><span class="kw">if </span>!script.is_empty()<span class="question-mark">? </span>{
-      <span class="kw">let </span><span class="kw-2">mut </span>properties = {<span class="macro">stored_map!</span>(
-        <span class="string">"isMath" </span>=&gt; <span class="bool-val">true</span>,
-        <span class="string">"base"        </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = base { Stored::Digested(b) }
-          <span class="kw">else </span>{ Stored::None },                      <span class="comment">// for sizing/positioning
-        </span><span class="string">"scriptlevel" </span>=&gt; get_script_level(),
-        <span class="string">"level"       </span>=&gt; get_boxing_level()
-      )};
+      <span class="kw">let </span><span class="kw-2">mut </span>properties = {
+        <span class="macro">stored_map!</span>(
+          <span class="string">"isMath" </span>=&gt; <span class="bool-val">true</span>,
+          <span class="string">"base"        </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = base { Stored::Digested(b) }
+            <span class="kw">else </span>{ Stored::None },                      <span class="comment">// for sizing/positioning
+          </span><span class="string">"scriptlevel" </span>=&gt; get_script_level(),
+          <span class="string">"level"       </span>=&gt; get_boxing_level()
+        )
+      };
       <span class="kw">if let </span><span class="prelude-val">Some</span>(pvs) = prevscript {
         properties.insert(<span class="string">"prevscript"</span>, pvs.into());
       }
@@ -614,7 +595,7 @@
       <span class="prelude-val">None</span>,
       <span class="macro">Tokens!</span>(placeholder),
       SymHashMap::default(),
-      ))])
+    ))])
   }
 }
 
@@ -734,21 +715,17 @@
   </span>def_primitive(
     <span class="macro">T_SUPER!</span>(),
     <span class="prelude-val">None</span>,
-    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(Rc::new(
-      |_args: Vec&lt;ArgWrap&gt;| {
-        script_handler(Catcode::SUPER)
-      },
-    ))),
+    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(Rc::new(|_args: Vec&lt;ArgWrap&gt;| {
+      script_handler(Catcode::SUPER)
+    }))),
     PrimitiveOptions::default(),
   )<span class="question-mark">?</span>;
   def_primitive(
     <span class="macro">T_SUB!</span>(),
     <span class="prelude-val">None</span>,
-    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(Rc::new(
-      |_args: Vec&lt;ArgWrap&gt;| {
-        script_handler( Catcode::SUB)
-      },
-    ))),
+    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(Rc::new(|_args: Vec&lt;ArgWrap&gt;| {
+      script_handler(Catcode::SUB)
+    }))),
     PrimitiveOptions::default(),
   )<span class="question-mark">?</span>;
 
@@ -802,6 +779,5 @@
       sizer =&gt; sub[w] {
         script_sizer(w.get_arg(<span class="number">1</span>).unwrap(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">"SUBSCRIPT"</span>, <span class="string">"post"</span>) }
   );
-
 });
 </code></pre></div></section></main></body></html>

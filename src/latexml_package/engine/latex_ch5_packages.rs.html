@@ -463,15 +463,15 @@
   });
   <span class="macro">DefMacro!</span>(<span class="string">"\\addto@hook DefToken {}"</span>, <span class="string">"#1\\expandafter{\\the#1#2}"</span>);
 
-
   <span class="comment">// Alas, we're not tracking versions, so we'll assume it's "later" &amp; cross fingers....
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\@ifpackagelater{}{}{}{}"</span>, <span class="string">"#3"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifclasslater{}{}{}{}"</span>,   <span class="string">"#3"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\@ifclasslater{}{}{}{}"</span>, <span class="string">"#3"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\AtEndOfClass"</span>, <span class="string">"\\AtEndOfPackage"</span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\AtBeginDvi {}"</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">TeX!</span>(<span class="string">r###"
+  <span class="macro">TeX!</span>(
+    <span class="string">r###"
   \def\@ifl@t@r#1#2{%
     \ifnum\expandafter\@parse@version@#1//00\@nil&lt;%
           \expandafter\@parse@version@#2//00\@nil
@@ -484,7 +484,8 @@
   \@parse@version@dash#1-#2-#3#4\@nil
   }
   \def\@parse@version@dash#1-#2-#3#4#5\@nil{%
-    \if\relax#2\relax\else#1\fi#2#3#4 }"###</span>);
+    \if\relax#2\relax\else#1\fi#2#3#4 }"###
+  </span>);
 
   <span class="comment">//======================================================================
   // Somewhat related I/O stuff
@@ -498,9 +499,9 @@
     <span class="kw">let </span>name_tokens = <span class="macro">Tokens!</span>(<span class="macro">ExplodeText!</span>(name));
     <span class="macro">DefMacro!</span>(<span class="string">"\\filename@base"</span>, <span class="prelude-val">None</span>, name_tokens);
     <span class="kw">let </span>ext_tokens = <span class="kw">if </span>!ext.is_empty() {
-      <span class="macro">Tokens!</span>(<span class="macro">ExplodeText!</span>(ext)) 
+      <span class="macro">Tokens!</span>(<span class="macro">ExplodeText!</span>(ext))
     } <span class="kw">else </span>{ <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)) };
-    <span class="macro">DefMacro!</span>(<span class="string">"\\filename@ext"</span>, <span class="prelude-val">None</span>, ext_tokens); 
+    <span class="macro">DefMacro!</span>(<span class="string">"\\filename@ext"</span>, <span class="prelude-val">None</span>, ext_tokens);
     Vec::new()
   });
 
@@ -510,5 +511,5 @@
     <span class="macro">DefMacro!</span>(<span class="string">"\\@filelist"</span>,<span class="prelude-val">None</span>,expansion);
     Vec::new()
   });
-
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

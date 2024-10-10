@@ -64,12 +64,7 @@
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href="#66" id="66">66</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="comment">//**********************************************************************
 </span><span class="kw">fn </span>set_input_encoding(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -83,25 +78,17 @@
   </span>state::set_input_encoding(<span class="prelude-val">None</span>); <span class="comment">// Disable the state::level decoding, if any.
 
   // Then load TeX's input encoding definitions.
-  </span>input_definitions(
-    encoding,
-    InputDefinitionOptions {
-      extension: <span class="prelude-val">Some</span>(<span class="string">"def"</span>.into()),
-      ..InputDefinitionOptions::default()
-    }
-  )<span class="question-mark">?</span>;
+  </span>input_definitions(encoding, InputDefinitionOptions {
+    extension: <span class="prelude-val">Some</span>(<span class="string">"def"</span>.into()),
+    ..InputDefinitionOptions::default()
+  })<span class="question-mark">?</span>;
   <span class="comment">// NOTE: INPUT_ENCODING is never actually used anywhere!
   // So, presumably either Perl is magically converting to utf8
   // or more likely, treating the bytes as (misinterpreted?) utf8?
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
   </span>assign_value(<span class="string">"INPUT_ENCODING"</span>, encoding.to_string(), <span class="prelude-val">None</span>);
   <span class="kw">let </span>encoding_tokenized = <span class="macro">TokenizeInternal!</span>(encoding);
-  def_macro(
-    <span class="macro">T_CS!</span>(<span class="string">"\\inputencodingname"</span>),
-    <span class="prelude-val">None</span>,
-    encoding_tokenized,
-    <span class="prelude-val">None</span>,
-  )
+  def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\inputencodingname"</span>), <span class="prelude-val">None</span>, encoding_tokenized, <span class="prelude-val">None</span>)
 }
 
 <span class="macro">LoadDefinitions!</span>({
@@ -122,9 +109,12 @@
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\@inpenc@undefined"</span>, {
     <span class="kw">let </span>enc_sym = get_input_encoding().unwrap();
-    <span class="kw">let </span>message = arena::with(enc_sym, |enc|
-     <span class="macro">s!</span>(<span class="string">"Keyboard character used is undefined in inputencoding {}"</span>,
-      enc));
+    <span class="kw">let </span>message = arena::with(enc_sym, |enc| {
+      <span class="macro">s!</span>(
+        <span class="string">"Keyboard character used is undefined in inputencoding {}"</span>,
+        enc
+      )
+    });
     <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"&lt;char&gt;"</span>, message);
   });
 

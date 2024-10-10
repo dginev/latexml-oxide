@@ -135,57 +135,49 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a></pre></div><pre class="rust"><code><span class="comment">// We need RAII Guards!
+<a href="#137" id="137">137</a></pre></div><pre class="rust"><code><span class="comment">// We need RAII Guards!
 // https://rust-unofficial.github.io/patterns/patterns/behavioural/RAII.html
 // it would be massively superior to leverage Drop, compared to explicit `expire_*` calls
 
 </span><span class="doccomment">//! Perl-style local assignments (dynamic scope)
-//! 
+//!
 //! This module can benefit from some thinking over and refactoring
 //! in principle the "local" scope variables in Perl are a completely standalone feature
 //! (it's global namespace value shadowing until scope expiration)
 //! ... so the push/pop can be modeled with sentry values getting created and dropped (TODO)...
 
-</span><span class="kw">use </span>std::cell::RefCell;
+</span><span class="kw">use </span>once_cell::sync::Lazy;
+<span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
-<span class="kw">use </span>once_cell::sync::Lazy;
 
+<span class="kw">use </span><span class="kw">crate</span>::Digested;
+<span class="kw">use </span><span class="kw">crate</span>::alignment::template::Template;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::IfFrame;
 <span class="kw">use </span><span class="kw">crate</span>::token::Token;
-<span class="kw">use </span><span class="kw">crate</span>::alignment::template::Template;
-<span class="kw">use </span><span class="kw">crate</span>::Digested;
 
 <span class="doccomment">/// These are fields realized via Perl's "local" mechanism in LaTeXML,
 /// but (for now) require explicit "expire" calls in Rust.
 /// Ideally their ergonomics gets improved, or we gradually phase them out.
 </span><span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>Localized {
-  dual_branch: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
-  if_frames: Vec&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;IfFrame&gt;&gt;&gt;&gt;,
-  current_token: Vec&lt;Token&gt;,
+  dual_branch:       Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+  if_frames:         Vec&lt;<span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;IfFrame&gt;&gt;&gt;&gt;,
+  current_token:     Vec&lt;Token&gt;,
   align_group_count: Vec&lt;i32&gt;, <span class="comment">// was $LaTeXML::ALIGN_STATE
   </span>reading_alignment: Vec&lt;Digested&gt;,
-  build_template: Vec&lt;Template&gt;,
-  unlocked: Vec&lt;bool&gt;,
+  build_template:    Vec&lt;Template&gt;,
+  unlocked:          Vec&lt;bool&gt;,
 }
 
 <span class="macro">macro_rules!</span> locals {
-  () =&gt; ((<span class="kw-2">*</span>LOCALIZED_VARS).borrow())
+  () =&gt; {
+    (<span class="kw-2">*</span>LOCALIZED_VARS).borrow()
+  };
 }
 <span class="macro">macro_rules!</span> locals_mut {
-  () =&gt; ((<span class="kw-2">*</span>LOCALIZED_VARS).borrow_mut())
+  () =&gt; {
+    (<span class="kw-2">*</span>LOCALIZED_VARS).borrow_mut()
+  };
 }
 
 <span class="attr">#[thread_local]
@@ -217,9 +209,7 @@
 <span class="doccomment">/// expire (localized) flag for "dual branch"
 </span><span class="kw">pub fn </span>expire_dual_branch() { <span class="macro">locals_mut!</span>().dual_branch.pop(); }
 <span class="doccomment">/// get the current value for "dual branch"
-</span><span class="kw">pub fn </span>get_dual_branch() -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-  <span class="macro">locals!</span>().dual_branch.last().cloned()
-}
+</span><span class="kw">pub fn </span>get_dual_branch() -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; { <span class="macro">locals!</span>().dual_branch.last().cloned() }
 
 <span class="kw">pub fn </span>increment_align_group_count() {
   <span class="kw">let </span><span class="kw-2">mut </span>locals = <span class="macro">locals_mut!</span>();
@@ -240,15 +230,9 @@
   }
 }
 
-<span class="kw">pub fn </span>state_is_unlocked() -&gt; bool {
-  <span class="macro">locals!</span>().unlocked.last().copied().unwrap_or(<span class="bool-val">false</span>)
-}
-<span class="kw">pub fn </span>local_state_unlocked(v: bool) {
-  <span class="macro">locals_mut!</span>().unlocked.push(v);
-}
-<span class="kw">pub fn </span>expire_state_unlocked() {
-  <span class="macro">locals_mut!</span>().unlocked.pop();
-}
+<span class="kw">pub fn </span>state_is_unlocked() -&gt; bool { <span class="macro">locals!</span>().unlocked.last().copied().unwrap_or(<span class="bool-val">false</span>) }
+<span class="kw">pub fn </span>local_state_unlocked(v: bool) { <span class="macro">locals_mut!</span>().unlocked.push(v); }
+<span class="kw">pub fn </span>expire_state_unlocked() { <span class="macro">locals_mut!</span>().unlocked.pop(); }
 
 <span class="kw">pub fn </span>align_group_count() -&gt; i32 {
   <span class="macro">locals!</span>()
@@ -265,24 +249,16 @@
   }
 }
 <span class="kw">pub fn </span>local_align_group_count(v: i32) { <span class="macro">locals_mut!</span>().align_group_count.push(v); }
-<span class="kw">pub fn </span>expire_align_group_count() -&gt; <span class="prelude-ty">Option</span>&lt;i32&gt; {
-  <span class="macro">locals_mut!</span>().align_group_count.pop()
-}
+<span class="kw">pub fn </span>expire_align_group_count() -&gt; <span class="prelude-ty">Option</span>&lt;i32&gt; { <span class="macro">locals_mut!</span>().align_group_count.pop() }
 
-<span class="kw">pub fn </span>get_reading_alignment() -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; {
-  <span class="macro">locals!</span>().reading_alignment.last().cloned()
-}
-<span class="kw">pub fn </span>has_reading_alignment() -&gt; bool { ! <span class="macro">locals!</span>().reading_alignment.is_empty() }
+<span class="kw">pub fn </span>get_reading_alignment() -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; { <span class="macro">locals!</span>().reading_alignment.last().cloned() }
+<span class="kw">pub fn </span>has_reading_alignment() -&gt; bool { !<span class="macro">locals!</span>().reading_alignment.is_empty() }
 <span class="kw">pub fn </span>local_reading_alignment(alignment: <span class="kw-2">&amp;</span>Digested) {
   <span class="macro">locals_mut!</span>().reading_alignment.push(alignment.clone());
 }
-<span class="kw">pub fn </span>expire_reading_alignment() -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; {
-  <span class="macro">locals_mut!</span>().reading_alignment.pop()
-}
+<span class="kw">pub fn </span>expire_reading_alignment() -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; { <span class="macro">locals_mut!</span>().reading_alignment.pop() }
 
-<span class="kw">pub fn </span>local_build_template(template: Template) {
-  <span class="macro">locals_mut!</span>().build_template.push(template);
-}
+<span class="kw">pub fn </span>local_build_template(template: Template) { <span class="macro">locals_mut!</span>().build_template.push(template); }
 <span class="kw">pub fn </span>set_build_template(template: Template) {
   <span class="kw-2">*</span><span class="macro">locals_mut!</span>()
     .build_template
@@ -293,6 +269,7 @@
 <span class="kw">pub fn </span>take_build_template() -&gt; <span class="prelude-ty">Option</span>&lt;Template&gt; { <span class="macro">locals_mut!</span>().build_template.pop() }
 
 <span class="kw">pub fn </span>with_current_build_template&lt;R, FnR&gt;(caller: FnR) -&gt; R
-<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Template&gt;) -&gt; R  {
+<span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Template&gt;) -&gt; R {
   caller(<span class="macro">locals_mut!</span>().build_template.last_mut())
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>
