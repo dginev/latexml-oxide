@@ -24,7 +24,7 @@ use crate::tokens::Tokens;
 pub struct KeyVal {
   // which KeyVals are we parsing and how do we behave?
   prefix: String,
-  key: String,
+  key:    String,
   keyset: String,
 }
 
@@ -33,7 +33,7 @@ impl Default for KeyVal {
     KeyVal {
       prefix: "KV".to_string(),
       keyset: String::new(),
-      key: String::new(),
+      key:    String::new(),
     }
   }
 }
@@ -106,18 +106,18 @@ pub fn has_keyval(prefix: &str, keyset: &str, key: &str) -> bool {
 #[derive(Debug, Default, Clone)]
 /// Configuration fields for declaring a new KeyVal pattern
 pub struct KeyvalConfig<'a> {
-  pub prefix: &'a str,
-  pub keyset: &'a str,
-  pub key: &'a str,
-  pub vtype: &'a str,
-  pub default: Option<&'a str>,
-  pub kind: Option<&'a str>,
-  pub code: Option<ExpansionBody>,
+  pub prefix:      &'a str,
+  pub keyset:      &'a str,
+  pub key:         &'a str,
+  pub vtype:       &'a str,
+  pub default:     Option<&'a str>,
+  pub kind:        Option<&'a str>,
+  pub code:        Option<ExpansionBody>,
   pub macroprefix: Option<&'a str>,
-  pub mismatch: Option<ExpansionBody>,
-  pub normalize: Option<bool>,
-  pub bin: Option<Tokens>,
-  pub choices: Vec<&'static str>,
+  pub mismatch:    Option<ExpansionBody>,
+  pub normalize:   Option<bool>,
+  pub bin:         Option<Tokens>,
+  pub choices:     Vec<&'static str>,
 }
 
 /// (Re-)defines this Key of kind 'kind'.

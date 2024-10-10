@@ -58,18 +58,18 @@ static COLUMN_ENDS: Lazy<[(Token, &'static str, bool); 6]> = Lazy::new(|| {
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
   pub autoclose: bool,
-  pub mouth: Mouth,
-  pub pushback: VecDeque<Token>,
+  pub mouth:     Mouth,
+  pub pushback:  VecDeque<Token>,
 }
 
 #[derive(Debug, Default)]
 pub struct Gullet {
-  pub runtime: Option<MouthRuntime>,
-  pub mouthstack: VecDeque<MouthRuntime>,
+  pub runtime:          Option<MouthRuntime>,
+  pub mouthstack:       VecDeque<MouthRuntime>,
   pub pending_comments: VecDeque<Token>,
-  pub token_limit: Option<usize>,
-  pub pushback_limit: Option<usize>,
-  pub progress: usize,
+  pub token_limit:      Option<usize>,
+  pub pushback_limit:   Option<usize>,
+  pub progress:         usize,
 }
 
 #[thread_local]
@@ -1756,8 +1756,8 @@ pub fn flush() {
     }
   }
   g.runtime = Some(MouthRuntime {
-    mouth: Mouth::default(),
-    pushback: VecDeque::with_capacity(128),
+    mouth:     Mouth::default(),
+    pushback:  VecDeque::with_capacity(128),
     autoclose: true,
   });
   g.mouthstack = VecDeque::new();

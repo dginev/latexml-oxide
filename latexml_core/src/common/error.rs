@@ -9,13 +9,13 @@ use std::result;
 
 #[derive(Debug, Clone, Default)]
 pub struct LogState {
-  pub undefined: SymHashMap<usize>,
-  pub missing: SymHashMap<usize>,
-  pub debug: usize,
-  pub info: usize,
-  pub warning: usize,
-  pub error: usize,
-  pub fatal: bool,
+  pub undefined:   SymHashMap<usize>,
+  pub missing:     SymHashMap<usize>,
+  pub debug:       usize,
+  pub info:        usize,
+  pub warning:     usize,
+  pub error:       usize,
+  pub fatal:       bool,
   pub status_code: usize,
 }
 pub enum LogStatus {
@@ -192,9 +192,9 @@ macro_rules! fatal {
     use $crate::common::error::ErrorCategory::*;
     use $crate::common::error::ErrorTarget::*;
     return Err(LatexmlError {
-      target: $target,
+      target:   $target,
       category: $category,
-      message: $message.to_string(),
+      message:  $message.to_string(),
     });
   }};
 }
@@ -264,9 +264,9 @@ pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Error {
-  pub target: ErrorTarget,
+  pub target:   ErrorTarget,
   pub category: ErrorCategory,
-  pub message: String,
+  pub message:  String,
 }
 impl ErrorTrait for Error {}
 unsafe impl Send for Error {}
@@ -367,9 +367,9 @@ impl Error {
   }
   pub fn todo() -> Self {
     Error {
-      target: ErrorTarget::Internal,
+      target:   ErrorTarget::Internal,
       category: ErrorCategory::ToDo,
-      message: String::from(
+      message:  String::from(
         "This section of the code is not yet implemented / ported over from Perl.",
       ),
     }
@@ -386,9 +386,9 @@ macro_rules! unported {
 impl From<io::Error> for Error {
   fn from(err: io::Error) -> Error {
     Error {
-      target: ErrorTarget::Mouth,
+      target:   ErrorTarget::Mouth,
       category: ErrorCategory::Io(err),
-      message: s!("IO error"),
+      message:  s!("IO error"),
     }
   }
 }
@@ -396,8 +396,8 @@ impl From<io::Error> for Error {
 impl From<Box<dyn ErrorTrait>> for Error {
   fn from(err: Box<dyn ErrorTrait>) -> Error {
     Error {
-      target: ErrorTarget::Document,
-      message: err.to_string(),
+      target:   ErrorTarget::Document,
+      message:  err.to_string(),
       category: ErrorCategory::Generic(err),
     }
   }
@@ -405,8 +405,8 @@ impl From<Box<dyn ErrorTrait>> for Error {
 impl From<Box<dyn ErrorTrait + Send + Sync>> for Error {
   fn from(err: Box<dyn ErrorTrait + Send + Sync>) -> Error {
     Error {
-      target: ErrorTarget::Document,
-      message: err.to_string(),
+      target:   ErrorTarget::Document,
+      message:  err.to_string(),
       category: ErrorCategory::Generic(err),
     }
   }
@@ -415,9 +415,9 @@ impl From<Box<dyn ErrorTrait + Send + Sync>> for Error {
 impl From<String> for Error {
   fn from(err: String) -> Error {
     Error {
-      target: ErrorTarget::Document,
+      target:   ErrorTarget::Document,
       category: ErrorCategory::Generic(From::from(err.clone())),
-      message: err,
+      message:  err,
     }
   }
 }
@@ -425,9 +425,9 @@ impl From<String> for Error {
 impl<'a> From<&'a str> for Error {
   fn from(err: &'a str) -> Error {
     Error {
-      target: ErrorTarget::Document,
+      target:   ErrorTarget::Document,
       category: ErrorCategory::Generic(From::from(err.to_owned())),
-      message: err.to_owned(),
+      message:  err.to_owned(),
     }
   }
 }
@@ -435,9 +435,9 @@ impl<'a> From<&'a str> for Error {
 impl From<()> for Error {
   fn from(_e: ()) -> Error {
     Error {
-      target: ErrorTarget::Document,
+      target:   ErrorTarget::Document,
       category: ErrorCategory::Libxml,
-      message: s!("LibXML error"),
+      message:  s!("LibXML error"),
     }
   }
 }
@@ -445,8 +445,8 @@ impl From<()> for Error {
 impl From<ParseIntError> for Error {
   fn from(err: ParseIntError) -> Error {
     Error {
-      target: ErrorTarget::Document,
-      message: err.to_string(),
+      target:   ErrorTarget::Document,
+      message:  err.to_string(),
       category: ErrorCategory::Generic(Box::new(err)),
     }
   }
@@ -455,8 +455,8 @@ impl From<ParseIntError> for Error {
 impl From<ParseFloatError> for Error {
   fn from(err: ParseFloatError) -> Error {
     Error {
-      target: ErrorTarget::Document,
-      message: err.to_string(),
+      target:   ErrorTarget::Document,
+      message:  err.to_string(),
       category: ErrorCategory::Generic(Box::new(err)),
     }
   }
@@ -465,9 +465,9 @@ impl From<ParseFloatError> for Error {
 impl From<marpa::error::Error> for Error {
   fn from(err: marpa::error::Error) -> Error {
     Error {
-      target: ErrorTarget::MathParser,
+      target:   ErrorTarget::MathParser,
       category: ErrorCategory::FailedParse,
-      message: err.to_string(),
+      message:  err.to_string(),
     }
   }
 }

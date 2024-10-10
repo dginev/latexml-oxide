@@ -16,21 +16,21 @@ use std::fmt::Write as _;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Locator {
-  pub source: SymStr,
-  pub from_line: u32,
-  pub to_line: u32,
+  pub source:      SymStr,
+  pub from_line:   u32,
+  pub to_line:     u32,
   pub from_column: u32,
-  pub to_column: u32,
+  pub to_column:   u32,
 }
 
 impl Default for Locator {
   fn default() -> Self {
     Locator {
-      source: arena::pin(file!()),
-      from_line: line!(),
-      to_line: line!(),
+      source:      arena::pin(file!()),
+      from_line:   line!(),
+      to_line:     line!(),
       from_column: column!(),
-      to_column: column!(),
+      to_column:   column!(),
     }
   }
 }

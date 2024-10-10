@@ -814,26 +814,26 @@ macro_rules! DefLigature {
     let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
     let new_ligature_id = generate_ligature_id();
     unshift_value("TEXT_LIGATURES", vec![Ligature {
-      id: new_ligature_id,
-      regex: Some($regex.to_string()),
-      code: Some(Rc::new(move |text| {
+      id:        new_ligature_id,
+      regex:     Some($regex.to_string()),
+      code:      Some(Rc::new(move |text| {
         regex_compiled.replace_all(text, $replacement).to_string()
       })),
       font_test: test_closure,
-      matcher: None,
+      matcher:   None,
     }]);
   };
   ($regex:expr, $replacement:expr) => {
     let regex_compiled = Regex::new($regex).unwrap();
     let new_ligature_id = generate_ligature_id();
     unshift_value("TEXT_LIGATURES", vec![Ligature {
-      id: new_ligature_id,
-      regex: Some($regex.to_string()),
-      code: Some(Rc::new(move |text| {
+      id:        new_ligature_id,
+      regex:     Some($regex.to_string()),
+      code:      Some(Rc::new(move |text| {
         regex_compiled.replace_all(text, $replacement).to_string()
       })),
       font_test: None,
-      matcher: None,
+      matcher:   None,
     }]);
   };
 }

@@ -46,14 +46,14 @@ impl TagOptionName {
 
 #[derive(Clone, Default)]
 pub struct TagOptions {
-  pub auto_open: Option<bool>,
-  pub auto_close: Option<bool>,
-  pub after_open: Option<Vec<TagConstructionClosure>>,
-  pub after_close: Option<Vec<TagConstructionClosure>>,
-  pub after_open_early: Option<Vec<TagConstructionClosure>>,
+  pub auto_open:         Option<bool>,
+  pub auto_close:        Option<bool>,
+  pub after_open:        Option<Vec<TagConstructionClosure>>,
+  pub after_close:       Option<Vec<TagConstructionClosure>>,
+  pub after_open_early:  Option<Vec<TagConstructionClosure>>,
   pub after_close_early: Option<Vec<TagConstructionClosure>>,
-  pub after_open_late: Option<Vec<TagConstructionClosure>>,
-  pub after_close_late: Option<Vec<TagConstructionClosure>>,
+  pub after_open_late:   Option<Vec<TagConstructionClosure>>,
+  pub after_close_late:  Option<Vec<TagConstructionClosure>>,
 }
 
 impl TagOptions {

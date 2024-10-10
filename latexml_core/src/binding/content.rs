@@ -31,39 +31,39 @@ static QUOTE_WRAPPED: Lazy<Regex> = Lazy::new(|| Regex::new("^\"(.+)\"$").unwrap
 /// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
 pub struct InputDefinitionOptions {
   /// an optional extension (such as "sty")
-  pub extension: Option<Cow<'static, str>>,
+  pub extension:     Option<Cow<'static, str>>,
   /// package options to pass into the loaded library
-  pub options: Vec<String>,
+  pub options:       Vec<String>,
   /// Tokens to process after the definition is loaded
-  pub after: Tokens,
+  pub after:         Tokens,
   /// flag to forbid raw TeX sources
-  pub notex: bool,
+  pub notex:         bool,
   /// flag to forbid errors ?
-  pub noerror: bool,
+  pub noerror:       bool,
   /// flag to forbid binding dispatch
-  pub noltxml: bool,
+  pub noltxml:       bool,
   /// collection of (package) options to process when loading the dependency
-  pub withoptions: Option<Vec<String>>,
+  pub withoptions:   Option<Vec<String>>,
   /// flag to handle options, or ignore them
   pub handleoptions: bool,
   /// flag to process in .cls mode (default: false)
-  pub as_class: bool,
+  pub as_class:      bool,
   /// flag to indicate reading the file raw in Gullet
-  pub raw: bool,
+  pub raw:           bool,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
     InputDefinitionOptions {
-      extension: None,
-      options: Vec::new(),
-      after: Tokens!(),
-      notex: false,
-      noerror: false,
-      noltxml: false,
-      raw: false,
-      withoptions: None,
+      extension:     None,
+      options:       Vec::new(),
+      after:         Tokens!(),
+      notex:         false,
+      noerror:       false,
+      noltxml:       false,
+      raw:           false,
+      withoptions:   None,
       handleoptions: false,
-      as_class: false,
+      as_class:      false,
     }
   }
 }
@@ -182,9 +182,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     if let Some(file) = find_file(
       &filename,
       Some(FindFileOptions {
-        forbid_ltxml: options.noltxml,
-        notex: options.notex,
-        ext_type: options.extension.as_ref().cloned(),
+        forbid_ltxml:      options.noltxml,
+        notex:             options.notex,
+        ext_type:          options.extension.as_ref().cloned(),
         search_paths_only: false,
       }),
     ) {
@@ -345,9 +345,9 @@ fn before_input_handle_options(
 /// configuration for input of a TeX source (content files mostly)
 #[derive(Debug, Default, Clone)]
 pub struct InputOptions {
-  pub noerror: bool,
+  pub noerror:    bool,
   pub reloadable: bool,
-  pub file_type: Option<String>,
+  pub file_type:  Option<String>,
 }
 
 /// Input for cases when the file (or data)
@@ -685,26 +685,26 @@ fn reset_options() -> Result<()> {
 }
 
 pub struct RequireOptions {
-  pub options: Vec<String>,
-  pub withoptions: Option<Vec<String>>,
-  pub extension: Option<Cow<'static, str>>,
+  pub options:          Vec<String>,
+  pub withoptions:      Option<Vec<String>>,
+  pub extension:        Option<Cow<'static, str>>,
   pub searchpaths_only: bool,
-  pub as_class: bool,
-  pub noltxml: Option<bool>,
-  pub notex: Option<bool>,
-  pub after: Tokens,
+  pub as_class:         bool,
+  pub noltxml:          Option<bool>,
+  pub notex:            Option<bool>,
+  pub after:            Tokens,
 }
 impl Default for RequireOptions {
   fn default() -> Self {
     RequireOptions {
-      options: Vec::new(),
-      withoptions: None,
-      extension: None,
-      notex: None,
-      noltxml: None,
-      as_class: false,
+      options:          Vec::new(),
+      withoptions:      None,
+      extension:        None,
+      notex:            None,
+      noltxml:          None,
+      as_class:         false,
       searchpaths_only: false,
-      after: Tokens!(),
+      after:            Tokens!(),
     }
   }
 }
@@ -806,9 +806,9 @@ pub fn load_class(name: &str, _options: Vec<String>, after: Tokens) -> Result<()
 #[derive(Default)]
 pub struct FindFileOptions {
   // TODO: this is no longer used in find_file, rather a level earlier
-  pub forbid_ltxml: bool,
-  pub notex: bool,
-  pub ext_type: Option<Cow<'static, str>>,
+  pub forbid_ltxml:      bool,
+  pub notex:             bool,
+  pub ext_type:          Option<Cow<'static, str>>,
   pub search_paths_only: bool,
 }
 

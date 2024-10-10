@@ -326,8 +326,8 @@ impl From<&RegisterValue> for MuGlue {
       RegisterValue::Dimension(other) => MuGlue::new(other.value_of()),
       RegisterValue::MuDimension(other) => MuGlue::new(other.value_of()),
       RegisterValue::Glue(other) => MuGlue {
-        skip: other.skip,
-        plus: other.plus,
+        skip:  other.skip,
+        plus:  other.plus,
         pfill: other.pfill,
         minus: other.minus,
         mfill: other.mfill,
@@ -425,45 +425,45 @@ pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<Arg
 #[derive(Clone)]
 pub struct Register {
   /// the public command sequence for this register
-  pub cs: Token,
+  pub cs:            Token,
   /// the internal address for this register
-  pub address: String,
+  pub address:       String,
   /// associated parameters, if any
-  pub parameters: Option<Parameters>,
+  pub parameters:    Option<Parameters>,
   /// the type of values accepted by this register (Number, Dimension, ...)
   pub register_type: RegisterType,
   /// read-only flag (default: false)
-  pub readonly: bool,
+  pub readonly:      bool,
   /// the current value
-  pub value: Option<RegisterValue>,
+  pub value:         Option<RegisterValue>,
   /// reader for a value
-  pub getter: Option<RegisterGetterClosure>,
+  pub getter:        Option<RegisterGetterClosure>,
   /// setter for a value
-  pub setter: Option<RegisterSetterClosure>,
+  pub setter:        Option<RegisterSetterClosure>,
   /// a default value
-  pub default: Option<RegisterValue>,
+  pub default:       Option<RegisterValue>,
   /// the unicode corresponding to the \mathchar of `value` (for chardef)
-  pub mathglyph: Option<char>,
+  pub mathglyph:     Option<char>,
   /// TODO: what does this do for CharDef ?
-  pub role: Option<SymStr>,
+  pub role:          Option<SymStr>,
   /// the source point of origin for this register definition
-  pub locator: Locator,
+  pub locator:       Locator,
 }
 impl Default for Register {
   fn default() -> Self {
     Register {
-      cs: T_CS!("Register"),
-      address: String::from("Register"),
-      locator: Locator::default(),
-      parameters: None,
+      cs:            T_CS!("Register"),
+      address:       String::from("Register"),
+      locator:       Locator::default(),
+      parameters:    None,
       register_type: RegisterType::Number,
-      getter: None,
-      setter: None,
-      readonly: false,
-      value: None,
-      mathglyph: None,
-      role: None,
-      default: None,
+      getter:        None,
+      setter:        None,
+      readonly:      false,
+      value:         None,
+      mathglyph:     None,
+      role:          None,
+      default:       None,
     }
   }
 }

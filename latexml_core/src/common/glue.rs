@@ -103,8 +103,8 @@ static GLUE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(GLUE_RE_STR).unwrap());
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct Glue {
-  pub skip: i64,
-  pub plus: Option<i64>,
+  pub skip:  i64,
+  pub plus:  Option<i64>,
   pub pfill: Option<FillCode>,
   pub minus: Option<i64>,
   pub mfill: Option<FillCode>,
@@ -119,8 +119,8 @@ impl NumericOps for Glue {
   where Self: Sized {
     if other.register_type() != RegisterType::Glue {
       Glue {
-        skip: self.skip + other.value_of(),
-        plus: self.plus,
+        skip:  self.skip + other.value_of(),
+        plus:  self.plus,
         pfill: self.pfill,
         minus: self.minus,
         mfill: self.mfill,

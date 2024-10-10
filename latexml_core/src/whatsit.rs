@@ -25,29 +25,29 @@ use crate::{BoxOps, Digested, DigestedData, TexMode};
 #[derive(Clone)]
 pub struct Whatsit {
   /// arguments
-  pub args: Vec<Option<Digested>>,
+  pub args:           Vec<Option<Digested>>,
   /// additional properties, such as font information or sizing
-  pub properties: HashMap<Stored>,
+  pub properties:     HashMap<Stored>,
   /// the definition responsible for creating this object
-  pub definition: Rc<dyn Definition>,
+  pub definition:     Rc<dyn Definition>,
   /// cached tokens for reverting back
   ///  (note that the "reversion" _property_ is currently also used)
-  pub reversion: Option<Tokens>,
+  pub reversion:      Option<Tokens>,
   /// special-case reversion tokens for whatsits representing Dual math structures
   pub dual_reversion: Option<HashMap<Tokens>>,
   /// point of origin in the source file
-  pub locator: Locator,
+  pub locator:        Locator,
 }
 
 impl Default for Whatsit {
   fn default() -> Self {
     Whatsit {
-      args: Vec::new(),
-      properties: HashMap::default(),
-      definition: Rc::new(Expandable::default()),
-      reversion: None,
+      args:           Vec::new(),
+      properties:     HashMap::default(),
+      definition:     Rc::new(Expandable::default()),
+      reversion:      None,
       dual_reversion: None,
-      locator: Locator::default(),
+      locator:        Locator::default(),
     }
   }
 }

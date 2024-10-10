@@ -243,13 +243,13 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
 #[derive(Default)]
 pub struct RegisterOptions {
   /// closure to obtain the current register value
-  pub getter: Option<RegisterGetterClosure>,
+  pub getter:   Option<RegisterGetterClosure>,
   /// closure to set the current register value
-  pub setter: Option<RegisterSetterClosure>,
+  pub setter:   Option<RegisterSetterClosure>,
   /// is this register meant as read-only? (default: false)
   pub readonly: bool,
   /// an optional name for the register (default: the cs)
-  pub address: Option<String>,
+  pub address:  Option<String>,
   /// an optional allocation for the register (default: None)
   pub allocate: Option<String>,
 }
@@ -1021,24 +1021,24 @@ pub fn def_environment(
   after_construct_with_frame.push(pop_frame_closure);
 
   let begin_name_constructor = Rc::new(Constructor {
-    cs: T_CS!(begin_name),
-    paramlist: paramlist.clone(),
-    replacement: compiled_replacement.clone(),
-    nargs: options.nargs,
-    before_digest: before_digest_env,
-    after_digest: options.after_digest_begin,
+    cs:                T_CS!(begin_name),
+    paramlist:         paramlist.clone(),
+    replacement:       compiled_replacement.clone(),
+    nargs:             options.nargs,
+    before_digest:     before_digest_env,
+    after_digest:      options.after_digest_begin,
     after_digest_body: options.after_digest_body,
-    before_construct: before_construct_with_frame,
+    before_construct:  before_construct_with_frame,
     // Curiously, it's the \begin whose afterConstruct gets called.
-    after_construct: after_construct_with_frame,
-    capture_body: true,
-    properties: options.properties.clone(),
+    after_construct:   after_construct_with_frame,
+    capture_body:      true,
+    properties:        options.properties.clone(),
     // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
     // (defined $sizer ? (sizer => $sizer) : ()),
     // ), $options{scope});
-    sizer: infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
-    reversion: options.reversion,
-    alias: options.alias,
+    sizer:             infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
+    reversion:         options.reversion,
+    alias:             options.alias,
   });
   install_definition(begin_name_constructor, options.scope);
 

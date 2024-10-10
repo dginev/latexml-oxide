@@ -25,75 +25,75 @@ use crate::{BoxOps, Digested};
 #[derive(Clone)]
 pub struct ConstructorOptions {
   /// number of arguments (if any)
-  pub nargs: Option<usize>,
+  pub nargs:            Option<usize>,
   /// bouded mode (default: false)
-  pub bounded: bool,
+  pub bounded:          bool,
   /// begin a named mode
-  pub mode: Option<String>,
+  pub mode:             Option<String>,
   /// a `SizingClosure` to estimate the size of the digested box
-  pub sizer: Option<SizingClosure>,
+  pub sizer:            Option<SizingClosure>,
   /// custom code to run immediately before the digestion phase
-  pub before_digest: Vec<BeforeDigestClosure>,
+  pub before_digest:    Vec<BeforeDigestClosure>,
   /// custom code to run immediately after the digestion phase
-  pub after_digest: Vec<DigestionClosure>,
+  pub after_digest:     Vec<DigestionClosure>,
   /// custom code to run immediately before the construction phase
   pub before_construct: Vec<ConstructionClosure>,
   /// custom code to run immediately after the construction phase
-  pub after_construct: Vec<ConstructionClosure>,
+  pub after_construct:  Vec<ConstructionClosure>,
 
   // environment-specific
   /// requires to be used in math mode
-  pub require_math: bool,
+  pub require_math:       bool,
   /// forbids use in math mode
-  pub forbid_math: bool,
+  pub forbid_math:        bool,
   /// custom directives for computing box properties
-  pub properties: PropertiesClosure,
+  pub properties:         PropertiesClosure,
   /// should it capture the body as `#body` (default: false)
-  pub capture_body: bool,
+  pub capture_body:       bool,
   /// specify a font to use, or instructions how to compute which font to use
-  pub font: Option<FontDirective>,
+  pub font:               Option<FontDirective>,
   /// custom code to run as digestion begins
   pub after_digest_begin: Vec<DigestionClosure>,
   /// custom code to run just before digestion ends
-  pub before_digest_end: Vec<BeforeDigestClosure>,
+  pub before_digest_end:  Vec<BeforeDigestClosure>,
   /// custom code to run after `#body` has been digested
-  pub after_digest_body: Vec<DigestionClosure>,
+  pub after_digest_body:  Vec<DigestionClosure>,
   /// provide tokens to revert to, or custom code for computing them
-  pub reversion: Option<Reversion>,
+  pub reversion:          Option<Reversion>,
   /// Local/Global scope of installing this definition (default: Local)
-  pub scope: Option<Scope>,
+  pub scope:              Option<Scope>,
   /// is this a robust command sequence (default: false)
-  pub robust: bool,
+  pub robust:             bool,
   /// lock the definition for raw TeX overrides (default: false)
-  pub locked: bool,
+  pub locked:             bool,
   /// alternative (command sequence) name, used for reversion
-  pub alias: Option<String>,
+  pub alias:              Option<String>,
 }
 impl Default for ConstructorOptions {
   fn default() -> Self {
     ConstructorOptions {
-      nargs: None,
-      bounded: false,
-      before_digest: vec![],
-      after_digest: vec![],
-      before_construct: vec![],
-      after_construct: vec![],
-      mode: None,
+      nargs:              None,
+      bounded:            false,
+      before_digest:      vec![],
+      after_digest:       vec![],
+      before_construct:   vec![],
+      after_construct:    vec![],
+      mode:               None,
       // environment-specific
-      require_math: false,
-      forbid_math: false,
-      properties: Rc::new(|_whatsit| Ok(SymHashMap::default())),
-      capture_body: false,
-      font: None,
+      require_math:       false,
+      forbid_math:        false,
+      properties:         Rc::new(|_whatsit| Ok(SymHashMap::default())),
+      capture_body:       false,
+      font:               None,
       after_digest_begin: vec![],
-      before_digest_end: vec![],
-      after_digest_body: vec![],
-      scope: None,
-      robust: false,
-      locked: false,
-      alias: None,
-      reversion: None,
-      sizer: None,
+      before_digest_end:  vec![],
+      after_digest_body:  vec![],
+      scope:              None,
+      robust:             false,
+      locked:             false,
+      alias:              None,
+      reversion:          None,
+      sizer:              None,
     }
   }
 }
@@ -127,39 +127,39 @@ impl fmt::Debug for ConstructorOptions {
 
 #[derive(Clone)]
 pub struct Constructor {
-  pub cs: Token,
-  pub nargs: Option<usize>,
-  pub paramlist: Option<Parameters>,
-  pub replacement: Option<ReplacementClosure>,
-  pub sizer: Option<SizingClosure>,
-  pub before_digest: Vec<BeforeDigestClosure>,
-  pub after_digest: Vec<DigestionClosure>,
-  pub before_construct: Vec<ConstructionClosure>,
-  pub after_construct: Vec<ConstructionClosure>,
-  pub properties: PropertiesClosure,
-  pub capture_body: bool,
+  pub cs:                Token,
+  pub nargs:             Option<usize>,
+  pub paramlist:         Option<Parameters>,
+  pub replacement:       Option<ReplacementClosure>,
+  pub sizer:             Option<SizingClosure>,
+  pub before_digest:     Vec<BeforeDigestClosure>,
+  pub after_digest:      Vec<DigestionClosure>,
+  pub before_construct:  Vec<ConstructionClosure>,
+  pub after_construct:   Vec<ConstructionClosure>,
+  pub properties:        PropertiesClosure,
+  pub capture_body:      bool,
   // environment-specific
   pub after_digest_body: Vec<DigestionClosure>,
-  pub reversion: Option<Reversion>,
-  pub alias: Option<String>,
+  pub reversion:         Option<Reversion>,
+  pub alias:             Option<String>,
 }
 impl Default for Constructor {
   fn default() -> Self {
     Constructor {
-      cs: T_CS!("Constructor"),
-      nargs: None,
-      paramlist: None,
-      replacement: None,
-      before_digest: vec![],
-      after_digest: vec![],
-      before_construct: vec![],
-      after_construct: vec![],
-      properties: Rc::new(|_whatsit| Ok(SymHashMap::default())),
-      capture_body: false,
+      cs:                T_CS!("Constructor"),
+      nargs:             None,
+      paramlist:         None,
+      replacement:       None,
+      before_digest:     vec![],
+      after_digest:      vec![],
+      before_construct:  vec![],
+      after_construct:   vec![],
+      properties:        Rc::new(|_whatsit| Ok(SymHashMap::default())),
+      capture_body:      false,
       after_digest_body: vec![],
-      reversion: None,
-      alias: None,
-      sizer: None,
+      reversion:         None,
+      alias:             None,
+      sizer:             None,
     }
   }
 }

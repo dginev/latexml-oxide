@@ -14,10 +14,10 @@ use crate::util::distill_lexeme;
 /// capable of servicing arbitrary field names.
 #[derive(Debug, Clone, Default)]
 pub struct Meta {
-  pub syntax_trace: Vec<String>,
-  pub fenced: Option<String>,
-  pub specialize: Option<String>,
-  pub curry_level: Option<CurryTerm>,
+  pub syntax_trace:      Vec<String>,
+  pub fenced:            Option<String>,
+  pub specialize:        Option<String>,
+  pub curry_level:       Option<CurryTerm>,
   pub curry_constraints: CurryConstraints,
 }
 

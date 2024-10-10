@@ -42,14 +42,14 @@ fn main() -> Result<(), Box<dyn Error>> {
   let target = argv.next();
   // Prepare to convert:
   let opts = Config {
-    verbosity: 0,
-    format: OutputFormat::HTML5,
-    whatsin: DataSize::Document,
-    whatsout: DataSize::Document,
-    preamble: None,
-    postamble: None,
-    mode: None,
-    bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
+    verbosity:               0,
+    format:                  OutputFormat::HTML5,
+    whatsin:                 DataSize::Document,
+    whatsout:                DataSize::Document,
+    preamble:                None,
+    postamble:               None,
+    mode:                    None,
+    bindings_dispatch:       Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
   };
   let mut converter = Converter::from_config(opts.clone());

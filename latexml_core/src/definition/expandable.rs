@@ -17,41 +17,41 @@ use crate::Digested;
 
 #[derive(Debug, Clone, Default)]
 pub struct ExpandableOptions {
-  pub locked: bool,
-  pub protected: bool,
-  pub outer: bool,
-  pub long: bool,
-  pub scope: Option<Scope>,
-  pub alias: Option<String>,
-  pub mathactive: bool,
-  pub robust: bool,
+  pub locked:            bool,
+  pub protected:         bool,
+  pub outer:             bool,
+  pub long:              bool,
+  pub scope:             Option<Scope>,
+  pub alias:             Option<String>,
+  pub mathactive:        bool,
+  pub robust:            bool,
   pub nopack_parameters: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct Expandable {
   pub is_protected: bool,
-  pub is_long: bool,
-  pub is_outer: bool,
-  pub has_cc_arg: bool,
-  pub alias: Option<String>,
-  pub locator: Locator,
-  pub cs: Token,
-  pub paramlist: Option<Parameters>,
-  pub expansion: Option<ExpansionBody>,
+  pub is_long:      bool,
+  pub is_outer:     bool,
+  pub has_cc_arg:   bool,
+  pub alias:        Option<String>,
+  pub locator:      Locator,
+  pub cs:           Token,
+  pub paramlist:    Option<Parameters>,
+  pub expansion:    Option<ExpansionBody>,
 }
 impl Default for Expandable {
   fn default() -> Self {
     Expandable {
       is_protected: false,
-      is_long: false,
-      is_outer: false,
-      has_cc_arg: false,
-      alias: None,
-      locator: Locator::default(),
-      cs: T_CS!("Expandable"),
-      paramlist: None,
-      expansion: None,
+      is_long:      false,
+      is_outer:     false,
+      has_cc_arg:   false,
+      alias:        None,
+      locator:      Locator::default(),
+      cs:           T_CS!("Expandable"),
+      paramlist:    None,
+      expansion:    None,
     }
   }
 }

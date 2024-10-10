@@ -5,7 +5,7 @@ use rustc_hash::FxHashMap as HashMap;
 #[derive(Debug)]
 pub struct Relaxng {
   /// the schema name
-  pub name: String,
+  pub name:    String,
   /// dependent modules
   pub modules: Vec<String>,
   // TODO:
@@ -18,7 +18,7 @@ pub struct Relaxng {
 impl Default for Relaxng {
   fn default() -> Self {
     Relaxng {
-      name: s!("LaTeXML"),
+      name:    s!("LaTeXML"),
       modules: Vec::new(),
       // elementdefs: HashMap::default(),
       // defs: HashMap::default(),

@@ -14,14 +14,14 @@ pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Res
 // These are applied after the document is completely constructed
 #[derive(Clone, Default)]
 pub struct RewriteOptions {
-  pub label: Option<String>,
-  pub scope: Option<Scope>,
-  pub xpath: Option<String>,
-  pub on_match: Option<Tokens>,
-  pub attributes: Option<String>,
-  pub replace: Option<RewriteReplaceClosure>,
-  pub regexp: Option<String>,
-  pub select: Option<String>,
+  pub label:        Option<String>,
+  pub scope:        Option<Scope>,
+  pub xpath:        Option<String>,
+  pub on_match:     Option<Tokens>,
+  pub attributes:   Option<String>,
+  pub replace:      Option<RewriteReplaceClosure>,
+  pub regexp:       Option<String>,
+  pub select:       Option<String>,
   pub select_count: Option<usize>,
 }
 impl fmt::Debug for RewriteOptions {
@@ -68,8 +68,8 @@ impl fmt::Debug for RewritePattern {
 #[derive(Debug, Clone)]
 pub struct RewriteClause {
   compiled: bool,
-  op: RewriteOperator,
-  pattern: RewritePattern,
+  op:       RewriteOperator,
+  pattern:  RewritePattern,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -89,51 +89,51 @@ impl Rewrite {
     if let Some(xpath) = options.select.take() {
       clauses.push(RewriteClause {
         compiled: true,
-        op: Select,
-        pattern: RewritePattern::String(xpath),
+        op:       Select,
+        pattern:  RewritePattern::String(xpath),
       })
     }
     // collect the actionable clauses from the options
     if let Some(label) = options.label.take() {
       clauses.push(RewriteClause {
         compiled: false,
-        op: Label,
-        pattern: RewritePattern::String(label),
+        op:       Label,
+        pattern:  RewritePattern::String(label),
       });
     }
     if let Some(scope) = options.scope.take() {
       clauses.push(RewriteClause {
         compiled: false,
-        op: Scope,
-        pattern: RewritePattern::Scope(scope),
+        op:       Scope,
+        pattern:  RewritePattern::Scope(scope),
       });
     }
     if let Some(xpath) = options.xpath.take() {
       clauses.push(RewriteClause {
         compiled: false,
-        op: Xpath,
-        pattern: RewritePattern::String(xpath),
+        op:       Xpath,
+        pattern:  RewritePattern::String(xpath),
       });
     }
     if let Some(tokens) = options.on_match.take() {
       clauses.push(RewriteClause {
         compiled: false,
-        op: Match,
-        pattern: RewritePattern::Tokens(tokens),
+        op:       Match,
+        pattern:  RewritePattern::Tokens(tokens),
       });
     }
     if let Some(replace) = options.replace.take() {
       clauses.push(RewriteClause {
         compiled: false,
-        op: Replace,
-        pattern: RewritePattern::Closure(replace),
+        op:       Replace,
+        pattern:  RewritePattern::Closure(replace),
       });
     }
     if let Some(r) = options.regexp.take() {
       clauses.push(RewriteClause {
         compiled: false,
-        op: Regexp,
-        pattern: RewritePattern::String(r),
+        op:       Regexp,
+        pattern:  RewritePattern::String(r),
       });
     }
     Rewrite { options, clauses }

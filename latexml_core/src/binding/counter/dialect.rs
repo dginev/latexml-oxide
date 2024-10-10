@@ -609,13 +609,13 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
 #[derive(Debug, Default, Clone)]
 pub struct BeginItemizeOptions {
   /// disable nested id suffix based on stacking level
-  pub nolevel: bool,
+  pub nolevel:     bool,
   /// enumitem series
-  pub series: Option<Tokens>,
+  pub series:      Option<Tokens>,
   /// start at a custom value
-  pub start: Option<Number>,
+  pub start:       Option<Number>,
   /// enumitem resume?
-  pub resume: Option<String>,
+  pub resume:      Option<String>,
   /// enumitem resume* ?
   pub resume_star: Option<String>,
 }

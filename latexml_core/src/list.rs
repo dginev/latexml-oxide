@@ -17,10 +17,10 @@ use crate::{BoxOps, Digested, TexMode};
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
 #[derive(Clone, Default)]
 pub struct List {
-  pub boxes: Vec<Digested>,
-  pub mode: Option<TexMode>,
-  pub font: Option<Font>,
-  pub locator: Locator,
+  pub boxes:      Vec<Digested>,
+  pub mode:       Option<TexMode>,
+  pub font:       Option<Font>,
+  pub locator:    Locator,
   pub properties: HashMap<Stored>,
 }
 

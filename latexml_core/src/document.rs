@@ -91,21 +91,21 @@ pub static MATH_TOKEN_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:XM
 pub static MATH_HINT_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:XMHint"));
 
 pub struct Document {
-  pub document: XmlDoc,
-  pub pending: Vec<Node>,
-  context: Option<XPath>,
-  pub node: Node,
-  pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
-  pub node_fonts: HashMap<u64, Font>,       // used to be _font attribute
-  pub idstore: HashMap<String, Node>,
+  pub document:                XmlDoc,
+  pub pending:                 Vec<Node>,
+  context:                     Option<XPath>,
+  pub node:                    Node,
+  pub node_boxes:              HashMap<usize, Digested>, // used to be _box attribute
+  pub node_fonts:              HashMap<u64, Font>,       // used to be _font attribute
+  pub idstore:                 HashMap<String, Node>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
-  pub rewrite_labels: HashMap<String, String>,
+  pub rewrite_labels:          HashMap<String, String>,
   // the following are internal "local"-based declarations in Perl
   localized_constructed_nodes: Vec<Vec<Node>>,
-  constructed_nodes: Vec<Node>,
-  localized_boxes: Vec<Option<Digested>>,
-  box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
-  localized_fonts: Vec<Rc<Font>>,
+  constructed_nodes:           Vec<Node>,
+  localized_boxes:             Vec<Option<Digested>>,
+  box_to_absorb:               Option<Digested>, // local $LaTeXML::BOX;
+  localized_fonts:             Vec<Rc<Font>>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -127,19 +127,19 @@ impl Document {
       None => doc_scaffold.as_node(), // when empty, set the document node as a node.
     };
     Document {
-      document: doc_scaffold,
-      node: root,
-      node_boxes: HashMap::default(),
-      node_fonts: HashMap::default(),
-      idstore: HashMap::default(),
-      rewrite_labels: HashMap::default(),
-      pending: Vec::new(),
+      document:                    doc_scaffold,
+      node:                        root,
+      node_boxes:                  HashMap::default(),
+      node_fonts:                  HashMap::default(),
+      idstore:                     HashMap::default(),
+      rewrite_labels:              HashMap::default(),
+      pending:                     Vec::new(),
       localized_constructed_nodes: Vec::new(),
-      constructed_nodes: Vec::new(),
-      box_to_absorb: None,
-      context: None,
-      localized_boxes: Vec::new(),
-      localized_fonts: Vec::new(),
+      constructed_nodes:           Vec::new(),
+      box_to_absorb:               None,
+      context:                     None,
+      localized_boxes:             Vec::new(),
+      localized_fonts:             Vec::new(),
     }
   }
 

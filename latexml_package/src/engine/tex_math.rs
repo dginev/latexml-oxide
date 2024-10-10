@@ -889,10 +889,10 @@ LoadDefinitions!({
 
 /// A shorthand data structure for delimiter metadata
 pub struct DelimiterMeta {
-  char: char,
-  left_role: &'static str,
+  char:       char,
+  left_role:  &'static str,
   right_role: &'static str,
-  name: Option<&'static str>,
+  name:       Option<&'static str>,
 }
 /// This duplicates in slightly different way what DefMath has put together.
 pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new(|| {

@@ -34,10 +34,10 @@ static LATEX_OPTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\[([^\]]*)\]
 
 #[derive(Default)]
 pub struct DigestionOptions {
-  pub mode: Option<DigestionMode>,
+  pub mode:         Option<DigestionMode>,
   pub noinitialize: Option<bool>,
-  pub preamble: Option<String>,
-  pub postamble: Option<String>,
+  pub preamble:     Option<String>,
+  pub postamble:    Option<String>,
 }
 
 pub trait DigestionAPI {

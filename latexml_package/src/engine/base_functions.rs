@@ -767,11 +767,11 @@ pub fn writable_tokens(tokens: &Tokens) -> String {
 // function to handle all the
 #[derive(Default)]
 pub struct KVSpec {
-  pub star: bool,
-  pub plus: bool,
-  pub prefix: Option<String>,
+  pub star:    bool,
+  pub plus:    bool,
+  pub prefix:  Option<String>,
   pub keysets: Vec<String>,
-  pub skip: Vec<String>,
+  pub skip:    Vec<String>,
 }
 pub fn keyvals_aux(until: Option<Token>, spec: KVSpec) -> Result<KeyVals> {
   let KVSpec {

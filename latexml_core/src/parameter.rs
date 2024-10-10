@@ -40,30 +40,30 @@ static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
 
 #[derive(Clone)]
 pub struct Parameter {
-  pub novalue: bool,
-  pub semiverbatim: Option<Vec<char>>,
-  pub optional: bool,
-  pub name: SymStr,
-  pub spec: SymStr,
-  pub extra: Vec<Tokens>,
-  pub inner: Option<Parameters>,
-  pub reader: ReaderClosure,
-  pub predigest: Option<ReaderPredigestClosure>,
-  pub reversion: Option<ReversionClosure>,
+  pub novalue:       bool,
+  pub semiverbatim:  Option<Vec<char>>,
+  pub optional:      bool,
+  pub name:          SymStr,
+  pub spec:          SymStr,
+  pub extra:         Vec<Tokens>,
+  pub inner:         Option<Parameters>,
+  pub reader:        ReaderClosure,
+  pub predigest:     Option<ReaderPredigestClosure>,
+  pub reversion:     Option<ReversionClosure>,
   pub before_digest: Vec<BeforeDigestClosure>,
-  pub after_digest: Vec<DigestionClosure>,
+  pub after_digest:  Vec<DigestionClosure>,
 }
 impl Default for Parameter {
   fn default() -> Self {
     Parameter {
-      novalue: false,
-      semiverbatim: None,
-      optional: false,
-      name: arena::pin_static("parameter_default"),
-      spec: *EMPTY_SYM,
-      extra: Vec::new(),
-      inner: None,
-      reader: Rc::new(|_args, _extra| {
+      novalue:       false,
+      semiverbatim:  None,
+      optional:      false,
+      name:          arena::pin_static("parameter_default"),
+      spec:          *EMPTY_SYM,
+      extra:         Vec::new(),
+      inner:         None,
+      reader:        Rc::new(|_args, _extra| {
         Warn!(
           "Parameter",
           "mock_reader",
@@ -71,10 +71,10 @@ impl Default for Parameter {
         );
         Ok(ArgWrap::None)
       }),
-      predigest: None,
-      reversion: None,
+      predigest:     None,
+      reversion:     None,
       before_digest: Vec::new(),
-      after_digest: Vec::new(),
+      after_digest:  Vec::new(),
     }
   }
 }

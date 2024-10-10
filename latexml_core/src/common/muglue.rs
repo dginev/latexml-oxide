@@ -8,8 +8,8 @@ use std::fmt;
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct MuGlue {
-  pub skip: i64,
-  pub plus: Option<i64>,
+  pub skip:  i64,
+  pub plus:  Option<i64>,
   pub pfill: Option<FillCode>,
   pub minus: Option<i64>,
   pub mfill: Option<FillCode>,
