@@ -78,20 +78,22 @@ LoadDefinitions!({
     stomach::with_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
-        if box_in_list.get_property_bool("isKern") {
-          let width_stored = box_in_list.get_property("width").unwrap(); 
-          if let Stored::Dimension(ref width_d) = *width_stored {
-            return *width_d;
+        if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
+          if box_in_list.get_property_bool("isKern") {
+            let width_stored = box_in_list.get_property("width").unwrap(); 
+            if let Stored::Dimension(ref width_d) = *width_stored {
+              return *width_d;
+            } else {
+              panic!("Unexpected type of \"width\" value in State: {width_stored:?}");
+            }
           } else {
-            panic!("Unexpected type of \"width\" value in State: {width_stored:?}");
+            break;
           }
         }
       }
       Dimension::new(0)
     })
   });
-
-    
 
   //======================================================================
   // Moving Vertically
