@@ -225,14 +225,8 @@ impl Parameter {
           }
         } else {
           descriptor =
-            Parameter::check_reader_function(&arena::with(self.name, |name| s!("Read{name}"))).map(
-              |reader| {
-                Rc::new(Parameter {
-                  reader,
-                  ..Parameter::default()
-                })
-              },
-            );
+            Parameter::check_reader_function(&arena::with(self.name, |name| s!("Read{name}")))
+              .map(|reader| Rc::new(Parameter { reader, ..Parameter::default() }));
         }
       }
     }

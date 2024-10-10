@@ -563,11 +563,7 @@ impl Mouth {
     while let Some(token) = self.read_token() {
       tokens.push(token);
     }
-    while let Some(Token {
-      code: Catcode::SPACE,
-      ..
-    }) = tokens.last()
-    {
+    while let Some(Token { code: Catcode::SPACE, .. }) = tokens.last() {
       // Remove trailing space
       tokens.pop();
     }

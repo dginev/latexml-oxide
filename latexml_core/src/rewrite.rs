@@ -209,11 +209,7 @@ impl Rewrite {
     //     $pattern = $self->compile_regexp($pattern); }
     //   Debug("Compiled clause $oop=>" . ToString($opattern) . "  ==> $op=>" . ToString($pattern))
     //     if $LaTeXML::DEBUG{rewrite};
-    RewriteClause {
-      compiled: true,
-      op,
-      pattern,
-    }
+    RewriteClause { compiled: true, op, pattern }
   }
 
   pub fn invoke(&mut self, document: &mut Document, root: &Node) -> Result<()> {
@@ -252,12 +248,7 @@ impl Rewrite {
     mut clauses: VecDeque<&RewriteClause>,
   ) -> Result<()> {
     use RewriteOperator::*;
-    if let Some(RewriteClause {
-      compiled: _,
-      op,
-      pattern,
-    }) = clauses.pop_front()
-    {
+    if let Some(RewriteClause { compiled: _, op, pattern }) = clauses.pop_front() {
       match op {
         Select => {
           // my ($xpath, $nnodes, @wilds) = @$pattern;
