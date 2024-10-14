@@ -772,7 +772,7 @@ macro_rules! Expand {
   };
 }
 
-/// Return `tokens` with all partial expandsion
+// /// Return `tokens` with all partial expandsion
 // macro_rules! ExpandPartially {
 //   ($tokens:expr) => {
 //     do_expand_partially($tokens)?
