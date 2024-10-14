@@ -773,11 +773,12 @@ macro_rules! Expand {
 }
 
 /// Return `tokens` with all partial expandsion
-macro_rules! ExpandPartially {
-  ($tokens:expr) => {
-    do_expand_partially($tokens)?
-  };
-}
+// macro_rules! ExpandPartially {
+//   ($tokens:expr) => {
+//     do_expand_partially($tokens)?
+//   };
+// }
+
 /// Builds a representation of a single command sequence invoked on a
 /// `Vec<Token>` of its arguments.
 /// A leading string argument is interpreted as `T_CS`.
