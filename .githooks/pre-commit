@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# Ensure code quality checks run on latexml-oxide push
+#
+# The hook should exit with non-zero status after issuing an
+# appropriate message if it wants to stop the commit.
+#
+
+cargo +nightly fmt --all && cargo +nightly clippy
