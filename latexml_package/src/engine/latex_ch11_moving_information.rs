@@ -392,16 +392,16 @@ LoadDefinitions!({
   DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => "text");
 
   DefMacro!("\\cite[] Semiverbatim", sub[(post_opt, keys)] {
-    // let style = state::lookup_tokens("CITE_STYLE").unwrap_or_else(|| Tokens!());
+    // let style = state::lookup_tokens("CITE_STYLE").unwrap_or(NO_TOKENS);
     let open = state::lookup_tokens("CITE_OPEN");
-    let open = open.unwrap_or_else(|| Tokens!());
-    let close = state::lookup_tokens("CITE_CLOSE").unwrap_or_else(|| Tokens!());
+    let open = open.unwrap_or(NO_TOKENS);
+    let close = state::lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS);
     let mut post_tokens = match post_opt {
       Some(tks) => tks.unlist(),
       None => Vec::new()
     };
     if !post_tokens.is_empty() {
-      let ns = state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or_else(|| Tokens!());
+      let ns = state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS);
       let mut post_wrapped = ns.unlist();
       post_wrapped.push(T_SPACE!());
       post_wrapped.extend(post_tokens);
