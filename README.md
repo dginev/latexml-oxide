@@ -67,7 +67,15 @@ Requires Rust `nightly` v1.72, and newer.
     $ cargo run --release --bin latexml_oxide latexml_oxide/tests/hello/hello.tex
     ```
 
-### Docs
+### Development Tips
+
+To enable linting quality control via rustfmt and clippy, you can activate the inlcuded hooks via:
+```
+$ rustup component add rust-analyzer --toolchain nightly
+$ rustup component add rustfmt --toolchain nightly
+$ rustup component add clippy --toolchain nightly
+$ git config --local core.hooksPath .githooks/
+```
 
 To generate the project documentation locally, run:
 ```bash
