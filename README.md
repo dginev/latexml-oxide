@@ -27,6 +27,14 @@ Design goals:
 
 Requires Rust `nightly` v1.83, and newer.
 
+We still need the non-perl OS dependencies from [get LaTeXML](https://math.nist.gov/~BMiller/LaTeXML/get.html),
+but adapted for Rust bindings.
+
+Example for Ubuntu:
+```
+$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick
+```
+
 ### Sample use
 
 1. Make sure the tests pass first, via
@@ -58,3 +66,5 @@ To generate the project documentation locally, run:
 ```bash
 $ cargo doc --workspace --no-deps --open
 ```
+
+**IMPORTANT:** There is a compile-time plugin that collects the files in the test suite. This means that when adding a new test `[name].tex` and `[name].xml` pair of files, you may need to manually execute `cargo clean` to rediscover the entry.
