@@ -105,4 +105,16 @@ LoadDefinitions!( {
 
   // Actually we should be using section counter
   DefPrimitive!("\\@appendix", { start_appendices("section"); });
+
+  DefPrimitive!("\\tiny",         None, font => {size => 5 });
+  DefPrimitive!("\\scriptsize",   None, font => {size => 7 });
+  DefPrimitive!("\\footnotesize", None, font => {size => 8 });
+  DefPrimitive!("\\small",        None, font => {size => 9 });
+  DefPrimitive!("\\normalsize",   None, font => {size => 10 });
+  DefPrimitive!("\\large",        None, font => {size => 12 });
+  DefPrimitive!("\\Large",        None, font => {size => 14.4 });
+  DefPrimitive!("\\LARGE",        None, font => {size => 17.28 });
+  DefPrimitive!("\\huge",         None, font => {size => 20.74 });
+  DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
+
 });

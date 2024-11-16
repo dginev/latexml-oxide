@@ -44,9 +44,11 @@ LoadDefinitions!({
   // \everyjob         pt holds tokens which are inserted at the start of every job.
   // \deadcycles       iq is the number of times \output was called since the last \shipout.
   // \maxdeadcycles    pi is the maximum allowed value of \deadcycles before an error is generated.
-  DefPrimitive!("\\end", {
+  DefPrimitive!("\\lx@end@document", {
     gullet::flush();
   });
+  Let!("\\end", "\\lx@end@document");
+
   DefRegister!("\\everyjob", Tokens!());
   DefRegister!("\\deadcycles", Number!(0));
   DefRegister!("\\maxdeadcycles", Number!(0));

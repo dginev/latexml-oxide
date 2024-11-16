@@ -6,6 +6,12 @@ static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> =
 static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
 static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
 
+// TODO: Rethink the numeric juggling here to make sense in our low-level proglang.
+static TRACE_MACROS: u8 = 0x1;
+static TRACE_COMMANDS: u8 = 0x2;
+static _TRACE_ALL: u8 = 0x3; // MACROS | COMMANDS
+static _TRACE_PROFILE: u8 = 0x4;
+
 use crate::prelude::*;
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -229,22 +235,48 @@ LoadDefinitions!({
   //======================================================================
   // Tracing
   //----------------------------------------------------------------------
-  // \tracingcommands  pi if positive, writes commands to the log file.
-  // \tracinglostchars pi if positive, writes characters not in the current font to the log file
-  // . \tracingmacros    pi    if positive, writes to the log file when expanding macros and
-  // arguments . \tracingonline    pi    if positive, writes diagnostic output to the terminal as
-  // well as to the log file. \tracingoutput    pi    if positive, writes contents of shipped out
-  // boxes to the log file. \tracingpages     pi    if positive, writes the page-cost calculations
-  // to the log file. \tracingparagraphs pi   if positive, writes a summary of the line-breaking
-  // calculations to the  log     file. \tracingrestores  pi    if positive, writes save-stack
-  // details to the log file. \tracingstats     pi    if positive, writes memory usage statistics
-  // to the log file.
+  // \tracingcommands   pi if positive, writes commands to the log file.
+  //
+  // \tracinglostchars  pi if positive, writes characters not in the current font to the log file.
+  //
+  // \tracingmacros     pi if positive, writes to the log file when expanding macros and
+  //                       arguments .
+  //
+  // \tracingonline     pi if positive, writes diagnostic output to the terminal as
+  //                       well as to the log file.
+  //
+  // \tracingoutput     pi if positive, writes contents of shipped out
+  //                       boxes to the log file.
+  //
+  // \tracingpages      pi if positive, writes the page-cost calculations
+  //                       to the log file.
+  //
+  // \tracingparagraphs pi if positive, writes a summary of the line-breaking
+  //                       calculations to the  log file.
+  //
+  // \tracingrestores   pi if positive, writes save-stack
+  //                       details to the log file.
+  //
+  // \tracingstats      pi if positive, writes memory usage statistics to the log file.
+  //
+  AssignValue!("tracingmacros"   => Number!(0));
+  AssignValue!("tracingcommands" => Number!(0));
   DefRegister!("\\tracingmacros", Number!(0),
-    getter => { LookupNumber!("TRACINGMACROS") },
-    setter => sub[value,scope,_args] { AssignValue!("TRACINGMACROS" => value.value_of(), scope); });
+  getter => { LookupNumber!("tracingmacros") },
+  setter => sub[value,scope,_args] {
+    let v = value.value_of();
+    AssignValue!("tracingmacros" => v, scope);
+    let p : u8 = lookup_int("TRACING") as u8;
+    AssignValue!("TRACING" => if v > 0 { p | TRACE_MACROS  } else { p & !TRACE_MACROS });
+  });
   DefRegister!("\\tracingcommands", Number!(0),
-    getter => { LookupNumber!("TRACINGCOMMANDS") },
-    setter => sub[value,scope,_args] { AssignValue!("TRACINGCOMMANDS" => value.value_of(), scope);});
+  getter => { LookupNumber!("tracingcommands") },
+  setter => sub[value,scope,_args] {
+    let v = value.value_of();
+    AssignValue!("tracingcommands" => v, scope);
+    let p : u8 = lookup_int("TRACING") as u8;
+    AssignValue!("TRACING" => if v > 0 { p | TRACE_COMMANDS  } else { p & !TRACE_COMMANDS });
+  });
 
   DefRegister!("\\tracingonline", Number!(0));
   DefRegister!("\\tracingstats", Number!(0));

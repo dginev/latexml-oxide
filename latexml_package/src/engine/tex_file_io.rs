@@ -114,7 +114,8 @@ LoadDefinitions!({
   DefPrimitive!("\\closeout Number", sub[(port)] {
     AssignValue!(&s!("output_file:{}",port), false, Some(Scope::Global));
   });
-  DefPrimitive!("\\write Number {}", sub[(port, tokens)] {
+  DefPrimitive!("\\write Number {}", sub[(port_n, tokens)] {
+    let port = port_n.value_of();
     let handle = with_value(&s!("output_file:{}", port), |val_opt|
     if let Some(filename) = val_opt {
        s!("{}_contents",filename)
@@ -124,8 +125,10 @@ LoadDefinitions!({
       contents.push_str(&Expand!(tokens).untex());
       contents.push('\n');
       AssignValue!(&handle => contents, Some(Scope::Global));
+    } else if port < 0 {
+      NoteLog!(Expand!(tokens).untex());
     } else {
-      println_stderr!("{}", Expand!(tokens).untex());
+      Note!(Expand!(tokens).untex());
     }
   });
 

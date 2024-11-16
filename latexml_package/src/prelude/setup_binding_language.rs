@@ -409,6 +409,11 @@ macro_rules! DefPrimitive {
     let (cs, params) = parse_prototype!($proto);
     def_primitive(cs, params, $replacement_closure, PrimitiveOptions::default())?;
   }};
+  // Case: a literal prototype mapped to nothing, will simply eat args and drop.
+  ($proto:literal) => {{
+    let (cs, params_opt) : (Token,Option<Parameters>) = compile_prototype!($proto);
+    def_primitive(cs, params_opt, None, PrimitiveOptions::default())?;
+  }};
 }
 
 #[macro_export]

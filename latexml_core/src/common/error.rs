@@ -260,6 +260,24 @@ macro_rules! generate_message {
   };
 }
 
+#[macro_export]
+macro_rules! Note {
+  ($input:expr) => {
+    // TODO: Only print to log file AND stderr
+    let msg = $input;
+    println_stderr!("{msg}");
+  };
+}
+
+#[macro_export]
+macro_rules! NoteLog {
+  ($input:expr) => {
+    // TODO: Only print to the log file
+    let msg = $input;
+    println_stderr!("{msg}");
+  };
+}
+
 pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]

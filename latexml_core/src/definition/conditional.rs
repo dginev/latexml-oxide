@@ -190,7 +190,7 @@ impl Conditional {
     let args = self.read_arguments()?;
 
     state::get_ifframe().unwrap().borrow_mut().parsing = false;
-    let tracing = state::lookup_bool("TRACINGCOMMANDS");
+    let tracing = state::lookup_bool("tracingcommands");
     //   print STDERR '{' . $self->tracingCSName . "} [#$ifid]\n" if $tracing;
     //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     if let Some(ref test) = self.test {
@@ -356,7 +356,7 @@ impl Conditional {
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
         // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"
-        //       if $state->lookupValue('TRACINGCOMMANDS');
+        //       if $state->lookupValue('tracingcommands');
         state::expire_ifframe();
         Ok(Tokens!())
       }
@@ -395,7 +395,7 @@ impl Conditional {
 
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
-        // "]\n"       if $state->lookupValue('TRACINGCOMMANDS');
+        // "]\n"       if $state->lookupValue('tracingcommands');
         expire_ifframe();
         Ok(Tokens!())
       }

@@ -252,7 +252,7 @@ impl Definition for MathPrimitive {
   fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     // Info!("MathPrimitive", "invoke", stomach, "invoke for {:?}", self.cs);
     // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
-    // my $tracing = $state->lookupValue('TRACINGCOMMANDS');
+    // my $tracing = $state->lookupValue('tracingcommands');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
     // print STDERR '{' . $self->tracingCSName . "}\n" if $tracing;
     let mut result: Vec<Digested> = self.execute_before_digest()?;

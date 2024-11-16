@@ -38,7 +38,7 @@ LoadDefinitions!({
     }
   }
   DefRegister!("\\magnification", Number!(1000));
-  Let!("\\bye", "\\end");
+  Let!("\\bye", "\\lx@end@document");
 
   // Most of these are ignored, but...
   DefMacro!(
@@ -470,16 +470,6 @@ LoadDefinitions!({
 
   // Ideally, we should set these sizes from class files
   AssignValue!("NOMINAL_FONT_SIZE", 10);
-  DefPrimitive!("\\tiny",         None, font => {size => 5 });
-  DefPrimitive!("\\scriptsize",   None, font => {size => 7 });
-  DefPrimitive!("\\footnotesize", None, font => {size => 8 });
-  DefPrimitive!("\\small",        None, font => {size => 9 });
-  DefPrimitive!("\\normalsize",   None, font => {size => 10 });
-  DefPrimitive!("\\large",        None, font => {size => 12 });
-  DefPrimitive!("\\Large",        None, font => {size => 14.4 });
-  DefPrimitive!("\\LARGE",        None, font => {size => 17.28 });
-  DefPrimitive!("\\huge",         None, font => {size => 20.74 });
-  DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
 
   DefPrimitive!("\\mit", None, require_math => true, font => {family => "italic"});
 
@@ -632,7 +622,7 @@ LoadDefinitions!({
   DefMacro!("\\slash", "/");
   DefPrimitive!("\\filbreak", None);
   DefMacro!("\\goodbreak", "\\par");
-  DefMacro!("\\eject", "\\par\\LTX@newpage");
+  DefMacro!("\\eject", "\\par\\lx@newpage");
   Let!("\\newpage", "\\eject");
 
   DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>",
@@ -640,7 +630,7 @@ LoadDefinitions!({
     after_assignment();
     Ok(Vec::new())
   });
-  DefMacro!("\\supereject", "\\par\\LTX@newpage");
+  DefMacro!("\\supereject", "\\par\\lx@newpage");
   DefPrimitive!("\\removelastskip", None);
   DefMacro!("\\smallbreak", "\\par");
   DefMacro!("\\medbreak", "\\par");
@@ -1400,20 +1390,6 @@ LoadDefinitions!({
 
   // Ah, since \ldots can appear in text and math....
   DefMacro!("\\ldots", "\\lx@ldots");
-  DefConstructor!("\\lx@ldots",
-    "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
-    sizer      => "\u{2026}",
-    reversion  => "\\ldots",
-    properties => {
-      if lookup_bool("IN_MATH") {
-        let new_font = lookup_font().unwrap().merge(
-          fontmap!(family => "serif", series => "medium", shape => "upright")
-          .specialize("\u{2026}"));
-        Ok(stored_map!("font" => new_font)) // Since not DefMath!
-      } else {
-        Ok(SymHashMap::default())
-      }
-  });
   DefConstructor!(
     "\\vdots",
     "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\u{22EE}</ltx:XMTok>)(\u{22EE})"
