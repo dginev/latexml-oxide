@@ -1,254 +1,254 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `defi_opts` macro in crate `latexml_package`."><title>defi_opts in latexml_package - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (f7273e004 2024-11-12)" data-channel="nightly" data-search-js="search-853ef39b.js" data-settings-js="settings-0f613d39.js" ><script src="../static.files/storage-59e33391.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc macro"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../latexml_package/index.html">latexml_<wbr>package</a><span class="version">0.3.2</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><span class="rustdoc-breadcrumbs"><a href="index.html">latexml_package</a></span><h1>Macro <span class="macro">defi_opts</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/latexml_package/prelude/setup_binding_language.rs.html#1640-2270">Source</a> </span></div><pre class="rust item-decl"><span class="macro">macro_rules!</span> defi_opts {
-    (@munch ($(,)<span class="question-mark">?</span>) -&gt; {<span class="macro-nonterminal">$kind</span>:ident,}) =&gt; { ... };
-    (@munch ($(,)<span class="question-mark">?</span>) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$id</span>:ident @ <span class="macro-nonterminal">$body</span>:expr])+ } ) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>reversion $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub[<span class="macro-nonterminal">$whatsit</span>:ident, <span class="macro-nonterminal">$args</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>reversion $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">?
-    </span>sub[<span class="macro-nonterminal">$arg</span>:ident, <span class="macro-nonterminal">$inner</span>:ident, <span class="macro-nonterminal">$extra</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>reversion $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>$(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>reversion $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>reversion $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>sizer $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub[<span class="macro-nonterminal">$whatsit_arg</span>:ident]
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>) -&gt;
-  {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>sizer $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>) -&gt;
-  {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>sizer $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>sizer $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>select $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>select $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>select_count $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>select_count $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>replace $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>replace $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>xpath $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>xpath $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$tokens</span>:expr)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>mode $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$literal</span>:literal $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>alias $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$literal</span>:literal $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>scope $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$scope</span>:expr)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>scope $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$scope</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>font $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub [ <span class="macro-nonterminal">$font_whatsit</span>:ident]
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>font $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>{ $(<span class="macro-nonterminal">$fkey</span>:ident =&gt; <span class="macro-nonterminal">$fvalue</span>:literal),* } $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>font $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>) -&gt;
-  {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>font $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$props</span>:ident $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>properties $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>properties $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">?
-      </span>sub[<span class="macro-nonterminal">$args</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>properties $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$var</span>:ident $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>before_digest_end $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>before_digest_end $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>before_digest $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>before_digest $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_digest $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_digest $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_digest_begin $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_digest_begin $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_digest_body $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_digest_body $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>before_construct $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>before_construct $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_construct $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_construct $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_construct $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$var</span>:ident $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>getter $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>getter $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>setter $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>setter $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_open $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_open $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_open_late $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_open_late $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_close $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_close $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_close_late $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>after_close_late $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>auto_open $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$auto</span>:literal $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>auto_close $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$auto</span>:literal $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>predigest $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span>sub $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>predigest $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>semiverbatim $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="prelude-val">Some</span>(<span class="macro-nonterminal">$value</span>:expr))
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>semiverbatim $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="prelude-val">None</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>semiverbatim $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$value</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>role $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$literal</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>role $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$literal</span>:literal)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>meaning $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$literal</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>meaning $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$literal</span>:literal)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>name $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$literal</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>name $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$literal</span>:literal)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>address $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$idval</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>address $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$idval</span>:expr)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>allocate $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$idval</span>:expr, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>allocate $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$idval</span>:expr)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>stretchy $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>stretchy $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>operator_role $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>operator_role $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
-  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>operator_stretchy $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>operator_stretchy $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
-  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>scriptpos $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span>scriptpos $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
-  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span><span class="macro-nonterminal">$id</span>:ident $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$lit</span>:literal $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@munch ( $(,)<span class="question-mark">? </span><span class="macro-nonterminal">$id</span>:ident $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@before_digest_end (<span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-                  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@before_digest ($(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-                  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@before_digest ($(sub)<span class="question-mark">? </span><span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident,
-    $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `defi_opts` macro in crate `latexml_package`."><title>defi_opts in latexml_package - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (917a50a03 2024-11-15)" data-channel="nightly" data-search-js="search-b6b1fcd2.js" data-settings-js="settings-0f613d39.js" ><script src="../static.files/storage-59e33391.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc macro"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../latexml_package/index.html">latexml_<wbr>package</a><span class="version">0.3.2</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><span class="rustdoc-breadcrumbs"><a href="index.html">latexml_package</a></span><h1>Macro <span class="macro">defi_opts</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/latexml_package/prelude/setup_binding_language.rs.html#1645-2275">Source</a> </span></div><pre class="rust item-decl"><code>macro_rules! defi_opts {
+    (@munch ($(,)?) -&gt; {$kind:ident,}) =&gt; { ... };
+    (@munch ($(,)?) -&gt; {$kind:ident, $([$id:ident @ $body:expr])+ } ) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? sub[$whatsit:ident, $args:ident] $body:block $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)?
+    sub[$arg:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? $(sub)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? sizer $(:)?$(=&gt;)? sub[$whatsit_arg:ident]
+    $body:block $($next:tt)*) -&gt;
+  {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? sizer $(:)?$(=&gt;)? $body:block $($next:tt)*) -&gt;
+  {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? sizer $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? sizer $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? select $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? select $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? select_count $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? select_count $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? replace $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? replace $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? xpath $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? xpath $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? mode $(:)?$(=&gt;)? $literal:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? alias $(:)?$(=&gt;)? $literal:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? scope $(:)?$(=&gt;)? $scope:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? scope $(:)?$(=&gt;)? $scope:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? font $(:)?$(=&gt;)? sub [ $font_whatsit:ident]
+    $body:block $($next:tt)*) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? font $(:)?$(=&gt;)? { $($fkey:ident =&gt; $fvalue:literal),* } $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? font $(:)?$(=&gt;)? $body:block $($next:tt)*) -&gt;
+  {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? font $(:)?$(=&gt;)? $props:ident $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? properties $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? properties $(:)?$(=&gt;)?
+      sub[$args:ident] $body:block $($next:tt)*)
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? properties $(:)?$(=&gt;)? $var:ident $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_digest_end $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_digest_end $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_digest $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_digest $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest_begin $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest_begin $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest_body $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest_body $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_construct $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_construct $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_construct $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_construct $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_construct $(:)?$(=&gt;)? $var:ident $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? getter $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? getter $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? setter $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? setter $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_open $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_open $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_open_late $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_open_late $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_close $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_close $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_close_late $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_close_late $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? auto_open $(:)?$(=&gt;)? $auto:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? auto_close $(:)?$(=&gt;)? $auto:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? predigest $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? predigest $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? semiverbatim $(:)?$(=&gt;)? Some($value:expr))
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? semiverbatim $(:)?$(=&gt;)? None)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? semiverbatim $(:)?$(=&gt;)? $value:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? role $(:)?$(=&gt;)? $literal:literal, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? role $(:)?$(=&gt;)? $literal:literal)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? meaning $(:)?$(=&gt;)? $literal:literal, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? meaning $(:)?$(=&gt;)? $literal:literal)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? name $(:)?$(=&gt;)? $literal:literal, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? name $(:)?$(=&gt;)? $literal:literal)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? address $(:)?$(=&gt;)? $idval:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? address $(:)?$(=&gt;)? $idval:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? allocate $(:)?$(=&gt;)? $idval:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? allocate $(:)?$(=&gt;)? $idval:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? stretchy $(:)?$(=&gt;)? $flag:literal, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? stretchy $(:)?$(=&gt;)? $flag:literal)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? operator_role $(:)?$(=&gt;)? $flag:literal, $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? operator_role $(:)?$(=&gt;)? $flag:literal)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? operator_stretchy $(:)?$(=&gt;)? $flag:literal, $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? operator_stretchy $(:)?$(=&gt;)? $flag:literal)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? scriptpos $(:)?$(=&gt;)? $flag:literal, $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? scriptpos $(:)?$(=&gt;)? $flag:literal)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? $id:ident $(:)?$(=&gt;)? $lit:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? $id:ident $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_digest_end ($body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_digest ($(sub)? $body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_digest ($(sub)? $body:block $($next:tt)* ) -&gt; {$kind:ident,
+    $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_digest (
-    sub[<span class="macro-nonterminal">$whatsit</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_digest (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_digest_begin (
-    sub[<span class="macro-nonterminal">$whatsit</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_digest_begin (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_digest_body (
-    sub[<span class="macro-nonterminal">$whatsit</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_digest_body (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@before_construct (
-    sub[<span class="macro-nonterminal">$doc</span>:ident, <span class="macro-nonterminal">$whatsit</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$doc:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@before_construct (
-    sub[<span class="macro-nonterminal">$doc</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$doc:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@before_construct (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_construct (
-    sub[<span class="macro-nonterminal">$doc</span>:ident, <span class="macro-nonterminal">$whatsit</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$doc:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_construct (
-    sub[<span class="macro-nonterminal">$doc</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$doc:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_construct (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@getter (
-    sub[<span class="macro-nonterminal">$args</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$args:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@getter (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@setter (
-    sub[<span class="macro-nonterminal">$value</span>:ident, <span class="macro-nonterminal">$scope</span>:ident, <span class="macro-nonterminal">$args</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$value:ident, $scope:ident, $args:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@setter (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_open (
-    sub[<span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$node</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$document:ident, $node:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_open (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_open_late (
-    sub[<span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$node</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$document:ident, $node:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_open_late (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_close (
-    sub[<span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$node</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-    -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$document:ident, $node:ident] $body:block $($next:tt)* )
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_close (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_close_late (
-    sub[<span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$node</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$document:ident, $node:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@after_close_late (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@replace (<span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-                  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@replace (sub [<span class="macro-nonterminal">$document_arg</span>:ident, <span class="macro-nonterminal">$node_arg</span>:ident]
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-                  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@reversion (sub [<span class="macro-nonterminal">$whatsit</span>:ident, <span class="macro-nonterminal">$args</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-                  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@reversion (sub [<span class="macro-nonterminal">$args</span>:ident, <span class="macro-nonterminal">$inner</span>:ident, <span class="macro-nonterminal">$extra</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-                  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-    (@reversion (sub <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@replace ($body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@replace (sub [$document_arg:ident, $node_arg:ident]
+    $body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@reversion (sub [$whatsit:ident, $args:ident] $body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@reversion (sub [$args:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@reversion (sub $body:block $($next:tt)*)
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@predigest (
-    sub[<span class="macro-nonterminal">$whatsit</span>:ident] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* )
-      -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
+    sub[$whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
     (@predigest (
-    <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; { ... };
-}</pre></section></div></main></body></html>
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+}</code></pre></section></div></main></body></html>

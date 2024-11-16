@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/plain.rs`."><title>plain.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (f7273e004 2024-11-12)" data-channel="nightly" data-search-js="search-853ef39b.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>plain.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/plain.rs`."><title>plain.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (917a50a03 2024-11-15)" data-channel="nightly" data-search-js="search-b6b1fcd2.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>plain.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -1957,31 +1957,7 @@
 <a href="#1956" id="1956">1956</a>
 <a href="#1957" id="1957">1957</a>
 <a href="#1958" id="1958">1958</a>
-<a href="#1959" id="1959">1959</a>
-<a href="#1960" id="1960">1960</a>
-<a href="#1961" id="1961">1961</a>
-<a href="#1962" id="1962">1962</a>
-<a href="#1963" id="1963">1963</a>
-<a href="#1964" id="1964">1964</a>
-<a href="#1965" id="1965">1965</a>
-<a href="#1966" id="1966">1966</a>
-<a href="#1967" id="1967">1967</a>
-<a href="#1968" id="1968">1968</a>
-<a href="#1969" id="1969">1969</a>
-<a href="#1970" id="1970">1970</a>
-<a href="#1971" id="1971">1971</a>
-<a href="#1972" id="1972">1972</a>
-<a href="#1973" id="1973">1973</a>
-<a href="#1974" id="1974">1974</a>
-<a href="#1975" id="1975">1975</a>
-<a href="#1976" id="1976">1976</a>
-<a href="#1977" id="1977">1977</a>
-<a href="#1978" id="1978">1978</a>
-<a href="#1979" id="1979">1979</a>
-<a href="#1980" id="1980">1980</a>
-<a href="#1981" id="1981">1981</a>
-<a href="#1982" id="1982">1982</a>
-<a href="#1983" id="1983">1983</a></pre></div><pre class="rust"><code><span class="doccomment">//! plain TeX
+<a href="#1959" id="1959">1959</a></pre></div><pre class="rust"><code><span class="doccomment">//! plain TeX
 //!
 //! Core TeX Implementation for LaTeXML
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -2021,7 +1997,7 @@
     }
   }
   <span class="macro">DefRegister!</span>(<span class="string">"\\magnification"</span>, <span class="macro">Number!</span>(<span class="number">1000</span>));
-  <span class="macro">Let!</span>(<span class="string">"\\bye"</span>, <span class="string">"\\end"</span>);
+  <span class="macro">Let!</span>(<span class="string">"\\bye"</span>, <span class="string">"\\lx@end@document"</span>);
 
   <span class="comment">// Most of these are ignored, but...
   </span><span class="macro">DefMacro!</span>(
@@ -2453,16 +2429,6 @@
 
   <span class="comment">// Ideally, we should set these sizes from class files
   </span><span class="macro">AssignValue!</span>(<span class="string">"NOMINAL_FONT_SIZE"</span>, <span class="number">10</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\tiny"</span>,         <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">5 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\scriptsize"</span>,   <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">7 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\footnotesize"</span>, <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">8 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\small"</span>,        <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">9 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\normalsize"</span>,   <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">10 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\large"</span>,        <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">12 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\Large"</span>,        <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">14.4 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\LARGE"</span>,        <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">17.28 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\huge"</span>,         <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">20.74 </span>});
-  <span class="macro">DefPrimitive!</span>(<span class="string">"\\Huge"</span>,         <span class="prelude-val">None</span>, font =&gt; {size =&gt; <span class="number">29.8 </span>});
 
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\mit"</span>, <span class="prelude-val">None</span>, require_math =&gt; <span class="bool-val">true</span>, font =&gt; {family =&gt; <span class="string">"italic"</span>});
 
@@ -2615,7 +2581,7 @@
   <span class="macro">DefMacro!</span>(<span class="string">"\\slash"</span>, <span class="string">"/"</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\filbreak"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\goodbreak"</span>, <span class="string">"\\par"</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">"\\eject"</span>, <span class="string">"\\par\\LTX@newpage"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\eject"</span>, <span class="string">"\\par\\lx@newpage"</span>);
   <span class="macro">Let!</span>(<span class="string">"\\newpage"</span>, <span class="string">"\\eject"</span>);
 
   <span class="macro">DefConstructor!</span>(<span class="string">"\\LTX@newpage"</span>, <span class="string">"^&lt;ltx:pagination role='newpage'/&gt;"</span>,
@@ -2623,7 +2589,7 @@
     after_assignment();
     <span class="prelude-val">Ok</span>(Vec::new())
   });
-  <span class="macro">DefMacro!</span>(<span class="string">"\\supereject"</span>, <span class="string">"\\par\\LTX@newpage"</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">"\\supereject"</span>, <span class="string">"\\par\\lx@newpage"</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">"\\removelastskip"</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\smallbreak"</span>, <span class="string">"\\par"</span>);
   <span class="macro">DefMacro!</span>(<span class="string">"\\medbreak"</span>, <span class="string">"\\par"</span>);
@@ -3383,20 +3349,6 @@
 
   // Ah, since \ldots can appear in text and math....
   </span><span class="macro">DefMacro!</span>(<span class="string">"\\ldots"</span>, <span class="string">"\\lx@ldots"</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@ldots"</span>,
-    <span class="string">"?#isMath(&lt;ltx:XMTok name='ldots' font='#font' role='ID'&gt;\u{2026}&lt;/ltx:XMTok&gt;)(\u{2026})"</span>,
-    sizer      =&gt; <span class="string">"\u{2026}"</span>,
-    reversion  =&gt; <span class="string">"\\ldots"</span>,
-    properties =&gt; {
-      <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
-        <span class="kw">let </span>new_font = lookup_font().unwrap().merge(
-          <span class="macro">fontmap!</span>(family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>)
-          .specialize(<span class="string">"\u{2026}"</span>));
-        <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"font" </span>=&gt; new_font)) <span class="comment">// Since not DefMath!
-      </span>} <span class="kw">else </span>{
-        <span class="prelude-val">Ok</span>(SymHashMap::default())
-      }
-  });
   <span class="macro">DefConstructor!</span>(
     <span class="string">"\\vdots"</span>,
     <span class="string">"?#isMath(&lt;ltx:XMTok name='vdots' font='#font' role='ID'&gt;\u{22EE}&lt;/ltx:XMTok&gt;)(\u{22EE})"

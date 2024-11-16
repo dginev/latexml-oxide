@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/base_xmath.rs`."><title>base_xmath.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (f7273e004 2024-11-12)" data-channel="nightly" data-search-js="search-853ef39b.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>base_xmath.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/base_xmath.rs`."><title>base_xmath.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (917a50a03 2024-11-15)" data-channel="nightly" data-search-js="search-b6b1fcd2.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>base_xmath.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -816,7 +816,21 @@
 <a href="#815" id="815">815</a>
 <a href="#816" id="816">816</a>
 <a href="#817" id="817">817</a>
-<a href="#818" id="818">818</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base XMath
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a></pre></div><pre class="rust"><code><span class="doccomment">//! Base XMath
 //!
 //! Core TeX Implementation for LaTeXML
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -1248,7 +1262,21 @@
   //     my ($kv,      $body)    = $whatsit-&gt;getArgs;
   //     $whatsit-&gt;setProperties($kv-&gt;getPairs); });
 
-  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  </span><span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@ldots"</span>), <span class="prelude-val">None</span>,
+  <span class="string">"?#isMath(&lt;ltx:XMTok name='ldots' font='#font' role='ID'&gt;\u{2026}&lt;/ltx:XMTok&gt;)(\u{2026})"</span>,
+  sizer      =&gt; <span class="string">"\u{2026}"</span>,
+  reversion  =&gt; <span class="string">"\\ldots"</span>,
+  properties =&gt; {
+    <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"font" </span>=&gt; lookup_font().unwrap().merge(
+        <span class="macro">fontmap!</span>(family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>)
+          .specialize(<span class="string">"\u{2026}"</span>))))
+    } <span class="kw">else </span>{
+          <span class="comment">// Since not DefMath!
+          // And so can \vdots
+      </span><span class="prelude-val">Ok</span>(SymHashMap::default())
+    }});
+  <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Support for rewrite rules
   //**********************************************************************
   </span><span class="macro">DefConstructor!</span>(<span class="string">"\\WildCard[]"</span>, <span class="string">"&lt;_WildCard_&gt;#1&lt;/_WildCard_&gt;"</span>);
