@@ -430,6 +430,20 @@ LoadDefinitions!({
   //     my ($kv,      $body)    = $whatsit->getArgs;
   //     $whatsit->setProperties($kv->getPairs); });
 
+  DefConstructor!(T_CS!("\\lx@ldots"), None,
+  "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
+  sizer      => "\u{2026}",
+  reversion  => "\\ldots",
+  properties => {
+    if lookup_bool("IN_MATH") {
+      Ok(stored_map!("font" => lookup_font().unwrap().merge(
+        fontmap!(family => "serif", series => "medium", shape => "upright")
+          .specialize("\u{2026}"))))
+    } else {
+          // Since not DefMath!
+          // And so can \vdots
+      Ok(SymHashMap::default())
+    }});
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Support for rewrite rules
   //**********************************************************************

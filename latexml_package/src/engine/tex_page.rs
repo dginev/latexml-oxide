@@ -39,4 +39,8 @@ LoadDefinitions!({
   DefRegister!("\\pagefillstretch", Dimension::new(0));
   DefRegister!("\\pagefilllstretch", Dimension::new(0));
   DefRegister!("\\pageshrink", Dimension::new(0));
+
+  //======================================================================
+  // Usable for things line \clearpage, etc.
+  DefConstructor!("\\lx@newpage", "^<ltx:pagination role='newpage'/>");
 });

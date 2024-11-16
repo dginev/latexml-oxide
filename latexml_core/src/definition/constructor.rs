@@ -224,7 +224,7 @@ impl Definition for Constructor {
     // Call any `Before' code.
     // TODO: profiling / tracing
     // let profiled = state!().lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
-    // let tracing = state!().lookup_value("TRACINGCOMMANDS");
+    // let tracing = state!().lookup_value("tracingcommands");
     // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
     let mut result = self.execute_before_digest()?;

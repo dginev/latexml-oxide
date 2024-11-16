@@ -603,6 +603,11 @@ impl From<usize> for Stored {
   fn from(value: usize) -> Self { Stored::Int(value as i64) }
 }
 
+// TODO: Should we add a lot more numeric nuance to the Store ?
+impl From<u8> for Stored {
+  fn from(value: u8) -> Self { Stored::Int(value as i64) }
+}
+
 impl From<i32> for Stored {
   fn from(value: i32) -> Self { Stored::Int(value as i64) }
 }
