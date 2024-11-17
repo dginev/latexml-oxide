@@ -2128,8 +2128,8 @@ pub fn take_pending_resources() -> Vec<Resource> {
 }
 pub fn reset_pending_resources() { state_mut!().pending_resources = Vec::new(); }
 pub fn get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -> Option<SymStr> {
-  match state!().indirect_model.as_ref().unwrap().get_sym(&tag) {
-    Some(sub_m) => sub_m.get_sym(&childtag).copied(),
+  match state!().indirect_model.as_ref().unwrap().get_sym(tag) {
+    Some(sub_m) => sub_m.get_sym(childtag).copied(),
     None => None,
   }
 }
@@ -2185,7 +2185,7 @@ where FnR: FnOnce(Option<&Stored>) -> R {
   caller(match state!().value.get(&map) {
     None => None,
     Some(map_vec) => match map_vec.front() {
-      Some(Stored::HashStored(h)) => h.get_sym(&key),
+      Some(Stored::HashStored(h)) => h.get_sym(key),
       _ => None,
     },
   })
