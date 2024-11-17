@@ -481,7 +481,7 @@ impl PartialEq for Stored {
         if let HashStored(hs2) = other {
           hs.len() == hs2.len()
             && hs.iter().all(|(key, value)| {
-              if let Some(item2) = hs2.get_sym(key) {
+              if let Some(item2) = hs2.get_sym(*key) {
                 value == item2
               } else {
                 false

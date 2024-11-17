@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use rustc_hash::FxHashSet as HashSet;
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::BufRead;
@@ -42,18 +42,18 @@ static DEFAULT_TAG_FRAME: Lazy<TagFrame> = Lazy::new(TagFrame::default);
 pub struct Model {
   pub schema:                      Option<Relaxng>,
   pub schema_data:                 Option<Vec<SymStr>>,
-  pub schema_class:                HashMap<SymStr, HashSet<SymStr>>,
-  pub code_namespace_prefixes:     HashMap<SymStr, SymStr>,
-  pub code_namespaces:             HashMap<SymStr, SymStr>,
-  pub document_namespace_prefixes: HashMap<SymStr, SymStr>,
-  pub document_namespaces:         HashMap<SymStr, SymStr>,
-  // doctype_namespaces: HashMap<SymStr, SymStr>,
+  pub schema_class:                SymHashMap<HashSet<SymStr>>,
+  pub code_namespace_prefixes:     SymHashMap<SymStr>,
+  pub code_namespaces:             SymHashMap<SymStr>,
+  pub document_namespace_prefixes: SymHashMap<SymStr>,
+  pub document_namespaces:         SymHashMap<SymStr>,
+  // doctype_namespaces: SymHashMap<SymStr>,
   // namespace_errors: usize,
   pub permissive:                  bool,
   pub no_compiled:                 bool,
   pub debug_mode:                  bool,
   pub namespace_errors:            u8,
-  pub tagprop:                     HashMap<SymStr, TagFrame>,
+  pub tagprop:                     SymHashMap<TagFrame>,
 }
 
 #[thread_local]
@@ -105,15 +105,14 @@ impl Model {
     let namespace_opt_checked = namespace_opt.filter(|val| *val != *EMPTY_SYM);
     match namespace_opt_checked {
       Some(namespace) => {
-        self.code_namespace_prefixes.insert(namespace, codeprefix);
-        self.code_namespaces.insert(codeprefix, namespace);
+        self.code_namespace_prefixes.insert_sym(namespace, codeprefix);
+        self.code_namespaces.insert_sym(codeprefix, namespace);
       },
       None => {
-        match self.code_namespaces.get(&codeprefix) {
-          Some(prev) => self.code_namespace_prefixes.remove(prev),
-          None => None,
+        if let Some(prev) = self.code_namespaces.get_sym(codeprefix) {
+          self.code_namespace_prefixes.remove_sym(*prev);
         };
-        self.code_namespaces.remove(&codeprefix);
+        self.code_namespaces.remove_sym(codeprefix);
       },
     };
   }
@@ -138,14 +137,14 @@ impl Model {
         };
         self
           .document_namespace_prefixes
-          .insert(regnamespace, docprefix_sym);
-        self.document_namespaces.insert(docprefix_sym, ns_sym);
+          .insert_sym(regnamespace, docprefix_sym);
+        self.document_namespaces.insert_sym(docprefix_sym, ns_sym);
       },
       None => {
-        if let Some(prev) = self.document_namespaces.get(&docprefix_sym) {
-          self.document_namespace_prefixes.remove(prev);
+        if let Some(prev) = self.document_namespaces.get_sym(docprefix_sym) {
+          self.document_namespace_prefixes.remove_sym(*prev);
         };
-        self.document_namespaces.remove(&docprefix_sym);
+        self.document_namespaces.remove_sym(docprefix_sym);
       },
     };
   }
@@ -188,7 +187,7 @@ impl Model {
     note_end(&s!("Loading compiled schema {path}\n"));
   }
   pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
-    let frame = self.tagprop.entry(arena::pin(tag)).or_default();
+    let frame = self.tagprop.entry(tag).or_default();
 
     for element in elements {
       frame.model.insert(arena::pin(element));
@@ -207,7 +206,7 @@ impl Model {
   // }
 
   pub fn add_tag_attribute(&mut self, tag: &str, attributes: Vec<&str>) {
-    let frame = self.tagprop.entry(arena::pin(tag)).or_default();
+    let frame = self.tagprop.entry(tag).or_default();
 
     for attribute in attributes {
       frame.attributes.insert(arena::pin(attribute));
@@ -215,13 +214,13 @@ impl Model {
   }
 
   pub fn set_schema_class(&mut self, classname: &str, content: HashSet<SymStr>) {
-    self.schema_class.insert(arena::pin(classname), content);
+    self.schema_class.insert(classname, content);
   }
   pub fn describe_model(&self) {}
   fn load_internal_extensions(&mut self) {
     if !self
       .tagprop
-      .contains_key(&arena::pin_static("ltx:_CaptureBlock_"))
+      .contains_key("ltx:_CaptureBlock_")
     {
       // Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block, ltx:para,
       self.synthesize_element("ltx:_CaptureBlock_", &[
@@ -232,7 +231,7 @@ impl Model {
       ]);
       let cb_entry = self
         .tagprop
-        .entry(arena::pin_static("ltx:_CaptureBlock_"))
+        .entry("ltx:_CaptureBlock_")
         .or_default();
       cb_entry.model.insert(arena::pin_static("svg:g"));
       cb_entry
@@ -246,11 +245,11 @@ impl Model {
     let mut to_add_in_model = Vec::new();
     let mut to_add_in_attrs = Vec::new();
     for other in others {
-      if let Some(content) = self.schema_class.get(&arena::pin(other)) {
+      if let Some(content) = self.schema_class.get(other) {
         for child in content {
           to_add_in_model.push(*child);
         }
-      } else if let Some(entry) = self.tagprop.get(&arena::pin(other)) {
+      } else if let Some(entry) = self.tagprop.get(other) {
         for child in &entry.model {
           to_add_in_model.push(*child);
         }
@@ -259,7 +258,7 @@ impl Model {
         }
       }
     }
-    let capture = self.tagprop.entry(arena::pin(tag)).or_default();
+    let capture = self.tagprop.entry(tag).or_default();
     for child in to_add_in_model {
       capture.model.insert(child);
     }
@@ -374,14 +373,14 @@ pub fn get_document_namespace_prefix(
   let mut docprefix = if !forattribute {
     model!()
       .document_namespace_prefixes
-      .get(&arena::pin(s!("DEFAULT#{namespace}")))
+      .get(&s!("DEFAULT#{namespace}"))
       .copied()
   } else {
     None
   };
   let ns_sym = arena::pin(namespace);
   if docprefix.is_none() {
-    docprefix = model!().document_namespace_prefixes.get(&ns_sym).copied();
+    docprefix = model!().document_namespace_prefixes.get_sym(ns_sym).copied();
   }
 
   if docprefix.is_none() && !probe {
@@ -416,7 +415,7 @@ pub fn get_document_namespace(docprefix: &str, probe: bool) -> Option<String> {
   } else {
     arena::pin(docprefix)
   };
-  let ns_str = match model!().document_namespaces.get(&docprefix_sym) {
+  let ns_str = match model!().document_namespaces.get_sym(docprefix_sym) {
     None => String::new(),
     Some(sym) => arena::with(*sym, |s| {
       if s.starts_with("DEFAULT#") {
@@ -467,13 +466,13 @@ pub fn get_namespace_prefix(namespace: &str, _forattribute: bool, probe: bool) -
   let ns_sym = arena::pin(namespace);
   let mut model = model_mut!();
   if !namespace.is_empty() {
-    codeprefix = model.code_namespace_prefixes.get(&ns_sym).copied();
+    codeprefix = model.code_namespace_prefixes.get_sym(ns_sym).copied();
 
     if codeprefix.is_some() && !probe {
       {
-        let docprefix = model.document_namespace_prefixes.get(&ns_sym);
+        let docprefix = model.document_namespace_prefixes.get_sym(ns_sym);
         // if there's a doc prefix and it's NOT already used in code namespace mapping
-        if docprefix.is_some() && !model.code_namespaces.contains_key(docprefix.unwrap()) {
+        if docprefix.is_some() && !model.code_namespaces.contains_key_sym(docprefix.unwrap()) {
           codeprefix = docprefix.copied();
         }
       }
@@ -494,7 +493,7 @@ pub fn get_namespace_prefix(namespace: &str, _forattribute: bool, probe: bool) -
 
 pub fn get_namespace(codeprefix: &str, probe: bool) -> Result<Option<SymStr>> {
   let mut model = model_mut!();
-  let mut ns: Option<SymStr> = model.code_namespaces.get(&arena::pin(codeprefix)).copied();
+  let mut ns: Option<SymStr> = model.code_namespaces.get(codeprefix).copied();
   if ns.is_none() && !probe {
     model.namespace_errors += 1;
     let example_namespace = s!(
@@ -681,7 +680,7 @@ pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
   }
 
   // Else query tag properties.
-  let model_entry = &mut model.tagprop.entry(tag).or_default().model;
+  let model_entry = &mut model.tagprop.entry_sym(tag).or_default().model;
   model_entry.contains(&ANY_SYM) || model_entry.contains(&child)
 }
 
@@ -710,7 +709,7 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
   // Else query tag properties.
   let model = &model
     .tagprop
-    .get(&arena::pin(tag))
+    .get(tag)
     .unwrap_or(&*DEFAULT_TAG_FRAME)
     .model;
   model.contains(&ANY_SYM) || model.contains(&arena::pin(child))
@@ -734,7 +733,7 @@ pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
   // Else query tag properties.
   let attributes = &model
     .tagprop
-    .get(&tag)
+    .get_sym(tag)
     .unwrap_or(&*DEFAULT_TAG_FRAME)
     .attributes;
   attributes.contains(&attrib)
@@ -742,11 +741,11 @@ pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
 
 pub fn is_node_in_schema_class(class_name: &str, tag: &Node) -> bool {
   let tag = get_node_qname(tag);
-  is_in_schema_class(&arena::pin(class_name), &tag)
+  is_in_schema_class(arena::pin(class_name), tag)
 }
-pub fn is_in_schema_class(class_name: &SymStr, tag: &SymStr) -> bool {
-  if let Some(class) = model!().schema_class.get(class_name) {
-    class.contains(tag)
+pub fn is_in_schema_class(class_name: SymStr, tag: SymStr) -> bool {
+  if let Some(class) = model!().schema_class.get_sym(class_name) {
+    class.contains(&tag)
   } else {
     false
   }
@@ -758,8 +757,8 @@ pub fn is_in_schema_class(class_name: &SymStr, tag: &SymStr) -> bool {
 
 pub fn get_tags() -> Vec<SymStr> { model!().tagprop.keys().copied().collect() }
 
-pub fn get_tag_contents(tag: &SymStr) -> Vec<SymStr> {
-  match model!().tagprop.get(tag) {
+pub fn get_tag_contents(tag: SymStr) -> Vec<SymStr> {
+  match model!().tagprop.get_sym(tag) {
     Some(h) => h.model.iter().copied().collect(),
     None => Vec::new(),
   }
@@ -803,7 +802,7 @@ pub(crate) fn compute_indirect_model_aux(
   // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
   // move ownership of the tag strings into the tag_contents vector.
   // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-  let tag_contents: Vec<SymStr> = get_tag_contents(&tag);
+  let tag_contents: Vec<SymStr> = get_tag_contents(tag);
 
   for kid in tag_contents {
     if desc.entry_sym(kid).or_default().contains_key_sym(&start) {
@@ -832,6 +831,6 @@ pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
 }
 
 pub fn with_code_namespaces<FnR, R>(caller: FnR) -> R
-where FnR: FnOnce(&HashMap<SymStr, SymStr>) -> R {
+where FnR: FnOnce(&SymHashMap<SymStr>) -> R {
   caller(&model!().code_namespaces)
 }

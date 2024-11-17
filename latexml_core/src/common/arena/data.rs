@@ -35,7 +35,7 @@ impl<T> SymHashMap<T> {
   #[inline]
   pub fn get(&self, key: &str) -> Option<&T> { self.0.get(&arena::pin(key)) }
   #[inline]
-  pub fn get_sym(&self, key: &SymStr) -> Option<&T> { self.0.get(key) }
+  pub fn get_sym(&self, key: SymStr) -> Option<&T> { self.0.get(&key) }
   #[inline]
   pub fn get_mut(&mut self, key: &str) -> Option<&mut T> { self.0.get_mut(&arena::pin(key)) }
   #[inline]
