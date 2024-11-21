@@ -599,7 +599,7 @@ pub fn process_options() -> Result<()> {
       Stored::String(content) => {
         if requested_options.contains(content) {
           requested_options.remove(content); // Remove it, since it's been handled.'
-          execute_option_internal(*content)?; 
+          execute_option_internal(*content)?;
         }
       },
       Stored::Strings(contents) => {
@@ -630,7 +630,10 @@ fn execute_option_internal(option: SymStr) -> Result<bool> {
     def_macro(
       T_CS!("\\CurrentOption"),
       None,
-      Tokens!(Token{text: option, code: Catcode::OTHER}),
+      Tokens!(Token {
+        text: option,
+        code: Catcode::OTHER,
+      }),
       None,
     )?;
 
@@ -659,7 +662,10 @@ fn execute_default_option_internal(option: SymStr) -> Result<bool> {
   def_macro(
     T_CS!("\\CurrentOption"),
     None,
-    Tokens!(Token{text: option, code:Catcode::OTHER}),
+    Tokens!(Token {
+      text: option,
+      code: Catcode::OTHER,
+    }),
     None,
   )?;
   digest(T_CS!("\\default@ds"))?;

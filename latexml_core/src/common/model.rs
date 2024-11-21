@@ -105,7 +105,9 @@ impl Model {
     let namespace_opt_checked = namespace_opt.filter(|val| *val != *EMPTY_SYM);
     match namespace_opt_checked {
       Some(namespace) => {
-        self.code_namespace_prefixes.insert_sym(namespace, codeprefix);
+        self
+          .code_namespace_prefixes
+          .insert_sym(namespace, codeprefix);
         self.code_namespaces.insert_sym(codeprefix, namespace);
       },
       None => {
@@ -218,10 +220,7 @@ impl Model {
   }
   pub fn describe_model(&self) {}
   fn load_internal_extensions(&mut self) {
-    if !self
-      .tagprop
-      .contains_key("ltx:_CaptureBlock_")
-    {
+    if !self.tagprop.contains_key("ltx:_CaptureBlock_") {
       // Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block, ltx:para,
       self.synthesize_element("ltx:_CaptureBlock_", &[
         "ltx:block",
@@ -229,10 +228,7 @@ impl Model {
         "ltx:sectional-block",
         "Caption",
       ]);
-      let cb_entry = self
-        .tagprop
-        .entry("ltx:_CaptureBlock_")
-        .or_default();
+      let cb_entry = self.tagprop.entry("ltx:_CaptureBlock_").or_default();
       cb_entry.model.insert(arena::pin_static("svg:g"));
       cb_entry
         .model
@@ -380,7 +376,10 @@ pub fn get_document_namespace_prefix(
   };
   let ns_sym = arena::pin(namespace);
   if docprefix.is_none() {
-    docprefix = model!().document_namespace_prefixes.get_sym(ns_sym).copied();
+    docprefix = model!()
+      .document_namespace_prefixes
+      .get_sym(ns_sym)
+      .copied();
   }
 
   if docprefix.is_none() && !probe {
@@ -707,11 +706,7 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
   }
 
   // Else query tag properties.
-  let model = &model
-    .tagprop
-    .get(tag)
-    .unwrap_or(&*DEFAULT_TAG_FRAME)
-    .model;
+  let model = &model.tagprop.get(tag).unwrap_or(&*DEFAULT_TAG_FRAME).model;
   model.contains(&ANY_SYM) || model.contains(&arena::pin(child))
 }
 

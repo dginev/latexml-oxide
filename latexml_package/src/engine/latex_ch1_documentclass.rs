@@ -42,7 +42,7 @@ LoadDefinitions!({
           "unexpected",
           "options",
           "Unused global options: {}",
-          arena::with_many(&*unused, |u| u.join(","))
+          arena::with_many(&unused, |u| u.join(","))
         );
         state::assign_value("@unusedoptionlist", Stored::Strings(Rc::new([])), None);
       }

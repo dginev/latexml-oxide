@@ -772,14 +772,11 @@ impl From<Rc<[SymStr]>> for Stored {
 }
 
 impl From<Vec<String>> for Stored {
-  fn from(value: Vec<String>) -> Self { Stored::Strings(value
-    .iter().map(arena::pin).collect()) }
+  fn from(value: Vec<String>) -> Self { Stored::Strings(value.iter().map(arena::pin).collect()) }
 }
 
 impl<'a> From<Vec<&'a str>> for Stored {
-  fn from(value: Vec<&'a str>) -> Self {
-    Stored::Strings(value.iter().map(arena::pin).collect())
-  }
+  fn from(value: Vec<&'a str>) -> Self { Stored::Strings(value.iter().map(arena::pin).collect()) }
 }
 
 impl From<Vec<Token>> for Stored {
