@@ -13,8 +13,8 @@ use std::rc::Rc;
 
 use crate::binding::content::{build_invocation, digest_literal, digest_text};
 use crate::binding::def::dialect::{RegisterOptions, def_macro, def_register, is_defined};
-use crate::common::arena::{self, SymStr};
 use crate::common::arena::SymHashMap as HashMap;
+use crate::common::arena::{self, SymStr};
 use crate::common::cleaners::{clean_id, clean_label, roman_aux};
 use crate::common::error::*;
 use crate::common::number::Number;
@@ -437,8 +437,12 @@ pub fn maybe_note_label(label: &str) {
 }
 
 fn deactivate_counter_scope(ctr: SymStr) {
-  let (scopes_for_counter, nested_counters) = arena::with(ctr,|cstr|
-  (s!("scopes_for_counter:{cstr}"), s!("nested_counters_{cstr}") ));
+  let (scopes_for_counter, nested_counters) = arena::with(ctr, |cstr| {
+    (
+      s!("scopes_for_counter:{cstr}"),
+      s!("nested_counters_{cstr}"),
+    )
+  });
   let scopes = lookup_value(&scopes_for_counter);
   if let Some(Stored::VecDequeStored(stored_scopes)) = scopes {
     for scope_stored in stored_scopes {
