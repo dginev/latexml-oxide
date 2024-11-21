@@ -13,7 +13,7 @@ use std::rc::Rc;
 
 use crate::binding::content::{build_invocation, digest_literal, digest_text};
 use crate::binding::def::dialect::{RegisterOptions, def_macro, def_register, is_defined};
-use crate::common::arena;
+use crate::common::arena::{self, SymStr};
 use crate::common::arena::SymHashMap as HashMap;
 use crate::common::cleaners::{clean_id, clean_label, roman_aux};
 use crate::common::error::*;
@@ -355,7 +355,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
 
   // Any scopes activated for previous value of this counter (& any nested counters) must be
   // removed. This may also include scopes activated for \label
-  deactivate_counter_scope(&ctr);
+  deactivate_counter_scope(arena::pin(&ctr));
 
   // And install the scope (if any) for this reference number.
   state::assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
@@ -436,8 +436,10 @@ pub fn maybe_note_label(label: &str) {
   }
 }
 
-fn deactivate_counter_scope(ctr: &str) {
-  let scopes = lookup_value(&s!("scopes_for_counter:{ctr}"));
+fn deactivate_counter_scope(ctr: SymStr) {
+  let (scopes_for_counter, nested_counters) = arena::with(ctr,|cstr|
+  (s!("scopes_for_counter:{cstr}"), s!("nested_counters_{cstr}") ));
+  let scopes = lookup_value(&scopes_for_counter);
   if let Some(Stored::VecDequeStored(stored_scopes)) = scopes {
     for scope_stored in stored_scopes {
       if let Stored::String(scope) = scope_stored {
@@ -450,10 +452,10 @@ fn deactivate_counter_scope(ctr: &str) {
 
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
-  let nested = lookup_value(&s!("nested_counters_{ctr}"));
+  let nested = lookup_value(&nested_counters);
   if let Some(Stored::Strings(stored_counters)) = nested {
     for inner_ctr in &*stored_counters {
-      deactivate_counter_scope(inner_ctr);
+      deactivate_counter_scope(*inner_ctr);
     }
   }
 }

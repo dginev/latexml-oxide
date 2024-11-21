@@ -77,7 +77,7 @@ pub enum Stored {
   /// boxed `[Option<char>]`
   Fontmap(Rc<[Option<char>]>),
   /// boxed collection
-  Strings(Rc<[String]>),
+  Strings(Rc<[SymStr]>),
   /// boxed collection (latexml)
   VecDigested(Vec<crate::Digested>),
   /// the heart of state - a stored Stash table
@@ -767,17 +767,18 @@ impl From<Rc<[Option<char>]>> for Stored {
   fn from(value: Rc<[Option<char>]>) -> Self { Stored::Fontmap(value) }
 }
 
-impl From<Rc<[String]>> for Stored {
-  fn from(value: Rc<[String]>) -> Self { Stored::Strings(value) }
+impl From<Rc<[SymStr]>> for Stored {
+  fn from(value: Rc<[SymStr]>) -> Self { Stored::Strings(value) }
 }
 
 impl From<Vec<String>> for Stored {
-  fn from(value: Vec<String>) -> Self { Stored::Strings(Rc::from(value.into_boxed_slice())) }
+  fn from(value: Vec<String>) -> Self { Stored::Strings(value
+    .iter().map(arena::pin).collect()) }
 }
 
 impl<'a> From<Vec<&'a str>> for Stored {
   fn from(value: Vec<&'a str>) -> Self {
-    Stored::Strings(value.iter().map(ToString::to_string).collect())
+    Stored::Strings(value.iter().map(arena::pin).collect())
   }
 }
 
