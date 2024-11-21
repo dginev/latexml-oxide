@@ -7,6 +7,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use crate::common::arena;
+use crate::common::arena::SymStr;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
 use crate::common::model;
@@ -564,15 +565,15 @@ pub fn process_options() -> Result<()> {
   //   else if execute_default_option_internal(option)) { }
   // } }
   // else {
-  let mut requested_options: HashSet<String> = HashSet::default();
+  let mut requested_options: HashSet<SymStr> = HashSet::default();
   for option in current_options.iter() {
     match option {
       Stored::String(content) => {
-        requested_options.insert(arena::to_string(*content));
+        requested_options.insert(*content);
       },
       Stored::Strings(contents) => {
         for content in contents.iter() {
-          requested_options.insert(content.to_string());
+          requested_options.insert(*content);
         }
       },
       _ => {},
@@ -581,11 +582,11 @@ pub fn process_options() -> Result<()> {
   for option in class_options.iter() {
     match option {
       Stored::String(content) => {
-        requested_options.insert(arena::to_string(*content));
+        requested_options.insert(*content);
       },
       Stored::Strings(contents) => {
         for content in contents.iter() {
-          requested_options.insert(content.to_string());
+          requested_options.insert(*content);
         }
       },
       _ => {},
@@ -596,20 +597,16 @@ pub fn process_options() -> Result<()> {
   for option in declared_options.iter() {
     match option {
       Stored::String(content) => {
-        arena::with(*content, |c_str| {
-          if requested_options.contains(c_str) {
-            requested_options.remove(c_str); // Remove it, since it's been handled.
-            execute_option_internal(c_str)
-          } else {
-            Ok(true)
-          }
-        })?;
+        if requested_options.contains(content) {
+          requested_options.remove(content); // Remove it, since it's been handled.'
+          execute_option_internal(*content)?; 
+        }
       },
       Stored::Strings(contents) => {
         for content in contents.iter() {
           if requested_options.contains(content) {
             requested_options.remove(content); // Remove it, since it's been handled.
-            execute_option_internal(content)?;
+            execute_option_internal(*content)?;
           }
         }
       },
@@ -618,7 +615,7 @@ pub fn process_options() -> Result<()> {
   }
   // Now handle any remaining options (eg. default options), in the given order.
   for option in requested_options.iter() {
-    execute_default_option_internal(option)?;
+    execute_default_option_internal(*option)?;
   }
   // Now, undefine the handlers?
   for option in declared_options.iter() {
@@ -627,13 +624,13 @@ pub fn process_options() -> Result<()> {
   Ok(())
 }
 
-fn execute_option_internal(option: &str) -> Result<bool> {
-  let cs = T_CS!(s!("\\ds@{}", option));
+fn execute_option_internal(option: SymStr) -> Result<bool> {
+  let cs = T_CS!(arena::with(option, |opt| s!("\\ds@{opt}")));
   if lookup_definition(&cs)?.is_some() {
     def_macro(
       T_CS!("\\CurrentOption"),
       None,
-      Tokens!(T_OTHER!(option)),
+      Tokens!(Token{text: option, code: Catcode::OTHER}),
       None,
     )?;
 
@@ -642,7 +639,7 @@ fn execute_option_internal(option: &str) -> Result<bool> {
         .into_iter()
         .filter(|item| {
           if let Stored::String(content) = item {
-            *content != arena::pin(option)
+            *content != option
           } else {
             false
           }
@@ -658,11 +655,11 @@ fn execute_option_internal(option: &str) -> Result<bool> {
   }
 }
 
-fn execute_default_option_internal(option: &str) -> Result<bool> {
+fn execute_default_option_internal(option: SymStr) -> Result<bool> {
   def_macro(
     T_CS!("\\CurrentOption"),
     None,
-    Tokens!(T_OTHER!(option)),
+    Tokens!(Token{text: option, code:Catcode::OTHER}),
     None,
   )?;
   digest(T_CS!("\\default@ds"))?;
