@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/content.rs`."><title>content.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (917a50a03 2024-11-15)" data-channel="nightly" data-search-js="search-b6b1fcd2.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/</div>content.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/content.rs`."><title>content.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (b19329a37 2024-11-21)" data-channel="nightly" data-search-js="search-92e6798f.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/</div>content.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -1106,7 +1106,10 @@
 <a href="#1105" id="1105">1105</a>
 <a href="#1106" id="1106">1106</a>
 <a href="#1107" id="1107">1107</a>
-<a href="#1108" id="1108">1108</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
+<a href="#1110" id="1110">1110</a>
+<a href="#1111" id="1111">1111</a></pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::borrow::Cow;
@@ -1115,6 +1118,7 @@
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::SymStr;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::{Font, Fontmap};
 <span class="kw">use </span><span class="kw">crate</span>::common::model;
@@ -1672,15 +1676,15 @@
   //   else if execute_default_option_internal(option)) { }
   // } }
   // else {
-  </span><span class="kw">let </span><span class="kw-2">mut </span>requested_options: HashSet&lt;String&gt; = HashSet::default();
+  </span><span class="kw">let </span><span class="kw-2">mut </span>requested_options: HashSet&lt;SymStr&gt; = HashSet::default();
   <span class="kw">for </span>option <span class="kw">in </span>current_options.iter() {
     <span class="kw">match </span>option {
       Stored::String(content) =&gt; {
-        requested_options.insert(arena::to_string(<span class="kw-2">*</span>content));
+        requested_options.insert(<span class="kw-2">*</span>content);
       },
       Stored::Strings(contents) =&gt; {
         <span class="kw">for </span>content <span class="kw">in </span>contents.iter() {
-          requested_options.insert(content.to_string());
+          requested_options.insert(<span class="kw-2">*</span>content);
         }
       },
       <span class="kw">_ </span>=&gt; {},
@@ -1689,11 +1693,11 @@
   <span class="kw">for </span>option <span class="kw">in </span>class_options.iter() {
     <span class="kw">match </span>option {
       Stored::String(content) =&gt; {
-        requested_options.insert(arena::to_string(<span class="kw-2">*</span>content));
+        requested_options.insert(<span class="kw-2">*</span>content);
       },
       Stored::Strings(contents) =&gt; {
         <span class="kw">for </span>content <span class="kw">in </span>contents.iter() {
-          requested_options.insert(content.to_string());
+          requested_options.insert(<span class="kw-2">*</span>content);
         }
       },
       <span class="kw">_ </span>=&gt; {},
@@ -1704,20 +1708,16 @@
   </span><span class="kw">for </span>option <span class="kw">in </span>declared_options.iter() {
     <span class="kw">match </span>option {
       Stored::String(content) =&gt; {
-        arena::with(<span class="kw-2">*</span>content, |c_str| {
-          <span class="kw">if </span>requested_options.contains(c_str) {
-            requested_options.remove(c_str); <span class="comment">// Remove it, since it's been handled.
-            </span>execute_option_internal(c_str)
-          } <span class="kw">else </span>{
-            <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
-          }
-        })<span class="question-mark">?</span>;
+        <span class="kw">if </span>requested_options.contains(content) {
+          requested_options.remove(content); <span class="comment">// Remove it, since it's been handled.'
+          </span>execute_option_internal(<span class="kw-2">*</span>content)<span class="question-mark">?</span>;
+        }
       },
       Stored::Strings(contents) =&gt; {
         <span class="kw">for </span>content <span class="kw">in </span>contents.iter() {
           <span class="kw">if </span>requested_options.contains(content) {
             requested_options.remove(content); <span class="comment">// Remove it, since it's been handled.
-            </span>execute_option_internal(content)<span class="question-mark">?</span>;
+            </span>execute_option_internal(<span class="kw-2">*</span>content)<span class="question-mark">?</span>;
           }
         }
       },
@@ -1726,7 +1726,7 @@
   }
   <span class="comment">// Now handle any remaining options (eg. default options), in the given order.
   </span><span class="kw">for </span>option <span class="kw">in </span>requested_options.iter() {
-    execute_default_option_internal(option)<span class="question-mark">?</span>;
+    execute_default_option_internal(<span class="kw-2">*</span>option)<span class="question-mark">?</span>;
   }
   <span class="comment">// Now, undefine the handlers?
   </span><span class="kw">for </span>option <span class="kw">in </span>declared_options.iter() {
@@ -1735,13 +1735,16 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>execute_option_internal(option: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-  <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ds@{}"</span>, option));
+<span class="kw">fn </span>execute_option_internal(option: SymStr) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+  <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(arena::with(option, |opt| <span class="macro">s!</span>(<span class="string">"\\ds@{opt}"</span>)));
   <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">?</span>.is_some() {
     def_macro(
       <span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>),
       <span class="prelude-val">None</span>,
-      <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(option)),
+      <span class="macro">Tokens!</span>(Token {
+        text: option,
+        code: Catcode::OTHER,
+      }),
       <span class="prelude-val">None</span>,
     )<span class="question-mark">?</span>;
 
@@ -1750,7 +1753,7 @@
         .into_iter()
         .filter(|item| {
           <span class="kw">if let </span>Stored::String(content) = item {
-            <span class="kw-2">*</span>content != arena::pin(option)
+            <span class="kw-2">*</span>content != option
           } <span class="kw">else </span>{
             <span class="bool-val">false
           </span>}
@@ -1766,11 +1769,14 @@
   }
 }
 
-<span class="kw">fn </span>execute_default_option_internal(option: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+<span class="kw">fn </span>execute_default_option_internal(option: SymStr) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
   def_macro(
     <span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>),
     <span class="prelude-val">None</span>,
-    <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(option)),
+    <span class="macro">Tokens!</span>(Token {
+      text: option,
+      code: Catcode::OTHER,
+    }),
     <span class="prelude-val">None</span>,
   )<span class="question-mark">?</span>;
   digest(<span class="macro">T_CS!</span>(<span class="string">"\\default@ds"</span>))<span class="question-mark">?</span>;

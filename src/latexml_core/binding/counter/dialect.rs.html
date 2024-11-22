@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (917a50a03 2024-11-15)" data-channel="nightly" data-search-js="search-b6b1fcd2.js" data-settings-js="settings-0f613d39.js" ><script src="../../../../static.files/storage-59e33391.js"></script><script defer src="../../../../static.files/src-script-56102188.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/counter/</div>dialect.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (b19329a37 2024-11-21)" data-channel="nightly" data-search-js="search-92e6798f.js" data-settings-js="settings-0f613d39.js" ><script src="../../../../static.files/storage-59e33391.js"></script><script defer src="../../../../static.files/src-script-56102188.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/counter/</div>dialect.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -749,7 +749,13 @@
 <a href="#748" id="748">748</a>
 <a href="#749" id="749">749</a>
 <a href="#750" id="750">750</a>
-<a href="#751" id="751">751</a></pre></div><pre class="rust"><code><span class="doccomment">//! # Counters
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a></pre></div><pre class="rust"><code><span class="doccomment">//! # Counters
 //!
 //! This is modelled on LaTeX's counter mechanisms, but since it also
 //! provides support for ID's, even where there is no visible reference number,
@@ -764,8 +770,8 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::binding::content::{build_invocation, digest_literal, digest_text};
 <span class="kw">use </span><span class="kw">crate</span>::binding::def::dialect::{RegisterOptions, def_macro, def_register, is_defined};
-<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr};
 <span class="kw">use </span><span class="kw">crate</span>::common::cleaners::{clean_id, clean_label, roman_aux};
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
@@ -1106,7 +1112,7 @@
 
   <span class="comment">// Any scopes activated for previous value of this counter (&amp; any nested counters) must be
   // removed. This may also include scopes activated for \label
-  </span>deactivate_counter_scope(<span class="kw-2">&amp;</span>ctr);
+  </span>deactivate_counter_scope(arena::pin(<span class="kw-2">&amp;</span>ctr));
 
   <span class="comment">// And install the scope (if any) for this reference number.
   </span>state::assign_value(<span class="string">"current_counter"</span>, ctr.to_string(), <span class="prelude-val">Some</span>(Scope::Local));
@@ -1187,8 +1193,14 @@
   }
 }
 
-<span class="kw">fn </span>deactivate_counter_scope(ctr: <span class="kw-2">&amp;</span>str) {
-  <span class="kw">let </span>scopes = lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"scopes_for_counter:{ctr}"</span>));
+<span class="kw">fn </span>deactivate_counter_scope(ctr: SymStr) {
+  <span class="kw">let </span>(scopes_for_counter, nested_counters) = arena::with(ctr, |cstr| {
+    (
+      <span class="macro">s!</span>(<span class="string">"scopes_for_counter:{cstr}"</span>),
+      <span class="macro">s!</span>(<span class="string">"nested_counters_{cstr}"</span>),
+    )
+  });
+  <span class="kw">let </span>scopes = lookup_value(<span class="kw-2">&amp;</span>scopes_for_counter);
   <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stored_scopes)) = scopes {
     <span class="kw">for </span>scope_stored <span class="kw">in </span>stored_scopes {
       <span class="kw">if let </span>Stored::String(scope) = scope_stored {
@@ -1201,10 +1213,10 @@
 
   <span class="comment">// TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
-  </span><span class="kw">let </span>nested = lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"nested_counters_{ctr}"</span>));
+  </span><span class="kw">let </span>nested = lookup_value(<span class="kw-2">&amp;</span>nested_counters);
   <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Strings(stored_counters)) = nested {
     <span class="kw">for </span>inner_ctr <span class="kw">in </span><span class="kw-2">&amp;*</span>stored_counters {
-      deactivate_counter_scope(inner_ctr);
+      deactivate_counter_scope(<span class="kw-2">*</span>inner_ctr);
     }
   }
 }
