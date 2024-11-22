@@ -779,7 +779,9 @@ macro_rules! Expand {
 
 #[macro_export]
 macro_rules! Input {
-  ($arg:expr) => { ::latexml_core::binding::content::input($arg, InputOptions::default())? }
+  ($arg:expr) => {
+    ::latexml_core::binding::content::input($arg, InputOptions::default())?
+  };
 }
 
 // /// Return `tokens` with all partial expandsion
