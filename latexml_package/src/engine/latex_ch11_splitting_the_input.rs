@@ -1,20 +1,28 @@
 use crate::prelude::*;
 LoadDefinitions!({
-
   // #======================================================================
   // # C.11.4 Splitting the input
   // #======================================================================
+  Let!("\\@@input", "\\input"); // Save TeX's version.
+  // LaTeX's \input is a bit different...
+
   // Input, now
   DefPrimitive!("\\ltx@input {}", sub[(arg)] { Input!(&Expand!(arg).to_string()); });
   DefMacro!("\\input", "\\@ifnextchar\\bgroup\\@iinput\\@@input");
   Let!("\\@iinput", "\\ltx@input");
-  DefMacro!("\\@input{}",  "\\IfFileExists{#1}{\\@@input\\@filef@und}{\\typeout{No file #1.}}");
-  DefMacro!("\\@input@{}", "\\InputIfFileExists{#1}{}{\\typeout{No file #1.}}");
-  
+  DefMacro!(
+    "\\@input{}",
+    "\\IfFileExists{#1}{\\@@input\\@filef@und}{\\typeout{No file #1.}}"
+  );
+  DefMacro!(
+    "\\@input@{}",
+    "\\InputIfFileExists{#1}{}{\\typeout{No file #1.}}"
+  );
+
   DefMacro!("\\quote@name{}", "\"\\quote@@name#1\\@gobble\"\"");
   DefMacro!("\\quote@@name{} Match:\"", "#1\\quote@@name");
   DefMacro!("\\unquote@name{}", "\\quote@@name#1\\@gobble\"");
-  
+
   // # Note that even excluded files SHOULD have the effects of their inclusion
   // # simulated by having read the corresponding aux file;
   // # But we're not bothering with that.

@@ -55,6 +55,7 @@ line ended by par</p>
     </para>
     <para xml:id="S0.SS0.SSS0.Px2.p7">
       <p>last line.
+
 Closed!</p>
     </para>
   </paragraph>
@@ -384,7 +385,10 @@ Line: “First line
 Line: “Second line
 ”<break/>
 
-Line: “Timing Before.
+Line: “Timing before: Before.
+”<break/>
+
+Line: “Timing after: After.
 ”<break/>
 
 Line: “Last line
