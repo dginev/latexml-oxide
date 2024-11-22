@@ -163,8 +163,9 @@ LoadDefinitions!({
   // DefLigature(qr{ffi},              "\x{FB03}", fontTest => \&nonTypewriterT1);
   // DefLigature(qr{ffl},              "\x{FB04}", fontTest => \&nonTypewriterT1);
 
-  DefConstructor!("\\TeX", r###"<ltx:text class='ltx_TeX_logo'
-    cssstyle='letter-spacing:-0.2em; margin-right:0.2em'>T<ltx:text yoffset='-0.4ex'>E</ltx:text>X</ltx:text>"###,
+  DefConstructor!("\\TeX", "<ltx:text class='ltx_TeX_logo' cssstyle='letter-spacing:-0.2em; margin-right:0.2em'
+  >T<ltx:text cssstyle='font-variant:small-caps;font-size:120%;' yoffset='-0.2ex'
+  >e</ltx:text>X</ltx:text>",
     sizer => sub[_whatsit] { Ok((Dimension!("1.9em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
   DefPrimitive!("\\i", "\u{0131}"); // LATIN SMALL LETTER DOTLESS I
   DefPrimitive!("\\j", "\u{0237}");
