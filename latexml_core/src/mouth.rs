@@ -755,6 +755,8 @@ impl Mouth {
   }
 
   fn gid() -> usize {
+    // assume all mouths are spawned by a single thread, in which case
+    // this expedient global counter is safe.
     unsafe {
       LASTID += 1;
       LASTID

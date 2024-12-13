@@ -99,26 +99,26 @@ LoadDefinitions!({
 
   DefMacro!("\\IfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_string = Expand!(file).to_string();
-    if let Some(_) = find_file(&file_string, None) {
+    if find_file(&file_string, None).is_some() {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
-      if_tks 
+      if_tks
     } else {
       else_tks
-    } 
+    }
   });
 
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = Expand!(file);
     let file_string = file_tks.to_string();
-    if let Some(_) = find_file(&file_string, None) {
+    if find_file(&file_string, None).is_some() {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
       Tokens!(if_tks, T_CS!("\\@addtofilelist"), T_BEGIN!(), file_tks.clone(), T_END!(),
         T_CS!("\\ltx@input"), T_BEGIN!(), file_tks, T_END!())
-    } else { 
+    } else {
       else_tks
-    } 
+    }
   });
 
   DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
