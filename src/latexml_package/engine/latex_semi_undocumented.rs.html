@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_semi_undocumented.rs`."><title>latex_semi_undocumented.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (b19329a37 2024-11-21)" data-channel="nightly" data-search-js="search-92e6798f.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_semi_undocumented.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_semi_undocumented.rs`."><title>latex_semi_undocumented.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-46132b98.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.85.0-nightly (d4025ee45 2024-12-12)" data-channel="nightly" data-search-js="search-92e6798f.js" data-settings-js="settings-0f613d39.js" ><script src="../../../static.files/storage-59e33391.js"></script><script defer src="../../../static.files/src-script-56102188.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_semi_undocumented.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -348,26 +348,26 @@
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\IfFileExists{}{}{}"</span>, sub[(file, if_tks, else_tks)] {
     <span class="kw">let </span>file_string = <span class="macro">Expand!</span>(file).to_string();
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw">_</span>) = find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">None</span>) {
+    <span class="kw">if </span>find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">None</span>).is_some() {
       <span class="kw">let </span>found_str = <span class="macro">s!</span>(<span class="string">"\"{file_string}\" "</span>);
       def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\@filef@und"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(found_str.into()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-      if_tks 
+      if_tks
     } <span class="kw">else </span>{
       else_tks
-    } 
+    }
   });
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\InputIfFileExists{}{}{}"</span>, sub[(file, if_tks, else_tks)] {
     <span class="kw">let </span>file_tks = <span class="macro">Expand!</span>(file);
     <span class="kw">let </span>file_string = file_tks.to_string();
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw">_</span>) = find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">None</span>) {
+    <span class="kw">if </span>find_file(<span class="kw-2">&amp;</span>file_string, <span class="prelude-val">None</span>).is_some() {
       <span class="kw">let </span>found_str = <span class="macro">s!</span>(<span class="string">"\"{file_string}\" "</span>);
       def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\@filef@und"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(found_str.into()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
       <span class="macro">Tokens!</span>(if_tks, <span class="macro">T_CS!</span>(<span class="string">"\\@addtofilelist"</span>), <span class="macro">T_BEGIN!</span>(), file_tks.clone(), <span class="macro">T_END!</span>(),
         <span class="macro">T_CS!</span>(<span class="string">"\\ltx@input"</span>), <span class="macro">T_BEGIN!</span>(), file_tks, <span class="macro">T_END!</span>())
-    } <span class="kw">else </span>{ 
+    } <span class="kw">else </span>{
       else_tks
-    } 
+    }
   });
 
   <span class="macro">DefMacro!</span>(<span class="string">"\\@ifdefinable DefToken {}"</span>, sub[(token, iftoken)] {
