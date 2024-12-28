@@ -196,8 +196,8 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
         Warn!(
           "unexpected",
           "keyval",
-          "Too many parameters in keyval {key} (in set {keyset} with prefix {prefix})\
-          taking only first"
+          s!("Too many parameters in keyval {key} (in set {keyset} with prefix {prefix})\
+          taking only first")
         );
       }
       keyval_set(&qname, "type", paramlist.take_parameters().remove(0).into());

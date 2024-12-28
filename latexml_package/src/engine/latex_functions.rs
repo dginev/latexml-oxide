@@ -137,7 +137,7 @@ pub fn only_preamble(cs: &str) -> Result<()> {
     Error!(
       "unexpected",
       cs,
-      "The current command '{cs}' can only appear in the preamble"
+      s!("The current command '{cs}' can only appear in the preamble")
     );
   }
   Ok(())

@@ -440,7 +440,7 @@ impl From<Stored> for Result<ArgWrap> {
         Error!(
           "stored",
           "type",
-          "Failed to cast to argument; Found stored {:?}",
+          "Failed to cast to argument; Found stored:",
           t
         );
         ArgWrap::None
@@ -465,7 +465,7 @@ impl From<ArgWrap> for Result<Stored> {
         Error!(
           "stored",
           "type",
-          "Failed to cast into Stored (no equivalent). Extend Stored if intended; {:?}",
+          "Failed to cast into Stored (no equivalent). Extend Stored if intended.",
           t
         );
         Stored::None
