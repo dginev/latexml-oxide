@@ -649,10 +649,10 @@ impl Document {
   /// ie. we're automatically closing them, even if they're the same type as we're asking to
   /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
   pub fn close_element(&mut self, qname: &str) -> Result<Option<Node>> {
-    Debug!(
-      "Close element {:?} at {:?}",
+    Debug!("document","close_element",
+      s!("Close element {:?} at {:?}",
       qname,
-      self.document.node_to_string(&self.node)
+      self.document.node_to_string(&self.node))
     );
     let qsym = arena::pin(qname);
     self.close_text_internal()?;

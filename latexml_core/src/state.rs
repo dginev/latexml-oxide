@@ -819,7 +819,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
       if arena::with(*s, |txt| {
         txt == "Anonymous String" || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
       }) {
-        Info!("ignore", lock_key, "Ignoring redefinition of {lock_key}");
+        Info!("ignore", lock_key, s!("Ignoring redefinition of {lock_key}"));
       }
     }
   } else {

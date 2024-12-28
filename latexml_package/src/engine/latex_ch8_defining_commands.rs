@@ -137,12 +137,12 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[(cs, encoding, code)] {
     let code_value = code.value_of() as u8;
     let cs_str = cs.to_string();
+    let ecs = T_CS!(s!("\\{encoding}{cs_str}"));
     let encoding_str = Expand!(encoding).to_string();
     if IsDefinable!(&cs) {    // If not already defined...
       DefMacro!(cs, None, Some(s!(r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
       \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
     }
-    let ecs = T_CS!("\\{encoding}{cs_str}");
     let replacement_value = font::decode(code_value, Some(encoding_str), false).unwrap();
     let replacement = PrimitiveBody::from(replacement_value);
     def_primitive(ecs, None, Some(replacement), PrimitiveOptions::default())?;
