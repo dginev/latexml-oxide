@@ -29,14 +29,14 @@ impl BoxOps for Comment {
   where FnR: FnOnce(&HashMap<Stored>) -> R {
     caller(&NO_PROPERTIES)
   }
-  fn get_property(&self, _key: &str) -> Option<Cow<Stored>> { None }
+  fn get_property(&self, _key: &str) -> Option<Cow<'_, Stored>> { None }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {} // no-op
-  fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Borrowed(&self.0)) }
+  fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed(&self.0)) }
   fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
     document.insert_comment(&self.0)?;
     Ok(Vec::new())
   }
-  fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(None) }
+  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(None) }
   fn get_width(&self, _options: Option<HashMap<Stored>>) -> Result<Option<RegisterValue>> {
     Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
   }

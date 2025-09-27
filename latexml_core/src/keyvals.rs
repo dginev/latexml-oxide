@@ -134,12 +134,12 @@ impl BoxOps for KeyVals {
   where FnR: FnOnce(&SymHashMap<Stored>) -> R {
     caller(&NO_PROPERTIES)
   }
-  fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
+  fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Owned(self.to_string())) }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
     todo!();
   }
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
-  fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
+  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,
     _options: SymHashMap<Stored>,
@@ -276,7 +276,7 @@ impl KeyVals {
         continue;
       }
       // if we have one of out delimiters, we end
-      if delim.iter().any(|d| token == *d) {
+      if delim.contains(&token) {
         last_token = Some(token);
         break;
       }

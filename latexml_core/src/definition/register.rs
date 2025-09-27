@@ -505,8 +505,8 @@ impl Definition for Register {
   // not implemented for primitives
   fn invoke(&self, _once_only: bool) -> Result<Tokens> { todo!() }
   fn get_parameters(&self) -> Option<&Parameters> { self.parameters.as_ref() }
-  fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs) }
-  fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
+  fn get_cs(&self) -> Cow<'_, Token> { Cow::Owned(self.cs) }
+  fn get_cs_name(&self) -> Cow<'_, str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
 
   fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>) {
@@ -672,7 +672,7 @@ impl Register {
     }
   }
 
-  pub fn get_address(&self) -> Cow<str> {
+  pub fn get_address(&self) -> Cow<'_, str> {
     if self.address.is_empty() {
       self.get_cs_name()
     } else {

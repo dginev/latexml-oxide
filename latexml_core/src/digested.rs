@@ -45,7 +45,7 @@ pub enum DigestedData {
   /// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
   Whatsit(RefCell<Whatsit>),
   /// A TeX Alignment (with interior mutability, for setters invoked while stored in state)
-  Alignment(RefCell<Alignment>),
+  Alignment(Box<RefCell<Alignment>>),
   /// A list of Digested data
   List(RefCell<List>),
   /// Raw Tokens that were postponed to the digestion phase uninvoked/undigested
@@ -181,7 +181,7 @@ impl From<Whatsit> for Digested {
 }
 impl From<Alignment> for Digested {
   fn from(value: Alignment) -> Digested {
-    Digested(Rc::new(DigestedData::Alignment(RefCell::new(value))))
+    Digested(Rc::new(DigestedData::Alignment(Box::new(RefCell::new(value)))))
   }
 }
 impl From<KeyVals> for Digested {
@@ -285,7 +285,7 @@ impl BoxOps for Digested {
       List(ref l) => l.borrow().unlist(),
     }
   }
-  fn unlist_ref(&self) -> Vec<Cow<Digested>> {
+  fn unlist_ref(&self) -> Vec<Cow<'_, Digested>> {
     use DigestedData::*;
     match *self.0 {
       TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_)
@@ -342,7 +342,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => b
@@ -360,7 +360,7 @@ impl BoxOps for Digested {
       _ => todo!(),
     }
   }
-  fn get_string(&self) -> Result<Cow<str>> {
+  fn get_string(&self) -> Result<Cow<'_, str>> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => b.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
@@ -412,7 +412,7 @@ impl BoxOps for Digested {
       _ => todo!(),
     }
   }
-  fn get_font(&self) -> Result<Option<Cow<Font>>> {
+  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => Ok(b.borrow().get_font()?.map(|v| Cow::Owned(v.into_owned()))),

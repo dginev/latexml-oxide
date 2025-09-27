@@ -147,7 +147,7 @@ impl Core {
 pub trait BoxOps: Object {
   /// If composite, unwrap into the contained digested objects (or return self)
   fn unlist(&self) -> Vec<Digested> { todo!() }
-  fn unlist_ref(&self) -> Vec<Cow<Digested>> { todo!() }
+  fn unlist_ref(&self) -> Vec<Cow<'_, Digested>> { todo!() }
   /// absorb the current object into the `Document` XML - returning the corresponding nodes
   fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>>;
   /// be_absorbed but with allowed side-effects on the carrier (for `Alignment` only)
@@ -155,7 +155,7 @@ pub trait BoxOps: Object {
     todo!();
   }
   /// build a string representation of the underlying digested data
-  fn get_string(&self) -> Result<Cow<str>>;
+  fn get_string(&self) -> Result<Cow<'_, str>>;
   /// get the underlying tokens (preceding digestion)
   fn get_tokens(&self) -> Option<&Tokens> { todo!() }
   /// deprecated: get the map of named properties. This can not be usable as long as we have any
@@ -175,7 +175,7 @@ pub trait BoxOps: Object {
     self.get_properties_mut().insert(key, value.into());
   }
   /// get a single named property (with special "isSpace" check)
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     self.with_properties(|props| {
       if key == "isSpace" {
         match props.get(key) {
@@ -226,7 +226,7 @@ pub trait BoxOps: Object {
     Ok(None)
   }
   /// gets the associated font, if any
-  fn get_font(&self) -> Result<Option<Cow<Font>>>;
+  fn get_font(&self) -> Result<Option<Cow<'_, Font>>>;
   /// sets an associated font
   fn set_font(&mut self, _font: Rc<Font>) { todo!() }
   /// sets a "width" property, for sizing

@@ -279,8 +279,8 @@ impl Definition for MathPrimitive {
     );
   }
 
-  fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
-  fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
+  fn get_cs(&self) -> Cow<'_, Token> { Cow::Borrowed(&self.cs) }
+  fn get_cs_name(&self) -> Cow<'_, str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }
   fn get_parameters(&self) -> Option<&Parameters> { self.paramlist.as_ref() }
   fn get_num_args(&self) -> usize {

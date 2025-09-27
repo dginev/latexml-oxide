@@ -352,11 +352,11 @@ impl BoxOps for Whatsit {
     caller(&self.properties)
   }
   fn get_properties_mut(&mut self) -> &mut HashMap<Stored> { &mut self.properties }
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     self.properties.get(key).map(Cow::Borrowed)
   }
   fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> { self.properties.get_mut(key) }
-  fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.revert()?.to_string())) }
+  fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Owned(self.revert()?.to_string())) }
 
   fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
     // Significant time is consumed here, and associated with a specific CS,
@@ -377,7 +377,7 @@ impl BoxOps for Whatsit {
     })
   }
 
-  fn get_font(&self) -> Result<Option<Cow<Font>>> {
+  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> {
     match self.properties.get("font") {
       Some(Stored::Font(font)) => Ok(Some(Cow::Owned((**font).clone()))),
       Some(Stored::FontDirective(fd)) => match fd {

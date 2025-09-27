@@ -228,9 +228,9 @@ pub trait Definition: Object {
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
   /// forced to clone
-  fn get_cs(&self) -> Cow<Token>;
-  fn get_cs_name(&self) -> Cow<str>;
-  fn get_cs_or_alias(&self) -> Cow<Token> {
+  fn get_cs(&self) -> Cow<'_, Token>;
+  fn get_cs_name(&self) -> Cow<'_, str>;
+  fn get_cs_or_alias(&self) -> Cow<'_, Token> {
     match self.get_alias() {
       Some(alias) => Cow::Owned(T_CS!(alias)),
       None => self.get_cs(),

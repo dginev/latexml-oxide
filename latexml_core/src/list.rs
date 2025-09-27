@@ -73,9 +73,9 @@ impl Object for List {
 }
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
-  fn unlist_ref(&self) -> Vec<Cow<Digested>> { self.boxes.iter().map(Cow::Borrowed).collect() }
+  fn unlist_ref(&self) -> Vec<Cow<'_, Digested>> { self.boxes.iter().map(Cow::Borrowed).collect() }
   fn get_properties(&self) -> &HashMap<Stored> { &self.properties }
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     self.properties.get(key).map(Cow::Borrowed)
   }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
@@ -86,11 +86,11 @@ impl BoxOps for List {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self.properties.insert(key, value.into());
   }
-  fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
+  fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { todo!() }
 
-  fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
+  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
   fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     Ok(match &self.font {
       Some(f) => f.compute_boxes_size(&self.boxes, options)?,
