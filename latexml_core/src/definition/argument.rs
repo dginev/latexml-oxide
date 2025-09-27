@@ -156,7 +156,7 @@ impl ArgWrap {
     }
   }
 
-  pub fn as_tokens(&self) -> Result<Option<Cow<Tokens>>> {
+  pub fn as_tokens(&self) -> Result<Option<Cow<'_, Tokens>>> {
     use ArgWrap::*;
     let result = match self {
       Token(t) => Some(Cow::Owned(Tokens!(*t))),

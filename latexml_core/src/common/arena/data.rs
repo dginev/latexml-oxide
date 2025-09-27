@@ -55,9 +55,9 @@ impl<T> SymHashMap<T> {
   #[inline]
   pub fn keys(&self) -> Keys<'_, SymStr, T> { self.0.keys() }
   #[inline]
-  pub fn entry(&mut self, key: &str) -> Entry<SymStr, T> { self.0.entry(arena::pin(key)) }
+  pub fn entry(&mut self, key: &str) -> Entry<'_, SymStr, T> { self.0.entry(arena::pin(key)) }
   #[inline]
-  pub fn entry_sym(&mut self, key: SymStr) -> Entry<SymStr, T> { self.0.entry(key) }
+  pub fn entry_sym(&mut self, key: SymStr) -> Entry<'_, SymStr, T> { self.0.entry(key) }
   #[inline]
   pub fn iter(&self) -> Iter<'_, SymStr, T> { self.0.iter() }
 }

@@ -514,7 +514,7 @@ impl Mouth {
           self.colno -= 1;
         }
         // Sneak a comment out, every so often.
-        if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && lookup_bool("INCLUDE_COMMENTS") {
+        if self.lineno.is_multiple_of(READLINE_PROGRESS_QUANTUM) && lookup_bool("INCLUDE_COMMENTS") {
           return Some(T_COMMENT!(s!(
             "**** {} Line {} ****",
             &self.shortsource,

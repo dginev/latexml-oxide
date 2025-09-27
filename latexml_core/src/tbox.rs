@@ -141,7 +141,7 @@ impl Tbox {
 impl BoxOps for Tbox {
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
   fn get_properties(&self) -> &HashMap<Stored> { &self.properties }
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     let props = &self.properties;
     if key == "isSpace" {
       match props.get(key) {
@@ -199,7 +199,7 @@ impl BoxOps for Tbox {
     }
   }
 
-  fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(Some(Cow::Borrowed(&self.font))) }
+  fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(Some(Cow::Borrowed(&self.font))) }
 
   fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     if let Some(body_stored) = self.get_property("body") {

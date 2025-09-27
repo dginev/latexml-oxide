@@ -467,16 +467,16 @@ impl Font {
   }
 
   // Accessors
-  pub fn get_family(&self) -> Option<&Cow<str>> { self.family.as_ref() }
-  pub fn get_series(&self) -> Option<&Cow<str>> { self.series.as_ref() }
-  pub fn get_shape(&self) -> Option<&Cow<str>> { self.shape.as_ref() }
+  pub fn get_family(&self) -> Option<&Cow<'_, str>> { self.family.as_ref() }
+  pub fn get_series(&self) -> Option<&Cow<'_, str>> { self.series.as_ref() }
+  pub fn get_shape(&self) -> Option<&Cow<'_, str>> { self.shape.as_ref() }
   pub fn get_size(&self) -> Option<f64> { self.size }
-  pub fn get_color(&self) -> Option<&Cow<str>> { self.color.as_ref() }
-  pub fn get_background(&self) -> Option<&Cow<str>> { self.bg.as_ref() }
-  pub fn get_opacity(&self) -> Option<&Cow<str>> { self.opacity.as_ref() }
-  pub fn get_encoding(&self) -> Option<&Cow<str>> { self.encoding.as_ref() }
-  pub fn get_language(&self) -> Option<&Cow<str>> { self.language.as_ref() }
-  pub fn get_mathstyle(&self) -> Option<&Cow<str>> { self.mathstyle.as_ref() }
+  pub fn get_color(&self) -> Option<&Cow<'_, str>> { self.color.as_ref() }
+  pub fn get_background(&self) -> Option<&Cow<'_, str>> { self.bg.as_ref() }
+  pub fn get_opacity(&self) -> Option<&Cow<'_, str>> { self.opacity.as_ref() }
+  pub fn get_encoding(&self) -> Option<&Cow<'_, str>> { self.encoding.as_ref() }
+  pub fn get_language(&self) -> Option<&Cow<'_, str>> { self.language.as_ref() }
+  pub fn get_mathstyle(&self) -> Option<&Cow<'_, str>> { self.mathstyle.as_ref() }
   pub fn get_flags(&self) -> Option<u8> { self.flags }
 
   // NOTE: In math, NORMALLY, setting any one of

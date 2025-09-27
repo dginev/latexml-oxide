@@ -397,7 +397,7 @@ impl BoxOps for Alignment {
   where FnR: FnOnce(&SymHashMap<Stored>) -> R {
     caller(&self.properties)
   }
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     self.properties.get(key).map(Cow::Borrowed)
   }
   fn get_properties_mut(&mut self) -> &mut SymHashMap<Stored> { &mut self.properties }
@@ -408,10 +408,10 @@ impl BoxOps for Alignment {
   ) -> Result<(Dimension, Dimension, Dimension)> {
     todo!();
   }
-  fn get_font(&self) -> Result<Option<Cow<crate::common::font::Font>>> {
+  fn get_font(&self) -> Result<Option<Cow<'_, crate::common::font::Font>>> {
     todo!();
   }
-  fn get_string(&self) -> Result<Cow<str>> { todo!() }
+  fn get_string(&self) -> Result<Cow<'_, str>> { todo!() }
 
   fn compute_size_and_cache(
     &mut self,

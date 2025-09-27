@@ -269,7 +269,7 @@ impl XM {
       _ => Vec::new(),
     }
   }
-  pub fn get_value(&self, nodes: &[Node]) -> Result<Cow<str>, Box<dyn Error>> {
+  pub fn get_value(&self, nodes: &[Node]) -> Result<Cow<'_, str>, Box<dyn Error>> {
     Ok(match self {
       XM::Lexeme(lex, _) => Cow::Owned(p_get_value(lookup_lex_node(lex, nodes)?)),
       XM::Token(props, _) => match props.content {
@@ -618,7 +618,7 @@ impl XM {
   ) -> Result<Node, Box<dyn Error + Send + Sync>> {
     match self {
       XM::Lexeme(content, _meta) => {
-        let id = content.split(':').last().unwrap().parse::<usize>().unwrap() - 1;
+        let id = content.split(':').next_back().unwrap().parse::<usize>().unwrap() - 1;
         let atom_node = &mut nodes[id];
         atom_node.unbind();
         Ok(atom_node.clone())
@@ -707,7 +707,7 @@ impl XM {
     }
   }
 
-  pub fn get_token_meaning(&self, nodes: &[Node]) -> Result<Option<Cow<str>>, Box<dyn Error>> {
+  pub fn get_token_meaning(&self, nodes: &[Node]) -> Result<Option<Cow<'_, str>>, Box<dyn Error>> {
     let props = match self {
       XM::Token(props, _) => props,
       XM::Lexeme(lex, _) => {
@@ -812,7 +812,7 @@ pub(crate) fn lookup_lex_node<'a>(
   lex: &'a str,
   nodes: &'a [Node],
 ) -> Result<&'a Node, Box<dyn Error>> {
-  let node_idx = lex.split(':').last().unwrap().parse::<usize>().expect(lex) - 1;
+  let node_idx = lex.split(':').next_back().unwrap().parse::<usize>().expect(lex) - 1;
   let node = nodes
     .get(node_idx)
     .expect("lex node lookup is grammar-internal and should always have an accurate index.");
