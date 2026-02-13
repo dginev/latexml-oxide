@@ -42,7 +42,7 @@ pub use latexml_core::definition::register::{Register, RegisterType, RegisterVal
 pub use latexml_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
   ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveBody, PrimitiveClosure,
-  PrimitiveFn, ReplacementClosure, Reversion,
+  PrimitiveFn, PropertiesClosure, ReplacementClosure, Reversion,
 };
 pub use latexml_core::digested::{Digested, DigestedData};
 pub use latexml_core::document::Document;
