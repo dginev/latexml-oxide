@@ -1,0 +1,57 @@
+use crate::engine::latex_ch8_theoremlike_environments::*;
+use crate::prelude::*;
+#[rustfmt::skip]
+LoadDefinitions!({
+  // This is close enough to amsthm to just use it.
+  RequirePackage!("amsthm");
+
+  // However, theorem.sty's styles do NOT record the headfont!
+  set_savable_theorem_parameters(vec![
+    "\\thm@bodyfont", "\\thm@headpunct",
+    "\\thm@styling", "\\thm@headstyling", "thm@swap",
+  ]);
+
+  // And headpunct defaults to none.
+  DefRegister!("\\thm@headpunct" => Tokens!());
+
+  DefMacro!("\\FMithmInfo", "");
+
+  DefMacro!("\\theoremheaderfont{}", sub[(font)] {
+    state::assign_register("\\thm@headfont",
+      RegisterValue::Tokens(font.clone()), None, vec![])?;
+    state::assign_register("\\thm@notefont",
+      RegisterValue::Tokens(font), None, vec![])?;
+    Ok(Tokens!())
+  });
+
+  // \lx@theorem@newtheoremstyle{name}{bodyfont}{headstyle}{swap}
+  DefPrimitive!("\\lx@theorem@newtheoremstyle{}{}{}{}", sub[(name, bodyfont, headstyle, swap)] {
+    let name_str = name.to_string();
+    let swap_val = swap.to_string() == "S";
+    save_theorem_style(&name_str, vec![
+      ("\\thm@bodyfont".into(), Stored::Tokens(bodyfont)),
+      ("\\thm@headstyling".into(), Stored::Tokens(headstyle)),
+      ("thm@swap".into(), Stored::Bool(swap_val)),
+    ]);
+    let name_for_closure = name_str.clone();
+    DefMacro!(
+      T_CS!(s!("\\th@{name_str}")),
+      None,
+      Some(ExpansionBody::Closure(Rc::new(move |_args| {
+        use_theorem_style(&name_for_closure);
+        Ok(Tokens!())
+      })))
+    );
+  });
+
+  RawTeX!(r"\lx@theorem@newtheoremstyle{plain}{\itshape}{\lx@makerunin}{N}");
+  RawTeX!(r"\lx@theorem@newtheoremstyle{break}{\slshape}{}{N}");
+  RawTeX!(r"\lx@theorem@newtheoremstyle{change}{\slshape}{\lx@makerunin}{S}");
+  RawTeX!(r"\lx@theorem@newtheoremstyle{margin}{\slshape}{\lx@makerunin\lx@makeoutdent}{S}");
+  RawTeX!(r"\lx@theorem@newtheoremstyle{marginbreak}{\slshape}{\lx@makeoutdent}{S}");
+  RawTeX!(r"\lx@theorem@newtheoremstyle{changebreak}{\slshape}{}{S}");
+  // Redefine so we get correct parameters recorded
+  RawTeX!(r"\lx@theorem@newtheoremstyle{definition}{}{\lx@makerunin}{N}");
+  RawTeX!(r"\lx@theorem@newtheoremstyle{remark}{}{\lx@makerunin}{N}");
+  RawTeX!(r"\th@plain");
+});

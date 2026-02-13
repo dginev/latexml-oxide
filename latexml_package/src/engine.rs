@@ -68,7 +68,7 @@ mod latex_ch7_math_mode_environments;
 mod latex_ch8_defining_commands;
 mod latex_ch8_defining_environments;
 mod latex_ch8_numbering;
-mod latex_ch8_theoremlike_environments;
+pub mod latex_ch8_theoremlike_environments;
 mod latex_ch9_figures_and_tables;
 mod latex_ch9_marginal_notes;
 pub mod latex_functions; // auxiliary functions

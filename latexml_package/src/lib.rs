@@ -34,6 +34,8 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "amsfonts.sty" => package::amsfonts_sty::load_definitions(),
     "amssymb.sty" => package::amssymb_sty::load_definitions(),
     "amsthm.sty" => package::amsthm_sty::load_definitions(),
+    "theorem.sty" => package::theorem_sty::load_definitions(),
+    "ntheorem.sty" => package::ntheorem_sty::load_definitions(),
     "amsbsy.sty" => package::amsbsy_sty::load_definitions(),
     "amsgen.sty" => package::amsgen_sty::load_definitions(),
     "fancyhdr.sty" => package::fancyhdr_sty::load_definitions(),
