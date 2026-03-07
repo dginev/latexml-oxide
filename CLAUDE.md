@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-latexml-oxide is a Rust port of [LaTeXML](https://github.com/brucemiller/latexml), a Perl tool that converts LaTeX documents into accessible web documents (HTML/XML). The project is **pre-alpha** — not ready for production use until test parity with the Perl original is reached.
+latexml-oxide is a Rust port of [LaTeXML](https://github.com/brucemiller/latexml), a Perl tool that converts LaTeX documents into accessible web documents (HTML/XML).
 
 The `LaTeXML/` directory contains the legacy Perl source being ported. Do not modify it — it serves as the reference implementation.
 
@@ -62,11 +62,24 @@ git config --local core.hooksPath .githooks/
 
 ## Architecture Notes
 
+**Important:** The one novelty in the Rust rewrite is the math parser engine, which now uses a highly ambiguous Marpa grammar.
+  - the new goal is to be highly ambiguous in parsing, 
+  - but aggressively prune in the semantics rules, so as to minimize the final parses
+  - this is active ongoing research. So be very cautious when porting math tests, ideally do them after everything else is solid.
+
 - **State** is a thread-local, global, mutable singleton (see CHANGELOG 0.3.2 decision)
 - Uses a **string interner** for efficient symbol handling
 - TeX macro definitions can be compiled at compile-time via proc macros in `latexml_codegen`
 - The port aims to be **faithful to the Perl original** while using idiomatic Rust where possible
 - Test files (`.t` extension) mirror the original LaTeXML Perl test suite; `.rs` files are the Rust equivalents
+- most tests are regression-oriented. They contain a complete TeX input, and can experience failures in many different intermediate stages.
+- we are interested in finding meaningful Rust types for the previously untyped Perl.
+
+## Practical guidance
+
+- When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
+- Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
+- The Perl LaTeXML directory gets updated at times, as the original project is still active. Before doing new work, always revise the current Rust against the current Perl, and update the Rust when outdated.
 
 ## Key Concepts Mapping (Perl → Rust)
 
