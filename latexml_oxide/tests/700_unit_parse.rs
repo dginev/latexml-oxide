@@ -65,3 +65,25 @@ fn basic_1() {
     expected_xmath_after
   );
 }
+
+#[test]
+fn recognizer_subscript_atom() {
+  let mut parser = MathParser::default();
+  // This works in standalone (XMArg wrapping produces ATOM)
+  assert!(parser.recognizes("UNKNOWN:D:1 start_POSTSUBSCRIPT:start:2 ATOM:r:3 end_POSTSUBSCRIPT:end:4 "),
+    "ATOM variant should parse");
+  // This should also work (XMTok produces UNKNOWN)
+  assert!(parser.recognizes("UNKNOWN:D:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:r:3 end_POSTSUBSCRIPT:end:4 "),
+    "UNKNOWN variant should parse");
+}
+
+#[test]
+fn recognizer_after_failure() {
+  let mut parser = MathParser::default();
+  // First formula that fails (has VERTBAR which causes issues)
+  let fails = parser.recognizes("UNKNOWN:d:1 UNKNOWN:s:2 start_POSTSUPERSCRIPT:start:3 NUMBER:2:4 end_POSTSUPERSCRIPT:end:5 RELOP:equals:6 UNKNOWN:h:7 OPEN:(:8 UNKNOWN:z:9 CLOSE:):10 VERTBAR:|:11 UNKNOWN:d:12 UNKNOWN:z:13 VERTBAR:|:14 start_POSTSUPERSCRIPT:start:15 NUMBER:2:16 end_POSTSUPERSCRIPT:end:17 ");
+  eprintln!("Complex formula recognized: {fails}");
+  // After failure+reset, simple subscript should still work
+  assert!(parser.recognizes("UNKNOWN:D:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:r:3 end_POSTSUBSCRIPT:end:4 "),
+    "D_r should parse after engine reset");
+}

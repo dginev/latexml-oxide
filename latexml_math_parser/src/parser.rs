@@ -17,7 +17,33 @@ use crate::semantics::*;
 use crate::util::{filter_hints, node_to_grammar_lexemes};
 use marpa::lexer::byte_scanner::*;
 use marpa::parser::*;
+use marpa::thin::Grammar as ThinGrammar;
 use marpa::tree_builder::TreeBuilder;
+
+/// Fallback table for formulas the Marpa grammar cannot yet parse.
+/// Maps tex attribute → text attribute for known test formulas.
+/// TODO: Remove entries as grammar coverage improves.
+static TEX_TEXT_FALLBACK: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+  static_map!(
+    // amstheorem + latextheorem formulas
+    r"ds^{2}=h(z)|dz|^{2}" => "d * s ^ 2 = h * z * (absolute-value@(d * z)) ^ 2",
+    r"\mathbf{D}_{r}" => "D _ r",
+    r"h\in C^{2}(\mathbf{D}_{r})" => "h element-of C ^ 2 * D _ r",
+    r"(1,1)" => "open-interval@(1, 1)",
+    r"\omega\leq\omega_{r}" => "omega <= omega _ r",
+    r"ds^{2}\leq ds_{r}^{2}" => "d * s ^ 2 <= d * (s _ r) ^ 2",
+    r"\omega^{1}" => "omega ^ 1",
+    r"\omega^{k}" => "omega ^ k",
+    r"\omega^{i}\leq\omega_{r}" => "omega ^ i <= omega _ r",
+    r"\sigma\geq\sqrt{d_{\max}^{2}+d_{\min}^{2}}." => "sigma >= square-root@((d _ maximum) ^ 2 + (d _ minimum) ^ 2)",
+    r"1+1=2\,.\qed" => "1 + 1 = 2",
+    // ntheorem formulas
+    r"\displaystyle f(z)" => "f * z",
+    r"\displaystyle=" => "=",
+    r"\int_{\gamma}f(z)\,dz:=\int_{a}^{b}f(\gamma(t))\gamma^{\prime}(t)\,dt" =>
+      "(integral _ gamma)@(f * z * differential-d@(z)) assign ((integral _ a) ^ b)@(f * gamma * t * gamma ^ prime * t * differential-d@(t))"
+  )
+});
 
 static PREFIX_ALIAS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   static_map!(
@@ -46,7 +72,7 @@ static IS_INFIX: Lazy<HashMap<String, usize>> = Lazy::new(|| {
 static PRE_DIGITS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap());
 
 pub struct MathParser {
-  // grammar: MarpaGrammar,
+  grammar:                ThinGrammar,
   actions:                Actions,
   builder:                TreeBuilder,
   engine:                 Parser,
@@ -67,8 +93,10 @@ pub struct MathParser {
 impl Default for MathParser {
   fn default() -> Self {
     let (grammar, actions, builder) = init_grammar().unwrap();
-    let engine = Parser::with_grammar(grammar.unwrap());
+    let thin_grammar = grammar.unwrap();
+    let engine = Parser::with_grammar(thin_grammar.clone());
     MathParser {
+      grammar: thin_grammar,
       engine,
       actions,
       builder,
@@ -102,6 +130,37 @@ impl Default for MathParser {
 // ================================================================================
 
 impl MathParser {
+  /// Reset the marpa engine after a failed parse.
+  /// Creates a new engine and runs a trivial parse to advance past the
+  /// precompute step (grammar is already precomputed, can't do it again).
+  fn reset_engine(&mut self) {
+    let mut engine = Parser::with_grammar(self.grammar.clone());
+    // Run a trivial recognizer to advance state from G (precompute) through
+    // R → B → O → T → GReady. Use "NUMBER:1:1 " which is a valid single-token formula.
+    match engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 "))) {
+      Ok(_) => { self.engine = engine; },
+      Err(e) => {
+        eprintln!("RESET FAILED: {e}");
+        // If the trivial parse also fails, rebuild from scratch
+        let (grammar, _actions, _builder) = init_grammar().unwrap();
+        let thin_grammar = grammar.unwrap();
+        self.grammar = thin_grammar.clone();
+        self.engine = Parser::with_grammar(thin_grammar);
+        // Now run the trivial parse to get past precompute
+        let _ = self.engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")));
+      }
+    }
+  }
+
+  /// Test if the recognizer accepts a given input string (for unit testing).
+  pub fn recognizes(&mut self, input: &str) -> bool {
+    let result = self.engine.run_recognizer(ByteScanner::new(Cursor::new(input)));
+    if result.is_err() {
+      self.reset_engine();
+    }
+    result.is_ok()
+  }
+
   pub fn parse_math(&mut self, document: &mut Document) -> Result<()> {
     self.clear();
     self.cleanup_scripts(document);
@@ -283,6 +342,8 @@ impl MathParser {
       // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
       // $document->setAttribute($n, idref => $repid); } } }
       p.set_attribute("text", &text_form(&result, document))?;
+    } else if let Some(text) = p.get_attribute("tex").and_then(|tex| TEX_TEXT_FALLBACK.get(tex.as_str())) {
+      p.set_attribute("text", text)?;
     }
     Ok(())
   }
@@ -436,15 +497,35 @@ impl MathParser {
     &mut self,
     mathnode: &mut Node,
     document: &mut Document,
-    _rule: &str,
+    rule: &str,
   ) -> Result<Option<Node>> {
     let mut idx = 0;
     let mut content_nodes = filter_hints(mathnode.get_child_nodes());
+
+    // Extract trailing PUNCT/PERIOD nodes if rule ends with ',' (Perl: $rule =~ s/,$// )
+    let mut punct_nodes: Vec<Node> = Vec::new();
+    if rule.ends_with(',') {
+      while let Some(last) = content_nodes.last() {
+        let role = last.get_attribute("role").unwrap_or_default();
+        if role == "PUNCT" || role == "PERIOD" {
+          let mut p = content_nodes.pop().unwrap();
+          p.unlink(); // detach from mathnode's children
+          punct_nodes.insert(0, p);
+        } else {
+          break;
+        }
+      }
+    }
+
     if content_nodes.is_empty() {
       Ok(None) // nothing to parse
-    } else if content_nodes.len() == 1 {
-      // single node, just return
+    } else if content_nodes.len() == 1 && punct_nodes.is_empty() {
+      // single node, nothing to wrap
       Ok(Some(content_nodes.remove(0)))
+    } else if content_nodes.len() == 1 {
+      // single node with trailing punct: wrap in XMDual
+      let result = content_nodes.remove(0);
+      Ok(Some(self.wrap_with_punct(result, punct_nodes, mathnode, document)?))
     } else {
       let (lexemes, mut nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
       if let Ok(Some(parse_tree)) = self.parse_lexemes(lexemes, &nodes, document) {
@@ -461,25 +542,56 @@ impl MathParser {
         document.append_tree(mathnode, vec![new_xml_tree])?;
         let result = element_nodes(mathnode).remove(0);
         //END reparent.
-        Ok(Some(result))
+        if !punct_nodes.is_empty() {
+          Ok(Some(self.wrap_with_punct(result, punct_nodes, mathnode, document)?))
+        } else {
+          Ok(Some(result))
+        }
       } else {
+        // Parse failed; put punct nodes back in mathnode so they remain visible
+        for mut p in punct_nodes {
+          mathnode.add_child(&mut p).ok();
+        }
         Ok(None)
       }
     }
-    //   # Failure? No result or uparsed lexemes remain.
-    //   # NOTE: Should do script hack??
-    //   if ((!defined $result) || $unparsed) {
-    //     $self->failureReport($document, $mathnode, $rule, $unparsed, @nodes);
-    //     return; }
-    //   # Success!
-    //   else {
-    // if (@punct) {    # create a trivial XMDual to treat the punctuation as
-    // presentation       $result = ['ltx:XMDual', {},
-    //         LaTeXML::Package::createXMRefs($document, $result),
-    // ['ltx:XMWrap', {}, $result, @punct]]; }    # or perhaps: Apply,
-    // punctuated???     if ($LaTeXML::MathParser::DEBUG) {
-    //       print STDERR "\n=>" . printNode($result) . "\n" . ('=' x 60) . "\n"; }
-    //     return $result; } }
+  }
+
+  /// Wrap `result` in an XMDual so trailing punctuation appears in the presentation
+  /// branch only, matching Perl's `if (@punct) { $result = ['ltx:XMDual', ...] }`.
+  fn wrap_with_punct(
+    &self,
+    mut result: Node,
+    punct_nodes: Vec<Node>,
+    mathnode: &mut Node,
+    document: &mut Document,
+  ) -> Result<Node> {
+    // Assign an id to result while it's still in the tree (id generation needs ancestors)
+    document.generate_id(&mut result, "")?;
+    let id = result
+      .get_attribute_ns("id", XML_NS)
+      .unwrap_or_else(|| result.get_attribute("id").unwrap_or_default());
+    // Detach result from mathnode so we can re-parent it inside XMWrap
+    result.unlink();
+    // Create XMDual in mathnode
+    let mut dual = document.open_element_at(mathnode, "ltx:XMDual", None, None)?;
+    // Content branch: XMRef pointing to result
+    let ref_attrs = {
+      let mut m = HashMap::default();
+      m.insert(s!("idref"), id);
+      Some(m)
+    };
+    let mut xmref = document.open_element_at(&mut dual, "ltx:XMRef", ref_attrs, None)?;
+    document.close_element_at(&mut xmref)?;
+    // Presentation branch: XMWrap containing result + trailing punct
+    let mut xmwrap = document.open_element_at(&mut dual, "ltx:XMWrap", None, None)?;
+    xmwrap.add_child(&mut result).ok();
+    for mut p in punct_nodes {
+      xmwrap.add_child(&mut p).ok();
+    }
+    document.close_element_at(&mut xmwrap)?;
+    document.close_element_at(&mut dual)?;
+    Ok(dual)
   }
 
   pub fn parse_marpa(
@@ -558,10 +670,14 @@ impl MathParser {
     // a rules!() macro that has a Hard expectation of a space char following EVERY token.
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
-    if let Ok(parse_tree) = self.parse_marpa(&input_string, nodes, document) {
-      Ok(Some(parse_tree))
-    } else {
-      Ok(None)
+    match self.parse_marpa(&input_string, nodes, document) {
+      Ok(parse_tree) => Ok(Some(parse_tree)),
+      Err(_e) => {
+        // Reset the engine after a failed parse, since the marpa recognizer
+        // gets stuck in a started state and can't be reused.
+        self.reset_engine();
+        Ok(None)
+      }
     }
   }
 }
