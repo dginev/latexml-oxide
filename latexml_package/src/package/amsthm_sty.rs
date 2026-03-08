@@ -71,7 +71,7 @@ LoadDefinitions!({
       );
       let mut full_body = preamble.unlist();
       full_body.extend(headspec.unlist());
-      let params = parse_parameters("{}{}{}", &formatter_cs, false)?;
+      let params = parse_parameters("{}{}{}", &formatter_cs, true)?;
       DefMacro!(
         formatter_cs.clone(),
         params,
@@ -125,11 +125,11 @@ LoadDefinitions!({
 
   AssignValue!("QED@stack" => Stored::VecDequeStored(std::collections::VecDeque::new()));
   DefMacro!("\\pushQED{}", sub[(qed)] {
-    push_value("QED@stack", Stored::Tokens(qed));
+    let _ = push_value("QED@stack", Stored::Tokens(qed));
     Ok(Tokens!())
   });
   DefMacro!("\\popQED", sub[_args] {
-    if let Some(Stored::Tokens(t)) = pop_value("QED@stack") {
+    if let Ok(Some(Stored::Tokens(t))) = pop_value("QED@stack") {
       Ok(t)
     } else {
       Ok(Tokens!())
@@ -149,8 +149,8 @@ LoadDefinitions!({
 
   DefMacro!("\\qedhere", sub[_args] {
     let t = pop_value("QED@stack");
-    push_value("QED@stack", Stored::Tokens(Tokens!()));
-    if let Some(Stored::Tokens(tokens)) = t {
+    let _ = push_value("QED@stack", Stored::Tokens(Tokens!()));
+    if let Ok(Some(Stored::Tokens(tokens))) = t {
       Ok(tokens)
     } else {
       Ok(Tokens!())
@@ -172,8 +172,8 @@ LoadDefinitions!({
       stomach::digest(Tokens::new(vec![T_CS!("\\th@proof")]))?;
     },
     after_digest => sub[whatsit] {
-      push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
-      stomach::digest(mouth::tokenize("\\the\\thm@bodyfont"))?;
+      let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
+      stomach::digest(mouth::tokenize_internal("\\the\\thm@bodyfont"))?;
     },
     properties => sub[args] {
       let mut title_tokens = vec![T_BEGIN!(), T_CS!("\\the"), T_CS!("\\thm@headfont")];
@@ -185,11 +185,13 @@ LoadDefinitions!({
       title_tokens.push(T_OTHER!("."));
       title_tokens.push(T_END!());
       let title = stomach::digest(Tokens::new(title_tokens))?;
-      let titlefont = title.get_font();
+      // Perl: [$title->unlist]->[1]->getFont — get font from first content box
+      // Rust codegen uses props["font"] for any font='#...' template attr
+      let titlefont = title.get_font().ok().flatten().map(|f| f.into_owned());
       let mut map = SymHashMap::default();
       map.insert("title", title.into());
       if let Some(f) = titlefont {
-        map.insert("titlefont", f.into());
+        map.insert("font", Stored::Font(Rc::new(f)));
       }
       map.insert("titleclass", "ltx_runin".into());
       Ok(map)
@@ -198,14 +200,14 @@ LoadDefinitions!({
 
   DefConstructor!("\\end@proof", sub[document, _args] {
     document.maybe_close_element("ltx:proof")?;
-    Ok(())
   },
   before_digest => {
-    if let Some(Stored::Tokens(qed)) = pop_value("QED@stack") {
+    if let Ok(Some(Stored::Tokens(qed))) = pop_value("QED@stack") {
       if !qed.is_empty() {
-        stomach::digest(qed)?;
+        return Ok(vec![stomach::digest(qed)?]);
       }
     }
+    Ok(vec![])
   });
 
   Let!("\\proof",    "\\@proof");

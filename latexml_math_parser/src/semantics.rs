@@ -321,9 +321,8 @@ pub fn fenced(
   let c = close.get_value(ctxt.nodes)?;
   let op_name = format!("delimited-{}{}", o, c);
 
-  // TODO: We need a method to figure out how many arguments are nested inside <arg>
-  // for now assume 1
-  // if arg.len() == 1 &&
+  // TODO: For now assume a single argument in arg; specialize in other functions such as "open_interval",
+  //       for the other cases from the classic MathParser.pm
   if op_name == "delimited-()" {
     // Hopefully, can just ignore the parens?
     let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
@@ -337,10 +336,124 @@ pub fn fenced(
       XProps::default(),
       Meta::default(),
     )))
+  } else if op_name == "delimited-||" {
+    let op = XProps {
+      meaning: Some(Cow::Borrowed("absolute-value")),
+      ..XProps::default()
+    };
+    interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
   } else {
     let op = xnew(op_name);
     interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
   }
+}
+
+// similar to fenced but the operator is a kind of tuple or interval, such as "open-interval"
+// and the arguments are delimited with a comma
+pub fn interval(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => open_opt, arg1_opt, sep_opt, arg2_opt, close_opt);
+  let open = open_opt.unwrap();
+  let mut arg1 = arg1_opt.unwrap();
+  let sep = sep_opt.unwrap();
+  let mut arg2 = arg2_opt.unwrap();
+  let close = close_opt.unwrap();
+
+  // Extract text values from lexemes (like fenced does)
+  let o = open.get_value(ctxt.nodes)?;
+  let c = close.get_value(ctxt.nodes)?;
+
+  // Determine interval type from delimiter pair
+  let op_meaning = match (o.as_ref(), c.as_ref()) {
+    ("(", ")") | ("]", "[") => "open-interval",
+    ("[", "]") => "closed-interval",
+    ("[", ")") => "closed-open-interval",
+    ("(", "]") => "open-closed-interval",
+    _ => "tuple",
+  };
+
+  // Create operator as XM::Token with meaning attribute
+  let op: XM = XProps {
+    meaning: Some(Cow::Borrowed(op_meaning)),
+    ..XProps::default()
+  }
+  .into();
+
+  let ref_args = create_xmrefs(&mut [&mut arg1, &mut arg2], ctxt)?;
+
+  Ok(Some(XM::Dual(
+    Box::new(XM::Apply(
+      op.into(),
+      ref_args.into(),
+      XProps::default(),
+      Meta::default(),
+    )),
+    Box::new(XM::Wrap(
+      vec![open, arg1, sep, arg2, close],
+      XProps::default(),
+      Meta::default(),
+    )),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+
+/// Perl's Fence (MathParser.pm): generalized fenced expression with
+/// comma-separated items. Determines meaning from delimiter+punctuation
+/// pattern using the Perl enclose tables.
+/// Receives: open, item1, punct1, item2, [punct2, item3, ...], close
+pub fn fence(
+  _rule_id: i32,
+  args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Collect all non-None args into a flat stuff vector
+  let stuff: Vec<XM> = args.into_iter().flatten().collect();
+  let open = &stuff[0];
+  let close = &stuff[stuff.len() - 1];
+  let o = open.get_value(ctxt.nodes)?;
+  let c = close.get_value(ctxt.nodes)?;
+  // Count items (every other element between open and close is an item)
+  let n = (stuff.len() - 2 + 1) / 2; // number of items
+  // Get first punctuation value for enclose2/encloseN lookup
+  let p = if n >= 2 { stuff[2].get_value(ctxt.nodes).ok() } else { None };
+  let p_str = p.as_deref().unwrap_or(",");
+
+  // Perl's enclose tables: determine operator meaning from delimiters + punctuation
+  let op_meaning = match n {
+    0 => "list",
+    1 => match (o.as_ref(), c.as_ref()) {
+      ("{", "}") => "set",
+      ("|", "|") => "absolute-value",
+      _ => return Ok(None), // fall through, shouldn't happen
+    },
+    2 => match (o.as_ref(), p_str, c.as_ref()) {
+      ("{", ",", "}") => "set",
+      ("(", ",", ")") => "open-interval",
+      ("[", ",", "]") => "closed-interval",
+      ("(", ",", "]") => "open-closed-interval",
+      ("[", ",", ")") => "closed-open-interval",
+      _ => "list",
+    },
+    _ => match (o.as_ref(), p_str, c.as_ref()) {
+      ("{", ",", "}") => "set",
+      ("(", ",", ")") => "vector",
+      _ => "list",
+    },
+  };
+
+  let op: XM = XProps {
+    meaning: Some(Cow::Borrowed(op_meaning)),
+    ..XProps::default()
+  }
+  .into();
+  interpret_delimited(op, stuff, ctxt).map(Option::Some)
 }
 
 /// This is similar, but "interprets" a delimited list as being the
@@ -432,6 +545,24 @@ pub fn prefix_script(
   new_script(base, op.unwrap(), ctxt)
 }
 
+/// Parse a scriptpos string like "post2" into position type and level.
+/// Follows Perl's: ($sx, $sl) = ($scriptpos || 'post') =~ /^(pre|mid|post)?(\d+)?$/
+fn parse_scriptpos(s: &str) -> (&'static str, u32) {
+  let s = if s.is_empty() { "post" } else { s };
+  let x = if s.starts_with("pre") {
+    "pre"
+  } else if s.starts_with("mid") {
+    "mid"
+  } else {
+    "post"
+  };
+  let l: u32 = s
+    .trim_start_matches(|c: char| c.is_ascii_alphabetic())
+    .parse()
+    .unwrap_or(1);
+  (x, l)
+}
+
 /// This is loosely in the lines of MathParser::NewScript, but taking into account
 /// the realities of our new data structures.
 pub fn new_script(
@@ -453,8 +584,13 @@ pub fn new_script(
     } else {
       "SUBSCRIPTOP"
     });
-    let scriptpos = Cow::Borrowed(if is_float { "pre1" } else { "post1" });
-    // TODO: scriptpos => "$x$l"
+    // Read scriptpos from the script node (e.g. "post2"), following Perl's NewScript:
+    //   my ($sx, $sl) = (p_getAttribute($rscript, 'scriptpos') || 'post') =~ /^(pre|mid|post)?(\d+)?$/;
+    //   scriptpos => "$x$l"
+    let raw_sp = script_wrap.get_attribute("scriptpos").unwrap_or_default();
+    let (x, l) = parse_scriptpos(&raw_sp);
+    let x = if is_float { "pre" } else { x };
+    let scriptpos: Cow<'static, str> = format!("{x}{l}").into();
     let op = new_props(
       None,
       None,

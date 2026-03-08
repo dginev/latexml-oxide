@@ -2,7 +2,7 @@ use crate::prelude::*;
 use std::collections::VecDeque;
 
 fn clean_class_name(name: &str) -> String {
-  name.split_whitespace().collect::<Vec<_>>().join("_").to_lowercase()
+  name.trim().chars().filter(|c| c.is_alphanumeric()).collect()
 }
 
 #[rustfmt::skip]
@@ -51,11 +51,11 @@ LoadDefinitions!({
 
   DefPrimitive!("\\newtheorem OptionalMatch:* {}[]{}[]", sub[(flag, thmset, otherthmset, typ, reset)] {
     define_new_theorem(
-      if flag.is_empty() { None } else { Some(flag) },
+      flag.filter(|f| !f.is_empty()),
       thmset,
-      if otherthmset.is_empty() { None } else { Some(otherthmset) },
+      otherthmset.filter(|t| !t.is_empty()),
       if typ.is_empty() { None } else { Some(typ) },
-      if reset.is_empty() { None } else { Some(reset) },
+      reset.filter(|t| !t.is_empty()),
     )?;
     // Reset these!
     state::assign_register("\\thm@prework",
@@ -66,7 +66,7 @@ LoadDefinitions!({
 });
 
 fn stored_string_list(keys: &[&str]) -> Stored {
-  let deque: VecDeque<Stored> = keys.iter().map(|k| Stored::from(*k)).collect();
+  let deque: VecDeque<Stored> = keys.iter().map(|k| Stored::from(k.to_string())).collect();
   Stored::VecDequeStored(deque)
 }
 
@@ -121,7 +121,7 @@ pub fn use_theorem_style(name: &str) {
         if key.starts_with('\\') {
           let tokens = match val {
             Stored::Tokens(t) => t,
-            Stored::Bool(b) => {
+            Stored::Bool(_) => {
               // bool stored for a register key — skip
               i += 2;
               continue;
@@ -212,7 +212,7 @@ fn define_new_theorem(
       DefMacro!(
         T_CS!(s!("\\the{counter}")),
         None,
-        Some(ExpansionBody::Tokens(mouth::tokenize(&the_counter_body))),
+        Some(ExpansionBody::Tokens(mouth::tokenize_internal(&the_counter_body))),
         scope => Some(Scope::Global)
       );
     }
@@ -318,7 +318,7 @@ fn define_new_theorem(
     fmt_toks.push(T_CS!("\\the"));
     fmt_toks.push(T_CS!("\\thm@headpunct"));
 
-    let params = parse_parameters("{}", &format_cs_token, false)?;
+    let params = parse_parameters("{}", &format_cs_token, true)?;
     DefMacro!(
       format_cs_token,
       params,
@@ -335,11 +335,11 @@ fn define_new_theorem(
     let fmt_str = s!(
       "{{\\the\\thm@headfont\\lx@tag{{\\csname fnum@{thmset_str}\\endcsname}}{{{note_part}}}\\the\\thm@headpunct}}"
     );
-    let params = parse_parameters("{}", &format_cs_token, false)?;
+    let params = parse_parameters("{}", &format_cs_token, true)?;
     DefMacro!(
       format_cs_token,
       params,
-      Some(ExpansionBody::Tokens(mouth::tokenize(&fmt_str))),
+      Some(ExpansionBody::Tokens(mouth::tokenize_internal(&fmt_str))),
       scope => Some(Scope::Global)
     );
   }
@@ -427,7 +427,7 @@ fn define_new_theorem(
   // before_digest
   let before_digest_closure: BeforeDigestClosure = Rc::new(move || {
     use_theorem_style(&thmset_for_before);
-    let digested = stomach::digest(mouth::tokenize("\\normalfont\\the\\thm@prework"))?;
+    let digested = stomach::digest(mouth::tokenize_internal("\\normalfont\\the\\thm@prework"))?;
     Ok(vec![digested])
   });
   options.before_digest.push(before_digest_closure);
@@ -441,14 +441,14 @@ fn define_new_theorem(
     let digest_str = s!(
       "\\the\\thm@bodyfont\\the\\thm@styling\\def\\lx@thistheorem{{{name_str}}}"
     );
-    let digested = stomach::digest(mouth::tokenize(&digest_str))?;
+    let digested = stomach::digest(mouth::tokenize_internal(&digest_str))?;
     Ok(vec![digested])
   });
   options.after_digest_begin.push(after_digest_begin_closure);
 
   // before_digest_end
   let before_digest_end_closure: BeforeDigestClosure = Rc::new(move || {
-    let digested = stomach::digest(mouth::tokenize("\\thm@doendmark\\the\\thm@postwork"))?;
+    let digested = stomach::digest(mouth::tokenize_internal("\\thm@doendmark\\the\\thm@postwork"))?;
     Ok(vec![digested])
   });
   options.before_digest_end.push(before_digest_end_closure);
@@ -473,7 +473,7 @@ fn define_new_theorem(
         if is_starred_for_props {
           let ctr_props = ref_step_id(&counter_for_tags)?;
           for (k, v) in ctr_props.iter() {
-            props.insert(*k, v.clone());
+            props.insert_sym(*k, v.clone());
           }
           // For starred theorems with a type, create tags without the counter number
           if has_type_for_props {
@@ -495,7 +495,7 @@ fn define_new_theorem(
         } else {
           let ctr_props = ref_step_counter(&thmset_for_tags, false)?;
           for (k, v) in ctr_props.iter() {
-            props.insert(*k, v.clone());
+            props.insert_sym(*k, v.clone());
           }
         }
       }
@@ -516,10 +516,10 @@ fn define_new_theorem(
       title_tokens.push(T_END!());
 
       let title = digest_text(Tokens::new(title_tokens))?;
-      let titlefont = title.get_font();
+      let titlefont = title.get_font()?.map(|f| f.into_owned());
       props.insert("title", title.into());
       if let Some(f) = titlefont {
-        props.insert("titlefont", f.into());
+        props.insert("titlefont", Stored::Font(Rc::new(f)));
       }
 
       Ok(props)
@@ -529,7 +529,7 @@ fn define_new_theorem(
 
   // Use the OptionalUndigested parameter
   let env_cs = T_CS!(s!("\\begin{{{thmset_for_env}}}"));
-  let paramlist = parse_parameters("OptionalUndigested", &env_cs, false)?;
+  let paramlist = parse_parameters("OptionalUndigested", &env_cs, true)?;
   def_environment(thmset_for_env, paramlist, compiled_replacement, options);
 
   Ok(())

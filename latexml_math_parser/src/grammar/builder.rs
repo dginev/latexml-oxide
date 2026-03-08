@@ -67,7 +67,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
   rules!(
     // Factors
-    factor_base = unknown | number | id | atom;
+    factor_base = unknown | number | id | atom | opfunction;
     factor = factor_base;
     // Terms
     tight_term = factor
@@ -76,8 +76,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | function factor => prefix_apply;
 
     term = tight_term
-      | term mulop tight_term => infix_apply_nary
-      | term mulop tight_term elideop => infix_apply_and_elide;
+    | term mulop tight_term => infix_apply_nary
+    | term mulop tight_term elideop => infix_apply_and_elide
+    | bigop tight_term => prefix_apply;
 
     // Expressions
     expression = term
@@ -101,8 +102,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Extensions, now that we have more category variables defined
     fenced_factor = lbrace expression rbrace    => fenced
            | lbracket expression rbracket       => fenced
-           | lparen formula rparen              => fenced;
-
+           | lparen formula rparen              => fenced
+           | lparen term punct term rparen      => interval
+           | lparen term punct term rbracket    => interval
+           | lbracket term punct term rbracket  => interval
+           | lbracket term punct term rparen  => interval
+           | rbracket term punct term lbracket => interval
+           | singlevertbar expression singlevertbar => fenced
+           // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
+           | lbrace term punct term rbrace => fence
+           | lbrace term punct term punct term rbrace => fence;
     factor += fenced_factor;
 
 

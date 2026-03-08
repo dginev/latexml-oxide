@@ -1393,14 +1393,16 @@ LoadDefinitions!({
   DefMacro!("\\ldots", "\\lx@ldots");
   DefConstructor!(
     "\\vdots",
-    "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\u{22EE}</ltx:XMTok>)(\u{22EE})"
-  );
-  // TODO:
-  // properties => sub {
-  //   (LookupValue('IN_MATH')
-  //     ? (font => LookupValue('font')->merge(family => 'serif',
-  //         series => 'medium', shape => 'upright')->specialize("\u{22EE}"))
-  //     : ()); });    # Since not DefMath!
+    "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\u{22EE}</ltx:XMTok>)(\u{22EE})",
+    properties => {
+      if lookup_bool("IN_MATH") {
+        Ok(stored_map!("font" => lookup_font().unwrap().merge(
+          fontmap!(family => "serif", series => "medium", shape => "upright")
+            .specialize("\u{22EE}"))))
+      } else {
+        Ok(SymHashMap::default())
+      }
+    });
   //                   # But not these!
   DefMath!("\\cdots", None, "\u{22EF}", role => "ELIDEOP"); // MIDLINE HORIZONTAL ELLIPSIS
   DefMath!("\\ddots", None, "\u{22F1}", role => "ID"); // DOWN RIGHT DIAGONAL ELLIPSIS
@@ -1409,14 +1411,16 @@ LoadDefinitions!({
   //         # Aha, also can be in text...
   DefConstructor!(
     "\\dots",
-    "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})"
-  );
-  // TODO:
-  //   properties => sub {
-  //     (LookupValue('IN_MATH')
-  //       ? (font => LookupValue('font')->merge(family => 'serif',
-  //           series => 'medium', shape => 'upright')->specialize("\u{2026}"))
-  //       : ()); });    # Since not DefMath!
+    "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
+    properties => {
+      if lookup_bool("IN_MATH") {
+        Ok(stored_map!("font" => lookup_font().unwrap().merge(
+          fontmap!(family => "serif", series => "medium", shape => "upright")
+            .specialize("\u{2026}"))))
+      } else {
+        Ok(SymHashMap::default())
+      }
+    });
 
   // And while we're at it...
 
@@ -1634,7 +1638,7 @@ LoadDefinitions!({
     "\\sqrt OptionalInScriptStyle Digested",
     "?#1(<ltx:XMApp><ltx:XMTok meaning='nth-root'/>\
     <ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)\
-    (<ltx:XMApp><ltx:XMTok role='FUNCTION' meaning='square-root'/><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)"
+    (<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)"
   );
 
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
@@ -1690,30 +1694,23 @@ LoadDefinitions!({
 
   ); //TODO: scriptpos => \&doScriptpos);
   DefMath!("\\liminf", None, "lim inf", role => "LIMITOP", meaning => "limit-infimum",
-
-  ); //TODO: scriptpos => \&doScriptpos);
-
+    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
   DefMath!("\\limsup", None, "lim sup", role => "LIMITOP", meaning => "limit-supremum",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
   DefMath!("\\ln",  None, "ln",  role => "OPFUNCTION", meaning => "natural-logarithm");
   DefMath!("\\log", None, "log", role => "OPFUNCTION", meaning => "logarithm");
   DefMath!("\\max", None, "max", role => "OPFUNCTION", meaning => "maximum",
-
-  ); //TODO: scriptpos => \&doScriptpos);
-
+    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
   DefMath!("\\min", None, "min", role => "OPFUNCTION", meaning => "minimum",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
   DefMath!("\\Pr",  None, "Pr",  role => "OPFUNCTION",
-  ); //TODO: scriptpos => \&doScriptpos);
+    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
   DefMath!("\\sec", None, "sec", role => "TRIGFUNCTION", meaning   => "secant");
   DefMath!("\\sin", None, "sin", role => "TRIGFUNCTION", meaning   => "sine");
 
   DefMath!("\\sinh", None, "sinh", role => "TRIGFUNCTION", meaning => "hyperbolic-sine");
   DefMath!("\\sup", None, "sup", role => "LIMITOP", meaning => "supremum",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
   DefMath!("\\tan",  None, "tan",  role => "TRIGFUNCTION", meaning => "tangent");
   DefMath!("\\tanh", None, "tanh", role => "TRIGFUNCTION", meaning => "hyperbolic-tangent");
 

@@ -17,7 +17,7 @@ pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
     return String::new();
   }
   let mut div = 1000;
-  let mut s: String = if n > div {
+  let mut s: String = if n >= div {
     String::from_utf8(vec![b'm'; (n / div) as usize]).unwrap()
   } else {
     String::new()

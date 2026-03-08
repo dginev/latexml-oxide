@@ -341,6 +341,12 @@ where FnR: FnOnce(&[Digested]) -> R {
   let list = &stomach.box_list;
   caller(list)
 }
+pub fn with_box_list_mut<R, FnR>(caller: FnR) -> R
+where FnR: FnOnce(&mut [Digested]) -> R {
+  let mut stomach = stomach_mut!();
+  let list = &mut stomach.box_list;
+  caller(list)
+}
 
 // **********************************************************************
 // Digestion

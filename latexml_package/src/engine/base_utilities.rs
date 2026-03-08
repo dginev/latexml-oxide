@@ -398,7 +398,7 @@ LoadDefinitions!({
 
   DefMacro!(
     "\\lx@@typerefnum@@{}",
-    r"\@ifundefined{#1typerefname}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\lx@the@@{#1}}}"
+    r"\@ifundefined{#1typerefname}{\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\csname p@#1\endcsname\lx@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\csname p@#1\endcsname\lx@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\csname p@#1\endcsname\lx@the@@{#1}}}"
   );
 
   AssignMapping!("type_tag_formatter", "typerefnum" => "\\lx@typerefnum@@");

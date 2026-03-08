@@ -3,6 +3,29 @@
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
+
+/// Perl's mergeLimits (TeX_Math.pool.ltxml): walks backward through the
+/// digest list, extracts any existing script level from the previous
+/// `scriptpos` value, and sets `scriptpos` to `pos` + level.
+fn merge_limits(pos: &str) {
+  // Compute script level before borrowing the box list mutably,
+  // since get_script_level() also borrows the stomach.
+  let default_level = get_script_level().to_string();
+  stomach::with_box_list_mut(|list| {
+    for b in list.iter_mut().rev() {
+      // extract trailing level number from existing scriptpos, or use current script level
+      let prev = b.get_property("scriptpos").map(|v| v.to_string()).unwrap_or_default();
+      let level: String = prev.chars().rev().take_while(|c| c.is_ascii_digit()).collect::<Vec<_>>()
+        .into_iter().rev().collect();
+      let level = if level.is_empty() { &default_level } else { &level };
+      b.set_property("scriptpos", format!("{pos}{level}"));
+      if !b.is_empty().unwrap_or(false) {
+        break;
+      }
+    }
+  });
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Math Family of primitive control sequences
@@ -326,7 +349,15 @@ LoadDefinitions!({
   // AND, rarely, they're empty.... Is it wrong to drop them?
   DefConstructor!("\\mathord{}", "?#1(<ltx:XMWrap role='ID'   >#1</ltx:XMWrap>)()", bounded => true);
   DefConstructor!("\\mathop{}", "?#1(<ltx:XMWrap role='BIGOP' scriptpos='#scriptpos'>#1</ltx:XMWrap>)()",
-    bounded => true); // TODO: , properties => { scriptpos => \&doScriptpos });
+    bounded => true,
+    properties => {
+      // doScriptpos: 'mid' in display mode, 'post' in text mode
+      // The script level number is appended later by mergeLimits (\limits, \nolimits)
+      let pos = if lookup_font().map_or(false, |f|
+        f.mathstyle.as_deref() == Some("display"))
+      { "mid" } else { "post" };
+      Ok(stored_map!("scriptpos" => pos))
+    });
   DefConstructor!("\\mathbin{}", "?#1(<ltx:XMWrap role='BINOP'>#1</ltx:XMWrap>)()", bounded => true);
   DefConstructor!("\\mathrel{}", "?#1(<ltx:XMWrap role='RELOP'>#1</ltx:XMWrap>)()", bounded => true);
   DefConstructor!("\\mathopen{}", "?#1(<ltx:XMWrap role='OPEN' >#1</ltx:XMWrap>)()", bounded => true);
@@ -435,25 +466,20 @@ LoadDefinitions!({
   // \nolimits               c  displays limits to the right of large operators (class 1).
   // \displaylimits          c  restores normal conventions for using limits with operators.
 
-  // TODO:
-  // DefConstructor('\limits', undef, sub {
-  //     my $node = $_[0]->getElement;
-  //     $_[0]->setAttribute($_[0]->getLastChildElement($node) || $node, scriptpos => "mid"); });
-  // DefConstructor('\nolimits', undef, sub {
-  //     my $node = $_[0]->getElement;
-  //     $node = $_[0]->getLastChildElement($node) || $node;
-  //     $node->removeAttribute('scriptpos'); });    # default is 'post', so we can just remove the
-  // attrib.
-  //
-  // DefConstructor('\displaylimits', undef, sub {
-  //     my ($document, %props) = @_;
-  //     my $node = $_[0]->getElement;
-  //     $node = $_[0]->getLastChildElement($node) || $node;
-  //     if (($props{mathstyle} || 'text') eq 'display') {
-  //       $document->setAttribute($node, scriptpos => "mid"); }
-  //     else {
-  //       $node->removeAttribute('scriptpos'); } },
-  //   properties => sub { (mathstyle => LookupValue('font')->getMathstyle); });
+  DefConstructor!("\\limits", "",
+    after_digest => { merge_limits("mid"); },
+    properties => { Ok(stored_map!("isEmpty" => true)) });
+  DefConstructor!("\\nolimits", "",
+    after_digest => { merge_limits("post"); },
+    properties => { Ok(stored_map!("isEmpty" => true)) });
+  DefConstructor!("\\displaylimits", "",
+    after_digest => {
+      let pos = if lookup_font().map_or(false, |f|
+        f.mathstyle.as_deref() == Some("display"))
+      { "mid" } else { "post" };
+      merge_limits(pos);
+    },
+    properties => { Ok(stored_map!("isEmpty" => true)) });
 
   //======================================================================
   // Math script fonts

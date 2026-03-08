@@ -4,7 +4,7 @@ use crate::semantics::XProps;
 use crate::semantics::tree::XM;
 use crate::semantics::tree::lookup_lex_node;
 use latexml_core::binding::def::dialect::get_xmarg_id;
-use libxml::tree::Node;
+use libxml::tree::{Node, NodeType};
 use std::borrow::Cow;
 use std::error::Error;
 
@@ -21,7 +21,9 @@ pub fn node_to_grammar_lexemes(mathnode: &Node, idx: &mut usize) -> (Vec<String>
   }
   let child_nodes = filter_hints(mathnode.get_child_nodes());
   for node in child_nodes.into_iter() {
-    if node.get_name() == "XMApp" {
+    if node.get_name() == "XMApp" && node.get_attribute("role").is_some() {
+      // Only recurse into XMApp nodes that have a role (scripts, etc.)
+      // Role-less XMApps (e.g. \sqrt, already-parsed structures) are atomic.
       let (mut inner_lexes, mut inner_nodes) = node_to_grammar_lexemes(&node, idx);
       for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
         lexemes.push(inner_lex);
@@ -67,7 +69,80 @@ pub fn distill_lexeme(name: &str) -> (&str, &str, &str) {
   }
 }
 
-pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> { nodes }
+/// Parse an XMHint `width` attribute string to points.
+/// Supports "3.0mu" (mu → pt by dividing by 1.8) and "1.667pt"/"0.16667em".
+fn get_xmhint_spacing(width: &str) -> f64 {
+  let width = width.trim();
+  if width.is_empty() {
+    return 0.0;
+  }
+  let unit_start = width.find(|c: char| c.is_alphabetic()).unwrap_or(width.len());
+  let (number_str, unit) = width.split_at(unit_start);
+  let number: f64 = number_str.trim().parse().unwrap_or(0.0);
+  match unit.trim() {
+    "mu" => number / 1.8,
+    "pt" => number,
+    "em" => number * 10.0, // assume 10pt font size
+    _ => 0.0,
+  }
+}
+
+/// Filter XMHint nodes from a list of child nodes, transferring their spacing
+/// info to adjacent tokens as `lpadding`/`rpadding` attributes (matching Perl).
+/// XMHints are also unlinked from the XML tree so they won't be seen again.
+pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
+  const HINT_PUNCT_THRESHOLD: f64 = 10.0;
+  let mut prefiltered: Vec<Node> = Vec::new();
+  let mut pending_space: f64 = 0.0;
+
+  for mut node in nodes {
+    if node.get_type() != Some(NodeType::ElementNode) {
+      continue;
+    }
+    if node.get_name() == "XMHint" {
+      if let Some(width_str) = node.get_attribute("width") {
+        let pts = get_xmhint_spacing(&width_str);
+        if pts != 0.0 {
+          let prev_role = prefiltered.last().and_then(|n| n.get_attribute("role"));
+          if prefiltered.last().is_some() && prev_role.as_deref() != Some("OPEN") {
+            let prev = prefiltered.last_mut().unwrap();
+            let s: f64 = prev
+              .get_attribute("_space")
+              .and_then(|v| v.parse().ok())
+              .unwrap_or(0.0);
+            let _ = prev.set_attribute("_space", &format!("{}", s + pts));
+          } else {
+            pending_space += pts;
+          }
+        }
+      }
+      // Unlink from the XML tree; XMHints are ephemeral
+      node.unlink();
+    } else {
+      if pending_space > 0.0 {
+        let _ = node.set_attribute("lpadding", &format!("{:.1}pt", pending_space));
+        pending_space = 0.0;
+      }
+      prefiltered.push(node);
+    }
+  }
+
+  // Second pass: convert _space to rpadding (or PUNCT XMHint if above threshold)
+  let mut filtered: Vec<Node> = Vec::new();
+  for mut node in prefiltered {
+    if let Some(s_str) = node.get_attribute("_space") {
+      let _ = node.remove_attribute("_space");
+      let s: f64 = s_str.parse().unwrap_or(0.0);
+      if s < HINT_PUNCT_THRESHOLD {
+        let _ = node.set_attribute("rpadding", &format!("{:.1}pt", s));
+      }
+      // Note: large spacings (≥10pt) would become PUNCT XMHints in Perl,
+      // but this requires document access; skip for now as it's uncommon.
+    }
+    filtered.push(node);
+  }
+  filtered
+}
 
 /// Given a list of XML nodes (either libxml nodes, or array representations)
 /// return a list of XMRef's referring to those nodes;

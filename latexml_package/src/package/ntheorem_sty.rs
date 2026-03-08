@@ -193,17 +193,15 @@ LoadDefinitions!({
   //======================================================================
   // Framing support
   DefConstructor!("\\lx@addframing", sub[document, _args] {
-    let node = document.get_element()?;
-    document.set_attribute(&node, "framed", "rectangle")?;
-    Ok(())
+    let mut node = document.get_element().unwrap();
+    document.set_attribute(&mut node, "framed", "rectangle")?;
   });
 
   DefMacro!("\\lx@snapshot@framing", "\\lx@@snapshot@framing{\\theoremframecommand{foo}}");
   DefConstructor!("\\lx@@snapshot@framing{}", sub[document, args] {
     // Simplified: just mark as framed
-    let node = document.get_element()?;
-    document.set_attribute(&node, "framed", "rectangle")?;
-    Ok(())
+    let mut node = document.get_element().unwrap();
+    document.set_attribute(&mut node, "framed", "rectangle")?;
   });
 
   DefMacro!("\\newframedtheorem{}[]{}[]",
