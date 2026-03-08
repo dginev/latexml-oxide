@@ -353,7 +353,7 @@ LoadDefinitions!({
     properties => {
       // doScriptpos: 'mid' in display mode, 'post' in text mode
       // The script level number is appended later by mergeLimits (\limits, \nolimits)
-      let pos = if lookup_font().map_or(false, |f|
+      let pos = if lookup_font().is_some_and(|f|
         f.mathstyle.as_deref() == Some("display"))
       { "mid" } else { "post" };
       Ok(stored_map!("scriptpos" => pos))
@@ -474,7 +474,7 @@ LoadDefinitions!({
     properties => { Ok(stored_map!("isEmpty" => true)) });
   DefConstructor!("\\displaylimits", "",
     after_digest => {
-      let pos = if lookup_font().map_or(false, |f|
+      let pos = if lookup_font().is_some_and(|f|
         f.mathstyle.as_deref() == Some("display"))
       { "mid" } else { "post" };
       merge_limits(pos);

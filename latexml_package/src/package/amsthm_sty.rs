@@ -73,7 +73,7 @@ LoadDefinitions!({
       full_body.extend(headspec.unlist());
       let params = parse_parameters("{}{}{}", &formatter_cs, true)?;
       DefMacro!(
-        formatter_cs.clone(),
+        formatter_cs,
         params,
         Some(ExpansionBody::Tokens(Tokens::new(full_body)))
       );
