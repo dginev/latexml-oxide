@@ -337,11 +337,11 @@ impl XM {
       XM::Apply(mut op, mut args, props, meta) => {
         // First, if we have a specialize directive, execute it:
         match into.specialize {
-          Some(ref directive) if directive == "embellish" => {
+          Some(ref directive) if directive == "embellish"
             // Atoms with embellishments should get their curry levels renamed
             // to avoid conflicts with the same atoms *without* the embellishments
             // as often this technique is used to generate new unique names.
-            if args.0.len() <= 2 {
+            && args.0.len() <= 2 => {
               if let Some(XM::Lexeme(_, arg_meta)) = &mut args.0[0] {
                 if let Some(CurryTerm::Var(ref mut curry_var)) = arg_meta.curry_level {
                   let mut base_op = op.0.base_operator_name();
@@ -359,8 +359,7 @@ impl XM {
                 }
                 into.curry_level.clone_from(&arg_meta.curry_level)
               }
-            }
-          },
+            },
           _ => {},
         }
         // Next, we validate the constraints.

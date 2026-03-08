@@ -596,12 +596,11 @@ pub fn process_options() -> Result<()> {
   // Execute options in declared order (eg. \ProcessOptions)
   for option in declared_options.iter() {
     match option {
-      Stored::String(content) => {
-        if requested_options.contains(content) {
+      Stored::String(content)
+        if requested_options.contains(content) => {
           requested_options.remove(content); // Remove it, since it's been handled.'
           execute_option_internal(*content)?;
-        }
-      },
+        },
       Stored::Strings(contents) => {
         for content in contents.iter() {
           if requested_options.contains(content) {

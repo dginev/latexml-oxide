@@ -164,7 +164,7 @@ fn define_new_theorem(
     .as_ref()
     .map(|t| t.to_string())
     .filter(|s| !s.is_empty());
-  let has_type = typ.as_ref().map_or(false, |t| !t.is_empty());
+  let has_type = typ.as_ref().is_some_and(|t| !t.is_empty());
   let is_starred = flag.is_some();
 
   let within_str = if let Some(ref w) = within {
@@ -373,8 +373,8 @@ fn define_new_theorem(
         document.open_element("ltx:theorem", Some(av_props), None)?;
       }
       // #tags
-      if let Some(ref stored_digested) = props.get("tags") {
-        let digested_opt: Option<Digested> = (*stored_digested).into();
+      if let Some(stored_digested) = props.get("tags") {
+        let digested_opt: Option<Digested> = stored_digested.into();
         if let Some(ref digested) = digested_opt {
           document.absorb(digested, None)?;
         }
@@ -397,16 +397,16 @@ fn define_new_theorem(
       } else {
         document.open_element("ltx:title", Some(title_av), None)?;
       }
-      if let Some(ref stored_digested) = props.get("title") {
-        let digested_opt: Option<Digested> = (*stored_digested).into();
+      if let Some(stored_digested) = props.get("title") {
+        let digested_opt: Option<Digested> = stored_digested.into();
         if let Some(ref digested) = digested_opt {
           document.absorb(digested, None)?;
         }
       }
       document.close_element("ltx:title")?;
       // #body
-      if let Some(ref stored_digested) = props.get("body") {
-        let digested_opt: Option<Digested> = (*stored_digested).into();
+      if let Some(stored_digested) = props.get("body") {
+        let digested_opt: Option<Digested> = stored_digested.into();
         if let Some(ref digested) = digested_opt {
           document.absorb(digested, None)?;
         }
@@ -420,9 +420,10 @@ fn define_new_theorem(
   let is_starred_for_props = is_starred;
   let has_type_for_props = has_type;
 
-  let mut options = ConstructorOptions::default();
-  options.mode = Some("internal_vertical".into());
-  options.scope = Some(Scope::Global);
+  let mut options = ConstructorOptions { 
+    mode: Some("internal_vertical".into()), 
+    scope: Some(Scope::Global), 
+    ..Default::default() };
 
   // before_digest
   let before_digest_closure: BeforeDigestClosure = Rc::new(move || {

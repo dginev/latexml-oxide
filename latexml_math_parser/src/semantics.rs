@@ -422,7 +422,7 @@ pub fn fence(
   let o = open.get_value(ctxt.nodes)?;
   let c = close.get_value(ctxt.nodes)?;
   // Count items (every other element between open and close is an item)
-  let n = (stuff.len() - 2 + 1) / 2; // number of items
+  let n = (stuff.len() - 2).div_ceil(2); // number of items
   // Get first punctuation value for enclose2/encloseN lookup
   let p = if n >= 2 { stuff[2].get_value(ctxt.nodes).ok() } else { None };
   let p_str = p.as_deref().unwrap_or(",");

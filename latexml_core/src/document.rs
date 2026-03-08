@@ -3341,8 +3341,8 @@ pub fn can_auto_close(node: &Node) -> bool {
   // OR it has autoClose set on tag properties
   match node.get_type() {
     Some(NodeType::TextNode) | Some(NodeType::CommentNode) => true,
-    Some(NodeType::ElementNode) => {
-      if !node.has_attribute("_noautoclose") {
+    Some(NodeType::ElementNode)
+      if !node.has_attribute("_noautoclose") => {
         if node.has_attribute("_autoclose") {
           true
         } else {
@@ -3354,10 +3354,7 @@ pub fn can_auto_close(node: &Node) -> bool {
             }
           })
         }
-      } else {
-        false
-      }
-    },
+      },
     _ => false,
   }
 }
