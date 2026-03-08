@@ -330,7 +330,14 @@ impl Tokens {
 
   /// Consumes a Tokens to a string containing TeX that created it (or could have).
   /// Note that this is not necessarily the original TeX code; expansions or other substitutions may
-  /// have taken place. Also note that the LaTeXML linebreak feature is always *disabled* here.)
+  /// have taken place.
+  ///
+  /// **Design decision:** The Perl `UnTeX` inserts `%\n` line-breaks (TeX comment + newline) when
+  /// a token string would exceed 78 characters. The Rust port deliberately omits this feature.
+  /// Line-break insertion is purely cosmetic and makes test expectations fragile — the `%\n`
+  /// appears verbatim in `tex=` attributes of `ltx:Math` elements, causing test XML files to
+  /// contain `%&#10;` escape sequences that depend on exact token lengths. We instead always
+  /// produce compact, single-line output. Test `.xml` files should not contain `%&#10;`.
   pub fn untex(self) -> String {
     let mut tokens: VecDeque<Token> = self.revert().into_iter().collect();
     let mut tex_string = String::new();

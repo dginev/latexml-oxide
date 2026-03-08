@@ -1023,95 +1023,28 @@ LoadDefinitions!({
   Let!("'", "\\active@math@prime");
 
   //----------------------------------------------------------------------
-  // TODO:
-  // DefMath!("\\smallint", None, "\u{222B}", meaning => "integral", role => "INTOP",
-  //   font => { size => 9 }, scriptpos => do_scriptpos, mathstyle => "text");    // INTEGRAL
-
-  // #----------------------------------------------------------------------
-  // # Actually LaTeX; Table 3.8. Variable-sized Symbols, p.44.
-  // #----------------------------------------------------------------------
-  // sub doScriptpos {
-  //   return (LookupValue('font')->getMathstyle eq 'display' ? 'mid' : 'post'); }
-
-  // sub doVariablesizeOp {
-  //   return (LookupValue('font')->getMathstyle eq 'display' ? 'display' : 'text'); }
-
-  // DefMathI('\sum', undef, "\x{2211}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "sum",
-  //   mathstyle => \&doVariablesizeOp);
-  // DefMathI('\prod', undef, "\x{220F}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "product",
-  //   mathstyle => \&doVariablesizeOp);
-  // DefMathI('\coprod', undef, "\x{2210}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "coproduct",
-  //   mathstyle => \&doVariablesizeOp);
-  // DefMathI('\int', undef, "\x{222B}",
-  //   role      => "INTOP",
-  //   meaning   => "integral",
-  //   mathstyle => \&doVariablesizeOp);
-  // DefMathI('\oint', undef, "\x{222E}",
-  //   role      => "INTOP",
-  //   meaning   => "contour"integral',
-  //   mathstyle => \&doVariablesizeOp);
-  // DefMathI('\bigcap', undef, "\x{22C2}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "intersection",
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
-  // DefMathI('\bigcup', undef, "\x{22C3}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "union",
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
-  // DefMathI('\bigsqcup', undef, "\x{2294}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "square"union',
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
-  // DefMathI('\bigvee', undef, "\x{22C1}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "or",
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
-  // DefMathI('\bigwedge', undef, "\x{22C0}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "and",
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
-  // DefMathI('\bigodot', undef, "\x{2299}",
-  //   role      => "SUMOP",              #meaning=> ?
-  //   scriptpos => \&doScriptpos,
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
-  // DefMathI('\bigotimes', undef, "\x{2297}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "tensor"product',
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
-  // DefMathI('\bigoplus', undef, "\x{2295}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "direct"sum',
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
-  // DefMathI('\biguplus', undef, "\x{228E}",
-  //   role      => "SUMOP",
-  //   scriptpos => \&doScriptpos,
-  //   meaning   => "symmetric"difference',
-  //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => "Big" });
+  // Table 3.8. Variable-sized Symbols (from math_common.pool.ltxml)
+  // TODO: scriptpos and mathstyle are closures in Perl (doScriptpos / doVariablesizeOp)
+  //   that depend on the current display style at typesetting time. Not yet ported as closures.
+  //   doScriptpos => "mid" in display mode, "post" in inline mode.
+  //   doVariablesizeOp => "display" in display mode, "text" in inline mode.
+  //----------------------------------------------------------------------
+  DefMath!("\\smallint", None, "\u{222B}",
+    meaning => "integral", role => "INTOP");  // INTEGRAL (small)
+  DefMath!("\\sum",    None, "\u{2211}", role => "SUMOP", meaning => "sum");
+  DefMath!("\\prod",   None, "\u{220F}", role => "SUMOP", meaning => "product");
+  DefMath!("\\coprod", None, "\u{2210}", role => "SUMOP", meaning => "coproduct");
+  DefMath!("\\int",    None, "\u{222B}", role => "INTOP", meaning => "integral");
+  DefMath!("\\oint",   None, "\u{222E}", role => "INTOP", meaning => "contour-integral");
+  DefMath!("\\bigcap",    None, "\u{22C2}", role => "SUMOP", meaning => "intersection");
+  DefMath!("\\bigcup",    None, "\u{22C3}", role => "SUMOP", meaning => "union");
+  DefMath!("\\bigsqcup",  None, "\u{2A06}", role => "SUMOP", meaning => "square-union");
+  DefMath!("\\bigvee",    None, "\u{22C1}", role => "SUMOP", meaning => "or");
+  DefMath!("\\bigwedge",  None, "\u{22C0}", role => "SUMOP", meaning => "and");
+  DefMath!("\\bigodot",   None, "\u{2A00}", role => "SUMOP");
+  DefMath!("\\bigotimes", None, "\u{2A02}", role => "SUMOP", meaning => "tensor-product");
+  DefMath!("\\bigoplus",  None, "\u{2A01}", role => "SUMOP", meaning => "direct-sum");
+  DefMath!("\\biguplus",  None, "\u{2A04}", role => "SUMOP", meaning => "symmetric-difference");
 
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.4. Binary Operation Symbols, p.42

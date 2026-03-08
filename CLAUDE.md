@@ -5,6 +5,8 @@
 latexml-oxide is a Rust port of [LaTeXML](https://github.com/brucemiller/latexml), a Perl tool that converts LaTeX documents into accessible web documents (HTML/XML).
 
 The `LaTeXML/` directory contains the legacy Perl source being ported. Do not modify it — it serves as the reference implementation.
+The `LaTeXML/` directory also changes often, as the legacy project continues to develop. Compare against it often, and continuously update the Rust code to match with the original Perl specifics.
+Similarly, the test `.tex`, `.xml` and `.pdf` files often need to be copied from the Perl space to the Rust space.
 
 ## Workspace Structure
 
@@ -32,8 +34,8 @@ sudo apt install libxml2-dev libxslt1-dev libkpathsea-dev texlive-latex-base ima
 ```
 
 ```bash
-# Run all tests (use --release for realistic performance)
-cargo test --release --tests
+# Run all tests
+RUST_BACKTRACE=1 cargo test --tests -- --nocapture
 
 # Convert a formula
 cargo run --release --bin latexmlmath_oxide '1+1=2'

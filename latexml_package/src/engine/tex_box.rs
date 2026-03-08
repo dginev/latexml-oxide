@@ -532,7 +532,22 @@ LoadDefinitions!({
   // "?#isHorizontalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)'\
   //    width='&GetKeyVal(#1,width)' color='#color'/>)",
-  after_digest=> { unported!() });
+  after_digest => sub [whatsit] {
+    if let Some(_alignment) = lookup_alignment() {
+  //     if (((!defined $h) && (!defined $w)) || ((defined $w) && ($w > 20))
+  //       || ((defined $h) && (defined $w) && ($w > 3 * $h))) {
+  // This isXxxxRule property is to determine if it is used for separating rules within alignments
+      whatsit.set_property("isHorizontalRule", true);
+  //     $alignment->addLine('t');
+    }
+  //   else {
+  //     $dims->setValue(width  => '100%') unless defined $w;
+  //     $dims->setValue(height => '1px')  unless defined $h; }
+  //   if (my $color = LookupValue('font')->getColor) {
+  //     if ($color ne 'black') {
+  //       $whatsit->setProperty(color => $color); } }
+    Ok(Vec::new())
+  });
   // afterDigest => sub {
   //   my ($stomach, $whatsit) = @_;
   //   my $dims   = $whatsit->getArg(1);

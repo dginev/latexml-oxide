@@ -22,6 +22,3 @@ rls/*
 # Profiling
 *.dot
 profs/*
-
-# Claude-only
-LaTeXML/

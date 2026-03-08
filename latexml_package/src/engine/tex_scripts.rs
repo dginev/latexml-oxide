@@ -86,12 +86,16 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     // away; and whether there are conflicting preceding scripts, which is an error
     // Parsing is too late!
     while let Some(prev) = { pop_box_list() } {
-      if prev.get_property_bool("isSpace") {
-        prevspace = true; // a space avoids double-scripts
-        putback.push_front(prev); // put back? assuming it will add rpadding to previous???
+      if prev.get_property_bool("isSpace") || prev.get_property_bool("isEmpty") {
+        // Explicitly empty (isSpace) or explicitly marked isEmpty (e.g. \limits):
+        // put back and keep looking for the base. A space also avoids double-scripts.
+        // Mirrors Perl: getProperty('isSpace') || getProperty('isEmpty') => put back, next
+        prevspace = true;
+        putback.push_front(prev);
         continue;
       } else if prev.is_empty()? {
-        // If empty, the script floats, can't conflict, but don't put back
+        // Structurally empty (e.g. bare `{}`): script floats, don't put back
+        // Mirrors Perl: IsEmpty($prev) => last (no unshift)
         break;
       } else if let Some(prevop) = is_script(&prev) {
         if prevop.1 == cc {

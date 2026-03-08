@@ -62,7 +62,7 @@ displaymath, a single equation and both types of eqnarrays.
         <para xml:id="ThmExample2.p1">
           <p>Look, the endmark is really at the bottom of the line:</p>
           <equation xml:id="S1.Ex1">
-            <Math mode="display" tex="f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^%&#10;{n+1}}d\zeta" text="f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))" xml:id="S1.Ex1.m1">
+            <Math mode="display" tex="f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^{n+1}}d\zeta" text="f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))" xml:id="S1.Ex1.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -109,7 +109,7 @@ displaymath, a single equation and both types of eqnarrays.
                         <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                         <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" scriptpos="mid1">∫</XMTok>
                         <XMApp>
-                          <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="OPERATOR">∂</XMTok>
+                          <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">D</XMTok>
                         </XMApp>
                       </XMApp>
@@ -360,7 +360,7 @@ written as</text></p>
         <title><tag><text font="bold">γ Lemma</text></tag><text font="bold"> (Breakstyle):</text></title>
         <para xml:id="ThmLemma3.p1">
           <p><text font="slanted">From the predefined styles, this is exactly the case for the break-styles.
-That’s no bug, it’s LaTeX-immanent.</text></p>
+That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.1em">L<text cssstyle="font-variant:small-caps;" yoffset="0.4ex">a</text>T<text cssstyle="font-variant:small-caps;font-size:120%" yoffset="-0.2ex">e</text>X</text>-immanent.</text></p>
         </para>
         <para xml:id="ThmLemma3.p2">
           <p><text font="slanted">The example goes on with an <verbatim font="typewriter upright">eqnarray</verbatim>:</text></p>
@@ -371,7 +371,7 @@ That’s no bug, it’s LaTeX-immanent.</text></p>
                 <tag role="refnum">2</tag>
               </tags>
               <MathFork>
-                <Math tex="\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{%&#10;\zeta-z}d\zeta" text="f * z = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta))" xml:id="S1.E2.m4">
+                <Math tex="\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" text="f * z = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta))" xml:id="S1.E2.m4">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -404,7 +404,7 @@ That’s no bug, it’s LaTeX-immanent.</text></p>
                             <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                             <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" scriptpos="mid1">∫</XMTok>
                             <XMApp>
-                              <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="OPERATOR">∂</XMTok>
+                              <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                               <XMTok font="italic" fontsize="70%" role="UNKNOWN">D</XMTok>
                             </XMApp>
                           </XMApp>
@@ -482,7 +482,7 @@ That’s no bug, it’s LaTeX-immanent.</text></p>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                                 <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" scriptpos="mid1">∫</XMTok>
                                 <XMApp>
-                                  <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="OPERATOR">∂</XMTok>
+                                  <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">D</XMTok>
                                 </XMApp>
                               </XMApp>
@@ -695,7 +695,7 @@ That’s no bug, it’s LaTeX-immanent.</text></p>
           <equationgroup class="ltx_eqn_eqnarray" xml:id="S1.EGx2">
             <equation xml:id="S1.Ex4">
               <MathFork>
-                <Math tex="\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{%&#10;\zeta-z}d\zeta=\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="f * z = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta)) = (1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.Ex4.m3">
+                <Math tex="\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta=\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="f * z = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta)) = (1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.Ex4.m3">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="multirelation"/>
@@ -729,7 +729,7 @@ That’s no bug, it’s LaTeX-immanent.</text></p>
                             <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                             <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" scriptpos="mid1">∫</XMTok>
                             <XMApp>
-                              <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="OPERATOR">∂</XMTok>
+                              <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                               <XMTok font="italic" fontsize="70%" role="UNKNOWN">D</XMTok>
                             </XMApp>
                           </XMApp>
@@ -871,7 +871,7 @@ That’s no bug, it’s LaTeX-immanent.</text></p>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                                 <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" scriptpos="mid1">∫</XMTok>
                                 <XMApp>
-                                  <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="OPERATOR">∂</XMTok>
+                                  <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">D</XMTok>
                                 </XMApp>
                               </XMApp>
@@ -1002,9 +1002,7 @@ That’s no bug, it’s LaTeX-immanent.</text></p>
       <p>If there are some environments in the same thm-environment,
 the last one gets the endmark:</p>
     </para>
-    <para xml:id="S1.p3">
-      <p><rule height="1px" width="100%"/></p>
-    </para>
+    <rule height="1px" width="100%"/>
     <theorem class="ltx_theorem_Definition" inlist="thm theorem:Definition" xml:id="ThmDefinition1">
       <tags>
         <tag>Definition 1</tag>
@@ -1134,6 +1132,7 @@ the last one gets the endmark:</p>
                 <XMTok font="upright" name="clubsuit" role="UNKNOWN">♣</XMTok>
               </XMath>
             </Math></text></p>
+        <rule height="1px" width="100%"/>
       </para>
     </theorem>
     <theorem class="ltx_theorem_Corollary" inlist="thm theorem:Corollary" xml:id="ThmTheorem2">
@@ -1161,7 +1160,7 @@ the last one gets the endmark:</p>
       <title class="ltx_runin"><tag><text font="bold">3 Example</text></tag></title>
       <para xml:id="ThmExample3.p1">
         <equation xml:id="S1.Ex5">
-          <Math mode="display" tex="f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^%&#10;{n+1}}d\zeta" text="f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))" xml:id="S1.Ex5.m1">
+          <Math mode="display" tex="f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^{n+1}}d\zeta" text="f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))" xml:id="S1.Ex5.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -1208,7 +1207,7 @@ the last one gets the endmark:</p>
                       <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                       <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" scriptpos="mid1">∫</XMTok>
                       <XMApp>
-                        <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="OPERATOR">∂</XMTok>
+                        <XMTok fontsize="70%" meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">D</XMTok>
                       </XMApp>
                     </XMApp>
@@ -1289,7 +1288,7 @@ same line as the text ends.
             </Math></text></p>
       </para>
     </theorem>
-    <para xml:id="S1.p4">
+    <para xml:id="S1.p3">
       <p>There must be no empty line in the input before the end
 (since then, the end mark is ignored) <break/></p>
     </para>
@@ -1311,7 +1310,7 @@ same line as the text ends.
             </Math></text></p>
       </para>
     </theorem>
-    <para xml:id="S1.p5">
+    <para xml:id="S1.p4">
       <p>Now, there is a corollary which should appear with a different
 name in the list of corollaries:</p>
     </para>
@@ -1355,7 +1354,7 @@ surrounding text.</text></p>
             </Math></text></p>
       </para>
     </theorem>
-    <para xml:id="S1.p6">
+    <para xml:id="S1.p5">
       <p>Here is an example for turning off the endmark automatics and
 manual handling:</p>
     </para>
@@ -1374,7 +1373,7 @@ manual handling:</p>
               </Math></text><break/>some more text, but no automatic endmark set.</text></p>
       </para>
     </theorem>
-    <para xml:id="S1.p7">
+    <para xml:id="S1.p6">
       <p>Also, one should note, that — — is inserted to set
 the endmark at the right margin.</p>
     </para>
@@ -1389,7 +1388,7 @@ the endmark at the right margin.</p>
         <p>It also works for short one’s.</p>
       </para>
     </theorem>
-    <para xml:id="S1.p8">
+    <para xml:id="S1.p7">
       <p>If you are tired of the greek numbers and the indentation for lemmata …
 you can redefine it:</p>
     </para>
@@ -1405,8 +1404,8 @@ you can redefine it:</p>
 continues.</text></p>
       </para>
     </theorem>
-    <para xml:id="S1.p9">
-      <p>the optional argument (i.e. the ‘theorem’-name) can be accessed by
+    <para xml:id="S1.p8">
+      <p>the optional argument (i.e. the ‘theorem’-name) can be accessed by
 eg. <verbatim font="typewriter">\Theoremname</verbatim></p>
     </para>
     <theorem class="ltx_theorem_Theorem" inlist="thm theorem:Theorem" xml:id="ThmTheorem7">
@@ -1420,7 +1419,7 @@ eg. <verbatim font="typewriter">\Theoremname</verbatim></p>
         <p><text font="slanted">Obviously, we are in Theorem somename.</text></p>
       </para>
     </theorem>
-    <para xml:id="S1.p10">
+    <para xml:id="S1.p9">
       <p>Now, we define an environment —KappaTheorem— which uses the same
 style parameters as Theorems and is numbered together with
 Corollaries (Theorems are also numbered with Corollaries).
@@ -1474,7 +1473,7 @@ The first Kappa-Theorem has been given in <ref labelref="LABEL:kappatheorem1" sh
         <tag role="typerefnum">§1.2</tag>
       </tags>
       <title><tag close=" ">1.2</tag>Framed and Shaded Theorems</title>
-      <theorem class="ltx_framed ltx_theorem_importantTheorem" inlist="thm theorem:importantTheorem" xml:id="ThmTheorem9">
+      <theorem class="ltx_theorem_importantTheorem" cssstyle="padding:9pt;" framed="rectangle" inlist="thm theorem:importantTheorem" xml:id="ThmTheorem9">
         <tags>
           <tag>Theorem 9</tag>
           <tag role="refnum">9</tag>

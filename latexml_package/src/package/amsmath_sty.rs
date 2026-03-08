@@ -53,4 +53,11 @@ LoadDefinitions!({
   //   properties => { isSpace => 1, width => sub { LookupValue('\thickmuskip')->negate; } });
 
   // DefConstructor('\mspace{MuDimension}', "<ltx:XMHint name='mspace' width='#1'/>");
+
+  //======================================================================
+  // Section 4.14.2 Vertical bar notations
+  DefMath!("\\lvert", "|", role => "OPEN",  stretchy => false);
+  DefMath!("\\lVert", "\u{2225}", role => "OPEN",  stretchy => false);
+  DefMath!("\\rvert", "|", role => "CLOSE", stretchy => false);
+  DefMath!("\\rVert", "\u{2225}", role => "CLOSE", stretchy => false);
 });

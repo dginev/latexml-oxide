@@ -45,6 +45,8 @@ pub struct XProps {
   pub font:      Option<Font>,
   /// usually associated with the internal `_font` attribute references
   pub fontref:   Option<Cow<'static, str>>,
+  /// stretchy attribute for delimiters (e.g. "false" to suppress MathML stretching)
+  pub stretchy:  Option<Cow<'static, str>>,
 }
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -86,6 +88,9 @@ impl XProps {
     }
     if let Some(fontref) = self.fontref.take() {
       attrs.insert(String::from("_font"), fontref.into_owned());
+    }
+    if let Some(stretchy) = self.stretchy.take() {
+      attrs.insert(String::from("stretchy"), stretchy.into_owned());
     }
     let attrs_opt = if attrs.is_empty() { None } else { Some(attrs) };
     (self.content.take(), self.font.take(), attrs_opt)
@@ -855,6 +860,22 @@ impl From<&Node> for XM {
         let inner_xm = children.iter().map(XM::from).collect::<Vec<_>>();
         XM::Arg(inner_xm)
       },
+      "XMDual" => {
+        let mut children = element_nodes(n);
+        let content = children.remove(0);
+        let presentation = if children.is_empty() {
+          XM::Wrap(Vec::new(), XProps::default(), Meta::default())
+        } else {
+          XM::from(&children.remove(0))
+        };
+        XM::Dual(Box::new(XM::from(&content)), Box::new(presentation), XProps::from(n), Meta::default())
+      },
+      "XMRef" => XM::Ref(XProps::from(n)),
+      "XMWrap" => {
+        let children = element_nodes(n);
+        let inner_xm = children.iter().map(XM::from).collect::<Vec<_>>();
+        XM::Wrap(inner_xm, XProps::from(n), Meta::default())
+      },
       // TODO: continue for the other cases
       missing_case => {
         dbg!(missing_case);
@@ -881,6 +902,7 @@ impl From<&Node> for XProps {
     let idref = attrs.remove("idref").map(Cow::Owned);
     let fontref = attrs.remove("_font").map(Cow::Owned);
 
+    let stretchy = attrs.remove("stretchy").map(Cow::Owned);
     XProps {
       content,
       role,
@@ -892,6 +914,7 @@ impl From<&Node> for XProps {
       fontref,
       font: None,
       xmkey: None,
+      stretchy,
     }
   }
 }
