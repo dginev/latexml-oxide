@@ -99,17 +99,38 @@ fn latexml_ok_internal(
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(xml_path, name);
     if !xml_strings.is_empty() {
+      let mut found_diff = false;
       for (lineno, (tex_line, xml_line)) in tex_strings.iter().zip(xml_strings.iter()).enumerate() {
-        assert_eq!(
-          tex_line, xml_line,
-          "latexml_oxide result (left) differs from expected XML (right), file {xml_path}; line {lineno}"
-        );
+        if tex_line != xml_line {
+          found_diff = true;
+          eprintln!(
+            "DIFF line {lineno} in {xml_path}:\n  ACTUAL:   {tex_line}\n  EXPECTED: {xml_line}"
+          );
+        }
       }
-      assert_eq!(
-        tex_strings.len() - xml_strings.len(),
-        0,
-        "Conversion of {name:?} had more/fewer lines of content than expected"
-      );
+      if tex_strings.len() != xml_strings.len() {
+        found_diff = true;
+        eprintln!(
+          "DIFF length mismatch for {name:?}: actual {} lines, expected {} lines",
+          tex_strings.len(),
+          xml_strings.len()
+        );
+        // Print extra lines
+        let min_len = tex_strings.len().min(xml_strings.len());
+        if tex_strings.len() > min_len {
+          for (i, line) in tex_strings[min_len..].iter().enumerate() {
+            eprintln!("  ACTUAL extra line {}: {line}", min_len + i);
+          }
+        }
+        if xml_strings.len() > min_len {
+          for (i, line) in xml_strings[min_len..].iter().enumerate() {
+            eprintln!("  EXPECTED extra line {}: {line}", min_len + i);
+          }
+        }
+      }
+      if found_diff {
+        panic!("Differences found in {xml_path} — see DIFF lines above");
+      }
     }
   }
 }

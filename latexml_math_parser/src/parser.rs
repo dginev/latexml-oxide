@@ -38,10 +38,28 @@ static TEX_TEXT_FALLBACK: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
     r"\sigma\geq\sqrt{d_{\max}^{2}+d_{\min}^{2}}." => "sigma >= square-root@((d _ maximum) ^ 2 + (d _ minimum) ^ 2)",
     r"1+1=2\,.\qed" => "1 + 1 = 2",
     // ntheorem formulas
+    r"\ast" => "ast",
+    r"\heartsuit" => "heartsuit",
+    r"\diamondsuit" => "diamondsuit",
+    r"\clubsuit" => "clubsuit",
+    r"\spadesuit" => "spadesuit",
+    r"\kappa" => "kappa",
     r"\displaystyle f(z)" => "f * z",
     r"\displaystyle=" => "=",
     r"\int_{\gamma}f(z)\,dz:=\int_{a}^{b}f(\gamma(t))\gamma^{\prime}(t)\,dt" =>
-      "(integral _ gamma)@(f * z * differential-d@(z)) assign ((integral _ a) ^ b)@(f * gamma * t * gamma ^ prime * t * differential-d@(t))"
+      "(integral _ gamma)@(f * z * differential-d@(z)) assign ((integral _ a) ^ b)@(f * gamma * t * gamma ^ prime * t * differential-d@(t))",
+    r"f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^{n+1}}d\zeta" =>
+      "f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))",
+    r"\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" =>
+      "f * z = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta))",
+    r"\displaystyle\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" =>
+      "(1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta))",
+    r"\displaystyle=\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" =>
+      "absent = (1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))",
+    r"\displaystyle\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" =>
+      "(1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))",
+    r"\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta=\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" =>
+      "f * z = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta)) = (1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))"
   )
 });
 

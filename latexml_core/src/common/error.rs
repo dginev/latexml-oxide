@@ -397,7 +397,6 @@ impl Error {
 #[macro_export]
 macro_rules! unported {
   () => {{
-    eprintln!("unported!() at {}:{}", file!(), line!());
     ::latexml_core::common::error::Error::todo()
   }};
 }

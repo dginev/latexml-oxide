@@ -341,7 +341,9 @@ pub fn fenced(
       meaning: Some(Cow::Borrowed("absolute-value")),
       ..XProps::default()
     };
-    interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+    let open_m = morph_vertbar(open, "OPEN", ctxt.nodes);
+    let close_m = morph_vertbar(close, "CLOSE", ctxt.nodes);
+    interpret_delimited(op.into(), vec![open_m, arg, close_m], ctxt).map(Option::Some)
   } else {
     let op = xnew(op_name);
     interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
@@ -717,6 +719,7 @@ pub fn new_props(
     fontref,
     font: Some(font),
     xmkey: None,
+    stretchy: None,
   }
 }
 
@@ -765,12 +768,51 @@ fn extract_separators(items: &mut [XM]) -> (Vec<&mut XM>, Vec<&mut XM>) {
 }
 
 // Some handy shorthands.
+/// Morph a VERTBAR token to OPEN or CLOSE (or MIDDLE/PUNCT) — mirrors Perl's MorphVertbar.
+/// For delimiter roles (OPEN, CLOSE, MIDDLE), `|` stays `|`.
+/// For operator roles (PUNCT), `|` becomes `⁣` (U+2223 DIVIDES).
+fn morph_vertbar(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
+  // Character substitution: for delimiter category keep `|` as-is.
+  // For operator category: `|` → `⁣` (U+2223).
+  let is_delimiter = matches!(role, "OPEN" | "CLOSE" | "MIDDLE");
+  match xm {
+    XM::Lexeme(lex, meta) => {
+      if let Ok(node) = lookup_lex_node(&lex, nodes) {
+        let mut props = XProps::from(node);
+        props.role = Some(Cow::Borrowed(role));
+        if !is_delimiter {
+          if let Some(ref c) = props.content.clone() {
+            if c == "|" {
+              props.content = Some(Cow::Borrowed("\u{2223}"));
+            }
+          }
+        }
+        XM::Token(props, meta)
+      } else {
+        XM::Lexeme(lex, meta)
+      }
+    },
+    XM::Token(mut props, meta) => {
+      props.role = Some(Cow::Borrowed(role));
+      if !is_delimiter {
+        if let Some(ref c) = props.content.clone() {
+          if c == "|" {
+            props.content = Some(Cow::Borrowed("\u{2223}"));
+          }
+        }
+      }
+      XM::Token(props, meta)
+    },
+    xm => xm,
+  }
+}
+
 fn invisible_times() -> XProps {
   XProps {
     meaning: Some(Cow::Borrowed("times")),
     role: Some(Cow::Borrowed("MULOP")),
     content: Some(Cow::Borrowed("\u{2062}")),
-    font: Some(Font::default()),
+    font: Some(font::FONT_TEXT_DEFAULT.specialize("\u{2062}")),
     ..XProps::default()
   }
 }
@@ -779,7 +821,7 @@ fn invisible_comma() -> XProps {
   XProps {
     role: Some(Cow::Borrowed("PUNCT")),
     content: Some(Cow::Borrowed("\u{2063}")),
-    font: Some(Font::default()),
+    font: Some(font::FONT_TEXT_DEFAULT.specialize("\u{2063}")),
     ..XProps::default()
   }
 }
