@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/content.rs`."><title>content.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-e56847b5.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.92.0-nightly (54a8a1db6 2025-09-26)" data-channel="nightly" data-search-js="search-e256b49e.js" data-stringdex-js="stringdex-061df703.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/</div>content.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>once_cell::sync::Lazy;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/content.rs`."><title>content.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (b41f22de2 2026-03-08)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/</div>content.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>once_cell::sync::Lazy;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>regex::Regex;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::borrow::Cow;
@@ -596,516 +596,516 @@
 <a href=#596 id=596 data-nosnippet>596</a>  <span class="comment">// Execute options in declared order (eg. \ProcessOptions)
 <a href=#597 id=597 data-nosnippet>597</a>  </span><span class="kw">for </span>option <span class="kw">in </span>declared_options.iter() {
 <a href=#598 id=598 data-nosnippet>598</a>    <span class="kw">match </span>option {
-<a href=#599 id=599 data-nosnippet>599</a>      Stored::String(content) =&gt; {
-<a href=#600 id=600 data-nosnippet>600</a>        <span class="kw">if </span>requested_options.contains(content) {
+<a href=#599 id=599 data-nosnippet>599</a>      Stored::String(content)
+<a href=#600 id=600 data-nosnippet>600</a>        <span class="kw">if </span>requested_options.contains(content) =&gt; {
 <a href=#601 id=601 data-nosnippet>601</a>          requested_options.remove(content); <span class="comment">// Remove it, since it's been handled.'
 <a href=#602 id=602 data-nosnippet>602</a>          </span>execute_option_internal(<span class="kw-2">*</span>content)<span class="question-mark">?</span>;
-<a href=#603 id=603 data-nosnippet>603</a>        }
-<a href=#604 id=604 data-nosnippet>604</a>      },
-<a href=#605 id=605 data-nosnippet>605</a>      Stored::Strings(contents) =&gt; {
-<a href=#606 id=606 data-nosnippet>606</a>        <span class="kw">for </span>content <span class="kw">in </span>contents.iter() {
-<a href=#607 id=607 data-nosnippet>607</a>          <span class="kw">if </span>requested_options.contains(content) {
-<a href=#608 id=608 data-nosnippet>608</a>            requested_options.remove(content); <span class="comment">// Remove it, since it's been handled.
-<a href=#609 id=609 data-nosnippet>609</a>            </span>execute_option_internal(<span class="kw-2">*</span>content)<span class="question-mark">?</span>;
-<a href=#610 id=610 data-nosnippet>610</a>          }
-<a href=#611 id=611 data-nosnippet>611</a>        }
-<a href=#612 id=612 data-nosnippet>612</a>      },
-<a href=#613 id=613 data-nosnippet>613</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#614 id=614 data-nosnippet>614</a>    }
-<a href=#615 id=615 data-nosnippet>615</a>  }
-<a href=#616 id=616 data-nosnippet>616</a>  <span class="comment">// Now handle any remaining options (eg. default options), in the given order.
-<a href=#617 id=617 data-nosnippet>617</a>  </span><span class="kw">for </span>option <span class="kw">in </span>requested_options.iter() {
-<a href=#618 id=618 data-nosnippet>618</a>    execute_default_option_internal(<span class="kw-2">*</span>option)<span class="question-mark">?</span>;
-<a href=#619 id=619 data-nosnippet>619</a>  }
-<a href=#620 id=620 data-nosnippet>620</a>  <span class="comment">// Now, undefine the handlers?
-<a href=#621 id=621 data-nosnippet>621</a>  </span><span class="kw">for </span>option <span class="kw">in </span>declared_options.iter() {
-<a href=#622 id=622 data-nosnippet>622</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ds@{}"</span>, option)), <span class="kw-2">&amp;</span><span class="macro">T_RELAX!</span>(), <span class="prelude-val">None</span>);
-<a href=#623 id=623 data-nosnippet>623</a>  }
-<a href=#624 id=624 data-nosnippet>624</a>  <span class="prelude-val">Ok</span>(())
-<a href=#625 id=625 data-nosnippet>625</a>}
-<a href=#626 id=626 data-nosnippet>626</a>
-<a href=#627 id=627 data-nosnippet>627</a><span class="kw">fn </span>execute_option_internal(option: SymStr) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-<a href=#628 id=628 data-nosnippet>628</a>  <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(arena::with(option, |opt| <span class="macro">s!</span>(<span class="string">"\\ds@{opt}"</span>)));
-<a href=#629 id=629 data-nosnippet>629</a>  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">?</span>.is_some() {
-<a href=#630 id=630 data-nosnippet>630</a>    def_macro(
-<a href=#631 id=631 data-nosnippet>631</a>      <span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>),
-<a href=#632 id=632 data-nosnippet>632</a>      <span class="prelude-val">None</span>,
-<a href=#633 id=633 data-nosnippet>633</a>      <span class="macro">Tokens!</span>(Token {
-<a href=#634 id=634 data-nosnippet>634</a>        text: option,
-<a href=#635 id=635 data-nosnippet>635</a>        code: Catcode::OTHER,
-<a href=#636 id=636 data-nosnippet>636</a>      }),
-<a href=#637 id=637 data-nosnippet>637</a>      <span class="prelude-val">None</span>,
-<a href=#638 id=638 data-nosnippet>638</a>    )<span class="question-mark">?</span>;
-<a href=#639 id=639 data-nosnippet>639</a>
-<a href=#640 id=640 data-nosnippet>640</a>    <span class="kw">let </span>unused = <span class="kw">match </span>remove_vecdeque(<span class="string">"@unusedoptionlist"</span>) {
-<a href=#641 id=641 data-nosnippet>641</a>      <span class="prelude-val">Some</span>(list) =&gt; list
-<a href=#642 id=642 data-nosnippet>642</a>        .into_iter()
-<a href=#643 id=643 data-nosnippet>643</a>        .filter(|item| {
-<a href=#644 id=644 data-nosnippet>644</a>          <span class="kw">if let </span>Stored::String(content) = item {
-<a href=#645 id=645 data-nosnippet>645</a>            <span class="kw-2">*</span>content != option
-<a href=#646 id=646 data-nosnippet>646</a>          } <span class="kw">else </span>{
-<a href=#647 id=647 data-nosnippet>647</a>            <span class="bool-val">false
-<a href=#648 id=648 data-nosnippet>648</a>          </span>}
-<a href=#649 id=649 data-nosnippet>649</a>        })
-<a href=#650 id=650 data-nosnippet>650</a>        .collect(),
-<a href=#651 id=651 data-nosnippet>651</a>      <span class="prelude-val">None </span>=&gt; VecDeque::new(),
-<a href=#652 id=652 data-nosnippet>652</a>    };
-<a href=#653 id=653 data-nosnippet>653</a>    assign_value(<span class="string">"@unusedoptionlist"</span>, Stored::VecDequeStored(unused), <span class="prelude-val">None</span>);
-<a href=#654 id=654 data-nosnippet>654</a>    digest(cs)<span class="question-mark">?</span>;
-<a href=#655 id=655 data-nosnippet>655</a>    <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
-<a href=#656 id=656 data-nosnippet>656</a>  } <span class="kw">else </span>{
-<a href=#657 id=657 data-nosnippet>657</a>    <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
-<a href=#658 id=658 data-nosnippet>658</a>  }
-<a href=#659 id=659 data-nosnippet>659</a>}
-<a href=#660 id=660 data-nosnippet>660</a>
-<a href=#661 id=661 data-nosnippet>661</a><span class="kw">fn </span>execute_default_option_internal(option: SymStr) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-<a href=#662 id=662 data-nosnippet>662</a>  def_macro(
-<a href=#663 id=663 data-nosnippet>663</a>    <span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>),
-<a href=#664 id=664 data-nosnippet>664</a>    <span class="prelude-val">None</span>,
-<a href=#665 id=665 data-nosnippet>665</a>    <span class="macro">Tokens!</span>(Token {
-<a href=#666 id=666 data-nosnippet>666</a>      text: option,
-<a href=#667 id=667 data-nosnippet>667</a>      code: Catcode::OTHER,
-<a href=#668 id=668 data-nosnippet>668</a>    }),
-<a href=#669 id=669 data-nosnippet>669</a>    <span class="prelude-val">None</span>,
-<a href=#670 id=670 data-nosnippet>670</a>  )<span class="question-mark">?</span>;
-<a href=#671 id=671 data-nosnippet>671</a>  digest(<span class="macro">T_CS!</span>(<span class="string">"\\default@ds"</span>))<span class="question-mark">?</span>;
-<a href=#672 id=672 data-nosnippet>672</a>  <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
-<a href=#673 id=673 data-nosnippet>673</a>}
-<a href=#674 id=674 data-nosnippet>674</a>
-<a href=#675 id=675 data-nosnippet>675</a><span class="kw">fn </span>reset_options() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#676 id=676 data-nosnippet>676</a>  assign_value(
-<a href=#677 id=677 data-nosnippet>677</a>    <span class="string">"@declaredoptions"</span>,
-<a href=#678 id=678 data-nosnippet>678</a>    Stored::VecDequeStored(VecDeque::new()),
-<a href=#679 id=679 data-nosnippet>679</a>    <span class="prelude-val">None</span>,
-<a href=#680 id=680 data-nosnippet>680</a>  );
-<a href=#681 id=681 data-nosnippet>681</a>  <span class="kw">let </span>opt_unused_cs = <span class="kw">if </span>gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\@currext"</span>))<span class="question-mark">?</span>.to_string() == <span class="string">"cls" </span>{
-<a href=#682 id=682 data-nosnippet>682</a>    <span class="string">"\\OptionNotUsed"
-<a href=#683 id=683 data-nosnippet>683</a>  </span>} <span class="kw">else </span>{
-<a href=#684 id=684 data-nosnippet>684</a>    <span class="string">"\\@unknownoptionerror"
-<a href=#685 id=685 data-nosnippet>685</a>  </span>};
-<a href=#686 id=686 data-nosnippet>686</a>  let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\default@ds"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(opt_unused_cs), <span class="prelude-val">None</span>);
-<a href=#687 id=687 data-nosnippet>687</a>  <span class="prelude-val">Ok</span>(())
-<a href=#688 id=688 data-nosnippet>688</a>}
-<a href=#689 id=689 data-nosnippet>689</a>
-<a href=#690 id=690 data-nosnippet>690</a><span class="kw">pub struct </span>RequireOptions {
-<a href=#691 id=691 data-nosnippet>691</a>  <span class="kw">pub </span>options:          Vec&lt;String&gt;,
-<a href=#692 id=692 data-nosnippet>692</a>  <span class="kw">pub </span>withoptions:      <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
-<a href=#693 id=693 data-nosnippet>693</a>  <span class="kw">pub </span>extension:        <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
-<a href=#694 id=694 data-nosnippet>694</a>  <span class="kw">pub </span>searchpaths_only: bool,
-<a href=#695 id=695 data-nosnippet>695</a>  <span class="kw">pub </span>as_class:         bool,
-<a href=#696 id=696 data-nosnippet>696</a>  <span class="kw">pub </span>noltxml:          <span class="prelude-ty">Option</span>&lt;bool&gt;,
-<a href=#697 id=697 data-nosnippet>697</a>  <span class="kw">pub </span>notex:            <span class="prelude-ty">Option</span>&lt;bool&gt;,
-<a href=#698 id=698 data-nosnippet>698</a>  <span class="kw">pub </span>after:            Tokens,
-<a href=#699 id=699 data-nosnippet>699</a>}
-<a href=#700 id=700 data-nosnippet>700</a><span class="kw">impl </span>Default <span class="kw">for </span>RequireOptions {
-<a href=#701 id=701 data-nosnippet>701</a>  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-<a href=#702 id=702 data-nosnippet>702</a>    RequireOptions {
-<a href=#703 id=703 data-nosnippet>703</a>      options:          Vec::new(),
-<a href=#704 id=704 data-nosnippet>704</a>      withoptions:      <span class="prelude-val">None</span>,
-<a href=#705 id=705 data-nosnippet>705</a>      extension:        <span class="prelude-val">None</span>,
-<a href=#706 id=706 data-nosnippet>706</a>      notex:            <span class="prelude-val">None</span>,
-<a href=#707 id=707 data-nosnippet>707</a>      noltxml:          <span class="prelude-val">None</span>,
-<a href=#708 id=708 data-nosnippet>708</a>      as_class:         <span class="bool-val">false</span>,
-<a href=#709 id=709 data-nosnippet>709</a>      searchpaths_only: <span class="bool-val">false</span>,
-<a href=#710 id=710 data-nosnippet>710</a>      after:            <span class="macro">Tokens!</span>(),
-<a href=#711 id=711 data-nosnippet>711</a>    }
-<a href=#712 id=712 data-nosnippet>712</a>  }
-<a href=#713 id=713 data-nosnippet>713</a>}
-<a href=#714 id=714 data-nosnippet>714</a>
-<a href=#715 id=715 data-nosnippet>715</a><span class="doccomment">/// An opinionated binding for \RequirePackage.
-<a href=#716 id=716 data-nosnippet>716</a>///
-<a href=#717 id=717 data-nosnippet>717</a>/// This (and `FindFile`) needs to evolve a bit to support reading raw .sty (.def, etc) files from
-<a href=#718 id=718 data-nosnippet>718</a>/// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find`
-<a href=#719 id=719 data-nosnippet>719</a>/// ???) Another potentially useful option might be that if we are reading a raw file,
-<a href=#720 id=720 data-nosnippet>720</a>/// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
-<a href=#721 id=721 data-nosnippet>721</a></span><span class="kw">pub fn </span>require_package(name: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: RequireOptions) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#722 id=722 data-nosnippet>722</a>  <span class="comment">// We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
-<a href=#723 id=723 data-nosnippet>723</a>  </span><span class="kw">if </span>options.notex.is_none()
-<a href=#724 id=724 data-nosnippet>724</a>    &amp;&amp; !lookup_bool(<span class="string">"INCLUDE_STYLES"</span>)
-<a href=#725 id=725 data-nosnippet>725</a>    &amp;&amp; !<span class="macro">matches!</span>(options.noltxml, <span class="prelude-val">Some</span>(<span class="bool-val">true</span>))
-<a href=#726 id=726 data-nosnippet>726</a>  {
-<a href=#727 id=727 data-nosnippet>727</a>    options.notex = <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
-<a href=#728 id=728 data-nosnippet>728</a>  }
-<a href=#729 id=729 data-nosnippet>729</a>  <span class="kw">if </span>options.extension.is_none() {
-<a href=#730 id=730 data-nosnippet>730</a>    options.extension = <span class="prelude-val">Some</span>(<span class="string">"sty"</span>.into());
-<a href=#731 id=731 data-nosnippet>731</a>  }
-<a href=#732 id=732 data-nosnippet>732</a>  <span class="comment">// TODO: Ideally we want to use the same struct for the RequirePackage options as for the
-<a href=#733 id=733 data-nosnippet>733</a>  // InputDefinitions options
-<a href=#734 id=734 data-nosnippet>734</a>  </span>input_definitions(name, InputDefinitionOptions {
-<a href=#735 id=735 data-nosnippet>735</a>    extension: options.extension,
-<a href=#736 id=736 data-nosnippet>736</a>    handleoptions: <span class="bool-val">true</span>,
-<a href=#737 id=737 data-nosnippet>737</a>    <span class="comment">// Pass classes options if we have NONE!
-<a href=#738 id=738 data-nosnippet>738</a>    </span>withoptions: <span class="kw">if </span>options.options.is_empty() {
-<a href=#739 id=739 data-nosnippet>739</a>      <span class="prelude-val">Some</span>(Vec::new())
-<a href=#740 id=740 data-nosnippet>740</a>    } <span class="kw">else </span>{
-<a href=#741 id=741 data-nosnippet>741</a>      <span class="prelude-val">None
-<a href=#742 id=742 data-nosnippet>742</a>    </span>}, <span class="comment">// fake boolean use, multi-type in latexml... refactor?
-<a href=#743 id=743 data-nosnippet>743</a>    </span>options: options.options,
-<a href=#744 id=744 data-nosnippet>744</a>    as_class: options.as_class,
-<a href=#745 id=745 data-nosnippet>745</a>    noltxml: options.noltxml.unwrap_or(<span class="bool-val">false</span>),
-<a href=#746 id=746 data-nosnippet>746</a>    notex: options.notex.unwrap_or(<span class="bool-val">false</span>),
-<a href=#747 id=747 data-nosnippet>747</a>    after: options.after,
-<a href=#748 id=748 data-nosnippet>748</a>    ..InputDefinitionOptions::default()
-<a href=#749 id=749 data-nosnippet>749</a>  })
-<a href=#750 id=750 data-nosnippet>750</a>}
-<a href=#751 id=751 data-nosnippet>751</a>
-<a href=#752 id=752 data-nosnippet>752</a><span class="kw">pub fn </span>require_resource(<span class="kw-2">mut </span>resource: Resource) {
-<a href=#753 id=753 data-nosnippet>753</a>  <span class="kw">if </span>resource.name.is_empty() &amp;&amp; resource.content.is_empty() {
-<a href=#754 id=754 data-nosnippet>754</a>    <span class="macro">Warn!</span>(
-<a href=#755 id=755 data-nosnippet>755</a>      <span class="string">"expected"</span>,
-<a href=#756 id=756 data-nosnippet>756</a>      <span class="string">"resource"</span>,
-<a href=#757 id=757 data-nosnippet>757</a>      <span class="string">"Resource must have a resource pathname or content; skipping"
-<a href=#758 id=758 data-nosnippet>758</a>    </span>);
-<a href=#759 id=759 data-nosnippet>759</a>    <span class="kw">return</span>;
-<a href=#760 id=760 data-nosnippet>760</a>  }
-<a href=#761 id=761 data-nosnippet>761</a>  <span class="kw">if </span>resource.mimetype.is_empty() &amp;&amp; !resource.name.is_empty() {
-<a href=#762 id=762 data-nosnippet>762</a>    <span class="kw">let </span>ext = pathname::extension(<span class="kw-2">&amp;</span>resource.name);
-<a href=#763 id=763 data-nosnippet>763</a>    resource.mimetype = resource_type(<span class="kw-2">&amp;</span>ext);
-<a href=#764 id=764 data-nosnippet>764</a>  }
-<a href=#765 id=765 data-nosnippet>765</a>  <span class="kw">if </span>resource.mimetype.is_empty() {
-<a href=#766 id=766 data-nosnippet>766</a>    <span class="macro">Warn!</span>(
-<a href=#767 id=767 data-nosnippet>767</a>      <span class="string">"expected"</span>,
-<a href=#768 id=768 data-nosnippet>768</a>      <span class="string">"mime-type"</span>,
-<a href=#769 id=769 data-nosnippet>769</a>      <span class="string">"Resource must have a mime-type; skipping"
-<a href=#770 id=770 data-nosnippet>770</a>    </span>);
-<a href=#771 id=771 data-nosnippet>771</a>    <span class="kw">return</span>;
-<a href=#772 id=772 data-nosnippet>772</a>  }
-<a href=#773 id=773 data-nosnippet>773</a>
-<a href=#774 id=774 data-nosnippet>774</a>  <span class="comment">// If we've got a document, go ahead &amp; put the resource in.
-<a href=#775 id=775 data-nosnippet>775</a>  // if (document.is_some()) {
-<a href=#776 id=776 data-nosnippet>776</a>  //   document.as_mut().unwrap().add_resource(resource, resource);
-<a href=#777 id=777 data-nosnippet>777</a>  // } else {
-<a href=#778 id=778 data-nosnippet>778</a>  </span>push_pending_resource(resource);
-<a href=#779 id=779 data-nosnippet>779</a>  <span class="comment">// }
-<a href=#780 id=780 data-nosnippet>780</a></span>}
-<a href=#781 id=781 data-nosnippet>781</a>
-<a href=#782 id=782 data-nosnippet>782</a><span class="kw">pub fn </span>load_class(name: <span class="kw-2">&amp;</span>str, _options: Vec&lt;String&gt;, after: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#783 id=783 data-nosnippet>783</a>  input_definitions(name, InputDefinitionOptions {
-<a href=#784 id=784 data-nosnippet>784</a>    extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)),
-<a href=#785 id=785 data-nosnippet>785</a>    after,
-<a href=#786 id=786 data-nosnippet>786</a>    notex: <span class="bool-val">true</span>,
-<a href=#787 id=787 data-nosnippet>787</a>    handleoptions: <span class="bool-val">true</span>,
-<a href=#788 id=788 data-nosnippet>788</a>    noerror: <span class="bool-val">true</span>,
-<a href=#789 id=789 data-nosnippet>789</a>    ..InputDefinitionOptions::default()
-<a href=#790 id=790 data-nosnippet>790</a>  })
-<a href=#791 id=791 data-nosnippet>791</a>  <span class="comment">// if (let success = InputDefinitions($class, type =&gt; 'cls', notex =&gt; 1, handleoptions =&gt; 1,
-<a href=#792 id=792 data-nosnippet>792</a>  // noerror =&gt; 1,     %options)) {
-<a href=#793 id=793 data-nosnippet>793</a>  //   return $success; }
-<a href=#794 id=794 data-nosnippet>794</a>  // else {
-<a href=#795 id=795 data-nosnippet>795</a>  //   $STATE&gt;noteStatus(missing =&gt; $class . '.cls');
-<a href=#796 id=796 data-nosnippet>796</a>  //   let alternate = 'OmniBus';    # was 'article'
-<a href=#797 id=797 data-nosnippet>797</a>  //   Warn('missing_file', $class, $STATE&gt;getStomach-&gt;getGullet,
-<a href=#798 id=798 data-nosnippet>798</a>  //     "Can't find binding for class $class (using $alternate)",
-<a href=#799 id=799 data-nosnippet>799</a>  //     maybeReportSearchPaths());
-<a href=#800 id=800 data-nosnippet>800</a>  // if (let success = InputDefinitions($alternate, type =&gt; 'cls', noerror =&gt; 1, handleoptions =&gt;
-<a href=#801 id=801 data-nosnippet>801</a>  // 1, %options)) {     return $success; }
-<a href=#802 id=802 data-nosnippet>802</a>  //   else {
-<a href=#803 id=803 data-nosnippet>803</a>  //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE&gt;getStomach-&gt;getGullet,
-<a href=#804 id=804 data-nosnippet>804</a>  //       "Can't find binding for class $alternate (installation error)");
-<a href=#805 id=805 data-nosnippet>805</a>  //     return; } } }
-<a href=#806 id=806 data-nosnippet>806</a></span>}
-<a href=#807 id=807 data-nosnippet>807</a>
-<a href=#808 id=808 data-nosnippet>808</a><span class="doccomment">/// configuration for searching for a file in the local filesystem
-<a href=#809 id=809 data-nosnippet>809</a></span><span class="attr">#[derive(Default)]
-<a href=#810 id=810 data-nosnippet>810</a></span><span class="kw">pub struct </span>FindFileOptions {
-<a href=#811 id=811 data-nosnippet>811</a>  <span class="comment">// TODO: this is no longer used in find_file, rather a level earlier
-<a href=#812 id=812 data-nosnippet>812</a>  </span><span class="kw">pub </span>forbid_ltxml:      bool,
-<a href=#813 id=813 data-nosnippet>813</a>  <span class="kw">pub </span>notex:             bool,
-<a href=#814 id=814 data-nosnippet>814</a>  <span class="kw">pub </span>ext_type:          <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
-<a href=#815 id=815 data-nosnippet>815</a>  <span class="kw">pub </span>search_paths_only: bool,
-<a href=#816 id=816 data-nosnippet>816</a>}
-<a href=#817 id=817 data-nosnippet>817</a>
-<a href=#818 id=818 data-nosnippet>818</a><span class="doccomment">/// search for a file as prescribed by a `FindFileOptions` configuration
-<a href=#819 id=819 data-nosnippet>819</a></span><span class="kw">pub fn </span>find_file(file: <span class="kw-2">&amp;</span>str, options: <span class="prelude-ty">Option</span>&lt;FindFileOptions&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#820 id=820 data-nosnippet>820</a>  <span class="kw">let </span>options = options.unwrap_or_default();
-<a href=#821 id=821 data-nosnippet>821</a>  <span class="kw">if </span>pathname::is_literaldata(file) {
-<a href=#822 id=822 data-nosnippet>822</a>    <span class="comment">// If literal protocol return immediately (unless notex!)
-<a href=#823 id=823 data-nosnippet>823</a>    </span><span class="kw">if </span>options.notex {
-<a href=#824 id=824 data-nosnippet>824</a>      <span class="prelude-val">None
-<a href=#825 id=825 data-nosnippet>825</a>    </span>} <span class="kw">else </span>{
-<a href=#826 id=826 data-nosnippet>826</a>      <span class="comment">// TODO: Consider returning a Cow&lt;str&gt; instead to optimize
-<a href=#827 id=827 data-nosnippet>827</a>      </span><span class="prelude-val">Some</span>(file.to_string())
-<a href=#828 id=828 data-nosnippet>828</a>    }
-<a href=#829 id=829 data-nosnippet>829</a>  } <span class="kw">else if </span>pathname::is_literaldata(file) || pathname::is_url(file) {
-<a href=#830 id=830 data-nosnippet>830</a>    <span class="comment">// If a known special protocol return immediately
-<a href=#831 id=831 data-nosnippet>831</a>    </span><span class="prelude-val">Some</span>(file.to_string())
-<a href=#832 id=832 data-nosnippet>832</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>ext) = options.ext_type {
-<a href=#833 id=833 data-nosnippet>833</a>    <span class="comment">// Otherwise, it's some kind of "real" file, and we might have to search for it
-<a href=#834 id=834 data-nosnippet>834</a>    // Specific type requested? Search for it.
-<a href=#835 id=835 data-nosnippet>835</a>    // Add the extension, if it isn't already there.
-<a href=#836 id=836 data-nosnippet>836</a>    </span><span class="kw">let </span>aux_file = <span class="kw">if </span>file.ends_with(ext.as_ref()) {
-<a href=#837 id=837 data-nosnippet>837</a>      file.to_string()
-<a href=#838 id=838 data-nosnippet>838</a>    } <span class="kw">else </span>{
-<a href=#839 id=839 data-nosnippet>839</a>      <span class="macro">s!</span>(<span class="string">"{}.{}"</span>, file, ext)
-<a href=#840 id=840 data-nosnippet>840</a>    };
-<a href=#841 id=841 data-nosnippet>841</a>    find_file_aux(<span class="kw-2">&amp;</span>aux_file, <span class="kw-2">&amp;</span>options)
-<a href=#842 id=842 data-nosnippet>842</a>  } <span class="kw">else if </span>file.ends_with(<span class="string">".tex"</span>) {
-<a href=#843 id=843 data-nosnippet>843</a>    <span class="comment">// If no type given, we MAY expect .tex, or maybe NOT!!
-<a href=#844 id=844 data-nosnippet>844</a>    // No requested type, then .tex; Of course, it may already have it!
-<a href=#845 id=845 data-nosnippet>845</a>    </span>find_file_aux(file, <span class="kw-2">&amp;</span>options)
-<a href=#846 id=846 data-nosnippet>846</a>  } <span class="kw">else </span>{
-<a href=#847 id=847 data-nosnippet>847</a>    <span class="kw">match </span>find_file_aux(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}.tex"</span>, file), <span class="kw-2">&amp;</span>options) {
-<a href=#848 id=848 data-nosnippet>848</a>      <span class="prelude-val">None </span>=&gt; find_file_aux(file, <span class="kw-2">&amp;</span>options),
-<a href=#849 id=849 data-nosnippet>849</a>      <span class="prelude-val">Some</span>(f) =&gt; <span class="prelude-val">Some</span>(f),
-<a href=#850 id=850 data-nosnippet>850</a>    }
-<a href=#851 id=851 data-nosnippet>851</a>  }
-<a href=#852 id=852 data-nosnippet>852</a>}
-<a href=#853 id=853 data-nosnippet>853</a>
-<a href=#854 id=854 data-nosnippet>854</a><span class="kw">fn </span>find_file_aux(file: <span class="kw-2">&amp;</span>str, options: <span class="kw-2">&amp;</span>FindFileOptions) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#855 id=855 data-nosnippet>855</a>  <span class="comment">// If cached, return simple path (it's a key into the cache)
-<a href=#856 id=856 data-nosnippet>856</a>  </span><span class="kw">let </span>cached = lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_contents"</span>, file));
-<a href=#857 id=857 data-nosnippet>857</a>  <span class="kw">if </span>!cached.is_empty() {
-<a href=#858 id=858 data-nosnippet>858</a>    <span class="prelude-val">Some</span>(file.to_string())
-<a href=#859 id=859 data-nosnippet>859</a>  } <span class="kw">else if </span>pathname::is_absolute(file) {
-<a href=#860 id=860 data-nosnippet>860</a>    <span class="comment">// And if we've got an absolute path,
-<a href=#861 id=861 data-nosnippet>861</a>    </span><span class="kw">if </span>Path::new(file).exists() {
-<a href=#862 id=862 data-nosnippet>862</a>      <span class="comment">// No need to search, just check if it exists.
-<a href=#863 id=863 data-nosnippet>863</a>      </span><span class="prelude-val">Some</span>(file.to_string())
-<a href=#864 id=864 data-nosnippet>864</a>    } <span class="kw">else </span>{
-<a href=#865 id=865 data-nosnippet>865</a>      <span class="comment">// otherwise we're never going to find it.
-<a href=#866 id=866 data-nosnippet>866</a>      </span><span class="prelude-val">None
-<a href=#867 id=867 data-nosnippet>867</a>    </span>}
-<a href=#868 id=868 data-nosnippet>868</a>  } <span class="kw">else if </span>pathname::is_nasty(file) {
-<a href=#869 id=869 data-nosnippet>869</a>    <span class="comment">// If it is a nasty filename, we won't touch it.
-<a href=#870 id=870 data-nosnippet>870</a>    // we DO NOT want to pass this to kpathse or such!
-<a href=#871 id=871 data-nosnippet>871</a>    </span><span class="prelude-val">None
-<a href=#872 id=872 data-nosnippet>872</a>  </span>} <span class="kw">else </span>{
-<a href=#873 id=873 data-nosnippet>873</a>    <span class="comment">// Note that the strategy is complicated by the fact that
-<a href=#874 id=874 data-nosnippet>874</a>    // (1) we prefer .ltxml bindings, if present
-<a href=#875 id=875 data-nosnippet>875</a>    // (2) those MAY be present in kpsewhich's DB (although our searchpaths take precedence!)
-<a href=#876 id=876 data-nosnippet>876</a>    // (3) BUT we want to avoid kpsewhich if we can, since it's slower
-<a href=#877 id=877 data-nosnippet>877</a>    // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
-<a href=#878 id=878 data-nosnippet>878</a>    </span><span class="kw">let </span>paths: Vec&lt;String&gt; = get_search_paths();
-<a href=#879 id=879 data-nosnippet>879</a>    <span class="comment">// let _urlbase = state!().lookup_value("URLBASE");
-<a href=#880 id=880 data-nosnippet>880</a>    // let _nopaths = lookup_bool("REMOTE_REQUEST");
-<a href=#881 id=881 data-nosnippet>881</a>    // let _ltxml_paths: Vec&lt;String&gt; = if nopaths { vec![] } else { paths.clone() };
-<a href=#882 id=882 data-nosnippet>882</a>
-<a href=#883 id=883 data-nosnippet>883</a>    // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
-<a href=#884 id=884 data-nosnippet>884</a>    // If we're looking for ltxml, look within our paths &amp; installation first (faster than kpse)
-<a href=#885 id=885 data-nosnippet>885</a>    // if !options.forbid_ltxml {
-<a href=#886 id=886 data-nosnippet>886</a>    //   if let Some(path) = pathname::find(
-<a href=#887 id=887 data-nosnippet>887</a>    //     &amp;s!("{}.ltxml", file),
-<a href=#888 id=888 data-nosnippet>888</a>    //     PathnameFindOptions {
-<a href=#889 id=889 data-nosnippet>889</a>    //       paths: Some(ltxml_paths),
-<a href=#890 id=890 data-nosnippet>890</a>    //       installation_subdir: Some(String::from("Package")),
-<a href=#891 id=891 data-nosnippet>891</a>    //       ..PathnameFindOptions::default()
-<a href=#892 id=892 data-nosnippet>892</a>    //     },
-<a href=#893 id=893 data-nosnippet>893</a>    //   ) {
-<a href=#894 id=894 data-nosnippet>894</a>    //     return Some(path);
-<a href=#895 id=895 data-nosnippet>895</a>    //   }
-<a href=#896 id=896 data-nosnippet>896</a>    // }
-<a href=#897 id=897 data-nosnippet>897</a>    // If we're looking for TeX, look within our paths &amp; installation first (faster than kpse)
-<a href=#898 id=898 data-nosnippet>898</a>    </span><span class="kw">if </span>!options.notex {
-<a href=#899 id=899 data-nosnippet>899</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = pathname::find(file, PathnameFindOptions {
-<a href=#900 id=900 data-nosnippet>900</a>        paths: <span class="prelude-val">Some</span>(paths),
-<a href=#901 id=901 data-nosnippet>901</a>        ..PathnameFindOptions::default()
-<a href=#902 id=902 data-nosnippet>902</a>      }) {
-<a href=#903 id=903 data-nosnippet>903</a>        <span class="kw">return </span><span class="prelude-val">Some</span>(path);
-<a href=#904 id=904 data-nosnippet>904</a>      }
-<a href=#905 id=905 data-nosnippet>905</a>    }
-<a href=#906 id=906 data-nosnippet>906</a>    <span class="comment">// Otherwise, pass on to kpsewhich
-<a href=#907 id=907 data-nosnippet>907</a>    // Depending on flags, maybe search for ltxml in texmf or for plain tex in ours!
-<a href=#908 id=908 data-nosnippet>908</a>    // The main point, though, is to we make only ONE (more) call.
-<a href=#909 id=909 data-nosnippet>909</a>    // return if grep { pathname::is_nasty($_) } @$paths;    // SECURITY! No nasty paths in cmdline
-<a href=#910 id=910 data-nosnippet>910</a>    //       // Do we need to sanitize these environment variables?
-<a href=#911 id=911 data-nosnippet>911</a>    // my $kpsewhich = which($ENV{LATEXML_KPSEWHICH} || 'kpsewhich');
-<a href=#912 id=912 data-nosnippet>912</a>    // local $ENV{TEXINPUTS} = join($Config::Config{'path_sep'},
-<a href=#913 id=913 data-nosnippet>913</a>    //   @$paths, $ENV{TEXINPUTS} || $Config::Config{'path_sep'});
-<a href=#914 id=914 data-nosnippet>914</a>    // my @candidates = (((!$options{noltxml} &amp;&amp; !$nopaths) ? ("$file.ltxml") : ()),
-<a href=#915 id=915 data-nosnippet>915</a>    //   (!$options{notex} ? ($file) : ()));
-<a href=#916 id=916 data-nosnippet>916</a>    // if (my $result = pathname::kpsewhich(@candidates)) {
-<a href=#917 id=917 data-nosnippet>917</a>    //   return (-f $result ? $result : undef); }
-<a href=#918 id=918 data-nosnippet>918</a>    // if ($urlbase &amp;&amp; ($path = url_find($file, urlbase =&gt; $urlbase))) {
-<a href=#919 id=919 data-nosnippet>919</a>    //   return $path; }
-<a href=#920 id=920 data-nosnippet>920</a>    </span>pathname::kpsewhich(<span class="kw-2">&amp;</span>[file])
-<a href=#921 id=921 data-nosnippet>921</a>  }
-<a href=#922 id=922 data-nosnippet>922</a>}
-<a href=#923 id=923 data-nosnippet>923</a>
-<a href=#924 id=924 data-nosnippet>924</a><span class="comment">//======================================================================
-<a href=#925 id=925 data-nosnippet>925</a>// Declaring and Adjusting the Document Model.
-<a href=#926 id=926 data-nosnippet>926</a>//======================================================================
-<a href=#927 id=927 data-nosnippet>927</a>
-<a href=#928 id=928 data-nosnippet>928</a></span><span class="kw">pub fn </span>install_tag(tag: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>properties: TagOptions) {
-<a href=#929 id=929 data-nosnippet>929</a>  <span class="kw">let </span>tag_ticket = arena::pin(tag);
-<a href=#930 id=930 data-nosnippet>930</a>  with_tag_property_mut(tag_ticket, |options| {
-<a href=#931 id=931 data-nosnippet>931</a>    <span class="kw">if </span>properties.auto_open.is_some() {
-<a href=#932 id=932 data-nosnippet>932</a>      options.auto_open = properties.auto_open;
-<a href=#933 id=933 data-nosnippet>933</a>    }
-<a href=#934 id=934 data-nosnippet>934</a>    <span class="kw">if </span>properties.auto_close.is_some() {
-<a href=#935 id=935 data-nosnippet>935</a>      options.auto_close = properties.auto_close;
-<a href=#936 id=936 data-nosnippet>936</a>    }
-<a href=#937 id=937 data-nosnippet>937</a>    <span class="kw">for </span>name <span class="kw">in </span><span class="kw-2">&amp;</span>TagOptionName::all() {
-<a href=#938 id=938 data-nosnippet>938</a>      <span class="kw">if </span>name.is_prepend() {
-<a href=#939 id=939 data-nosnippet>939</a>        options.prepend(name, properties.remove(name));
-<a href=#940 id=940 data-nosnippet>940</a>      } <span class="kw">else if </span>name.is_append() {
-<a href=#941 id=941 data-nosnippet>941</a>        options.append(name, properties.remove(name));
-<a href=#942 id=942 data-nosnippet>942</a>      } <span class="kw">else </span>{
-<a href=#943 id=943 data-nosnippet>943</a>        <span class="comment">// we'll handle the regular ones out of the loop
-<a href=#944 id=944 data-nosnippet>944</a>      </span>}
-<a href=#945 id=945 data-nosnippet>945</a>    }
-<a href=#946 id=946 data-nosnippet>946</a>  });
-<a href=#947 id=947 data-nosnippet>947</a>}
-<a href=#948 id=948 data-nosnippet>948</a>
-<a href=#949 id=949 data-nosnippet>949</a><span class="doccomment">/// Selects the RelaxNG schema defining the XML output language
-<a href=#950 id=950 data-nosnippet>950</a></span><span class="kw">pub fn </span>select_relaxng_schema(schema: <span class="kw-2">&amp;</span>str, namespaces: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, String&gt;&gt;) {
-<a href=#951 id=951 data-nosnippet>951</a>  <span class="comment">// What verb here? Set, Choose,...
-<a href=#952 id=952 data-nosnippet>952</a>  </span>model::set_relaxng_schema(schema);
-<a href=#953 id=953 data-nosnippet>953</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(namespaces) = namespaces {
-<a href=#954 id=954 data-nosnippet>954</a>    <span class="kw">for </span>(prefix, value) <span class="kw">in </span>namespaces {
-<a href=#955 id=955 data-nosnippet>955</a>      model::register_document_namespace(<span class="kw-2">&amp;</span>prefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>value));
-<a href=#956 id=956 data-nosnippet>956</a>    }
-<a href=#957 id=957 data-nosnippet>957</a>  }
-<a href=#958 id=958 data-nosnippet>958</a>}
-<a href=#959 id=959 data-nosnippet>959</a>
-<a href=#960 id=960 data-nosnippet>960</a><span class="kw">pub fn </span>merge_font(font: Font) {
-<a href=#961 id=961 data-nosnippet>961</a>  <span class="kw">let </span>new_font = lookup_font().unwrap().merge(font);
-<a href=#962 id=962 data-nosnippet>962</a>  assign_font(Rc::new(new_font), <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#963 id=963 data-nosnippet>963</a>}
-<a href=#964 id=964 data-nosnippet>964</a>
-<a href=#965 id=965 data-nosnippet>965</a><span class="kw">pub fn </span>digest_text(stuff: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-<a href=#966 id=966 data-nosnippet>966</a>  begin_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>;
-<a href=#967 id=967 data-nosnippet>967</a>  <span class="kw">let </span>value = digest(stuff);
-<a href=#968 id=968 data-nosnippet>968</a>  end_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>;
-<a href=#969 id=969 data-nosnippet>969</a>  value
-<a href=#970 id=970 data-nosnippet>970</a>}
-<a href=#971 id=971 data-nosnippet>971</a>
-<a href=#972 id=972 data-nosnippet>972</a><span class="kw">pub fn </span>digest_literal&lt;T: Into&lt;Tokens&gt;&gt;(stuff: T) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-<a href=#973 id=973 data-nosnippet>973</a>  <span class="kw">let </span>stuff: Tokens = stuff.into();
-<a href=#974 id=974 data-nosnippet>974</a>  <span class="comment">// Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
-<a href=#975 id=975 data-nosnippet>975</a>  // valid changes of state!)
-<a href=#976 id=976 data-nosnippet>976</a>  </span>begin_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>;
-<a href=#977 id=977 data-nosnippet>977</a>
-<a href=#978 id=978 data-nosnippet>978</a>  <span class="kw">let </span>font = lookup_font().unwrap(); <span class="comment">// TODO: raise error if font missing
-<a href=#979 id=979 data-nosnippet>979</a>  </span>assign_font(
-<a href=#980 id=980 data-nosnippet>980</a>    Rc::new(font.merge(<span class="macro">fontmap!</span>(encoding =&gt; <span class="string">"ASCII"</span>))),
-<a href=#981 id=981 data-nosnippet>981</a>    <span class="prelude-val">Some</span>(Scope::Local),
-<a href=#982 id=982 data-nosnippet>982</a>  ); <span class="comment">// try to stay as ASCII as possible
-<a href=#983 id=983 data-nosnippet>983</a>
-<a href=#984 id=984 data-nosnippet>984</a>  </span><span class="kw">let </span>value = digest(stuff);
-<a href=#985 id=985 data-nosnippet>985</a>  assign_font(font, <span class="prelude-val">None</span>);
-<a href=#986 id=986 data-nosnippet>986</a>  end_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>;
-<a href=#987 id=987 data-nosnippet>987</a>  value
-<a href=#988 id=988 data-nosnippet>988</a>}
-<a href=#989 id=989 data-nosnippet>989</a>
-<a href=#990 id=990 data-nosnippet>990</a><span class="kw">pub fn </span>digest_if(token: Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-<a href=#991 id=991 data-nosnippet>991</a>  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
-<a href=#992 id=992 data-nosnippet>992</a>    <span class="kw">match </span>digest(<span class="macro">Tokens!</span>(token)) {
-<a href=#993 id=993 data-nosnippet>993</a>      <span class="prelude-val">Ok</span>(t) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(t)),
-<a href=#994 id=994 data-nosnippet>994</a>      <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
-<a href=#995 id=995 data-nosnippet>995</a>    }
-<a href=#996 id=996 data-nosnippet>996</a>  } <span class="kw">else </span>{
-<a href=#997 id=997 data-nosnippet>997</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#998 id=998 data-nosnippet>998</a>  }
-<a href=#999 id=999 data-nosnippet>999</a>}
-<a href=#1000 id=1000 data-nosnippet>1000</a>
-<a href=#1001 id=1001 data-nosnippet>1001</a><span class="doccomment">/// Creates a single `Tokens` representing a TeX invocation of the lead `token` over a list of
-<a href=#1002 id=1002 data-nosnippet>1002</a>/// arguments.
-<a href=#1003 id=1003 data-nosnippet>1003</a>///
-<a href=#1004 id=1004 data-nosnippet>1004</a>/// Note: currently this is near the `Mouth` representation of data, and deals purely with tokens.
-<a href=#1005 id=1005 data-nosnippet>1005</a>/// A more generic version of this method may be able to support `ArgWrap` for the argument list.
-<a href=#1006 id=1006 data-nosnippet>1006</a>/// Indeed, the return type may also be lifted to a new generic ArgWrap::Invocation, if there was
-<a href=#1007 id=1007 data-nosnippet>1007</a>/// benefit.
-<a href=#1008 id=1008 data-nosnippet>1008</a></span><span class="kw">pub fn </span>build_invocation&lt;T: Into&lt;Token&gt;&gt;(token: T, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-<a href=#1009 id=1009 data-nosnippet>1009</a>  <span class="kw">let </span>token: Token = token.into();
-<a href=#1010 id=1010 data-nosnippet>1010</a>  <span class="comment">// Note: token may have been \let to another defn!
-<a href=#1011 id=1011 data-nosnippet>1011</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
-<a href=#1012 id=1012 data-nosnippet>1012</a>    <span class="kw">let </span><span class="kw-2">mut </span>invoked_tokens = <span class="macro">vec!</span>[token];
-<a href=#1013 id=1013 data-nosnippet>1013</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = defn.get_parameters() {
-<a href=#1014 id=1014 data-nosnippet>1014</a>      invoked_tokens.extend(params.revert_arguments(args)<span class="question-mark">?</span>);
-<a href=#1015 id=1015 data-nosnippet>1015</a>    }
-<a href=#1016 id=1016 data-nosnippet>1016</a>    <span class="prelude-val">Ok</span>(Tokens::new(invoked_tokens))
-<a href=#1017 id=1017 data-nosnippet>1017</a>  } <span class="kw">else </span>{
-<a href=#1018 id=1018 data-nosnippet>1018</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Can't invoke {:?}; it is undefined"</span>, token.stringify());
-<a href=#1019 id=1019 data-nosnippet>1019</a>    token.with_cs_name(|csname| {
-<a href=#1020 id=1020 data-nosnippet>1020</a>      <span class="macro">Error!</span>(<span class="string">"undefined"</span>, csname, message);
-<a href=#1021 id=1021 data-nosnippet>1021</a>      <span class="prelude-val">Ok</span>(())
-<a href=#1022 id=1022 data-nosnippet>1022</a>    })<span class="question-mark">?</span>;
-<a href=#1023 id=1023 data-nosnippet>1023</a>    <span class="kw">let </span><span class="kw-2">mut </span>invoked_tokens = <span class="macro">vec!</span>[token];
-<a href=#1024 id=1024 data-nosnippet>1024</a>    <span class="comment">// DefConstructor!(token, convert_latex_args(args.len(), 0),
-<a href=#1025 id=1025 data-nosnippet>1025</a>    // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
-<a href=#1026 id=1026 data-nosnippet>1026</a>    </span><span class="kw">let </span>wrapped_args: Vec&lt;Token&gt; = args
-<a href=#1027 id=1027 data-nosnippet>1027</a>      .into_iter()
-<a href=#1028 id=1028 data-nosnippet>1028</a>      .flat_map(|arg_opt| {
-<a href=#1029 id=1029 data-nosnippet>1029</a>        <span class="kw">let </span><span class="kw-2">mut </span>wrapped = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
-<a href=#1030 id=1030 data-nosnippet>1030</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = arg_opt {
-<a href=#1031 id=1031 data-nosnippet>1031</a>          wrapped.extend(arg.unlist());
-<a href=#1032 id=1032 data-nosnippet>1032</a>        }
-<a href=#1033 id=1033 data-nosnippet>1033</a>        wrapped.push(<span class="macro">T_END!</span>());
-<a href=#1034 id=1034 data-nosnippet>1034</a>        wrapped
-<a href=#1035 id=1035 data-nosnippet>1035</a>      })
-<a href=#1036 id=1036 data-nosnippet>1036</a>      .collect();
-<a href=#1037 id=1037 data-nosnippet>1037</a>    invoked_tokens.extend(wrapped_args);
-<a href=#1038 id=1038 data-nosnippet>1038</a>    <span class="prelude-val">Ok</span>(Tokens::new(invoked_tokens))
-<a href=#1039 id=1039 data-nosnippet>1039</a>  }
-<a href=#1040 id=1040 data-nosnippet>1040</a>}
-<a href=#1041 id=1041 data-nosnippet>1041</a>
-<a href=#1042 id=1042 data-nosnippet>1042</a><span class="doccomment">/// Convert a LaTeX-style argument spec to our Package form.
-<a href=#1043 id=1043 data-nosnippet>1043</a>/// Ie. given $nargs and $optional, being the two optional arguments to
-<a href=#1044 id=1044 data-nosnippet>1044</a>/// something like \newcommand, convert it to the form we use
-<a href=#1045 id=1045 data-nosnippet>1045</a></span><span class="kw">pub fn </span>convert_latex_args(
-<a href=#1046 id=1046 data-nosnippet>1046</a>  <span class="kw-2">mut </span>nargs: usize,
-<a href=#1047 id=1047 data-nosnippet>1047</a>  optional: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-<a href=#1048 id=1048 data-nosnippet>1048</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
-<a href=#1049 id=1049 data-nosnippet>1049</a>  <span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
-<a href=#1050 id=1050 data-nosnippet>1050</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = optional {
-<a href=#1051 id=1051 data-nosnippet>1051</a>    params.push(
-<a href=#1052 id=1052 data-nosnippet>1052</a>      Parameter {
-<a href=#1053 id=1053 data-nosnippet>1053</a>        name: arena::pin_static(<span class="string">"Optional"</span>),
-<a href=#1054 id=1054 data-nosnippet>1054</a>        spec: arena::pin(<span class="macro">s!</span>(<span class="string">"[Default:{}]"</span>, tks.clone().untex())),
-<a href=#1055 id=1055 data-nosnippet>1055</a>        extra: <span class="macro">vec!</span>[tks],
-<a href=#1056 id=1056 data-nosnippet>1056</a>        ..Parameter::default()
-<a href=#1057 id=1057 data-nosnippet>1057</a>      }
-<a href=#1058 id=1058 data-nosnippet>1058</a>      .init()<span class="question-mark">?</span>,
-<a href=#1059 id=1059 data-nosnippet>1059</a>    );
-<a href=#1060 id=1060 data-nosnippet>1060</a>    nargs -= <span class="number">1</span>;
-<a href=#1061 id=1061 data-nosnippet>1061</a>  }
-<a href=#1062 id=1062 data-nosnippet>1062</a>
-<a href=#1063 id=1063 data-nosnippet>1063</a>  <span class="kw">for _ in </span><span class="number">1</span>..=nargs {
-<a href=#1064 id=1064 data-nosnippet>1064</a>    params.push(
-<a href=#1065 id=1065 data-nosnippet>1065</a>      Parameter {
-<a href=#1066 id=1066 data-nosnippet>1066</a>        name: arena::pin_static(<span class="string">"Plain"</span>),
-<a href=#1067 id=1067 data-nosnippet>1067</a>        spec: arena::pin_static(<span class="string">"{}"</span>),
-<a href=#1068 id=1068 data-nosnippet>1068</a>        ..Parameter::default()
-<a href=#1069 id=1069 data-nosnippet>1069</a>      }
-<a href=#1070 id=1070 data-nosnippet>1070</a>      .init()<span class="question-mark">?</span>,
-<a href=#1071 id=1071 data-nosnippet>1071</a>    );
-<a href=#1072 id=1072 data-nosnippet>1072</a>  }
-<a href=#1073 id=1073 data-nosnippet>1073</a>  <span class="kw">if </span>params.is_empty() {
-<a href=#1074 id=1074 data-nosnippet>1074</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#1075 id=1075 data-nosnippet>1075</a>  } <span class="kw">else </span>{
-<a href=#1076 id=1076 data-nosnippet>1076</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Parameters::new(params)))
-<a href=#1077 id=1077 data-nosnippet>1077</a>  }
-<a href=#1078 id=1078 data-nosnippet>1078</a>}
-<a href=#1079 id=1079 data-nosnippet>1079</a>
-<a href=#1080 id=1080 data-nosnippet>1080</a><span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
-<a href=#1081 id=1081 data-nosnippet>1081</a>  preload_font_map(encoding).expect(<span class="string">"preloading font map should succeed."</span>);
-<a href=#1082 id=1082 data-nosnippet>1082</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)) {
-<a href=#1083 id=1083 data-nosnippet>1083</a>    map.into()
-<a href=#1084 id=1084 data-nosnippet>1084</a>  } <span class="kw">else </span>{
-<a href=#1085 id=1085 data-nosnippet>1085</a>    <span class="prelude-val">None
-<a href=#1086 id=1086 data-nosnippet>1086</a>  </span>}
-<a href=#1087 id=1087 data-nosnippet>1087</a>}
-<a href=#1088 id=1088 data-nosnippet>1088</a><span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1089 id=1089 data-nosnippet>1089</a>  <span class="comment">// This check is done as a "preload" step for mutability reasons.
-<a href=#1090 id=1090 data-nosnippet>1090</a>  </span><span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>);
-<a href=#1091 id=1091 data-nosnippet>1091</a>  <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span>key) {
-<a href=#1092 id=1092 data-nosnippet>1092</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#1093 id=1093 data-nosnippet>1093</a>  }
-<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="kw">let </span>fail_key = <span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_failed_to_load"</span>);
-<a href=#1095 id=1095 data-nosnippet>1095</a>  <span class="kw">let </span>failed_flag = lookup_bool(<span class="kw-2">&amp;</span>fail_key);
-<a href=#1096 id=1096 data-nosnippet>1096</a>  <span class="kw">if </span>!failed_flag {
-<a href=#1097 id=1097 data-nosnippet>1097</a>    assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
-<a href=#1098 id=1098 data-nosnippet>1098</a>    </span>input_definitions(<span class="kw-2">&amp;</span>encoding.to_lowercase(), InputDefinitionOptions {
-<a href=#1099 id=1099 data-nosnippet>1099</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"fontmap"</span>)),
-<a href=#1100 id=1100 data-nosnippet>1100</a>      noerror: <span class="bool-val">true</span>,
-<a href=#1101 id=1101 data-nosnippet>1101</a>      ..InputDefinitionOptions::default()
-<a href=#1102 id=1102 data-nosnippet>1102</a>    })<span class="question-mark">?</span>;
-<a href=#1103 id=1103 data-nosnippet>1103</a>    <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)) {
-<a href=#1104 id=1104 data-nosnippet>1104</a>      <span class="comment">// Got map?
-<a href=#1105 id=1105 data-nosnippet>1105</a>      </span>assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
-<a href=#1106 id=1106 data-nosnippet>1106</a>    } <span class="kw">else </span>{
-<a href=#1107 id=1107 data-nosnippet>1107</a>      assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#1108 id=1108 data-nosnippet>1108</a>    }
-<a href=#1109 id=1109 data-nosnippet>1109</a>  }
-<a href=#1110 id=1110 data-nosnippet>1110</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1111 id=1111 data-nosnippet>1111</a>}</code></pre></div></section></main></body></html>
+<a href=#603 id=603 data-nosnippet>603</a>        },
+<a href=#604 id=604 data-nosnippet>604</a>      Stored::Strings(contents) =&gt; {
+<a href=#605 id=605 data-nosnippet>605</a>        <span class="kw">for </span>content <span class="kw">in </span>contents.iter() {
+<a href=#606 id=606 data-nosnippet>606</a>          <span class="kw">if </span>requested_options.contains(content) {
+<a href=#607 id=607 data-nosnippet>607</a>            requested_options.remove(content); <span class="comment">// Remove it, since it's been handled.
+<a href=#608 id=608 data-nosnippet>608</a>            </span>execute_option_internal(<span class="kw-2">*</span>content)<span class="question-mark">?</span>;
+<a href=#609 id=609 data-nosnippet>609</a>          }
+<a href=#610 id=610 data-nosnippet>610</a>        }
+<a href=#611 id=611 data-nosnippet>611</a>      },
+<a href=#612 id=612 data-nosnippet>612</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#613 id=613 data-nosnippet>613</a>    }
+<a href=#614 id=614 data-nosnippet>614</a>  }
+<a href=#615 id=615 data-nosnippet>615</a>  <span class="comment">// Now handle any remaining options (eg. default options), in the given order.
+<a href=#616 id=616 data-nosnippet>616</a>  </span><span class="kw">for </span>option <span class="kw">in </span>requested_options.iter() {
+<a href=#617 id=617 data-nosnippet>617</a>    execute_default_option_internal(<span class="kw-2">*</span>option)<span class="question-mark">?</span>;
+<a href=#618 id=618 data-nosnippet>618</a>  }
+<a href=#619 id=619 data-nosnippet>619</a>  <span class="comment">// Now, undefine the handlers?
+<a href=#620 id=620 data-nosnippet>620</a>  </span><span class="kw">for </span>option <span class="kw">in </span>declared_options.iter() {
+<a href=#621 id=621 data-nosnippet>621</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ds@{}"</span>, option)), <span class="kw-2">&amp;</span><span class="macro">T_RELAX!</span>(), <span class="prelude-val">None</span>);
+<a href=#622 id=622 data-nosnippet>622</a>  }
+<a href=#623 id=623 data-nosnippet>623</a>  <span class="prelude-val">Ok</span>(())
+<a href=#624 id=624 data-nosnippet>624</a>}
+<a href=#625 id=625 data-nosnippet>625</a>
+<a href=#626 id=626 data-nosnippet>626</a><span class="kw">fn </span>execute_option_internal(option: SymStr) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+<a href=#627 id=627 data-nosnippet>627</a>  <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(arena::with(option, |opt| <span class="macro">s!</span>(<span class="string">"\\ds@{opt}"</span>)));
+<a href=#628 id=628 data-nosnippet>628</a>  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">?</span>.is_some() {
+<a href=#629 id=629 data-nosnippet>629</a>    def_macro(
+<a href=#630 id=630 data-nosnippet>630</a>      <span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>),
+<a href=#631 id=631 data-nosnippet>631</a>      <span class="prelude-val">None</span>,
+<a href=#632 id=632 data-nosnippet>632</a>      <span class="macro">Tokens!</span>(Token {
+<a href=#633 id=633 data-nosnippet>633</a>        text: option,
+<a href=#634 id=634 data-nosnippet>634</a>        code: Catcode::OTHER,
+<a href=#635 id=635 data-nosnippet>635</a>      }),
+<a href=#636 id=636 data-nosnippet>636</a>      <span class="prelude-val">None</span>,
+<a href=#637 id=637 data-nosnippet>637</a>    )<span class="question-mark">?</span>;
+<a href=#638 id=638 data-nosnippet>638</a>
+<a href=#639 id=639 data-nosnippet>639</a>    <span class="kw">let </span>unused = <span class="kw">match </span>remove_vecdeque(<span class="string">"@unusedoptionlist"</span>) {
+<a href=#640 id=640 data-nosnippet>640</a>      <span class="prelude-val">Some</span>(list) =&gt; list
+<a href=#641 id=641 data-nosnippet>641</a>        .into_iter()
+<a href=#642 id=642 data-nosnippet>642</a>        .filter(|item| {
+<a href=#643 id=643 data-nosnippet>643</a>          <span class="kw">if let </span>Stored::String(content) = item {
+<a href=#644 id=644 data-nosnippet>644</a>            <span class="kw-2">*</span>content != option
+<a href=#645 id=645 data-nosnippet>645</a>          } <span class="kw">else </span>{
+<a href=#646 id=646 data-nosnippet>646</a>            <span class="bool-val">false
+<a href=#647 id=647 data-nosnippet>647</a>          </span>}
+<a href=#648 id=648 data-nosnippet>648</a>        })
+<a href=#649 id=649 data-nosnippet>649</a>        .collect(),
+<a href=#650 id=650 data-nosnippet>650</a>      <span class="prelude-val">None </span>=&gt; VecDeque::new(),
+<a href=#651 id=651 data-nosnippet>651</a>    };
+<a href=#652 id=652 data-nosnippet>652</a>    assign_value(<span class="string">"@unusedoptionlist"</span>, Stored::VecDequeStored(unused), <span class="prelude-val">None</span>);
+<a href=#653 id=653 data-nosnippet>653</a>    digest(cs)<span class="question-mark">?</span>;
+<a href=#654 id=654 data-nosnippet>654</a>    <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
+<a href=#655 id=655 data-nosnippet>655</a>  } <span class="kw">else </span>{
+<a href=#656 id=656 data-nosnippet>656</a>    <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
+<a href=#657 id=657 data-nosnippet>657</a>  }
+<a href=#658 id=658 data-nosnippet>658</a>}
+<a href=#659 id=659 data-nosnippet>659</a>
+<a href=#660 id=660 data-nosnippet>660</a><span class="kw">fn </span>execute_default_option_internal(option: SymStr) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+<a href=#661 id=661 data-nosnippet>661</a>  def_macro(
+<a href=#662 id=662 data-nosnippet>662</a>    <span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>),
+<a href=#663 id=663 data-nosnippet>663</a>    <span class="prelude-val">None</span>,
+<a href=#664 id=664 data-nosnippet>664</a>    <span class="macro">Tokens!</span>(Token {
+<a href=#665 id=665 data-nosnippet>665</a>      text: option,
+<a href=#666 id=666 data-nosnippet>666</a>      code: Catcode::OTHER,
+<a href=#667 id=667 data-nosnippet>667</a>    }),
+<a href=#668 id=668 data-nosnippet>668</a>    <span class="prelude-val">None</span>,
+<a href=#669 id=669 data-nosnippet>669</a>  )<span class="question-mark">?</span>;
+<a href=#670 id=670 data-nosnippet>670</a>  digest(<span class="macro">T_CS!</span>(<span class="string">"\\default@ds"</span>))<span class="question-mark">?</span>;
+<a href=#671 id=671 data-nosnippet>671</a>  <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
+<a href=#672 id=672 data-nosnippet>672</a>}
+<a href=#673 id=673 data-nosnippet>673</a>
+<a href=#674 id=674 data-nosnippet>674</a><span class="kw">fn </span>reset_options() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#675 id=675 data-nosnippet>675</a>  assign_value(
+<a href=#676 id=676 data-nosnippet>676</a>    <span class="string">"@declaredoptions"</span>,
+<a href=#677 id=677 data-nosnippet>677</a>    Stored::VecDequeStored(VecDeque::new()),
+<a href=#678 id=678 data-nosnippet>678</a>    <span class="prelude-val">None</span>,
+<a href=#679 id=679 data-nosnippet>679</a>  );
+<a href=#680 id=680 data-nosnippet>680</a>  <span class="kw">let </span>opt_unused_cs = <span class="kw">if </span>gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\@currext"</span>))<span class="question-mark">?</span>.to_string() == <span class="string">"cls" </span>{
+<a href=#681 id=681 data-nosnippet>681</a>    <span class="string">"\\OptionNotUsed"
+<a href=#682 id=682 data-nosnippet>682</a>  </span>} <span class="kw">else </span>{
+<a href=#683 id=683 data-nosnippet>683</a>    <span class="string">"\\@unknownoptionerror"
+<a href=#684 id=684 data-nosnippet>684</a>  </span>};
+<a href=#685 id=685 data-nosnippet>685</a>  let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\default@ds"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(opt_unused_cs), <span class="prelude-val">None</span>);
+<a href=#686 id=686 data-nosnippet>686</a>  <span class="prelude-val">Ok</span>(())
+<a href=#687 id=687 data-nosnippet>687</a>}
+<a href=#688 id=688 data-nosnippet>688</a>
+<a href=#689 id=689 data-nosnippet>689</a><span class="kw">pub struct </span>RequireOptions {
+<a href=#690 id=690 data-nosnippet>690</a>  <span class="kw">pub </span>options:          Vec&lt;String&gt;,
+<a href=#691 id=691 data-nosnippet>691</a>  <span class="kw">pub </span>withoptions:      <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+<a href=#692 id=692 data-nosnippet>692</a>  <span class="kw">pub </span>extension:        <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+<a href=#693 id=693 data-nosnippet>693</a>  <span class="kw">pub </span>searchpaths_only: bool,
+<a href=#694 id=694 data-nosnippet>694</a>  <span class="kw">pub </span>as_class:         bool,
+<a href=#695 id=695 data-nosnippet>695</a>  <span class="kw">pub </span>noltxml:          <span class="prelude-ty">Option</span>&lt;bool&gt;,
+<a href=#696 id=696 data-nosnippet>696</a>  <span class="kw">pub </span>notex:            <span class="prelude-ty">Option</span>&lt;bool&gt;,
+<a href=#697 id=697 data-nosnippet>697</a>  <span class="kw">pub </span>after:            Tokens,
+<a href=#698 id=698 data-nosnippet>698</a>}
+<a href=#699 id=699 data-nosnippet>699</a><span class="kw">impl </span>Default <span class="kw">for </span>RequireOptions {
+<a href=#700 id=700 data-nosnippet>700</a>  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#701 id=701 data-nosnippet>701</a>    RequireOptions {
+<a href=#702 id=702 data-nosnippet>702</a>      options:          Vec::new(),
+<a href=#703 id=703 data-nosnippet>703</a>      withoptions:      <span class="prelude-val">None</span>,
+<a href=#704 id=704 data-nosnippet>704</a>      extension:        <span class="prelude-val">None</span>,
+<a href=#705 id=705 data-nosnippet>705</a>      notex:            <span class="prelude-val">None</span>,
+<a href=#706 id=706 data-nosnippet>706</a>      noltxml:          <span class="prelude-val">None</span>,
+<a href=#707 id=707 data-nosnippet>707</a>      as_class:         <span class="bool-val">false</span>,
+<a href=#708 id=708 data-nosnippet>708</a>      searchpaths_only: <span class="bool-val">false</span>,
+<a href=#709 id=709 data-nosnippet>709</a>      after:            <span class="macro">Tokens!</span>(),
+<a href=#710 id=710 data-nosnippet>710</a>    }
+<a href=#711 id=711 data-nosnippet>711</a>  }
+<a href=#712 id=712 data-nosnippet>712</a>}
+<a href=#713 id=713 data-nosnippet>713</a>
+<a href=#714 id=714 data-nosnippet>714</a><span class="doccomment">/// An opinionated binding for \RequirePackage.
+<a href=#715 id=715 data-nosnippet>715</a>///
+<a href=#716 id=716 data-nosnippet>716</a>/// This (and `FindFile`) needs to evolve a bit to support reading raw .sty (.def, etc) files from
+<a href=#717 id=717 data-nosnippet>717</a>/// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find`
+<a href=#718 id=718 data-nosnippet>718</a>/// ???) Another potentially useful option might be that if we are reading a raw file,
+<a href=#719 id=719 data-nosnippet>719</a>/// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
+<a href=#720 id=720 data-nosnippet>720</a></span><span class="kw">pub fn </span>require_package(name: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: RequireOptions) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#721 id=721 data-nosnippet>721</a>  <span class="comment">// We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
+<a href=#722 id=722 data-nosnippet>722</a>  </span><span class="kw">if </span>options.notex.is_none()
+<a href=#723 id=723 data-nosnippet>723</a>    &amp;&amp; !lookup_bool(<span class="string">"INCLUDE_STYLES"</span>)
+<a href=#724 id=724 data-nosnippet>724</a>    &amp;&amp; !<span class="macro">matches!</span>(options.noltxml, <span class="prelude-val">Some</span>(<span class="bool-val">true</span>))
+<a href=#725 id=725 data-nosnippet>725</a>  {
+<a href=#726 id=726 data-nosnippet>726</a>    options.notex = <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
+<a href=#727 id=727 data-nosnippet>727</a>  }
+<a href=#728 id=728 data-nosnippet>728</a>  <span class="kw">if </span>options.extension.is_none() {
+<a href=#729 id=729 data-nosnippet>729</a>    options.extension = <span class="prelude-val">Some</span>(<span class="string">"sty"</span>.into());
+<a href=#730 id=730 data-nosnippet>730</a>  }
+<a href=#731 id=731 data-nosnippet>731</a>  <span class="comment">// TODO: Ideally we want to use the same struct for the RequirePackage options as for the
+<a href=#732 id=732 data-nosnippet>732</a>  // InputDefinitions options
+<a href=#733 id=733 data-nosnippet>733</a>  </span>input_definitions(name, InputDefinitionOptions {
+<a href=#734 id=734 data-nosnippet>734</a>    extension: options.extension,
+<a href=#735 id=735 data-nosnippet>735</a>    handleoptions: <span class="bool-val">true</span>,
+<a href=#736 id=736 data-nosnippet>736</a>    <span class="comment">// Pass classes options if we have NONE!
+<a href=#737 id=737 data-nosnippet>737</a>    </span>withoptions: <span class="kw">if </span>options.options.is_empty() {
+<a href=#738 id=738 data-nosnippet>738</a>      <span class="prelude-val">Some</span>(Vec::new())
+<a href=#739 id=739 data-nosnippet>739</a>    } <span class="kw">else </span>{
+<a href=#740 id=740 data-nosnippet>740</a>      <span class="prelude-val">None
+<a href=#741 id=741 data-nosnippet>741</a>    </span>}, <span class="comment">// fake boolean use, multi-type in latexml... refactor?
+<a href=#742 id=742 data-nosnippet>742</a>    </span>options: options.options,
+<a href=#743 id=743 data-nosnippet>743</a>    as_class: options.as_class,
+<a href=#744 id=744 data-nosnippet>744</a>    noltxml: options.noltxml.unwrap_or(<span class="bool-val">false</span>),
+<a href=#745 id=745 data-nosnippet>745</a>    notex: options.notex.unwrap_or(<span class="bool-val">false</span>),
+<a href=#746 id=746 data-nosnippet>746</a>    after: options.after,
+<a href=#747 id=747 data-nosnippet>747</a>    ..InputDefinitionOptions::default()
+<a href=#748 id=748 data-nosnippet>748</a>  })
+<a href=#749 id=749 data-nosnippet>749</a>}
+<a href=#750 id=750 data-nosnippet>750</a>
+<a href=#751 id=751 data-nosnippet>751</a><span class="kw">pub fn </span>require_resource(<span class="kw-2">mut </span>resource: Resource) {
+<a href=#752 id=752 data-nosnippet>752</a>  <span class="kw">if </span>resource.name.is_empty() &amp;&amp; resource.content.is_empty() {
+<a href=#753 id=753 data-nosnippet>753</a>    <span class="macro">Warn!</span>(
+<a href=#754 id=754 data-nosnippet>754</a>      <span class="string">"expected"</span>,
+<a href=#755 id=755 data-nosnippet>755</a>      <span class="string">"resource"</span>,
+<a href=#756 id=756 data-nosnippet>756</a>      <span class="string">"Resource must have a resource pathname or content; skipping"
+<a href=#757 id=757 data-nosnippet>757</a>    </span>);
+<a href=#758 id=758 data-nosnippet>758</a>    <span class="kw">return</span>;
+<a href=#759 id=759 data-nosnippet>759</a>  }
+<a href=#760 id=760 data-nosnippet>760</a>  <span class="kw">if </span>resource.mimetype.is_empty() &amp;&amp; !resource.name.is_empty() {
+<a href=#761 id=761 data-nosnippet>761</a>    <span class="kw">let </span>ext = pathname::extension(<span class="kw-2">&amp;</span>resource.name);
+<a href=#762 id=762 data-nosnippet>762</a>    resource.mimetype = resource_type(<span class="kw-2">&amp;</span>ext);
+<a href=#763 id=763 data-nosnippet>763</a>  }
+<a href=#764 id=764 data-nosnippet>764</a>  <span class="kw">if </span>resource.mimetype.is_empty() {
+<a href=#765 id=765 data-nosnippet>765</a>    <span class="macro">Warn!</span>(
+<a href=#766 id=766 data-nosnippet>766</a>      <span class="string">"expected"</span>,
+<a href=#767 id=767 data-nosnippet>767</a>      <span class="string">"mime-type"</span>,
+<a href=#768 id=768 data-nosnippet>768</a>      <span class="string">"Resource must have a mime-type; skipping"
+<a href=#769 id=769 data-nosnippet>769</a>    </span>);
+<a href=#770 id=770 data-nosnippet>770</a>    <span class="kw">return</span>;
+<a href=#771 id=771 data-nosnippet>771</a>  }
+<a href=#772 id=772 data-nosnippet>772</a>
+<a href=#773 id=773 data-nosnippet>773</a>  <span class="comment">// If we've got a document, go ahead &amp; put the resource in.
+<a href=#774 id=774 data-nosnippet>774</a>  // if (document.is_some()) {
+<a href=#775 id=775 data-nosnippet>775</a>  //   document.as_mut().unwrap().add_resource(resource, resource);
+<a href=#776 id=776 data-nosnippet>776</a>  // } else {
+<a href=#777 id=777 data-nosnippet>777</a>  </span>push_pending_resource(resource);
+<a href=#778 id=778 data-nosnippet>778</a>  <span class="comment">// }
+<a href=#779 id=779 data-nosnippet>779</a></span>}
+<a href=#780 id=780 data-nosnippet>780</a>
+<a href=#781 id=781 data-nosnippet>781</a><span class="kw">pub fn </span>load_class(name: <span class="kw-2">&amp;</span>str, _options: Vec&lt;String&gt;, after: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#782 id=782 data-nosnippet>782</a>  input_definitions(name, InputDefinitionOptions {
+<a href=#783 id=783 data-nosnippet>783</a>    extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)),
+<a href=#784 id=784 data-nosnippet>784</a>    after,
+<a href=#785 id=785 data-nosnippet>785</a>    notex: <span class="bool-val">true</span>,
+<a href=#786 id=786 data-nosnippet>786</a>    handleoptions: <span class="bool-val">true</span>,
+<a href=#787 id=787 data-nosnippet>787</a>    noerror: <span class="bool-val">true</span>,
+<a href=#788 id=788 data-nosnippet>788</a>    ..InputDefinitionOptions::default()
+<a href=#789 id=789 data-nosnippet>789</a>  })
+<a href=#790 id=790 data-nosnippet>790</a>  <span class="comment">// if (let success = InputDefinitions($class, type =&gt; 'cls', notex =&gt; 1, handleoptions =&gt; 1,
+<a href=#791 id=791 data-nosnippet>791</a>  // noerror =&gt; 1,     %options)) {
+<a href=#792 id=792 data-nosnippet>792</a>  //   return $success; }
+<a href=#793 id=793 data-nosnippet>793</a>  // else {
+<a href=#794 id=794 data-nosnippet>794</a>  //   $STATE&gt;noteStatus(missing =&gt; $class . '.cls');
+<a href=#795 id=795 data-nosnippet>795</a>  //   let alternate = 'OmniBus';    # was 'article'
+<a href=#796 id=796 data-nosnippet>796</a>  //   Warn('missing_file', $class, $STATE&gt;getStomach-&gt;getGullet,
+<a href=#797 id=797 data-nosnippet>797</a>  //     "Can't find binding for class $class (using $alternate)",
+<a href=#798 id=798 data-nosnippet>798</a>  //     maybeReportSearchPaths());
+<a href=#799 id=799 data-nosnippet>799</a>  // if (let success = InputDefinitions($alternate, type =&gt; 'cls', noerror =&gt; 1, handleoptions =&gt;
+<a href=#800 id=800 data-nosnippet>800</a>  // 1, %options)) {     return $success; }
+<a href=#801 id=801 data-nosnippet>801</a>  //   else {
+<a href=#802 id=802 data-nosnippet>802</a>  //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE&gt;getStomach-&gt;getGullet,
+<a href=#803 id=803 data-nosnippet>803</a>  //       "Can't find binding for class $alternate (installation error)");
+<a href=#804 id=804 data-nosnippet>804</a>  //     return; } } }
+<a href=#805 id=805 data-nosnippet>805</a></span>}
+<a href=#806 id=806 data-nosnippet>806</a>
+<a href=#807 id=807 data-nosnippet>807</a><span class="doccomment">/// configuration for searching for a file in the local filesystem
+<a href=#808 id=808 data-nosnippet>808</a></span><span class="attr">#[derive(Default)]
+<a href=#809 id=809 data-nosnippet>809</a></span><span class="kw">pub struct </span>FindFileOptions {
+<a href=#810 id=810 data-nosnippet>810</a>  <span class="comment">// TODO: this is no longer used in find_file, rather a level earlier
+<a href=#811 id=811 data-nosnippet>811</a>  </span><span class="kw">pub </span>forbid_ltxml:      bool,
+<a href=#812 id=812 data-nosnippet>812</a>  <span class="kw">pub </span>notex:             bool,
+<a href=#813 id=813 data-nosnippet>813</a>  <span class="kw">pub </span>ext_type:          <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+<a href=#814 id=814 data-nosnippet>814</a>  <span class="kw">pub </span>search_paths_only: bool,
+<a href=#815 id=815 data-nosnippet>815</a>}
+<a href=#816 id=816 data-nosnippet>816</a>
+<a href=#817 id=817 data-nosnippet>817</a><span class="doccomment">/// search for a file as prescribed by a `FindFileOptions` configuration
+<a href=#818 id=818 data-nosnippet>818</a></span><span class="kw">pub fn </span>find_file(file: <span class="kw-2">&amp;</span>str, options: <span class="prelude-ty">Option</span>&lt;FindFileOptions&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#819 id=819 data-nosnippet>819</a>  <span class="kw">let </span>options = options.unwrap_or_default();
+<a href=#820 id=820 data-nosnippet>820</a>  <span class="kw">if </span>pathname::is_literaldata(file) {
+<a href=#821 id=821 data-nosnippet>821</a>    <span class="comment">// If literal protocol return immediately (unless notex!)
+<a href=#822 id=822 data-nosnippet>822</a>    </span><span class="kw">if </span>options.notex {
+<a href=#823 id=823 data-nosnippet>823</a>      <span class="prelude-val">None
+<a href=#824 id=824 data-nosnippet>824</a>    </span>} <span class="kw">else </span>{
+<a href=#825 id=825 data-nosnippet>825</a>      <span class="comment">// TODO: Consider returning a Cow&lt;str&gt; instead to optimize
+<a href=#826 id=826 data-nosnippet>826</a>      </span><span class="prelude-val">Some</span>(file.to_string())
+<a href=#827 id=827 data-nosnippet>827</a>    }
+<a href=#828 id=828 data-nosnippet>828</a>  } <span class="kw">else if </span>pathname::is_literaldata(file) || pathname::is_url(file) {
+<a href=#829 id=829 data-nosnippet>829</a>    <span class="comment">// If a known special protocol return immediately
+<a href=#830 id=830 data-nosnippet>830</a>    </span><span class="prelude-val">Some</span>(file.to_string())
+<a href=#831 id=831 data-nosnippet>831</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>ext) = options.ext_type {
+<a href=#832 id=832 data-nosnippet>832</a>    <span class="comment">// Otherwise, it's some kind of "real" file, and we might have to search for it
+<a href=#833 id=833 data-nosnippet>833</a>    // Specific type requested? Search for it.
+<a href=#834 id=834 data-nosnippet>834</a>    // Add the extension, if it isn't already there.
+<a href=#835 id=835 data-nosnippet>835</a>    </span><span class="kw">let </span>aux_file = <span class="kw">if </span>file.ends_with(ext.as_ref()) {
+<a href=#836 id=836 data-nosnippet>836</a>      file.to_string()
+<a href=#837 id=837 data-nosnippet>837</a>    } <span class="kw">else </span>{
+<a href=#838 id=838 data-nosnippet>838</a>      <span class="macro">s!</span>(<span class="string">"{}.{}"</span>, file, ext)
+<a href=#839 id=839 data-nosnippet>839</a>    };
+<a href=#840 id=840 data-nosnippet>840</a>    find_file_aux(<span class="kw-2">&amp;</span>aux_file, <span class="kw-2">&amp;</span>options)
+<a href=#841 id=841 data-nosnippet>841</a>  } <span class="kw">else if </span>file.ends_with(<span class="string">".tex"</span>) {
+<a href=#842 id=842 data-nosnippet>842</a>    <span class="comment">// If no type given, we MAY expect .tex, or maybe NOT!!
+<a href=#843 id=843 data-nosnippet>843</a>    // No requested type, then .tex; Of course, it may already have it!
+<a href=#844 id=844 data-nosnippet>844</a>    </span>find_file_aux(file, <span class="kw-2">&amp;</span>options)
+<a href=#845 id=845 data-nosnippet>845</a>  } <span class="kw">else </span>{
+<a href=#846 id=846 data-nosnippet>846</a>    <span class="kw">match </span>find_file_aux(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}.tex"</span>, file), <span class="kw-2">&amp;</span>options) {
+<a href=#847 id=847 data-nosnippet>847</a>      <span class="prelude-val">None </span>=&gt; find_file_aux(file, <span class="kw-2">&amp;</span>options),
+<a href=#848 id=848 data-nosnippet>848</a>      <span class="prelude-val">Some</span>(f) =&gt; <span class="prelude-val">Some</span>(f),
+<a href=#849 id=849 data-nosnippet>849</a>    }
+<a href=#850 id=850 data-nosnippet>850</a>  }
+<a href=#851 id=851 data-nosnippet>851</a>}
+<a href=#852 id=852 data-nosnippet>852</a>
+<a href=#853 id=853 data-nosnippet>853</a><span class="kw">fn </span>find_file_aux(file: <span class="kw-2">&amp;</span>str, options: <span class="kw-2">&amp;</span>FindFileOptions) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#854 id=854 data-nosnippet>854</a>  <span class="comment">// If cached, return simple path (it's a key into the cache)
+<a href=#855 id=855 data-nosnippet>855</a>  </span><span class="kw">let </span>cached = lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_contents"</span>, file));
+<a href=#856 id=856 data-nosnippet>856</a>  <span class="kw">if </span>!cached.is_empty() {
+<a href=#857 id=857 data-nosnippet>857</a>    <span class="prelude-val">Some</span>(file.to_string())
+<a href=#858 id=858 data-nosnippet>858</a>  } <span class="kw">else if </span>pathname::is_absolute(file) {
+<a href=#859 id=859 data-nosnippet>859</a>    <span class="comment">// And if we've got an absolute path,
+<a href=#860 id=860 data-nosnippet>860</a>    </span><span class="kw">if </span>Path::new(file).exists() {
+<a href=#861 id=861 data-nosnippet>861</a>      <span class="comment">// No need to search, just check if it exists.
+<a href=#862 id=862 data-nosnippet>862</a>      </span><span class="prelude-val">Some</span>(file.to_string())
+<a href=#863 id=863 data-nosnippet>863</a>    } <span class="kw">else </span>{
+<a href=#864 id=864 data-nosnippet>864</a>      <span class="comment">// otherwise we're never going to find it.
+<a href=#865 id=865 data-nosnippet>865</a>      </span><span class="prelude-val">None
+<a href=#866 id=866 data-nosnippet>866</a>    </span>}
+<a href=#867 id=867 data-nosnippet>867</a>  } <span class="kw">else if </span>pathname::is_nasty(file) {
+<a href=#868 id=868 data-nosnippet>868</a>    <span class="comment">// If it is a nasty filename, we won't touch it.
+<a href=#869 id=869 data-nosnippet>869</a>    // we DO NOT want to pass this to kpathse or such!
+<a href=#870 id=870 data-nosnippet>870</a>    </span><span class="prelude-val">None
+<a href=#871 id=871 data-nosnippet>871</a>  </span>} <span class="kw">else </span>{
+<a href=#872 id=872 data-nosnippet>872</a>    <span class="comment">// Note that the strategy is complicated by the fact that
+<a href=#873 id=873 data-nosnippet>873</a>    // (1) we prefer .ltxml bindings, if present
+<a href=#874 id=874 data-nosnippet>874</a>    // (2) those MAY be present in kpsewhich's DB (although our searchpaths take precedence!)
+<a href=#875 id=875 data-nosnippet>875</a>    // (3) BUT we want to avoid kpsewhich if we can, since it's slower
+<a href=#876 id=876 data-nosnippet>876</a>    // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
+<a href=#877 id=877 data-nosnippet>877</a>    </span><span class="kw">let </span>paths: Vec&lt;String&gt; = get_search_paths();
+<a href=#878 id=878 data-nosnippet>878</a>    <span class="comment">// let _urlbase = state!().lookup_value("URLBASE");
+<a href=#879 id=879 data-nosnippet>879</a>    // let _nopaths = lookup_bool("REMOTE_REQUEST");
+<a href=#880 id=880 data-nosnippet>880</a>    // let _ltxml_paths: Vec&lt;String&gt; = if nopaths { vec![] } else { paths.clone() };
+<a href=#881 id=881 data-nosnippet>881</a>
+<a href=#882 id=882 data-nosnippet>882</a>    // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
+<a href=#883 id=883 data-nosnippet>883</a>    // If we're looking for ltxml, look within our paths &amp; installation first (faster than kpse)
+<a href=#884 id=884 data-nosnippet>884</a>    // if !options.forbid_ltxml {
+<a href=#885 id=885 data-nosnippet>885</a>    //   if let Some(path) = pathname::find(
+<a href=#886 id=886 data-nosnippet>886</a>    //     &amp;s!("{}.ltxml", file),
+<a href=#887 id=887 data-nosnippet>887</a>    //     PathnameFindOptions {
+<a href=#888 id=888 data-nosnippet>888</a>    //       paths: Some(ltxml_paths),
+<a href=#889 id=889 data-nosnippet>889</a>    //       installation_subdir: Some(String::from("Package")),
+<a href=#890 id=890 data-nosnippet>890</a>    //       ..PathnameFindOptions::default()
+<a href=#891 id=891 data-nosnippet>891</a>    //     },
+<a href=#892 id=892 data-nosnippet>892</a>    //   ) {
+<a href=#893 id=893 data-nosnippet>893</a>    //     return Some(path);
+<a href=#894 id=894 data-nosnippet>894</a>    //   }
+<a href=#895 id=895 data-nosnippet>895</a>    // }
+<a href=#896 id=896 data-nosnippet>896</a>    // If we're looking for TeX, look within our paths &amp; installation first (faster than kpse)
+<a href=#897 id=897 data-nosnippet>897</a>    </span><span class="kw">if </span>!options.notex {
+<a href=#898 id=898 data-nosnippet>898</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = pathname::find(file, PathnameFindOptions {
+<a href=#899 id=899 data-nosnippet>899</a>        paths: <span class="prelude-val">Some</span>(paths),
+<a href=#900 id=900 data-nosnippet>900</a>        ..PathnameFindOptions::default()
+<a href=#901 id=901 data-nosnippet>901</a>      }) {
+<a href=#902 id=902 data-nosnippet>902</a>        <span class="kw">return </span><span class="prelude-val">Some</span>(path);
+<a href=#903 id=903 data-nosnippet>903</a>      }
+<a href=#904 id=904 data-nosnippet>904</a>    }
+<a href=#905 id=905 data-nosnippet>905</a>    <span class="comment">// Otherwise, pass on to kpsewhich
+<a href=#906 id=906 data-nosnippet>906</a>    // Depending on flags, maybe search for ltxml in texmf or for plain tex in ours!
+<a href=#907 id=907 data-nosnippet>907</a>    // The main point, though, is to we make only ONE (more) call.
+<a href=#908 id=908 data-nosnippet>908</a>    // return if grep { pathname::is_nasty($_) } @$paths;    // SECURITY! No nasty paths in cmdline
+<a href=#909 id=909 data-nosnippet>909</a>    //       // Do we need to sanitize these environment variables?
+<a href=#910 id=910 data-nosnippet>910</a>    // my $kpsewhich = which($ENV{LATEXML_KPSEWHICH} || 'kpsewhich');
+<a href=#911 id=911 data-nosnippet>911</a>    // local $ENV{TEXINPUTS} = join($Config::Config{'path_sep'},
+<a href=#912 id=912 data-nosnippet>912</a>    //   @$paths, $ENV{TEXINPUTS} || $Config::Config{'path_sep'});
+<a href=#913 id=913 data-nosnippet>913</a>    // my @candidates = (((!$options{noltxml} &amp;&amp; !$nopaths) ? ("$file.ltxml") : ()),
+<a href=#914 id=914 data-nosnippet>914</a>    //   (!$options{notex} ? ($file) : ()));
+<a href=#915 id=915 data-nosnippet>915</a>    // if (my $result = pathname::kpsewhich(@candidates)) {
+<a href=#916 id=916 data-nosnippet>916</a>    //   return (-f $result ? $result : undef); }
+<a href=#917 id=917 data-nosnippet>917</a>    // if ($urlbase &amp;&amp; ($path = url_find($file, urlbase =&gt; $urlbase))) {
+<a href=#918 id=918 data-nosnippet>918</a>    //   return $path; }
+<a href=#919 id=919 data-nosnippet>919</a>    </span>pathname::kpsewhich(<span class="kw-2">&amp;</span>[file])
+<a href=#920 id=920 data-nosnippet>920</a>  }
+<a href=#921 id=921 data-nosnippet>921</a>}
+<a href=#922 id=922 data-nosnippet>922</a>
+<a href=#923 id=923 data-nosnippet>923</a><span class="comment">//======================================================================
+<a href=#924 id=924 data-nosnippet>924</a>// Declaring and Adjusting the Document Model.
+<a href=#925 id=925 data-nosnippet>925</a>//======================================================================
+<a href=#926 id=926 data-nosnippet>926</a>
+<a href=#927 id=927 data-nosnippet>927</a></span><span class="kw">pub fn </span>install_tag(tag: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>properties: TagOptions) {
+<a href=#928 id=928 data-nosnippet>928</a>  <span class="kw">let </span>tag_ticket = arena::pin(tag);
+<a href=#929 id=929 data-nosnippet>929</a>  with_tag_property_mut(tag_ticket, |options| {
+<a href=#930 id=930 data-nosnippet>930</a>    <span class="kw">if </span>properties.auto_open.is_some() {
+<a href=#931 id=931 data-nosnippet>931</a>      options.auto_open = properties.auto_open;
+<a href=#932 id=932 data-nosnippet>932</a>    }
+<a href=#933 id=933 data-nosnippet>933</a>    <span class="kw">if </span>properties.auto_close.is_some() {
+<a href=#934 id=934 data-nosnippet>934</a>      options.auto_close = properties.auto_close;
+<a href=#935 id=935 data-nosnippet>935</a>    }
+<a href=#936 id=936 data-nosnippet>936</a>    <span class="kw">for </span>name <span class="kw">in </span><span class="kw-2">&amp;</span>TagOptionName::all() {
+<a href=#937 id=937 data-nosnippet>937</a>      <span class="kw">if </span>name.is_prepend() {
+<a href=#938 id=938 data-nosnippet>938</a>        options.prepend(name, properties.remove(name));
+<a href=#939 id=939 data-nosnippet>939</a>      } <span class="kw">else if </span>name.is_append() {
+<a href=#940 id=940 data-nosnippet>940</a>        options.append(name, properties.remove(name));
+<a href=#941 id=941 data-nosnippet>941</a>      } <span class="kw">else </span>{
+<a href=#942 id=942 data-nosnippet>942</a>        <span class="comment">// we'll handle the regular ones out of the loop
+<a href=#943 id=943 data-nosnippet>943</a>      </span>}
+<a href=#944 id=944 data-nosnippet>944</a>    }
+<a href=#945 id=945 data-nosnippet>945</a>  });
+<a href=#946 id=946 data-nosnippet>946</a>}
+<a href=#947 id=947 data-nosnippet>947</a>
+<a href=#948 id=948 data-nosnippet>948</a><span class="doccomment">/// Selects the RelaxNG schema defining the XML output language
+<a href=#949 id=949 data-nosnippet>949</a></span><span class="kw">pub fn </span>select_relaxng_schema(schema: <span class="kw-2">&amp;</span>str, namespaces: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, String&gt;&gt;) {
+<a href=#950 id=950 data-nosnippet>950</a>  <span class="comment">// What verb here? Set, Choose,...
+<a href=#951 id=951 data-nosnippet>951</a>  </span>model::set_relaxng_schema(schema);
+<a href=#952 id=952 data-nosnippet>952</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(namespaces) = namespaces {
+<a href=#953 id=953 data-nosnippet>953</a>    <span class="kw">for </span>(prefix, value) <span class="kw">in </span>namespaces {
+<a href=#954 id=954 data-nosnippet>954</a>      model::register_document_namespace(<span class="kw-2">&amp;</span>prefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>value));
+<a href=#955 id=955 data-nosnippet>955</a>    }
+<a href=#956 id=956 data-nosnippet>956</a>  }
+<a href=#957 id=957 data-nosnippet>957</a>}
+<a href=#958 id=958 data-nosnippet>958</a>
+<a href=#959 id=959 data-nosnippet>959</a><span class="kw">pub fn </span>merge_font(font: Font) {
+<a href=#960 id=960 data-nosnippet>960</a>  <span class="kw">let </span>new_font = lookup_font().unwrap().merge(font);
+<a href=#961 id=961 data-nosnippet>961</a>  assign_font(Rc::new(new_font), <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#962 id=962 data-nosnippet>962</a>}
+<a href=#963 id=963 data-nosnippet>963</a>
+<a href=#964 id=964 data-nosnippet>964</a><span class="kw">pub fn </span>digest_text(stuff: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+<a href=#965 id=965 data-nosnippet>965</a>  begin_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>;
+<a href=#966 id=966 data-nosnippet>966</a>  <span class="kw">let </span>value = digest(stuff);
+<a href=#967 id=967 data-nosnippet>967</a>  end_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>;
+<a href=#968 id=968 data-nosnippet>968</a>  value
+<a href=#969 id=969 data-nosnippet>969</a>}
+<a href=#970 id=970 data-nosnippet>970</a>
+<a href=#971 id=971 data-nosnippet>971</a><span class="kw">pub fn </span>digest_literal&lt;T: Into&lt;Tokens&gt;&gt;(stuff: T) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+<a href=#972 id=972 data-nosnippet>972</a>  <span class="kw">let </span>stuff: Tokens = stuff.into();
+<a href=#973 id=973 data-nosnippet>973</a>  <span class="comment">// Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
+<a href=#974 id=974 data-nosnippet>974</a>  // valid changes of state!)
+<a href=#975 id=975 data-nosnippet>975</a>  </span>begin_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>;
+<a href=#976 id=976 data-nosnippet>976</a>
+<a href=#977 id=977 data-nosnippet>977</a>  <span class="kw">let </span>font = lookup_font().unwrap(); <span class="comment">// TODO: raise error if font missing
+<a href=#978 id=978 data-nosnippet>978</a>  </span>assign_font(
+<a href=#979 id=979 data-nosnippet>979</a>    Rc::new(font.merge(<span class="macro">fontmap!</span>(encoding =&gt; <span class="string">"ASCII"</span>))),
+<a href=#980 id=980 data-nosnippet>980</a>    <span class="prelude-val">Some</span>(Scope::Local),
+<a href=#981 id=981 data-nosnippet>981</a>  ); <span class="comment">// try to stay as ASCII as possible
+<a href=#982 id=982 data-nosnippet>982</a>
+<a href=#983 id=983 data-nosnippet>983</a>  </span><span class="kw">let </span>value = digest(stuff);
+<a href=#984 id=984 data-nosnippet>984</a>  assign_font(font, <span class="prelude-val">None</span>);
+<a href=#985 id=985 data-nosnippet>985</a>  end_mode(<span class="string">"text"</span>)<span class="question-mark">?</span>;
+<a href=#986 id=986 data-nosnippet>986</a>  value
+<a href=#987 id=987 data-nosnippet>987</a>}
+<a href=#988 id=988 data-nosnippet>988</a>
+<a href=#989 id=989 data-nosnippet>989</a><span class="kw">pub fn </span>digest_if(token: Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+<a href=#990 id=990 data-nosnippet>990</a>  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
+<a href=#991 id=991 data-nosnippet>991</a>    <span class="kw">match </span>digest(<span class="macro">Tokens!</span>(token)) {
+<a href=#992 id=992 data-nosnippet>992</a>      <span class="prelude-val">Ok</span>(t) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(t)),
+<a href=#993 id=993 data-nosnippet>993</a>      <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
+<a href=#994 id=994 data-nosnippet>994</a>    }
+<a href=#995 id=995 data-nosnippet>995</a>  } <span class="kw">else </span>{
+<a href=#996 id=996 data-nosnippet>996</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#997 id=997 data-nosnippet>997</a>  }
+<a href=#998 id=998 data-nosnippet>998</a>}
+<a href=#999 id=999 data-nosnippet>999</a>
+<a href=#1000 id=1000 data-nosnippet>1000</a><span class="doccomment">/// Creates a single `Tokens` representing a TeX invocation of the lead `token` over a list of
+<a href=#1001 id=1001 data-nosnippet>1001</a>/// arguments.
+<a href=#1002 id=1002 data-nosnippet>1002</a>///
+<a href=#1003 id=1003 data-nosnippet>1003</a>/// Note: currently this is near the `Mouth` representation of data, and deals purely with tokens.
+<a href=#1004 id=1004 data-nosnippet>1004</a>/// A more generic version of this method may be able to support `ArgWrap` for the argument list.
+<a href=#1005 id=1005 data-nosnippet>1005</a>/// Indeed, the return type may also be lifted to a new generic ArgWrap::Invocation, if there was
+<a href=#1006 id=1006 data-nosnippet>1006</a>/// benefit.
+<a href=#1007 id=1007 data-nosnippet>1007</a></span><span class="kw">pub fn </span>build_invocation&lt;T: Into&lt;Token&gt;&gt;(token: T, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#1008 id=1008 data-nosnippet>1008</a>  <span class="kw">let </span>token: Token = token.into();
+<a href=#1009 id=1009 data-nosnippet>1009</a>  <span class="comment">// Note: token may have been \let to another defn!
+<a href=#1010 id=1010 data-nosnippet>1010</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
+<a href=#1011 id=1011 data-nosnippet>1011</a>    <span class="kw">let </span><span class="kw-2">mut </span>invoked_tokens = <span class="macro">vec!</span>[token];
+<a href=#1012 id=1012 data-nosnippet>1012</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = defn.get_parameters() {
+<a href=#1013 id=1013 data-nosnippet>1013</a>      invoked_tokens.extend(params.revert_arguments(args)<span class="question-mark">?</span>);
+<a href=#1014 id=1014 data-nosnippet>1014</a>    }
+<a href=#1015 id=1015 data-nosnippet>1015</a>    <span class="prelude-val">Ok</span>(Tokens::new(invoked_tokens))
+<a href=#1016 id=1016 data-nosnippet>1016</a>  } <span class="kw">else </span>{
+<a href=#1017 id=1017 data-nosnippet>1017</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Can't invoke {:?}; it is undefined"</span>, token.stringify());
+<a href=#1018 id=1018 data-nosnippet>1018</a>    token.with_cs_name(|csname| {
+<a href=#1019 id=1019 data-nosnippet>1019</a>      <span class="macro">Error!</span>(<span class="string">"undefined"</span>, csname, message);
+<a href=#1020 id=1020 data-nosnippet>1020</a>      <span class="prelude-val">Ok</span>(())
+<a href=#1021 id=1021 data-nosnippet>1021</a>    })<span class="question-mark">?</span>;
+<a href=#1022 id=1022 data-nosnippet>1022</a>    <span class="kw">let </span><span class="kw-2">mut </span>invoked_tokens = <span class="macro">vec!</span>[token];
+<a href=#1023 id=1023 data-nosnippet>1023</a>    <span class="comment">// DefConstructor!(token, convert_latex_args(args.len(), 0),
+<a href=#1024 id=1024 data-nosnippet>1024</a>    // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
+<a href=#1025 id=1025 data-nosnippet>1025</a>    </span><span class="kw">let </span>wrapped_args: Vec&lt;Token&gt; = args
+<a href=#1026 id=1026 data-nosnippet>1026</a>      .into_iter()
+<a href=#1027 id=1027 data-nosnippet>1027</a>      .flat_map(|arg_opt| {
+<a href=#1028 id=1028 data-nosnippet>1028</a>        <span class="kw">let </span><span class="kw-2">mut </span>wrapped = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
+<a href=#1029 id=1029 data-nosnippet>1029</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = arg_opt {
+<a href=#1030 id=1030 data-nosnippet>1030</a>          wrapped.extend(arg.unlist());
+<a href=#1031 id=1031 data-nosnippet>1031</a>        }
+<a href=#1032 id=1032 data-nosnippet>1032</a>        wrapped.push(<span class="macro">T_END!</span>());
+<a href=#1033 id=1033 data-nosnippet>1033</a>        wrapped
+<a href=#1034 id=1034 data-nosnippet>1034</a>      })
+<a href=#1035 id=1035 data-nosnippet>1035</a>      .collect();
+<a href=#1036 id=1036 data-nosnippet>1036</a>    invoked_tokens.extend(wrapped_args);
+<a href=#1037 id=1037 data-nosnippet>1037</a>    <span class="prelude-val">Ok</span>(Tokens::new(invoked_tokens))
+<a href=#1038 id=1038 data-nosnippet>1038</a>  }
+<a href=#1039 id=1039 data-nosnippet>1039</a>}
+<a href=#1040 id=1040 data-nosnippet>1040</a>
+<a href=#1041 id=1041 data-nosnippet>1041</a><span class="doccomment">/// Convert a LaTeX-style argument spec to our Package form.
+<a href=#1042 id=1042 data-nosnippet>1042</a>/// Ie. given $nargs and $optional, being the two optional arguments to
+<a href=#1043 id=1043 data-nosnippet>1043</a>/// something like \newcommand, convert it to the form we use
+<a href=#1044 id=1044 data-nosnippet>1044</a></span><span class="kw">pub fn </span>convert_latex_args(
+<a href=#1045 id=1045 data-nosnippet>1045</a>  <span class="kw-2">mut </span>nargs: usize,
+<a href=#1046 id=1046 data-nosnippet>1046</a>  optional: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#1047 id=1047 data-nosnippet>1047</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
+<a href=#1048 id=1048 data-nosnippet>1048</a>  <span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
+<a href=#1049 id=1049 data-nosnippet>1049</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = optional {
+<a href=#1050 id=1050 data-nosnippet>1050</a>    params.push(
+<a href=#1051 id=1051 data-nosnippet>1051</a>      Parameter {
+<a href=#1052 id=1052 data-nosnippet>1052</a>        name: arena::pin_static(<span class="string">"Optional"</span>),
+<a href=#1053 id=1053 data-nosnippet>1053</a>        spec: arena::pin(<span class="macro">s!</span>(<span class="string">"[Default:{}]"</span>, tks.clone().untex())),
+<a href=#1054 id=1054 data-nosnippet>1054</a>        extra: <span class="macro">vec!</span>[tks],
+<a href=#1055 id=1055 data-nosnippet>1055</a>        ..Parameter::default()
+<a href=#1056 id=1056 data-nosnippet>1056</a>      }
+<a href=#1057 id=1057 data-nosnippet>1057</a>      .init()<span class="question-mark">?</span>,
+<a href=#1058 id=1058 data-nosnippet>1058</a>    );
+<a href=#1059 id=1059 data-nosnippet>1059</a>    nargs -= <span class="number">1</span>;
+<a href=#1060 id=1060 data-nosnippet>1060</a>  }
+<a href=#1061 id=1061 data-nosnippet>1061</a>
+<a href=#1062 id=1062 data-nosnippet>1062</a>  <span class="kw">for _ in </span><span class="number">1</span>..=nargs {
+<a href=#1063 id=1063 data-nosnippet>1063</a>    params.push(
+<a href=#1064 id=1064 data-nosnippet>1064</a>      Parameter {
+<a href=#1065 id=1065 data-nosnippet>1065</a>        name: arena::pin_static(<span class="string">"Plain"</span>),
+<a href=#1066 id=1066 data-nosnippet>1066</a>        spec: arena::pin_static(<span class="string">"{}"</span>),
+<a href=#1067 id=1067 data-nosnippet>1067</a>        ..Parameter::default()
+<a href=#1068 id=1068 data-nosnippet>1068</a>      }
+<a href=#1069 id=1069 data-nosnippet>1069</a>      .init()<span class="question-mark">?</span>,
+<a href=#1070 id=1070 data-nosnippet>1070</a>    );
+<a href=#1071 id=1071 data-nosnippet>1071</a>  }
+<a href=#1072 id=1072 data-nosnippet>1072</a>  <span class="kw">if </span>params.is_empty() {
+<a href=#1073 id=1073 data-nosnippet>1073</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#1074 id=1074 data-nosnippet>1074</a>  } <span class="kw">else </span>{
+<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Parameters::new(params)))
+<a href=#1076 id=1076 data-nosnippet>1076</a>  }
+<a href=#1077 id=1077 data-nosnippet>1077</a>}
+<a href=#1078 id=1078 data-nosnippet>1078</a>
+<a href=#1079 id=1079 data-nosnippet>1079</a><span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
+<a href=#1080 id=1080 data-nosnippet>1080</a>  preload_font_map(encoding).expect(<span class="string">"preloading font map should succeed."</span>);
+<a href=#1081 id=1081 data-nosnippet>1081</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)) {
+<a href=#1082 id=1082 data-nosnippet>1082</a>    map.into()
+<a href=#1083 id=1083 data-nosnippet>1083</a>  } <span class="kw">else </span>{
+<a href=#1084 id=1084 data-nosnippet>1084</a>    <span class="prelude-val">None
+<a href=#1085 id=1085 data-nosnippet>1085</a>  </span>}
+<a href=#1086 id=1086 data-nosnippet>1086</a>}
+<a href=#1087 id=1087 data-nosnippet>1087</a><span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1088 id=1088 data-nosnippet>1088</a>  <span class="comment">// This check is done as a "preload" step for mutability reasons.
+<a href=#1089 id=1089 data-nosnippet>1089</a>  </span><span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>);
+<a href=#1090 id=1090 data-nosnippet>1090</a>  <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span>key) {
+<a href=#1091 id=1091 data-nosnippet>1091</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#1092 id=1092 data-nosnippet>1092</a>  }
+<a href=#1093 id=1093 data-nosnippet>1093</a>  <span class="kw">let </span>fail_key = <span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_failed_to_load"</span>);
+<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="kw">let </span>failed_flag = lookup_bool(<span class="kw-2">&amp;</span>fail_key);
+<a href=#1095 id=1095 data-nosnippet>1095</a>  <span class="kw">if </span>!failed_flag {
+<a href=#1096 id=1096 data-nosnippet>1096</a>    assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
+<a href=#1097 id=1097 data-nosnippet>1097</a>    </span>input_definitions(<span class="kw-2">&amp;</span>encoding.to_lowercase(), InputDefinitionOptions {
+<a href=#1098 id=1098 data-nosnippet>1098</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"fontmap"</span>)),
+<a href=#1099 id=1099 data-nosnippet>1099</a>      noerror: <span class="bool-val">true</span>,
+<a href=#1100 id=1100 data-nosnippet>1100</a>      ..InputDefinitionOptions::default()
+<a href=#1101 id=1101 data-nosnippet>1101</a>    })<span class="question-mark">?</span>;
+<a href=#1102 id=1102 data-nosnippet>1102</a>    <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)) {
+<a href=#1103 id=1103 data-nosnippet>1103</a>      <span class="comment">// Got map?
+<a href=#1104 id=1104 data-nosnippet>1104</a>      </span>assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#1105 id=1105 data-nosnippet>1105</a>    } <span class="kw">else </span>{
+<a href=#1106 id=1106 data-nosnippet>1106</a>      assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#1107 id=1107 data-nosnippet>1107</a>    }
+<a href=#1108 id=1108 data-nosnippet>1108</a>  }
+<a href=#1109 id=1109 data-nosnippet>1109</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1110 id=1110 data-nosnippet>1110</a>}
+</code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/document.rs`."><title>document.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-e56847b5.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.92.0-nightly (54a8a1db6 2025-09-26)" data-channel="nightly" data-search-js="search-e256b49e.js" data-stringdex-js="stringdex-061df703.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>document.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">pub mod </span>helpers;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/document.rs`."><title>document.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (b41f22de2 2026-03-08)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>document.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">pub mod </span>helpers;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">pub mod </span>resource;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">pub mod </span>tag;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -36,7 +36,7 @@
 <a href=#36 id=36 data-nosnippet>36</a><span class="kw">use </span><span class="kw">crate</span>::Tbox;
 <a href=#37 id=37 data-nosnippet>37</a><span class="kw">use </span><span class="kw">crate</span>::document::resource::Resource;
 <a href=#38 id=38 data-nosnippet>38</a><span class="kw">use </span><span class="kw">crate</span>::document::tag::{TagConstructionClosure, TagOptionName};
-<a href=#39 id=39 data-nosnippet>39</a><span class="kw">use crate</span>::{BoxOps, Digested, DigestedData};
+<a href=#39 id=39 data-nosnippet>39</a><span class="kw">use </span>crate::{BoxOps, Digested, DigestedData};
 <a href=#40 id=40 data-nosnippet>40</a>
 <a href=#41 id=41 data-nosnippet>41</a><span class="kw">static </span>HAS_NONSPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\S"</span>).unwrap());
 <a href=#42 id=42 data-nosnippet>42</a><span class="kw">static </span>ONLY_SPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\s+$"</span>).unwrap());
@@ -1712,7 +1712,7 @@
 <a href=#1712 id=1712 data-nosnippet>1712</a>      <span class="comment">// out of options if already inside an auto-open chain
 <a href=#1713 id=1713 data-nosnippet>1713</a>      </span><span class="kw">let </span>message: String =
 <a href=#1714 id=1714 data-nosnippet>1714</a>        arena::with2(has_opened, cur_qname, |has_opened_str, cur_qname_str| {
-<a href=#1715 id=1715 data-nosnippet>1715</a>          <span class="prelude-val">Ok</span>::&lt;String, <span class="kw">crate</span>::common::error::Error&gt;(<span class="macro">format!</span>(
+<a href=#1715 id=1715 data-nosnippet>1715</a>          Ok::&lt;String, <span class="kw">crate</span>::common::error::Error&gt;(<span class="macro">format!</span>(
 <a href=#1716 id=1716 data-nosnippet>1716</a>            <span class="string">"failed auto-open through &lt;{}&gt; at inadmissible &lt;{}&gt;. Currently in {}"</span>,
 <a href=#1717 id=1717 data-nosnippet>1717</a>            has_opened_str,
 <a href=#1718 id=1718 data-nosnippet>1718</a>            cur_qname_str,
@@ -3341,8 +3341,8 @@
 <a href=#3341 id=3341 data-nosnippet>3341</a>  // OR it has autoClose set on tag properties
 <a href=#3342 id=3342 data-nosnippet>3342</a>  </span><span class="kw">match </span>node.get_type() {
 <a href=#3343 id=3343 data-nosnippet>3343</a>    <span class="prelude-val">Some</span>(NodeType::TextNode) | <span class="prelude-val">Some</span>(NodeType::CommentNode) =&gt; <span class="bool-val">true</span>,
-<a href=#3344 id=3344 data-nosnippet>3344</a>    <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
-<a href=#3345 id=3345 data-nosnippet>3345</a>      <span class="kw">if </span>!node.has_attribute(<span class="string">"_noautoclose"</span>) {
+<a href=#3344 id=3344 data-nosnippet>3344</a>    <span class="prelude-val">Some</span>(NodeType::ElementNode)
+<a href=#3345 id=3345 data-nosnippet>3345</a>      <span class="kw">if </span>!node.has_attribute(<span class="string">"_noautoclose"</span>) =&gt; {
 <a href=#3346 id=3346 data-nosnippet>3346</a>        <span class="kw">if </span>node.has_attribute(<span class="string">"_autoclose"</span>) {
 <a href=#3347 id=3347 data-nosnippet>3347</a>          <span class="bool-val">true
 <a href=#3348 id=3348 data-nosnippet>3348</a>        </span>} <span class="kw">else </span>{
@@ -3354,20 +3354,18 @@
 <a href=#3354 id=3354 data-nosnippet>3354</a>            </span>}
 <a href=#3355 id=3355 data-nosnippet>3355</a>          })
 <a href=#3356 id=3356 data-nosnippet>3356</a>        }
-<a href=#3357 id=3357 data-nosnippet>3357</a>      } <span class="kw">else </span>{
-<a href=#3358 id=3358 data-nosnippet>3358</a>        <span class="bool-val">false
-<a href=#3359 id=3359 data-nosnippet>3359</a>      </span>}
-<a href=#3360 id=3360 data-nosnippet>3360</a>    },
-<a href=#3361 id=3361 data-nosnippet>3361</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-<a href=#3362 id=3362 data-nosnippet>3362</a>  }
-<a href=#3363 id=3363 data-nosnippet>3363</a>}
-<a href=#3364 id=3364 data-nosnippet>3364</a><span class="doccomment">/// Get the node's qualified name in standard form.
-<a href=#3365 id=3365 data-nosnippet>3365</a>///
-<a href=#3366 id=3366 data-nosnippet>3366</a>/// Ie. using the registered prefix for that namespace.
-<a href=#3367 id=3367 data-nosnippet>3367</a>/// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
-<a href=#3368 id=3368 data-nosnippet>3368</a>/// NOTE: Should Deprecate! (use model)
-<a href=#3369 id=3369 data-nosnippet>3369</a></span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr { model::get_node_qname(node) }
-<a href=#3370 id=3370 data-nosnippet>3370</a><span class="kw">pub fn </span>with_node_qname&lt;R, FnR&gt;(node: <span class="kw-2">&amp;</span>Node, caller: FnR) -&gt; R
-<a href=#3371 id=3371 data-nosnippet>3371</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
-<a href=#3372 id=3372 data-nosnippet>3372</a>  model::with_node_qname(node, caller)
-<a href=#3373 id=3373 data-nosnippet>3373</a>}</code></pre></div></section></main></body></html>
+<a href=#3357 id=3357 data-nosnippet>3357</a>      },
+<a href=#3358 id=3358 data-nosnippet>3358</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#3359 id=3359 data-nosnippet>3359</a>  }
+<a href=#3360 id=3360 data-nosnippet>3360</a>}
+<a href=#3361 id=3361 data-nosnippet>3361</a><span class="doccomment">/// Get the node's qualified name in standard form.
+<a href=#3362 id=3362 data-nosnippet>3362</a>///
+<a href=#3363 id=3363 data-nosnippet>3363</a>/// Ie. using the registered prefix for that namespace.
+<a href=#3364 id=3364 data-nosnippet>3364</a>/// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
+<a href=#3365 id=3365 data-nosnippet>3365</a>/// NOTE: Should Deprecate! (use model)
+<a href=#3366 id=3366 data-nosnippet>3366</a></span><span class="kw">pub fn </span>get_node_qname(node: <span class="kw-2">&amp;</span>Node) -&gt; SymStr { model::get_node_qname(node) }
+<a href=#3367 id=3367 data-nosnippet>3367</a><span class="kw">pub fn </span>with_node_qname&lt;R, FnR&gt;(node: <span class="kw-2">&amp;</span>Node, caller: FnR) -&gt; R
+<a href=#3368 id=3368 data-nosnippet>3368</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
+<a href=#3369 id=3369 data-nosnippet>3369</a>  model::with_node_qname(node, caller)
+<a href=#3370 id=3370 data-nosnippet>3370</a>}
+</code></pre></div></section></main></body></html>
