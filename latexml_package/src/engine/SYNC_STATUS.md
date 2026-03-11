@@ -430,3 +430,41 @@ Rust equivalents: `enter_horizontal()` / `leave_horizontal()?` / `leave_horizont
 | `\@documentclasshook` | latex_constructs L84/128 | latex_ch2_document.rs | **DONE** |
 | sectioning afterDigest | latex_constructs L616/653 | N/A | N/A — not in scope |
 | `\usepackage`/`\RequirePackage` | latex_constructs L798/811 | N/A | N/A — not in scope |
+
+---
+
+## Core Modules Sync Status
+
+### mouth.rs (vs Mouth.pm) — OK
+- Synced 2026-03-11 (commit 727bd4f49)
+- `at_letter` option, input encoding (latin-1 + FFFD→space), file validation, `note_message "w/@ other"`
+
+### gullet.rs (vs Gullet.pm) — MINOR
+- Synced 2026-03-11 (commit 3ca5b0198)
+- `\special_relax` smuggling, `peekToken`, `readingFromMouth` skipSpaces, `skip_one_space_expanded`, backquote charcode fix
+- **Deferred:** `readArg` isolation via `readingFromMouth(Tokens(...))`
+
+### stomach.rs (vs Stomach.pm) — MINOR
+- Synced 2026-03-11 (commit 9690d998e)
+- `repackHorizontal`, BOUND_MODE checks, `current_frame_message` locator, math mode enter_horizontal skip
+- `decode_math_char` hook infrastructure (cross-crate fn pointer pattern)
+- **Deferred:** `everymath`/`everydisplay` injection consolidation (currently per-constructor in tex_math.rs)
+
+### state.rs (vs State.pm) — OK
+- Synced 2026-03-11 (commit 18eef452c)
+- `beginSemiverbatim` MODE fix (text → restricted_horizontal), mathcode `'\''` = 0x8000
+
+### document.rs (vs Document.pm) — MINOR
+- Synced 2026-03-11
+- **Fixed:** `modify_id()` rewritten with radix_alpha iteration + ID_SUFFIX support
+- **Fixed:** `record_id()` now calls `modify_id()` for duplicates (was `todo!()`)
+- **Fixed:** `float_to_element()` warning condition was inverted (warned when canContainSomehow=true, should be false)
+- **Fixed:** `float_to_label()` now starts from lastChild of current node (matching Perl)
+- **Fixed:** `is_open()` now checks all child nodes (was element-only)
+- **Added:** `remove_ss_values()`, `remove_class()`, `float_to_attribute()`
+- **Replaced:** `_pre_comment`/`_comment` `todo!()` with TODO comment (needs libxml create_comment)
+- **Added:** TODO for comment-swapping in `open_text_internal` (Perl lines 1139-1144)
+- **Deferred (stubs):** `compact_xmdual()` (commented out body), `autoCollapseChildren()` (inline in finalize_rec)
+- **Deferred:** `mergeAttributes()`, `getInsertionContext()`, `doctest()` diagnostic suite
+- **Deferred:** `finalize_rec` font element name extraction from pending_declaration (`element` key)
+- **Deferred:** `insertElementBefore()`, `getNodeLanguage()`, `decodeFont()`
