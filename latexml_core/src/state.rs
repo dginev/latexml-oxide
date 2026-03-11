@@ -898,6 +898,33 @@ pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T
   state_mut!().assign_value(key, value, scope)
 }
 
+/// assigns a `Stored` value 'inplace': replaces the front value in whatever frame
+/// it was originally assigned in, without recording an undo entry.
+/// This matches Perl's `assignValue(key, value, 'inplace')`.
+/// Used for MODE changes in enter_horizontal (switches mode without creating a new binding).
+pub fn assign_value_inplace(key: &str, value: impl Into<Stored>) {
+  let key_sym = arena::pin(key);
+  let value = value.into();
+  let state = &mut *state_mut!();
+  let table = &mut state.value;
+  if let Some(vvec) = table.get_mut(&key_sym) {
+    if let Some(front) = vvec.front_mut() {
+      *front = value;
+      return;
+    }
+  }
+  // If the value was never assigned, push globally (matching Perl behavior)
+  let vvec = table.entry(key_sym).or_default();
+  vvec.push_front(value);
+  // Find the locked frame and record the undo there
+  for frame in &mut state.undo {
+    if frame.locked {
+      frame.table_mut(TableName::Value).insert(key_sym, 1);
+      break;
+    }
+  }
+}
+
 /// assigns a `Stored` value at the given (arena ticket!) key and scope
 pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(key: SymStr, value: T, scope: S) {
   let value = value.into();
