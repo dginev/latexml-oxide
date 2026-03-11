@@ -444,8 +444,10 @@ pub struct Register {
   pub default:       Option<RegisterValue>,
   /// the unicode corresponding to the \mathchar of `value` (for chardef)
   pub mathglyph:     Option<char>,
-  /// TODO: what does this do for CharDef ?
+  /// role attribute for math chardef (e.g. "MULOP", "BINOP")
   pub role:          Option<SymStr>,
+  /// additional properties for math chardefs (meaning, stretchy, scriptpos, mathstyle, etc.)
+  pub chardef_props: HashMap<Stored>,
   /// the source point of origin for this register definition
   pub locator:       Locator,
 }
@@ -459,11 +461,12 @@ impl Default for Register {
       register_type: RegisterType::Number,
       getter:        None,
       setter:        None,
-      readonly:      false,
-      value:         None,
-      mathglyph:     None,
-      role:          None,
-      default:       None,
+      readonly:       false,
+      value:          None,
+      mathglyph:      None,
+      role:           None,
+      chardef_props:  HashMap::default(),
+      default:        None,
     }
   }
 }
@@ -557,8 +560,27 @@ impl Definition for Register {
       if let Some(role) = self.role {
         props.insert("role", Stored::String(role));
       }
+      // Copy extra math chardef properties (meaning, stretchy, scriptpos, etc.)
+      for (k, v) in &self.chardef_props {
+        props.insert_sym(*k, v.clone());
+      }
       return Ok(vec![Digested::from(
         if let Some(mathglyph) = self.mathglyph {
+          // Perl: for math chardefs, synthesize name from CS if no name/meaning set
+          if !props.contains_key("name") {
+            let cs_name = self.get_cs_name();
+            let n = cs_name.trim_start_matches('\\');
+            let has_matching_meaning = props.get("meaning").is_some_and(|m| {
+              if let Stored::String(s) = m {
+                arena::with(*s, |ms| ms == n)
+              } else {
+                false
+              }
+            });
+            if !has_matching_meaning {
+              props.insert("name", Stored::String(arena::pin(n)));
+            }
+          }
           Tbox::new(
             arena::pin_char(mathglyph),
             None,
@@ -665,6 +687,59 @@ impl Register {
       value,
       mathglyph,
       role,
+      chardef_props: HashMap::default(),
+      register_type: RegisterType::CharDef,
+      readonly: true,
+      locator: gullet::get_locator(),
+      ..Register::default()
+    }
+  }
+
+  /// A math CharDef is like a regular CharDef but stores additional decoded math properties
+  /// (meaning, stretchy, scriptpos, mathstyle, chardef_name, etc.)
+  /// Perl: LaTeXML::Core::Definition::CharDef->new($cs, 'math', $value)
+  pub fn new_math_chardef(
+    cs: Token,
+    value: Option<RegisterValue>,
+    mathglyph: Option<char>,
+    role: Option<SymStr>,
+    meaning: Option<SymStr>,
+    chardef_name: Option<SymStr>,
+    stretchy: Option<SymStr>,
+    scriptpos: Option<SymStr>,
+    mathstyle: Option<SymStr>,
+    need_scriptpos: bool,
+    need_mathstyle: bool,
+  ) -> Self {
+    let mut chardef_props = HashMap::default();
+    if let Some(m) = meaning {
+      chardef_props.insert("meaning", Stored::String(m));
+    }
+    if let Some(n) = chardef_name {
+      chardef_props.insert("name", Stored::String(n));
+    }
+    if let Some(s) = stretchy {
+      chardef_props.insert("stretchy", Stored::String(s));
+    }
+    if let Some(sp) = scriptpos {
+      chardef_props.insert("scriptpos", Stored::String(sp));
+    }
+    if let Some(ms) = mathstyle {
+      chardef_props.insert("mathstyle", Stored::String(ms));
+    }
+    if need_scriptpos {
+      chardef_props.insert("need_scriptpos", Stored::Bool(true));
+    }
+    if need_mathstyle {
+      chardef_props.insert("need_mathstyle", Stored::Bool(true));
+    }
+    Register {
+      cs,
+      parameters: None,
+      value,
+      mathglyph,
+      role,
+      chardef_props,
       register_type: RegisterType::CharDef,
       readonly: true,
       locator: gullet::get_locator(),

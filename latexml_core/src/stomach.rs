@@ -57,7 +57,8 @@ pub fn initialize_stomach() {
   stomach.box_list = Vec::new();
   stomach.localized_box_list = Vec::new();
 
-  assign_value("MODE", "text", Some(Scope::Global));
+  assign_value("BOUND_MODE", "vertical", Some(Scope::Global));
+  assign_value("MODE", "vertical", Some(Scope::Global));
   assign_value("IN_MATH", false, Some(Scope::Global));
   assign_value("PRESERVE_NEWLINES", 1, Some(Scope::Global));
   assign_value(
@@ -290,15 +291,19 @@ pub fn set_mode(mode: &str) -> Result<()> {
 /// appropriate for the mode.
 pub fn begin_mode(mode: &str) -> Result<()> {
   push_stack_frame(false); // Effectively bgroup
+  // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
+  assign_value("BOUND_MODE", arena::pin(mode), Some(Scope::Local));
   set_mode(mode)?;
   Ok(())
 }
 /// End processing in `mode`; an error is signalled if `stomach` is not
 /// currently in `mode`.  This also ends a level of grouping.
 pub fn end_mode(mode: &str) -> Result<()> {
-  // Last stack frame was NOT a mode switch!?!?!
-  if !is_value_bound("MODE", Some(0)) || (lookup_string_sym("MODE") != arena::pin(mode)) {
-    // Or was a mode switch to a different mode
+  // Perl checks BOUND_MODE, not MODE, for the frame check
+  if !is_value_bound("BOUND_MODE", Some(0))
+    || (lookup_string("BOUND_MODE") != mode)
+  {
+    // Last stack frame was NOT a mode switch, or was a switch to a different mode
     let message = s!(
       "Attempt to end mode `{}` in `{}`",
       mode,
@@ -310,10 +315,52 @@ pub fn end_mode(mode: &str) -> Result<()> {
     };
     Error!("unexpected", category, &message); // self.currentFrameMessage);
   } else {
-    // Don"t pop if there"s an error; maybe we'll recover?
+    // Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
+    if mode.ends_with("vertical") {
+      leave_horizontal_internal();
+    }
+    // Don't pop if there's an error; maybe we'll recover?
     pop_stack_frame(false)?;
   } // Effectively egroup.
   Ok(())
+}
+
+/// Switch to horizontal mode without stacking the mode.
+/// Can only switch from vertical|internal_vertical to horizontal.
+/// Perl: sub enterHorizontal
+pub fn enter_horizontal() {
+  let mode = lookup_string("MODE");
+  if mode.ends_with("vertical") {
+    assign_value_inplace("MODE", arena::pin("horizontal"));
+  }
+  // else: already horizontal or math — ignore
+}
+
+/// Resume vertical mode by executing \par, in TeX-like fashion.
+/// Perl: sub leaveHorizontal
+pub fn leave_horizontal() -> Result<()> {
+  let mode = lookup_string("MODE");
+  let bound = lookup_string("BOUND_MODE");
+  if mode == "horizontal" && bound.ends_with("vertical") {
+    // This needs to be an invisible, and slightly gentler, \par
+    assign_value("INTERNAL_PAR", true, Some(Scope::Local));
+    let par_result = invoke_token(&T_CS!("\\par"))?;
+    push_box_list_vec(par_result);
+    assign_value("INTERNAL_PAR", false, Some(Scope::Local));
+  }
+  Ok(())
+}
+
+/// Resume vertical mode internally: reset mode without firing \par.
+/// Used within argument digestion, e.g. endMode for vertical modes.
+/// Perl: sub leaveHorizontal_internal
+pub fn leave_horizontal_internal() {
+  let mode = lookup_string("MODE");
+  let bound = lookup_string("BOUND_MODE");
+  if mode == "horizontal" && bound.ends_with("vertical") {
+    // TODO: repackHorizontal (packages horizontal items into a List)
+    assign_value_inplace("MODE", arena::pin(&bound.to_string()));
+  }
 }
 
 pub fn new_local_box_list() {
@@ -334,6 +381,7 @@ where I: IntoIterator<Item = Digested> {
   stomach_mut!().box_list.extend(arg)
 }
 pub fn push_box_list(arg: Digested) { stomach_mut!().box_list.push(arg) }
+fn push_box_list_vec(args: Vec<Digested>) { stomach_mut!().box_list.extend(args) }
 pub fn pop_box_list() -> Option<Digested> { stomach_mut!().box_list.pop() }
 pub fn with_box_list<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(&[Digested]) -> R {
@@ -699,9 +747,12 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
   clear_prefixes(); // prefixes shouldn't apply here.
   match cc {
     Catcode::SPACE => {
-      if lookup_bool("IN_MATH") {
+      // Perl: if($STATE->lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
+      let mode = lookup_string("MODE");
+      if mode.ends_with("math") || mode.ends_with("vertical") {
         Ok(None)
       } else {
+        enter_horizontal();
         Ok(Some(Digested::from(Tbox::new(
           meaning.get_sym(),
           font,
@@ -721,6 +772,8 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       Ok(Some(Digested::from(comment)))
     },
     _ => {
+      // Perl: enterHorizontal($self); for non-math characters
+      enter_horizontal();
       let text = font::decode_string(meaning.get_sym(), None, true);
       Ok(Some(Digested::from(Tbox::new(
         text,
