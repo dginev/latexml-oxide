@@ -174,9 +174,13 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
     Ok(dom) => process_dom(dom, name),
   }
 }
-fn process_ltx_doc(doc: Document, _name: &str) -> Vec<String> {
+fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
   let doc_str = doc.serialize_to_string();
-  // eprintln!("{doc_str}");
+  if std::env::var("LATEXML_SAVE_ACTUAL").is_ok() {
+    let path = format!("/tmp/latexml_actual_{name}.xml");
+    std::fs::write(&path, &doc_str).ok();
+    eprintln!("Saved actual XML to {path}");
+  }
   doc_str.split('\n').map(ToString::to_string).collect()
 }
 

@@ -18,6 +18,7 @@ LoadDefinitions!({
   // \kern is heavily used by xy.
   // Completely HACK version for the moment
   // Note that \kern should add vertical spacing in vertical modes!
+  // Perl: enterHorizontal => 1
   DefConstructor!("\\kern Dimension", sub[document,args, props] {
     // TODO: We definitely need a cleaner Dimension cast here.
     let length : Dimension = if let DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
@@ -48,7 +49,10 @@ LoadDefinitions!({
       // Add space to document?
       document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;
     }
-  }, properties => sub[args] {
+  },
+  // TODO: enter_horizontal causes io_test failure — investigate
+  // before_digest => { enter_horizontal(); },
+  properties => sub[args] {
     unref!(args => length);
     Ok(stored_map!("width" => length, "isSpace" => true, "isKern" => true))
   });
@@ -104,12 +108,12 @@ LoadDefinitions!({
   // \raise <dimen> <box>
   // But <box> apparently must really explicitly be an \hbox, \vbox or \vtop (?)
   // OR something that expands into one!!
+  // Perl: enterHorizontal => 1
   DefConstructor!("\\lower Dimension MoveableBox",
-  // TODO: SVG
-  // "?&inSVG()(<svg:g transform='#transform' _noautoclose='1'>#2</svg:g>)\
-  // (<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)",
   "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
     // sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); },
+    // TODO: enter_horizontal causes io_test failure — investigate
+    // before_digest => { enter_horizontal(); },
     after_digest => sub[whatsit] {
       let y         = Dimension(-whatsit.get_arg(1).unwrap().value_of());
       let ypx       = y.px_value(None);
@@ -119,12 +123,12 @@ LoadDefinitions!({
     }
   );
 
+  // Perl: enterHorizontal => 1
   DefConstructor!("\\raise Dimension MoveableBox",
-  // TODO: SVG
-  // "?&inSVG()(<svg:g transform='#transform' _noautoclose='1'>#2</svg:g>)"
-  //   . "(<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)",
   "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
   //sizer       => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); },
+  // TODO: enter_horizontal causes io_test failure — investigate
+  // before_digest => { enter_horizontal(); },
   after_digest => sub[whatsit] {
     let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
     let ypx       = y.px_value(None);
@@ -140,15 +144,21 @@ LoadDefinitions!({
   // \moveright        c  shifts a box right and appends it to the current vertical list.
   // \moveleft<dimen><box>, \moveright<dimen><box>
   // \moveleft<dimen><box>, \moveright<dimen><box>
+  // Perl: enterHorizontal => 1
   DefConstructor!("\\moveleft Dimension MoveableBox",
   "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
+  // TODO: enter_horizontal causes io_test failure — investigate
+  // before_digest => { enter_horizontal(); },
   after_digest => sub[whatsit] {
     if let DigestedData::RegisterValue(d) = whatsit.get_arg(1).unwrap().data() {
       whatsit.set_property("x", d.clone().multiply(Number::new(-1)));
     }
   });
+  // Perl: enterHorizontal => 1
   DefConstructor!("\\moveright Dimension MoveableBox",
   "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
+  // TODO: enter_horizontal causes io_test failure — investigate
+  // before_digest => { enter_horizontal(); },
   after_digest => sub[whatsit] {
     if let Some(dimension) = whatsit.get_arg(1) {
       whatsit.set_property("x", dimension.clone());

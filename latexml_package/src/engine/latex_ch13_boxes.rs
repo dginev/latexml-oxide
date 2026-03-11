@@ -116,9 +116,11 @@ LoadDefinitions!({
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
   DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox");
+  // Perl: enterHorizontal => 1
   DefConstructor!("\\@makebox[Dimension][]{}",
     "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
     mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
+    // TODO: enter_horizontal causes io_test failure — investigate
     before_digest => {
       reenter_text_mode(false); }
     // properties   => sub[args] {
@@ -148,45 +150,47 @@ LoadDefinitions!({
 
   DefMacro!("\\fbox{}", "\\@framebox{#1}");
   DefMacro!("\\framebox", "\\@ifnextchar(\\pic@framebox\\@framebox");
-  // DefConstructor("\\@framebox[Dimension][]{}",
-  //   "?#mathframe(<ltx:XMArg enclose='box'>#inner</ltx:XMArg>)"
-  //     . "(<ltx:text ?#width(width='#width') ?#align(align='#align')"
-  //     . " framed='rectangle' framecolor='#framecolor'"
-  //     . " _noautoclose='1'>#3</ltx:text>)",
-  //   alias => '\framebox', sizer => '#3',
-  //   beforeDigest => sub {
-  //     my ($stomach) = @_;
-  //     my $wasmath = LookupValue('IN_MATH');
-  //     $stomach->beginMode('text');
-  //     AssignValue(FRAME_IN_MATH => $wasmath); },
-  //   properties => sub {
-  //     (($_[2] ? (align => $makebox_alignment{ ToString($_[2]) }) : ()),
-  //       framecolor => LookupValue('font')->getColor,
-  //       ($_[1] ? (width => $_[1]) : ())); },
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $wasmath = LookupValue('FRAME_IN_MATH');
-  //     my $arg     = $whatsit->getArg(3);
-  //     $stomach->endMode('text');
-  //     if ($wasmath && $arg->isMath) {
-  //       $whatsit->setProperties(mathframe => 1, inner => $arg->getBody); }
-  //     return; },
-  //   afterConstruct => sub {
-  //     my ($document, $whatsit) = @_;
-  //     my $node = $document->getNode->lastChild;
-  //     # If the generated node, has only a single (non space) child
-  //     my @c = grep { ($_->nodeType != XML_TEXT_NODE) || ($_->textContent =~ /[^\s\n]/) }
-  //       $node->childNodes;
-  //     my $model = $document->getModel;
-  //     # and that child can have the framed attribute
-  //     if ((scalar(@c) == 1)
-  //       && $document->canHaveAttribute($model->getNodeQName($c[0]), 'framed')) {
-  //       # unwrap, copying the attributes
-  //       $document->unwrapNodes($node);
-  //       foreach my $k (qw(width align framed)) {
-  //         if (my $v = $node->getAttribute($k)) {
-  //           $document->setAttribute($c[0], $k => $v); } } } }
-  // );
+  // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
+  // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
+  DefConstructor!("\\@framebox[Dimension][]{}",
+    "<ltx:text ?#width(width='#width') framed='rectangle' _noautoclose='1'>#3</ltx:text>",
+    alias => "\\framebox",
+    mode => "text", bounded => true,
+    before_digest => {
+      reenter_text_mode(false); },
+    after_construct => sub[document, _whatsit] {
+      // Perl afterConstruct: if the <ltx:text> has a single non-text child
+      // that can have 'framed', unwrap the text and copy attributes to the child.
+      let current = document.get_node().clone();
+      if let Some(node) = current.get_last_child() {
+        if document::get_node_qname(&node) != arena::pin_static("ltx:text") {
+          return Ok(());
+        }
+        // Filter to non-whitespace children
+        let children: Vec<Node> = node.get_child_nodes().into_iter().filter(|n| {
+          if n.get_type() == Some(NodeType::ElementNode) {
+            true
+          } else {
+            // text node — keep only if non-whitespace
+            n.get_content().chars().any(|c| !c.is_whitespace())
+          }
+        }).collect();
+        if children.len() == 1
+          && children[0].get_type() == Some(NodeType::ElementNode)
+          && document::can_node_have_attribute(&children[0], "framed")
+          && !children[0].has_attribute("framed")
+        {
+          // Copy attributes from ltx:text to child, then unwrap
+          for attr in ["width", "align", "framed"] {
+            if let Some(v) = node.get_attribute(attr) {
+              document.set_attribute(&mut children[0].clone(), attr, &v)?;
+            }
+          }
+          document.unwrap_nodes(node)?;
+        }
+      }
+    }
+  );
 
   AssignValue!("SAVEBOX", 100);
   TeX!(
@@ -283,9 +287,11 @@ LoadDefinitions!({
   // DefConstructor("\\rule[Dimension]{Dimension}{Dimension}",
   //   "<ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/>",
   //   properties => sub { (offset => $_[1], width => $_[2], height => $_[3]) });
+  // Perl: enterHorizontal => 1
   DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode         => "text", bounded => true,
+    // TODO: enter_horizontal causes io_test failure — investigate
     before_digest => {
       reenter_text_mode(false); }
     // TODO

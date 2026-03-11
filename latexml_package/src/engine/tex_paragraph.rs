@@ -38,13 +38,23 @@ LoadDefinitions!({
       let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
-      } else if document::sym_can_contain_somehow(tag,para_tag).is_some() {
-        // Used in a position where a paragraph can be started, start
-        document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None)?;
+      } else if document::sym_can_contain_somehow(tag, para_tag).is_some() {
+        // Perversely ignore indent on 1st para after sectioning titles (Perl parity)
+        let prev_is_title = node.get_last_child().map(|prev| {
+          let prev_qname = document::get_node_qname(&prev);
+          arena::with(prev_qname, |s| s == "ltx:title" || s == "ltx:toctitle")
+        }).unwrap_or(false);
+        if prev_is_title {
+          document.open_element("ltx:para", None, None)?;
+        } else {
+          document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None)?;
+        }
       }
       // Otherwise ignore.
     }
-  });
+  },
+  // Perl: enterHorizontal => 1
+  before_digest => { enter_horizontal(); });
   DefConstructor!("\\noindent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
@@ -57,7 +67,9 @@ LoadDefinitions!({
       }
       // Otherwise ignore.
     }
-  });
+  },
+  // Perl: enterHorizontal => 1
+  before_digest => { enter_horizontal(); });
 
   // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
   // A para can contain both p and displayed equations and such.
@@ -87,10 +99,29 @@ LoadDefinitions!({
             document.insert_element("ltx:break",Vec::new(), None)?;
           }
         }
-        document.maybe_close_element("ltx:para")?;
+        if !prop_bool!(props, "internal_par") {
+          document.maybe_close_element("ltx:para")?;
+        }
       }
     },
+    before_digest => {
+      // Perl: combine any digested horizontal material into a horizontal List
+      let mode = lookup_string("MODE");
+      let bound = lookup_string("BOUND_MODE");
+      if mode == "horizontal" && bound.ends_with("vertical") {
+        // TODO: repackHorizontal (packages horizontal items into a List)
+        assign_value_inplace("MODE", &bound.to_string()); // Resume vertical/internal_vertical
+      }
+      state::assign_value("parshape", Stored::None, None);
+      state::assign_value("interlinepenalties", Stored::None, None);
+    },
     after_digest => sub[whatsit] {
+      whatsit.set_property("mode", lookup_string("MODE").to_string());
+      // When invoked by leave_horizontal: no reversion, don't close ltx:para
+      if LookupBool!("INTERNAL_PAR") {
+        whatsit.set_property("internal_par", true);
+        whatsit.set_property("reversion", Tokens!());
+      }
       let in_preamble = LookupBool!("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", true);
@@ -101,6 +132,8 @@ LoadDefinitions!({
           whatsit.set_property("class", c);
           { state::assign_value("next_para_class", Stored::None, None); }
         }
+        // Per eTeX spec, \interlinepenalties (like \parshape) is reset after each paragraph.
+        { state::assign_value("interlinepenalties", Stored::None, None); }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
         if state::lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
           // respect \parindent if no overrides are given
@@ -132,14 +165,35 @@ LoadDefinitions!({
   // Paragraph Shape
   //----------------------------------------------------------------------
   // \parshape               iq specifies an arbitrary paragraph shape.
-  DefPrimitive!("\\parshape SkipMatch:= Number", sub[(n)] {
-    for _ in 0..n.value_of() {
-      gullet::read_dimension()?;
-      gullet::read_dimension()?;
+  // Acts like a Number register (returns count of lines when read).
+  // Setter reads n pairs of dimensions and stores them in state.
+  DefRegister!("\\parshape", Number::new(0),
+    getter => sub[_args] {
+      with_value("parshape", |val_opt| {
+        if let Some(Stored::VecDequeStored(shape)) = val_opt {
+          Some(RegisterValue::Number(Number::new((shape.len() / 2) as i64)))
+        } else {
+          Some(RegisterValue::Number(Number::new(0)))
+        }
+      })
+    },
+    setter => sub[value, _scope, _args] {
+      let n_val = value.value_of();
+      let n = if n_val < 0 { 0 } else { n_val } as usize;
+      let mut shape = VecDeque::new();
+      for _ in 0..n {
+        let indent = gullet::read_dimension().unwrap_or_default();
+        let length = gullet::read_dimension().unwrap_or_default();
+        shape.push_back(Stored::Dimension(indent));
+        shape.push_back(Stored::Dimension(length));
+      }
+      assign_value(
+        "parshape",
+        if n > 0 { Stored::VecDequeStored(shape) } else { Stored::None },
+        Some(Scope::Global),
+      );
     }
-    // we _could_ conceivably store this somewhere for some attempt at stylistic purpose...
-    Ok(Vec::new())
-  });
+  );
   //======================================================================
   // Paragraph Shape
   //----------------------------------------------------------------------

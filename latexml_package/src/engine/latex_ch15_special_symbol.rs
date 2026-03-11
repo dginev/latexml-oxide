@@ -29,6 +29,8 @@ LoadDefinitions!({
   DefPrimitive!("\\textperiodcentered", "\u{22C5}"); // DOT OPERATOR
   DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
   DefAccent!("\\textcircled", '\u{0020DD}', "\u{0025EF}"); // Defined in TeX.pool
+  // From latex_constructs.pool.ltxml
+  DefAccent!("\\k", '\u{0328}', "\u{02DB}", below => true); // COMBINING OGONEK & OGONEK
   DefPrimitive!("\\textless", "<");
   DefPrimitive!("\\textgreater", ">");
   DefPrimitive!("\\textcopyright", "\u{00A9}"); // COPYRIGHT SIGN

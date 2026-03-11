@@ -81,6 +81,11 @@ LoadDefinitions!({
     }
   });
 
+  // \CheckCommand validates but doesn't define — absorb and ignore args
+  DefPrimitive!("\\CheckCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}", None);
+  // Font encoding subset declaration — ignored in our context
+  DefPrimitive!("\\DeclareEncodingSubset{}{}{}", None);
+
   //------------------------------------------------------------
   // The following commands define encoding-specific expansions
   // or glyphs.  The control-sequence is defined to use the expansion for

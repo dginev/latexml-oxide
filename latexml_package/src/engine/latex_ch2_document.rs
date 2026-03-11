@@ -34,12 +34,18 @@ LoadDefinitions!({
     }
   },
   after_digest => sub[whatsit] {
-    begin_mode("text")?;
+    // Perl: beginMode('internal_vertical', 1) — noframe=1
+    // Begin internal_vertical mode WITHOUT pushing a stack frame, keeping level=0
+    assign_value("BOUND_MODE", "internal_vertical", Some(Scope::Local));
+    set_mode("internal_vertical")?;
     // we need to re-bind in order to nest calls to the binding macro machinery
     DefMacro!("\\@currenvir", "document");
     state::assign_value("current_environment", "document", None);
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
+    Let!("\\@nodocument", "\\relax", Scope::Global);
+    // Clear \everypar at document start (Perl parity)
+    state::assign_value("\\everypar", Tokens!(), Some(Scope::Global));
     let mut boxes = Vec::new();
     if let Some(ops) = state::lookup_tokens("@document@preamble@atend") {
       boxes.push(stomach::digest(ops)?);
@@ -52,6 +58,7 @@ LoadDefinitions!({
       boxes.push(stomach::digest(ops)?);
     }
     whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
+    leave_horizontal_internal();
     boxes
   });
 
@@ -99,7 +106,10 @@ LoadDefinitions!({
   //       Warn('unexpected', '\end{document}', $stomach,
   //         "Attempt to end document with open groups, environments or conditionals", @lines);
   //     }
-      end_mode("text")?;
+      // Perl: endMode('internal_vertical', 1) — noframe=1
+      // Leave horizontal mode if needed, then end mode without popping frame
+      leave_horizontal_internal();
+      // executeBeforeAfterGroup equivalent — skip for now
       gullet::flush();
       boxes
   });

@@ -1,25 +1,38 @@
 \documentclass{article}
 \def\testbox#1{%
- \ifvoid#1 Box #1 is empty
- \else\ifhbox#1 Box #1 is horizontal
- \else\ifvbox#1 Box #1 is vertical
+ \ifvoid#1 Box \string#1 is void
+ \else\ifhbox#1 Box \string#1 is horizontal
+ \else\ifvbox#1 Box \string#1 is vertical
  \fi\fi\fi
  \par}
 \begin{document}
-\setbox100=\hbox{Goodbye}
-\testbox{100}
-\setbox101=\hbox{Hello}
-\testbox{101}
-\setbox102=\vbox{\box101,\box100}
-\testbox{102}
+\newbox\myboxA
+\newbox\myboxB
+\newbox\myboxC
+\newbox\myboxD
+\newbox\myboxE
+Not yet set:\testbox{\myboxA}
+\setbox\myboxA=\hbox{}
+Set empty:\testbox{\myboxA}
+\setbox\myboxA=\hbox{Goodbye}
+\testbox{\myboxA}
+\setbox\myboxB=\hbox{Hello}
+\testbox{\myboxB}
+\setbox\myboxC=\vbox{\box\myboxB,\box\myboxA}
+\testbox{\myboxC}
 
-Using...
-\box102
+Combined: \box\myboxC
+And now: \testbox{\myboxA}.
 
-\setbox103=\hbox{}
-\testbox{103}
+Curious unsetting behavior:
+\setbox\myboxA=\hbox{Once}
+Once? \box\myboxA \box\myboxA.
 
-\testbox{104}
+\setbox\myboxA=\hbox{Once}
+Once? {\box\myboxA\box\myboxA}\box\myboxA\box\myboxA.
+
+\setbox\myboxA=\hbox{ and Again}
+Once? {\setbox\myboxA=\hbox{Once}\box\myboxA\box\myboxA}\box\myboxA\box\myboxA.
 
 \[ a + \hbox{a}\]
 \[ a + \vbox{a}\]
@@ -34,5 +47,26 @@ Using...
 
 \def\mybox#1{\hbox{#1}}
 \[ a - \lower1ex\mybox{a} \]
+
+
+\setbox\myboxA=\vbox spread 1cm{1cm Box}
+\setbox\myboxB=\vbox spread 2cm{2cm Box}
+\setbox\myboxC=\vbox{\unvbox\myboxA\unvbox\myboxB}
+\setbox\myboxD=\copy\myboxC
+\setbox\myboxE=\vbox{\unvbox\myboxC\unvbox\myboxD}
+
+combined vbox: \fbox{\box\myboxE}
+
+First line
+\vskip0.01em
+second line
+
+\noindent
+\hrule
+\vskip 8 pt
+Some text between two hrules.
+\vskip 8 pt
+\noindent
+\hrule
 
 \end{document}

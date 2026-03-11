@@ -25,6 +25,8 @@ LoadDefinitions!({
   // This makes \relax disappear completely after digestion
   // (which seems most TeX like).
   DefPrimitive!(T_CS!("\\relax"), None, {});
+  // \protect is used in LaTeX for robust commands; acts like \relax in the base engine.
+  Let!("\\protect", "\\relax");
   //## However, this keeps a box, so it can appear in UnTeX
   //## DefPrimitive('\relax',undef);
   //# But if you do that, you've got to watch out since it usually
@@ -205,12 +207,11 @@ LoadDefinitions!({
           };
         } else if defn.get_cs_name() == "\\font" {
           // HACK to get the \fontcmd that would have selected the current font (see FontDef)
-          todo!();
-          // continue:
-          // return lookup_value("current_FontDef") || T_CS!("\\tenrm"); }
-          // } else if (defn.is_font_def()) { // Or a propert TeX \fontcmd defined by \font
-          //   return defn.get_cs();
-          // }
+          if let Some(Stored::Token(t)) = state::lookup_value("current_FontDef") {
+            return Ok(Tokens!(t));
+          } else {
+            return Ok(Tokens!(T_CS!("\\lx@default@font")));
+          }
         } else {
           // the argument token is Undefined
           if token.get_catcode() == Catcode::CS {

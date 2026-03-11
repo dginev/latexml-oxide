@@ -39,6 +39,8 @@ LoadDefinitions!({
   // \muskip                 iq assigns <muglue> to a \muskip register.
   // \nonscript              c  ignores immediately following glue or kern in script and
   // scriptscript styles.
+  // Should discard following skip/glue; for now a no-op stub.
+  DefPrimitive!("\\nonscript", None);
 
   //======================================================================
   // The next two sections are the basic LaTeXML Infrastructure for math.
@@ -50,19 +52,15 @@ LoadDefinitions!({
   // This really should be T_MATH
   // and it should (or not) check for a second $ only if not in restricted horizontal mode!
   // (and then all the \lx@dollar@in@(text|math|normal)mode defns would not be needed.
-  DefPrimitive!(T_CS!("\\lx@dollar@in@normalmode"), None, {
+  DefPrimitive!(T_CS!("\\lx@dollar@default"), None, {
     let mut op = "\\lx@begin@inline@math";
     {
       let mode = state::lookup_string("MODE");
-      Debug!("T_MATH primitive current mode: {:?}", mode);
       if mode == "display_math" {
         if gullet::if_next(T_MATH!())? {
           gullet::read_token()?;
           op = "\\lx@end@display@math";
         } else {
-          // Avoid a Fatal, but we're likely in trouble.
-          // Should we switch to text mode? (LaTeX normally wouldn't)
-          // Did we miss something and would should have already been in text mode? Possibly...
           Error!(
             "expected",
             "$",
@@ -73,6 +71,8 @@ LoadDefinitions!({
       } else if mode == "inline_math" {
         op = "\\lx@end@inline@math";
       } else if gullet::if_next(T_MATH!())? {
+        // TODO: Perl checks `($bound =~ /vertical$/)` here, but our BOUND_MODE tracking
+        // isn't complete enough yet. For now, always check for $$ display math.
         gullet::read_token()?;
         op = "\\lx@begin@display@math";
       }
@@ -84,16 +84,15 @@ LoadDefinitions!({
     }
   });
   // Let this be the default, conventional $
-  Let!(T_MATH!(), T_CS!("\\lx@dollar@in@normalmode"));
+  Let!(T_MATH!(), T_CS!("\\lx@dollar@default"));
+  // Obsolete aliases
+  Let!("\\lx@dollar@in@normalmode", "\\lx@dollar@default");
 
   //======================================================================
-  // Math mode in alignment
-  // Special forms for $ appearing within alignments.
-  // Note that $ within a math alignment (eg array environment),
-  // switches to text mode! There's no $$ for display math.
-  //
-  // This is the "normal" case: $ appearing with an alignment that is in text mode.
-  // It's just like regular $, except it doesn't look for $$ (no display math).
+  // Math mode in special cases: math alignments, or perverse equations for ...$text$...
+  // In Perl, \lx@dollar@in@textmode is now aliased to \lx@dollar@default.
+  // But since our BOUND_MODE tracking isn't complete, we keep a simple version
+  // that just toggles inline math (no $$ display math check).
   DefPrimitive!("\\lx@dollar@in@textmode", {
     let mathcs = if lookup_bool("IN_MATH") {
       T_CS!("\\lx@end@inline@math")
@@ -102,6 +101,8 @@ LoadDefinitions!({
     };
     stomach::invoke_token(&mathcs)
   });
+  // Note that $ within a math alignment (eg array environment),
+  // switches to text mode! There's no $$ for display math.
 
   // This one is for $ appearing within an alignment that's already math.
   // This should switch to text mode (because it's balancing the hidden $
@@ -237,35 +238,60 @@ LoadDefinitions!({
 
   // Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
-  DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
+  DefConstructor!("\\mathchar Number",
+    "?#glyph(<ltx:XMTok role='#role' ?#meaning(meaning='#meaning') ?#name(name='#name')\
+     ?#scriptpos(scriptpos='#scriptpos') ?#mathstyle(mathstyle='#mathstyle')\
+     ?#stretchy(stretchy='#stretchy')>#glyph</ltx:XMTok>)",
     sizer       => "#1",
     after_digest => sub[whatsit] {
       let n = whatsit.get_arg(1).unwrap().value_of();
-      let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
-      if let Some(glyph) = glyph_opt {
+      let props = decode_math_char(n as u16)?;
+      if let Some(glyph) = props.glyph {
         whatsit.set_property("glyph", glyph);
         whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
       }
-      if let Some(role) = role_opt {
-        whatsit.set_property("role", role);
+      if let Some(ref role) = props.role {
+        whatsit.set_property("role", role.clone());
+      }
+      if let Some(ref meaning) = props.meaning {
+        whatsit.set_property("meaning", meaning.clone());
+      }
+      if let Some(ref name) = props.name {
+        whatsit.set_property("name", name.clone());
+      }
+      if let Some(ref scriptpos) = props.scriptpos {
+        whatsit.set_property("scriptpos", scriptpos.clone());
+      }
+      if let Some(ref mathstyle) = props.mathstyle {
+        whatsit.set_property("mathstyle", mathstyle.clone());
+      }
+      if let Some(ref stretchy) = props.stretchy {
+        whatsit.set_property("stretchy", stretchy.clone());
       }
       Ok(Vec::new())
     }
   );
 
   DefConstructor!("\\delimiter Number",
-  "?#glyph(?#isMath(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)(#glyph))",
+  "?#glyph(?#isMath(<ltx:XMTok role='#role' ?#name(name='#name')\
+   ?#stretchy(stretchy='#stretchy')>#glyph</ltx:XMTok>)(#glyph))",
   sizer       => "#glyph",
   after_digest => sub[whatsit] {
     let mut n = whatsit.get_arg(1).unwrap().value_of();
     n >>= 12;    // Ignore 3 rightmost digits and treat as \mathchar
-    let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
-    if let Some(glyph) = glyph_opt {
-      whatsit.set_property("glyph",glyph);
+    let props = decode_math_char(n as u16)?;
+    if let Some(glyph) = props.glyph {
+      whatsit.set_property("glyph", glyph);
       whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
     }
-    if let Some(role) = role_opt {
-      whatsit.set_property("role", role);
+    if let Some(ref role) = props.role {
+      whatsit.set_property("role", role.clone());
+    }
+    if let Some(ref name) = props.name {
+      whatsit.set_property("name", name.clone());
+    }
+    if let Some(ref stretchy) = props.stretchy {
+      whatsit.set_property("stretchy", stretchy.clone());
     }
     Ok(Vec::new())
   });
@@ -275,11 +301,22 @@ LoadDefinitions!({
     // Let w/o AfterAssignment
     let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, means_relax, None);
-    let value  = gullet::read_number().unwrap_or_default();
-    let (role, glyph) = decode_math_char(value.value_of() as u16)?;
-    // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
+    let value = gullet::read_number().unwrap_or_default();
+    let props = decode_math_char(value.value_of() as u16)?;
     state::install_definition(
-      Register::new_chardef(newcs,Some(value.into()), glyph, role.map(arena::pin)), None);
+      Register::new_math_chardef(
+        newcs,
+        Some(value.into()),
+        props.glyph,
+        props.role.as_deref().map(arena::pin),
+        props.meaning.as_deref().map(arena::pin),
+        None, // chardef_name: synthesized at invoke time from CS name
+        props.stretchy.as_deref().map(arena::pin),
+        props.scriptpos.as_deref().map(arena::pin),
+        props.mathstyle.as_deref().map(arena::pin),
+        props.need_scriptpos,
+        props.need_mathstyle,
+      ), None);
     state::after_assignment();
   });
 
@@ -288,8 +325,8 @@ LoadDefinitions!({
   sizer => "#1",    // Close enough?
   after_digest => sub[whatsit] {
     let n = whatsit.get_arg(1).unwrap().value_of();
-    let (_role, glyph_opt) = decode_math_char(n as u16)?;
-    if let Some(glyph) = glyph_opt {
+    let props = decode_math_char(n as u16)?;
+    if let Some(glyph) = props.glyph {
       whatsit.set_property("glyph", glyph);
 
       let mut glyph_buf: [u8; 4] = [0; 4];
@@ -316,11 +353,11 @@ LoadDefinitions!({
     }
   );
 
-  // Not used anywhere (yet)
-  DefRegister!("\\delcode Number", Number::new(0),
+  // Perl default is -1 ("no delimiter code assigned").
+  DefRegister!("\\delcode Number", Number::new(-1),
   getter=> sub[args] {
     let code = lookup_delcode(args[0].value_of() as u8 as char);
-    Number::new(code.unwrap_or_default() as i64)
+    Number::new(code.map(|c| c as i64).unwrap_or(-1))
   },
   setter => sub[value, scope, args] {
     assign_delcode(args[0].value_of() as u8 as char,
@@ -404,7 +441,13 @@ LoadDefinitions!({
     },
     reversion => None);
 
-  DefMacro!("\\right XToken", r"\right@hidden@egroup\@right #1");
+  // \right is a constructor (non-expandable), so that LaTeX3 kernel can use it as a separator
+  // in \numexpr contexts. It unreads \right@hidden@egroup and \@right into the input stream.
+  DefConstructor!("\\right", "",
+    before_digest => {
+      gullet::unread(Tokens::new(vec![T_CS!("\\right@hidden@egroup"), T_CS!("\\@right")]));
+    },
+    reversion => None);
 
   DefConstructor!("\\@left Token",
     "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
@@ -629,148 +672,138 @@ LoadDefinitions!({
   // thickness. After digesting the \choose (or whatever), grab the previous and following
   // material and store as args in the whatsit.
 
-  // Increment the mathstyle stored in any boxes & whatsits.
-  // The tricky part is to know when NOT to increment!
-  // \displaystyle, constructors that set their own specific style,...
-  // And, any collateral adjustments that had been done in digestion depending on mathstyle
-  // WONT be adjusted!
-  // We don't have a clear API to find the displayable Boxes within;
-  // and we don't have a good handle on grouping...
+  // TODO: adjustMathstyle — recursively adjusts mathstyle on already-digested boxes.
+  // Perl walks all Box/List/Whatsit children and shifts mathstyle using
+  // mathstyle_adjust_map. Skipped for now; cosmetic effect only.
 
-  // # ARGH!!!!!!!!! RETHINK!!!!!!
-  // sub adjustMathstyle {
-  //   my ($outerstyle, $adjusted, @boxes) = @_;
-  //   foreach my $box (@boxes) {
-  //     next unless defined $box;
-  //     next if $$adjusted{$box};    # since we do args AND props, be careful not to adjust twice!
-  //     $$adjusted{$box} = 1;
-  //     my $r = ref $box;
-  //     next unless $r && ($r !~ /(?:SCALAR|HASH|ARRAY|CODE|REF|GLOB|LVALUE)/) && $r->isaBox;
-  //     return if $box->getProperty('explicit_mathstyle');
-  //     next   if $box->getProperty('own_mathstyle');
+  // \lx@left/\lx@right: like \left/\right but without extra grouping.
+  // Perl uses TeXDelimiter param type; we alias to \@left/\@right for now.
+  Let!("\\lx@left", "\\@left");
+  Let!("\\lx@right", "\\@right");
 
-  //     if ($r eq 'LaTeXML::Core::Box') {
-  //       adjustMathStyle_internal($outerstyle, $box); }
-  //     elsif ($r eq 'LaTeXML::Core::List') {
-  //       adjustMathstyle($outerstyle, $adjusted, $box->unlist); }
-  //     elsif ($r eq 'LaTeXML::Core::Whatsit') {
-  //       my $style = adjustMathStyle_internal($outerstyle, $box) || $outerstyle;
-  //       # now recurse on contained boxes (args AND properties!)
-  //       adjustMathstyle($style, $adjusted, $box->getArgs);
-  //       adjustMathstyle($style, $adjusted, values %{ $box->getPropertiesRef }); } }
-  //   return; }
+  // \lx@generalized@over{reversion}{keyvals}{top}{bottom}
+  // keyvals: role, meaning, left, right, thickness
+  DefConstructor!("\\lx@generalized@over Undigested RequiredKeyVals",
+    "?#needXMDual(\
+       <ltx:XMDual>\
+         <ltx:XMApp>\
+           <ltx:XMRef _xmkey='#xmkey0'/>\
+           <ltx:XMRef _xmkey='#xmkey1'/>\
+           <ltx:XMRef _xmkey='#xmkey2'/>\
+         </ltx:XMApp>\
+         <ltx:XMWrap>\
+           #left)(\
+       )\
+       <ltx:XMApp>\
+         <ltx:XMTok _xmkey='#xmkey0' role='#role' ?#meaning(meaning='#meaning')\
+          ?#mathstyle(mathstyle='#mathstyle') ?#thickness(thickness='#thickness')/>\
+         <ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg>\
+         <ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg>\
+       </ltx:XMApp>\
+       ?#needXMDual(\
+           #right\
+         </ltx:XMWrap>\
+       </ltx:XMDual>)()",
+    after_digest => sub[whatsit] {
+      use latexml_core::stomach;
+      use latexml_core::binding::content::merge_font;
+      use latexml_core::common::font::Font;
+      use latexml_core::list::List;
+      use latexml_core::binding::def::dialect::get_xmarg_id;
 
-  // # Heursitic;
-  // # we're wanting to adjust the style AS IF the numerator had been already in the next mathstyle
-  // # This isn't the same as just shifting the mathstyle!
-  // # we're sorta trying to infer WHY the box has a given style...?
-  // our %mathstyle_adjust_map = (
-  //   display => { display => 'text', text => 'script', script => 'script', scriptscript =>
-  // 'scriptscript' },   text => { display => 'text', text => 'script', script => 'scriptscript',
-  // scriptscript => 'scriptscript' },   script => { display => 'display', text => 'text', script
-  // => 'scriptscript', scriptscript => 'scriptscript' },   scriptscript => { display =>
-  // 'display', text => 'text', script => 'scriptscript', scriptscript => 'scriptscript' });
+      // Extract key-value pairs from arg 2
+      let (role_kv, meaning_kv, thickness_kv, has_left, has_right) = {
+        let arg2 = whatsit.get_arg(2);
+        if let Some(d) = arg2 {
+          use latexml_core::digested::DigestedData;
+          if let DigestedData::KeyVals(kv) = d.data() {
+            let role = kv.get_value("role").map(ToString::to_string);
+            let meaning = kv.get_value("meaning").map(ToString::to_string);
+            let thickness = kv.get_value("thickness").map(ToString::to_string);
+            let has_left = kv.get_value("left").is_some();
+            let has_right = kv.get_value("right").is_some();
+            (role, meaning, thickness, has_left, has_right)
+          } else {
+            (None, None, None, false, false)
+          }
+        } else {
+          (None, None, None, false, false)
+        }
+      };
 
-  // sub adjustMathStyle_internal {
-  //   my ($outerstyle, $box) = @_;
-  //   $outerstyle = 'display' unless $outerstyle;
-  //   if (my $font = $box->getFont) {
-  //     my $origstyle = $font->getMathstyle || 'display';
-  //     my $newstyle  = $mathstyle_adjust_map{$outerstyle}{$origstyle};
-  //     $box->setFont($font->merge(mathstyle => $newstyle));
-  //     if (my $recstyle = $box->getProperty('mathstyle')) {    # And adjust here, if recorded.
-  //       $box->setProperty(mathstyle => $newstyle);
-  //       return $newstyle; } }
-  //   return; }
+      // Determine mathstyle from current font
+      let style = lookup_font()
+        .and_then(|f| f.get_mathstyle().map(|s| s.to_string()))
+        .unwrap_or_else(|| "display".to_string());
 
-  // sub fracSizer {
-  //   my ($numerator, $denominator) = @_;
-  //   my $w = $numerator->getWidth->larger($denominator->getWidth);
-  //   my $d = $denominator->getTotalHeight->multiply(0.5);
-  //   my $h = $numerator->getTotalHeight->add($d);
-  //   return ($w, $h, $d); }
+      // Determine role: default to FRACOP
+      let role = role_kv.unwrap_or_else(|| "FRACOP".to_string());
 
-  // # \lx@generalized@over{reversion}{keyvals}{top}{bottom}
-  // # keyvals: role,meaning, left,right, thickness
-  // DefConstructor('\lx@generalized@over Undigested RequiredKeyVals',
-  //   "?#needXMDual("
-  //     . "<ltx:XMDual>"
-  //     . "<ltx:XMApp>"
-  //     . "<ltx:XMRef _xmkey='#xmkey0'/>"
-  //     . "<ltx:XMRef _xmkey='#xmkey1'/>"
-  //     . "<ltx:XMRef _xmkey='#xmkey2'/>"
-  //     . "</ltx:XMApp>"
-  //     . "<ltx:XMWrap>"
-  //     . "#left)()"
-  //     . "<ltx:XMApp>"
-  //     . "<ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle'
-  // thickness='#thickness'/>"     . "<ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg>"
-  //     . "<ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg>"
-  //     . "</ltx:XMApp>"
-  //     . "?#needXMDual(#right"
-  //     . "</ltx:XMWrap>"
-  //     . "</ltx:XMDual>)()",
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $kv = $whatsit->getArg(2);
-  //     # Really, we want the mathstyle that was in effect BEFORE the group starting the numerator!
-  //     # (there could be a \displaystyle INSIDE the numerator, but that's not the one we want)
-  //     # Of course the group that started the numerator may be the start of the Math, itself!
-  //     # AND, the numerator, which was already digested, needs it's mathstyle ADJUSTED
-  //     my $font = ($state->isValueBound('MODE', 0)    # Last stack frame was a mode switch!?!?!
-  //       ? $state->lookupValue('font')                # then just use whatever font we've got
-  //       : ($state->isValueBound('font', 0)           # else if font was set in numerator
-  //           && $state->valueInFrame('font', 1))
-  //         || $state->lookupValue('font')             # then just use whatever font we've got
-  //     );
-  //     my $style     = $font->getMathstyle;
-  //     my $role      = ToString($kv->getValue('role'));
-  //     my $meaning   = ToString($kv->getValue('meaning'));
-  //     my $thickness = ToString($kv->getValue('thickness'));
-  //     $role    = 'FRACOP' unless $role;
-  //     $meaning = 'divide' if (!$meaning) && ($thickness ne '0pt');
-  //     # Unfortunately, the numerator's already digested! We have to adjust it's mathstyle
-  //     my @top = $stomach->regurgitate;
-  //     # really have to pass +/-1, +/-2 etc..!
-  //     adjustMathstyle($style, {}, @top);
-  //     MergeFont(fraction => 1);
-  //     my @bot     = $stomach->digestNextBody();
-  //     my $closing = pop(@bot);    # We'll leave whatever closed the list (endmath, endgroup...)
-  //     $whatsit->setProperties(
-  //       top       => List(@top, mode => 'math'),
-  //       bottom    => List(@bot, mode => 'math'),
-  //       role      => $role,
-  //       meaning   => $meaning,
-  //       thickness => $thickness,
-  //       mathstyle => $style);
-  //     if ($kv->getValue('left') || $kv->getValue('right')) {
-  //       $whatsit->setProperties(needXMDual => 1,
-  //         xmkey0 => LaTeXML::Package::getXMArgID(),
-  //         xmkey1 => LaTeXML::Package::getXMArgID(),
-  //         xmkey2 => LaTeXML::Package::getXMArgID()); }
-  //     return $closing; },    # and leave the closing bit, whatever it is.
-  //   properties => sub { %{ $_[2]->getKeyVals }; },
-  //   sizer      => sub { fracSizer($_[0]->getProperty('top'), $_[0]->getProperty('bottom')); },
-  //   reversion  => sub {
-  //     my ($whatsit) = @_;
-  //     (Revert($whatsit->getProperty('top')),
-  //       $whatsit->getArg(1)->unlist,
-  //       Revert($whatsit->getProperty('bottom'))); });
+      // Determine meaning: default to "divide" if thickness is not "0pt"
+      let meaning = if let Some(m) = meaning_kv {
+        if m.is_empty() { None } else { Some(m) }
+      } else if thickness_kv.as_deref() != Some("0pt") {
+        Some("divide".to_string())
+      } else {
+        None
+      };
 
-  // DefMacro('\above Dimension',
-  //   '\lx@generalized@over{\above #1}{meaning=divide,thickness=#1}');
-  // DefMacro('\abovewithdelims Token Token Dimension',
-  // '\lx@generalized@over{\abovewithdelims #1 #2
-  // #3}{left={\@left#1},right={\@right#2},meaning=divide,thickness=#3}'); DefMacro('\atop',
-  //   '\lx@generalized@over{\atop}{thickness=0pt}');
-  // DefMacro('\atopwithdelims Token Token',
-  //   '\lx@generalized@over{\atopwithdelims #1
-  // #2}{thickness=0pt,left={\@left#1},right={\@right#2}}'); DefMacro('\over',
-  //   '\lx@generalized@over{\over}{meaning=divide}');
-  // DefMacro('\overwithdelims Token Token',
-  //   '\lx@generalized@over{\overwithdelims #1
-  // #2}{left={\@left#1},right={\@right#2},meaning=divide}'); // My thinking was that this is a
-  // "fraction" providing the dimension is > 0!
+      // Grab the numerator (already digested content)
+      let top = stomach::regurgitate();
+      // TODO: adjustMathstyle($style, {}, @top);
+
+      // Set fraction font for denominator
+      merge_font(Font { fraction: Some(true), ..Font::default() });
+
+      // Digest the denominator
+      let mut bot = stomach::digest_next_body(None)?;
+
+      // Pop the closing token (endmath, endgroup, etc.) — leave it for further processing
+      let closing = bot.pop();
+
+      // Set properties on the whatsit
+      let top_list = Digested::from(List::new(top));
+      let bot_list = Digested::from(List::new(bot));
+      whatsit.set_property("top", top_list);
+      whatsit.set_property("bottom", bot_list);
+      whatsit.set_property("role", role);
+      if let Some(ref m) = meaning {
+        whatsit.set_property("meaning", m.clone());
+      }
+      if let Some(ref t) = thickness_kv {
+        whatsit.set_property("thickness", t.clone());
+      }
+      whatsit.set_property("mathstyle", style);
+
+      // For delimited variants, set up XMDual keys
+      if has_left || has_right {
+        whatsit.set_property("needXMDual", true);
+        let key0 = get_xmarg_id()?;
+        let key1 = get_xmarg_id()?;
+        let key2 = get_xmarg_id()?;
+        whatsit.set_property("xmkey0", key0.to_string());
+        whatsit.set_property("xmkey1", key1.to_string());
+        whatsit.set_property("xmkey2", key2.to_string());
+      }
+
+      // Return the closing token to be placed after the whatsit
+      let result: Vec<Digested> = closing.into_iter().collect();
+      Ok(result)
+    }
+  );
+
+  DefMacro!("\\above Dimension",
+    "\\lx@generalized@over{\\above #1}{meaning=divide,thickness=#1}");
+  DefMacro!("\\abovewithdelims Token Token Dimension",
+    "\\lx@generalized@over{\\abovewithdelims #1 #2 #3}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide,thickness=#3}");
+  DefMacro!("\\atop",
+    "\\lx@generalized@over{\\atop}{thickness=0pt}");
+  DefMacro!("\\atopwithdelims Token Token",
+    "\\lx@generalized@over{\\atopwithdelims #1 #2}{thickness=0pt,left={\\lx@left#1},right={\\lx@right#2}}");
+  DefMacro!("\\over",
+    "\\lx@generalized@over{\\over}{meaning=divide}");
+  DefMacro!("\\overwithdelims Token Token",
+    "\\lx@generalized@over{\\overwithdelims #1 #2}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide}");
 
   //======================================================================
   //
@@ -890,7 +923,7 @@ LoadDefinitions!({
         || t.with_str(|tstr| tstr.starts_with("\\begin{") || tstr.starts_with("\\end{"))
       // This seems needed within AmSTeX environs
       {
-        let mut invoked = Invocation!(T_CS!("\\@@eqno"), vec![Tokens::new(stuff)]).unlist();
+        let mut invoked = Invocation!(T_CS!("\\lx@eqno"), vec![Tokens::new(stuff)]).unlist();
         invoked.push(t);
         return Ok(Tokens::new(invoked));
       } else {
@@ -908,7 +941,7 @@ LoadDefinitions!({
 
   Let!("\\leqno", "\\eqno");
   // Revert to nothing, since it really doesn't belong in the TeX string(?)
-  DefConstructor!("\\@@eqno{}",
+  DefConstructor!("\\lx@eqno{}",
     "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
     reversion => "");
 });

@@ -31,20 +31,61 @@ LoadDefinitions!({
   // \skipdef          c  creates a symbolic name for a \skip register.
   // \muskipdef        c  creates a symbolic name for a \muskip register.
   // \toksdef          c  creates a symbolic name for a \toks register.
-  DefPrimitive!("\\countdef Token SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\countdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\count", Number::new(0).into())
   });
-  DefPrimitive!("\\dimendef Token SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\dimendef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\dimen", Dimension::new(0).into())
   });
-  DefPrimitive!("\\skipdef Token SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\skipdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\skip", Glue::new(0).into())
   });
-  DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\muskipdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\muskip", MuGlue::new(0).into())
   });
-  DefPrimitive!("\\toksdef Token SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\toksdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\toks", Tokens!().into())
+  });
+
+  // Candidate for use defining plain's \alloc@ and latex's \e@alloc
+  DefMacro!("\\lx@alloc@ DefToken {} {} DefToken", sub[(typ,tracker,allocator,cs)] {
+    use latexml_core::binding::def::dialect::allocate_register;
+    let type_str = typ.to_string();
+    let tracker_str = tracker.to_string();
+    let allocator_str = allocator.to_string();
+    // Check if allocator is a register-shorthand type (\countdef, \dimendef, etc.)
+    let is_stored = matches!(allocator_str.as_str(),
+      "\\countdef" | "\\dimendef" | "\\skipdef" | "\\muskipdef" | "\\toksdef");
+    let next = if is_stored {
+      // Use the register allocation system
+      if let Some(addr) = allocate_register(&type_str)? {
+        // Extract the number part from e.g. "\\count256"
+        addr.trim_start_matches(&type_str).to_string()
+      } else {
+        s!("0")
+      }
+    } else {
+      let xnext = state::lookup_number(&tracker_str).unwrap_or(Number::new(0));
+      let next = xnext.value_of() + 1;
+      next.to_string()
+    };
+    state::assign_value(&tracker_str,
+      Number::new(next.parse::<i64>().unwrap_or(0)), Some(Scope::Global));
+    let mut result: Vec<Token> = vec![T_CS!("\\allocationnumber")];
+    result.extend(Explode!(next));
+    result.push(T_CS!("\\relax"));
+    result.push(T_CS!("\\global"));
+    result.extend(allocator.unlist());
+    result.push(cs);
+    result.push(T_OTHER!("="));
+    result.push(T_CS!("\\allocationnumber"));
+    result
+  });
+
+  // Out of place, but utility for LaTeX-style \the<ctr>; used by Package's NewCounter
+  DefMacro!("\\lx@counter@arabic{}", sub[(ctr)] {
+    let ctr_name = Expand!(ctr).to_string();
+    ExplodeText!(CounterValue!(&ctr_name).value_of())
   });
 
   //======================================================================

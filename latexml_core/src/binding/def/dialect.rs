@@ -298,9 +298,8 @@ pub fn def_register<T: Into<RegisterValue>>(
       setter: options.setter,
       default: Some(value),
       value: None,
-      role: None,
       locator: gullet::get_locator(),
-      mathglyph: None,
+      ..Register::default()
     },
     Some(Scope::Global),
   );
@@ -837,6 +836,11 @@ pub fn def_constructor(
   // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*latexml_codegen::constructable::NARGS = $paramlist.get_num_args();
   let scope = options.scope;
+  let cs = if options.robust {
+    def_robust_cs(cs, options.locked, scope).expect("def_robust_cs for constructor failed")
+  } else {
+    cs
+  };
   let cs_name = cs.with_cs_name(ToString::to_string);
   let locked_key_opt = if options.locked {
     Some(s!("{cs_name}:locked"))

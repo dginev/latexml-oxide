@@ -392,4 +392,44 @@ LoadDefinitions!({
       sizer => sub[w] {
         script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post") }
   );
+
+  // Experiment: When we detect a math element containing solely a floating superscript in the
+  //             *Frontmatter* of a document, assume it is a note mark, and normalize it down to
+  //             plain text.
+  DefRewrite!(xpath =>
+    concat!(
+      "descendant::ltx:Math[child::ltx:XMath[child::ltx:XMApp[",
+      "(@role='FLOATSUPERSCRIPT' or @role='FLOATSUBSCRIPT') and ",
+      "not(preceding-sibling::*) and not(following-sibling::*) ",
+      "and not(./*/*[not(self::ltx:XMTok)]) ]]]"
+    ),
+    replace => sub[document, nodes] {
+      let math = nodes.pop().unwrap();
+      // Navigate: Math -> XMath -> XMApp -> XMArg -> text
+      let mut replaced = false;
+      let xmath_children: Vec<Node> = math.get_child_nodes().into_iter()
+        .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+      if let Some(xmath) = xmath_children.first() {
+        let xmapp_children: Vec<Node> = xmath.get_child_nodes().into_iter()
+          .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+        if let Some(xmapp) = xmapp_children.first() {
+          let role = xmapp.get_attribute("role").unwrap_or_default();
+          let xmarg_children: Vec<Node> = xmapp.get_child_nodes().into_iter()
+            .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+          if let Some(xmarg) = xmarg_children.first() {
+            let text = xmarg.get_content();
+            let qname = if role == "FLOATSUPERSCRIPT" { "ltx:sup" } else { "ltx:sub" };
+            document.open_element(qname, None, None)?;
+            document.get_node_mut().append_text(&text)?;
+            document.close_element(qname)?;
+            replaced = true;
+          }
+        }
+      }
+      if !replaced {
+        // should never happen, but just in case: put the math node back
+        document.get_node_mut().add_child(math)?;
+      }
+    }
+  );
 });

@@ -185,8 +185,11 @@ LoadDefinitions!({
     meaning => "times", role => "MULOP");
   DefMath!("\\lx@InvisibleComma", None, "\u{2063}", reversion => "", name => "", role => "PUNCT");
   DefMath!("\\lx@InvisiblePlus", None, "\u{2064}", reversion => "", name => "", meaning => "plus", role => "ADDOP");
+  // Perl: beforeDigest => sub { $_[0]->enterHorizontal; }
   DefConstructor!("\\lx@kludged{}",
     "?#isMath(<ltx:XMWrap rule='kludge'>#1</ltx:XMWrap>)(#1)",
+    // TODO: enter_horizontal causes io_test failure — investigate
+    // before_digest => { enter_horizontal(); },
     reversion => "#1");
   // TODO:
   // DefConstructor!("\\lx@padded[MuDimension]{MuDimension}{}",
@@ -458,7 +461,7 @@ LoadDefinitions!({
   DefMath!('=', None, '=', role => "RELOP",   meaning  => "equals");
   DefMath!('+', None, '+', role => "ADDOP",   meaning  => "plus");
   DefMath!('-', None, '-', role => "ADDOP",   meaning  => "minus");
-  DefMath!('*', None, '*', role => "MULOP",   meaning  => "times");
+  DefMath!('*', None, "\u{2217}", role => "MULOP", meaning => "times"); // U+2217 ASTERISK OPERATOR
   DefMath!('/', None, '/', role => "MULOP",   meaning  => "divide");
   DefMath!('!', None, '!', role => "POSTFIX", meaning  => "factorial");
   DefMath!(',', None, ',', role => "PUNCT");

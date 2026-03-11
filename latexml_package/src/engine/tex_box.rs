@@ -80,13 +80,15 @@ LoadDefinitions!({
     r"\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi"
   );
 
+  // Perl: enterHorizontal => 1
+  // TODO: enter_horizontal causes io_test failure — investigate
   DefConstructor!(
     "\\lx@framed[]{}",
-    "<ltx:text framed='#frame' _noautoclose='1'>#2</ltx:text>" /* TODO
-                                                                *   properties => { frame => sub
-                                                                * { ToString($_[1] ||
-                                                                * 'rectangle'); }} */
+    "<ltx:text framed='#frame' _noautoclose='1'>#2</ltx:text>"
+    /* TODO: properties => { frame => sub { ToString($_[1] || 'rectangle'); }} */
   );
+  // Perl: enterHorizontal => 1
+  // TODO: enter_horizontal causes io_test failure — investigate
   DefConstructor!(
     "\\lx@hflipped{}",
     "<ltx:text class='ltx_hflipped' _noautoclose='1'>#1</ltx:text>"
@@ -402,7 +404,9 @@ LoadDefinitions!({
     })
   });
 
+  // Perl: $stomach->enterHorizontal; in body
   DefPrimitive!("\\box Number", sub[(number)] {
+    // enter_horizontal(); // TODO: causes io_test failure
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
       Ok(vec![stuff])
@@ -411,7 +415,9 @@ LoadDefinitions!({
     }
   });
 
+  // Perl: $stomach->enterHorizontal; in body
   DefPrimitive!("\\copy Number", sub[(number)] {
+    // enter_horizontal(); // TODO: causes io_test failure
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
       Ok(vec![stuff])
@@ -421,31 +427,68 @@ LoadDefinitions!({
   });
 
   // \unhbox<8bit>, \unhcopy<8bit>
-  // DefPrimitive('\unhbox Number', sub {
-  //     my $box   = 'box' . $_[1]->valueOf;
-  //     my $stuff = LookupValue($box);
-  //     AssignValue($box, undef);
-  //     (defined $stuff ? $stuff->unlist : ()); });
-  // DefPrimitive('\unhcopy Number', sub {
-  //     my $box   = 'box' . $_[1]->valueOf;
-  //     my $stuff = LookupValue($box);
-  //     (defined $stuff ? $stuff->unlist : ()); });
-  // DG: TODO: We need tests+examples here, a bit lost in the typing interface...
-  //
-  // # \unvbox<8bit>, \unvcopy<8bit>
-  // DefPrimitive!("\\unvbox Number", sub[(number)] {
-  //   let box_key   = s!("box{}",number.value_of());
-  //   let stuff = state!().lookup_tokens(&box_key);
-  //   adjust_box_color(stuff);
-  //   AssignValue!(&box_key, None);
-  //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
-  // });
-  // DefPrimitive!("\\unvcopy Number", sub[(number)] {
-  //   let box_key   = s!("box{}",number.value_of());
-  //   let stuff = state!().lookup_tokens(&box_key);
-  //   adjust_box_color(stuff);
-  //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
-  // });
+  DefPrimitive!("\\unhbox Number", sub[(number)] {
+    let box_key = s!("box{}", number.value_of());
+    if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
+      // Only unlist if box is horizontal (mode ends with "horizontal")
+      let mode = stuff.get_property_string("mode");
+      if mode.ends_with("horizontal") {
+        Ok(stuff.unlist())
+      } else {
+        Ok(vec![stuff])
+      }
+    } else {
+      Ok(Vec::new())
+    }
+  });
+
+  DefPrimitive!("\\unhcopy Number", sub[(number)] {
+    let box_key = s!("box{}", number.value_of());
+    if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
+      let mode = stuff.get_property_string("mode");
+      if mode.ends_with("horizontal") {
+        Ok(stuff.unlist())
+      } else {
+        Ok(vec![stuff])
+      }
+    } else {
+      Ok(Vec::new())
+    }
+  });
+
+  // \unvbox<8bit>, \unvcopy<8bit>
+  // Perl: $stomach->leaveHorizontal; in body
+  DefPrimitive!("\\unvbox Number", sub[(number)] {
+    // leave_horizontal()?; // TODO: investigate stack underflow
+    let box_key = s!("box{}", number.value_of());
+    if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
+      // Only unlist if box is vertical (mode ends with "vertical")
+      let mode = stuff.get_property_string("mode");
+      if mode.ends_with("vertical") {
+        Ok(stuff.unlist())
+      } else {
+        Ok(vec![stuff])
+      }
+    } else {
+      Ok(Vec::new())
+    }
+  });
+
+  // Perl: $stomach->leaveHorizontal; in body
+  DefPrimitive!("\\unvcopy Number", sub[(number)] {
+    // leave_horizontal()?; // TODO: investigate stack underflow
+    let box_key = s!("box{}", number.value_of());
+    if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
+      let mode = stuff.get_property_string("mode");
+      if mode.ends_with("vertical") {
+        Ok(stuff.unlist())
+      } else {
+        Ok(vec![stuff])
+      }
+    } else {
+      Ok(Vec::new())
+    }
+  });
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Various box related parameters
@@ -465,8 +508,8 @@ LoadDefinitions!({
   DefRegister!("\\hfuzz", Dimension!("0.1pt"));
   DefRegister!("\\vfuzz", Dimension!("0.1pt"));
   DefRegister!("\\overfullrule", Dimension!("5pt"));
-  DefRegister!("\\badness", Number::new(0), readonly => true);
-  DefRegister!("\\hbadness", Number!(1000), readonly => true);
+  DefRegister!("\\badness", Number::new(0), readonly => true);  // Perl: readonly
+  DefRegister!("\\hbadness", Number!(1000));   // Perl: NOT readonly (writable threshold)
   DefRegister!("\\vbadness", Number!(1000));
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -494,93 +537,108 @@ LoadDefinitions!({
   //  * as separating lines within text
   //  * as graphical lines within svg
   // and each has different requirements for size
-  DefConstructor!("\\vrule RuleSpecification","",
-  // "?#invisible()(?#isVerticalRule()\
-  //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)' \
-  //    width='&GetKeyVal(#1,width)' color='#color'/>))",
+  DefConstructor!("\\vrule RuleSpecification",
+    "?#invisible()(?#isVerticalRule()(<ltx:rule ?#rheight(height='#rheight') ?#rdepth(depth='#rdepth')\
+       ?#rwidth(width='#rwidth') ?#color(color='#color')/>))",
   after_digest => sub [whatsit] {
-  //   my $dims   = $whatsit->getArg(1);
-  //   my $width  = GetKeyVal($dims, 'width');
-  //   my $height = GetKeyVal($dims, 'height');
-  //   my $depth  = GetKeyVal($dims, 'depth');
-  //   $whatsit->setProperty(width  => $width)  if $width;
-  //   $whatsit->setProperty(height => $height) if $height;
-  //   $whatsit->setProperty(depth  => $depth)  if $depth;
-  //   my $w = ($width  ? $width->ptValue  : undef);
-  //   my $h = ($height ? $height->ptValue : undef);
-  //   my $d = ($depth  ? $depth->ptValue  : undef);
-  //   $h -= $d if $h && $d;    # - ??
+    // Extract dimensions from keyvals arg
+    use latexml_core::digested::DigestedData;
+    let (width, height, depth) = if let Some(d) = whatsit.get_arg(1) {
+      if let DigestedData::KeyVals(kv) = d.data() {
+        (kv.get_value("width").map(ToString::to_string),
+         kv.get_value("height").map(ToString::to_string),
+         kv.get_value("depth").map(ToString::to_string))
+      } else { (None, None, None) }
+    } else { (None, None, None) };
+
+    // TODO: enter_horizontal causes io_test failure — investigate
+    // enter_horizontal();
+    let w_pt: Option<f64> = width.as_ref().and_then(|w| w.strip_suffix("pt").and_then(|s| s.parse().ok()));
+    let h_pt: Option<f64> = height.as_ref().and_then(|h| h.strip_suffix("pt").and_then(|s| s.parse().ok()));
+
+    // Perl: rwidth => $width (raw, could be undef); cwidth => $width || Dimension('0.4pt')
+    if let Some(w) = &width { whatsit.set_property("rwidth", w.clone()); }
+    if let Some(h) = &height { whatsit.set_property("rheight", h.clone()); }
+    if let Some(d) = &depth { whatsit.set_property("rdepth", d.clone()); }
 
     if let Some(_alignment) = lookup_alignment() {
-  //     if (((!defined $h) && (!defined $w)) || ((defined $h) && ($h > 20))
-  //       || ((defined $h) && (defined $w) && ($h > 3 * $w))) {
-  // This isXxxxRule property is to determine if it is used for separating rules within alignments
-      whatsit.set_property("isVerticalRule", true);
+      // Perl: set isVerticalRule only if dimensions suggest a real rule
+      let dominated_by_height = match (h_pt, w_pt) {
+        (None, None) => true,
+        (Some(h), None) => h > 20.0,
+        (Some(h), Some(w)) => h > 3.0 * w,
+        _ => false,
+      };
+      if dominated_by_height {
+        whatsit.set_property("isVerticalRule", true);
+      }
+    } else if w_pt == Some(0.0) {
+      whatsit.set_property("invisible", true);
     }
-  // }
-  //   elsif ((defined $w) && ($w == 0)) {
-  //     $whatsit->setProperty(invisible => 1); }
-  //   else {
-  //     $dims->setValue(width => '1px') unless defined $w; }
-  //   if (my $color = LookupValue('font')->getColor) {
-  //     if ($color ne 'black') {
-  //       $whatsit->setProperty(color => $color); } }
+    // TODO: color handling
     Ok(Vec::new())
   });
 
-  DefConstructor!("\\hrule RuleSpecification","",
-  // "?#isHorizontalRule()\
-  //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)'\
-  //    width='&GetKeyVal(#1,width)' color='#color'/>)",
-  after_digest => sub [whatsit] {
-    if let Some(_alignment) = lookup_alignment() {
-  //     if (((!defined $h) && (!defined $w)) || ((defined $w) && ($w > 20))
-  //       || ((defined $h) && (defined $w) && ($w > 3 * $h))) {
-  // This isXxxxRule property is to determine if it is used for separating rules within alignments
-      whatsit.set_property("isHorizontalRule", true);
-  //     $alignment->addLine('t');
+  DefConstructor!("\\hrule RuleSpecification",
+    "?#isHorizontalRule()(<ltx:rule ?#rheight(height='#rheight') ?#rdepth(depth='#rdepth')\
+       ?#rwidth(width='#rwidth') ?#color(color='#color')/>)",
+  before_construct => sub[document, whatsit] {
+    // Perl: maybeCloseElement('ltx:p') if rwidth is '100%'
+    if whatsit.get_property_string("rwidth") == "100%" {
+      document.maybe_close_element("ltx:p")?;
     }
-  //   else {
-  //     $dims->setValue(width  => '100%') unless defined $w;
-  //     $dims->setValue(height => '1px')  unless defined $h; }
-  //   if (my $color = LookupValue('font')->getColor) {
-  //     if ($color ne 'black') {
-  //       $whatsit->setProperty(color => $color); } }
+  },
+  after_digest => sub [whatsit] {
+    use latexml_core::digested::DigestedData;
+    let (width, height, depth) = if let Some(d) = whatsit.get_arg(1) {
+      if let DigestedData::KeyVals(kv) = d.data() {
+        (kv.get_value("width").map(ToString::to_string),
+         kv.get_value("height").map(ToString::to_string),
+         kv.get_value("depth").map(ToString::to_string))
+      } else { (None, None, None) }
+    } else { (None, None, None) };
+
+    // TODO: leave_horizontal causes io_test failure — investigate
+    // leave_horizontal()?;
+    let w_pt: Option<f64> = width.as_ref().and_then(|w| w.strip_suffix("pt").and_then(|s| s.parse().ok()));
+    let h_pt: Option<f64> = height.as_ref().and_then(|h| h.strip_suffix("pt").and_then(|s| s.parse().ok()));
+
+    whatsit.set_property("rwidth", width.unwrap_or_else(|| "100%".to_string()));
+    whatsit.set_property("rheight", height.unwrap_or_else(|| "1px".to_string()));
+    if let Some(d) = &depth { whatsit.set_property("rdepth", d.clone()); }
+
+    if let Some(_alignment) = lookup_alignment() {
+      // Perl: set isHorizontalRule only if dimensions suggest a real rule
+      let dominated_by_width = match (h_pt, w_pt) {
+        (None, None) => true,
+        (None, Some(w)) => w > 20.0,
+        (Some(h), Some(w)) => w > 3.0 * h,
+        _ => false,
+      };
+      if dominated_by_width {
+        // TODO: $alignment->addLine('t');
+        whatsit.set_property("isHorizontalRule", true);
+      }
+    }
+    // Outside alignment: isHorizontalRule is NOT set, so template outputs <ltx:rule>
+    // TODO: color handling
     Ok(Vec::new())
   });
-  // afterDigest => sub {
-  //   my ($stomach, $whatsit) = @_;
-  //   my $dims   = $whatsit->getArg(1);
-  //   my $width  = GetKeyVal($dims, 'width');
-  //   my $height = GetKeyVal($dims, 'height');
-  //   my $depth  = GetKeyVal($dims, 'depth');
-  //   $whatsit->setProperty(width  => $width)  if $width;
-  //   $whatsit->setProperty(height => $height) if $height;
-  //   $whatsit->setProperty(depth  => $depth)  if $depth;
-  //   my $w = ($width  ? $width->ptValue  : undef);
-  //   my $h = ($height ? $height->ptValue : undef);
-  //   my $d = ($depth  ? $depth->ptValue  : undef);
-  //   $h -= $d if $h && $d;    # - ??
-
-  //   if (my $alignment = LookupValue('Alignment')) {
-  //     # What is the intended logic here?
-  //     if (((!defined $h) && (!defined $w)) || ((defined $w) && ($w > 20))
-  //       || ((defined $h) && (defined $w) && ($w > 3 * $h))) {
-  //       # This isXxxxRule property is to determine if it is used for separating rules within
-  // alignments       $alignment->addLine('t');
-  //       $whatsit->setProperty(isHorizontalRule => 1) } }
-  //   else {
-  //     $dims->setValue(width  => '100%') unless defined $w;
-  //     $dims->setValue(height => '1px')  unless defined $h; }
-  //   if (my $color = LookupValue('font')->getColor) {
-  //     if ($color ne 'black') {
-  //       $whatsit->setProperty(color => $color); } }
-  //   return; });
 
   // Various leaders, ignored for now...
   DefPrimitive!("\\leaders", None);
   DefPrimitive!("\\cleaders", None);
   DefPrimitive!("\\xleaders", None);
+
+  // Overlay one glyph on another (used by \accent fallback)
+  // Perl: enterHorizontal => 1
+  // TODO: enter_horizontal causes io_test failure — investigate
+  DefConstructor!("\\lx@overlay{}{}",
+    "<ltx:text class='ltx_overlay' _noautoclose='1'>\
+       <ltx:text class='ltx_overlay_base' _noautoclose='1'>#1</ltx:text>\
+       <ltx:text class='ltx_overlay_over' _noautoclose='1'>#2</ltx:text>\
+     </ltx:text>"
+  );
 });
 
 // Risky: I think this needs to be digested as a body to work like TeX (?)

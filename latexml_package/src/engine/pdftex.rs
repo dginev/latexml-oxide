@@ -25,6 +25,12 @@ LoadDefinitions!({
   DefRegister!("\\efcode Token Number", Number::new(0));
   DefRegister!("\\lpcode Token Number", Number::new(0));
   DefRegister!("\\rpcode Token Number", Number::new(0));
+  DefRegister!("\\knaccode Token Number", Number::new(0));
+  DefRegister!("\\knbccode Token Number", Number::new(0));
+  DefRegister!("\\knbscode Token Number", Number::new(0));
+  DefRegister!("\\shbscode Token Number", Number::new(0));
+  DefRegister!("\\stbscode Token Number", Number::new(0));
+  DefRegister!("\\tagcode Token Number", Number::new(0));
 
   DefRegister!("\\pdfforcepagebox"                => Number::new(0));
   DefRegister!("\\pdfoptionalwaysusepdfpagebox"   => Number::new(0));
@@ -95,18 +101,19 @@ LoadDefinitions!({
   DefMacro!("\\pdffilesize{}", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
-    if let Some(_path) = find_file(&filepath,None) {
-      todo!();
-      // let stat = stat $path;
-      // (defined $stat[7]) ? Explode($stat[7]) : ();
+    if let Some(path) = find_file(&filepath, None) {
+      match std::fs::metadata(&path) {
+        Ok(meta) => Explode!(meta.len()),
+        Err(_) => Vec::new(),
+      }
     } else {
-      Tokens!() } });
+      Vec::new() } });
   DefMacro!("\\pdffilemoddate {}", None);
   DefMacro!("\\pdffiledump {}", None);
   // DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
-  DefRegister!("\\pdftexversion"           => Number::new(0));
+  DefRegister!("\\pdftexversion"           => Number::new(140));
   DefRegister!("\\pdflastobj"              => Number::new(0));
   DefRegister!("\\pdflastxform"            => Number::new(0));
   DefRegister!("\\pdflastximage"           => Number::new(0));

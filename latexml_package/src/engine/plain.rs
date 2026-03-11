@@ -22,6 +22,28 @@ static MATH_CHAR_NEGATIONS: Lazy<HashMap<String, &'static str>> = Lazy::new(|| {
   )
 });
 
+/// Set the role attribute on the last child element of the current node.
+/// Mirrors Perl's augmentDelimiterProperties for \bigl, \bigm, \bigr, etc.
+fn augment_delimiter_role(document: &mut Document, role: &str) -> Result<()> {
+  let current = document.get_node().clone();
+  let delim_opt = current
+    .get_child_nodes()
+    .into_iter()
+    .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+    .last();
+  if let Some(mut delim) = delim_opt {
+    // Only set role if current role is OPEN/MIDDLE/CLOSE/VERTBAR or absent
+    let current_role = delim.get_attribute("role");
+    match current_role.as_deref() {
+      None | Some("OPEN") | Some("MIDDLE") | Some("CLOSE") | Some("VERTBAR") => {
+        document.set_attribute(&mut delim, "role", role)?;
+      },
+      _ => {}, // leave non-delimiter roles alone
+    }
+  }
+  Ok(())
+}
+
 LoadDefinitions!({
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
@@ -54,12 +76,13 @@ LoadDefinitions!({
   //======================================================================
   // \choose & friends, also need VERY special argument handling
 
-  // DefMacro('\choose',
-  //   '\lx@generalized@over{\choose}{meaning=binomial,thickness=0pt,left=\lx@left(,right=\lx@
-  // right)}'); DefMacro('\brace',
-  //   '\lx@generalized@over{\brace}{thickness=0pt,left=\lx@left\{,right=\lx@right\}}');
-  // DefMacro('\brack',
-  //   '\lx@generalized@over{\brack}{thickness=0pt,left=\lx@left[,right=\lx@right]}');
+  DefMacro!("\\choose",
+    "\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left={\\lx@left(},right={\\lx@right)}}");
+  DefMacro!("\\brace",
+    "\\lx@generalized@over{\\brace}{thickness=0pt,left={\\lx@left\\{},right={\\lx@right\\}}}");
+  DefMacro!("\\brack",
+    "\\lx@generalized@over{\\brack}{thickness=0pt,left={\\lx@left[},right={\\lx@right]}}");
+
 
   //======================================================================
   // Special Characters.
@@ -163,9 +186,13 @@ LoadDefinitions!({
   // DefLigature(qr{ffi},              "\x{FB03}", fontTest => \&nonTypewriterT1);
   // DefLigature(qr{ffl},              "\x{FB04}", fontTest => \&nonTypewriterT1);
 
+  // Perl: enterHorizontal => 1
   DefConstructor!("\\TeX", "<ltx:text class='ltx_TeX_logo' cssstyle='letter-spacing:-0.2em; margin-right:0.2em'
   >T<ltx:text cssstyle='font-variant:small-caps;font-size:120%;' yoffset='-0.2ex'
   >e</ltx:text>X</ltx:text>",
+    locked => true,
+    // TODO: enter_horizontal causes io_test failure — investigate
+    // before_digest => { enter_horizontal(); },
     sizer => sub[_whatsit] { Ok((Dimension!("1.9em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
   DefPrimitive!("\\i", "\u{0131}"); // LATIN SMALL LETTER DOTLESS I
   DefPrimitive!("\\j", "\u{0237}");
@@ -286,8 +313,8 @@ LoadDefinitions!({
   DefPrimitive!("\\newbox DefToken", sub[(t)] {
     let n = lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
-    let empty_list = List::new(Vec::new());
-    AssignValue!(&s!("box{n}"), empty_list);
+    // Don't store a value — a newly allocated box is void.
+    // classify_box returns "" for None, making \ifvoid true.
     DefRegister!(t, None, Number(n), readonly => true);
   });
   DefPrimitive!("\\newhelp DefToken {}", sub[(token,arg)] {
@@ -350,6 +377,7 @@ LoadDefinitions!({
     DefRegister!(t, None, Number::new(0));
   });
   // \alloc@, \ch@ck
+  DefMacro!("\\ch@ck{}{}{}", None, locked => true);
 
   // TeX plain uses \newdimen, etc. for these.
   // Is there any advantage to that?
@@ -799,22 +827,22 @@ LoadDefinitions!({
 
   DefAccent!("\\`", '\u{0300}', "\u{0060}"); // COMBINING GRAVE ACCENT & GRAVE ACCENT
   DefAccent!("\\'", '\u{0301}', "\u{00B4}"); // COMBINING ACUTE ACCENT & ACUTE ACCENT
-  DefAccent!("\\^", '\u{0302}', "\u{005E}"); // COMBINING CIRCUMFLEX ACCENT & CIRCUMFLEX ACCENT
+  DefAccent!("\\^", '\u{0302}', "\u{02C6}"); // COMBINING CIRCUMFLEX ACCENT & MODIFIER LETTER CIRCUMFLEX ACCENT
   DefAccent!("\\\"", '\u{0308}', "\u{00A8}"); // COMBINING DIAERESIS & DIAERESIS
-  DefAccent!("\\~", '\u{0303}', "~"); // COMBINING TILDE
+  DefAccent!("\\~", '\u{0303}', "\u{02DC}"); // COMBINING TILDE & SMALL TILDE
   DefAccent!("\\=", '\u{0304}', "\u{00AF}"); // COMBINING MACRON & MACRON
   DefAccent!("\\.", '\u{0307}', "\u{02D9}"); // COMBINING DOT ABOVE & DOT ABOVE
   DefAccent!("\\u", '\u{0306}', "\u{02D8}"); // COMBINING BREVE & BREVE
   DefAccent!("\\v", '\u{030C}', "\u{02C7}"); // COMBINING CARON & CARON
-  DefAccent!("\\@ringaccent", '\u{030A}', "o"); // COMBINING RING ABOVE & non-combining
-  DefAccent!("\\r", '\u{030A}', "o"); // COMBINING RING ABOVE & non-combining
+  DefAccent!("\\@ringaccent", '\u{030A}', "\u{02DA}"); // COMBINING RING ABOVE & RING ABOVE
+  DefAccent!("\\r", '\u{030A}', "\u{02DA}"); // COMBINING RING ABOVE & RING ABOVE
   DefAccent!("\\H", '\u{030B}', "\u{02DD}"); // COMBINING DOUBLE ACUTE ACCENT & non-combining
   DefAccent!("\\c", '\u{0327}', "\u{00B8}", below => true); // COMBINING CEDILLA & CEDILLA
   // NOTE: The next two get define for math, as well; See below
   DefAccent!("\\@text@daccent", '\u{0323}', ".",       below => true); // COMBINING DOT BELOW & DOT (?)
   DefAccent!("\\@text@baccent", '\u{0331}', "\u{00AF}", below => true); // COMBINING MACRON BELOW  & MACRON
-  // COMBINING DOUBLE INVERTED BREVE & ???? What????
-  DefAccent!("\\t", '\u{0361}', "-");
+  // COMBINING DOUBLE INVERTED BREVE & NBSP + combining char as standalone
+  DefAccent!("\\t", '\u{0361}', "\u{00A0}\u{0361}");
   // this one"s actually defined in mathscinet.sty, but just stick it here!
   // COMBINING COMMA BELOW
   DefAccent!("\\lfhook", '\u{0326}', ",", below => true);
@@ -876,7 +904,7 @@ LoadDefinitions!({
   DefPrimitive!("\\rightarrowfill", None);
   DefPrimitive!("\\leftarrowfill", None);
   DefPrimitive!("\\upbracefill", None);
-  DefPrimitive!("\\downbracefil", None);
+  DefPrimitive!("\\downbracefill", None);
 
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());
@@ -1021,6 +1049,30 @@ LoadDefinitions!({
   locked => true); // Only in math!
   assign_mathcode('\'', 0x8000u16, None);
   Let!("'", "\\active@math@prime");
+
+  // Mathcode assignments from plain_base.pool.ltxml (Table 17.2 of TeX Book)
+  // Punctuation and operators
+  assign_mathcode('!', 0x5021u16, None);
+  assign_mathcode('(', 0x4028u16, None);
+  assign_mathcode(')', 0x5029u16, None);
+  assign_mathcode('+', 0x202Bu16, None);
+  assign_mathcode(',', 0x613Bu16, None);
+  assign_mathcode('-', 0x2200u16, None);
+  assign_mathcode('.', 0x013Au16, None);
+  assign_mathcode('/', 0x013Du16, None);
+  assign_mathcode(':', 0x303Au16, None);
+  assign_mathcode(';', 0x603Bu16, None);
+  assign_mathcode('<', 0x313Cu16, None);
+  assign_mathcode('=', 0x303Du16, None);
+  assign_mathcode('>', 0x313Eu16, None);
+  assign_mathcode('[', 0x405Bu16, None);
+  assign_mathcode('\\', 0x026Eu16, None);
+  assign_mathcode(']', 0x505Du16, None);
+  assign_mathcode('{', 0x4266u16, None);
+  assign_mathcode('|', 0x026Au16, None);
+  assign_mathcode('}', 0x5267u16, None);
+  // _ and ' are active (handled above/below)
+  assign_mathcode('_', 0x8000u16, None);
 
   //----------------------------------------------------------------------
   // Table 3.8. Variable-sized Symbols (from math_common.pool.ltxml)
@@ -1337,6 +1389,9 @@ LoadDefinitions!({
       }
     });
   //                   # But not these!
+  // Design note: Perl LaTeXML uses role 'ID' for \cdots, but latexml-oxide intentionally uses
+  // 'ELIDEOP' to enable dedicated grammar rules (e.g. `term mulop tight_term elideop`) that
+  // produce better-structured math parse trees for elision patterns like a⋅b⋅c⋯.
   DefMath!("\\cdots", None, "\u{22EF}", role => "ELIDEOP"); // MIDLINE HORIZONTAL ELLIPSIS
   DefMath!("\\ddots", None, "\u{22F1}", role => "ID"); // DOWN RIGHT DIAGONAL ELLIPSIS
   DefMath!("\\colon", None, ":",        role => "METARELOP"); // Seems like good default role
@@ -1359,6 +1414,7 @@ LoadDefinitions!({
 
   // Pretest for XMath to keep from interpreting math that the DOM may not allow!!
 
+  // Same design note as \cdots above: ELIDEOP is an intentional Rust-specific choice.
   DefMathLigature!("\u{22C5}\u{22C5}\u{22C5}", "\u{22EF}", role => "ELIDEOP", name => "cdots");
 
   DefLigature!(r"[.][.][.]", "\u{2026}", fontTest => sub[arg] {arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" }); // ldots
@@ -1386,6 +1442,7 @@ LoadDefinitions!({
     operator_role => "OVERACCENT", operator_stretchy => false); // RIGHTWARDS ARROW
   DefMath!("\\dot Digested",      "\u{02D9}", operator_role => "OVERACCENT"); // DOT ABOVE
   DefMath!("\\ddot Digested",     "\u{00A8}",  operator_role => "OVERACCENT"); // DIAERESIS
+  DefMath!("\\mathring Digested", "\u{030A}", operator_role => "OVERACCENT"); // COMBINING RING ABOVE
   DefMath!("\\widehat Digested", "\u{005E}", operator_role => "OVERACCENT"); // CIRCUMFLEX ACCENT [plain? also amsfonts]
   DefMath!("\\widetilde Digested", "\u{007E}", operator_role => "OVERACCENT"); // TILDE [plain? also amsfonts]
   // These aren"t handled as simple accents by TeX, so no Digested
@@ -1438,8 +1495,10 @@ LoadDefinitions!({
   DefMath!("\\rangle", None, "\u{27E9}", role => "CLOSE", stretchy => false); // RIGHT-POINTING ANGLE BRACKET
 
   // Not sure these should be defined here, or latex, or even latex compat mode.
-  DefMath!("\\lgroup", None, "(", font => { series => "bold" }, role => "OPEN",  stretchy => false);
-  DefMath!("\\rgroup", None, ")", font => { series => "bold" }, role => "CLOSE", stretchy => false);
+  // Updated to use proper codepoints: U+27EE/27EF (MATHEMATICAL LEFT/RIGHT FLATTENED PARENTHESIS)
+  // Perl commit "Lrgroup (#2762)": removed bold font, using dedicated Unicode codepoints.
+  DefMath!("\\lgroup", None, "\u{27EE}", role => "OPEN",  stretchy => false);
+  DefMath!("\\rgroup", None, "\u{27EF}", role => "CLOSE", stretchy => false);
   DefMath!("\\bracevert", None, "|", font => { series => "bold" }, role => "VERTBAR");
 
   // TeX marks some symbols as delimiters which can be used with \left,\right,
@@ -1477,35 +1536,34 @@ LoadDefinitions!({
   //     $document->setAttribute($delim, role => $role); }
   //   return; }
 
-  // TODO:
-  // The "m" versions are defined in e-Tex and other places.
-  // DefConstructor('\bigl {}', '#1', bounded => true, font => { size => 'big' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'OPEN'); });
-  // DefConstructor('\bigm {}', '#1', bounded => true, font => { size => 'big' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'MIDDLE'); });
-  // DefConstructor('\bigr {}', '#1', bounded => true, font => { size => 'big' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'CLOSE'); });
+  // Sized delimiters with role assignment (l=OPEN, m=MIDDLE, r=CLOSE)
+  DefConstructor!("\\bigl {}",  "#1", bounded => true, font => { size => 1.2 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "OPEN")?; });
+  DefConstructor!("\\bigm {}",  "#1", bounded => true, font => { size => 1.2 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "MIDDLE")?; });
+  DefConstructor!("\\bigr {}",  "#1", bounded => true, font => { size => 1.2 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "CLOSE")?; });
 
-  // DefConstructor('\Bigl {}', '#1', bounded => true, font => { size => 'Big' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'OPEN'); });
-  // DefConstructor('\Bigm {}', '#1', bounded => true, font => { size => 'Big' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'MIDDLE'); });
-  // DefConstructor('\Bigr {}', '#1', bounded => true, font => { size => 'Big' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'CLOSE'); });
+  DefConstructor!("\\Bigl {}",  "#1", bounded => true, font => { size => 1.6 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "OPEN")?; });
+  DefConstructor!("\\Bigm {}",  "#1", bounded => true, font => { size => 1.6 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "MIDDLE")?; });
+  DefConstructor!("\\Bigr {}",  "#1", bounded => true, font => { size => 1.6 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "CLOSE")?; });
 
-  // DefConstructor('\biggl {}', '#1', bounded => true, font => { size => 'bigg' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'OPEN'); });
-  // DefConstructor('\biggm {}', '#1', bounded => true, font => { size => 'bigg' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'MIDDLE'); });
-  // DefConstructor('\biggr {}', '#1', bounded => true, font => { size => 'bigg' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'CLOSE'); });
+  DefConstructor!("\\biggl {}", "#1", bounded => true, font => { size => 2.1 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "OPEN")?; });
+  DefConstructor!("\\biggm {}", "#1", bounded => true, font => { size => 2.1 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "MIDDLE")?; });
+  DefConstructor!("\\biggr {}", "#1", bounded => true, font => { size => 2.1 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "CLOSE")?; });
 
-  // DefConstructor('\Biggl {}', '#1', bounded => true, font => { size => 'Bigg' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'OPEN'); });
-  // DefConstructor('\Biggm {}', '#1', bounded => true, font => { size => 'Bigg' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'MIDDLE'); });
-  // DefConstructor('\Biggr {}', '#1', bounded => true, font => { size => 'Bigg' },
-  //   afterConstruct => sub { addDelimiterRole($_[0], 'CLOSE'); });
+  DefConstructor!("\\Biggl {}", "#1", bounded => true, font => { size => 2.6 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "OPEN")?; });
+  DefConstructor!("\\Biggm {}", "#1", bounded => true, font => { size => 2.6 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "MIDDLE")?; });
+  DefConstructor!("\\Biggr {}", "#1", bounded => true, font => { size => 2.6 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "CLOSE")?; });
 
   Let!(&T_CS!("\\vert"), T_OTHER!("|"));
   Let!("\\Vert", "\\|");
