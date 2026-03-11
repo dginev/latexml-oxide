@@ -274,12 +274,12 @@ LoadDefinitions!({
 
   DefConstructor!("\\lx@hyper@url@ Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
     "?#isMath(<ltx:XMWrap class='#class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
+    bounded   => true,
     properties => sub[args] {
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(stored_map!(
         "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None),
-        // TODO: why was class realized in Perl as "sub" closure here?
         "class"=> ltx_cmd
       ))
     },

@@ -5,6 +5,17 @@ LoadDefinitions!({
   //======================================================================
   // Ignored
   NewCounter!("page");
+  DefMacro!("\\@mkboth", "\\@gobbletwo");
+  DefMacro!("\\ps@empty",
+    "\\let\\@mkboth\\@gobbletwo\\let\\@oddhead\\@empty\\let\\@oddfoot\\@empty\
+     \\let\\@evenhead\\@empty\\let\\@evenfoot\\@empty");
+  DefMacro!("\\ps@plain",
+    "\\let\\@mkboth\\@gobbletwo\
+     \\let\\@oddhead\\@empty\\def\\@oddfoot{\\reset@font\\hfil\\thepage\
+     \\hfil}\\let\\@evenhead\\@empty\\let\\@evenfoot\\@oddfoot");
+  Let!("\\@leftmark", "\\@firstoftwo");
+  Let!("\\@rightmark", "\\@secondoftwo");
+
   DefPrimitive!("\\pagestyle{}", None);
   DefPrimitive!("\\thispagestyle{}", None);
   DefPrimitive!("\\markright{}", None);
@@ -16,10 +27,10 @@ LoadDefinitions!({
   DefPrimitive!("\\onecolumn", None);
 
   // Style parameters from Fig. C.3, p.182
-  DefRegister!("\\paperheight"     => Dimension::new(0));
-  DefRegister!("\\paperwidth"      => Dimension::new(0));
-  DefRegister!("\\textheight"      => Dimension::new(0));
-  DefRegister!("\\textwidth"       => Dimension!("6in"));
+  DefRegister!("\\paperheight"     => Dimension!("11in"));
+  DefRegister!("\\paperwidth"      => Dimension!("8.5in"));
+  DefRegister!("\\textheight"      => Dimension!("550pt"));
+  DefRegister!("\\textwidth"       => Dimension!("345pt"));
   DefRegister!("\\topmargin"       => Dimension::new(0));
   DefRegister!("\\headheight"      => Dimension::new(0));
   DefRegister!("\\headsep"         => Dimension::new(0));
@@ -29,8 +40,8 @@ LoadDefinitions!({
   DefRegister!("\\oddsidemargin"   => Dimension::new(0));
   DefRegister!("\\marginparwidth"  => Dimension::new(0));
   DefRegister!("\\marginparsep"    => Dimension::new(0));
-  DefRegister!("\\columnwidth"     => Dimension!("6in"));
-  DefRegister!("\\linewidth"       => Dimension!("6in"));
+  DefRegister!("\\columnwidth"     => Dimension!("345pt"));
+  DefRegister!("\\linewidth"       => Dimension!("345pt"));
   DefRegister!("\\baselinestretch" => Dimension::new(0));
 
   TeX!(

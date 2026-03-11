@@ -96,6 +96,8 @@ LoadDefinitions!({
   // \urldef{newcmd}\cmd{arg}
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
   // Along with the annoying \endgroup that must balance the one always preceding \Url!
+  DefRegister!("\\Urlmuskip", MuGlue::default());
+
   DefPrimitive!("\\urldef{}", sub[(cmd)] {
     let cmd = cmd.to_string();
     let expansion : Vec<Digested> = stomach::digest_next_body(Some(T_CS!("\\endgroup")))?;

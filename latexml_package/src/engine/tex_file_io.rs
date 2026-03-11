@@ -8,6 +8,17 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // File I/O Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  // Technically LaTeX, but Package also does file bookkeeping
+  DefMacro!(T_CS!("\\@currnamestack"), None, Tokens!());
+  Let!("\\@currname", "\\lx@empty");
+  Let!("\\@currext",  "\\lx@empty");
+  DefMacro!("\\lx@pushfilename",
+    r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}");
+  DefMacro!("\\lx@popfilename", r"\expandafter\lx@p@pfilename\@currnamestack\@nil");
+  DefMacro!("\\lx@p@pfilename {}{}{} Until:\\@nil",
+    r"\gdef\@currname{#1}\gdef\@currext{#2}\catcode`\@#3\relax\gdef\@currnamestack{#4}");
+
   //======================================================================
   // Low-level input
   //----------------------------------------------------------------------
@@ -63,23 +74,30 @@ LoadDefinitions!({
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
       AssignValue!("INCLUDE_COMMENTS", false);
       let mut tokens = Vec::new();
-      let mut level = 0;
+      let mut level: i32 = 0;
+      let mut discard = false;
       let mut mouth = mouth_obj.borrow_mut();
       while let Some(t) = mouth.read_token() {
         let cc = t.get_catcode();
-        if cc != Catcode::MARKER {
+        if cc == Catcode::BEGIN { level += 1; }
+        if cc == Catcode::END   { level -= 1; }
+        if level < 0            { discard = true; } // silently discard extra } & read till EOL
+        if !discard && cc != Catcode::MARKER {
           tokens.push(t);
         }
-        match cc {
-          Catcode::BEGIN => {level += 1},
-          Catcode::END => {level -= 1},
-          _ => {}
-        };
-        if level == 0 && mouth.is_eol() {
+        if (level == 0 || discard) && mouth.is_eol() {
           break;
         }
       }
       egroup()?;
+      if level > 0 {
+        Error!("unexpected", "unbalanced",
+          s!("Runaway definition? File ended within \\read with unbalanced {{"));
+        // Append T_END tokens to balance (non-TeX patch to avoid Fatal)
+        for _ in 0..level {
+          tokens.push(T_END!());
+        }
+      }
       DefMacro!(token, None, Tokens::new(tokens), nopack_parameters => true);
     }
   });

@@ -17,6 +17,8 @@ LoadDefinitions!({
   RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml");
   // Namespace for arbitrary data attributes (mapped to data-xxx in html5)
   RegisterNamespace!("data" => "http://dlmf.nist.gov/LaTeXML/data");
+  // Needed for ARIA accessibility attributes
+  RegisterNamespace!("aria" => "http://www.w3.org/ns/wai-aria");
 
   // This is used for plain TeX, but needs to be undone for LaTeX (or...)!
   RelaxNGSchema!("LaTeXML");

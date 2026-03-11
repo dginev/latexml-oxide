@@ -208,6 +208,8 @@ LoadDefinitions!({
     None,
     Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath"))
   );
+  // protected => true prevents read_x_token(fully_expand=false) from expanding this
+  // (needed for lx_change_case_tokens to preserve \ensuremath{} content unchanged)
   DefMacro!("\\@ensuremath{}", sub[(stuff)] {
     if lookup_bool("IN_MATH") {
       stuff.unlist()
@@ -217,7 +219,7 @@ LoadDefinitions!({
       result.push(T_MATH!());
       result
     }
-  });
+  }, protected => true);
 
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => sub[document, node] {

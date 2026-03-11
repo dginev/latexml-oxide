@@ -70,6 +70,9 @@ LoadDefinitions!({
       }
     }
   );
+  DefRegister!("\\defaultskewchar",   Number!(-1));
+  DefRegister!("\\defaulthyphenchar", Number!(45)); // ord('-') = 45
+
   // Not sure what this should be...
   DefPrimitive!("\\nullfont", None, font => {family => "nullfont"});
 
@@ -132,7 +135,7 @@ LoadDefinitions!({
     '\u{0335}', '!', '\u{201D}', '#', '$', '%', '&', '\u{2019}', '(', ')', '*', '+', ',', '-', '.',
     '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '\u{00A1}', '=', '\u{00BF}',
     '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
-    'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\u{201C}', ']', '^', '\u{02D9}', '\u{2018}',
+    'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\u{201C}', ']', '\u{02C6}', '\u{02D9}', '\u{2018}',
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
     't', 'u', 'v', 'w', 'x', 'y', 'z', '\u{2013}', '\u{2014}', '\u{02DD}', '\u{007E}', '\u{00A8}'
   ]); // TODO: do we really need '\u{00A0}'\x{0335} as a single entry?
@@ -262,10 +265,13 @@ LoadDefinitions!({
       '\u{23A7}', '\u{23AB}', '\u{23A9}', '\u{23AD}', '\u{23A8}', '\u{23AC}', '\u{23AA}',
       '\u{23D0}', // l.bot.paren r.bot.paren l.paren.ext     r.paren.ext
       '\u{239D}', '\u{23A0}', '\u{239C}', '\u{239F}', '\u{27E8}', '\u{27E9}', '\u{2294}',
-      '\u{2294}', '\u{222E}', '\u{222E}', '\u{2299}', '\u{2299}', '\u{2295}', '\u{2295}',
-      '\u{2297}', '\u{2297}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}', '\u{22C2}',
-      '\u{228C}', '\u{2227}', '\u{2228}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}',
-      '\u{22C2}', '\u{228C}', '\u{2227}', '\u{2228}', '\u{2210}', '\u{2210}', '\u{005E}',
+      // ointctr  ointctr  odot(big) odot(big) oplus(big) oplus(big) otimes(big) otimes(big)
+      '\u{2294}', '\u{222E}', '\u{222E}', '\u{2A00}', '\u{2A00}', '\u{2A01}', '\u{2A01}',
+      // (Perl: 2A00=N-ARY CIRCLED DOT, 2A01=N-ARY CIRCLED PLUS, 2A02=N-ARY CIRCLED TIMES)
+      '\u{2A02}', '\u{2A02}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}', '\u{22C2}',
+      // uplus(big)    wedge(big)  vee(big)
+      '\u{2A04}', '\u{22C0}', '\u{22C1}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}',
+      '\u{22C2}', '\u{2A04}', '\u{22C0}', '\u{22C1}', '\u{2210}', '\u{2210}', '\u{005E}',
       '\u{005E}', '\u{005E}', '\u{007E}', '\u{007E}', '\u{007E}', '[', ']', '\u{230A}', '\u{230B}',
       '\u{2308}', '\u{2309}', '{', '}',
       // [missing rad frags]     double arrow ext.

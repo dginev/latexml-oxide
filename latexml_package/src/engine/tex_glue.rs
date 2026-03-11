@@ -36,6 +36,7 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Glue Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  DefRegister!("\\lx@default@jot", Dimension::from_str("3pt")?);
 
   //======================================================================
   // Inserting, removing glue
@@ -50,16 +51,19 @@ LoadDefinitions!({
     unref!(args => length_digested);
     let length = match  length_digested.data() {
       DigestedData::RegisterValue(v) => v.into(),
-      _ => Dimension::default() // should this also be an error?
+      _ => Dimension::default()
     };
     let parent = document.get_node();
-    //    Debug("HSKIP ".ToString($length)." at ".$document->getNodeQName($parent));
     if document::with_node_qname(parent, |name| name == "svg:g") {
-      todo!(); // copy over perl
+      // TODO: SVG translate handling
+      // TODO: isMath => XMHint element
     } else {
       document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;
     }
   },
+  // Perl: enterHorizontal => 1
+  // TODO: enter_horizontal causes io_test failure — investigate
+  // before_digest => { enter_horizontal(); },
   properties => sub[args] {
     unref!(args => length);
     Ok(stored_map!(
@@ -71,16 +75,16 @@ LoadDefinitions!({
   // then we also should put the desired spacing on a style attribute?!?!?!
   DefConstructor!("\\vskip Glue", sub[document, args, _props] {
     unref!(args => length);
-    let length = length.pt_value(None);
-
-    if length > 10.0 {    // Or what!?!?!?!
-      if document.is_closeable("ltx:para").is_some() {
-        document.close_element("ltx:para")?;
-      } else if document.is_openable("ltx:break") {
-        document.insert_element("ltx:break", Vec::new(), None)?;
-      }
+    let pt = length.pt_value(None);
+    if pt <= 0.0 {
+      // Negative or zero skip: do nothing
+    } else if pt < 4.0 && document.is_closeable("ltx:p").is_some() {
+      document.close_element("ltx:p")?;
+    } else if document.is_closeable("ltx:para").is_some() {
+      document.close_element("ltx:para")?;
     }},
-     // TODO: "height" property
+    // Perl: leaveHorizontal => 1
+    before_digest => { leave_horizontal()?; },
     properties => {stored_map!("isSpace" => true, "isSkip"=>true,
       "isVerticalSpace" => true, "isBreak" => true) }
   );
@@ -99,6 +103,10 @@ LoadDefinitions!({
         break;
       }
     }
+    // Restore any comment boxes that were scanned past
+    for comment in comments.into_iter().rev() {
+      push_box_list(comment);
+    }
   });
 
   //======================================================================
@@ -109,6 +117,8 @@ LoadDefinitions!({
   // glue in a horizontal or math list. \hfilneg          d  cancels the stretchability of \hfil.
   // \hss              d  inserts infinitely stretchable and shrinkable horizontal glue in a
   // horizontal or math list.
+  // Perl: all have enterHorizontal => 1
+  // TODO: enter_horizontal() causes io_test failure — investigate
   DefPrimitive!("\\hss", None);
   DefPrimitive!("\\hfilneg", None);
   DefPrimitive!("\\hfil", {
@@ -139,7 +149,8 @@ LoadDefinitions!({
   // \vss              d  insert infinitely stretchable and shrinkable vertical glue in a vertical
   // list.
 
-  // Stuff to ignore for now...
+  // Perl: all have leaveHorizontal => 1
+  // TODO: leave_horizontal causes io_test failure — investigate stack underflow
   DefPrimitive!("\\vfil", None);
   DefPrimitive!("\\vfill", None);
   DefPrimitive!("\\vss", None);

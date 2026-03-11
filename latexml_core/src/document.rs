@@ -966,8 +966,8 @@ impl Document {
     // to have as text. return decode('UTF-8',
     // $self->getDocument->toString($format)); } This uses our own serializer
     // emulating libxml2's heuristic indentation.
-    //  return $self->serialize_aux($self->getDocument, 0, 0, 1); }
-    // This uses our own serializer w/ correct indentation rules.
+    // This uses our own serializer with the correct schema-based indentation rules:
+    // noindent_children=true when the element can contain #PCDATA per the schema.
     self.serialize_aux(&self.document.as_node(), 0, false, false)
   }
 
@@ -1037,11 +1037,12 @@ impl Document {
         }
 
         let noindent_children: bool = if heuristic {
-          // This emulates libxml2"s heuristic
-          noindent
-            || children
-              .iter()
-              .any(|e| e.get_type() == Some(NodeType::TextNode))
+          // libxml2's heuristic: inline (noindent) if ANY direct child is a text node.
+          // Crucially, this does NOT propagate the parent's noindent — each element
+          // independently checks its own children for text nodes.
+          children
+            .iter()
+            .any(|e| e.get_type() == Some(NodeType::TextNode))
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = get_node_qname(node);

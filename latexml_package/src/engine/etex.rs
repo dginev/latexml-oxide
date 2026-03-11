@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use latexml_core::common::glue::FillCode;
 
 LoadDefinitions!({
   // See http://tex.loria.fr/moteurs/etex_ref.html
@@ -60,8 +61,13 @@ LoadDefinitions!({
   //======================================================================
   // 3.3 Environmental enquiries
 
-  DefMacro!("\\eTeXrevision", { Explode!(".2") });
+  DefMacro!("\\eTeXrevision", { Explode!(".6") });
   DefRegister!("\\eTeXversion" => Number::new(2));
+
+  // Conditional almost tracks this information, but not quite in the needed form. Punt!
+  DefRegister!("\\currentiflevel",  Number!(0), readonly => true);
+  DefRegister!("\\currentifbranch", Number!(0), readonly => true);
+  DefRegister!("\\currentiftype",   Number!(0), readonly => true);
 
   // \currentgrouplevel
   DefRegister!("\\currentgrouplevel", Number!(0), readonly => true,
@@ -82,6 +88,169 @@ LoadDefinitions!({
 
   // # ???
   DefRegister!("\\lastnodetype", Number::new(0));
+
+  // \fontcharht <font><8bit>
+  // \fontcharwd <font><8bit>
+  // \fontchardp <font><8bit>
+  // \fontcharic <font><8bit>
+  DefParameterType!(FontDef, sub[_inner, _extra] {
+    gullet::read_token()?.unwrap_or(T_CS!("\\relax"))
+  });
+
+  DefRegister!("\\fontcharht FontDef Number", Dimension::new(0),
+    readonly => true,
+    getter => sub[args] {
+      let font_tok = args.remove(0).expected_token();
+      let code = args.remove(0).expect_number().value_of();
+      let key = s!("fontinfo_{}", font_tok.to_string());
+      let font_rc = with_value(&key, |v| {
+        if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
+      });
+      if let (Some(font), true) = (font_rc, code >= 0 && code <= 127) {
+        if let Some(ch) = char::from_u32(code as u32) {
+          let (_, h, _) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
+          return Some(RegisterValue::Dimension(h));
+        }
+      }
+      Some(RegisterValue::Dimension(Dimension::new(0)))
+    });
+
+  DefRegister!("\\fontcharwd FontDef Number", Dimension::new(0),
+    readonly => true,
+    getter => sub[args] {
+      let font_tok = args.remove(0).expected_token();
+      let code = args.remove(0).expect_number().value_of();
+      let key = s!("fontinfo_{}", font_tok.to_string());
+      let font_rc = with_value(&key, |v| {
+        if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
+      });
+      if let (Some(font), true) = (font_rc, code >= 0 && code <= 127) {
+        if let Some(ch) = char::from_u32(code as u32) {
+          let (w, _, _) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
+          return Some(RegisterValue::Dimension(w));
+        }
+      }
+      Some(RegisterValue::Dimension(Dimension::new(0)))
+    });
+
+  DefRegister!("\\fontchardp FontDef Number", Dimension::new(0),
+    readonly => true,
+    getter => sub[args] {
+      let font_tok = args.remove(0).expected_token();
+      let code = args.remove(0).expect_number().value_of();
+      let key = s!("fontinfo_{}", font_tok.to_string());
+      let font_rc = with_value(&key, |v| {
+        if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
+      });
+      if let (Some(font), true) = (font_rc, code >= 0 && code <= 127) {
+        if let Some(ch) = char::from_u32(code as u32) {
+          let (_, _, d) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
+          return Some(RegisterValue::Dimension(d));
+        }
+      }
+      Some(RegisterValue::Dimension(Dimension::new(0)))
+    });
+
+  // italic correction not yet computed; return 0 as in Perl
+  DefRegister!("\\fontcharic FontDef Number", Dimension::new(0),
+    readonly => true,
+    getter => sub[args] {
+      let _font_tok = args.remove(0);
+      let _code     = args.remove(0);
+      Some(RegisterValue::Dimension(Dimension::new(0)))
+    });
+
+  // \parshapeindent, \parshapelength, \parshapedimen
+  // Assuming parshape is stored as an even list of [indent0, length0, indent1, length1, ...]
+  // These access the indentation or length of the n-th (1-based) line, or the last line.
+  DefRegister!("\\parshapeindent Number", Dimension::new(0),
+    readonly => true,
+    getter => sub[args] {
+      let n = {
+        let v = args.remove(0).value_of();
+        if v < 0 { 0usize } else { v as usize }
+      };
+      if n == 0 {
+        return Some(RegisterValue::Dimension(Dimension::new(0)));
+      }
+      with_value("parshape", |v| {
+        if let Some(Stored::VecDequeStored(shape)) = v {
+          let idx = 2 * n - 2;
+          let d = if idx < shape.len() {
+            shape.get(idx)
+          } else {
+            // fallback: second-to-last element (last indent)
+            shape.get(shape.len().saturating_sub(2))
+          };
+          d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
+            .map(RegisterValue::Dimension)
+            .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+        } else {
+          Some(RegisterValue::Dimension(Dimension::new(0)))
+        }
+      })
+    });
+
+  DefRegister!("\\parshapelength Number", Dimension::new(0),
+    readonly => true,
+    getter => sub[args] {
+      let n = {
+        let v = args.remove(0).value_of();
+        if v < 0 { 0usize } else { v as usize }
+      };
+      if n == 0 {
+        return Some(RegisterValue::Dimension(Dimension::new(0)));
+      }
+      with_value("parshape", |v| {
+        if let Some(Stored::VecDequeStored(shape)) = v {
+          let idx = 2 * n - 1;
+          let d = if idx < shape.len() {
+            shape.get(idx)
+          } else {
+            // fallback: last element
+            shape.back()
+          };
+          d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
+            .map(RegisterValue::Dimension)
+            .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+        } else {
+          Some(RegisterValue::Dimension(Dimension::new(0)))
+        }
+      })
+    });
+
+  DefRegister!("\\parshapedimen Number", Dimension::new(0),
+    readonly => true,
+    getter => sub[args] {
+      let n = {
+        let v = args.remove(0).value_of();
+        if v < 0 { 0usize } else { v as usize }
+      };
+      if n == 0 {
+        return Some(RegisterValue::Dimension(Dimension::new(0)));
+      }
+      with_value("parshape", |v| {
+        if let Some(Stored::VecDequeStored(shape)) = v {
+          let primary_idx = n - 1;
+          let d = if primary_idx < shape.len() {
+            shape.get(primary_idx)
+          } else {
+            // fallback: odd n-1 → last (a length), even n-1 → second-to-last (an indent)
+            let fallback_idx = if (n - 1) % 2 == 0 {
+              shape.len().saturating_sub(2)
+            } else {
+              shape.len().saturating_sub(1)
+            };
+            shape.get(fallback_idx)
+          };
+          d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
+            .map(RegisterValue::Dimension)
+            .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+        } else {
+          Some(RegisterValue::Dimension(Dimension::new(0)))
+        }
+      })
+    });
 
   // #======================================================================
   // # 3.4 Generalization of the \mark concept: a class of \marks
@@ -126,11 +295,10 @@ LoadDefinitions!({
   // # Should show all open groups & their type.
   DefPrimitive!("\\showgroups", None);
 
-  // # \showtokens <generaltext>
-  // DefPrimitive!("\\showtokens GeneralText",  sub {
-  //   Note("> " . writableTokens($_[1]));
-  //   Note($_[0]->getLocator->toString());
-  //   return; });
+  // \showtokens <generaltext> — logs the token text (no document output)
+  DefPrimitive!("\\showtokens GeneralText", sub[(tokens)] {
+    Note!(s!("> {}", writable_tokens(&tokens)));
+  });
 
   DefRegister!("\\tracingassigns"    => Number::new(0)); // ???
   DefRegister!("\\tracinggroups"     => Number::new(0));
@@ -147,15 +315,18 @@ LoadDefinitions!({
   // # NOTE: These tokens are NOT used anywhere (yet?)
   DefRegister!("\\everyeof", Tokens!());
 
-  // TODO:
-  // DefConstructor('\middle Token', '#1',
-  //   afterConstruct => sub {
-  //     my ($document) = @_;
-  //     my $current = $document->getNode;
-  //     my $delim = $document->getLastChildElement($current) || $current;
-  //     $document->setAttribute($delim, role     => 'MIDDLE');
-  //     $document->setAttribute($delim, stretchy => 'true');
-  //     return; });
+  // \middle Token — sets role='MIDDLE' and stretchy='true' on the produced delimiter element
+  DefConstructor!("\\middle Token", "#1",
+    after_construct => sub[document, _whatsit] {
+      let current = document.get_node().clone();
+      let delim_opt = current.get_child_nodes()
+        .into_iter()
+        .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+        .last();
+      let mut delim = delim_opt.unwrap_or_else(|| current.clone());
+      document.set_attribute(&mut delim, "role", "MIDDLE")?;
+      document.set_attribute(&mut delim, "stretchy", "true")?;
+    });
 
   // \unless someif
   DefConditional!("\\unless Token", sub[(if_token)] {
@@ -262,7 +433,105 @@ LoadDefinitions!({
     args.remove(0).expect_mu_glue()
   });
 
+  // Parts of Glue
+  DefRegister!("\\gluestretchorder Glue", Number::new(0),
+    getter => sub[args] {
+      let g = args.remove(0).expect_glue();
+      let order: i64 = match g.pfill {
+        None                  => 0,
+        Some(FillCode::Fil)   => 1,
+        Some(FillCode::Fill)  => 2,
+        Some(FillCode::Filll) => 3,
+      };
+      Some(RegisterValue::Number(Number::new(order)))
+    });
+
+  DefRegister!("\\glueshrinkorder Glue", Number::new(0),
+    getter => sub[args] {
+      let g = args.remove(0).expect_glue();
+      let order: i64 = match g.mfill {
+        None                  => 0,
+        Some(FillCode::Fil)   => 1,
+        Some(FillCode::Fill)  => 2,
+        Some(FillCode::Filll) => 3,
+      };
+      Some(RegisterValue::Number(Number::new(order)))
+    });
+
+  DefRegister!("\\gluestretch Glue", Dimension::new(0),
+    getter => sub[args] {
+      let g = args.remove(0).expect_glue();
+      Some(RegisterValue::Dimension(Dimension::new(g.plus.unwrap_or(0))))
+    });
+
+  DefRegister!("\\glueshrink Glue", Dimension::new(0),
+    getter => sub[args] {
+      let g = args.remove(0).expect_glue();
+      Some(RegisterValue::Dimension(Dimension::new(g.minus.unwrap_or(0))))
+    });
+
+  DefPrimitive!("\\pagediscards",  None);
+  DefPrimitive!("\\splitdiscards", None);
+  DefMacro!("\\reserveinserts{}", None);
+
   DefPrimitive!("\\pdftexcmds@directlua{}", None);
+
+  // \lastlinefit
+  DefRegister!("\\lastlinefit", Number::new(0));
+
+  // Penalty array registers (\interlinepenalties, \clubpenalties, etc.)
+  // Mirrors Perl's eTeXPenaltiesGetter / eTeXPenaltiesSetter helpers.
+  // The getter reads an index N from the gullet (not from args), returns the N-th penalty.
+  // The setter receives the count N as its assigned value, then reads N penalties from the gullet.
+  fn etex_penalties_getter(name: &str) -> Option<RegisterValue> {
+    let n = gullet::read_number().unwrap_or_default().value_of();
+    let n = if n < 0 { 0i64 } else { n } as usize;
+    if n == 0 {
+      return Some(RegisterValue::Number(Number::new(0)));
+    }
+    with_value(name, |v| {
+      if let Some(Stored::VecDequeStored(p)) = v {
+        let idx = n - 1;
+        let item = if idx < p.len() { p.get(idx) } else { p.back() };
+        item.and_then(|s| if let Stored::Number(num) = s { Some(*num) } else { None })
+          .map(RegisterValue::Number)
+          .or(Some(RegisterValue::Number(Number::new(0))))
+      } else {
+        Some(RegisterValue::Number(Number::new(0)))
+      }
+    })
+  }
+
+  fn etex_penalties_setter(name: &str, value: RegisterValue) {
+    let n = value.value_of();
+    let n = if n < 0 { 0i64 } else { n } as usize;
+    let mut penalties = VecDeque::new();
+    for _ in 0..n {
+      let p = gullet::read_number().unwrap_or_default();
+      penalties.push_back(Stored::Number(p));
+    }
+    assign_value(
+      name,
+      if n > 0 { Stored::VecDequeStored(penalties) } else { Stored::None },
+      None,
+    );
+  }
+
+  DefRegister!("\\interlinepenalties", Number::new(0),
+    getter => sub[_args] { etex_penalties_getter("interlinepenalties") },
+    setter => sub[value, _scope, _args] { etex_penalties_setter("interlinepenalties", value) });
+
+  DefRegister!("\\clubpenalties", Number::new(0),
+    getter => sub[_args] { etex_penalties_getter("clubpenalties") },
+    setter => sub[value, _scope, _args] { etex_penalties_setter("clubpenalties", value) });
+
+  DefRegister!("\\widowpenalties", Number::new(0),
+    getter => sub[_args] { etex_penalties_getter("widowpenalties") },
+    setter => sub[value, _scope, _args] { etex_penalties_setter("widowpenalties", value) });
+
+  DefRegister!("\\displaywidowpenalties", Number::new(0),
+    getter => sub[_args] { etex_penalties_getter("displaywidowpenalties") },
+    setter => sub[value, _scope, _args] { etex_penalties_setter("displaywidowpenalties", value) });
 
   // Not really sure where this comes from; pdftex?
   DefRegister!("\\synctex", Number::new(0));

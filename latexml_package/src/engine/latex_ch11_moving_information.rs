@@ -66,6 +66,7 @@ LoadDefinitions!({
   // # * is added to accommodate hyperref
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
     "<ltx:ref labelref='#label' _force_font='true'/>",
+    robust => true,
     properties => sub[args] {
       unpack_opt_ref!(args => _star, label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
@@ -108,9 +109,19 @@ LoadDefinitions!({
       return Ok(Tokens!());
     }
     let jobname = Expand!(T_CS!("\\jobname")).to_string();
-    let bbl_path     = FindFile!(&jobname, type => "bbl");
-    let mut missing_bibs = String::new();
-    if lookup_bool("NO_BIBTEX") {
+    let bbl_path = FindFile!(&jobname, type => "bbl");
+    // BIB_CONFIG is a list of phases; default ['bib', 'bbl'] means try bib first, fall back to bbl.
+    // 'nobibtex' option sets it to ['bbl'] to skip bibtex entirely.
+    let default_bib_config: Rc<[SymStr]> = Rc::new([arena::pin("bib"), arena::pin("bbl")]);
+    let bib_config = match lookup_value("BIB_CONFIG") {
+      Some(Stored::Strings(v)) => v,
+      _ => default_bib_config,
+    };
+    if bib_config.is_empty() {
+      Info!("missing", "bib_config", "BIB_CONFIG was empty, ignoring bibliography phase.");
+      return Ok(Tokens!());
+    }
+    if arena::with(bib_config[0], |s| s == "bbl") {
       if bbl_path.is_none() {
         Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
         Ok(Tokens!())
@@ -118,6 +129,7 @@ LoadDefinitions!({
         Ok(bbl_clause)
       }
     } else {
+      let mut missing_bibs = String::new();
       for bf in bib_files.split(',') {
         let bib_path = FindFile!(bf, type => "bib");
         if bib_path.is_none() {
@@ -416,7 +428,7 @@ LoadDefinitions!({
 
     Ok(Invocation!(T_CS!("\\@@cite"),
       vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)]))
-  });
+  }, robust => true);
 
   // # NOTE: Eventually needs to be recognized by MakeBibliography
   // DefConstructor('\nocite Semiverbatim',

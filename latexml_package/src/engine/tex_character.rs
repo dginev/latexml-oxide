@@ -17,9 +17,11 @@ LoadDefinitions!({
   // \ (ctrl space)    c  inserts a control space.
   // \char           c  provides access to one of the 256 characters in a font.
   //----------------------------------------------------------------------
+  // Perl: $_[0]->enterHorizontal; Box(' ', ...isSpace => 1, width => '0.5em')
+  // TODO: enter_horizontal(); causes io_test failure — investigate
   DefPrimitive!("\\ ", {
     Tbox::new(
-      arena::pin_static("\u{00A0}"),
+      arena::pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\ ")),
@@ -28,6 +30,8 @@ LoadDefinitions!({
     )
   });
 
+  // Perl: $stomach->enterHorizontal; Box($glyph, $adjfont, ...)
+  // TODO: enter_horizontal(); causes io_test failure — investigate
   DefPrimitive!("\\char Number", sub[(number)] {
     let number_tks = number.revert().unwrap_or_default().unlist();
     let decoded = match font::decode(number.value_of() as u8, None, false) {
@@ -119,12 +123,21 @@ LoadDefinitions!({
   DefMacro!("\\romannumeral Number", sub[(num)] { roman!(num.value_of()) });
   // 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // suggests all characters except spaces are returned in category code Other, i.e. Explode()
+  // Mirrors Perl: CS → explode with escape char; SPACE → keep as space; ESCAPE/COMMENT/INVALID → empty;
+  // all other catcodes → T_OTHER with same text.
   DefMacro!("\\string Token", sub[(token)] {
-    let mut s = token.to_string();
-    if s.starts_with('\\') {
-      s = escapechar() + &s[1..];
+    match token.code {
+      Catcode::CS => {
+        let mut s = token.to_string();
+        if s.starts_with('\\') {
+          s = escapechar() + &s[1..];
+        }
+        Explode!(s)
+      }
+      Catcode::SPACE => vec![token],
+      Catcode::ESCAPE | Catcode::COMMENT | Catcode::INVALID => vec![],
+      _ => vec![Token { text: token.text, code: Catcode::OTHER }],
     }
-    Explode!(s)
   });
 
   //======================================================================
@@ -151,7 +164,7 @@ LoadDefinitions!({
   DefRegister!("\\sfcode Number", Number::new(0),
   getter=> sub[args] {
   let code = lookup_sfcode(args[0].value_of() as u8 as char);
-    Number::new(code.unwrap_or_default() as i64)
+    Number::new(code.unwrap_or(1000) as i64)  // Perl default is 1000 for undefined sfcodes
   },
   setter => sub[value, scope, args] {
     assign_sfcode(args[0].value_of() as u8 as char,
@@ -200,16 +213,62 @@ pub fn apply_accent(
   let font = letter_box.get_font()?.map(|f| Rc::new((*f).clone()));
 
   let mut string: String = letter_box.to_string();
-  string = string.replace('\u{0131}', "i").replace('\u{0237}', "j");
+  // Perl: only replace dotless i/j with dotted for over-accents.
+  // Over-accents are those placed above the letter (combiner range U+0300–U+0315 approx.).
+  // Below accents (cedilla U+0327, dot-below U+0323, macron-below U+0331, comma-below U+0326)
+  // preserve dotless i/j so combining works correctly.
+  // U+0300–U+0315 covers grave/acute/circumflex/tilde/macron/dot-above/diaeresis/ring/caron etc.
+  // U+0361 (COMBINING DOUBLE INVERTED BREVE from \t) is also an above accent.
+  let is_above_accent = matches!(combiningchar, '\u{0300}'..='\u{0315}' | '\u{0361}');
+  if is_above_accent {
+    string = string.replace('\u{0131}', "i").replace('\u{0237}', "j");
+  }
   string = SPACE_RE.replace_all(&string, " ").into_owned();
+
+  // Perl: applying combining dot above (U+0307) to i or j is redundant — remove it.
+  let effective_combiner = if combiningchar == '\u{0307}' && string.contains(|c| c == 'i' || c == 'j') {
+    '\0'  // sentinel for "no combining char"
+  } else {
+    combiningchar
+  };
+
+  // HACK to mimic real LaTeX's encoding mechanism (from Perl).
+  // Necessary for \~, \^ in urls, ascii, typewriter contexts.
+  // In typewriter font or ASCII encoding, produce the plain character
+  // instead of applying the combining accent.
+  let typewriter_replacement = match standalonechar {
+    "\u{02DC}" => Some("~"),  // SMALL TILDE → ~
+    "\u{02C6}" => Some("^"),  // MODIFIER CIRCUMFLEX → ^
+    _ => None,
+  };
+  if let Some(replacement) = typewriter_replacement {
+    if let Some(ref f) = font {
+      let is_typewriter = f.get_family().is_some_and(|fam| fam.as_ref() == "typewriter");
+      let is_ascii = f.get_encoding().is_some_and(|enc| enc.as_ref() == "ASCII");
+      if is_typewriter || is_ascii {
+        return Ok(Tbox::new(
+          arena::pin(format!("{replacement}{string}")),
+          font,
+          Some(locator),
+          reversion.unwrap_or(Tokens!()),
+          SymHashMap::default(),
+        ));
+      }
+    }
+  }
+
   let text = if string.chars().all(|l| l.is_whitespace()) {
     standalonechar.to_string()
   } else {
     let mut letters = string.chars();
     let lead_letter = letters.next().unwrap();
-    let mut combined_str = compose(lead_letter, combiningchar)
-      .map(|c| c.to_string())
-      .unwrap_or_else(|| format!("{lead_letter}{combiningchar}"));
+    let mut combined_str = if effective_combiner == '\0' {
+      lead_letter.to_string()
+    } else {
+      compose(lead_letter, effective_combiner)
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| format!("{lead_letter}{effective_combiner}"))
+    };
     for rest in letters {
       combined_str.push(rest);
     }

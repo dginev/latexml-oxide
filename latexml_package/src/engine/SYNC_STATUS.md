@@ -281,6 +281,35 @@ Generated 2026-03-11. Covers all engine files.
 
 ---
 
+## Core Engine Sync (non-engine files)
+
+### mouth.rs (vs Mouth.pm + Mouth/file.pm) — MINOR
+- **Fixed:** `at_letter` option now separate from `fordefinitions` (Perl keeps them independent)
+- **Fixed:** `note_message` includes "w/@ other" suffix per Perl
+- **Fixed:** File validation: readable check (PermissionDenied) and binary file detection
+- **Fixed:** Input encoding: latin-1 support, `\u{FFFD}`→space replacement (Perl's Encode::FB_DEFAULT behavior)
+- **Fixed:** `load_tex_definitions` now passes `at_letter: true` (matches Perl `$loadtexdefinitions_options`)
+- **Fixed:** `raw_tex()` uses `at_letter: true` instead of manual catcode save/restore
+- **Remaining:** Full encoding support (only latin-1 handled; other encodings fall back to UTF-8 lossy)
+- **Remaining:** `FoodType::Binding` variant commented out
+- **Remaining:** Token caching optimization not implemented (performance only, low priority)
+
+### stomach.rs (vs Stomach.pm) — MINOR
+- **Fixed:** `enter_horizontal`, `leave_horizontal`, `leave_horizontal_internal` implemented
+- **Fixed:** `bindable_mode()` mapping, `BOUND_MODE` tracking
+- **Fixed:** MODE initialized to "vertical" (was "text")
+- **Remaining:** Test regressions from MODE changes need one-by-one investigation
+
+### state.rs (vs State.pm) — MINOR
+- **Fixed:** `assign_value_inplace` implemented (Perl's 'inplace' scope)
+- Remaining gaps tracked separately
+
+### register.rs (vs Definition/Register.pm) — MINOR
+- **Fixed:** `new_math_chardef` with `chardef_props` HashMap
+- Remaining gaps tracked separately
+
+---
+
 ## Cross-Cutting Infrastructure Gaps
 
 1. **`enterHorizontal`/`leaveHorizontal`** — Core infrastructure now implemented in `stomach.rs`:

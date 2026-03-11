@@ -87,10 +87,18 @@ LoadDefinitions!({
   // nondisplay math mode. \ifmmode          c  is true if TeX is in math or display math mode.
   // \ifvmode          c  is true if TeX is in vertical or internal vertical mode.
 
-  // NOTE: We don't KNOW if we're in vertical, horizontal or inner mode!!!!!!!
-  DefConditional!("\\ifvmode", { false });
-  DefConditional!("\\ifhmode", { false });
-  DefConditional!("\\ifinner", { false });
+  DefConditional!("\\ifvmode", {
+    let mode = state::lookup_string("MODE");
+    mode.ends_with("vertical")
+  });
+  DefConditional!("\\ifhmode", {
+    let mode = state::lookup_string("MODE");
+    mode.ends_with("horizontal")
+  });
+  DefConditional!("\\ifinner", {
+    let mode = state::lookup_string("MODE");
+    matches!(mode.as_str(), "restricted_horizontal" | "internal_vertical" | "math")
+  });
   DefConditional!("\\ifmmode", { lookup_bool("IN_MATH") });
 
   //======================================================================

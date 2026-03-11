@@ -80,6 +80,40 @@ LoadDefinitions!({
     Some(Scope::Global)
   );
 
+  // Dash and space primitives used by ligatures and other mechanisms
+  DefPrimitive!("\\lx@endash", {
+    Tbox::new(
+      arena::pin_static("\u{2013}"),
+      None, None,
+      Tokens!(T_CS!("\\lx@endash")),
+      SymHashMap::default(),
+    )
+  });
+  DefPrimitive!("\\lx@emdash", {
+    Tbox::new(
+      arena::pin_static("\u{2014}"),
+      None, None,
+      Tokens!(T_CS!("\\lx@emdash")),
+      SymHashMap::default(),
+    )
+  });
+  DefPrimitive!("\\lx@NBSP", {
+    Tbox::new(
+      arena::pin_static("\u{00A0}"),
+      None, None,
+      Tokens!(T_CS!("\\lx@NBSP")),
+      stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
+    )
+  });
+  DefPrimitive!("\\lx@nobreakspace", {
+    Tbox::new(
+      arena::pin_static("\u{00A0}"),
+      None, None,
+      Tokens!(T_CS!("\\lx@nobreakspace")),
+      stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
+    )
+  });
+
   DefConditional!("\\if@in@preamble", { lookup_bool("inPreamble") });
 
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
