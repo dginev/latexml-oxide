@@ -17,6 +17,7 @@ use std::fmt::Write as _;
 use std::rc::Rc;
 
 use crate::TexMode;
+use crate::util::radix::radix_alpha;
 use crate::common::arena::{
   self, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, SymHashMap, SymStr,
   XML_ID_SYM,
@@ -251,18 +252,9 @@ impl Document {
       Cow::Borrowed(&*local_font)
     };
 
-    if let Some(_comment) = node.get_attribute("_pre_comment") {
-      if let Some(_parent) = node.get_parent() {
-        // parent.: Option<Node> insert_before(XML::LibXML::Comment.new(comment), node);
-        todo!();
-      }
-    }
-    if let Some(_comment) = node.get_attribute("_comment") {
-      if let Some(_parent) = node.get_parent() {
-        // parent.add_next_sibling(XML::c0.:(omment.new(comment), );
-        todo!();
-      }
-    }
+    // TODO: _pre_comment / _comment insertion requires create_comment support in libxml wrapper
+    // Perl: parent.insertBefore(XML::LibXML::Comment.new(comment), node)
+    // Perl: parent.insertAfter(XML::LibXML::Comment.new(comment), node)
 
     let mut keys_to_remove: Vec<SymStr> = Vec::new();
     let mut attrs_to_set: Vec<(SymStr, SymStr)> = Vec::new();
@@ -1449,7 +1441,11 @@ impl Document {
         // todo!();
       }
       self.node.append_text(text)?;
-    } else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
+    }
+    // TODO: Perl lines 1139-1144 — if lastChild is a comment node and its previous sibling is
+    // a text node, swap them to avoid splitting text runs, then recurse.
+    // Requires insertAfter support.
+    else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None)?;
       Debug!(
@@ -1971,6 +1967,70 @@ impl Document {
     self.add_ss_values(node, "class", class)
   }
 
+  /// Remove space-separated values from an attribute.
+  /// Perl: sub removeSSValues (Document.pm lines 1423-1437)
+  pub fn remove_ss_values(&mut self, node: &mut Node, key: &str, values: &str) {
+    let to_remove: Vec<&str> = values.split_whitespace().collect();
+    if to_remove.is_empty() {
+      return;
+    }
+    if let Some(current) = node.get_attribute(key) {
+      let updated: Vec<&str> = current
+        .split_whitespace()
+        .filter(|v| !to_remove.contains(v))
+        .collect();
+      if updated.is_empty() {
+        let _ = node.remove_attribute(key);
+      } else {
+        let mut sorted = updated;
+        sorted.sort();
+        node.set_attribute(key, &sorted.join(" "))
+          .unwrap_or_default();
+      }
+    }
+  }
+
+  /// Remove CSS class from element.
+  /// Perl: sub removeClass (Document.pm lines 1439-1442)
+  pub fn remove_class(&mut self, node: &mut Node, class: &str) {
+    self.remove_ss_values(node, "class", class);
+  }
+
+  /// Float to a node that can accept the given attribute.
+  /// Returns the previous node so it can be restored after setting the attribute.
+  /// Perl: sub floatToAttribute (Document.pm lines 1080-1092)
+  pub fn float_to_attribute(&mut self, key: &str) -> Option<Node> {
+    let candidates = self.get_insertion_candidates(&self.node);
+    for candidate in candidates {
+      let qname_sym = get_node_qname(&candidate);
+      if sym_can_have_attribute(qname_sym, arena::pin(key)) {
+        let savenode = self.node.clone();
+        self.set_node(&candidate);
+        return Some(savenode);
+      }
+    }
+    Warn!(
+      "malformed",
+      key,
+      s!("No open node can get attribute '{}'", key)
+    );
+    None
+  }
+
+  /// Check if a node is currently open (i.e., is or contains the current node).
+  /// Perl: sub isOpen (Document.pm lines 1998-2006)
+  pub fn is_open(&self, node: &Node) -> bool {
+    if *node == self.node {
+      return true;
+    }
+    for child in node.get_child_nodes() {
+      if self.is_open(&child) {
+        return true;
+      }
+    }
+    false
+  }
+
   //**********************************************************************
   // Association of nodes and ids (xml:id)
 
@@ -1979,20 +2039,30 @@ impl Document {
   /// Usually this association will be maintained by the methods
   /// that create nodes or set attributes.
   fn record_id(&mut self, id: &str) -> String {
-    if let Some(_prev) = self.idstore.get(id) {
+    let needs_modify = if let Some(prev) = self.idstore.get(id) {
       // Whoops! Already assigned!!!
       // Can we recover?
-      todo!();
-      // if ! self.node.is_same_node(prev) {
-      //   let badid = id.to_string();
-      //   let id = self.modify_id(id);
-      //   Info!("malformed", "id", node, "Duplicated attribute xml:id",
-      //     "Using id='$id' on " . Stringify($node),
-      //     "id='$badid' already set on " . Stringify($prev));
-      // }
-    }
-    self.idstore.insert(id.to_string(), self.node.clone());
-    id.to_string()
+      self.node != *prev
+    } else {
+      false
+    };
+    let final_id = if needs_modify {
+      let badid = id.to_string();
+      let new_id = self.modify_id(badid.clone());
+      Info!(
+        "malformed",
+        "id",
+        s!(
+          "Duplicated attribute xml:id. Using id='{}'",
+          new_id
+        )
+      );
+      new_id
+    } else {
+      id.to_string()
+    };
+    self.idstore.insert(final_id.clone(), self.node.clone());
+    final_id
   }
 
   /// Records the association of the given `node` with the `id`,
@@ -2050,20 +2120,34 @@ impl Document {
     }
   }
 
-  /// Get a new, related, but unique id
+  /// Get a new, related, but unique id.
   /// Sneaky option: try "ID_SUFFIX" as a suffix for id, first.
+  /// Perl: sub modifyID (Document.pm lines 1483-1494)
   pub fn modify_id(&mut self, id: String) -> String {
     if self.idstore.contains_key(&id) {
       // Whoops! Already assigned!!!
       // Can we recover?
       let badid = id;
-      // if (!$LaTeXML::Core::Document::ID_SUFFIX
-      // || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
-      // foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
-      //   return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
-      // Error!("malformed", "id", "Automatic incrementing of ID counters failed", self,
-      // s!("Last alternative for '{}' is '{}'",id,badid)); } } TODO
-      s!("{}a", badid)
+      // First try ID_SUFFIX if set
+      if let Some(Stored::String(suffix)) = state::lookup_value("ID_SUFFIX") {
+        let suffixed = s!("{}{}", badid, arena::to_string(suffix));
+        if !self.idstore.contains_key(&suffixed) {
+          return suffixed;
+        }
+      }
+      // Try radix_alpha(1) through radix_alpha(26^3)
+      // Gotta give up, eventually; is 3 letters enough?
+      for s1 in 1_i64..=(26 * 26 * 26) {
+        let candidate = s!("{}{}", badid, radix_alpha(s1));
+        if !self.idstore.contains_key(&candidate) {
+          return candidate;
+        }
+      }
+      log::error!(
+        "malformed:id: Automatic incrementing of ID counters failed for '{}'",
+        badid
+      );
+      badid
     } else {
       id
     }
@@ -2968,7 +3052,7 @@ impl Document {
         //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
         return Ok(Some(savenode));
       }
-    } else if can_contain_node_somehow(&self.node, qname).is_some() {
+    } else if can_contain_node_somehow(&self.node, qname).is_none() {
       Warn!(
         "malformed",
         qname,
@@ -2984,8 +3068,14 @@ impl Document {
   // whether it has an id (and ideally either a refnum or title)
   pub fn float_to_label(&mut self) -> Option<Node> {
     let key = "labels";
+    // Perl: start from lastChild of current node if it's an element
+    let start = if self.node.get_type() == Some(NodeType::ElementNode) {
+      self.node.get_last_child().unwrap_or_else(|| self.node.clone())
+    } else {
+      self.node.clone()
+    };
     let ancestors: Vec<Node> = self
-      .get_insertion_candidates(&self.node)
+      .get_insertion_candidates(&start)
       .into_iter()
       .filter(|node| node.get_type() == Some(NodeType::ElementNode))
       .collect();
