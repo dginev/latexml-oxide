@@ -243,7 +243,11 @@ pub fn endgroup() -> Result<()> {
 pub fn set_mode(mode: &str) -> Result<()> {
   let prevmode = lookup_string("MODE");
   let ismath = mode.ends_with("math");
-  assign_value("MODE", arena::pin(mode), Some(Scope::Local));
+  // Perl: beginMode maps to internal mode names, but set_mode stores as-is
+  // We also set BOUND_MODE so end_mode can find it
+  let bound_mode = bindable_mode(mode).unwrap_or(mode);
+  assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
+  assign_value("MODE", arena::pin(bound_mode), Some(Scope::Local));
   assign_value("IN_MATH", ismath, Some(Scope::Local));
   if mode == prevmode {
   } else if ismath {
@@ -286,42 +290,63 @@ pub fn set_mode(mode: &str) -> Result<()> {
   Ok(())
 }
 
+/// Map user-facing mode names to internal bound mode names.
+/// Perl: our %bindable_mode = (text => 'restricted_horizontal', ...)
+fn bindable_mode(umode: &str) -> Option<&'static str> {
+  match umode {
+    "text" | "restricted_horizontal" => Some("restricted_horizontal"),
+    "vertical" | "internal_vertical" => Some("internal_vertical"),
+    "math" | "inline_math" => Some("math"),
+    "display_math" => Some("display_math"),
+    _ => None,
+  }
+}
+
 /// Begin processing in `mode`; one of "text", "display-math" or "inline-math".
 /// This also begins a new level of grouping and switches to a font
 /// appropriate for the mode.
 pub fn begin_mode(mode: &str) -> Result<()> {
-  push_stack_frame(false); // Effectively bgroup
-  // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
-  assign_value("BOUND_MODE", arena::pin(mode), Some(Scope::Local));
-  set_mode(mode)?;
-  Ok(())
+  if let Some(bound_mode) = bindable_mode(mode) {
+    push_stack_frame(false); // Effectively bgroup
+    // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
+    assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
+    set_mode(bound_mode)?;
+    Ok(())
+  } else {
+    Warn!("unexpected", mode, s!("Cannot enter {mode} mode"));
+    Ok(())
+  }
 }
 /// End processing in `mode`; an error is signalled if `stomach` is not
 /// currently in `mode`.  This also ends a level of grouping.
 pub fn end_mode(mode: &str) -> Result<()> {
-  // Perl checks BOUND_MODE, not MODE, for the frame check
-  if !is_value_bound("BOUND_MODE", Some(0))
-    || (lookup_string("BOUND_MODE") != mode)
-  {
-    // Last stack frame was NOT a mode switch, or was a switch to a different mode
-    let message = s!(
-      "Attempt to end mode `{}` in `{}`",
-      mode,
-      lookup_string("MODE")
-    );
-    let category = match get_current_token() {
-      Some(ref token) => token.to_string(),
-      None => String::from("mode"),
-    };
-    Error!("unexpected", category, &message); // self.currentFrameMessage);
-  } else {
-    // Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
-    if mode.ends_with("vertical") {
-      leave_horizontal_internal();
+  if let Some(bound_mode) = bindable_mode(mode) {
+    // Perl checks BOUND_MODE, not MODE, for the frame check
+    if !is_value_bound("BOUND_MODE", Some(0))
+      || (lookup_string("BOUND_MODE") != bound_mode)
+    {
+      // Last stack frame was NOT a mode switch, or was a switch to a different mode
+      let message = s!(
+        "Attempt to end mode `{}` in `{}`",
+        mode,
+        lookup_string("MODE")
+      );
+      let category = match get_current_token() {
+        Some(ref token) => token.to_string(),
+        None => String::from("mode"),
+      };
+      Error!("unexpected", category, &message);
+    } else {
+      // Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
+      if bound_mode.ends_with("vertical") {
+        leave_horizontal_internal();
+      }
+      // Don't pop if there's an error; maybe we'll recover?
+      pop_stack_frame(false)?;
     }
-    // Don't pop if there's an error; maybe we'll recover?
-    pop_stack_frame(false)?;
-  } // Effectively egroup.
+  } else {
+    Warn!("unexpected", mode, s!("Cannot end {mode} mode"));
+  }
   Ok(())
 }
 
