@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::common::arena::SymHashMap as HashMap;
+use crate::common::arena::{self, SymHashMap as HashMap};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -135,30 +135,63 @@ impl Whatsit {
   /// under "trailer".
   pub fn set_body(&mut self, mut body: Vec<Digested>) {
     let trailer_opt = body.pop();
-    let mode = if self.is_math() {
-      TexMode::Math
-    } else {
-      TexMode::Text
-    };
-
+    // Perl: get mode from whatsit's own properties (not just isMath binary)
+    let mode_opt: Option<String> = self
+      .get_property("mode")
+      .and_then(|p| match &*p {
+        Stored::String(s) => Some(arena::to_string(*s)),
+        _ => None,
+      });
     let mut list = List::new(body);
-    if self.is_math() {
-      list.mode = Some(mode);
+    // Set mode from whatsit's own mode property (Perl: $mode from $$self{properties}{mode})
+    if let Some(ref mode_str) = mode_opt {
+      list.set_property("mode", Stored::String(arena::pin(mode_str)));
+      if mode_str.contains("math") {
+        list.mode = Some(TexMode::Math);
+      }
+    } else if self.is_math() {
+      list.mode = Some(TexMode::Math);
     }
     self.properties.insert("body", Digested::from(list).into());
     if let Some(digested) = trailer_opt {
-      if let DigestedData::Whatsit(ref trailer) = digested.data() {
-        // And copy any otherwise undefined properties from the trailer
-        let trailer_val = trailer.borrow();
-        let props = trailer_val.get_properties();
-        for (prop, value) in props {
-          self
-            .properties
-            .entry_sym(*prop)
-            .or_insert_with(|| value.clone());
-        }
-        self.properties.insert("trailer", digested.clone().into());
+      self.properties.insert("trailer", digested.clone().into());
+      // And copy any otherwise undefined properties from the trailer
+      // Perl: copies properties from trailer (typically a Whatsit for \end{...})
+      match digested.data() {
+        DigestedData::Whatsit(ref trailer) => {
+          let trailer_val = trailer.borrow();
+          let props = trailer_val.get_properties();
+          for (prop, value) in props {
+            self
+              .properties
+              .entry_sym(*prop)
+              .or_insert_with(|| value.clone());
+          }
+        },
+        DigestedData::TBox(ref tbox) => {
+          let tbox_val = tbox.borrow();
+          let props = tbox_val.get_properties();
+          for (prop, value) in props {
+            self
+              .properties
+              .entry_sym(*prop)
+              .or_insert_with(|| value.clone());
+          }
+        },
+        DigestedData::List(ref list) => {
+          let list_val = list.borrow();
+          let props = list_val.get_properties();
+          for (prop, value) in props {
+            self
+              .properties
+              .entry_sym(*prop)
+              .or_insert_with(|| value.clone());
+          }
+        },
+        _ => {},
       }
+      // TODO: Perl line 84 — create locator range from self to trailer
+      // $$self{properties}{locator} = Locator->newRange($self->getLocator, $trailer->getLocator);
     }
   }
 

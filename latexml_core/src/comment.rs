@@ -29,7 +29,14 @@ impl BoxOps for Comment {
   where FnR: FnOnce(&HashMap<Stored>) -> R {
     caller(&NO_PROPERTIES)
   }
-  fn get_property(&self, _key: &str) -> Option<Cow<'_, Stored>> { None }
+  fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
+    // Perl: Comment->getProperty('isEmpty') returns 1
+    if key == "isEmpty" {
+      Some(Cow::Owned(Stored::Bool(true)))
+    } else {
+      None
+    }
+  }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {} // no-op
   fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed(&self.0)) }
   fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
