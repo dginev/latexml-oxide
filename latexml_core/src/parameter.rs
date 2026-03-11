@@ -332,6 +332,14 @@ impl Parameter {
     };
     self.revert_catcodes()?;
 
+    // Perl: experiment: skip spaces after a successful OptionalMatch read
+    if !value_arg.is_none()
+      && self.optional
+      && arena::with(self.name, |name| name.starts_with("OptionalMatch"))
+    {
+      gullet::skip_spaces()?;
+    }
+
     let checked_value =
       if !self.optional && !self.novalue && (value_arg.is_none() && self.predigest.is_none()) {
         // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens>
