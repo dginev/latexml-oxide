@@ -482,6 +482,7 @@ fn load_tex_definitions(request: &str, pathname: &str) -> Result<()> {
   };
   let pathname_mouth = Mouth::create(pathname, MouthOptions {
     fordefinitions: true,
+    at_letter: true,
     notes: true,
     content,
     ..MouthOptions::default()
