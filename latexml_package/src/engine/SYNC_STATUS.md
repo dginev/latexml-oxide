@@ -321,7 +321,17 @@ Generated 2026-03-11. Covers all engine files.
 
 ### state.rs (vs State.pm) — MINOR
 - **Fixed:** `assign_value_inplace` implemented (Perl's 'inplace' scope)
-- Remaining gaps tracked separately
+- **Fixed:** `begin_semiverbatim()` now sets MODE to `restricted_horizontal` (was `text`), matching Perl
+- **Fixed:** `begin_semiverbatim()` now calls `assign_mathcode('\'', 0x8000)` (was TODO)
+- **Synced:** All value/catcode/mathcode/sfcode/lccode/uccode/delcode lookups and assignments
+- **Synced:** All definition/meaning lookups (lookupDefinition, lookupExpandable, lookupConditional, isDontExpandable, lookupDigestableDefinition)
+- **Synced:** Frame management (pushFrame, popFrame, getFrameDepth, isValueBound)
+- **Synced:** Scope management (activateScope, deactivateScope, getKnownScopes, getActiveScopes)
+- **Synced:** Prefix management (setPrefix, getPrefix, clearPrefixes)
+- **Synced:** Unit conversion (convertUnit)
+- **Deferred:** `pushDaemonFrame`/`popDaemonFrame`/`daemon_copy` — commented out (daemon mode not yet needed)
+- **Deferred:** `valueInFrame()` — frame-level positional lookup (debugging aid, rarely used)
+- **Note:** Status tracking (`noteStatus`/`getStatus`/`getStatusMessage`/`getStatusCode`) lives in `error.rs` REPORT singleton rather than in State, already functional
 
 ### register.rs (vs Definition/Register.pm) — MINOR
 - **Fixed:** `new_math_chardef` with `chardef_props` HashMap

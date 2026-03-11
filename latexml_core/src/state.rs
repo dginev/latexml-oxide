@@ -1751,7 +1751,7 @@ pub fn get_frame_depth() -> usize {
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   // Is this a good/safe enough shorthand, or should we really be doing beginMode?
   push_frame();
-  assign_value("MODE", "text", None);
+  assign_value("MODE", "restricted_horizontal", None);
   assign_value("IN_MATH", false, None);
   let mut all_specials: Vec<char> = Vec::new();
   if let Some(extra) = extraspecials {
@@ -1770,8 +1770,7 @@ pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   for special_char in all_specials {
     assign_catcode(special_char, Catcode::OTHER, Some(Scope::Local));
   }
-  // TODO:
-  // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
+  assign_mathcode('\'', 0x8000u16, Some(Scope::Local));
   // try to stay as ASCII as possible
   if let Some(ref current_font) = lookup_font() {
     let local_font = current_font.merge(fontmap!(encoding => "ASCII"));
