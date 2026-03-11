@@ -436,8 +436,9 @@ Rust equivalents: `enter_horizontal()` / `leave_horizontal()?` / `leave_horizont
 ## Core Modules Sync Status
 
 ### mouth.rs (vs Mouth.pm) — OK
-- Synced 2026-03-11 (commit 727bd4f49)
+- Synced 2026-03-11 (commit 727bd4f49, 94713d882)
 - `at_letter` option, input encoding (latin-1 + FFFD→space), file validation, `note_message "w/@ other"`
+- **Fixed:** `at_letter` restore now uses `unwrap_or(Catcode::OTHER)` — was silently leaving `@` as LETTER when saved catcode was None (not in table). Fixed meaning_test and inin_test.
 
 ### gullet.rs (vs Gullet.pm) — MINOR
 - Synced 2026-03-11 (commit 3ca5b0198)
@@ -468,3 +469,57 @@ Rust equivalents: `enter_horizontal()` / `leave_horizontal()?` / `leave_horizont
 - **Deferred:** `mergeAttributes()`, `getInsertionContext()`, `doctest()` diagnostic suite
 - **Deferred:** `finalize_rec` font element name extraction from pending_declaration (`element` key)
 - **Deferred:** `insertElementBefore()`, `getNodeLanguage()`, `decodeFont()`
+
+### token.rs (vs Token.pm) — MINOR
+- Reviewed 2026-03-11
+- **Cosmetic:** T_COMMENT doesn't prepend `%` (Perl `bless ['%' . ($c || ''), CC_COMMENT]`). No test impact.
+- **Minor:** T_ARG has no 1-9 validation (Perl calls Fatal for out-of-range). Low priority.
+- **OK:** `get_cs_name()`, `defined_as()`, `substitute_parameters()`, `neutralize()` all match Perl.
+
+### tokens.rs (vs Tokens.pm) — OK
+- Reviewed 2026-03-11
+- **Intentional divergence:** `untex` omits `%\n` line-break insertion (documented design decision)
+- **Minor:** `strip_braces()` always strips 1 layer (Perl supports `$layers` parameter). Low priority.
+- **OK:** `revert()`, `neutralize()`, `equals()`, `unlist()`, `Explode`/`ExplodeText` all match Perl.
+
+### comment.rs (vs Comment.pm) — OK
+- Synced 2026-03-11 (commit c6871020b)
+- **Fixed:** `get_property("isEmpty")` now returns `true` (matches Perl `Comment->getProperty('isEmpty')`)
+- **Deferred:** `insert_comment` in document.rs mostly stubbed (needs libxml create_comment)
+
+### list.rs (vs List.pm) — MINOR
+- Reviewed 2026-03-11
+- **Deferred:** `List()` factory function with single-box simplification and horizontal list flattening
+  (attempted and reverted — caused percent_test regression; needs per-callsite integration)
+- **OK:** `List::new()`, `is_empty()`, `BoxOps` trait implementation all match Perl core behavior.
+
+### whatsit.rs (vs Whatsit.pm) — MINOR
+- Synced 2026-03-11 (commit c6871020b)
+- **Fixed:** `set_body` now reads mode from whatsit's "mode" property (was binary `is_math()` only)
+- **Fixed:** Trailer property copying expanded to handle TBox and List variants (was Whatsit-only)
+- **Deferred:** `toAttribute` with parameter substitution (`#1`, `#prop` patterns) — not yet used in Rust
+- **Deferred:** Reversion caching disabled, `computeSize` missing sizer string patterns (`'0'`, `'#\w+'`)
+
+### parameter.rs (vs Parameter.pm) — MINOR
+- Synced 2026-03-11 (commit 8ad6d8072)
+- **Fixed:** OptionalMatch space-skipping after successful read (Perl L98-100)
+- **Deferred:** MODE preservation in `digest()` (Perl L122/139-141) — causes percent_test regression
+  when `leave_horizontal_internal()` fires during parameter digestion. Needs mature MODE tracking.
+- **OK:** `read()`, `digest()`, `revert()`, `setup_catcodes`/`revert_catcodes` all match Perl core flow.
+
+### parameters.rs (vs Parameters.pm) — OK
+- Reviewed 2026-03-11
+- Faithful port of multi-parameter container. `read_arguments()`, `digest()`, `revert()` match Perl.
+
+### definition/ (vs Definition.pm, Register.pm) — MINOR
+- Reviewed 2026-03-11
+- **OK:** `addValue` logic is handled inline by `\advance`/`\multiply`/`\divide` in tex_registers.rs
+  (Perl has convenience method on Register, Rust does it at call site — functionally equivalent)
+- **Deferred:** Profiling hooks (startProfiling/stopProfiling/showProfile) are stubs only. Low priority.
+- **Deferred:** FontDef parameter type not implemented. Blocks proper math font selection.
+
+### rewrite.rs (vs Rewrite.pm) — GAPS
+- Reviewed 2026-03-11
+- Only ~20% ported (Select and Replace operators)
+- **Missing:** Pattern compilation, label resolution, most operators
+- **Known:** Low priority until more tests exercise rewrite rules
