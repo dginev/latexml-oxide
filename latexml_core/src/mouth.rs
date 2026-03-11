@@ -308,7 +308,9 @@ impl Mouth {
     self.colno = 0;
     self.nchars = 0;
     // Perl: at_letter restores @ catcode (independent of fordefinitions)
-    if let Some(cc) = self.saved_at_cc.take() {
+    if self.at_letter {
+      // Restore saved catcode, or OTHER if @ wasn't in catcode table before
+      let cc = self.saved_at_cc.take().unwrap_or(Catcode::OTHER);
       assign_catcode('@', cc, None);
     }
     // Perl: fordefinitions restores INCLUDE_COMMENTS
