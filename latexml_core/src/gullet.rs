@@ -31,6 +31,33 @@ use crate::tokens::Tokens;
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
+
+// Perl smuggles the unexpanded token inside \special_relax's slot [2].
+// Rust Token is Copy+Clone with no extra slot, so we use a thread-local Cell.
+use std::cell::Cell;
+#[thread_local]
+static SPECIAL_RELAX_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("\\special_relax"));
+#[thread_local]
+static SPECIAL_RELAX_SMUGGLED: Cell<Option<Token>> = Cell::new(None);
+
+/// Store the unexpanded token smuggled inside \special_relax (Perl: $$special_relax[2])
+fn set_special_relax_smuggled(token: Token) {
+  SPECIAL_RELAX_SMUGGLED.set(Some(token));
+}
+/// Retrieve (and clear) the smuggled token from the last \special_relax
+pub fn take_special_relax_smuggled() -> Option<Token> {
+  SPECIAL_RELAX_SMUGGLED.take()
+}
+/// Peek at the smuggled token without consuming it
+fn peek_special_relax_smuggled() -> Option<Token> {
+  SPECIAL_RELAX_SMUGGLED.get()
+}
+/// Check if a token is \special_relax and its smuggled unexpanded token matches `target`
+fn special_relax_matches(token: &Token, target: &Token) -> bool {
+  token.code == Catcode::CS
+    && token.text == *SPECIAL_RELAX_SYM
+    && peek_special_relax_smuggled().as_ref() == Some(target)
+}
 #[thread_local]
 static DEFERRED_COMMANDS: Lazy<HashSet<SymStr>> = Lazy::new(|| {
   set!(
@@ -161,11 +188,21 @@ pub fn unread_one(token: Token) {
   };
 }
 /// Unreads a `Vec<Token>` to the start of the token stream
+/// Perl: also adjusts ALIGN_STATE by retracting scanned braces (Gullet.pm lines 343-358)
 pub fn unread_vec(tokens: Vec<Token>) {
+  let mut level: i64 = 0;
   if let Some(ref mut runtime) = gullet_mut!().runtime {
     for token in tokens.into_iter().rev() {
+      match token.get_catcode() {
+        Catcode::BEGIN => level -= 1, // Retract scanned braces
+        Catcode::END => level += 1,
+        _ => {},
+      }
       runtime.pushback.push_front(token);
     }
+  }
+  if level != 0 {
+    set_align_group_count(align_group_count() + level as i32);
   }
 }
 
@@ -368,8 +405,11 @@ pub fn read_token() -> Result<Option<Token>> {
       }
       if check_dont_expand {
         if nextt.code == Catcode::CS && nextt.text == *DONT_EXPAND_SYM {
-          let _unexpanded = read_token();
-          // Replace next token with a special \relax
+          let unexpanded = read_token()?;
+          // Perl: smuggle the unexpanded token in the "meaning" slot of \special_relax
+          if let Some(tok) = unexpanded {
+            set_special_relax_smuggled(tok);
+          }
           next_token = Some(T_CS!("\\special_relax"));
         }
         break;
@@ -432,13 +472,13 @@ pub fn read_x_token(
     let token = next_token.unwrap();
     if token.get_catcode() == Catcode::CS && token.text == *DONT_EXPAND_SYM {
       let unexpanded = read_token()?.unwrap();
-      return Ok(Some(
-        if for_conditional && unexpanded.code == Catcode::ACTIVE {
-          unexpanded
-        } else {
-          T_CS!("\\special_relax")
-        },
-      ));
+      if for_conditional && unexpanded.code == Catcode::ACTIVE {
+        return Ok(Some(unexpanded));
+      } else {
+        // Perl: smuggle the unexpanded token in \special_relax
+        set_special_relax_smuggled(unexpanded);
+        return Ok(Some(T_CS!("\\special_relax")));
+      }
     }
     // Wow!!!!! See TeX the Program \S 309
     // SHOULD count nesting of { }!!! when SCANNED (not digested)
@@ -802,7 +842,8 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
           return Ok(Tokens!()); // Not more correct, but maybe less confusing?
         },
       };
-      if token == *want {
+      // Perl: check direct match OR \special_relax smuggling (Gullet.pm line 662)
+      if token == *want || special_relax_matches(&token, want) {
         break;
       }
       match token.get_catcode() {
@@ -1014,6 +1055,31 @@ pub fn if_next(token: Token) -> Result<bool> {
   Ok(is_next)
 }
 
+/// Perl: peekToken — peek at the next token without triggering alignment
+/// Sets ALIGN_STATE to 1000000 to suppress alignment template handling (Perl line 331-337)
+pub fn peek_token() -> Result<Option<Token>> {
+  local_align_group_count(1000000);
+  let result = read_token()?;
+  if let Some(ref tok) = result {
+    unread_one(*tok);
+  }
+  expire_align_group_count();
+  Ok(result)
+}
+
+/// Perl: showUnexpected — returns a debug message about the next available token
+pub fn show_unexpected() -> String {
+  match peek_token() {
+    Ok(Some(token)) => {
+      let meaning = lookup_meaning(&token)
+        .map(|m| format!("{:?}", m))
+        .unwrap_or_else(|| "undef".to_string());
+      s!("Next token is {} ( == {})", token.stringify(), meaning)
+    },
+    _ => "Input is empty".to_string(),
+  }
+}
+
 //**********************************************************************
 //  Numbers, Dimensions, Glue
 // See TeXBook, Ch.24, pp.269-271.
@@ -1027,8 +1093,17 @@ pub fn read_value(value_type: RegisterType) -> Result<RegisterValue> {
     RegisterType::Glue => Ok(read_glue()?.into()),
     RegisterType::MuGlue => Ok(read_mu_glue()?.into()),
     RegisterType::Tokens => Ok(read_tokens_value()?.into()),
-    // TODO: unwrap should be a proper error, value is expected
-    RegisterType::Token => Ok(read_token()?.unwrap().into()),
+    RegisterType::Token => {
+      // Perl: readValue('Token') checks for \csname (Gullet.pm line 770-775)
+      #[thread_local]
+      static TOKEN_CSNAME: Lazy<Token> = Lazy::new(|| T_CS!("\\csname"));
+      let token = read_non_space()?.unwrap_or(*TOKEN_RELAX);
+      if token.defined_as(&TOKEN_CSNAME) {
+        Ok(read_cs_name()?.into())
+      } else {
+        Ok(token.into())
+      }
+    },
     RegisterType::CharDef => Ok(read_number()?.into()),
     RegisterType::Any => Ok(read_arg(ExpansionLevel::Off)?.into()),
   }
@@ -1074,7 +1149,12 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
         None => break,
         Some(token) => {
           let cc = token.get_catcode();
-          let was_last_match = Some(&&token) == to_match.last();
+          // Perl: also check smuggled \special_relax token (Gullet.pm line 612)
+          let was_last_match = if let Some(&&want) = to_match.last() {
+            token == want || special_relax_matches(&token, &want)
+          } else {
+            false
+          };
           matched.push(token);
           if was_last_match {
             to_match.pop();
