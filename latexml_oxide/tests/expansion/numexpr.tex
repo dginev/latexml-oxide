@@ -91,7 +91,7 @@ MuGlue=\the\mymuskip.
 \section{Expandafter on primitive separators}
 \let\sep\right
 \def\feed#1#2{%
-\number \numexpr
+\number \numexpr 
   \expandafter \NwNw
   \number \numexpr #1 \expandafter \sep
   \number \numexpr #2 \sep\relax}
@@ -115,4 +115,3 @@ Num=\the\mynum
 Num=\the\mynum
 
 {\mynum=\numexpr 13*}
-
