@@ -294,6 +294,18 @@ Generated 2026-03-11. Covers all engine files.
 - **Remaining:** `FoodType::Binding` variant commented out
 - **Remaining:** Token caching optimization not implemented (performance only, low priority)
 
+### gullet.rs (vs Gullet.pm) — MINOR
+- **Fixed:** `\special_relax` smuggling — unexpanded token stored in thread-local Cell (Perl: slot [2])
+- **Fixed:** `read_match()` checks smuggled `\special_relax` token (Perl line 612)
+- **Fixed:** `read_until()` checks smuggled `\special_relax` in single-token case (Perl line 662)
+- **Fixed:** `peek_token()` added — reads+unreads with ALIGN_STATE suppression (Perl line 331-337)
+- **Fixed:** `show_unexpected()` added — debug message for error reporting (Perl line 185-193)
+- **Fixed:** `read_value(Token)` handles `\csname...\endcsname` (Perl line 770-775)
+- **Fixed:** `unread_vec()` adjusts ALIGN_STATE by counting BEGIN/END tokens (Perl line 352-358)
+- **Remaining:** `read_arg()` uses direct unread instead of `reading_from_mouth` for expanded single tokens (subtle semantic difference, low impact)
+- **Remaining:** `read_register_value()` missing coercion types (Number→Dimension, Dimension→Glue, etc.)
+- **Remaining:** `show_pushback()` debug utility not implemented (low priority)
+
 ### stomach.rs (vs Stomach.pm) — MINOR
 - **Fixed:** `enter_horizontal`, `leave_horizontal`, `leave_horizontal_internal` implemented
 - **Fixed:** `bindable_mode()` mapping, `BOUND_MODE` tracking
