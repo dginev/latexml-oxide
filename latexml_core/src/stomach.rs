@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use std::borrow::Cow;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::rc::Rc;
 
@@ -18,7 +18,20 @@ use crate::state::*;
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::{Digested, TexMode, gullet};
+use crate::{BoxOps, Digested, TexMode, gullet};
+
+/// Hook for decoding math characters (Perl: decodeMathChar).
+/// Set by latexml_package during initialization, since the full implementation
+/// depends on Package-level utilities (unicode_math_properties, etc.)
+pub type DecodeMathCharFn = fn(u16, Token) -> Result<Digested>;
+
+#[thread_local]
+static DECODE_MATH_CHAR_HOOK: Cell<Option<DecodeMathCharFn>> = Cell::new(None);
+
+/// Register the decode_math_char hook from latexml_package
+pub fn set_decode_math_char_hook(hook: DecodeMathCharFn) {
+  DECODE_MATH_CHAR_HOOK.set(Some(hook));
+}
 
 static MAXSTACK: usize = 200;
 
@@ -173,9 +186,13 @@ pub fn current_frame_message() -> String {
   } else {
     String::new()
   };
-  //   TODO:
-  //   . " " . ToString(state!().lookup_value('groupInitiatorLocator'));
-  s!("current frame is {} due to {}", target, initiator)
+  let locator = lookup_string("groupInitiatorLocator");
+  s!(
+    "current frame is {} due to {} {}",
+    target,
+    initiator,
+    locator
+  )
 }
 
 //======================================================================
@@ -197,12 +214,24 @@ pub fn bgroup() {
 /// undoing whatever bindings appeared there, and also
 /// decrementing the level of boxing.
 pub fn egroup() -> Result<()> {
-  if lookup_bool("groupNonBoxing") {
+  if is_value_bound("BOUND_MODE", Some(0)) {
+    // Last stack frame was a mode switch!?!?!
+    // Don't pop if there's an error; maybe we'll recover?
+    Error!(
+      "unexpected",
+      get_current_token().unwrap(),
+      s!(
+        "Attempt to close a group that switched to mode {}; {}",
+        lookup_string("MODE"),
+        current_frame_message()
+      )
+    );
+  } else if lookup_bool("groupNonBoxing") {
     // or group was opened with \begingroup
     Error!(
       "unexpected",
       get_current_token().unwrap(),
-      "Attempt to close boxing group"
+      s!("Attempt to close boxing group; {}", current_frame_message())
     );
   } else {
     // Don't pop if there's an error; maybe we'll recover?
@@ -216,7 +245,19 @@ pub fn begingroup() { push_stack_frame(true); }
 /// End a level of binding by popping the last stack frame,
 /// undoing whatever bindings appeared there.
 pub fn endgroup() -> Result<()> {
-  if !lookup_bool("groupNonBoxing") {
+  if is_value_bound("BOUND_MODE", Some(0)) {
+    // Last stack frame was a mode switch!?!?!
+    // Don't pop if there's an error; maybe we'll recover?
+    Error!(
+      "unexpected",
+      get_current_token().unwrap().to_string(),
+      s!(
+        "Attempt to close a group that switched to mode {}; {}",
+        lookup_string("MODE"),
+        current_frame_message()
+      )
+    );
+  } else if !lookup_bool("groupNonBoxing") {
     // or group was opened with \bgroup
     Error!(
       "unexpected",
@@ -311,6 +352,12 @@ pub fn begin_mode(mode: &str) -> Result<()> {
     // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
     assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
     set_mode(bound_mode)?;
+    // Perl: inject \everymath / \everydisplay tokens (Stomach.pm lines 504-507)
+    // NOTE: This injection is already handled by individual math mode
+    // constructors in tex_math.rs ($, $$, \(, \[, etc.), so enabling it
+    // here in begin_mode would cause DOUBLE injection. Only enable when
+    // the tex_math.rs constructors stop doing their own injection.
+    // TODO: consolidate everymath injection to this single location.
     Ok(())
   } else {
     Warn!("unexpected", mode, s!("Cannot enter {mode} mode"));
@@ -383,8 +430,56 @@ pub fn leave_horizontal_internal() {
   let mode = lookup_string("MODE");
   let bound = lookup_string("BOUND_MODE");
   if mode == "horizontal" && bound.ends_with("vertical") {
-    // TODO: repackHorizontal (packages horizontal items into a List)
+    repack_horizontal();
     assign_value_inplace("MODE", arena::pin(&bound.to_string()));
+  }
+}
+
+/// Repack recently digested horizontal items into single horizontal List.
+/// Note that TeX would have done paragraph line-breaking, resulting in essentially
+/// a vertical list.
+/// Perl: sub repackHorizontal (Stomach.pm lines 440-454)
+pub fn repack_horizontal() {
+  let mut stomach = stomach_mut!();
+  let mut para: Vec<Digested> = Vec::new();
+  let mut keep = false;
+
+  loop {
+    let should_pop = if let Some(item) = stomach.box_list.last() {
+      let mode_str = item
+        .get_property("mode")
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "horizontal".to_string());
+      if mode_str == "horizontal"
+        || mode_str == "restricted_horizontal"
+        || mode_str == "math"
+      {
+        // if ONLY horizontal mode spaces, we can prune them; it just makes an empty ltx:p
+        if mode_str != "horizontal" || !item.get_property_bool("isSpace") {
+          keep = true;
+        }
+        true
+      } else {
+        false
+      }
+    } else {
+      false
+    };
+
+    if should_pop {
+      para.push(stomach.box_list.pop().unwrap());
+    } else {
+      break;
+    }
+  }
+
+  // Items were popped in reverse order, so reverse them back
+  para.reverse();
+
+  if keep {
+    let mut list = List::new(para);
+    list.mode = Some(TexMode::Text); // "horizontal" in Perl
+    stomach.box_list.push(Digested::from(list));
   }
 }
 
@@ -793,8 +888,17 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       Ok(Some(Digested::from(comment)))
     },
     _ => {
-      // Perl: enterHorizontal($self); for non-math characters
-      enter_horizontal();
+      // Perl: check mathcode for IN_MATH characters (Stomach.pm lines 248-251)
+      // In Perl, all math chars go through decodeMathChar which decodes via
+      // the font encoding. In Rust, Tbox::new already handles IN_MATH:
+      // it sets mode="math", looks up math_token_attributes for role/meaning/name,
+      // and specializes the font. This produces the correct LaTeXML-level properties.
+      // The DECODE_MATH_CHAR_HOOK is available for cases where TeX-level mathcode
+      // font decoding is needed (e.g., non-ASCII chars needing font map lookup).
+      // TODO: Use hook for chars where font-encoding glyph differs from input.
+      if !lookup_bool("IN_MATH") {
+        enter_horizontal();
+      }
       let text = font::decode_string(meaning.get_sym(), None, true);
       Ok(Some(Digested::from(Tbox::new(
         text,

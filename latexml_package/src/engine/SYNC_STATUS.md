@@ -310,6 +310,13 @@ Generated 2026-03-11. Covers all engine files.
 - **Fixed:** `enter_horizontal`, `leave_horizontal`, `leave_horizontal_internal` implemented
 - **Fixed:** `bindable_mode()` mapping, `BOUND_MODE` tracking
 - **Fixed:** MODE initialized to "vertical" (was "text")
+- **Fixed:** `repack_horizontal()` implemented (Perl lines 440-454) — pops horizontal items from box_list, packs into List
+- **Fixed:** `egroup()`/`endgroup()` now check `BOUND_MODE` before allowing close (Perl lines 334, 354)
+- **Fixed:** `current_frame_message()` now includes `groupInitiatorLocator` (Perl line 314)
+- **Fixed:** `invoke_token_simple()` skips `enter_horizontal()` in math mode (Perl lines 248-255)
+- **Fixed:** `decode_math_char` hook infrastructure — callback registered from `latexml_package` at init
+- **Deferred:** `\everymath`/`\everydisplay` injection in `begin_mode()` — already handled per-constructor in tex_math.rs, consolidation deferred to avoid double injection
+- **Deferred:** Full mathcode-based char decoding in `invoke_token_simple()` — `Tbox::new` already handles math props via `math_token_attributes`; hook available but disabled pending role reconciliation (ADDOP vs BINOP)
 - **Remaining:** Test regressions from MODE changes need one-by-one investigation
 
 ### state.rs (vs State.pm) — MINOR

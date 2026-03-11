@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use latexml_core::common::arena::SymHashMap;
 use latexml_core::common::xml::content_nodes;
 use std::char::{REPLACEMENT_CHARACTER, decode_utf16};
 
@@ -553,6 +554,45 @@ pub fn decode_math_char(mut n: u16) -> Result<MathCharProps> {
   props.resolve_style_props();
 
   Ok(props)
+}
+
+/// Stomach-level hook for decoding math characters.
+/// Called from stomach::invoke_token_simple when IN_MATH and mathcode is set.
+/// Perl: decodeMathChar($mathcode, $meaning) in Stomach::invokeToken_simple
+pub fn decode_math_char_for_stomach(
+  mathcode: u16,
+  meaning: Token,
+) -> Result<Digested> {
+  let props = decode_math_char(mathcode)?;
+  let mut properties = SymHashMap::default();
+  properties.insert("mode", Stored::String(*arena::MATH_SYM));
+  if let Some(ref role) = props.role {
+    properties.insert("role", Stored::String(arena::pin(role)));
+  }
+  if let Some(ref m) = props.meaning {
+    properties.insert("meaning", Stored::String(arena::pin(m)));
+  }
+  if let Some(ref name) = props.name {
+    properties.insert("name", Stored::String(arena::pin(name)));
+  }
+  if let Some(ref stretchy) = props.stretchy {
+    properties.insert("stretchy", Stored::String(arena::pin(stretchy)));
+  }
+  let glyph_sym = if let Some(glyph) = props.glyph {
+    arena::pin(&glyph.to_string())
+  } else {
+    meaning.get_sym()
+  };
+  let font = lookup_font().map(|f| {
+    Rc::new(arena::with(glyph_sym, |s| f.specialize(s)))
+  });
+  Ok(Digested::from(Tbox::new(
+    glyph_sym,
+    font,
+    None,
+    Tokens!(meaning),
+    properties,
+  )))
 }
 
 /// Stomach-level counterpart to `read_box_contents`.
