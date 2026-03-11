@@ -546,13 +546,11 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
 pub fn raw_tex(text: &str) -> Result<()> {
   // It could be as simple as this, except if catcodes get changed, it's too late!!!
   //  Digest(TokenizeInternal($text));
-  let savedcc = lookup_catcode('@').unwrap_or(Catcode::OTHER);
-  assign_catcode('@', Catcode::LETTER, None);
   let raw_tex_mouth = Mouth::new(
     text,
     Some(MouthOptions {
       fordefinitions: true,
-      // at_letter: true,
+      at_letter: true,
       ..MouthOptions::default()
     }),
   )?;
@@ -564,8 +562,6 @@ pub fn raw_tex(text: &str) -> Result<()> {
     }
     Ok(())
   })?;
-
-  assign_catcode('@', savedcc, None);
   Ok(())
 }
 

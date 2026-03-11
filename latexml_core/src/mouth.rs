@@ -22,7 +22,6 @@ use crate::state::*;
 use crate::token::*;
 use crate::tokens::{NO_TOKENS, Tokens};
 use crate::util::pathname;
-use crate::util::text::trim_end_in_place;
 
 static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
 
@@ -63,6 +62,7 @@ static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*
 #[derive(Debug, Default)]
 pub struct MouthOptions {
   pub fordefinitions: bool,
+  pub at_letter:      bool,
   pub notes:          bool,
   pub content:        Option<String>,
   pub foodtype:       Option<FoodType>,
@@ -73,6 +73,7 @@ pub struct MouthOptions {
 #[derive(Debug)]
 pub struct Mouth {
   fordefinitions:         bool,
+  at_letter:              bool,
   notes:                  bool,
   at_eof:                 bool,
   nchars:                 usize,
@@ -101,6 +102,7 @@ impl Default for Mouth {
       notes:                  false,
       note_message:           None,
       fordefinitions:         false,
+      at_letter:              false,
       at_eof:                 false,
       skipping_spaces:        false,
       lineno:                 0,
@@ -188,6 +190,7 @@ impl Mouth {
       Some(opts) => Mouth {
         foodtype: opts.foodtype.unwrap_or(FoodType::Literal),
         fordefinitions: opts.fordefinitions,
+        at_letter: opts.at_letter,
         notes: opts.notes,
         source: opts.source.unwrap_or_default(),
         ..Mouth::default()
@@ -212,23 +215,50 @@ impl Mouth {
 
   fn open_file(&mut self, pathname: &str) -> Result<()> {
     if self.foodtype == FoodType::File {
-      // TODO: Handle errors
-      //   Fatal('I/O', $pathname, $self, "File $pathname is not readable."); }
-      // elsif ((!-z $pathname) && (-B $pathname)) {
-      //   Fatal('I/O', $pathname, $self, "Input file $pathname appears to be binary."); }
-      // open($IN, '<', $pathname)
-      //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
-      let f = match File::open(pathname) {
-        Ok(handle) => handle,
+      // Perl: check readable, then check binary (non-empty), then open
+      let metadata = std::fs::metadata(pathname);
+      match &metadata {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+          fatal!(Mouth, MissingFile, s!("Can't find file {}", pathname));
+        },
+        Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
+          Error!("I/O", "unreadable", s!("File {} is not readable. Ignoring.", pathname), "", "",
+            self.get_location());
+          return Ok(());
+        },
         Err(e) => {
-          if e.kind() == io::ErrorKind::NotFound {
-            fatal!(Mouth, MissingFile, s!("Can't find file {}", pathname));
-          } else {
-            return Err(e.into());
+          return Err(io::Error::new(e.kind(), e.to_string()).into());
+        },
+        Ok(meta) => {
+          // Check for binary file (non-empty and appears binary)
+          // Perl's -B heuristic: check first block for high proportion of non-text bytes
+          if meta.len() > 0 {
+            if let Ok(mut f) = File::open(pathname) {
+              let mut buf = [0u8; 512];
+              if let Ok(n) = f.read(&mut buf) {
+                if n > 0 {
+                  let non_text = buf[..n].iter().filter(|&&b| b == 0 || (b < 0x20 && b != b'\n' && b != b'\r' && b != b'\t' && b != 0x1b)).count();
+                  if non_text * 3 > n {
+                    // High ratio of non-text bytes — likely binary
+                    Error!("invalid", "binary",
+                      s!("Input file {} appears to be binary. Ignoring.", pathname), "", "",
+                      self.get_location());
+                    return Ok(());
+                  }
+                }
+              }
+            }
           }
         },
+      }
+      let f = match File::open(pathname) {
+        Ok(f) => f,
+        Err(e) => {
+          Error!("I/O", "open", s!("Can't open {} for reading: {}", pathname, e), "", "",
+            self.get_location());
+          return Err(e.into());
+        },
       };
-
       let reader = BufReader::new(f);
       self.reader = Some(reader);
       self.buffer = VecDeque::new();
@@ -246,21 +276,28 @@ impl Mouth {
 
   fn initialize(&mut self) {
     self.note_message = if self.notes {
-      if self.fordefinitions {
-        Some(s!("Processing definitions"))
+      let source = if !self.source.is_empty() {
+        &self.source
       } else {
-        Some(s!("Processing content"))
-      }
+        "Anonymous String"
+      };
+      let kind = if self.fordefinitions { "definitions" } else { "content" };
+      let at_note = if self.fordefinitions && !self.at_letter { " w/@ other" } else { "" };
+      Some(s!("Processing {}{} {}", kind, at_note, source))
     } else {
       None
     };
-    if self.fordefinitions {
+    // Perl: at_letter saves/restores @ catcode independently of fordefinitions
+    if self.at_letter {
       self.saved_at_cc = lookup_catcode('@');
+      assign_catcode('@', Catcode::LETTER, None);
+    }
+    // Perl: fordefinitions saves/restores INCLUDE_COMMENTS
+    if self.fordefinitions {
       self.saved_include_comments = match lookup_value("INCLUDE_COMMENTS") {
         Some(Stored::Bool(x)) => Some(x),
         _ => None,
       };
-      assign_catcode('@', Catcode::LETTER, None);
       assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
     }
   }
@@ -270,13 +307,13 @@ impl Mouth {
     self.lineno = 0;
     self.colno = 0;
     self.nchars = 0;
-    if self.fordefinitions {
-      if let Some(cc) = self.saved_at_cc {
-        assign_catcode('@', cc, None);
-      }
-      if let Some(sic) = self.saved_include_comments {
-        assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
-      }
+    // Perl: at_letter restores @ catcode (independent of fordefinitions)
+    if let Some(cc) = self.saved_at_cc.take() {
+      assign_catcode('@', cc, None);
+    }
+    // Perl: fordefinitions restores INCLUDE_COMMENTS
+    if let Some(sic) = self.saved_include_comments.take() {
+      assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
     }
     if self.notes {
       if let Some(ref msg) = self.note_message {
@@ -328,11 +365,27 @@ impl Mouth {
         // just not going to be a sane way forward. we will first decode
         // the read-in bytes to the right String form, and THEN split lines.
         // as such, decoding is the first action taken on bytes read in from a file.
-        if let Some(ref _encoding) = get_input_encoding() {
-          // TODO: What are characters that fail to decode replaced by in Rust?
-          // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable
-          // chars to space(?).
-          todo!();
+        if let Some(ref encoding_sym) = get_input_encoding() {
+          // Perl: decode with Encode::FB_DEFAULT, then replace \x{FFFD} with space
+          let encoding_name = crate::common::arena::to_string(*encoding_sym);
+          // For now, support latin-1/iso-8859-1 (most common non-UTF-8 TeX encoding)
+          let file_str = if encoding_name.eq_ignore_ascii_case("iso-8859-1")
+            || encoding_name.eq_ignore_ascii_case("latin1")
+            || encoding_name.eq_ignore_ascii_case("latin-1")
+          {
+            file_bytes.iter().map(|&b| b as char).collect::<String>()
+          } else {
+            // Fallback: try UTF-8 with lossy conversion
+            String::from_utf8_lossy(&file_bytes).into_owned()
+          };
+          // Perl: replace replacement chars with space and warn
+          let replaced = file_str.replace('\u{FFFD}', " ");
+          if replaced.len() != file_str.len() {
+            Info!("misdefined", &encoding_name,
+              s!("input isn't valid under encoding {}", &encoding_name), "", "",
+              self.get_location());
+          }
+          self.buffer = Mouth::split_lines(&replaced);
         } else {
           // no encoding, interpret as unicode!
           match str::from_utf8(&file_bytes) {
@@ -343,7 +396,9 @@ impl Mouth {
               let message = s!("input isn't valid under encoding utf8: {:?}", e);
               Info!("misdefined", "utf8", message, "", "", self.get_location());
               let file_str = String::from_utf8_lossy(&file_bytes);
-              self.buffer = Mouth::split_lines(&file_str);
+              // Perl: replace \x{FFFD} with space
+              let replaced = file_str.replace('\u{FFFD}', " ");
+              self.buffer = Mouth::split_lines(&replaced);
             },
           };
         }
@@ -366,7 +421,8 @@ impl Mouth {
       let mut ch = *ch;
       let mut cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
       // Possible convert ^^x
-      if cc == Catcode::SUPER && Some(&ch) == self.chars.get(self.colno) {
+      // Perl: (cc == CC_SUPER) && (colno + 1 < nchars) && (ch == chars[colno])
+      if cc == Catcode::SUPER && self.colno + 1 < self.nchars && Some(&ch) == self.chars.get(self.colno) {
         let c1_opt = self.chars.get(self.colno + 1);
         let c2_opt = self.chars.get(self.colno + 2);
         let mut two_hex = false;
@@ -580,7 +636,10 @@ impl Mouth {
     let mut line = String::new();
     if self.colno < self.nchars {
       line = self.chars.iter().skip(self.colno).collect();
-      // End lines with \n, not CR, since the result will be treated as strings
+      // Strip the final carriage return, if it has been added back (Perl: s/\r$//s)
+      if line.ends_with('\r') {
+        line.pop();
+      }
       self.colno = self.nchars;
     } else if !noread {
       match self.get_next_line() {
@@ -593,7 +652,8 @@ impl Mouth {
           return None;
         },
         Some(next_line) => {
-          next_line.trim_end().clone_into(&mut line);
+          // Strip trailing spaces (Perl: s/ *$//s)
+          line = next_line.trim_end_matches(' ').to_string();
           self.lineno += 1;
           self.chars = line.chars().collect();
           self.nchars = self.chars.len();
@@ -601,7 +661,6 @@ impl Mouth {
         },
       }
     }
-    trim_end_in_place(&mut line); // Even empty lines are valid here
     Some(line)
   }
 
@@ -672,8 +731,6 @@ impl Mouth {
   }
 
   fn handle_end_of_line(&mut self) -> Token {
-    // Note that newines should be converted to space (with " " for content)
-    // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     self.colno = self.nchars; // Ignore any remaining characters after EOL
     if lookup_int("PRESERVE_NEWLINES") != 0 {
       Token!("\n", Catcode::SPACE)
