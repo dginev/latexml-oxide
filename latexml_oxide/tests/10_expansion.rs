@@ -20,8 +20,10 @@ static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
 
 pub fn expansion_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
-    "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions()),
-    "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions()),
+    // Document-level bindings: loaded by load_external_binding(stem)
+    // Translate the Perl .latexml files to Rust
+    "whichinput" => Some(helpers::whichinput_tex::load_definitions()),
+    "whichcache" => Some(helpers::whichcache_tex::load_definitions()),
     _ => None,
   }
 }
