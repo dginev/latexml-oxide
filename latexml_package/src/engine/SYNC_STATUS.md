@@ -518,6 +518,31 @@ Rust equivalents: `enter_horizontal()` / `leave_horizontal()?` / `leave_horizont
 - **Deferred:** Profiling hooks (startProfiling/stopProfiling/showProfile) are stubs only. Low priority.
 - **Deferred:** FontDef parameter type not implemented. Blocks proper math font selection.
 
+### conditional.rs (vs Conditional.pm) — OK
+- Synced 2026-03-11 (commit b701adc60)
+- **Fixed:** `\ifcase` negative number handling: `num > 0` → `num != 0` (Perl L88). Negative values now correctly skip all `\or` branches to `\else`.
+- **Implemented:** IF_LIMIT infinite loop protection (Perl L63-65, was TODO). Uses `state::lookup_int("if_limit")`.
+- **Implemented:** ALIGN_STATE tracking in `read_next_conditional` for `{`/`}` tokens during conditional body skipping (Perl L128-130).
+- **Fixed:** Error message for "conditional fell off end" now includes start location (Perl L154-155).
+- **Verified:** `\fi` frame comparison logic is correct — Rust pop-then-check is equivalent to Perl peek-then-pop.
+- **Verified:** `invoke_conditional`, `invoke_else`, `invoke_fi` all match Perl logic.
+- **Minor:** `PartialEq` only compares `cs` (Perl `equals` also compares parameters and test). Low priority.
+
+### alignment.rs (vs Alignment.pm) — MINOR
+- Synced 2026-03-11 (commits 5baef91a3, 7c35d8765, e5220ef18)
+- **Implemented:** `normalize_mark_spans` (was stubbed `Ok(())`). Marks cells covered by colspan/rowspan as skipped, copies rowspan from spanned columns, truncates rowspan for non-empty cells, copies bottom borders.
+- **Implemented:** `Digested::is_skippable()` matching Perl's `isSkippable` (L484-508).
+- **Implemented:** Cell `skippable` field set in `normalize_cell_sizes` (Perl L469).
+- **Fixed:** Absorption uses `skippable` (not `empty`) for cell content check (Perl L362).
+- **Fixed:** `nextColumn` adds fallback column with align=center for extra tabs (Perl L140-143, was returning None).
+- **Fixed:** colspan/rowspan attributes now passed to cell constructor (Perl L353-354, was commented out).
+- **Fixed:** Border normalization sorts chars before joining (matching Perl L330-331 sort+dedup pattern).
+- **Fixed:** `normalize_prune_rows` uses `skippable` with bracket-check heuristic (Perl L742-753).
+- **Deferred:** Padding CSS classes (`ltx_nopad_l`, `ltx_nopad_r`) — needs `lspaces`/`rspaces` on Cell.
+- **Deferred:** ABSORB_LIMIT guard (Perl L302-307) — needs global limit infrastructure.
+- **Deferred:** Sizing info not passed to open_container (Perl L306-314) — commented out.
+- **Deferred:** `\lx@intercol` intercolumn handling in template construction (tex_tables.rs TODO).
+
 ### rewrite.rs (vs Rewrite.pm) — GAPS
 - Reviewed 2026-03-11
 - Only ~20% ported (Select and Replace operators)
