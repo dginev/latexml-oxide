@@ -23,6 +23,7 @@ pub mod latexml_sty;
 pub mod multido_sty;
 pub mod nameref_sty;
 pub mod ntheorem_sty;
+pub mod report_cls;
 pub mod t1_fontmap;
 pub mod t1enc_def;
 pub mod t1enc_sty;

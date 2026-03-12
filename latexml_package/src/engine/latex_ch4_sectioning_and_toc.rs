@@ -104,8 +104,15 @@ LoadDefinitions!({
       let inlist = args[1].as_ref().unwrap().to_string();
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
+      // If backmatter, find insertion point as if inserting the backmatter element type
+      if let Some(asif) = props.get("backmatterelement") {
+        let asif_str = asif.to_string();
+        let point = document.find_insertion_point(&asif_str, None)?;
+        document.set_node(&point);
+      }
       let clean_id = prop_string!(props,"id"); // TODO: CleanID($id);
-      document.open_element(&s!("ltx:{stype}"),
+      let tagname = s!("ltx:{stype}");
+      document.open_element(&tagname,
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
           )?;
@@ -148,7 +155,14 @@ LoadDefinitions!({
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
 
-      let mut props = ref_step_counter(&stype.to_string(), false)?;
+      let stype_str = stype.to_string();
+      let mut props = ref_step_counter(&stype_str, false)?;
+      // For appendix, look up the backmatter element mapping
+      if stype_str == "appendix" {
+        if let Some(bme) = state::lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
+          props.insert("backmatterelement", bme);
+        }
+      }
       let toctitle = match toctitle_arg {
         Some(v) => if !v.to_string().is_empty() {
           args[2].as_ref().unwrap()
@@ -180,9 +194,12 @@ LoadDefinitions!({
   sub[document, args, props] {
       let stype = args[0].as_ref().unwrap();
       let inlist = args[1].as_ref().unwrap();
-      // let toctitle_arg = args[2].as_ref();
-      // let title = args[3].as_ref().unwrap();
-
+      // If backmatter, find insertion point as if inserting the backmatter element type
+      if let Some(asif) = props.get("backmatterelement") {
+        let asif_str = asif.to_string();
+        let point = document.find_insertion_point(&asif_str, None)?;
+        document.set_node(&point);
+      }
       let id = props.get("id").unwrap().to_string();
       document.open_element(&s!("ltx:{stype}"),
         Some(string_map!(
@@ -203,7 +220,14 @@ LoadDefinitions!({
       // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
-      let mut props = RefStepID!(&stype.to_string())?;
+      let stype_str = stype.to_string();
+      let mut props = RefStepID!(&stype_str)?;
+      // For appendix, look up the backmatter element mapping
+      if stype_str == "appendix" {
+        if let Some(bme) = state::lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
+          props.insert("backmatterelement", bme);
+        }
+      }
       let title_digested = if let Postponed(tokens) = title.data() {
         // TODO: is .clone() on the tokens before they are unlisted a sign that
         // the DigestedData::Postponed variant isn't ideal?
