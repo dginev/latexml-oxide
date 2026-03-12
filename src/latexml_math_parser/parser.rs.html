@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/parser.rs`."><title>parser.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (b41f22de2 2026-03-08)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/</div>parser.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>libxml::tree::{Node, NodeType};
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/parser.rs`."><title>parser.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (3b1b0ef4d 2026-03-11)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/</div>parser.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>libxml::tree::{Node, NodeType};
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>once_cell::sync::Lazy;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>regex::Regex;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
@@ -821,7 +821,7 @@
 <a href=#821 id=821 data-nosnippet>821</a>      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 <a href=#822 id=822 data-nosnippet>822</a>      .join(<span class="string">""</span>)
 <a href=#823 id=823 data-nosnippet>823</a>  } <span class="kw">else if </span>tag == arena::pin_static(<span class="string">"ltx:XMArray"</span>) {
-<a href=#824 id=824 data-nosnippet>824</a>    textrec_array(<span class="kw-2">&amp;</span>node)
+<a href=#824 id=824 data-nosnippet>824</a>    textrec_array(<span class="kw-2">&amp;</span>node, document)
 <a href=#825 id=825 data-nosnippet>825</a>  } <span class="kw">else </span>{
 <a href=#826 id=826 data-nosnippet>826</a>    <span class="macro">s!</span>(<span class="string">"[{}]"</span>, p_get_value(<span class="kw-2">&amp;</span>node))
 <a href=#827 id=827 data-nosnippet>827</a>  }
@@ -902,105 +902,119 @@
 <a href=#902 id=902 data-nosnippet>902</a>  }
 <a href=#903 id=903 data-nosnippet>903</a>}
 <a href=#904 id=904 data-nosnippet>904</a>
-<a href=#905 id=905 data-nosnippet>905</a><span class="kw">fn </span>textrec_array(_node: <span class="kw-2">&amp;</span>Node) -&gt; String {
-<a href=#906 id=906 data-nosnippet>906</a>  <span class="comment">// my $name = $node-&gt;getAttribute('meaning') || $node-&gt;getAttribute('name')
-<a href=#907 id=907 data-nosnippet>907</a>  // || 'Array';   my @rows = ();
-<a href=#908 id=908 data-nosnippet>908</a>  //   foreach my $row (element_nodes($node)) {
-<a href=#909 id=909 data-nosnippet>909</a>  // push(@rows, '[' . join(', ', map { ($_-&gt;firstChild ?
-<a href=#910 id=910 data-nosnippet>910</a>  // textrec($_-&gt;firstChild) : '') } element_nodes($row)) . ']'); } return $name
-<a href=#911 id=911 data-nosnippet>911</a>  // . '[' . join(', ', @rows) . ']';
-<a href=#912 id=912 data-nosnippet>912</a>  </span><span class="macro">todo!</span>()
-<a href=#913 id=913 data-nosnippet>913</a>}
-<a href=#914 id=914 data-nosnippet>914</a>
-<a href=#915 id=915 data-nosnippet>915</a><span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-<a href=#916 id=916 data-nosnippet>916</a>// Cute! Were it NOT for Sub/Superscripts, the whole parsing process only
-<a href=#917 id=917 data-nosnippet>917</a>// builds a new superstructure around the sequence of token nodes in the input.
-<a href=#918 id=918 data-nosnippet>918</a>// Thus, any internal structure is unchanged.
-<a href=#919 id=919 data-nosnippet>919</a>//  They get re-parented, but if the parse fails, we've only got to put them
-<a href=#920 id=920 data-nosnippet>920</a>// BACK into the original node, to recover the original arrangment!!!
-<a href=#921 id=921 data-nosnippet>921</a>// Thus, we don't have to clone, and deal with namespace duplication.
-<a href=#922 id=922 data-nosnippet>922</a>// ...
-<a href=#923 id=923 data-nosnippet>923</a>// EXCEPT, as I said, for sub/superscripts!!!!
-<a href=#924 id=924 data-nosnippet>924</a>//
-<a href=#925 id=925 data-nosnippet>925</a>
-<a href=#926 id=926 data-nosnippet>926</a>//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-<a href=#927 id=927 data-nosnippet>927</a>// Constructors used in grammar
-<a href=#928 id=928 data-nosnippet>928</a>// All the tree construction in the grammar should come through these
-<a href=#929 id=929 data-nosnippet>929</a>// operations. We avoid mucking with the actual XML nodes (both to avoid
-<a href=#930 id=930 data-nosnippet>930</a>// modifying the original tree until we have a successful parse, and to avoid
-<a href=#931 id=931 data-nosnippet>931</a>// XML::LibXML cloning nightmares) We are converting XML nodes to array
-<a href=#932 id=932 data-nosnippet>932</a>// representation: [$tag, {%attr},@children] This means any inspection of
-<a href=#933 id=933 data-nosnippet>933</a>// nodes has to recognize that  * node may be in XML vs ARRAY representation
-<a href=#934 id=934 data-nosnippet>934</a>// * node may be an XMRef to another node whose properties are the ones we
-<a href=#935 id=935 data-nosnippet>935</a>// should use.
-<a href=#936 id=936 data-nosnippet>936</a>//
-<a href=#937 id=937 data-nosnippet>937</a>// Also, when we are examining a node's properties (roles, fences, script
-<a href=#938 id=938 data-nosnippet>938</a>// positioning, etc) we should be careful to check for XMRef indirection and
-<a href=#939 id=939 data-nosnippet>939</a>// examine the properties of the node that was referred to.
-<a href=#940 id=940 data-nosnippet>940</a>// HOWEVER, we should construct our parse tree using (a clone of) the XMRef
-<a href=#941 id=941 data-nosnippet>941</a>// node, rather than (a clone of) the referred to node, so as to preserve
-<a href=#942 id=942 data-nosnippet>942</a>// identity.
-<a href=#943 id=943 data-nosnippet>943</a>//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-<a href=#944 id=944 data-nosnippet>944</a>// We're currently keeping the id's on the nodes as they get cloned,
-<a href=#945 id=945 data-nosnippet>945</a>// since they'll (maybe) replace the unparsed nodes.
-<a href=#946 id=946 data-nosnippet>946</a>// However, if we consider multiple parses or preserving both parsed &amp; unparsed,
-<a href=#947 id=947 data-nosnippet>947</a>// we may have to do some adaptation and id shifting.
-<a href=#948 id=948 data-nosnippet>948</a>// ================================================================================
-<a href=#949 id=949 data-nosnippet>949</a>
-<a href=#950 id=950 data-nosnippet>950</a>// ================================================================================
-<a href=#951 id=951 data-nosnippet>951</a>// Low-level accessors
-<a href=#952 id=952 data-nosnippet>952</a>
-<a href=#953 id=953 data-nosnippet>953</a>// The following accessors work on both the LibXML and ARRAY representations
-<a href=#954 id=954 data-nosnippet>954</a>// but they do NOT automatically dereference XMRef!
-<a href=#955 id=955 data-nosnippet>955</a></span><span class="kw">pub fn </span>p_get_value(node: <span class="kw-2">&amp;</span>Node) -&gt; String {
-<a href=#956 id=956 data-nosnippet>956</a>  <span class="kw">let </span>node_type = node.get_type();
-<a href=#957 id=957 data-nosnippet>957</a>  <span class="kw">if </span>node_type == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
-<a href=#958 id=958 data-nosnippet>958</a>    <span class="kw">let </span>x = node.get_content();
-<a href=#959 id=959 data-nosnippet>959</a>    <span class="kw">if </span>!x.is_empty() {
-<a href=#960 id=960 data-nosnippet>960</a>      <span class="comment">// get content, or fall back to name
-<a href=#961 id=961 data-nosnippet>961</a>      </span>x
-<a href=#962 id=962 data-nosnippet>962</a>    } <span class="kw">else </span>{
-<a href=#963 id=963 data-nosnippet>963</a>      node.get_attribute(<span class="string">"name"</span>).unwrap_or_default()
-<a href=#964 id=964 data-nosnippet>964</a>    }
-<a href=#965 id=965 data-nosnippet>965</a>  } <span class="kw">else </span>{
-<a href=#966 id=966 data-nosnippet>966</a>    node.get_content()
-<a href=#967 id=967 data-nosnippet>967</a>  }
-<a href=#968 id=968 data-nosnippet>968</a>}
-<a href=#969 id=969 data-nosnippet>969</a>
-<a href=#970 id=970 data-nosnippet>970</a><span class="comment">//================================================================================
-<a href=#971 id=971 data-nosnippet>971</a>
-<a href=#972 id=972 data-nosnippet>972</a></span><span class="kw">pub fn </span>realize_xmnode&lt;<span class="lifetime">'a</span>&gt;(node: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Node, document: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Document) -&gt; Cow&lt;<span class="lifetime">'a</span>, Node&gt; {
-<a href=#973 id=973 data-nosnippet>973</a>  <span class="kw">if </span>with_node_qname(node, |name| name == <span class="string">"ltx:XMRef"</span>) {
-<a href=#974 id=974 data-nosnippet>974</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(idref) = node.get_attribute(<span class="string">"idref"</span>) {
-<a href=#975 id=975 data-nosnippet>975</a>      <span class="comment">// Can it happen that $realnode is, itself, an XMRef?
-<a href=#976 id=976 data-nosnippet>976</a>      // Then we should recurse recurse!
-<a href=#977 id=977 data-nosnippet>977</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(realnode) = document.lookup_id(<span class="kw-2">&amp;</span>idref) {
-<a href=#978 id=978 data-nosnippet>978</a>        <span class="kw">return </span>Cow::Borrowed(realnode);
-<a href=#979 id=979 data-nosnippet>979</a>      } <span class="kw">else </span>{
-<a href=#980 id=980 data-nosnippet>980</a>        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Cannot find a node with xml:id='{}'"</span>, idref);
-<a href=#981 id=981 data-nosnippet>981</a>        <span class="comment">// TODO:
-<a href=#982 id=982 data-nosnippet>982</a>        // LaTeXML::MathParser::IDREFS{$idref}
-<a href=#983 id=983 data-nosnippet>983</a>        // ? "Previously bound to " .
-<a href=#984 id=984 data-nosnippet>984</a>        // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-<a href=#985 id=985 data-nosnippet>985</a>        </span><span class="kw">let </span>err = || {
-<a href=#986 id=986 data-nosnippet>986</a>          <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"id"</span>, message);
-<a href=#987 id=987 data-nosnippet>987</a>          <span class="prelude-val">Ok</span>(())
-<a href=#988 id=988 data-nosnippet>988</a>        };
-<a href=#989 id=989 data-nosnippet>989</a>        err().ok();
-<a href=#990 id=990 data-nosnippet>990</a>        <span class="comment">//       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
-<a href=#991 id=991 data-nosnippet>991</a>      </span>}
-<a href=#992 id=992 data-nosnippet>992</a>    }
-<a href=#993 id=993 data-nosnippet>993</a>  }
-<a href=#994 id=994 data-nosnippet>994</a>  Cow::Borrowed(node)
-<a href=#995 id=995 data-nosnippet>995</a>}
-<a href=#996 id=996 data-nosnippet>996</a>
-<a href=#997 id=997 data-nosnippet>997</a><span class="kw">fn </span>p_get_attribute(item: <span class="kw-2">&amp;</span>Node, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#998 id=998 data-nosnippet>998</a>  <span class="comment">//   elsif (ref $item eq 'ARRAY') {
-<a href=#999 id=999 data-nosnippet>999</a>  //     return $$item[1]{$key}; }
-<a href=#1000 id=1000 data-nosnippet>1000</a>  </span><span class="kw">if </span>item.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
-<a href=#1001 id=1001 data-nosnippet>1001</a>    item.get_attribute(key)
-<a href=#1002 id=1002 data-nosnippet>1002</a>  } <span class="kw">else </span>{
-<a href=#1003 id=1003 data-nosnippet>1003</a>    <span class="prelude-val">None
-<a href=#1004 id=1004 data-nosnippet>1004</a>  </span>}
-<a href=#1005 id=1005 data-nosnippet>1005</a>}
+<a href=#905 id=905 data-nosnippet>905</a><span class="kw">fn </span>textrec_array(node: <span class="kw-2">&amp;</span>Node, document: <span class="kw-2">&amp;</span>Document) -&gt; String {
+<a href=#906 id=906 data-nosnippet>906</a>  <span class="kw">let </span>name = node
+<a href=#907 id=907 data-nosnippet>907</a>    .get_attribute(<span class="string">"meaning"</span>)
+<a href=#908 id=908 data-nosnippet>908</a>    .or_else(|| node.get_attribute(<span class="string">"name"</span>))
+<a href=#909 id=909 data-nosnippet>909</a>    .unwrap_or_else(|| String::from(<span class="string">"Array"</span>));
+<a href=#910 id=910 data-nosnippet>910</a>  <span class="kw">let </span>rows: Vec&lt;String&gt; = element_nodes(node)
+<a href=#911 id=911 data-nosnippet>911</a>    .into_iter()
+<a href=#912 id=912 data-nosnippet>912</a>    .map(|row| {
+<a href=#913 id=913 data-nosnippet>913</a>      <span class="kw">let </span>cells: Vec&lt;String&gt; = element_nodes(<span class="kw-2">&amp;</span>row)
+<a href=#914 id=914 data-nosnippet>914</a>        .into_iter()
+<a href=#915 id=915 data-nosnippet>915</a>        .map(|cell| {
+<a href=#916 id=916 data-nosnippet>916</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(first_child) = cell.get_first_child() {
+<a href=#917 id=917 data-nosnippet>917</a>            textrec(<span class="kw-2">&amp;</span>first_child, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document)
+<a href=#918 id=918 data-nosnippet>918</a>          } <span class="kw">else </span>{
+<a href=#919 id=919 data-nosnippet>919</a>            String::new()
+<a href=#920 id=920 data-nosnippet>920</a>          }
+<a href=#921 id=921 data-nosnippet>921</a>        })
+<a href=#922 id=922 data-nosnippet>922</a>        .collect();
+<a href=#923 id=923 data-nosnippet>923</a>      <span class="macro">format!</span>(<span class="string">"[{}]"</span>, cells.join(<span class="string">", "</span>))
+<a href=#924 id=924 data-nosnippet>924</a>    })
+<a href=#925 id=925 data-nosnippet>925</a>    .collect();
+<a href=#926 id=926 data-nosnippet>926</a>  <span class="macro">format!</span>(<span class="string">"{}[{}]"</span>, name, rows.join(<span class="string">", "</span>))
+<a href=#927 id=927 data-nosnippet>927</a>}
+<a href=#928 id=928 data-nosnippet>928</a>
+<a href=#929 id=929 data-nosnippet>929</a><span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#930 id=930 data-nosnippet>930</a>// Cute! Were it NOT for Sub/Superscripts, the whole parsing process only
+<a href=#931 id=931 data-nosnippet>931</a>// builds a new superstructure around the sequence of token nodes in the input.
+<a href=#932 id=932 data-nosnippet>932</a>// Thus, any internal structure is unchanged.
+<a href=#933 id=933 data-nosnippet>933</a>//  They get re-parented, but if the parse fails, we've only got to put them
+<a href=#934 id=934 data-nosnippet>934</a>// BACK into the original node, to recover the original arrangment!!!
+<a href=#935 id=935 data-nosnippet>935</a>// Thus, we don't have to clone, and deal with namespace duplication.
+<a href=#936 id=936 data-nosnippet>936</a>// ...
+<a href=#937 id=937 data-nosnippet>937</a>// EXCEPT, as I said, for sub/superscripts!!!!
+<a href=#938 id=938 data-nosnippet>938</a>//
+<a href=#939 id=939 data-nosnippet>939</a>
+<a href=#940 id=940 data-nosnippet>940</a>//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#941 id=941 data-nosnippet>941</a>// Constructors used in grammar
+<a href=#942 id=942 data-nosnippet>942</a>// All the tree construction in the grammar should come through these
+<a href=#943 id=943 data-nosnippet>943</a>// operations. We avoid mucking with the actual XML nodes (both to avoid
+<a href=#944 id=944 data-nosnippet>944</a>// modifying the original tree until we have a successful parse, and to avoid
+<a href=#945 id=945 data-nosnippet>945</a>// XML::LibXML cloning nightmares) We are converting XML nodes to array
+<a href=#946 id=946 data-nosnippet>946</a>// representation: [$tag, {%attr},@children] This means any inspection of
+<a href=#947 id=947 data-nosnippet>947</a>// nodes has to recognize that  * node may be in XML vs ARRAY representation
+<a href=#948 id=948 data-nosnippet>948</a>// * node may be an XMRef to another node whose properties are the ones we
+<a href=#949 id=949 data-nosnippet>949</a>// should use.
+<a href=#950 id=950 data-nosnippet>950</a>//
+<a href=#951 id=951 data-nosnippet>951</a>// Also, when we are examining a node's properties (roles, fences, script
+<a href=#952 id=952 data-nosnippet>952</a>// positioning, etc) we should be careful to check for XMRef indirection and
+<a href=#953 id=953 data-nosnippet>953</a>// examine the properties of the node that was referred to.
+<a href=#954 id=954 data-nosnippet>954</a>// HOWEVER, we should construct our parse tree using (a clone of) the XMRef
+<a href=#955 id=955 data-nosnippet>955</a>// node, rather than (a clone of) the referred to node, so as to preserve
+<a href=#956 id=956 data-nosnippet>956</a>// identity.
+<a href=#957 id=957 data-nosnippet>957</a>//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#958 id=958 data-nosnippet>958</a>// We're currently keeping the id's on the nodes as they get cloned,
+<a href=#959 id=959 data-nosnippet>959</a>// since they'll (maybe) replace the unparsed nodes.
+<a href=#960 id=960 data-nosnippet>960</a>// However, if we consider multiple parses or preserving both parsed &amp; unparsed,
+<a href=#961 id=961 data-nosnippet>961</a>// we may have to do some adaptation and id shifting.
+<a href=#962 id=962 data-nosnippet>962</a>// ================================================================================
+<a href=#963 id=963 data-nosnippet>963</a>
+<a href=#964 id=964 data-nosnippet>964</a>// ================================================================================
+<a href=#965 id=965 data-nosnippet>965</a>// Low-level accessors
+<a href=#966 id=966 data-nosnippet>966</a>
+<a href=#967 id=967 data-nosnippet>967</a>// The following accessors work on both the LibXML and ARRAY representations
+<a href=#968 id=968 data-nosnippet>968</a>// but they do NOT automatically dereference XMRef!
+<a href=#969 id=969 data-nosnippet>969</a></span><span class="kw">pub fn </span>p_get_value(node: <span class="kw-2">&amp;</span>Node) -&gt; String {
+<a href=#970 id=970 data-nosnippet>970</a>  <span class="kw">let </span>node_type = node.get_type();
+<a href=#971 id=971 data-nosnippet>971</a>  <span class="kw">if </span>node_type == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+<a href=#972 id=972 data-nosnippet>972</a>    <span class="kw">let </span>x = node.get_content();
+<a href=#973 id=973 data-nosnippet>973</a>    <span class="kw">if </span>!x.is_empty() {
+<a href=#974 id=974 data-nosnippet>974</a>      <span class="comment">// get content, or fall back to name
+<a href=#975 id=975 data-nosnippet>975</a>      </span>x
+<a href=#976 id=976 data-nosnippet>976</a>    } <span class="kw">else </span>{
+<a href=#977 id=977 data-nosnippet>977</a>      node.get_attribute(<span class="string">"name"</span>).unwrap_or_default()
+<a href=#978 id=978 data-nosnippet>978</a>    }
+<a href=#979 id=979 data-nosnippet>979</a>  } <span class="kw">else </span>{
+<a href=#980 id=980 data-nosnippet>980</a>    node.get_content()
+<a href=#981 id=981 data-nosnippet>981</a>  }
+<a href=#982 id=982 data-nosnippet>982</a>}
+<a href=#983 id=983 data-nosnippet>983</a>
+<a href=#984 id=984 data-nosnippet>984</a><span class="comment">//================================================================================
+<a href=#985 id=985 data-nosnippet>985</a>
+<a href=#986 id=986 data-nosnippet>986</a></span><span class="kw">pub fn </span>realize_xmnode&lt;<span class="lifetime">'a</span>&gt;(node: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Node, document: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Document) -&gt; Cow&lt;<span class="lifetime">'a</span>, Node&gt; {
+<a href=#987 id=987 data-nosnippet>987</a>  <span class="kw">if </span>with_node_qname(node, |name| name == <span class="string">"ltx:XMRef"</span>) {
+<a href=#988 id=988 data-nosnippet>988</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(idref) = node.get_attribute(<span class="string">"idref"</span>) {
+<a href=#989 id=989 data-nosnippet>989</a>      <span class="comment">// Can it happen that $realnode is, itself, an XMRef?
+<a href=#990 id=990 data-nosnippet>990</a>      // Then we should recurse recurse!
+<a href=#991 id=991 data-nosnippet>991</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(realnode) = document.lookup_id(<span class="kw-2">&amp;</span>idref) {
+<a href=#992 id=992 data-nosnippet>992</a>        <span class="kw">return </span>Cow::Borrowed(realnode);
+<a href=#993 id=993 data-nosnippet>993</a>      } <span class="kw">else </span>{
+<a href=#994 id=994 data-nosnippet>994</a>        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Cannot find a node with xml:id='{}'"</span>, idref);
+<a href=#995 id=995 data-nosnippet>995</a>        <span class="comment">// TODO:
+<a href=#996 id=996 data-nosnippet>996</a>        // LaTeXML::MathParser::IDREFS{$idref}
+<a href=#997 id=997 data-nosnippet>997</a>        // ? "Previously bound to " .
+<a href=#998 id=998 data-nosnippet>998</a>        // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
+<a href=#999 id=999 data-nosnippet>999</a>        </span><span class="kw">let </span>err = || {
+<a href=#1000 id=1000 data-nosnippet>1000</a>          <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"id"</span>, message);
+<a href=#1001 id=1001 data-nosnippet>1001</a>          <span class="prelude-val">Ok</span>(())
+<a href=#1002 id=1002 data-nosnippet>1002</a>        };
+<a href=#1003 id=1003 data-nosnippet>1003</a>        err().ok();
+<a href=#1004 id=1004 data-nosnippet>1004</a>        <span class="comment">//       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
+<a href=#1005 id=1005 data-nosnippet>1005</a>      </span>}
+<a href=#1006 id=1006 data-nosnippet>1006</a>    }
+<a href=#1007 id=1007 data-nosnippet>1007</a>  }
+<a href=#1008 id=1008 data-nosnippet>1008</a>  Cow::Borrowed(node)
+<a href=#1009 id=1009 data-nosnippet>1009</a>}
+<a href=#1010 id=1010 data-nosnippet>1010</a>
+<a href=#1011 id=1011 data-nosnippet>1011</a><span class="kw">fn </span>p_get_attribute(item: <span class="kw-2">&amp;</span>Node, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#1012 id=1012 data-nosnippet>1012</a>  <span class="comment">//   elsif (ref $item eq 'ARRAY') {
+<a href=#1013 id=1013 data-nosnippet>1013</a>  //     return $$item[1]{$key}; }
+<a href=#1014 id=1014 data-nosnippet>1014</a>  </span><span class="kw">if </span>item.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+<a href=#1015 id=1015 data-nosnippet>1015</a>    item.get_attribute(key)
+<a href=#1016 id=1016 data-nosnippet>1016</a>  } <span class="kw">else </span>{
+<a href=#1017 id=1017 data-nosnippet>1017</a>    <span class="prelude-val">None
+<a href=#1018 id=1018 data-nosnippet>1018</a>  </span>}
+<a href=#1019 id=1019 data-nosnippet>1019</a>}
 </code></pre></div></section></main></body></html>
