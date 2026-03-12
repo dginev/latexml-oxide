@@ -975,10 +975,18 @@ pub fn read_cs_name() -> Result<Token> {
   Ok(T_CS!(cs))
 }
 
-/// reads and discards tokens, until it encounters a conditional, if any
+/// reads and discards tokens, until it encounters a conditional, if any.
+/// Perl: skipConditionalBody inner loop (Conditional.pm L127-133) reads tokens directly
+/// from pushback/mouth and manually tracks ALIGN_STATE for { and }.
 pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
   while let Some(token) = read_token()? {
-    if token.get_catcode().is_active_or_cs() {
+    let cc = token.get_catcode();
+    // Perl L128-130: track ALIGN_STATE for braces during conditional skipping
+    if cc == Catcode::BEGIN {
+      increment_align_group_count();
+    } else if cc == Catcode::END {
+      decrement_align_group_count();
+    } else if cc.is_active_or_cs() {
       if let Some(cond_type) = lookup_conditional(&token) {
         return Ok(Some((token, cond_type)));
       }

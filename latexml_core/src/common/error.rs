@@ -313,6 +313,7 @@ pub enum ErrorCategory {
   ToDo,
   TokenLimit,
   PushbackLimit,
+  IfLimit,
 }
 
 #[derive(Debug)]
@@ -364,6 +365,7 @@ impl fmt::Display for ErrorCategory {
       Filename(ref name) => write!(f, "file:{name}"),
       TokenLimit => write!(f, "token_limit"),
       PushbackLimit => write!(f, "pushback_limit"),
+      IfLimit => write!(f, "if_limit"),
     }
   }
 }
