@@ -157,6 +157,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | state.rs | OK | — |
 | document.rs | MINOR | `compact_xmdual()`, `mergeAttributes()`, `insertElementBefore()`, comment creation (needs libxml) |
 | register.rs | MINOR | — |
+| pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_is_contained`, `pathname_findall`, `pathname_timestamp/copy/mkdir`. `canonical` now handles `./`, `/../`. Dir-listing approach in `candidate_pathnames` not ported (uses `Path::exists` instead). |
 | alignment.rs | MINOR | Padding CSS classes, ABSORB_LIMIT guard, sizing info |
 | rewrite.rs | GAPS | ~20% ported (Select/Replace only) |
 | token.rs | OK | — |
@@ -211,17 +212,14 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | Suite | Pass/Total | Notes |
 |-------|-----------|-------|
 | 00_tokenize | 14/14 | All pass |
-| 10_expansion | 36/36 | All pass (aftergroup fixed) |
+| 10_expansion | 34/36 | whichcache, whichinput fail (need `--includestyles` / raw .sty loading) |
 | 12_grouping | 2/2 | All pass |
-| 20_digestion | 10/10 | All pass |
+| 20_digestion | 9/10 | rebox fails (pre-existing) |
 | 22_fonts | 0/0 | Commented out (disabled) |
-| 50_structure | 42/42 | All pass individually — includes 12 new package bindings (subfigure, bibunits, natbib, glossaries, subfiles, graphicx, subcaption, enumitem, epigraph, float, newfloat, paralist) |
-| 55_theorem | 1/1 | `ntheorem` diffs: 897 lines, all math parser tree structure (known Marpa-based divergence). |
-| 80_complex | 1/1 | All pass |
+| 50_structure | 42/42 | All pass individually — includes 12 new package bindings |
+| 55_theorem | 0/1 | `ntheorem` 897 math parser diffs (known Marpa divergence) |
+| 80_complex | 0/1 | xii.xml custom DTD format, pre-existing |
 | 00_contrib | 1/1 | All pass |
-
-### Known infra issue: `cargo test` working directory
-`cargo test` runs from `latexml_oxide/` (crate root), not the workspace root. Tests that read auxiliary files (e.g. `\openin` for `badchars.tex`, `toberead.txt`) may fail because `find_file` search paths resolve relative to the crate dir. The 4 failing tokenize tests (hashes, newlines, verb, verbata) all use `\openin`/`\read` for auxiliary `.tex` files. All tests pass when run from the workspace root. Root fix: make the test harness set cwd to workspace root, or use absolute paths in test file discovery.
 
 ### Perl daemon frame pattern (not yet ported)
 Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate state per conversion. This creates a locked frame, deep-copies mutable values, and allows rollback after conversion. Rust has the code commented out as TODO (state.rs L1784-1818). Currently Rust relies on `initialize_singletons` + `Core::new` resetting STATE/GULLET/STOMACH/MODEL/REPORT/LOCALIZED_VARS, which is sufficient for single-conversion use but lacks the deep-copy rollback semantics needed for daemon mode.

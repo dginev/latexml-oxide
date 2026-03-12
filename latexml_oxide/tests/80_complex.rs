@@ -25,7 +25,8 @@ fn can_complex() {
 pub fn complex_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
-    "xii.tex" => Some(helpers::xii_tex::load_definitions()),
+    // Document-level binding: loaded by load_external_binding(stem)
+    "xii" => Some(helpers::xii_tex::load_definitions()),
     _ => None,
   }
 }

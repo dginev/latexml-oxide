@@ -30,6 +30,9 @@ static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
 static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new().ok()));
+// Perl: $pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|
+static CANONICAL_URL_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^((?:https|http|ftp)://[^/]*)").unwrap());
 
 // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
 //     Ok(exe_path) => {
@@ -66,6 +69,15 @@ pub fn is_reloadable(pathname: &str) -> bool {
   // to load an adjacently defined language, so allow that.
   ext == "ldf"
 }
+/// Check whether a pathname is a raw TeX source or definition file.
+/// Perl: pathname_is_raw
+pub fn is_raw(pathname: &str) -> bool {
+  matches!(
+    extension(pathname).as_str(),
+    "tex" | "pool" | "sty" | "cls" | "clo" | "cnf" | "cfg" | "ldf" | "def" | "dfu"
+  )
+}
+
 /// absolute paths start with the filesystem root - check if this is one
 pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
 /// convert a (possibly relative) file path to an absolute one
@@ -110,8 +122,8 @@ pub fn url_split(url: &str) -> (&str, &str) {
   }
 }
 
-/// This likely needs portability work!!! (particularly regarding urls, separators, ...)
-/// AND, care about symbolic links and collapsing ../ !!!
+/// Canonicalize a pathname by simplifying redundant separators, `.` and `..` components.
+/// Matches Perl's pathname_canonical from Pathname.pm.
 pub fn canonical(pathname: &str) -> String {
   if is_literaldata(pathname) {
     return pathname.to_owned();
@@ -119,28 +131,74 @@ pub fn canonical(pathname: &str) -> String {
   // Don't call is_absolute, etc, here, cause THEY call US!
   let home_path: &str = &HOME_PATH;
 
-  // TODO: consider using Path's .canonicalize()
-
-  // TODO: Finish fleshing out, just a mock for now
-  if pathname.starts_with(HOME_TILDE) {
+  let mut pathname = if pathname.starts_with(HOME_TILDE) {
     pathname.replacen(HOME_TILDE, home_path, 1)
   } else {
     pathname.to_string()
+  };
+
+  // Handle URL prefix: strip protocol://host before normalizing path
+  let url_prefix = if let Some(caps) = CANONICAL_URL_RE.captures(&pathname) {
+    let prefix = caps.get(1).unwrap().as_str().to_string();
+    pathname = pathname[prefix.len()..].to_string();
+    Some(prefix)
+  } else {
+    None
+  };
+
+  // Perl: $pathname =~ s|/\./|/|g;
+  while pathname.contains("/./") {
+    pathname = pathname.replace("/./", "/");
   }
-  // We CAN canonicalize urls, but we need to be careful about the // before host!
-  // OHHH, but we DON'T want \ for separator!
-  // let urlprefix = None;
-  // if ($pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|) {
-  //   $urlprefix = $1; }
-
-  // if ($pathname =~ m|//+/|) {
-  //   Carp::cluck "Recursive pathname? : $pathname\n"; }
-
-  // $pathname =~ s|/\./|/|g;
-  // Collapse any foo/.. patterns, but not ../..
-  // while ($pathname =~ s|/(?!\.\./)[^/]+/\.\.(/\|$)|$1|) { }
-  // $pathname =~ s|^\./||;
-  // return (defined $urlprefix ? $urlprefix . $pathname : $pathname); }
+  // Perl: while ($pathname =~ s|/(?!\.\./)[^/]+/\.\.(/|$)|$1|) { }
+  // Collapse /foo/.. patterns but not /../..
+  // Implemented without lookahead since the regex crate doesn't support it.
+  loop {
+    let mut changed = false;
+    // Find /component/.. where component is not ".."
+    if let Some(dotdot_pos) = pathname.find("/..") {
+      // Check this is actually /../ or /..$ (end of string)
+      let after = dotdot_pos + 3;
+      if after == pathname.len() || pathname.as_bytes().get(after) == Some(&b'/') {
+        // Find the preceding component: look backwards from dotdot_pos for '/'
+        if dotdot_pos > 0 {
+          let prefix = &pathname[..dotdot_pos];
+          if let Some(slash_pos) = prefix.rfind('/') {
+            let component = &pathname[slash_pos + 1..dotdot_pos];
+            if component != ".." && !component.is_empty() {
+              // Replace /component/.. with the trailing part
+              let trail = &pathname[after..];
+              pathname = format!("{}{}", &pathname[..slash_pos], trail);
+              changed = true;
+            }
+          } else if prefix != ".." {
+            // No leading slash, e.g. "foo/.."
+            let trail = &pathname[after..];
+            pathname = if trail.starts_with('/') {
+              trail[1..].to_string()
+            } else {
+              trail.to_string()
+            };
+            if pathname.is_empty() {
+              pathname = ".".to_string();
+            }
+            changed = true;
+          }
+        }
+      }
+    }
+    if !changed {
+      break;
+    }
+  }
+  // Perl: $pathname =~ s|^\./(.)|$1|; — reduce ./foo to foo, but preserve ./
+  if pathname.starts_with("./") && pathname.len() > 2 {
+    pathname = pathname[2..].to_string();
+  }
+  match url_prefix {
+    Some(prefix) => format!("{}{}", prefix, pathname),
+    None => pathname,
+  }
 }
 
 /// Note that this returns ONLY recognized protocols!
@@ -178,7 +236,14 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
     pathname.to_owned()
   };
 
-  let (pathdir, name, pathname_ext) = split(&canonical_pathname);
+  let (pathdir, name_stem, pathname_ext) = split(&canonical_pathname);
+  // Perl: $name .= '.' . $type if (defined $type) && ($type ne '');
+  // Re-attach the extension to the name, as Perl does after split
+  let name = if !pathname_ext.is_empty() {
+    format!("{}.{}", name_stem, pathname_ext)
+  } else {
+    name_stem.clone()
+  };
 
   let cwd = cwd();
 
@@ -200,10 +265,13 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
       }
     }
   }
-  // Always have the current directory!
-  let from_cwd = concat(&cwd, &pathdir);
-  if !dirs.contains(&from_cwd) {
-    dirs.push(from_cwd);
+  // Perl: push(@dirs, pathname_concat($cwd, $pathdir)) unless @dirs;
+  // Only add cwd if no search paths were given (fallback)
+  if dirs.is_empty() {
+    let from_cwd = concat(&cwd, &pathdir);
+    if !dirs.contains(&from_cwd) {
+      dirs.push(from_cwd);
+    }
   }
 
   // TODO: The use of INSTALLDIRS should be rethought entirely, as Rust currently doesn't have a
@@ -226,16 +294,24 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
     }
   }
   // extract the desired extensions.
+  // Perl: the extensions from `types` option are applied to the already-reassembled name.
+  // Since name already has its extension, matching an existing extension pushes '' (exact match).
   let mut exts = Vec::new();
   if let Some(ext_vec) = options.extensions {
     for ext in ext_vec {
-      if ext.is_empty() || pathname_ext == ext.to_lowercase() {
+      if ext.is_empty() {
         exts.push(String::new());
       } else if ext == "*" {
         exts.push(s!(".*"));
         exts.push(String::new());
+      } else if !pathname_ext.is_empty() && pathname_ext == ext.to_lowercase() {
+        // Perl: if ($pathname =~ /\.\Q$ext\E$/i) { push(@exts, ''); }
+        // The file already has this extension, so push '' for exact match
+        exts.push(String::new());
+        // Also push the extension itself (Perl pushes both)
+        exts.push(format!(".{}", &ext));
       } else {
-        exts.push(s!(".{}", &ext));
+        exts.push(format!(".{}", &ext));
       }
     }
   }
@@ -248,20 +324,7 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
   for dir in &dirs {
     for ext in &exts {
       if name == "*" {
-        // Unfortunately, we've got to test the file system NOW...
-        //       if ext == ".*" {    // everything
-        // //         opendir(DIR, $dir) or next;
-        // //         push(@paths, map { concat($dir, $_) } grep { !/^\./ } readdir(DIR));
-        // //         closedir(DIR);
-        //       } else {
-        // //         opendir(DIR, $dir) or next;    // ???
-        // //         push(@paths, map { concat($dir, $_) } grep { /\Q$ext\E$/ } readdir(DIR));
-        // //         closedir(DIR); } }
-        //       }
-        //     } else if ext == ".*" { // Unfortunately, we've got to test the file system NOW...
-        // //       opendir(DIR, $dir) or next;      // ???
-        // //       push(@paths, map { concat($dir, $_) } grep { /^\Q$name\E\.\w+$/ } readdir(DIR));
-        // //       closedir(DIR);
+        // TODO: wildcard directory listing support
       } else {
         paths.push(concat(dir, &(name.clone() + ext)));
       }
@@ -291,10 +354,10 @@ pub fn file_name(pathname: &str) -> String {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
   }
-  .to_lowercase()
 }
 
 /// transform to a base name (via `Path::file_stem`)
+/// Note: Perl's pathname_name returns the stem without extension and without case change.
 pub fn file_stem(pathname: &str) -> String {
   let canonical_pathname = canonical(pathname);
   let canonical_path = Path::new(&canonical_pathname);
@@ -302,10 +365,10 @@ pub fn file_stem(pathname: &str) -> String {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
   }
-  .to_lowercase()
 }
 
 /// obtain the directory portion of a pathname (via `Path::parent`)
+/// Matches Perl's pathname_directory.
 pub fn directory(pathname: &str) -> String {
   let canonical_pathname = canonical(pathname);
   let canonical_path = Path::new(&canonical_pathname);
@@ -313,7 +376,6 @@ pub fn directory(pathname: &str) -> String {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
   }
-  .to_lowercase()
 }
 
 /// obtain the extension portion of a pathname (via `Path::extension`)
