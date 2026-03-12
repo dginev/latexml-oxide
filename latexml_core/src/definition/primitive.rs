@@ -18,20 +18,22 @@ use crate::whatsit::Whatsit;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {
-  pub bounded:       bool,
-  pub is_prefix:     bool,
-  pub require_math:  bool,
-  pub forbid_math:   bool,
-  pub robust:        bool,
-  pub locked:        bool,
-  pub nargs:         Option<usize>,
-  pub scope:         Option<Scope>,
-  pub font:          Option<FontDirective>,
-  pub mode:          Option<String>,
-  pub alias:         Option<String>,
-  pub before_digest: Vec<BeforeDigestClosure>,
-  pub after_digest:  Vec<DigestionClosure>,
-  pub reversion:     Option<Reversion>,
+  pub bounded:          bool,
+  pub is_prefix:        bool,
+  pub require_math:     bool,
+  pub forbid_math:      bool,
+  pub robust:           bool,
+  pub locked:           bool,
+  pub enter_horizontal: bool,
+  pub leave_horizontal: bool,
+  pub nargs:            Option<usize>,
+  pub scope:            Option<Scope>,
+  pub font:             Option<FontDirective>,
+  pub mode:             Option<String>,
+  pub alias:            Option<String>,
+  pub before_digest:    Vec<BeforeDigestClosure>,
+  pub after_digest:     Vec<DigestionClosure>,
+  pub reversion:        Option<Reversion>,
 }
 
 #[derive(Clone)]

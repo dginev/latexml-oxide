@@ -50,8 +50,7 @@ LoadDefinitions!({
       document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;
     }
   },
-  // TODO: enter_horizontal causes io_test failure — investigate
-  // before_digest => { enter_horizontal(); },
+  enter_horizontal => true,
   properties => sub[args] {
     unref!(args => length);
     Ok(stored_map!("width" => length, "isSpace" => true, "isKern" => true))
@@ -112,8 +111,7 @@ LoadDefinitions!({
   DefConstructor!("\\lower Dimension MoveableBox",
   "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
     // sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); },
-    // TODO: enter_horizontal causes io_test failure — investigate
-    // before_digest => { enter_horizontal(); },
+    enter_horizontal => true,
     after_digest => sub[whatsit] {
       let y         = Dimension(-whatsit.get_arg(1).unwrap().value_of());
       let ypx       = y.px_value(None);
@@ -127,8 +125,7 @@ LoadDefinitions!({
   DefConstructor!("\\raise Dimension MoveableBox",
   "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
   //sizer       => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); },
-  // TODO: enter_horizontal causes io_test failure — investigate
-  // before_digest => { enter_horizontal(); },
+  enter_horizontal => true,
   after_digest => sub[whatsit] {
     let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
     let ypx       = y.px_value(None);
@@ -147,8 +144,7 @@ LoadDefinitions!({
   // Perl: enterHorizontal => 1
   DefConstructor!("\\moveleft Dimension MoveableBox",
   "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
-  // TODO: enter_horizontal causes io_test failure — investigate
-  // before_digest => { enter_horizontal(); },
+  enter_horizontal => true,
   after_digest => sub[whatsit] {
     if let DigestedData::RegisterValue(d) = whatsit.get_arg(1).unwrap().data() {
       whatsit.set_property("x", d.clone().multiply(Number::new(-1)));
@@ -157,8 +153,7 @@ LoadDefinitions!({
   // Perl: enterHorizontal => 1
   DefConstructor!("\\moveright Dimension MoveableBox",
   "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
-  // TODO: enter_horizontal causes io_test failure — investigate
-  // before_digest => { enter_horizontal(); },
+  enter_horizontal => true,
   after_digest => sub[whatsit] {
     if let Some(dimension) = whatsit.get_arg(1) {
       whatsit.set_property("x", dimension.clone());

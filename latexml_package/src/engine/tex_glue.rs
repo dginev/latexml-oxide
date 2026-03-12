@@ -62,8 +62,7 @@ LoadDefinitions!({
     }
   },
   // Perl: enterHorizontal => 1
-  // TODO: enter_horizontal causes io_test failure — investigate
-  // before_digest => { enter_horizontal(); },
+  enter_horizontal => true,
   properties => sub[args] {
     unref!(args => length);
     Ok(stored_map!(
@@ -118,10 +117,10 @@ LoadDefinitions!({
   // \hss              d  inserts infinitely stretchable and shrinkable horizontal glue in a
   // horizontal or math list.
   // Perl: all have enterHorizontal => 1
-  // TODO: enter_horizontal() causes io_test failure — investigate
-  DefPrimitive!("\\hss", None);
-  DefPrimitive!("\\hfilneg", None);
+  DefPrimitive!("\\hss", None, enter_horizontal => true);
+  DefPrimitive!("\\hfilneg", None, enter_horizontal => true);
   DefPrimitive!("\\hfil", {
+    enter_horizontal();
     Tbox::new(
       arena::pin_static(" "),
       None,
@@ -131,6 +130,7 @@ LoadDefinitions!({
     )
   });
   DefPrimitive!("\\hfill", {
+    enter_horizontal();
     Tbox::new(
       arena::pin_static(" "),
       None,
@@ -150,11 +150,10 @@ LoadDefinitions!({
   // list.
 
   // Perl: all have leaveHorizontal => 1
-  // TODO: leave_horizontal causes io_test failure — investigate stack underflow
-  DefPrimitive!("\\vfil", None);
-  DefPrimitive!("\\vfill", None);
-  DefPrimitive!("\\vss", None);
-  DefPrimitive!("\\vfilneg", None);
+  DefPrimitive!("\\vfil", None, leave_horizontal => true);
+  DefPrimitive!("\\vfill", None, leave_horizontal => true);
+  DefPrimitive!("\\vss", None, leave_horizontal => true);
+  DefPrimitive!("\\vfilneg", None, leave_horizontal => true);
 
   //======================================================================
   // Lastskip

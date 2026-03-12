@@ -188,8 +188,7 @@ LoadDefinitions!({
   // Perl: beforeDigest => sub { $_[0]->enterHorizontal; }
   DefConstructor!("\\lx@kludged{}",
     "?#isMath(<ltx:XMWrap rule='kludge'>#1</ltx:XMWrap>)(#1)",
-    // TODO: enter_horizontal causes io_test failure — investigate
-    // before_digest => { enter_horizontal(); },
+    enter_horizontal => true,
     reversion => "#1");
   // TODO:
   // DefConstructor!("\\lx@padded[MuDimension]{MuDimension}{}",

@@ -1278,15 +1278,19 @@ LoadDefinitions!({
       Info!("unexpected", "patchcmd", "Patchcmd is not supported on LaTeXML-native definitions, will not patch {}",cs);
       return Ok(failure)
     }
-    let string        = expansion.unwrap().to_string();
-    let search_string = search.to_string();
+    let expansion_tokens = match expansion.unwrap() {
+      ExpansionBody::Tokens(t) => t.clone(),
+      _ => unreachable!(),
+    };
+    let string        = expansion_tokens.untex();
+    let search_string = search.untex();
     // All characters are meant to be matched as literal, avoid regex interpretation
     // search_string = quotemeta(search_string);
     // let search_regex = qr/$search_string/;
     if string.contains(&search_string) {
       // Should the token substitution happen on the actual data structure?
       // string replacement is a quick&dirty way out...
-      let replace_string = replace.to_string();
+      let replace_string = replace.untex();
       let patched = string.replace(&search_string, &replace_string);
       // New definition in local scope
       state::install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(),

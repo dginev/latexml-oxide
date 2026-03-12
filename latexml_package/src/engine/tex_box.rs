@@ -81,17 +81,17 @@ LoadDefinitions!({
   );
 
   // Perl: enterHorizontal => 1
-  // TODO: enter_horizontal causes io_test failure — investigate
   DefConstructor!(
     "\\lx@framed[]{}",
-    "<ltx:text framed='#frame' _noautoclose='1'>#2</ltx:text>"
+    "<ltx:text framed='#frame' _noautoclose='1'>#2</ltx:text>",
+    enter_horizontal => true
     /* TODO: properties => { frame => sub { ToString($_[1] || 'rectangle'); }} */
   );
   // Perl: enterHorizontal => 1
-  // TODO: enter_horizontal causes io_test failure — investigate
   DefConstructor!(
     "\\lx@hflipped{}",
-    "<ltx:text class='ltx_hflipped' _noautoclose='1'>#1</ltx:text>"
+    "<ltx:text class='ltx_hflipped' _noautoclose='1'>#1</ltx:text>",
+    enter_horizontal => true
   );
 
   // sub reportNoUnicode {
@@ -551,8 +551,7 @@ LoadDefinitions!({
       } else { (None, None, None) }
     } else { (None, None, None) };
 
-    // TODO: enter_horizontal causes io_test failure — investigate
-    // enter_horizontal();
+    // enter_horizontal is now handled automatically via mode => "text"
     let w_pt: Option<f64> = width.as_ref().and_then(|w| w.strip_suffix("pt").and_then(|s| s.parse().ok()));
     let h_pt: Option<f64> = height.as_ref().and_then(|h| h.strip_suffix("pt").and_then(|s| s.parse().ok()));
 
@@ -632,12 +631,12 @@ LoadDefinitions!({
 
   // Overlay one glyph on another (used by \accent fallback)
   // Perl: enterHorizontal => 1
-  // TODO: enter_horizontal causes io_test failure — investigate
   DefConstructor!("\\lx@overlay{}{}",
     "<ltx:text class='ltx_overlay' _noautoclose='1'>\
        <ltx:text class='ltx_overlay_base' _noautoclose='1'>#1</ltx:text>\
        <ltx:text class='ltx_overlay_over' _noautoclose='1'>#2</ltx:text>\
-     </ltx:text>"
+     </ltx:text>",
+    enter_horizontal => true
   );
 });
 

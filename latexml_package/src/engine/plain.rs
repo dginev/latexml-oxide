@@ -191,8 +191,7 @@ LoadDefinitions!({
   >T<ltx:text cssstyle='font-variant:small-caps;font-size:120%;' yoffset='-0.2ex'
   >e</ltx:text>X</ltx:text>",
     locked => true,
-    // TODO: enter_horizontal causes io_test failure — investigate
-    // before_digest => { enter_horizontal(); },
+    enter_horizontal => true,
     sizer => sub[_whatsit] { Ok((Dimension!("1.9em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
   DefPrimitive!("\\i", "\u{0131}"); // LATIN SMALL LETTER DOTLESS I
   DefPrimitive!("\\j", "\u{0237}");
