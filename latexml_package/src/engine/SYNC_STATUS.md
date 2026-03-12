@@ -128,6 +128,7 @@ Generated 2026-03-11. Covers all engine files.
 ### tex_job.rs — OK
 - **Fixed:** Added `today()` helper and `MONTH_NAMES` array
 - **Fixed:** Added `SOURCE_DATE_EPOCH` env var support for reproducible builds
+- **Fixed:** `\lx@end@document` now calls `leave_horizontal()` before `gullet::flush()` (matches Perl: `$stomach->leaveHorizontal; $stomach->getGullet->flush;`)
 - **Remaining:** `DumpFile()` infrastructure not ported (low priority)
 
 ### tex_glue.rs — MINOR
@@ -190,8 +191,8 @@ Generated 2026-03-11. Covers all engine files.
 
 ### latex_ch1_fragile_commands.rs — OK (intentionally minimal)
 
-### latex_ch1_break_command.rs — MINOR
-- Differs: `\lx@newline` variant missing, different context checking
+### latex_ch1_break_command.rs — OK
+- **Fixed:** Implemented Perl's `\lx@newline` with `sub[document]` constructor: context-aware behavior (checks IN_MATH, _CaptureBlock_, ltx:p parent, canContain). `\\` is now Let'd to `\lx@newline` (was template-only `<ltx:break/>`)
 
 ### latex_ch2_document.rs — MINOR
 - **Fixed:** `\begin{document}` sets `BOUND_MODE=internal_vertical` and `set_mode("internal_vertical")`, with `leave_horizontal_internal()` in afterDigest
@@ -219,6 +220,7 @@ Generated 2026-03-11. Covers all engine files.
 - Missing: `\raggedright`/`\raggedleft` implementations (commented out)
 
 ### latex_ch6_quotations_and_verse.rs — OK
+- **Fixed:** `\@block@cr` now Let'd to `\lx@newline` (was separate constructor with `<ltx:break/>\n` — the `\n` caused spurious newlines in text nodes). Quote/quotation/verse environments no longer override `\\`/`\par` in before_digest (Perl doesn't either).
 ### latex_ch6_list_making_environments.rs — MINOR
 ### latex_ch6_list_and_trivlist_environments.rs — OK
 ### latex_ch6_verbatim.rs — MINOR (different architecture but functional)
@@ -421,7 +423,7 @@ Rust equivalents: `enter_horizontal()` / `leave_horizontal()?` / `leave_horizont
 | `\hrule` | TeX_Box L791 | tex_box.rs | **TODO** — commented out |
 | `\unvbox`/`\unvcopy` | TeX_Box L683/693 | tex_box.rs | **TODO** — body calls `leaveHorizontal` |
 | `\halign` | TeX_Tables L168 | tex_tables.rs | N/A — not ported |
-| `\lx@end@document` | TeX_Job L67 | tex_job.rs | **TODO** — body calls `leaveHorizontal` |
+| `\lx@end@document` | TeX_Job L67 | tex_job.rs | **DONE** — `leave_horizontal()` + `flush()` |
 
 ### leaveHorizontal_internal — needs `leave_horizontal_internal()`
 
@@ -440,6 +442,7 @@ Rust equivalents: `enter_horizontal()` / `leave_horizontal()?` / `leave_horizont
 - Synced 2026-03-11 (commit 727bd4f49, 94713d882)
 - `at_letter` option, input encoding (latin-1 + FFFD→space), file validation, `note_message "w/@ other"`
 - **Fixed:** `at_letter` restore now uses `unwrap_or(Catcode::OTHER)` — was silently leaving `@` as LETTER when saved catcode was None (not in table). Fixed meaning_test and inin_test.
+- **EOL handling confirmed identical** (2026-03-11): state machine (N/M/S), blank line detection, trailing space removal, PRESERVE_NEWLINES, comment handling — all match Perl Mouth.pm. No catcode divergences for spaces/newlines.
 
 ### gullet.rs (vs Gullet.pm) — MINOR
 - Synced 2026-03-11 (commit 3ca5b0198)
