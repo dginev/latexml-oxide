@@ -298,10 +298,17 @@ LoadDefinitions!({
     }
   );
 
-  // DefConstructor("\\rule[Dimension]{Dimension}{Dimension}",
-  //   "<ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/>",
-  //   properties => sub { (offset => $_[1], width => $_[2], height => $_[3]) });
-  // Perl: enterHorizontal => 1 (now automatic via mode => "text")
+  DefConstructor!("\\rule[Dimension]{Dimension}{Dimension}",
+    "<ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      Ok(stored_map!(
+        "offset" => args[0].as_ref().map(|a| a.to_string()).unwrap_or_default(),
+        "width" => args[1].as_ref().map(|a| a.to_string()).unwrap_or_default(),
+        "height" => args[2].as_ref().map(|a| a.to_string()).unwrap_or_default()
+      ))
+    }
+  );
   DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode         => "text", bounded => true,
