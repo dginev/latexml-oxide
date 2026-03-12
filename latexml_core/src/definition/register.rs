@@ -561,8 +561,30 @@ impl Definition for Register {
         props.insert("role", Stored::String(role));
       }
       // Copy extra math chardef properties (meaning, stretchy, scriptpos, etc.)
+      // Resolve need_scriptpos/need_mathstyle to actual values (Perl: Package.pm lines 2981-2984)
+      let in_display = state::lookup_string("IN_MATH_DISPLAY") == "true"
+        || state::lookup_font()
+          .map(|f| f.get_mathstyle().map(|s| s.as_ref()) == Some("display"))
+          .unwrap_or(false);
       for (k, v) in &self.chardef_props {
-        props.insert_sym(*k, v.clone());
+        let key_str = arena::with(*k, |s| s.to_string());
+        match key_str.as_str() {
+          "need_scriptpos" => {
+            // Resolve to actual scriptpos value based on display context
+            if !props.contains_key("scriptpos") {
+              let val = if in_display { "mid" } else { "post" };
+              props.insert("scriptpos", Stored::String(arena::pin_static(val)));
+            }
+          },
+          "need_mathstyle" => {
+            // Resolve to actual mathstyle value based on display context
+            if !props.contains_key("mathstyle") {
+              let val = if in_display { "display" } else { "text" };
+              props.insert("mathstyle", Stored::String(arena::pin_static(val)));
+            }
+          },
+          _ => { props.insert_sym(*k, v.clone()); }
+        }
       }
       return Ok(vec![Digested::from(
         if let Some(mathglyph) = self.mathglyph {
