@@ -164,6 +164,15 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
+## Package.pm — DefFoo Sync Status (dialect.rs)
+
+| DefFoo | Perl Lines | Rust Lines | Status | Gaps |
+|--------|-----------|-----------|--------|------|
+| `DefMacroI` | 1152-1165 | 204-240 | MINOR | `outer`/`long` fields present in ExpandableOptions but not mapped to Expandable struct |
+| `DefPrimitiveI` | 1286-1317 | 317-414 | MINOR | Missing `outer`/`long` in PrimitiveOptions |
+| `DefConstructorI` | 1436-1474 | 845-963 | MINOR | Missing `outer`/`long`/`attributeForm`; robust alias fallback not implemented |
+| `DefEnvironmentI` | 1882-1981 | 977-1220 | OK | `\FOO` (csname case) hooks mostly unimplemented (TODO). `\begin{env}` now uses `begin_mode_opt(noframe)`. `\endFOO` now has endMode + beforeDigestEnd. |
+
 ## Package.pm — Missing/Deferred Functions
 
 | Function | Status | Notes |
