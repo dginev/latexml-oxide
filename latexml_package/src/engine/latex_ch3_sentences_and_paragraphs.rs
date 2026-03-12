@@ -161,6 +161,7 @@ LoadDefinitions!({
   // we don't implement the internals directly, so lock them to the latexml variant
   Let!("\\@thefnmark", "\\lx@notemark{footnote}");
 
+  Tag!("ltx:emph", auto_close => true);
   Tag!("ltx:note", after_close => sub[doc, node] { relocate_footnote(doc, node)?; });
 
   // Style parameters

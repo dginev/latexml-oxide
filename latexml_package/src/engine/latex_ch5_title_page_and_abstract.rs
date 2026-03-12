@@ -226,6 +226,8 @@ LoadDefinitions!({
     mode => "text"
   );
 
+  Tag!("ltx:titlepage", auto_close => true);
+
   DefConstructor!("\\maybe@end@title", sub[document,_args,_props] {
     if document.is_closeable("ltx:titlepage").is_some() {
       document.close_element("ltx:titlepage")?;
