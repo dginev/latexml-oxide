@@ -150,10 +150,10 @@ LoadDefinitions!({
   //
   // Probably there are other places (eg in titlepage?) that should force the close??
 
+  // Perl: latex_constructs.pool.ltxml lines 1180-1194
   DefEnvironment!("{abstract}", "",
     after_digest_begin => {
       AssignValue!("inPreamble" => false);
-      AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract");
     },
     after_digest => {
       let abstract_title = stomach::digest(Tokens!(T_CS!("\\format@title@abstract"),
@@ -174,19 +174,25 @@ LoadDefinitions!({
       DefMacro!("\\maybe@end@abstract", "", scope => Some(Scope::Global));
     },
     locked => true,
-    mode => "text"
+    mode => "internal_vertical"
   );
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
+  // Perl: latex_constructs.pool.ltxml lines 1197-1203
   DefMacro!("\\abstract", {
     if gullet::if_next(T_BEGIN!())? {
-      T_CS!("\\abstract@onearg")
+      Tokens!(T_CS!("\\abstract@onearg"))
     } else {
-      T_CS!("\\begin{abstract}")
+      // When \abstract is used without braces (e.g. \abstract ... \section{...}),
+      // add \maybe@end@abstract to \@startsection@hook so the abstract closes
+      // when the next sectioning command starts.
+      Tokens!(
+        T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
+        T_CS!("\\begin{abstract}"))
     }
   },
   locked => true);
-  DefMacro!("\\abstract@onearg{}", "\\begin{abstract}#1\\end{abstract}");
+  DefMacro!("\\abstract@onearg{}", "\\begin{abstract}#1\\end{abstract}\\let\\endabstract\\relax");
   DefMacro!("\\maybe@end@abstract", "\\endabstract");
   DefMacro!("\\abstractname", "Abstract");
   DefMacro!("\\format@title@abstract{}", "#1");

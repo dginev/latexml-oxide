@@ -64,7 +64,7 @@ Updated 2026-03-11. Only lists open gaps & TODOs; completed items live in git hi
 | File | Status | Open Gaps |
 |------|--------|-----------|
 | latex_ch1_documentclass.rs | MINOR | `\documentstyle` compat, `onlyPreamble` |
-| latex_ch1_environments.rs | GAPS | `beforebegin/afterend` hooks, `\@checkend` |
+| latex_ch1_environments.rs | OK | `beforebegin/afterend` hooks and `\@checkend` implemented |
 | latex_ch2_document.rs | MINOR | Unclosed group/env/conditional warnings commented out |
 | latex_ch3_sentences_and_paragraphs.rs | OK | `enterHorizontal` now auto via `mode => "text"` |
 | latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag` |
