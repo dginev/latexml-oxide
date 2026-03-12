@@ -192,6 +192,30 @@ impl NumericOps for RegisterValue {
       RegisterValue::Tokens(_v) => todo!(),
     }
   }
+  fn smaller<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.smaller(other)),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.smaller(other)),
+      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.smaller(other)),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.smaller(other)),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.smaller(other)),
+      RegisterValue::Token(_v) => todo!(),
+      RegisterValue::Tokens(_v) => todo!(),
+    }
+  }
+  fn larger<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.larger(other)),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.larger(other)),
+      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.larger(other)),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.larger(other)),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.larger(other)),
+      RegisterValue::Token(_v) => todo!(),
+      RegisterValue::Tokens(_v) => todo!(),
+    }
+  }
   /// For now only meant as a type cast, unimplemented in other cases
   /// DO NOT use this method to cast into a Glue object, define a `.to_glue()` instead
   fn into_glue_type(self) -> Glue {

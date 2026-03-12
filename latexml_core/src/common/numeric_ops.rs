@@ -104,9 +104,11 @@ pub trait NumericOps {
   where Self: Sized {
     Self::new(self.value_of() - other.value_of())
   }
+  // Perl: int($self->valueOf * $other->valueOf) — uses float arithmetic to
+  // handle Float multipliers correctly, then truncates.
   fn multiply<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
-    Self::new(self.value_of() * other.value_of())
+    Self::new((self.value_of() as f64 * other.value_f64()) as i64)
   }
   /// Truncating division
   fn divide<T: NumericOps>(self, other: T) -> Self

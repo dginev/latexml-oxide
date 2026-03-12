@@ -6,7 +6,7 @@ use std::fmt;
 
 use crate::Object;
 use crate::common::dimension::attribute_format;
-use crate::common::numeric_ops::{NumericOps, fixpoint, kround};
+use crate::common::numeric_ops::{EPSILON, NumericOps, fixpoint, kround};
 use crate::definition::register::{RegisterType, RegisterValue};
 use crate::digested::Digested;
 use crate::state::*;
@@ -148,6 +148,64 @@ impl NumericOps for Glue {
       minus,
       mfill,
     }
+  }
+  // Perl Glue.pm: multiply scales skip, plus, AND minus components
+  fn multiply<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    let factor = other.value_f64();
+    Glue {
+      skip:  (self.skip as f64 * factor) as i64,
+      plus:  self.plus.map(|p| (p as f64 * factor) as i64),
+      pfill: self.pfill,
+      minus: self.minus.map(|m| (m as f64 * factor) as i64),
+      mfill: self.mfill,
+    }
+  }
+  // Perl Glue.pm: divide scales skip, plus, AND minus components
+  fn divide<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    let mut divisor = other.value_f64();
+    if divisor == 0.0 {
+      divisor = EPSILON as f64;
+    }
+    Glue {
+      skip:  (self.skip as f64 / divisor).trunc() as i64,
+      plus:  self.plus.map(|p| (p as f64 / divisor).trunc() as i64),
+      pfill: self.pfill,
+      minus: self.minus.map(|m| (m as f64 / divisor).trunc() as i64),
+      mfill: self.mfill,
+    }
+  }
+  fn subtract<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    if other.register_type() != RegisterType::Glue {
+      Glue {
+        skip:  self.skip - other.value_of(),
+        plus:  self.plus,
+        pfill: self.pfill,
+        minus: self.minus,
+        mfill: self.mfill,
+      }
+    } else {
+      let other_glue = other.into_glue_type();
+      self.add_glue(Glue {
+        skip:  -other_glue.skip,
+        plus:  other_glue.plus.map(|p| -p),
+        pfill: other_glue.pfill,
+        minus: other_glue.minus.map(|m| -m),
+        mfill: other_glue.mfill,
+      })
+    }
+  }
+  fn smaller<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    let other_val = other.value_of();
+    if self.skip <= other_val { self } else { Self::new(other_val) }
+  }
+  fn larger<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    let other_val = other.value_of();
+    if self.skip >= other_val { self } else { Self::new(other_val) }
   }
 }
 

@@ -59,6 +59,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "utf8.def" => package::utf8_def::load_definitions(),
     "textcase.sty" => package::textcase_sty::load_definitions(),
     "cite.sty" => package::cite_sty::load_definitions(),
+    "calc.sty" => package::calc_sty::load_definitions(),
     _other => return None,
   })
 }
