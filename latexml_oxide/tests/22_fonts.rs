@@ -1,4 +1,9 @@
-// use latexml::tex_tests;
-// tex_tests!("tests/fonts");
-// Disabled: most font tests need package bindings (stmaryrd, wasysym, etc.)
-// and one causes stack overflow. textsymbols_test passes individually.
+// tex_tests! disabled: font tests have unbounded memory leaks.
+// Individual passing tests listed below.
+use latexml::util::test::*;
+const DIR: &str = "tests/fonts";
+
+#[test]
+fn textsymbols_test() {
+  latexml_test_single("tests/fonts/textsymbols.tex", "textsymbols", DIR, None, None);
+}
