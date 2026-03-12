@@ -107,36 +107,27 @@ ltx:section, ltx:document (4 calls), ltx:* (2 calls), ltx:XMDual, ltx:XMText, lt
 
 ## enterHorizontal / leaveHorizontal Checklist
 
-### enterHorizontal — TODO items
+**Infrastructure:** `enter_horizontal`/`leave_horizontal` options now supported on `DefConstructor!`, `DefPrimitive!`, `DefEnvironment!`. `mode => "text"` auto-adds `enter_horizontal` for constructors/primitives (matching Perl).
+
+### enterHorizontal — remaining TODO items
 
 | Definition | Rust File | Status |
 |---|---|---|
-| `\ ` (ctrl space) | tex_character.rs | **TODO** |
-| `\char Number` | tex_character.rs | **TODO** |
-| `\hskip Glue` | tex_glue.rs | **TODO** |
-| `\hss/hfilneg/hfil/hfill` | tex_glue.rs | **TODO** |
-| `\kern/raise/lower/moveleft/moveright` | tex_kern.rs | **TODO** |
-| `\lx@framed/hflipped/overlay/text@nounicode` | tex_box.rs | **TODO** |
 | `\box/\copy` | tex_box.rs | **TODO** |
 | `\vrule` | tex_box.rs | **TODO** |
 | `\leavevmode` | plain.rs | **TODO** |
-| `\TeX/\LaTeX` | plain.rs | **TODO** |
 | `\lx@begin@display/inline@math` | tex_math.rs | **TODO** |
-| `\lx@kludged` | base_xmath.rs | **TODO** |
-| `\@makebox/\raisebox` | latex_ch13_boxes.rs | **TODO** |
-| `\emph` | latex_ch3 | **TODO** |
 
-Done: `\indent`, `\noindent`.
+Done: `\indent`, `\noindent`, `\ `, `\char`, `\hskip`, `\hss/hfilneg/hfil/hfill`, `\kern/raise/lower/moveleft/moveright`, `\lx@framed/hflipped/overlay`, `\TeX/\LaTeX/\LaTeXe`, `\lx@kludged`, `\@makebox/\raisebox`, `\emph` + all `mode => "text"` definitions.
 
-### leaveHorizontal — TODO items
+### leaveHorizontal — remaining TODO items
 
 | Definition | Rust File | Status |
 |---|---|---|
-| `\vfil/vfill/vss/vfilneg` | tex_glue.rs | **TODO** |
 | `\hrule` | tex_box.rs | **TODO** |
 | `\unvbox/\unvcopy` | tex_box.rs | **TODO** |
 
-Done: `\vskip`, `\lx@end@document`.
+Done: `\vskip`, `\lx@end@document`, `\vfil/vfill/vss/vfilneg`.
 
 ### leaveHorizontal_internal — all done
 Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
