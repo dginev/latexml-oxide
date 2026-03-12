@@ -325,6 +325,15 @@ pub fn def_primitive(
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   let cs_name = cs.with_cs_name(ToString::to_string);
 
+  // Perl: mode => 'text' becomes restricted_horizontal + enterHorizontal
+  let mut needs_enter_horizontal = options.enter_horizontal;
+  let mode = if options.mode.as_deref() == Some("text") {
+    needs_enter_horizontal = true;
+    Some("restricted_horizontal".to_string())
+  } else {
+    options.mode
+  };
+
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
     let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
@@ -336,7 +345,13 @@ pub fn def_primitive(
     let forbid_math_closure = before_digest_simple!({ forbidMath!(cs_name_cloned) });
     before_digest_env.push(forbid_math_closure);
   }
-  if let Some(ref mode) = options.mode {
+  if needs_enter_horizontal {
+    before_digest_env.push(before_digest_simple!({ enter_horizontal(); }));
+  }
+  if options.leave_horizontal {
+    before_digest_env.push(before_digest_simple!({ leave_horizontal()?; }));
+  }
+  if let Some(ref mode) = mode {
     let mode_clone = mode.clone();
     let begin_mode_closure = before_digest_simple!({
       begin_mode(&mode_clone)?;
@@ -359,8 +374,8 @@ pub fn def_primitive(
   before_digest_env.extend(options.before_digest);
 
   let mut after_digest_env: Vec<DigestionClosure> = options.after_digest;
-  if let Some(ref mode) = options.mode {
-    let mode_clone = mode.clone();
+  if let Some(ref mode_str) = mode {
+    let mode_clone = mode_str.clone();
     let end_mode_closure: DigestionClosure = after_digest_simple!(_whatsit, {
       end_mode(&mode_clone)?;
     });
@@ -850,6 +865,15 @@ pub fn def_constructor(
 
   let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
 
+  // Perl: mode => 'text' becomes restricted_horizontal + enterHorizontal
+  let mut needs_enter_horizontal = options.enter_horizontal;
+  let mode = if options.mode.as_deref() == Some("text") {
+    needs_enter_horizontal = true;
+    Some("restricted_horizontal".to_string())
+  } else {
+    options.mode
+  };
+
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
     let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
@@ -860,7 +884,13 @@ pub fn def_constructor(
     let forbid_math_closure = before_digest_simple!({ forbidMath!(cs_name_cloned) });
     before_digest_closures.push(forbid_math_closure);
   }
-  if let Some(ref mode) = options.mode {
+  if needs_enter_horizontal {
+    before_digest_closures.push(before_digest_simple!({ enter_horizontal(); }));
+  }
+  if options.leave_horizontal {
+    before_digest_closures.push(before_digest_simple!({ leave_horizontal()?; }));
+  }
+  if let Some(ref mode) = mode {
     let mode_clone = mode.clone();
     let begin_mode_closure = before_digest_simple!({
       begin_mode(&mode_clone)?;
@@ -894,8 +924,8 @@ pub fn def_constructor(
   before_digest_closures.extend(options.before_digest);
 
   let mut after_digest_closures: Vec<DigestionClosure> = options.after_digest;
-  if let Some(ref mode) = options.mode {
-    let mode_clone = mode.clone();
+  if let Some(ref mode_str) = mode {
+    let mode_clone = mode_str.clone();
     let end_mode_closure: DigestionClosure = after_digest_simple!(_whatsit, {
       end_mode(&mode_clone)?;
     });
@@ -954,6 +984,16 @@ pub fn def_environment(
   let begin_name = s!("\\begin{{{name}}}");
   let end_name = s!("\\end{{{name}}}");
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
+
+  // Perl: mode => 'text' becomes restricted_horizontal for environments (no enterHorizontal)
+  // Perl also defaults to restricted_horizontal when mode is None, but we keep
+  // existing Rust behavior of not setting mode when None, to avoid regressions.
+  let mode = if options.mode.as_deref() == Some("text") {
+    Some("restricted_horizontal".to_string())
+  } else {
+    options.mode
+  };
+
   if options.require_math {
     let require_name = begin_name.clone();
     let require_math_closure = before_digest_simple!({ requireMath!(require_name) });
@@ -978,7 +1018,13 @@ pub fn def_environment(
   });
 
   before_digest_env.push(atbegin_hook_closure);
-  if let Some(ref mode) = options.mode {
+  if options.enter_horizontal {
+    before_digest_env.push(before_digest_simple!({ enter_horizontal(); }));
+  }
+  if options.leave_horizontal {
+    before_digest_env.push(before_digest_simple!({ leave_horizontal()?; }));
+  }
+  if let Some(ref mode) = mode {
     let bmode = mode.clone();
     let mode_closure = before_digest_simple!({
       set_mode(&bmode)?;
@@ -1067,9 +1113,9 @@ pub fn def_environment(
   });
   after_digest_env.push(unexpected_end_closure);
 
-  match options.mode {
-    Some(mode) => {
-      let emode = mode;
+  match mode {
+    Some(ref emode) => {
+      let emode = emode.clone();
       let emode_closure = Rc::new(move |_whatsit: &mut Whatsit| {
         end_mode(&emode)?;
         Ok(Vec::new())

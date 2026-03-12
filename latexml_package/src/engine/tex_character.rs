@@ -18,8 +18,8 @@ LoadDefinitions!({
   // \char           c  provides access to one of the 256 characters in a font.
   //----------------------------------------------------------------------
   // Perl: $_[0]->enterHorizontal; Box(' ', ...isSpace => 1, width => '0.5em')
-  // TODO: enter_horizontal(); causes io_test failure — investigate
   DefPrimitive!("\\ ", {
+    enter_horizontal();
     Tbox::new(
       arena::pin_static(" "),
       None,
@@ -31,8 +31,8 @@ LoadDefinitions!({
   });
 
   // Perl: $stomach->enterHorizontal; Box($glyph, $adjfont, ...)
-  // TODO: enter_horizontal(); causes io_test failure — investigate
   DefPrimitive!("\\char Number", sub[(number)] {
+    enter_horizontal();
     let number_tks = number.revert().unwrap_or_default().unlist();
     let decoded = match font::decode(number.value_of() as u8, None, false) {
       None => *EMPTY_SYM,

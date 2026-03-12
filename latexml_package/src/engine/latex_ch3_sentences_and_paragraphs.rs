@@ -29,8 +29,7 @@ LoadDefinitions!({
   >T<ltx:text cssstyle='font-variant:small-caps;font-size:120%' yoffset='-0.2ex'
   >e</ltx:text
   >X</ltx:text>",
-  // TODO: enter_horizontal causes io_test failure — investigate
-  // before_digest => { enter_horizontal(); },
+  enter_horizontal => true,
   sizer => { Ok((Dimension!("2.6em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
 
   // Perl: enterHorizontal => 1
@@ -41,8 +40,7 @@ LoadDefinitions!({
   >e</ltx:text
   >X\u{2002}2<ltx:text cssstyle='font-style:italic' yoffset='-0.3ex'
   >\u{03B5}</ltx:text></ltx:text>",
-  // TODO: enter_horizontal causes io_test failure — investigate
-  // before_digest => { enter_horizontal(); },
+  enter_horizontal => true,
   sizer => { Ok((Dimension!("3.7em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
 
   DefMacro!("\\fmtname", "LaTeX2e");

@@ -41,6 +41,11 @@ pub struct ConstructorOptions {
   /// custom code to run immediately after the construction phase
   pub after_construct:  Vec<ConstructionClosure>,
 
+  /// switch to horizontal mode before digesting (Perl: enterHorizontal => 1)
+  pub enter_horizontal:   bool,
+  /// switch to vertical mode before digesting (Perl: leaveHorizontal => 1)
+  pub leave_horizontal:   bool,
+
   // environment-specific
   /// requires to be used in math mode
   pub require_math:       bool,
@@ -79,6 +84,8 @@ impl Default for ConstructorOptions {
       before_construct:   vec![],
       after_construct:    vec![],
       mode:               None,
+      enter_horizontal:   false,
+      leave_horizontal:   false,
       // environment-specific
       require_math:       false,
       forbid_math:        false,

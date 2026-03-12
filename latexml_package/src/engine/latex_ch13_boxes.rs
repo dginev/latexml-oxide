@@ -116,11 +116,10 @@ LoadDefinitions!({
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
   DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox");
-  // Perl: enterHorizontal => 1
+  // Perl: enterHorizontal => 1 (now automatic via mode => "text")
   DefConstructor!("\\@makebox[Dimension][]{}",
     "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
     mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
-    // TODO: enter_horizontal causes io_test failure — investigate
     before_digest => {
       reenter_text_mode(false); }
     // properties   => sub[args] {
@@ -287,11 +286,10 @@ LoadDefinitions!({
   // DefConstructor("\\rule[Dimension]{Dimension}{Dimension}",
   //   "<ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/>",
   //   properties => sub { (offset => $_[1], width => $_[2], height => $_[3]) });
-  // Perl: enterHorizontal => 1
+  // Perl: enterHorizontal => 1 (now automatic via mode => "text")
   DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode         => "text", bounded => true,
-    // TODO: enter_horizontal causes io_test failure — investigate
     before_digest => {
       reenter_text_mode(false); }
     // TODO
