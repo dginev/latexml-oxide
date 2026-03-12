@@ -45,6 +45,7 @@ Generated 2026-03-11. Covers all engine files.
 - **Fixed:** `\lx@generalized@over Undigested RequiredKeyVals` constructor with full afterDigest (regurgitate numerator, digestNextBody denominator, keyvals extraction)
 - **Fixed:** All 6 fraction macros: `\above`, `\abovewithdelims`, `\atop`, `\atopwithdelims`, `\over`, `\overwithdelims`
 - **Fixed:** `\lx@left`/`\lx@right` — aliased to `\@left`/`\@right` (Perl uses TeXDelimiter, Rust uses Token)
+- **Fixed:** Display math `$$` now injects `\everymath` and `\everydisplay` tokens in before_digest (was commented out TODO)
 - **TODO:** `adjustMathstyle` — recursive mathstyle adjustment on already-digested boxes (cosmetic)
 - **TODO:** `fracSizer` — sizer callback for fractions
 - **Missing (~14 defs):**
@@ -89,7 +90,7 @@ Generated 2026-03-11. Covers all engine files.
 ### tex_paragraph.rs (vs TeX_Paragraph.pool.ltxml) — MINOR
 - **Fixed:** `\indent`/`\noindent` now call `enter_horizontal()` in before_digest (matches Perl `enterHorizontal => 1`)
 - **Fixed:** `\lx@normal@par` `beforeDigest` checks MODE/BOUND_MODE and calls `assign_value_inplace` to resume vertical mode (matches Perl's repackHorizontal logic)
-- **Missing properties:** `\indent`/`\noindent` still lack `isSpace`
+- **Fixed:** `\indent`/`\noindent` now have `isSpace` property (matches Perl)
 - **Missing helpers:** `alignLine()`, `trimNodeLeftWhitespace()`, `trimNodeRightWhitespace()`
 - **Rust-only:** `ltx:break` insertion in figures (not in Perl)
 
@@ -101,16 +102,16 @@ Generated 2026-03-11. Covers all engine files.
 - **Fixed:** `\ifvmode`, `\ifhmode`, `\ifinner` now check actual MODE state (was hardcoded `false`)
 - `\ifmmode` works (checks `IN_MATH`)
 
-### pdftex.rs (vs pdfTeX.pool.ltxml) — GAPS
-- **Missing registers (6):** `\knaccode`, `\knbccode`, `\knbscode`, `\shbscode`, `\stbscode`, `\tagcode`
-- **Missing:** `OpenAnnotSpecification` parameter type, `\pdfannot`, `\pdfobj` primitives
-- **Incomplete:** `\pdfcolorstack` (commented out), `\pdffilesize` (has `todo!()`)
-- **Wrong default:** `\pdftexversion` should be `140`, not `0`
+### pdftex.rs (vs pdfTeX.pool.ltxml) — MINOR (96.7% complete)
+- **116/120 definitions ported.** All 73 registers (integer, dimension, token, read-only) fully ported.
+- **Missing (3):** `OpenAnnotSpecification` parameter type, `\pdfannot`, `\pdfobj` (PDF annotations, low priority)
+- **Incomplete:** `\pdfcolorstack` (commented out TODO)
 
 ### etex.rs (vs eTeX.pool.ltxml) — MINOR
+- **Fixed:** `\fontcharwd/ht/dp` removed 0-127 code restriction, added current font fallback (matches Perl `$font->merge` behavior)
+- **Fixed:** `\currentgrouplevel` — `get_frame_depth()` now returns correct count (removed erroneous `saturating_sub(1)`)
 - **Type mismatch:** `\parshapelength` returns `Dimension` in Rust, `Number` in Perl
 - **Incomplete:** `etex_readexpr_i` has `todo!()` for missing close paren error
-- **Bounds:** `\fontchar*` enforces 0-127 in Rust; Perl allows any value
 
 ### tex_debugging.rs — OK
 ### tex_page.rs — OK
@@ -274,7 +275,7 @@ Generated 2026-03-11. Covers all engine files.
 |------|------|----------|-------|
 | `latex_bootstrap.pool.ltxml` | 9 | Medium | LoadFormat machinery needed |
 | `latex_base.pool.ltxml` | 168 | High | Largest unported file |
-| `latex_constructs.pool.ltxml` | ~84 | Medium | Some content in chapter files |
+| `latex_constructs.pool.ltxml` | ~148 | Medium | 94.6% ported across latex_ch*.rs files; missing: `\hline`, `\@multicolumn`, `{figure*}`, `{table*}`, `\marginpar` |
 | `Base_Deprecated.pool.ltxml` | ~20 | Low | |
 | `AmSTeX.pool.ltxml` | ~50 | Low | |
 | `BibTeX.pool.ltxml` | ~30 | Low | |
@@ -325,7 +326,7 @@ Generated 2026-03-11. Covers all engine files.
 - **Fixed:** `begin_semiverbatim()` now calls `assign_mathcode('\'', 0x8000)` (was TODO)
 - **Synced:** All value/catcode/mathcode/sfcode/lccode/uccode/delcode lookups and assignments
 - **Synced:** All definition/meaning lookups (lookupDefinition, lookupExpandable, lookupConditional, isDontExpandable, lookupDigestableDefinition)
-- **Synced:** Frame management (pushFrame, popFrame, getFrameDepth, isValueBound)
+- **Synced:** Frame management (pushFrame, popFrame, getFrameDepth — fixed off-by-one, isValueBound)
 - **Synced:** Scope management (activateScope, deactivateScope, getKnownScopes, getActiveScopes)
 - **Synced:** Prefix management (setPrefix, getPrefix, clearPrefixes)
 - **Synced:** Unit conversion (convertUnit)
