@@ -261,6 +261,14 @@ impl Definition for Constructor {
     properties
       .entry("isMath")
       .or_insert_with(|| Stored::Bool(ismath));
+    // Perl: $mode = $properties{mode} || $state->lookupValue('MODE') || 'restricted_horizontal';
+    // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
+    properties.entry("mode").or_insert_with(|| {
+      let mode = lookup_string("MODE");
+      Stored::String(crate::common::arena::pin(
+        if mode.is_empty() { "restricted_horizontal" } else { &mode },
+      ))
+    });
     // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
