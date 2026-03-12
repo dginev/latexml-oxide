@@ -23,7 +23,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, `\lx@math@overline/underline/overbrace/underbrace`, math ligatures. `\mathchoice` unported |
+| tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, `\lx@math@overline/underline/overbrace/underbrace`, math ligatures. `\mathchoice` ported. |
 | tex_box.rs | GAPS | Missing: `\leaders/cleaders/xleaders`, SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
 | tex_file_io.rs | MINOR | `\lx@special@graphics` constructor + `Tag('ltx:graphics')` commented out |
 | tex_fonts.rs | GAPS | Missing: `getFontDimen()`, 7 ligature defs. `\fontname` always returns placeholder. `\fontdimen` only handles 3 hardcoded params |
@@ -78,7 +78,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 | latex_ch10_tabbing_environment.rs | EMPTY | 0% |
 | latex_ch14_pictures_and_color.rs | GAPS | 30% — picture environment not implemented |
 
-Files at OK/MINOR (95%+): latex_ch1_fragile_commands, latex_ch1_break_command, latex_ch5_page_styles, latex_ch5_title_page_and_abstract (frontmatter now working: \maketitle includes \lx@frontmatterhere, {abstract} after_construct calls insert_frontmatter, {titlepage} has before_digest/after_construct hooks), latex_ch6_* (all), latex_ch7_math_mode_changing_style, latex_ch8_defining_environments, latex_ch8_theoremlike_environments, latex_ch8_numbering (\@addtoreset ported), latex_ch9_figures_and_tables, latex_ch10_array_and_tabular, latex_ch11_* (all), latex_ch12_line_and_page_breaking, latex_ch13_boxes, latex_ch15_* (both), latex_other_in_appendices (\hb@xt@, \TextOrMath, \eminnershape), latex_semi_undocumented (\protected@write ported).
+Files at OK/MINOR (95%+): latex_ch1_fragile_commands, latex_ch1_break_command, latex_ch5_page_styles (added `\columnsep`, `\columnseprule`, `\mathindent`, `\onecolumn` → `\par`), latex_ch5_title_page_and_abstract (frontmatter now working: \maketitle includes \lx@frontmatterhere, {abstract} after_construct calls insert_frontmatter, {titlepage} has before_digest/after_construct hooks), latex_ch6_* (all), latex_ch7_math_mode_changing_style, latex_ch8_defining_environments, latex_ch8_theoremlike_environments, latex_ch8_numbering (\@addtoreset ported), latex_ch9_figures_and_tables, latex_ch10_array_and_tabular, latex_ch11_* (all), latex_ch12_line_and_page_breaking, latex_ch13_boxes, latex_ch15_* (both), latex_other_in_appendices (\hb@xt@, \TextOrMath, \eminnershape), latex_semi_undocumented (\protected@write ported).
 
 ---
 
@@ -139,9 +139,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 | File | Defs | Priority | Notes |
 |------|------|----------|-------|
-| `latex_bootstrap.pool.ltxml` | 9 | Medium | LoadFormat machinery |
+| `latex_bootstrap.pool.ltxml` | 5 | Medium | LoadFormat machinery. Done: `\@definecounter`, `\e@ch@ck`, `\try@load@fontshape`, `\define@newfont` |
 | `latex_base.pool.ltxml` | 168 | High | Largest unported file |
-| `latex_constructs.pool.ltxml` | ~8 | Low | 94.6% ported; missing: `\hline`, `\@multicolumn`, `{figure*}`, `{table*}`, `\marginpar` |
+| `latex_constructs.pool.ltxml` | ~5 | Low | 96% ported; missing: `\@multicolumn`. Done: `{figure*}`, `{table*}`, `\marginpar`, `\counterwithin`, `\counterwithout`, `\@removefromreset` |
 | `Base_Deprecated.pool.ltxml` | ~20 | Low | |
 
 ---
@@ -196,3 +196,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | calc.sty | OK | Full expression parser: +,-,*,/, \real, \ratio, \minof, \maxof, \widthof/heightof/depthof/totalheightof. RegisterValue smaller/larger preserve type variant. |
 | report.cls | OK | Faithful port of Perl report.cls.ltxml (identical to book.cls except CSS resource). |
 | amsmath.sty | GAPS | Only ~5% ported: \medspace/negmedspace/thickspace/negthickspace, \lvert/rvert/lVert/rVert. |
+| appendix.sty | OK | Core environments: appendices, subappendices, conditional switches. |
+| multicol.sty | OK | Full port: multicols/multicols* environments, registers, stubs. |
+| booktabs.sty | OK | Full port: toprule/midrule/bottomrule/cmidrule/specialrule, registers. |
+| caption.sty | MINOR | Stub-level: captionsetup, Declare* macros, registers. Missing: KeyVals, CAPTION_ value storage. |
+| remreset.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
+| chngcntr.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
