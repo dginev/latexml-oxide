@@ -1,4 +1,34 @@
 use crate::prelude::*;
+
+/// Perl: %unicode_enclosed_alphanumerics table
+/// Maps single chars (0-9, a-z, A-Z) and numbers 10-20 to their circled Unicode equivalents.
+fn unicode_enclosed_alphanumeric(text: &str) -> Option<String> {
+  let ch = match text {
+    "0" => '\u{24EA}', "1" => '\u{2460}', "2" => '\u{2461}', "3" => '\u{2462}',
+    "4" => '\u{2463}', "5" => '\u{2464}', "6" => '\u{2465}', "7" => '\u{2466}',
+    "8" => '\u{2467}', "9" => '\u{2468}', "10" => '\u{2469}', "11" => '\u{246A}',
+    "12" => '\u{246B}', "13" => '\u{246C}', "14" => '\u{246D}', "15" => '\u{246E}',
+    "16" => '\u{246F}', "17" => '\u{2470}', "18" => '\u{2471}', "19" => '\u{2472}',
+    "20" => '\u{2473}',
+    "a" => '\u{24D0}', "b" => '\u{24D1}', "c" => '\u{24D2}', "d" => '\u{24D3}',
+    "e" => '\u{24D4}', "f" => '\u{24D5}', "g" => '\u{24D6}', "h" => '\u{24D7}',
+    "i" => '\u{24D8}', "j" => '\u{24D9}', "k" => '\u{24DA}', "l" => '\u{24DB}',
+    "m" => '\u{24DC}', "n" => '\u{24DD}', "o" => '\u{24DE}', "p" => '\u{24DF}',
+    "q" => '\u{24E0}', "r" => '\u{24E1}', "s" => '\u{24E2}', "t" => '\u{24E3}',
+    "u" => '\u{24E4}', "v" => '\u{24E5}', "w" => '\u{24E6}', "x" => '\u{24E7}',
+    "y" => '\u{24E8}', "z" => '\u{24E9}',
+    "A" => '\u{24B6}', "B" => '\u{24B7}', "C" => '\u{24B8}', "D" => '\u{24B9}',
+    "E" => '\u{24BA}', "F" => '\u{24BB}', "G" => '\u{24BC}', "H" => '\u{24BD}',
+    "I" => '\u{24BE}', "J" => '\u{24BF}', "K" => '\u{24C0}', "L" => '\u{24C1}',
+    "M" => '\u{24C2}', "N" => '\u{24C3}', "O" => '\u{24C4}', "P" => '\u{24C5}',
+    "Q" => '\u{24C6}', "R" => '\u{24C7}', "S" => '\u{24C8}', "T" => '\u{24C9}',
+    "U" => '\u{24CA}', "V" => '\u{24CB}', "W" => '\u{24CC}', "X" => '\u{24CD}',
+    "Y" => '\u{24CE}', "Z" => '\u{24CF}',
+    _ => return None,
+  };
+  Some(ch.to_string())
+}
+
 LoadDefinitions!({
   //======================================================================
   // C.15.3 Special Symbol
@@ -28,7 +58,23 @@ LoadDefinitions!({
   DefPrimitive!("\\textparagraph", "\u{00B6}"); // PILCROW SIGN
   DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
   DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
-  DefAccent!("\\textcircled", '\u{0020DD}', "\u{0025EF}"); // Defined in TeX.pool
+  // Perl: DefPrimitive('\textcircled {}', sub { ... })
+  // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD
+  DefPrimitive!("\\textcircled {}", sub[(arg)] {
+    let text = arg.to_string();
+    let content = unicode_enclosed_alphanumeric(&text)
+      .unwrap_or_else(|| format!("{}\u{20DD}", text));
+    let in_math = lookup_bool("IN_MATH");
+    let is_number = !text.is_empty() && text.chars().all(|c| c.is_ascii_digit());
+    let mut props = stored_map!();
+    if in_math {
+      props.insert("role", Stored::from(if is_number { "NUMBER" } else { "UNKNOWN" }));
+      props.insert("meaning", Stored::from(format!("circled-{}", text)));
+    }
+    Tbox::new(arena::pin(&content), None, None,
+      Invocation!(T_CS!("\\textcircled"), vec![arg]),
+      props)
+  });
   // From latex_constructs.pool.ltxml
   DefAccent!("\\k", '\u{0328}', "\u{02DB}", below => true); // COMBINING OGONEK & OGONEK
   DefPrimitive!("\\textless", "<");
