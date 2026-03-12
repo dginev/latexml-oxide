@@ -174,10 +174,15 @@ impl Conditional {
     let mut ifid = state::lookup_int("if_count");
     ifid += 1;
     state::assign_value("if_count", ifid, Some(Scope::Global));
-    // TODO:
-    // if ($LaTeXML::IF_LIMIT and $ifid > $LaTeXML::IF_LIMIT) {
-    //   Fatal('timeout', 'if_limit', $self,
-    //     "Conditional limit of $LaTeXML::IF_LIMIT exceeded, infinite loop?"); }
+    // Perl: if ($LaTeXML::IF_LIMIT and $ifid > $LaTeXML::IF_LIMIT) { Fatal(...) }
+    let if_limit = state::lookup_int("if_limit");
+    if if_limit > 0 && ifid > if_limit {
+      Fatal!(
+        Timeout,
+        IfLimit,
+        s!("Conditional limit of {} exceeded, infinite loop?", if_limit)
+      );
+    }
     let if_frame = Rc::new(RefCell::new(IfFrame {
       token: get_current_token().unwrap(),
       start: gullet::get_locator(),
@@ -206,8 +211,10 @@ impl Conditional {
       }
     } else {
       // If there's no test, it must be the Special Case, \ifcase
+      // Note: num == 0 takes the 1st branch, no need to skip
+      // num < 0 should skip all \or & end up on the \else
       let num = args[0].value_of();
-      if num > 0 {
+      if num != 0 {
         let _to = self.skip_conditional_body(num);
         //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;
       }
@@ -316,7 +323,7 @@ impl Conditional {
       "expected",
       "\\fi",
       self,
-      "Missing \\fi or \\else, conditional fell off end"
+      s!("Missing \\fi or \\else, conditional fell off end. Conditional started at {:?}", _start)
     );
     Ok(Tokens!())
   }
