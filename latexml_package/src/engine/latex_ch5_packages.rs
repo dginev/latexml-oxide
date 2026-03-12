@@ -113,19 +113,20 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  // DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(name, options)] {
-  //   // $name = ToString($name);
-  //   // $name =~ s/\s+//g;
-  //   // PassOptions($name, 'sty', split(/\s*,\s*/, ToString(Expand($options))));
-  //   Ok(Vec::new())
-  // });
+  // Perl: latex_constructs.pool.ltxml lines 868-878
+  DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(options, name)] {
+    let name_str = Expand!(name).to_string().replace(' ', "");
+    let opts_str = Expand!(options).to_string();
+    let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+    state::push_value(&s!("opt@{}.sty", name_str), opts)?;
+  });
 
-  // DefPrimitive!("\\PassOptionsToClass{}{}", sub[(name, options)] {
-  //   // $name = ToString($name);
-  //   // $name =~ s/\s+//g;
-  //   // PassOptions($name, 'cls', split(/\s*,\s*/, ToString(Expand($options))));
-  //   Ok(Vec::new())
-  // });
+  DefPrimitive!("\\PassOptionsToClass{}{}", sub[(options, name)] {
+    let name_str = Expand!(name).to_string().replace(' ', "");
+    let opts_str = Expand!(options).to_string();
+    let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+    state::push_value(&s!("opt@{}.cls", name_str), opts)?;
+  });
 
   DefConstructor!("\\RequirePackageWithOptions Semiverbatim []",
   "<?latexml package='#1'?>",
@@ -153,6 +154,22 @@ LoadDefinitions!({
   // });
 
   DefMacro!("\\CurrentOption", None);
+
+  // Perl: latex_constructs.pool.ltxml lines 907-919
+  DefPrimitive!("\\OptionNotUsed", {
+    let option = Expand!(T_CS!("\\CurrentOption")).to_string();
+    if !option.is_empty() {
+      let ext = Expand!(T_CS!("\\@currext")).to_string();
+      if ext == "cls" {
+        state::push_value("@unusedoptionlist", option)?;
+      }
+    }
+  });
+  DefPrimitive!("\\@unknownoptionerror", {
+    let option = Expand!(T_CS!("\\CurrentOption")).to_string();
+    let name = Expand!(T_CS!("\\@currname")).to_string();
+    Info!("unexpected", &option, &s!("Unknown option '{}' for {}", option, name));
+  });
 
   DefPrimitive!("\\ExecuteOptions{}", sub[(options)] {
     let expanded = do_expand(options)?.to_string();

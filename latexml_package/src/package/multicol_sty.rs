@@ -6,10 +6,12 @@ LoadDefinitions!({
   // Since this is basically styling, we can ignore the effects.
 
   // Optional arg is sortof a heading, but w/o any particular styling(?)
+  // Note: Perl uses <ltx:para> (open, not close) at end of conditional
+  // to auto-close the heading para and open a new one that wraps pagination + body
   DefEnvironment!("{multicols}{}[]",
-    r###"?#2(<ltx:para><ltx:p>#2</ltx:p></ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###);
+    r###"?#2(<ltx:para><ltx:p>#2</ltx:p><ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###);
   DefEnvironment!("{multicols*}{}[]",
-    r###"?#2(<ltx:para><ltx:p>#2</ltx:p></ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###);
+    r###"?#2(<ltx:para><ltx:p>#2</ltx:p><ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###);
 
   DefMacro!("\\botmark", "");
   DefMacro!("\\topmark", "");
