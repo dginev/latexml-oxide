@@ -1,0 +1,5 @@
+[env]
+# Increase default stack size for test threads to 16MB (default is 8MB).
+# Some tests (colortbls, etc.) trigger deep recursion in the TeX engine
+# which causes stack overflow at 8MB, crashing the entire test binary.
+RUST_MIN_STACK = "16777216"

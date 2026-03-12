@@ -22,9 +22,14 @@ LoadDefinitions!({
     "<ltx:XMApp>\
       <ltx:XMTok meaning='divide' role='FRACOP' mathstyle='#mathstyle'/>\
       <ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg>\
-      </ltx:XMApp>" /* TODO
-                     * sizer      => sub[whatsit] { frac_sizer(whatsit.get_arg(1),
-                     * whatsit.get_arg(2)) }, properties => { "mathstyle" =>
-                     * lookup_font().get_mathstyle() } */
+      </ltx:XMApp>",
+    properties => {
+      let ms = lookup_font()
+        .and_then(|f| f.get_mathstyle().map(|s| s.to_string()));
+      match ms {
+        Some(s) => Ok(stored_map!("mathstyle" => s)),
+        None => Ok(stored_map!()),
+      }
+    }
   );
 });
