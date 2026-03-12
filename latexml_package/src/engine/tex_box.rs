@@ -404,9 +404,8 @@ LoadDefinitions!({
     })
   });
 
-  // Perl: $stomach->enterHorizontal; in body
+  // Perl: \box does NOT call enterHorizontal (TeX_Box.pool.ltxml line 647)
   DefPrimitive!("\\box Number", sub[(number)] {
-    // enter_horizontal(); // TODO: causes io_test failure
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
       Ok(vec![stuff])
@@ -415,9 +414,8 @@ LoadDefinitions!({
     }
   });
 
-  // Perl: $stomach->enterHorizontal; in body
+  // Perl: \copy does NOT call enterHorizontal (TeX_Box.pool.ltxml line 653)
   DefPrimitive!("\\copy Number", sub[(number)] {
-    // enter_horizontal(); // TODO: causes io_test failure
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
       Ok(vec![stuff])
@@ -427,7 +425,9 @@ LoadDefinitions!({
   });
 
   // \unhbox<8bit>, \unhcopy<8bit>
+  // Perl: $stomach->enterHorizontal (TeX_Box.pool.ltxml lines 663, 673)
   DefPrimitive!("\\unhbox Number", sub[(number)] {
+    enter_horizontal();
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
       // Only unlist if box is horizontal (mode ends with "horizontal")
@@ -443,6 +443,7 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\unhcopy Number", sub[(number)] {
+    enter_horizontal();
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
       let mode = stuff.get_property_string("mode");
@@ -457,9 +458,9 @@ LoadDefinitions!({
   });
 
   // \unvbox<8bit>, \unvcopy<8bit>
-  // Perl: $stomach->leaveHorizontal; in body
+  // Perl: $stomach->leaveHorizontal (TeX_Box.pool.ltxml lines 683, 693)
   DefPrimitive!("\\unvbox Number", sub[(number)] {
-    // leave_horizontal()?; // TODO: investigate stack underflow
+    leave_horizontal()?;
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
       // Only unlist if box is vertical (mode ends with "vertical")
@@ -474,9 +475,9 @@ LoadDefinitions!({
     }
   });
 
-  // Perl: $stomach->leaveHorizontal; in body
+  // Perl: $stomach->leaveHorizontal (TeX_Box.pool.ltxml line 693)
   DefPrimitive!("\\unvcopy Number", sub[(number)] {
-    // leave_horizontal()?; // TODO: investigate stack underflow
+    leave_horizontal()?;
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
       let mode = stuff.get_property_string("mode");
@@ -551,7 +552,8 @@ LoadDefinitions!({
       } else { (None, None, None) }
     } else { (None, None, None) };
 
-    // enter_horizontal is now handled automatically via mode => "text"
+    // Perl: $stomach->enterHorizontal (TeX_Box.pool.ltxml line 756)
+    enter_horizontal();
     let w_pt: Option<f64> = width.as_ref().and_then(|w| w.strip_suffix("pt").and_then(|s| s.parse().ok()));
     let h_pt: Option<f64> = height.as_ref().and_then(|h| h.strip_suffix("pt").and_then(|s| s.parse().ok()));
 

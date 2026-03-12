@@ -125,8 +125,9 @@ pub fn push_stack_frame(nobox: bool) {
     stomach_mut!().boxing.push(current_token)
   }
 }
-/// Removes the last/current stack frame, ending a TeX group
-pub fn pop_stack_frame(nobox: bool) -> Result<()> {
+/// Execute tokens stored on beforeAfterGroup (if any); done before popping a stack frame.
+/// Perl: sub executeBeforeAfterGroup (Stomach.pm lines 286-295)
+pub fn execute_before_after_group() -> Result<()> {
   if let Some(Stored::VecDequeStored(beforeafter)) = remove_value("beforeAfterGroup") {
     if !beforeafter.is_empty() {
       let mut result = Vec::new();
@@ -150,7 +151,13 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
       }
     }
   }
+  Ok(())
+}
+
+/// Removes the last/current stack frame, ending a TeX group
+pub fn pop_stack_frame(nobox: bool) -> Result<()> {
   let after = remove_value("afterGroup");
+  execute_before_after_group()?;
   pop_frame()?;
   if !nobox {
     {
@@ -346,9 +353,18 @@ fn bindable_mode(umode: &str) -> Option<&'static str> {
 /// Begin processing in `mode`; one of "text", "display-math" or "inline-math".
 /// This also begins a new level of grouping and switches to a font
 /// appropriate for the mode.
+/// If `noframe` is true, skip pushing a stack frame (e.g. for \begin{document}).
+/// Perl: sub beginMode (Stomach.pm lines 474-517)
 pub fn begin_mode(mode: &str) -> Result<()> {
+  begin_mode_opt(mode, false)
+}
+/// Like `begin_mode`, but with an explicit `noframe` option.
+/// When `noframe` is true, no stack frame is pushed (the caller already did bgroup).
+pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
-    push_stack_frame(false); // Effectively bgroup
+    if !noframe {
+      push_stack_frame(false); // Effectively bgroup
+    }
     // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
     assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
     set_mode(bound_mode)?;
@@ -366,7 +382,13 @@ pub fn begin_mode(mode: &str) -> Result<()> {
 }
 /// End processing in `mode`; an error is signalled if `stomach` is not
 /// currently in `mode`.  This also ends a level of grouping.
+/// Perl: sub endMode (Stomach.pm lines 522-541)
 pub fn end_mode(mode: &str) -> Result<()> {
+  end_mode_opt(mode, false)
+}
+/// Like `end_mode`, but with an explicit `noframe` option.
+/// When `noframe` is true, executeBeforeAfterGroup is run but the stack frame is not popped.
+pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
     // Perl checks BOUND_MODE, not MODE, for the frame check
     if !is_value_bound("BOUND_MODE", Some(0))
@@ -388,8 +410,13 @@ pub fn end_mode(mode: &str) -> Result<()> {
       if bound_mode.ends_with("vertical") {
         leave_horizontal_internal();
       }
-      // Don't pop if there's an error; maybe we'll recover?
-      pop_stack_frame(false)?;
+      if noframe {
+        // No pop, but at least do beforeAfterGroup
+        execute_before_after_group()?;
+      } else {
+        // Don't pop if there's an error; maybe we'll recover?
+        pop_stack_frame(false)?;
+      }
     }
   } else {
     Warn!("unexpected", mode, s!("Cannot end {mode} mode"));

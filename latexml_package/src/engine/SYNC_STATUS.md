@@ -37,9 +37,9 @@ Updated 2026-03-11. Only lists open gaps & TODOs; completed items live in git hi
 | tex_paragraph.rs | MINOR | Missing: `alignLine()`, `trimNodeLeftWhitespace()`, `trimNodeRightWhitespace()` |
 | tex_macro.rs | MINOR | FontDef case still commented out |
 | tex_logic.rs | OK | — |
-| tex_glue.rs | MINOR | `\hskip/hfil/hfill/hss/hfilneg` `enter_horizontal` commented out; `\vfil/vfill/vss/vfilneg` `leave_horizontal` commented out; `\hskip` SVG missing |
+| tex_glue.rs | MINOR | `\hskip` SVG missing |
 | tex_registers.rs | MINOR | Missing `DumpFile()` infrastructure |
-| tex_kern.rs | MINOR | SVG handling removed |
+| tex_kern.rs | OK | SVG handling removed (not critical for XML output) |
 | pdftex.rs | MINOR | Missing: `OpenAnnotSpecification`, `\pdfannot`, `\pdfobj`, `\pdfcolorstack` |
 | etex.rs | MINOR | `\parshapelength` returns Dimension (Perl: Number); `etex_readexpr_i` has `todo!()` for missing close paren |
 | tex_job.rs | OK | — |
@@ -66,7 +66,7 @@ Updated 2026-03-11. Only lists open gaps & TODOs; completed items live in git hi
 | latex_ch1_documentclass.rs | MINOR | `\documentstyle` compat, `onlyPreamble` |
 | latex_ch1_environments.rs | GAPS | `beforebegin/afterend` hooks, `\@checkend` |
 | latex_ch2_document.rs | MINOR | Unclosed group/env/conditional warnings commented out |
-| latex_ch3_sentences_and_paragraphs.rs | MINOR | Missing: `\@@par`, `\@par`, `\@restorepar`, `enterHorizontal` on `\emph` |
+| latex_ch3_sentences_and_paragraphs.rs | OK | `enterHorizontal` now auto via `mode => "text"` |
 | latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag` |
 | latex_ch5_packages.rs | GAPS | Missing: `\PassOptionsToPackage/Class`, `\ExecuteOptions` (full), `\@onefilewithoptions`, many option helpers |
 | latex_ch7_math_mode_environments.rs | GAPS | Missing: equation numbering, `\nonumber`, `\tag`, `\lefteqn`, `\intertext`, eqnarray |
@@ -109,25 +109,15 @@ ltx:section, ltx:document (4 calls), ltx:* (2 calls), ltx:XMDual, ltx:XMText, lt
 
 **Infrastructure:** `enter_horizontal`/`leave_horizontal` options now supported on `DefConstructor!`, `DefPrimitive!`, `DefEnvironment!`. `mode => "text"` auto-adds `enter_horizontal` for constructors/primitives (matching Perl).
 
-### enterHorizontal — remaining TODO items
+### enterHorizontal — all done
 
-| Definition | Rust File | Status |
-|---|---|---|
-| `\box/\copy` | tex_box.rs | **TODO** |
-| `\vrule` | tex_box.rs | **TODO** |
-| `\leavevmode` | plain.rs | **TODO** |
-| `\lx@begin@display/inline@math` | tex_math.rs | **TODO** |
+Done: `\indent`, `\noindent`, `\ `, `\char`, `\hskip`, `\hss/hfilneg/hfil/hfill`, `\kern/raise/lower/moveleft/moveright`, `\lx@framed/hflipped/overlay`, `\TeX/\LaTeX/\LaTeXe`, `\lx@kludged`, `\@makebox/\raisebox`, `\emph`, `\leavevmode`, `\vrule`, `\unhbox/\unhcopy`, `\lx@begin@display/inline@math` + all `mode => "text"` definitions.
 
-Done: `\indent`, `\noindent`, `\ `, `\char`, `\hskip`, `\hss/hfilneg/hfil/hfill`, `\kern/raise/lower/moveleft/moveright`, `\lx@framed/hflipped/overlay`, `\TeX/\LaTeX/\LaTeXe`, `\lx@kludged`, `\@makebox/\raisebox`, `\emph` + all `mode => "text"` definitions.
+Note: `\box/\copy` do NOT call enterHorizontal in Perl (verified TeX_Box.pool.ltxml lines 647-655).
 
-### leaveHorizontal — remaining TODO items
+### leaveHorizontal — all done
 
-| Definition | Rust File | Status |
-|---|---|---|
-| `\hrule` | tex_box.rs | **TODO** |
-| `\unvbox/\unvcopy` | tex_box.rs | **TODO** |
-
-Done: `\vskip`, `\lx@end@document`, `\vfil/vfill/vss/vfilneg`.
+Done: `\vskip`, `\lx@end@document`, `\vfil/vfill/vss/vfilneg`, `\hrule`, `\unvbox/\unvcopy`.
 
 ### leaveHorizontal_internal — all done
 Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
@@ -161,7 +151,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 |--------|--------|-----------|
 | mouth.rs | OK | Full encoding support (only latin-1+UTF-8) |
 | gullet.rs | MINOR | `readArg` isolation via `readingFromMouth`; `read_register_value` coercions |
-| stomach.rs | MINOR | `everymath/everydisplay` injection consolidation; mathcode char decoding (ADDOP vs BINOP) |
+| stomach.rs | MINOR | `everymath/everydisplay` injection consolidation; mathcode char decoding (ADDOP vs BINOP). `execute_before_after_group` extracted. `begin_mode_opt`/`end_mode_opt` with `noframe` parameter synced with Perl Grouplevel commit (acaab773). |
 | state.rs | OK | — |
 | document.rs | MINOR | `compact_xmdual()`, `mergeAttributes()`, `insertElementBefore()`, comment creation (needs libxml) |
 | register.rs | MINOR | — |
