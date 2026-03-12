@@ -46,6 +46,12 @@ macro_rules! locals_mut {
 #[thread_local]
 static LOCALIZED_VARS: Lazy<RefCell<Localized>> = Lazy::new(|| RefCell::new(Localized::default()));
 
+/// Reset all localized variables to their default state.
+/// Must be called between conversion runs to prevent state pollution.
+pub fn initialize_localized() {
+  *locals_mut!() = Localized::default();
+}
+
 /// sets a (originally Perl-local) `IfFrame` that needs to be manually expired.
 pub fn set_ifframe(if_frame: Option<Rc<RefCell<IfFrame>>>) {
   locals_mut!().if_frames.push(if_frame);
