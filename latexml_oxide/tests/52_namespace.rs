@@ -4,4 +4,4 @@
 use latexml::util::test::*;
 
 #[test]
-fn can_namespace() { latexml_tests("tests/structure", None, None); }
+fn can_namespace() { latexml_tests("tests/namespace", None, None); }
