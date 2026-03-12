@@ -7,18 +7,8 @@ LoadDefinitions!({
   DefConditional!("\\if@reversemargin");
   Let!("\\reversemarginpar", "\\@reversemargintrue");
   Let!("\\normalmarginpar", "\\@reversemarginfalse");
-  // TODO: Can we find an ergonomic rust way to write multi-line XML strings for constructors?
-  //       maybe have a "proper" template capability, as most Rust web frameworks do?
-  //       consider the view! macro of Leptos for example:
-  //       https://docs.rs/leptos/latest/leptos/macro.view.html
-  //
-  // DefConstructor!("\\marginpar[]{}", r###"\
-  // ?#1(<ltx:note role='margin'
-  // class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>\
-  // ?#2(<ltx:note role='margin'
-  // class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:
-  // note>))\ (<ltx:note role='margin'
-  // class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###);
+  // Perl: latex_constructs.pool.ltxml lines 3543-3546
+  DefConstructor!("\\marginpar[]{}", r###"?#1(<ltx:note role='margin' class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>?#2(<ltx:note role='margin' class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>))(<ltx:note role='margin' class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###);
 
   DefRegister!("\\marginparpush", Dimension::new(0));
 

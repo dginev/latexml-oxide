@@ -1,0 +1,73 @@
+use crate::engine::latex_functions::{begin_appendices, end_appendices};
+use crate::prelude::*;
+
+#[rustfmt::skip]
+LoadDefinitions!({
+  // Perl: appendix.sty.ltxml
+  // INCOMPLETE IMPLEMENTATION — covers the core environments
+
+  DefMacro!("\\appendixname",     "Appendix");
+  DefMacro!("\\appendixtocname",  "Appendices");
+  DefMacro!("\\appendixpagename", "Appendices");
+
+  // Whether the entry in toc gets page number; Ignorable
+  DefMacro!("\\appendicestocpagenum",   "");
+  DefMacro!("\\noappendicestocpagenum", "");
+
+  // Switches, mostly ignorable(?)
+  DefConditional!("\\if@dotoc@pp");
+  DefConditional!("\\if@dotitle@pp");
+  DefConditional!("\\if@dotitletoc@pp");
+  DefConditional!("\\if@dohead@pp");
+  DefConditional!("\\if@dopage@pp");
+
+  DefMacro!("\\appendixtocon",       "\\@dotoc@pptrue");
+  DefMacro!("\\appendixtocoff",      "\\@dotoc@ppfalse");
+  DefMacro!("\\appendixpageon",      "\\@dopage@pptrue");
+  DefMacro!("\\appendixpageoff",     "\\@dopage@ppfalse");
+  DefMacro!("\\appendixtitleon",     "\\@dotitle@pptrue");
+  DefMacro!("\\appendixtitleoff",    "\\@dotitle@ppfalse");
+  DefMacro!("\\appendixtitletocon",  "\\@dotitletoc@pptrue");
+  DefMacro!("\\appendixtitletocoff", "\\@dotitletoc@ppfalse");
+  DefMacro!("\\appendixheaderon",    "\\@dohead@pptrue");
+  DefMacro!("\\appendixheaderoff",   "\\@dohead@ppfalse");
+
+  DefMacro!("\\setthesection",    "\\Alph{section}");
+  DefMacro!("\\setthesubsection", "\\thesection.\\Alph{subsection}");
+
+  DefPrimitive!("\\lx@pp@appendix@begin", {
+    if lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some() {
+      begin_appendices("chapter");
+    } else {
+      begin_appendices("section");
+    }
+  });
+
+  DefConstructor!("\\lx@pp@appendix@end", sub[document, _args, _props] {
+    document.maybe_close_element("ltx:appendix")?;
+  },
+    before_digest => {
+      end_appendices();
+    }
+  );
+
+  // Adjust numbering!!!
+  DefPrimitive!("\\lx@pp@subappendix@begin", {
+    if lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some() {
+      begin_appendices("section");
+    } else {
+      begin_appendices("subsection");
+    }
+  });
+
+  DefMacro!("\\appendices",
+    r"\lx@pp@appendix@begin\if@dotoc@pp\addappheadtotoc\fi\if@dopage@pp\appendixpage\fi\if@dotitle@pp\def\fnum@appendix{\lx@refnum@compose{\appendixname}{\lx@the@@{appendix}}}\fi\if@dotitle@pp\def\fnum@toc@appendix{\lx@refnum@compose{\appendixname}{\lx@the@@{appendix}}}\fi"
+  );
+
+  // These must END appendices!!!!
+  // AND CLOSE an open appendix!
+  DefMacro!("\\endappendices", "\\lx@pp@appendix@end");
+
+  DefMacro!("\\subappendices",    "\\lx@pp@subappendix@begin");
+  DefMacro!("\\endsubappendices", "\\lx@pp@appendix@end");
+});

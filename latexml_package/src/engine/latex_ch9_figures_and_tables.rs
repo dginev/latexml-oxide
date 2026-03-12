@@ -122,14 +122,20 @@ LoadDefinitions!({
     },
     mode => "internal_vertical"
   );
-  // DefEnvironment('{figure*}[]',
-  //   "<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>"
-  //     . "#tags"
-  //     . "#body"
-  //     . "</ltx:figure>",
-  //   properties   => { layout => 'vertical' },
-  //   beforeDigest => sub { DefMacroI('\@captype', undef, 'figure'); },
-  //   afterDigest  => sub { RescueCaptionCounters('figure', $_[1]); });
+  // Perl: latex_constructs.pool.ltxml line 3460
+  DefEnvironment!("{figure*}[]",r###"
+  <ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>
+    #tags
+    #body
+  </ltx:figure>
+  "###,
+    properties   => { stored_map!("layout" => "vertical") },
+    before_digest => { DefMacro!("\\@captype", "figure"); },
+    after_digest  => sub[tag] {
+      rescue_caption_counters("figure", tag);
+    },
+    mode => "internal_vertical"
+  );
   DefEnvironment!("{table}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     // TODO:
@@ -137,16 +143,13 @@ LoadDefinitions!({
     before_digest => { DefMacro!("\\@captype", "table"); },
     after_digest  => sub[whatsit] { rescue_caption_counters("table", whatsit); },
     mode => "internal_vertical");
-  // DefEnvironment('{table*}[]',
-  //   "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>"
-  //     . "#tags"
-  //     . "#body"
-  //     . "</ltx:table>",
-  //   properties   => { layout => 'vertical' },
-  //   beforeDigest => sub { DefMacroI('\@captype', undef, 'table'); },
-  //   afterDigest  => sub { RescueCaptionCounters('table', $_[1]); });\
-
-  // TODO: More to add here, continue...
+  // Perl: latex_constructs.pool.ltxml line 3478
+  DefEnvironment!("{table*}[]",
+    "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
+    properties   => { stored_map!("layout" => "vertical") },
+    before_digest => { DefMacro!("\\@captype", "table"); },
+    after_digest  => sub[whatsit] { rescue_caption_counters("table", whatsit); },
+    mode => "internal_vertical");
 
   DefPrimitive!("\\flushbottom",      None);
   DefPrimitive!("\\suppressfloats[]", None);
