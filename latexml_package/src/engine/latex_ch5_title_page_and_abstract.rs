@@ -238,7 +238,7 @@ LoadDefinitions!({
       Let!("\\abstract", "\\abstract@onearg");
     },
     before_digest_end => {
-      stomach::digest(Tokens!(T_CS!("\\maybe@end@titlepage")))?;
+      stomach::digest(Tokens!(T_CS!("\\maybe@end@titlepage")))?
     },
     after_construct => sub[doc, _whatsit] {
       insert_frontmatter(doc)?;
