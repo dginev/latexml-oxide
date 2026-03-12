@@ -88,13 +88,17 @@ pub fn has_keyval(prefix: &str, keyset: &str, key: &str) -> bool {
 }
 
 /// disable a given key-val
-// fn disable_keyval(prefix: &str, keyset: &str, key: &str) -> Result<()> {
-//   let qname = keyval_qname(prefix, keyset, key);
-//   keyval_set(&qname, "disabled", true.into());
-//   // disable the key
-//   define_ordinary(&qname, Some(ExpansionBody::Tokens(
-//     tokenize(&s!("\\PackageWarning{{keyval}}{{`{key}' has been disabled. }}")))))
-// }
+pub fn disable_keyval(prefix: &str, keyset: &str, key: &str) -> Result<()> {
+  let qname = keyval_qname(prefix, keyset, key);
+  keyval_set(&qname, "disabled", true.into());
+  // disable the key
+  define_ordinary(
+    &qname,
+    Some(ExpansionBody::Tokens(tokenize(&s!(
+      "\\PackageWarning{{keyval}}{{`{key}' has been disabled. }}"
+    )))),
+  )
+}
 
 //======================================================================
 // Key Definition

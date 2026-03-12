@@ -13,6 +13,7 @@ use crate::common::store::Stored;
 use crate::definition::argument::ArgWrap;
 use crate::document::Document;
 use crate::gullet::{self, ExpansionLevel};
+use crate::state;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, NO_PROPERTIES};
@@ -74,13 +75,21 @@ impl PartialEq for KeyVals {
 }
 
 impl fmt::Display for KeyVals {
-  fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-    todo!();
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let mut first = true;
+    for (key, value) in &self.cached_pairs {
+      if !first {
+        write!(f, ",")?;
+      }
+      write!(f, "{}={}", key, value)?;
+      first = false;
+    }
+    Ok(())
   }
 }
 
 impl Object for KeyVals {
-  fn stringify(&self) -> String { "KeyVals:TODO".to_string() }
+  fn stringify(&self) -> String { self.to_string() }
 
   fn be_digested(mut self) -> Result<Digested> {
     if self.was_digested {
@@ -368,60 +377,189 @@ impl KeyVals {
   //======================================================================
   // Value Related Reversion
   //======================================================================
-  fn set_keys_expansion(&mut self) -> Tokens {
-    // let skip         = self.skip;
-    // let setInternals = $self->getSetInternals;
+  fn set_keys_expansion(&self) -> Tokens {
+    let skip_keys = &self.skip;
+    let set_internals = self.set_internals;
+    let prefix = &self.prefix;
 
-    // my ($punct, $assign) = ($$self{punct}, $$self{assign});
+    // Handle skipMissing store token (xkeyval feature)
+    let rmmacro = match &self.skip_missing {
+      SkipMissing::Store(token) => Some(*token),
+      _ => None,
+    };
+    let hook_missing = self.hook_missing;
 
-    // // we might have to store values in a seperate token
-    // let rmmacro     = $self->getSkipMissing;
-    // let hookMissing = $self->getHookMissing;
-    // let definedrm   = ref($rmmacro) ? 1 : 0;
-    // let rmtokens    = ();
+    // Read existing tokens from rmmacro (if defined and has meaning)
+    let mut rmtokens: Vec<Token> = Vec::new();
+    if let Some(rm) = rmmacro {
+      if state::lookup_meaning(&rm).is_some() {
+        if let Ok(expanded) = gullet::do_expand(Tokens!(rm)) {
+          rmtokens = expanded.unlist();
+        }
+      }
+    }
 
-    // // read in existing tokens (if they are defined)
-    // if ($definedrm && $state->lookupMeaning($rmmacro)) {
-    //   @rmtokens = LaTeXML::Package::Expand($rmmacro)->unlist; }
+    let mut tokens: Vec<Token> = Vec::new();
 
-    // define some xkeyval internals
-    let tokens = Vec::new();
-    // let tokens = $setInternals ? (
-    //   T_CS('\def'), T_CS('\XKV@fams'), T_BEGIN, Explode(join(',', $self->getKeySets)), T_END,
-    //   T_CS('\def'), T_CS('\XKV@na'), T_BEGIN, Explode(join(',', @skip)), T_END
-    // ) : ();
+    // Define xkeyval internals if needed
+    if set_internals {
+      let keysets_joined = self.keysets.join(",");
+      let skip_joined = self.skip.join(",");
+      tokens.push(T_CS!("\\def"));
+      tokens.push(T_CS!("\\XKV@fams"));
+      tokens.push(T_BEGIN!());
+      tokens.extend(Explode!(keysets_joined));
+      tokens.push(T_END!());
+      tokens.push(T_CS!("\\def"));
+      tokens.push(T_CS!("\\XKV@na"));
+      tokens.push(T_BEGIN!());
+      tokens.extend(Explode!(skip_joined));
+      tokens.push(T_END!());
+    }
 
-    // // iterate over the key-value pairs
-    // for tuple in &self.tuples {
-    //   let (key, value, useDefault, keyvals, keyval) = tuple;
+    // Iterate over key-value pairs
+    for tuple in &self.tuples {
+      let KVData {
+        key,
+        value,
+        use_default,
+        primary_keyset,
+        keysets,
+        ..
+      } = tuple;
 
-    //   // we might want to skip to the next iteration if key is to be omitted
-    //   next if (grep { $_ eq $key } @skip);
+      // Skip keys in the skip list
+      if skip_keys.iter().any(|s| s == key) {
+        continue;
+      }
 
-    //   // we might need to save the macros that weren't saved
-    //   if (scalar @keyvals == 0) {
-    //     if ($definedrm) {
-    //       push(@rmtokens, $self->revertKeyVal($keyval, $value, $useDefault, (@rmtokens ? 0 : 1),
-    //           1, $punct, $assign)); }
-    //     my @reversion = $self->revertKeyVal($keyval, $value, $useDefault, 1, 1, $punct, $assign);
-    //     push(@tokens, $hookMissing, T_BEGIN, $self->revertKeyVal($keyval, $value, $useDefault, 1,
-    // 1, $punct, $assign), T_END) if $hookMissing;     next; }
+      // If no keysets resolved for this key
+      if keysets.is_empty() {
+        // Store in rmmacro if defined
+        if rmmacro.is_some() {
+          if let Ok(rev) = self.revert_keyval(
+            key,
+            primary_keyset,
+            value.as_ref(),
+            *use_default,
+            rmtokens.is_empty(),
+          ) {
+            rmtokens.extend(rev);
+          }
+        }
+        // Call hookMissing if defined
+        if let Some(hm) = hook_missing {
+          if let Ok(rev) =
+            self.revert_keyval(key, primary_keyset, value.as_ref(), *use_default, true)
+          {
+            tokens.push(hm);
+            tokens.push(T_BEGIN!());
+            tokens.extend(rev);
+            tokens.push(T_END!());
+          }
+        }
+        continue;
+      }
 
-    //   // and iterate over all valid keysets
-    //   foreach my $keyset (@keyvals) {
-    //     my $expansion = $keyset->setKeysExpansion($value, $useDefault, 1, 1, $setInternals);
-    //     next unless defined($expansion);
-    //     push(@tokens, $expansion->unlist); } }
+      // Iterate over all valid keysets
+      for keyset in keysets {
+        let qname = keyval_qname(prefix, keyset, key);
+        if !has_keyval(prefix, keyset, key) {
+          Info!(
+            "undefined",
+            "Encountered unknown KeyVals key",
+            s!("'{key}' with prefix '{prefix}' not defined in '{keyset}'")
+          );
+        } else if matches!(keyval_get(&qname, "disabled"), Some(Stored::Bool(true))) {
+          Warn!(
+            "undefined",
+            "keyval",
+            s!("`{key}' has been disabled. ")
+          );
+        } else {
+          // Define xkeyval internals per-key if needed
+          if set_internals {
+            tokens.push(T_CS!("\\def"));
+            tokens.push(T_CS!("\\XKV@prefix"));
+            tokens.push(T_BEGIN!());
+            tokens.extend(Explode!(s!("{prefix}@")));
+            tokens.push(T_END!());
+            tokens.push(T_CS!("\\def"));
+            tokens.push(T_CS!("\\XKV@tfam"));
+            tokens.push(T_BEGIN!());
+            tokens.extend(Explode!(keyset));
+            tokens.push(T_END!());
+            tokens.push(T_CS!("\\def"));
+            tokens.push(T_CS!("\\XKV@header"));
+            tokens.push(T_BEGIN!());
+            tokens.extend(Explode!(s!("{prefix}@{keyset}@")));
+            tokens.push(T_END!());
+            tokens.push(T_CS!("\\def"));
+            tokens.push(T_CS!("\\XKV@tkey"));
+            tokens.push(T_BEGIN!());
+            tokens.extend(Explode!(key));
+            tokens.push(T_END!());
+          }
 
-    // // and assign the macro with the other keys
-    // push(@tokens, T_CS('\def'), $rmmacro, T_BEGIN, @rmtokens, T_END) if $definedrm;
+          if *use_default {
+            // Call the @default macro
+            tokens.push(T_CS!(s!("\\{qname}@default")));
+          } else {
+            // Call the macro with the value
+            tokens.push(T_CS!(s!("\\{qname}")));
+            tokens.push(T_BEGIN!());
+            if let Some(v) = value {
+              if let Ok(reverted) = v.revert() {
+                tokens.extend(reverted.unlist());
+              }
+            }
+            tokens.push(T_END!());
+          }
 
-    // // reset all the internals (if applicable)
-    // push(@tokens,
-    //   T_CS('\def'), T_CS('\XKV@fams'), T_BEGIN, T_END,
-    //   T_CS('\def'), T_CS('\XKV@na'), T_BEGIN, T_END) if $setInternals;
+          // Reset xkeyval internals per-key
+          if set_internals {
+            tokens.push(T_CS!("\\def"));
+            tokens.push(T_CS!("\\XKV@prefix"));
+            tokens.push(T_BEGIN!());
+            tokens.push(T_END!());
+            tokens.push(T_CS!("\\def"));
+            tokens.push(T_CS!("\\XKV@tfam"));
+            tokens.push(T_BEGIN!());
+            tokens.push(T_END!());
+            tokens.push(T_CS!("\\def"));
+            tokens.push(T_CS!("\\XKV@header"));
+            tokens.push(T_BEGIN!());
+            tokens.push(T_END!());
+            tokens.push(T_CS!("\\def"));
+            tokens.push(T_CS!("\\XKV@tkey"));
+            tokens.push(T_BEGIN!());
+            tokens.push(T_END!());
+          }
+        }
+      }
+    }
 
-    // and return the list of tokens
+    // Assign rmmacro with collected missing keys
+    if let Some(rm) = rmmacro {
+      tokens.push(T_CS!("\\def"));
+      tokens.push(rm);
+      tokens.push(T_BEGIN!());
+      tokens.extend(rmtokens);
+      tokens.push(T_END!());
+    }
+
+    // Reset all internals if applicable
+    if set_internals {
+      tokens.push(T_CS!("\\def"));
+      tokens.push(T_CS!("\\XKV@fams"));
+      tokens.push(T_BEGIN!());
+      tokens.push(T_END!());
+      tokens.push(T_CS!("\\def"));
+      tokens.push(T_CS!("\\XKV@na"));
+      tokens.push(T_BEGIN!());
+      tokens.push(T_END!());
+    }
+
     Tokens::new(tokens)
   }
 
@@ -443,7 +581,7 @@ impl KeyVals {
           primary_keyset,
           value.as_ref(),
           *use_default,
-          !tokens.is_empty(),
+          tokens.is_empty(),
         )?;
         tokens.extend(reverted);
       }
