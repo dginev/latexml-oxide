@@ -1,8 +1,2 @@
-///**********************************************************************
-/// Test cases for latexml_oxide
-///**********************************************************************
-use latexml::util::test::*;
-
-#[test]
-#[ignore]
-fn can_math() { latexml_tests("tests/math", None, None); }
+use latexml::tex_tests;
+tex_tests!("tests/math");

@@ -1130,9 +1130,14 @@ impl Document {
     attributes
       .entry(s!("role"))
       .or_insert_with(|| s!("UNKNOWN"));
-    // TODO: This seems ported out of order, where should these attributes be
-    // getting removed?
+    // Remove internal-only properties that should not become XML attributes.
+    // In Perl, these are filtered by canHaveAttribute (model validation),
+    // but we filter them explicitly here.
     attributes.remove("mode");
+    attributes.remove("isMath");
+    attributes.remove("cached_width");
+    attributes.remove("cached_height");
+    attributes.remove("cached_depth");
     // attributes.remove("stretchy");
 
     let is_space = attributes.contains_key("isSpace");
@@ -1938,13 +1943,9 @@ impl Document {
       node.set_attribute("xml:id", value)?; // and bypass all ns stuff
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
-      // Ignore attributes not allowed by the model,
-      // but accept "internal" attributes.
-      // let model = model_mut!();
-      // let qname = model.get_node_qname(node);
-      // if key.starts_with("_") || model.can_have_attribute(qname, key) {
+      // Note: Full model validation (can_have_attribute) is done in node_set_attribute.
+      // Here we just set the attribute, since the caller is responsible for filtering.
       node.set_attribute(key, value)?;
-      // }
     } else {
       // Accept any namespaced attributes
       dbg!(key);
