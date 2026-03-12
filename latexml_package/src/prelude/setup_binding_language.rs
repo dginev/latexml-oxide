@@ -1972,6 +1972,20 @@ macro_rules! defi_opts {
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@predigest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
+  // digested_reversion: Option<DigestedReversionClosure>
+  // Perl equivalent: the `reversion` option on DefParameterType, which receives the raw value.
+  // Allows parameter types to control reversion formatting from the structured digested data.
+  (@munch ( $(,)? digested_reversion $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@digested_reversion (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  (@digested_reversion (sub[$arg:ident] $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [digested_reversion @ Some(Rc::new({
+        move |$arg: &Digested| -> Result<Tokens> { $body }
+      }))]})
+  };
   // reversion
 
   // semiverbatim

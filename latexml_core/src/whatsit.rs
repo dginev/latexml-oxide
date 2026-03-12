@@ -328,26 +328,11 @@ impl Object for Whatsit {
           tokens.push(defn.get_cs().into_owned());
         }
         if let Some(parameters) = defn.get_parameters() {
-          // TODO: This is a sticking point. Both in terms of type mismatch between
-          // revert_arguments and get_args, but much worse with the expectation of
-          // passing in a gullet and state for the parameter reversion
-          // for now approximate this with some slight of hand ...
-          // tokens.extend(parameters.revert_arguments(self.get_args())?);
-          //
-          // Note 2: I've already had to dance around the T_BEGIN/T_END wrappers with my hacky
-          // workaround so maybe worth taking some time and aligning the idea here
-          // with `.revert_arguments` to avoid the insanity?
-          //
-          // GOAL: push(@tokens, $parameters->revertArguments($self->getArgs)); } }
-          let args = self
-            .get_args()
-            .iter()
-            .map(|opt| match opt {
-              Some(arg) => Some(arg.revert().ok()?),
-              None => None,
-            })
-            .collect();
-          tokens.extend(parameters.revert_arguments(args)?)
+          // Use revert_digested_arguments which checks for digested_reversion
+          // closures on each parameter, allowing parameter types like BoxSpecification
+          // to format their reversion from the structured digested data.
+          // Perl: push(@tokens, $parameters->revertArguments($self->getArgs));
+          tokens.extend(parameters.revert_digested_arguments(self.get_args())?)
         }
       },
     };

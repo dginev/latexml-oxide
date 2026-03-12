@@ -88,17 +88,22 @@ LoadDefinitions!({
   });
 
   // Perl: p{Dimension} — before wraps content in \vtop{\hbox to <width>\relax{...}}.
-  // Width flows through \hbox BoxSpecification, vattach through \vtop → insertBlock.
-  // Note: Perl includes "to <dim>\relax" in before tokens for structural wrapping,
-  // but that causes trim_column_template mismatch (BoxSpec reverts differently).
-  // We keep the simpler before tokens; the width attribute goes to the cell and
-  // canHaveAttribute filtering + insertBlock handle attribute placement.
+  // Width flows through \hbox BoxSpecification (not as cell attribute).
+  // vattach flows through \vtop → insertBlock.
+  // Perl: before => Tokens(\vtop, {, \hbox, T_LETTER('t'), T_LETTER('o'), $_[1]->revert, \relax, {)
   DefColumnType!("p{Dimension}", sub[(width)] {
+    // Build before tokens: \vtop { \hbox to <dim> \relax {
+    let mut before = vec![
+      T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\hbox"),
+    ];
+    before.extend(ExplodeText!("to"));
+    before.extend(width.revert()?.unlist());
+    before.push(T_CS!("\\relax"));
+    before.push(T_BEGIN!());
     with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
-      before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\hbox"), T_BEGIN!())),
+      before: Some(Tokens::new(before)),
       after: Some(Tokens!(T_END!(), T_END!())),
       align: Some(Align::Justify),
-      width: Some(width),
       vattach: Some("top".to_string()),
       ..Cell::default()}));
   });
@@ -743,6 +748,14 @@ pub fn extract_alignment_column(
   // Peel off any boxes from both sides until we get the "meat" of the column.
   // from this we can establish borders, alignment and emptiness.
   // But we, of course, immediately put them back...
+  if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
+    eprintln!("DEBUG extract_alignment_column n0={n0} initial align={align:?} boxes({}):", boxes.len());
+    for (i, b) in boxes.iter().enumerate() {
+      eprintln!("  [{i}] isFill={} isVRule={} isSpace={} str={:?}",
+        b.get_property("isFill").is_some(), b.get_property("isVerticalRule").is_some(),
+        b.get_property("isSpace").is_some(), b.to_string());
+    }
+  }
   let mut saveleft = VecDeque::new();
   let mut saveright = VecDeque::new();
   while let Some(front_box) = boxes.pop_front() {
