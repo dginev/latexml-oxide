@@ -1,6 +1,6 @@
 # Engine Sync Status: Perl vs Rust
 
-Updated 2026-03-11. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git history.
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
@@ -162,6 +162,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | token.rs | OK | — |
 | tokens.rs | OK | — |
 | number/float/dimension.rs | OK | — |
+| glue.rs | OK | NumericOps overrides: multiply/divide/subtract/smaller/larger preserve plus/minus/pfill/mfill |
+| numeric_ops.rs | OK | Default multiply uses float arithmetic matching Perl |
 | font.rs | MINOR | `computeBoxesSize` decomposition, `DEFSIZE` from state |
 
 ---
@@ -184,3 +186,11 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | `FindFile_fallback` | DEFERRED | arXiv version-suffix stripping |
 | `LoadFormat` | DEFERRED | Handled inline in Rust |
 | `maybePreemptRefnum` | PARTIAL | Skeleton with `todo!()` |
+
+---
+
+## Package Bindings
+
+| Package | Status | Notes |
+|---------|--------|-------|
+| calc.sty | OK | Full expression parser: +,-,*,/, \real, \ratio, \minof, \maxof, \widthof/heightof/depthof/totalheightof. RegisterValue smaller/larger preserve type variant. |

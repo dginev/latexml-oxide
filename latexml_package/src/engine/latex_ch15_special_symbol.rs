@@ -26,7 +26,7 @@ LoadDefinitions!({
   DefPrimitive!("\\textdaggerdbl", "\u{2021}"); // DOUBLE DAGGER
   DefPrimitive!("\\textdagger", "\u{2020}"); // DAGGER
   DefPrimitive!("\\textparagraph", "\u{00B6}"); // PILCROW SIGN
-  DefPrimitive!("\\textperiodcentered", "\u{22C5}"); // DOT OPERATOR
+  DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
   DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
   DefAccent!("\\textcircled", '\u{0020DD}', "\u{0025EF}"); // Defined in TeX.pool
   // From latex_constructs.pool.ltxml
@@ -44,6 +44,7 @@ LoadDefinitions!({
   DefPrimitive!("\\textregistered", "\u{00AE}"); // REGISTERED SIGN
   DefPrimitive!("\\texttrademark", "\u{2122}"); // TRADE MARK SIGN
   DefConstructor!("\\textsuperscript{}", "<ltx:sup>#1</ltx:sup>",  mode => "text");
+  DefConstructor!("\\textsubscript{}", "<ltx:sub>#1</ltx:sub>",  mode => "text");
   // This is something coming from xetex/xelatex ? Why define this way?
   //DefConstructor!("\\realsuperscript{}', "<ltx:text yoffset='0.5em'
   // _noautoclose='1'>#1</ltx:text>");
