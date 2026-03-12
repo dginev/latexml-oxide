@@ -33,6 +33,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "book.cls" => package::book_cls::load_definitions(),
     "booktabs.sty" => package::booktabs_sty::load_definitions(),
     "caption.sty" => package::caption_sty::load_definitions(),
+    "remreset.sty" => package::remreset_sty::load_definitions(),
     "report.cls" => package::report_cls::load_definitions(),
     "amsmath.sty" => package::amsmath_sty::load_definitions(),
     "amsfonts.sty" => package::amsfonts_sty::load_definitions(),
@@ -65,6 +66,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "textcase.sty" => package::textcase_sty::load_definitions(),
     "cite.sty" => package::cite_sty::load_definitions(),
     "calc.sty" => package::calc_sty::load_definitions(),
+    "chngcntr.sty" => package::chngcntr_sty::load_definitions(),
     _other => return None,
   })
 }
