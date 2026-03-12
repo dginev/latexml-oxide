@@ -611,3 +611,105 @@ All core APIs ported:
 | `ProcessPendingResources` | EXISTS | Already `document.process_pending_resources()` |
 | `maybePreemptRefnum` | PARTIAL | Skeleton exists with `todo!()` — needs LABEL_MAPPING_HOOK closure type |
 | `IsEmpty` (standalone) | PARTIAL | Method on Digested exists; standalone variadic version not needed in Rust |
+
+---
+
+## Font.pm → font.rs Sync (2026-03-11)
+
+### File: `latexml_core/src/common/font.rs` ↔ `LaTeXML/lib/LaTeXML/Common/Font.pm`
+
+#### Static Data
+| Perl | Rust | Status |
+|---|---|---|
+| `%font_family` | `FONT_FAMILY` | **SYNCED** — fixed cmm (math not italic), cmsy/cmex/msa/msb (encoding-only), added graphic/xy fonts |
+| `%font_series` | `FONT_SERIES` | OK |
+| `%font_shape` | `FONT_SHAPE` | OK |
+| `%font_size` | `FONT_SIZE` | OK |
+| `$FONTREGEXP` | `FONT_RE` | **SYNCED** — updated to match new font entries |
+| `%metric_map` | `METRIC_MAP` | **NEW** — full family_series_shape → tfm mapping |
+| `@metric_fallbacks` | `METRIC_FALLBACKS` | **NEW** — cmr/cmmi/cmsy/cmex/msam/msbm |
+| `%mathatomtype` | `MATH_ATOM_TYPE` | **NEW** — 20 role→type mappings |
+| `$mathbearings` | `MATH_BEARINGS` | **NEW** — 8×8 bearing table |
+| `$mathbearingreg` | inline in `math_bearing` | **NEW** — thinmuskip/medmuskip/thickmuskip register lookup |
+| `%baseline_map` | `BASELINE_MAP` | **NEW** (not yet used in compute_boxes_size) |
+| `%scriptstylemap` | `SCRIPT_STYLE_MAP` | OK |
+| `%fracstylemap` | `FRAC_STYLE_MAP` | **RENAMED** from `_FRAC_STYLE_MAP` |
+| `%stylesize` | `STYLE_SIZE` | OK |
+| `%mathstylestep` | `MATH_STYLE_STEP` | OK |
+| `%stepmathstyle` | `STEP_MATH_STYLE` | **RENAMED** from `_STEP_MATH_STYLE` |
+| `%mathstylesize` | `MATH_STYLE_SIZE` | **RENAMED** from `_MATH_STYLE_SIZE` |
+| `$FLAG_*` | `FLAG_FORCE_FAMILY/SERIES/SHAPE`, `FLAG_EMPH` | **NEW** — were commented out |
+
+#### Subroutines: Constructors & Accessors
+| Perl | Rust | Status |
+|---|---|---|
+| `new` | `Font { ... }` / `fontmap!` | OK — Rust struct construction |
+| `new_internal` | `Font { ... }` | OK — direct struct construction |
+| `textDefault` | `Font::text_default()` | OK |
+| `mathDefault` | `Font::math_default()` | OK |
+| `getFamily..getFlags` (11 accessors) | `get_family()..get_flags()` | OK |
+| `toString` | `fmt::Debug` | OK — `Font[fam,ser,shp,...]` format |
+| `stringify` | `Font::stringify()` | **NEW** — condensed non-default components |
+| `asFontinfo` | `Font::as_fontinfo()` | **NEW** — returns HashMap |
+| `equals` | `PartialEq` derive | OK |
+
+#### Subroutines: Font Lookup
+| Perl | Rust | Status |
+|---|---|---|
+| `lookupFontFamily` | `lookup_font_family()` | OK |
+| `lookupFontSeries` | `lookup_font_series()` | OK |
+| `lookupFontShape` | `lookup_font_shape()` | OK |
+| `lookupTeXFont` | `lookup_tex_font()` | **NEW** |
+| `decodeFontname` | `decode_fontname()` | OK |
+| `rationalizeFontSize` | `rationalize_font_size()` | OK |
+| `relativeFontSize` | `relative_font_size()` | OK |
+
+#### Subroutines: Font Comparison & Matching
+| Perl | Rust | Status |
+|---|---|---|
+| `isDiff` | `is_diff()` + `is_diff_opt_str()` + `is_diff_f64()` | OK |
+| `match` | `Font::font_match()` | **NEW** — wildcard matching |
+| `makeConcrete` | `Font::make_concrete()` | **NEW** |
+| `relativeTo` | `Font::relative_to()` | **FIXED** — added color/bg/opacity/encoding/language/emph diffs |
+| `distance` | `Font::distance()` | **FIXED** — matches Perl (no encoding/mathstyle, FLAG_EMPH) |
+| `match_font` | `match_font()` | **NEW** — regex-based string matching |
+| `font_match_xpaths` | `font_match_xpaths()` | **NEW** — XPath generation |
+| `isSticky` | `Font::is_sticky()` | OK |
+
+#### Subroutines: Font Merging
+| Perl | Rust | Status |
+|---|---|---|
+| `merge` | `Font::merge()` | **REWRITTEN** — now handles forcebold, fraction, emph/FLAG_EMPH, force-flag blocking, scale, specialize |
+| `specialize` | `Font::specialize()` | **FIXED** — DEFSERIES→DEFSHAPE bug, forceshape for lowercase Greek |
+| `purestyleChanges` | `Font::purestyle_changes()` | OK |
+| `mergePurestyle` | `Font::merge_purestyle()` | **NEW** — uses STEP_MATH_STYLE |
+
+#### Subroutines: Metrics & Sizing
+| Perl | Rust | Status |
+|---|---|---|
+| `getMetric` | `Font::get_metric()` | **REWRITTEN** — uses METRIC_MAP for proper lookup |
+| `getMetricForName` | `get_metric_for_name()` | **NEW** — with fallback chain |
+| `getEMWidth` | `Font::get_em_width()` | **FIXED** — uses get_metric(None) |
+| `getEXHeight` | `Font::get_ex_height()` | **FIXED** — uses get_metric(None) |
+| `getMUWidth` | `Font::get_mu_width()` | **FIXED** — uses get_metric(None) |
+| `computeStringSize` | `Font::compute_string_size()` | **FIXED** — kerning + italic correction |
+| `getNominalSize` | `Font::get_nominal_size()` | OK |
+| `math_bearing` | `Font::math_bearing()` | **IMPLEMENTED** — was stub returning 0.0 |
+| `computeBoxesSize` | `Font::compute_boxes_size()` | PARTIAL — single-pass, no word/line/stack decomposition |
+| `computeBoxesSize_box` | inline in compute_boxes_size | PARTIAL — no separate function |
+| `computeBoxesSize_words` | — | MISSING — word-level sizing with space/break handling |
+| `computeBoxesSize_lines` | — | MISSING — line breaking logic |
+| `computeBoxesSize_stack` | — | MISSING — multi-line stacking with vattach |
+| `_showsize` | — | N/A — debug helper |
+
+#### Subroutines: Font Decoding
+| Perl | Rust | Status |
+|---|---|---|
+| Font decode (implicit) | `font::decode()` | OK |
+| Font decode_string | `font::decode_string()` | OK |
+
+#### Known Remaining Gaps
+1. `DEFSIZE` is a static `10.0` — Perl's `DEFSIZE()` consults `$STATE->lookupValue('NOMINAL_FONT_SIZE')`. This matters when documents declare `\documentclass[12pt]{article}`.
+2. `computeBoxesSize` doesn't decompose into `_words`/`_lines`/`_stack` sub-functions. The current implementation is a single-pass that doesn't handle line breaking, word boundaries, or vertical stacking with `vattach`.
+3. `BASELINE_MAP` is defined but not yet used (needed by `computeBoxesSize_stack`).
+4. `FONT_FAMILY` map: some entries intentionally differ from Perl (e.g. `cmbrs => symbol`, `ccy => symbol` kept for compatibility even though Perl doesn't have them).
