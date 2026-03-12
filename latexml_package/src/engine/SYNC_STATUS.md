@@ -56,6 +56,7 @@ Updated 2026-03-11. Only lists open gaps & TODOs; completed items live in git hi
 - Missing: `\alloc@{}{}{}{}{}`, `\@@oalign/@@ooalign`, `\multispan`, `\hglue`, `\displaylines`, `\@math@daccent/baccent`, `\lx@hack@bordermatrix`
 - `\leavevmode` calls `enter_horizontal()` (synced)
 - `\joinrel`/`\@@joinrel` return errors
+- `\partial` role fixed to DIFFOP (was OPERATOR), `\smallint` has mathstyle TODO
 - Missing: `\smallint` font size, `\phantom/hphantom/vphantom` afterDigest sizing
 - `\neg/\lnot` now use role "BIGOP" (matching Perl)
 
