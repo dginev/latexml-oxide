@@ -164,13 +164,20 @@ LoadDefinitions!({
     reversion         => Tokens!(T_MATH!(),T_MATH!()),
     before_digest => {
       begin_mode("display_math")?;
-      // TODO:
-      // if let Some(everymath_toks) = lookup_definition(T_CS!("\\everymath")).value_of().unlist() {
-      //   gullet::unread(everymath_toks);
-      // }
-      // if let Some(everydisplay_toks) = lookup_definition(T_CS!("\\everydisplay")).value_of().unlist() {
-      //   gullet::unread(everydisplay_toks);
-      // }
+      // Inject \everymath tokens (Perl: Stomach.pm line 504-507)
+      if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
+        let everymath_toks = everymath_toks.unlist();
+        if !everymath_toks.is_empty() {
+          gullet::unread(Tokens::new(everymath_toks));
+        }
+      }
+      // Inject \everydisplay tokens
+      if let Some(RegisterValue::Tokens(everydisplay_toks)) = state::lookup_register("\\everydisplay", Vec::new())? {
+        let everydisplay_toks = everydisplay_toks.unlist();
+        if !everydisplay_toks.is_empty() {
+          gullet::unread(Tokens::new(everydisplay_toks));
+        }
+      }
     },
     capture_body  => true );
 
