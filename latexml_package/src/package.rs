@@ -1,6 +1,7 @@
 // Supported package bindings
 pub mod alltt_sty;
 pub mod amsbsy_sty;
+pub mod calc_sty;
 pub mod amsfonts_sty;
 pub mod amsgen_sty;
 pub mod amsmath_sty;
