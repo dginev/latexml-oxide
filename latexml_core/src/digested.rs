@@ -495,6 +495,53 @@ impl Digested {
     })
   }
 
+  /// Check if all items are "empty" or only spaces or otherwise skippable in a table cell.
+  /// Perl: isSkippable (Alignment.pm L484-508)
+  pub fn is_skippable(&self) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      Comment(_) => true,
+      TBox(ref b) => {
+        let b = b.borrow();
+        if b.get_property_bool("isEmpty") || b.get_property_bool("isSpace")
+          || b.get_property_bool("alignmentSkippable")
+        {
+          true
+        } else {
+          // Perl: getString, check if only whitespace
+          b.get_string().ok().map(|s| s.trim().is_empty()).unwrap_or(false)
+        }
+      },
+      List(ref l) => l.borrow().boxes.iter().all(|d| d.is_skippable()),
+      Whatsit(ref w) => {
+        let w = w.borrow();
+        if w.get_property_bool("isEmpty") || w.get_property_bool("isSpace")
+          || w.get_property_bool("alignmentSkippable")
+        {
+          true
+        } else if let Ok(Some(body)) = w.get_body() {
+          body.is_skippable()
+        } else {
+          false
+        }
+      },
+      Postponed(ref tks) => {
+        // Perl checks token catcodes: letters, others, active, CS are NOT skippable
+        tks.unlist_ref().iter().all(|t| {
+          let cc = t.get_catcode();
+          !matches!(
+            cc,
+            crate::token::Catcode::LETTER
+              | crate::token::Catcode::OTHER
+              | crate::token::Catcode::ACTIVE
+              | crate::token::Catcode::CS
+          )
+        })
+      },
+      _ => false,
+    }
+  }
+
   /// Provide a way of emulating an `Undigested` argument, by requesting
   /// raw tokens, only when they are preserved -- empty otherwise.
   pub fn raw_tokens(&self) -> Option<&Tokens> {
