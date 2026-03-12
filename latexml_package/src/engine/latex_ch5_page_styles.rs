@@ -25,7 +25,10 @@ LoadDefinitions!({
   DefPrimitive!("\\pagenumbering{}", None);
   // Perl: DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par');
   DefMacro!("\\twocolumn[]", "\\ifx.#1.\\else\\par\\noindent#1\\fi\\par");
-  DefPrimitive!("\\onecolumn", None);
+  // Perl: DefMacro('\onecolumn', '\par');
+  DefMacro!("\\onecolumn", "\\par");
+  DefMacro!("\\@onecolumna", "", locked => true);
+  DefMacro!("\\@twocolumna", "", locked => true);
 
   // Style parameters from Fig. C.3, p.182
   DefRegister!("\\paperheight"     => Dimension!("11in"));
