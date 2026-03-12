@@ -110,7 +110,8 @@ LoadDefinitions!({
   //======================================================================
   // End marks
   DefMacro!("\\TheoremSymbol", "\\@qedbox{\\the\\thm@symbol}");
-  DefConstructor!("\\@qedbox{}", "<ltx:text class='ltx_align_floatright'>#1</ltx:text>");
+  DefConstructor!("\\@qedbox{}", "<ltx:text class='ltx_align_floatright'>#1</ltx:text>",
+    enter_horizontal => true);
 
   RawTeX!("\\newif\\ifsetendmark\\setendmarktrue");
   DefMacro!("\\NoEndMark", "\\global\\setendmarkfalse");
