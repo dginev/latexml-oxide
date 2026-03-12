@@ -687,6 +687,26 @@ fn reset_options() -> Result<()> {
   Ok(())
 }
 
+/// Execute a list of options (Perl: ExecuteOptions).
+/// Tries each option's \ds@{option} definition; logs unexpected ones.
+pub fn execute_options(options: &[&str]) -> Result<()> {
+  let mut unhandled = Vec::new();
+  for option in options {
+    let sym = arena::pin(*option);
+    if !execute_option_internal(sym)? {
+      unhandled.push(*option);
+    }
+  }
+  for option in &unhandled {
+    Info!(
+      "unexpected",
+      *option,
+      s!("Unexpected options passed to ExecuteOptions '{option}'")
+    );
+  }
+  Ok(())
+}
+
 pub struct RequireOptions {
   pub options:          Vec<String>,
   pub withoptions:      Option<Vec<String>>,
@@ -962,6 +982,49 @@ pub fn merge_font(font: Font) {
   assign_font(Rc::new(new_font), Some(Scope::Local));
 }
 
+/// Define a named color (Perl: DefColor).
+/// Stores as color_{name} and also defines \\color@{name} macro.
+pub fn def_color(name: &str, color: &[&str], scope: Option<Scope>) -> Result<()> {
+  if color.is_empty() {
+    return Ok(());
+  }
+  let model = color[0];
+  let spec = &color[1..];
+  // Check ifglobalcolors
+  let effective_scope = if if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true) {
+    Some(Scope::Global)
+  } else {
+    scope
+  };
+  assign_value(
+    &s!("color_{name}"),
+    Stored::String(arena::pin(color.join(" "))),
+    effective_scope,
+  );
+  // Define \\color@{name} macro
+  let model_spec = s!("\\relax\\relax{{{} {}}}{{{model}}}{{{}}}", model, spec.join(" "), spec.join(","));
+  def_macro(
+    T_CS!(s!("\\\\color@{name}")),
+    None,
+    crate::mouth::tokenize_internal(&model_spec),
+    Some(crate::definition::expandable::ExpandableOptions {
+      scope: effective_scope,
+      ..Default::default()
+    }),
+  )?;
+  Ok(())
+}
+
+/// Define a derived color model (Perl: DefColorModel).
+/// Stores conversion functions for a derived color model.
+pub fn def_color_model(model: &str, coremodel: &str) {
+  assign_value(
+    &s!("derived_color_model_{model}"),
+    Stored::String(arena::pin(coremodel)),
+    Some(Scope::Global),
+  );
+}
+
 pub fn digest_text(stuff: Tokens) -> Result<Digested> {
   begin_mode("text")?;
   let value = digest(stuff);
@@ -996,6 +1059,56 @@ pub fn digest_if(token: Token) -> Result<Option<Digested>> {
   } else {
     Ok(None)
   }
+}
+
+/// Test a conditional `\ifXXX` and return its boolean result (Perl: IfCondition).
+/// Looks up the conditional's test closure and invokes it.
+pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {
+  use crate::definition::conditional::ConditionalType;
+  if let Some(defn) = lookup_definition(if_token)? {
+    if defn.get_conditional_type() == Some(ConditionalType::If) {
+      if let Some(test) = defn.get_test() {
+        // Read arguments for the conditional test
+        let args = match defn.get_parameters() {
+          Some(params) => params.read_arguments(Some(defn.as_ref()))?,
+          None => Vec::new(),
+        };
+        return Ok(Some(test(args)?));
+      }
+    }
+  }
+  if x_equals(if_token, &T_CS!("\\iftrue")) {
+    return Ok(Some(true));
+  }
+  if x_equals(if_token, &T_CS!("\\iffalse")) {
+    return Ok(Some(false));
+  }
+  Error!(
+    "expected",
+    "conditional",
+    s!("Expected a conditional, got '{}'", if_token.stringify())
+  );
+  Ok(None)
+}
+
+/// Set the boolean value of a `\newif`-type conditional (Perl: SetCondition).
+/// This is only for simple conditionals taking no arguments.
+pub fn set_condition(if_token: &Token, value: bool, scope: Option<Scope>) {
+  if let Ok(Some(defn)) = lookup_definition(if_token) {
+    if defn.get_parameters().is_none() {
+      let target = if value {
+        T_CS!("\\iftrue")
+      } else {
+        T_CS!("\\iffalse")
+      };
+      let_i(if_token, &target, scope);
+      return;
+    }
+  }
+  log::error!(
+    "Expected a conditional defined by \\newif, got '{}'",
+    if_token.stringify()
+  );
 }
 
 /// Creates a single `Tokens` representing a TeX invocation of the lead `token` over a list of
@@ -1075,6 +1188,103 @@ pub fn convert_latex_args(
   } else {
     Ok(Some(Parameters::new(params)))
   }
+}
+
+/// Decode a codepoint using the fontmap for a given font and/or encoding (Perl: FontDecode).
+/// Returns the decoded glyph (if any) and the possibly-adjusted font.
+pub fn font_decode(
+  code: i32,
+  encoding_opt: Option<&str>,
+  font_opt: Option<Rc<Font>>,
+) -> (Option<char>, Option<Rc<Font>>) {
+  if code < 0 {
+    return (None, font_opt);
+  }
+  let font = font_opt.unwrap_or_else(|| lookup_font().unwrap());
+  let encoding = match encoding_opt {
+    Some(enc) => enc.to_string(),
+    None => font.get_encoding().map_or("OT1".to_string(), |c| c.to_string()),
+  };
+  let map = load_font_map(&encoding);
+  // Check for family-specific map
+  let (effective_map, _effective_enc) = if let Some(family) = font.get_family() {
+    let fam_key = s!("{}_{}_fontmap", encoding, family);
+    if let Some(fmap) = lookup_value(&fam_key) {
+      let fmap: Option<Fontmap> = fmap.into();
+      if let Some(fm) = fmap {
+        (Some(fm), s!("{}_{}", encoding, family))
+      } else {
+        (map, encoding.clone())
+      }
+    } else {
+      (map, encoding.clone())
+    }
+  } else {
+    (map, encoding.clone())
+  };
+  let glyph = effective_map
+    .as_ref()
+    .and_then(|m| m.get(code as usize).copied().flatten());
+  // In-math alphanumeric mathstyle handling is done in decodeMathChar instead
+  (glyph, Some(font))
+}
+
+/// Decode a string using the fontmap for a given encoding (Perl: FontDecodeString).
+/// If `implicit` is true, codepoints missing from the map decode to themselves.
+pub fn font_decode_string(
+  string: &str,
+  encoding_opt: Option<&str>,
+  implicit: bool,
+) -> String {
+  let font = lookup_font().unwrap();
+  let encoding = match encoding_opt {
+    Some(enc) => enc.to_string(),
+    None => font.get_encoding().map_or("OT1".to_string(), |c| c.to_string()),
+  };
+  let map = load_font_map(&encoding);
+  // Check for family-specific map
+  let effective_map = if let Some(family) = font.get_family() {
+    let fam_key = s!("{}_{}_fontmap", encoding, family);
+    if let Some(fmap) = lookup_value(&fam_key) {
+      let fmap: Option<Fontmap> = fmap.into();
+      fmap.or(map)
+    } else {
+      map
+    }
+  } else {
+    map
+  };
+  let input_enc = lookup_string("INPUT_ENCODING");
+  let map_max: usize = if input_enc == "utf8" { 128 } else { 256 };
+  // Also limit for short font maps
+  let map_max = if let Some(ref m) = effective_map {
+    if m.len() < map_max { m.len() } else { map_max }
+  } else {
+    map_max
+  };
+
+  let mut result = String::new();
+  for ch in string.chars() {
+    let code = ch as usize;
+    if implicit {
+      if let Some(ref m) = effective_map {
+        if code < map_max {
+          if let Some(Some(glyph)) = m.get(code) {
+            result.push(*glyph);
+          }
+        } else {
+          result.push(ch);
+        }
+      } else {
+        result.push(ch);
+      }
+    } else if let Some(ref m) = effective_map {
+      if let Some(Some(glyph)) = m.get(code) {
+        result.push(*glyph);
+      }
+    }
+  }
+  result
 }
 
 pub fn load_font_map(encoding: &str) -> Option<Fontmap> {

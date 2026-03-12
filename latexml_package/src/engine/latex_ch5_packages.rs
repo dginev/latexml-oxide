@@ -154,10 +154,10 @@ LoadDefinitions!({
 
   DefMacro!("\\CurrentOption", None);
 
-  DefPrimitive!("\\ExecuteOptions{}", sub[(_options)] {
-    // TODO!
-    // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
-    Info!("TODO","\\ExecuteOptions","implement fully, it's an empty stub.");
+  DefPrimitive!("\\ExecuteOptions{}", sub[(options)] {
+    let expanded = do_expand(options)?.to_string();
+    let opts: Vec<&str> = expanded.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+    execute_options(&opts)?;
     Ok(Vec::new())
   });
 

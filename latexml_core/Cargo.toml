@@ -24,3 +24,4 @@ unidecode = "0.3.0"
 rustc-hash = "2.0.0"
 string-interner = {version = "0.19.0", default-features = false, features = ["std", "backends","inline-more"]}
 marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_forests" }
+unicode-normalization = "0.1.25"

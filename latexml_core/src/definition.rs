@@ -13,6 +13,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::arena::{self, SymHashMap, SymStr};
+use crate::definition::conditional::ConditionalType;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -242,6 +243,8 @@ pub trait Definition: Object {
   fn is_register(&self) -> bool { false }
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { false }
+  fn get_test(&self) -> Option<&ConditionalClosure> { None }
+  fn get_conditional_type(&self) -> Option<ConditionalType> { None }
 
   fn read_arguments(&self) -> Result<Vec<ArgWrap>>
   where Self: Sized {

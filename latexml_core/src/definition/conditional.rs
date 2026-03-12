@@ -139,6 +139,8 @@ impl Definition for Conditional {
   fn get_cs(&self) -> Cow<'_, Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> Cow<'_, str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
+  fn get_test(&self) -> Option<&ConditionalClosure> { self.test.as_ref() }
+  fn get_conditional_type(&self) -> Option<ConditionalType> { Some(self.conditional_type) }
   // Not implemented for expandable
   fn invoke_primitive(&self) -> Result<Vec<Digested>> { todo!() }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
