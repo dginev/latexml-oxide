@@ -713,3 +713,138 @@ All core APIs ported:
 2. `computeBoxesSize` doesn't decompose into `_words`/`_lines`/`_stack` sub-functions. The current implementation is a single-pass that doesn't handle line breaking, word boundaries, or vertical stacking with `vattach`.
 3. `BASELINE_MAP` is defined but not yet used (needed by `computeBoxesSize_stack`).
 4. `FONT_FAMILY` map: some entries intentionally differ from Perl (e.g. `cmbrs => symbol`, `ccy => symbol` kept for compatibility even though Perl doesn't have them).
+
+---
+
+## Core Type Sync: Token.pm, Tokens.pm, Number.pm, Float.pm, Dimension.pm
+
+Audited 2026-03-11 against current Perl HEAD.
+
+### Token.pm → token.rs — OK
+
+| Perl | Rust | Status |
+|---|---|---|
+| CC_ESCAPE..CC_ARG (constants) | `Catcode` enum | OK |
+| T_BEGIN..T_SUB (constants) | `TOKEN_*` statics + `T_*!()` macros | OK |
+| T_SPACE, T_CR | `TOKEN_SPACE`, `TOKEN_CR` | OK |
+| T_LETTER($c) | `T_LETTER!()` macro | OK |
+| T_OTHER($c) | `T_OTHER!()` macro | OK |
+| T_ACTIVE($c) | `T_ACTIVE!()` macro | OK |
+| T_COMMENT($c) | `T_COMMENT!()` macro | OK — Perl prepends '%', Rust doesn't. Comments are filtered in toString anyway. |
+| T_CS($c) | `T_CS!()` macro | OK |
+| T_MARKER($t) | `T_MARKER!()` macro | OK |
+| T_ARG($v) | `T_ARG!()` macro | OK — Perl validates 1-9 range, Rust doesn't (panics later if bad) |
+| Token($string, $cc) | `Token!()` macro / `Token::new()` | OK |
+| Explode($string) | `Explode!()` macro | OK |
+| ExplodeText($string) | `ExplodeText!()` macro | OK — Perl `/[a-zA-Z]/` (ASCII), Rust `is_alphabetic()` (Unicode). Intentional. |
+| UnTeX($thing) | `Tokens::untex()` | OK — Rust intentionally omits `%\n` line-breaks (documented design decision) |
+| @CATCODE_PRIMITIVE | `Catcode::is_primitive()` | OK |
+| @CATCODE_EXECUTABLE | `Catcode::is_executable()` | OK |
+| @CATCODE_STANDARDCHAR | Not ported as array | N/A — only used in commented-out code |
+| @CATCODE_NAME | `Catcode::name()` | OK |
+| @CATCODE_PRIMITIVE_NAME | `get_primitive_name()` | OK |
+| @CATCODE_SHORT_NAME | `Catcode::short_name()` | OK |
+| @CATCODE_NEUTRALIZABLE | `Catcode::is_neutralizable()` | OK |
+| isaToken() | — | N/A — Rust has static typing |
+| getCSName() | `Token::get_cs_name()` / `with_cs_name()` | OK |
+| getExecutableName() | `Token::get_executable_name()` | OK |
+| getString() | `Token::with_str()` | OK |
+| getCharcode() | `Token::get_charcode()` | OK |
+| getCatcode() | `Token::get_catcode()` | OK |
+| isExecutable() | `Token::is_executable()` | OK |
+| unlist() | `Into<Vec<Token>>` | OK |
+| stripBraces() | — on Token | OK — Token returns self, braces handled at Tokens level |
+| neutralize() | `Token::neutralize()` | OK |
+| substituteParameters(@args) | `Token::substitute_parameters()` | OK |
+| packParameters() | Returns self (no-op) | OK |
+| revert() | `Token::revert()` | OK |
+| toString() | `Display for Token` | OK |
+| beDigested() | `Token::be_digested()` | OK |
+| equals($a,$b) | `PartialEq for Token` | OK |
+| defined_as($token) | `Token::defined_as()` | OK |
+| stringify() | `Token::stringify()` | FIXED — was using decimal "U+{c}/..." instead of hex "U+{:04x}/..." |
+
+### Tokens.pm → tokens.rs — OK
+
+| Perl | Rust | Status |
+|---|---|---|
+| Tokens(@tokens) | `Tokens!()` macro / `Tokens::new()` | OK |
+| TokensI(@tokens) | `Tokens::new()` (no flattening) | OK |
+| unlist() | `Tokens::unlist()` / `unlist_ref()` / `unlist_mut()` | OK |
+| clone() | Rust `Clone` derive | OK |
+| revert() | `Tokens::revert()` | OK |
+| toString() | `Display for Tokens` (skips COMMENT) | OK |
+| equals($a,$b) | `Tokens::equals()` (filters COMMENT+MARKER) | OK |
+| stringify() | `Tokens::stringify()` | OK |
+| beDigested() | `Tokens::be_digested()` | OK |
+| neutralize() | `Tokens::neutralize()` | OK |
+| isBalanced() | `Tokens::is_balanced()` | OK |
+| substituteParameters(@args) | `Tokens::substitute_parameters()` | OK |
+| packParameters() | `Tokens::pack_parameters()` | OK |
+| stripBraces($layers) | `strip_braces()` / `strip_braces_n(layers)` | FIXED — was buggy: didn't verify brace pairing, stripped ALL layers. Now uses Perl's balanced-pair algorithm with `layers` parameter (default 1). |
+
+### Number.pm → number.rs + numeric_ops.rs — OK
+
+| Perl | Rust | Status |
+|---|---|---|
+| Number($number) | `Number!()` macro | OK |
+| new($class,$number) | `Number::new()` via NumericOps | OK — truncates, not rounds |
+| valueOf() | `NumericOps::value_of()` | OK |
+| toString() | `Display for Number` | OK |
+| $EPSILON, $ROUNDING_HALF | `EPSILON`, `ROUNDING_HALF` constants | OK — Rust uses f32-precision constants (sufficient for TeX) |
+| roundto($number,$prec) | `round_to()` | OK |
+| kround($number) | `kround()` | OK |
+| unlist() | Object trait | OK |
+| revert() | `Object::revert()` | OK |
+| smaller($other) | `NumericOps::smaller()` | OK |
+| larger($other) | `NumericOps::larger()` | OK |
+| absolute() | `NumericOps::absolute()` | OK |
+| sign() | `NumericOps::sign()` | OK |
+| negate() | `NumericOps::negate()` | OK |
+| add($other) | `NumericOps::add()` | OK |
+| subtract($other) | `NumericOps::subtract()` | OK |
+| multiply($other) | `NumericOps::multiply()` | OK — integer mult is exact, no truncation needed |
+| divide($other) | `NumericOps::divide()` | OK — truncating |
+| divideround($other) | `NumericOps::divideround()` | OK — rounding |
+| stringify() | — | MINOR — Perl returns "Number[N]", Rust uses Display format. Cosmetic only. |
+| getStretch() | — | N/A — returns Dimension(0). Not needed in Rust: eTeX registers use direct Glue field access |
+| getShrink() | — | N/A — same as above |
+| getStretchOrder() | — | N/A — same as above |
+| getShrinkOrder() | — | N/A — same as above |
+
+### Float.pm → float.rs — OK
+
+| Perl | Rust | Status |
+|---|---|---|
+| Float($number) | `Float::new_f64()` / `Float::new()` | OK |
+| new($class,$number) | `Float::new_f64()` | OK — no truncation |
+| toString() | `Display for Float` → `floatformat()` | OK |
+| multiply($self,$other) | `NumericOps::multiply()` override | OK — f64 mult, no truncation |
+| stringify() | `Object::stringify()` | OK — "Float[N]" |
+| floatformat($n) | `floatformat()` / `custom_float_format()` | OK — Rust adds `tight` mode for integer-like output |
+
+### Dimension.pm → dimension.rs — OK
+
+| Perl | Rust | Status |
+|---|---|---|
+| Dimension($spec) | `Dimension::new()` / `new_f64()` + `spec_to_f64()` | OK |
+| _unit() | `NumericOps::unit()` → `Some("pt")` | OK |
+| new($class,$spec) | `new_f64()` + `spec_to_f64()` | OK |
+| toString() | `Display for Dimension` → `fixedformat()` | OK |
+| toAttribute() | `NumericOps::to_attribute()` → `attribute_format()` | OK |
+| stringify() | — | MINOR — Perl returns "Dimension[N]", Rust uses Display. Cosmetic. |
+| $UNITY | `UNITY` constant (65536) | OK |
+| fixpoint($float,$unit) | `fixpoint()` | OK |
+| fixedformat($s,$unit) | `fixedformat()` | OK — Knuth's print_scaled §103 |
+| attributeformat($sp,$unit) | `attribute_format()` | OK |
+| ptValue($self,$prec) | `NumericOps::pt_value()` | OK |
+| pxValue($self,$prec) | `NumericOps::px_value()` | FIXED — was hardcoded DPI=100, now reads from state |
+| spValue($self,$prec) | `NumericOps::value_of()` | OK — returns SP directly |
+| emValue($self,$prec,$font) | `Dimension::em_value()` | NEW — was missing, now uses font's EM width |
+
+#### Fixes Applied This Session
+1. **Token::stringify** hex format: `U+{c}/...` → `U+{:04x}/...` to match Perl's `sprintf("%04x",...)`.
+2. **Tokens::strip_braces** rewritten with Perl's balanced-pair algorithm. Old impl was buggy: `{a}{b}` → `a}{b` (wrong), `{{a}}` → `a` (should be `{a}`). Added `strip_braces_n(layers)`.
+3. **keyvals.rs** updated to call `strip_braces_n(2)` matching Perl's `stripBraces(2)`.
+4. **Dimension::em_value** added (was missing). Converts to em units using font EM width.
+5. **NumericOps::px_value** now reads DPI from state instead of hardcoding 100.
