@@ -213,6 +213,23 @@ LoadDefinitions!({
 
   DefMacro!("\\@ifpackagewith", r"\@if@ptions\@pkgextension");
   DefMacro!("\\@ifclasswith", r"\@if@ptions\@clsextension");
+  // Perl: latex_constructs.pool.ltxml lines 952-958
+  DefMacro!("\\@if@ptions{}{}{}", sub[(ext, name, option)] {
+    let option_str = Expand!(option).to_string();
+    let key = s!("opt@{}.{}", Expand!(name), Expand!(ext));
+    let found = with_value(&key, |val_opt| {
+      if let Some(Stored::VecDequeStored(values)) = val_opt {
+        values.iter().any(|v| v.to_string() == option_str)
+      } else {
+        false
+      }
+    });
+    if found {
+      T_CS!("\\@firstoftwo")
+    } else {
+      T_CS!("\\@secondoftwo")
+    }
+  });
   DefMacro!(
     "\\@ptionlist {}",
     r"\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}"
