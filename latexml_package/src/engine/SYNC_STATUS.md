@@ -23,7 +23,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, `\lx@math@overline/underline/overbrace/underbrace`, math ligatures. `\mathchoice` ported. |
+| tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, math ligatures. `\mathchoice` ported. Done: `\lx@math@overline/underline/overbrace/underbrace`, `\lx@text@overline/underline`, `\lx@math@over/underleft/rightarrow`, `operator_stretchy` on all. |
 | tex_box.rs | GAPS | Missing: `\leaders/cleaders/xleaders`, SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
 | tex_file_io.rs | MINOR | `\lx@special@graphics` constructor + `Tag('ltx:graphics')` commented out |
 | tex_fonts.rs | GAPS | Missing: `getFontDimen()`, 7 ligature defs. `\fontname` always returns placeholder. `\fontdimen` only handles 3 hardcoded params |
