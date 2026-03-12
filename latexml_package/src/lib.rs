@@ -29,6 +29,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "latexml.sty" => package::latexml_sty::load_definitions(),
     "article.cls" => package::article_cls::load_definitions(),
     "alltt.sty" => package::alltt_sty::load_definitions(),
+    "appendix.sty" => package::appendix_sty::load_definitions(),
     "book.cls" => package::book_cls::load_definitions(),
     "report.cls" => package::report_cls::load_definitions(),
     "amsmath.sty" => package::amsmath_sty::load_definitions(),

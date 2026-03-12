@@ -23,6 +23,13 @@ LoadDefinitions!({
   //**********************************************************************
 
   LoadPool!("TeX");
+
+  // Perl: latex_bootstrap.pool.ltxml — stubs for font/counter internals
+  DefMacro!("\\@definecounter", "\\newcounter", locked => true);
+  DefMacro!("\\e@ch@ck{}{}{}{}", "", locked => true);
+  DefMacro!("\\try@load@fontshape", "", locked => true);
+  DefMacro!("\\define@newfont", "", locked => true);
+
   // lines 31-110
   InnerPool!(latex_ch1_documentclass);
   // lines 110-180

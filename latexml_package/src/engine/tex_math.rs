@@ -612,17 +612,26 @@ LoadDefinitions!({
 
   // Note that in TeX, all 4 args get digested(!)
   // and the choice is made when absorbing!
-  DefConstructor!("\\mathchoice Digested Digested Digested Digested", sub[_doc,_args] {
-    Err(unported!())?;
-    //   my ($document, $d, $t, $s, $ss, %props) = @_;
-    //   my $style  = $props{mathstyle};
-    //   my $choice = ($style eq 'display' ? $d
-    //     : ($style eq 'text' ? $t
-    //       : ($style eq 'script' ? $s
-    //         : $ss)));
-    //   $document->absorb($choice); },
-    // properties => { mathstyle => sub { LookupValue('font')->getMathstyle; } });
-  });
+  // Perl: TeX_Math.pool.ltxml lines 931-939
+  DefConstructor!("\\mathchoice Digested Digested Digested Digested", sub[document, args, props] {
+    let style = prop_string!(props, "mathstyle");
+    let choice = match style.as_str() {
+      "display" => args[0].as_ref(),
+      "text"    => args[1].as_ref(),
+      "script"  => args[2].as_ref(),
+      _         => args[3].as_ref(), // scriptscript or default
+    };
+    if let Some(c) = choice {
+      document.absorb(c, None)?;
+    }
+  },
+    properties => {
+      let mathstyle = lookup_font()
+        .map(|f| f.get_mathstyle().map(|s| s.to_string()).unwrap_or_default())
+        .unwrap_or_default();
+      Ok(stored_map!("mathstyle" => mathstyle))
+    }
+  );
   // THIS IS WRONG!!!!
   Let!("\\vcenter", "\\vbox");
   //======================================================================
