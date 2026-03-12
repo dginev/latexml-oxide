@@ -1745,7 +1745,6 @@ pub fn get_frame_depth() -> usize {
     .iter()
     .filter(|frame| !frame.locked)
     .count()
-    .saturating_sub(1)
 }
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {

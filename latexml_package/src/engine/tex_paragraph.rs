@@ -53,6 +53,7 @@ LoadDefinitions!({
       // Otherwise ignore.
     }
   },
+  properties => { stored_map!("isSpace" => true) },
   // Perl: enterHorizontal => 1
   before_digest => { enter_horizontal(); });
   DefConstructor!("\\noindent", sub[document] {
@@ -68,6 +69,7 @@ LoadDefinitions!({
       // Otherwise ignore.
     }
   },
+  properties => { stored_map!("isSpace" => true) },
   // Perl: enterHorizontal => 1
   before_digest => { enter_horizontal(); });
 

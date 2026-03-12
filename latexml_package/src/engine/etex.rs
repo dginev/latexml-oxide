@@ -97,6 +97,9 @@ LoadDefinitions!({
     gullet::read_token()?.unwrap_or(T_CS!("\\relax"))
   });
 
+  // Perl: $font = $STATE->lookupValue('font')->merge(%$fontinfo);
+  // Rust stores the full Font at fontinfo_{cs}, so we use it directly.
+  // If not found, fall back to the current font from state.
   DefRegister!("\\fontcharht FontDef Number", Dimension::new(0),
     readonly => true,
     getter => sub[args] {
@@ -105,8 +108,8 @@ LoadDefinitions!({
       let key = s!("fontinfo_{}", font_tok.to_string());
       let font_rc = with_value(&key, |v| {
         if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
-      });
-      if let (Some(font), true) = (font_rc, code >= 0 && code <= 127) {
+      }).or_else(lookup_font);
+      if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
           let (_, h, _) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
           return Some(RegisterValue::Dimension(h));
@@ -123,8 +126,8 @@ LoadDefinitions!({
       let key = s!("fontinfo_{}", font_tok.to_string());
       let font_rc = with_value(&key, |v| {
         if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
-      });
-      if let (Some(font), true) = (font_rc, code >= 0 && code <= 127) {
+      }).or_else(lookup_font);
+      if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
           let (w, _, _) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
           return Some(RegisterValue::Dimension(w));
@@ -141,8 +144,8 @@ LoadDefinitions!({
       let key = s!("fontinfo_{}", font_tok.to_string());
       let font_rc = with_value(&key, |v| {
         if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
-      });
-      if let (Some(font), true) = (font_rc, code >= 0 && code <= 127) {
+      }).or_else(lookup_font);
+      if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
           let (_, _, d) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
           return Some(RegisterValue::Dimension(d));
@@ -151,7 +154,7 @@ LoadDefinitions!({
       Some(RegisterValue::Dimension(Dimension::new(0)))
     });
 
-  // italic correction not yet computed; return 0 as in Perl
+  // Perl: also computes via computeStringSize but notes "Not actually computed here (yet)"
   DefRegister!("\\fontcharic FontDef Number", Dimension::new(0),
     readonly => true,
     getter => sub[args] {
