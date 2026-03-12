@@ -335,10 +335,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.borrow_mut().set_property(key, value),
       List(ref l) => l.borrow_mut().set_property(key, value),
       Whatsit(ref w) => w.borrow_mut().set_property(key, value),
-      _ => {
-        dbg!(self);
-        todo!();
-      },
+      _ => { /* no-op for Comment/Postponed/RegisterValue/KeyVals/Alignment */ },
     }
   }
 
@@ -357,7 +354,7 @@ impl BoxOps for Digested {
         .borrow()
         .get_property(key)
         .map(|v| Cow::Owned(v.into_owned())),
-      _ => todo!(),
+      _ => None,
     }
   }
   fn get_string(&self) -> Result<Cow<'_, str>> {
@@ -366,7 +363,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
       List(ref l) => l.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
       Whatsit(ref w) => w.borrow().get_string().map(|v| Cow::Owned(v.into_owned())),
-      _ => todo!(),
+      _ => Ok(Cow::Borrowed("")),
     }
   }
   fn has_property(&self, key: &str) -> bool {
@@ -375,7 +372,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.borrow().has_property(key),
       List(ref l) => l.borrow().has_property(key),
       Whatsit(ref w) => w.borrow().has_property(key),
-      _ => todo!(),
+      _ => false,
     }
   }
   fn get_body(&self) -> Result<Option<Digested>> {
@@ -434,7 +431,7 @@ impl BoxOps for Digested {
       KeyVals(ref kvs) => kvs.compute_size(options),
       Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options),
       Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options),
-      Postponed(_) | RegisterValue(_) | Comment(_) => todo!(),
+      Postponed(_) | RegisterValue(_) | Comment(_) => Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0))),
     }
   }
 }
