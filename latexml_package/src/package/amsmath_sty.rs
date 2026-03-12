@@ -69,4 +69,13 @@ LoadDefinitions!({
   DefMath!("\\lVert", "\u{2225}", role => "OPEN",  stretchy => false);
   DefMath!("\\rvert", "|", role => "CLOSE", stretchy => false);
   DefMath!("\\rVert", "\u{2225}", role => "CLOSE", stretchy => false);
+
+  // Perl: amsmath.sty.ltxml line 85
+  Let!("\\notag", "\\nonumber");
+
+  // Perl: amsmath.sty.ltxml lines 87-91
+  DefMacro!(
+    "\\tag OptionalMatch:* {}",
+    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\expandafter\\def\\expandafter\\theequation\\expandafter{#2}\\lx@make@tags{equation}}"
+  );
 });
