@@ -1,3 +1,4 @@
+use crate::engine::base_utilities::insert_frontmatter;
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -110,15 +111,20 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:date}[role=creation]{\\today}"
   );
 
-  // Doesn"t produce anything (we're already inserting frontmatter),
+  // Doesn't produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
   DefMacro!(
     "\\maketitle",
-    r"\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
+    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
 \global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
 \global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
 \global\let\author\relax\global\let\date\relax\global\let\and\relax"
   );
+  // In case \maketitle isn't used in the document, let's check for it.
+  AddToMacro!("\\@startsection@hook", "\\lx@frontmatter@fallback");
+  // in cases such as titlepage, the document end is the last fallback.
+  let _ = state::push_value("@at@end@document",
+    Tokens!(T_CS!("\\lx@frontmatter@fallback")));
 
   DefMacro!("\\@thanks", "\\@empty");
   DefMacro!("\\thanks{}", r"\def\@thanks{#1}\lx@make@thanks{#1}");
@@ -173,6 +179,9 @@ LoadDefinitions!({
       })?;
       DefMacro!("\\maybe@end@abstract", "", scope => Some(Scope::Global));
     },
+    after_construct => sub[doc, _whatsit] {
+      insert_frontmatter(doc)?; // HERE if not already done.
+    },
     locked => true,
     mode => "internal_vertical"
   );
@@ -220,14 +229,20 @@ LoadDefinitions!({
   // Particularly, if they start with a pseudo superscript or other "marker", they're probably
   // affil! For now, we just give an info message
   DefEnvironment!("{titlepage}", "<ltx:titlepage>#body",
-    // TODO
-    // before_digest => sub { Let('\centering', '\relax');
-    //   DefEnvironment('{abstract}',
-    //     '<ltx:abstract>#body</ltx:abstract>');
-    //   Info('unexpected', 'titlepage', $_[0],
-    //     "When using titlepage, Frontmatter will not be well-structured");
-    //   return; },
-    // beforeDigestEnd => sub { Digest(T_CS('\maybe@end@title')); },
+    before_digest => {
+      Let!("\\centering", "\\relax");
+      state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
+      AddToMacro!("\\maketitle", "\\unwind@titlepage");
+      // In titlepage, abstract is simpler: direct body
+      DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>");
+      Let!("\\abstract", "\\abstract@onearg");
+    },
+    before_digest_end => {
+      stomach::digest(Tokens!(T_CS!("\\maybe@end@titlepage")))?;
+    },
+    after_construct => sub[doc, _whatsit] {
+      insert_frontmatter(doc)?;
+    },
     locked => true,
     mode => "internal_vertical"
   );
@@ -237,6 +252,15 @@ LoadDefinitions!({
   DefConstructor!("\\maybe@end@title", sub[document,_args,_props] {
     if document.is_closeable("ltx:titlepage").is_some() {
       document.close_element("ltx:titlepage")?;
+    }
+  });
+
+  DefConstructor!("\\maybe@end@titlepage", sub[document,_args,_props] {
+    document.maybe_close_element("ltx:titlepage")?;
+  });
+  DefConstructor!("\\unwind@titlepage", sub[document,_args,_props] {
+    if let Some(titlepage) = document.maybe_close_element("ltx:titlepage")? {
+      document.unwrap_nodes(titlepage)?;
     }
   });
 

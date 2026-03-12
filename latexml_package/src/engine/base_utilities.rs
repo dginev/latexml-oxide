@@ -207,50 +207,6 @@ LoadDefinitions!({
     unported!()
   });
 
-  // This is called by afterOpen (by default on <ltx:document>) to
-  // output any frontmatter that was accumulated.
-
-  // TODO: Porting confusion at this point -- is this now to be phased out in favor of
-  // insert_frontmatter ? original latexml may have moved here...
-  Tag!("ltx:document", after_open_late => sub[document, _node] {
-    // this happens only once per conversion, so not a big deal to keep it in the closure
-    let frontmatter_elements_set: HashSet<String> =
-      FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
-
-    let mut frontmatter = match state::remove_value("frontmatter") {
-      Some(Stored::HashTagData(frnt)) => frnt,
-      _ => fatal!(TexPool, Expected,
-            "Global TeX Frontmatter hash was not available, should never happen"),
-    };
-    state::assign_value("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
-
-    // order is important here, first go through frontmatter_elements, then any leftover keys.
-    let custom_keys: Vec<String> = frontmatter
-      .keys()
-      .filter(|key| !frontmatter_elements_set.contains(key.as_str()))
-      .map(ToString::to_string)
-      .collect();
-    let mut all_keys: Vec<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
-    all_keys.extend(custom_keys);
-
-    for key in &all_keys {
-      if let Some(list) = frontmatter.remove(key) {
-        // Dubious, but assures that frontmatter appears in text mode...
-        document.set_box_to_absorb(Tbox::new(*EMPTY_SYM, lookup_font(), None, Tokens!(T_SPACE!()),
-          SymHashMap::default()).into());
-        for (tag, attr, stuff) in list {
-          document.open_element(&tag, attr, None)?;
-          // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
-          //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
-          document.absorb(&stuff, None)?;
-
-          document.close_element(&tag)?;
-        }
-        document.expire_box_to_absorb();
-      }
-    }
-  });
-
   // Add FrontMatter at document begin, unless deferred to a better position.
   Tag!("ltx:document", after_open_late => sub[document,_root] {
     if !lookup_bool("frontmatter_deferred") {
@@ -262,6 +218,9 @@ LoadDefinitions!({
   // deferring it from document begin.
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
     after_digest => { state::assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
+
+  // Fallback: if \maketitle wasn't used, this still triggers frontmatter placement
+  DefPrimitive!("\\lx@frontmatter@fallback", None);
 
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
@@ -504,41 +463,94 @@ LoadDefinitions!({
 });
 
 /// Insert FrontMatter into document, if not already added
-pub fn insert_frontmatter(_document: &mut Document) -> Result<()> {
+pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
     return Ok(());
   }
-  // TODO: Continue
-  // if let Some(frontmatter) = lookup_value("frontmatter");
-  // my @set_keys    = $frontmatter ? (keys %$frontmatter) : ();
-  // # if doc ONLY has abstract as frontmatter, defer until abstract's document location
-  // if ((scalar(@set_keys) == 1) && ($set_keys[0] eq 'ltx:abstract') &&
-  //   !LookupValue('frontmatter_deferred')) {
-  //   AssignValue(frontmatter_deferred => 1, 'global');
-  //   return; }
-  // AssignValue(frontmatter_done => 1, 'global');    # OK, we're placing FrontMatter here, now.
-  // foreach my $key (@frontmatter_elements, grep { !$frontmatter_elements{$_} } @set_keys) {
-  //   if (my $list = $$frontmatter{$key}) {
-  //     # Dubious, but assures that frontmatter appears in text mode...
-  //     local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
-  //     foreach my $item (@$list) {
-  //       my ($tag, $attr, @stuff) = @$item;
-  //       # add a dedicated class for frontmatter notes,
-  //       # in the case we want to style those uniformly.
-  //       if ($tag eq 'ltx:note') {
-  //         $attr ||= {};
-  //         $$attr{class} = ($$attr{class} ? $$attr{class} . ' ' : '') . 'ltx_note_frontmatter'; }
-  //       $document->openElement($tag, ($attr ? %$attr : ()),
-  //         (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
-  //           ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
-  //       map { $document->absorb($_) } @stuff;
-  //       my $completed_node = $document->closeElement($tag);
-  //       # At this time, the frontmatter element should really carry the actual literal values
-  // intended.       # Thus, if we see an empty element, something went wrong -- including our
-  // bindings are too verbose,       # as e.g. \preprint{} always generates a ltx:note element.
-  //       #
-  //       # To solve this in a single location: prune here!
-  //       if (($tag ne "ltx:rdf") && !scalar($completed_node->childNodes)) {
-  //         $document->removeNode($completed_node); } } } }
+  let frontmatter_elements_set: HashSet<String> =
+    FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
+
+  // Get frontmatter hash
+  let frontmatter_ref = match state::lookup_value("frontmatter") {
+    Some(Stored::HashTagData(frnt)) => frnt,
+    _ => return Ok(()),
+  };
+  let set_keys: Vec<String> = frontmatter_ref.keys().cloned().collect();
+
+  // If doc ONLY has abstract as frontmatter, defer until abstract's document location
+  if set_keys.len() == 1
+    && set_keys[0] == "ltx:abstract"
+    && !lookup_bool("frontmatter_deferred")
+  {
+    state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
+    return Ok(());
+  }
+
+  state::assign_value("frontmatter_done", true, Some(Scope::Global));
+
+  // Remove frontmatter and replace with empty
+  let mut frontmatter = match state::remove_value("frontmatter") {
+    Some(Stored::HashTagData(frnt)) => frnt,
+    _ => return Ok(()),
+  };
+  state::assign_value(
+    "frontmatter",
+    Stored::HashTagData(HashMap::default()),
+    Some(Scope::Global),
+  );
+
+  // Order: first go through frontmatter_elements order, then any custom keys
+  let custom_keys: Vec<String> = frontmatter
+    .keys()
+    .filter(|key| !frontmatter_elements_set.contains(key.as_str()))
+    .map(ToString::to_string)
+    .collect();
+  let mut all_keys: Vec<String> =
+    FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
+  all_keys.extend(custom_keys);
+
+  for key in &all_keys {
+    if let Some(list) = frontmatter.remove(key) {
+      // Dubious, but assures that frontmatter appears in text mode...
+      document.set_box_to_absorb(
+        Tbox::new(
+          *EMPTY_SYM,
+          lookup_font(),
+          None,
+          Tokens!(T_SPACE!()),
+          SymHashMap::default(),
+        )
+        .into(),
+      );
+      for (tag, attr, stuff) in list {
+        // Add a dedicated class for frontmatter notes
+        let attr = if tag == "ltx:note" {
+          let mut a = attr.unwrap_or_default();
+          let existing = a.get("class").cloned().unwrap_or_default();
+          let new_class = if existing.is_empty() {
+            "ltx_note_frontmatter".to_string()
+          } else {
+            s!("{existing} ltx_note_frontmatter")
+          };
+          a.insert("class".to_string(), new_class);
+          Some(a)
+        } else {
+          attr
+        };
+        document.open_element(&tag, attr, None)?;
+        document.absorb(&stuff, None)?;
+        let completed_node = document.close_element(&tag)?;
+        // Prune empty frontmatter elements (except ltx:rdf)
+        if tag != "ltx:rdf" {
+          if let Some(ref node) = completed_node {
+            if node.get_child_nodes().is_empty() {
+              document.remove_node(node.clone());
+            }
+          }
+        }
+      }
+      document.expire_box_to_absorb();
+    }
+  }
   Ok(())
 }
