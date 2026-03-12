@@ -36,8 +36,7 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     // Perl: beginMode('internal_vertical', 1) — noframe=1
     // Begin internal_vertical mode WITHOUT pushing a stack frame, keeping level=0
-    assign_value("BOUND_MODE", "internal_vertical", Some(Scope::Local));
-    set_mode("internal_vertical")?;
+    begin_mode_opt("internal_vertical", true)?;
     // we need to re-bind in order to nest calls to the binding macro machinery
     DefMacro!("\\@currenvir", "document");
     state::assign_value("current_environment", "document", None);
@@ -107,9 +106,8 @@ LoadDefinitions!({
   //         "Attempt to end document with open groups, environments or conditionals", @lines);
   //     }
       // Perl: endMode('internal_vertical', 1) — noframe=1
-      // Leave horizontal mode if needed, then end mode without popping frame
-      leave_horizontal_internal();
-      // executeBeforeAfterGroup equivalent — skip for now
+      // End mode without popping stack frame (executes beforeAfterGroup)
+      end_mode_opt("internal_vertical", true)?;
       gullet::flush();
       boxes
   });

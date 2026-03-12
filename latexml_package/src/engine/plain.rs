@@ -745,7 +745,8 @@ LoadDefinitions!({
   DefPrimitive!("\\raggedright", None);
   DefPrimitive!("\\raggedleft", None); // this is actually LaTeX
   DefPrimitive!("\\ttraggedright", None);
-  DefPrimitive!("\\leavevmode", None);
+  // Perl: sub { $_[0]->enterHorizontal; }  (plain_bootstrap.pool.ltxml line 43)
+  DefPrimitive!("\\leavevmode", { enter_horizontal(); });
   DefMacro!(
     "\\mathhexbox{}{}{}",
     r##"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"##

@@ -163,6 +163,8 @@ LoadDefinitions!({
   </ltx:equation>",
     reversion         => Tokens!(T_MATH!(),T_MATH!()),
     before_digest => {
+      // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 135)
+      enter_horizontal();
       begin_mode("display_math")?;
       // Inject \everymath tokens (Perl: Stomach.pm line 504-507)
       if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
@@ -189,6 +191,8 @@ LoadDefinitions!({
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     reversion    => Tokens!(T_MATH!()),
     before_digest => {
+      // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 151)
+      enter_horizontal();
       begin_mode("inline_math")?;
       if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
         let everymath_toks = everymath_toks.unlist();
