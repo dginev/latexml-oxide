@@ -94,8 +94,8 @@ LoadDefinitions!({
           // Only set on the para about to close, if unknown!
           if qname == arena::pin_static("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
-            arena::with(class_sym, |class_str|
-              document.set_attribute(&mut node, "class", class_str))?;
+            let class_s = arena::with(class_sym, |s| s.to_string());
+            document.set_attribute(&mut node, "class", &class_s)?;
           } else if qname == arena::pin_static("ltx:figure") {
             // insert breaks in figures, for vertically separating subfigures
             document.insert_element("ltx:break",Vec::new(), None)?;

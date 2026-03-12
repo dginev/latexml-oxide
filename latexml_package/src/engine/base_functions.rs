@@ -651,6 +651,25 @@ where T: Sized + Object {
 /// designed to accept all reasonable block material from several levels,
 /// and then determine which container element is most apprpriate for both the conent & context
 /// from block, logical-block or sectional-block, or the inline- variants.
+/// Perl: isVAttached — checks if node or any single-child descendant has 'vattach'
+fn is_v_attached(node: &Node) -> bool {
+  let mut current = node.clone();
+  loop {
+    if current.get_attribute("vattach").is_some() {
+      return true;
+    }
+    let children: Vec<_> = current
+      .get_child_nodes()
+      .into_iter()
+      .filter(|n| matches!(n.get_type(), Some(NodeType::ElementNode)))
+      .collect();
+    if children.len() != 1 {
+      return false;
+    }
+    current = children[0].clone();
+  }
+}
+
 pub fn insert_block(
   document: &mut Document,
   contents: &Digested,
@@ -674,7 +693,7 @@ pub fn insert_block(
       tag == "ltx:XMText",
     )
   });
-  let ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
+  let mut ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
   if is_xmath && !is_xmtext {
     // but math always needs this
     context = document.open_element("ltx:XMText", None, None)?;
@@ -683,7 +702,7 @@ pub fn insert_block(
   let is_inline = is_svg || document::can_contain(&context, "#PCDATA");
   let mut container_attr = block_attr.clone();
   container_attr.insert("_vertical_mode_".to_string(), "true".to_string());
-  let container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
+  let mut container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
   document.absorb(contents, None)?;
 
   let mut nodes = content_nodes(&container);
@@ -695,6 +714,15 @@ pub fn insert_block(
   document.close_to_node(&container, true)?;
   document.close_node(&container)?;
   document.close_to_node(&context, true)?;
+
+  // Perl: Hack: apparently TeX doesn't shift (vattach) a single node in a vbox/vtop/...
+  let mut block_attr = block_attr;
+  let mut ignorable_attr = ignorable_attr;
+  if nnodes == 1 && block_attr.contains_key("vattach") && is_v_attached(&nodes[0]) {
+    container.remove_attribute("vattach")?;
+    block_attr.remove("vattach");
+    ignorable_attr = is_svg || block_attr.is_empty();
+  }
 
   if nnodes < 1 {
     // Insertion came up empty?
