@@ -283,9 +283,12 @@ impl Document {
               value = arena::with(value, |value_str| arena::pin(s!("{value_str} {ovalue}")))
             }
           }
-          arena::with2(key, value, |key_str, value_str| {
-            self.set_attribute(node, key_str, value_str)
-          })?;
+          // Resolve to owned Strings before calling set_attribute,
+          // to avoid holding an arena borrow while set_attribute may need arena::pin
+          // for schema-based attribute filtering (canHaveAttribute check).
+          let key_s = arena::with(key, |s| s.to_string());
+          let value_s = arena::with(value, |s| s.to_string());
+          self.set_attribute(node, &key_s, &value_s)?;
         }
         for key in keys_to_remove {
           arena::with(key, |key_str| pending_declaration.remove(key_str));
@@ -1898,6 +1901,14 @@ impl Document {
   pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str) -> Result<()> {
     if value.is_empty() {
       return Ok(()); // skip if empty
+    }
+    // Perl: setAttribute checks canHaveAttribute before setting.
+    // Accept internal attributes (starting with _), namespaced (containing :), and model-allowed.
+    if !key.starts_with('_') && !key.contains(':') && key != "id" {
+      let qname = get_node_qname(node);
+      if !model::can_have_attribute(qname, arena::pin(key)) {
+        return Ok(()); // silently skip attributes not allowed by schema
+      }
     }
     if key == "xml:id" || key == "id" {
       // If it's an ID attribute

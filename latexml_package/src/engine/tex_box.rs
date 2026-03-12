@@ -269,37 +269,43 @@ LoadDefinitions!({
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, _props] {
       let contents = args[1].as_ref().unwrap();
-      let _block = insert_block(document, contents, string_map!("vattach" => "bottom"));
+      // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
+      if contents.get_property_bool("is_vbox") {
+        document.absorb(contents, None)?;
+      } else {
+        insert_block(document, contents, string_map!("vattach" => "bottom"))?;
+      }
     },
     sizer       => "#2",
     mode        => "internal_vertical",
-    after_digest => sub[_whatsit] {
-      // TODO: Height arith
-        // let spec = whatsit.get_arg(1);
-        // let tbox  = $whatsit.get_arg(2);
-        // if let Some(h) = GetKeyVal!(spec, "to") {
-        //   whatsit.set_height(h);
-        // } else if let Some(s) = GetKeyVal!(spec, "spread") {
-        //   whatsit.set_height(tbox.get_height().add(s));
-        // }
+    after_digest => sub[whatsit] {
+      // Perl: hackVBoxAttachment + set is_vbox, content_box
+      if let Some(content_box) = whatsit.get_arg_mut(2) {
+        content_box.set_property("vattach", "bottom");
+      }
+      whatsit.set_property("is_vbox", true);
+      // TODO: Height arith for BoxSpecification 'to'/'spread'
     }
   );
 
   DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, _props] {
       let contents = args[1].as_ref().unwrap();
-      insert_block(document, contents, string_map!("vattach" => "top"))?;
+      // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
+      if contents.get_property_bool("is_vbox") {
+        document.absorb(contents, None)?;
+      } else {
+        insert_block(document, contents, string_map!("vattach" => "top"))?;
+      }
     },
     // sizer       => '#2',
     mode        => "internal_vertical",
-    after_digest => sub[_whatsit] {
-      // TODO: Height arith
-      //   my $spec = $whatsit.get_arg(1);
-      //   my $box  = $whatsit.get_arg(2);
-      //   if (my $h = GetKeyVal($spec, 'to')) {
-      //     $whatsit->setHeight($h); }
-      //   elsif (my $s = GetKeyVal($spec, 'spread')) {
-      //     $whatsit->setHeight($box->getHeight->add($s)); }
-      //   return; });
+    after_digest => sub[whatsit] {
+      // Perl: hackVBoxAttachment + set is_vbox, content_box
+      if let Some(content_box) = whatsit.get_arg_mut(2) {
+        content_box.set_property("vattach", "top");
+      }
+      whatsit.set_property("is_vbox", true);
+      // TODO: Height arith for BoxSpecification 'to'/'spread'
     }
   );
 

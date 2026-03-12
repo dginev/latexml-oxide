@@ -25,8 +25,8 @@ LoadDefinitions!({
     // Already (auto) created?
     if let Some(mut docel) = document.findnode("/ltx:document", None) {
       if id != *EMPTY_SYM {
-        arena::with(id, |id_str|
-          document.set_attribute(&mut docel, "xml:id", id_str))?;
+        let id_s = arena::with(id, |s| s.to_string());
+        document.set_attribute(&mut docel, "xml:id", &id_s)?;
       }
     } else {
       let props = arena::with(id, |id_str| string_map!("xml:id" => id_str));
