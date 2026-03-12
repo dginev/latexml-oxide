@@ -70,7 +70,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 | latex_ch3_sentences_and_paragraphs.rs | OK | `enterHorizontal` now auto via `mode => "text"` |
 | latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag`. `backmatterelement` property for appendix sections implemented (matches Perl `find_insertion_point` behavior). |
 | latex_ch5_packages.rs | MINOR | Done: `\PassOptionsToPackage/Class`, `\OptionNotUsed`, `\@unknownoptionerror`. Missing: `\@onefilewithoptions`, `ProcessOptions` inorder flag |
-| latex_ch7_math_mode_environments.rs | GAPS | Done: `retract_equation()`, `\nonumber`, `\lx@equation@nonumber`, `\lx@equation@retract`, `\lx@equation@settag`/`@`, `{equation*}`, `after_equation` postset branch. Missing: `\lefteqn`, `\intertext`, eqnarray, `{align}`/`{gather}`/`{multline}` |
+| latex_ch7_math_mode_environments.rs | GAPS | Done: `retract_equation()`, `\nonumber`, `\lx@equation@nonumber`, `\lx@equation@retract`, `\lx@equation@settag`/`@`, `{equation*}`, `after_equation` postset branch, simplified `{eqnarray}`/`{eqnarray*}` (single-equation per group, no alignment). Missing: `\lefteqn`, `\intertext`, full alignment-based eqnarray (MathFork/MathBranch/rearrangeEqnarray), `{align}`/`{gather}`/`{multline}` |
 | latex_ch7_math_common_structures.rs | GAPS | Missing: `\frac` sizer, mathstyle property calc |
 | latex_ch7_math_common_delimiters.rs | EMPTY | 0% ported |
 | latex_ch8_defining_commands.rs | GAPS | Missing: `\DeclareMathAccent`, `\DeclareFontShape/Family`, many font declaration primitives |
@@ -202,3 +202,25 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | caption.sty | MINOR | Stub-level: captionsetup, Declare* macros, registers. Missing: KeyVals, CAPTION_ value storage. |
 | remreset.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
 | chngcntr.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
+| ntheorem.sty | GAPS | Framing constructors (`\lx@addframing`, `\lx@@snapshot@framing`) ported. Missing: `\colorbox` (needs xcolor port) for shaded theorems, `backgroundcolor` attribute. |
+
+---
+
+## Test Suite Status (2026-03-12)
+
+| Suite | Pass/Total | Notes |
+|-------|-----------|-------|
+| 00_tokenize | 14/14 | All pass |
+| 10_expansion | 36/36 | All pass (aftergroup fixed) |
+| 12_grouping | 2/2 | All pass |
+| 20_digestion | 10/10 | All pass |
+| 22_fonts | 20/20 | All pass |
+| 50_structure | 1/1 (namespace) | All pass |
+| 55_theorem | 4/5 | `ntheorem` fails: 896 diff lines, 873 are math parser tree structure diffs (known Marpa-based divergence). 23 non-math diffs from simplified eqnarray (no MathFork/MathBranch). |
+| 80_complex | 1/1 | All pass |
+
+### ntheorem test gap analysis
+- **Math parser tree structure** (873/896 diffs): XMApp/XMTok nesting differs due to Marpa-based parser architecture. Not fixable without parser changes (active research).
+- **eqnarray** (23/896 diffs): Simplified `DefEnvironment` produces single equation per group instead of full alignment with MathFork/MathBranch/tr/td restructuring. Full impl needs: `eqnarray_bindings`, 3-column `$\displaystyle` template, `rearrangeEqnarray` post-processing (~200 lines in Perl).
+- **Equation numbering**: Offset by ~1 due to simplified eqnarray not splitting rows.
+- **Shaded theorems**: `backgroundcolor` attribute missing (needs `\colorbox` from xcolor.sty).
