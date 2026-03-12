@@ -15,7 +15,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 |------|--------|-----------|
 | base_schema.rs | MINOR | Missing `RegisterNamespace(aria)` |
 | base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
-| base_utilities.rs | GAPS | Missing: `\lx@endash/emdash/NBSP/nobreakspace`, `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()`, `insertFrontMatter()`, `AddToPreamble()` |
+| base_utilities.rs | GAPS | Missing: `\lx@endash/emdash/NBSP/nobreakspace`, `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()`, `AddToPreamble()`. `insertFrontMatter()` ported (deferred-abstract logic, frontmatter ordering). `\lx@frontmatter@fallback` primitive added. |
 | base_xmath.rs | GAPS | ~29 commented-out defs (`\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript/subscript`, matrix/cases systems). Missing: `openMathFork()`, `closeMathFork()`, `MathWhatsit()`, equation group helpers |
 | base_functions.rs | MINOR | — |
 
@@ -68,7 +68,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 | latex_ch1_environments.rs | OK | `beforebegin/afterend` hooks and `\@checkend` implemented |
 | latex_ch2_document.rs | MINOR | Unclosed group/env/conditional warnings commented out |
 | latex_ch3_sentences_and_paragraphs.rs | OK | `enterHorizontal` now auto via `mode => "text"` |
-| latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag` |
+| latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag`. `backmatterelement` property for appendix sections implemented (matches Perl `find_insertion_point` behavior). |
 | latex_ch5_packages.rs | GAPS | Missing: `\PassOptionsToPackage/Class`, `\ExecuteOptions` (full), `\@onefilewithoptions`, many option helpers |
 | latex_ch7_math_mode_environments.rs | GAPS | Missing: equation numbering, `\nonumber`, `\tag`, `\lefteqn`, `\intertext`, eqnarray |
 | latex_ch7_math_common_structures.rs | GAPS | Missing: `\frac` sizer, mathstyle property calc |
@@ -78,7 +78,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 | latex_ch10_tabbing_environment.rs | EMPTY | 0% |
 | latex_ch14_pictures_and_color.rs | GAPS | 30% — picture environment not implemented |
 
-Files at OK/MINOR (95%+): latex_ch1_fragile_commands, latex_ch1_break_command, latex_ch5_page_styles, latex_ch5_title_page_and_abstract, latex_ch6_* (all), latex_ch7_math_mode_changing_style, latex_ch8_defining_environments, latex_ch8_theoremlike_environments, latex_ch8_numbering, latex_ch9_figures_and_tables, latex_ch10_array_and_tabular, latex_ch11_* (all), latex_ch12_line_and_page_breaking, latex_ch13_boxes, latex_ch15_* (both), latex_other_in_appendices, latex_semi_undocumented.
+Files at OK/MINOR (95%+): latex_ch1_fragile_commands, latex_ch1_break_command, latex_ch5_page_styles, latex_ch5_title_page_and_abstract (frontmatter now working: \maketitle includes \lx@frontmatterhere, {abstract} after_construct calls insert_frontmatter, {titlepage} has before_digest/after_construct hooks), latex_ch6_* (all), latex_ch7_math_mode_changing_style, latex_ch8_defining_environments, latex_ch8_theoremlike_environments, latex_ch8_numbering (\@addtoreset ported), latex_ch9_figures_and_tables, latex_ch10_array_and_tabular, latex_ch11_* (all), latex_ch12_line_and_page_breaking, latex_ch13_boxes, latex_ch15_* (both), latex_other_in_appendices (\hb@xt@, \TextOrMath, \eminnershape), latex_semi_undocumented (\protected@write ported).
 
 ---
 
@@ -194,3 +194,5 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | Package | Status | Notes |
 |---------|--------|-------|
 | calc.sty | OK | Full expression parser: +,-,*,/, \real, \ratio, \minof, \maxof, \widthof/heightof/depthof/totalheightof. RegisterValue smaller/larger preserve type variant. |
+| report.cls | OK | Faithful port of Perl report.cls.ltxml (identical to book.cls except CSS resource). |
+| amsmath.sty | GAPS | Only ~5% ported: \medspace/negmedspace/thickspace/negthickspace, \lvert/rvert/lVert/rVert. |
