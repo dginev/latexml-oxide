@@ -52,6 +52,8 @@ pub struct InputDefinitionOptions {
   pub as_class:      bool,
   /// flag to indicate reading the file raw in Gullet
   pub raw:           bool,
+  /// flag to allow reloading a previously loaded definitions file
+  pub reloadable:    bool,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
@@ -63,6 +65,7 @@ impl Default for InputDefinitionOptions {
       noerror:       false,
       noltxml:       false,
       raw:           false,
+      reloadable:    false,
       withoptions:   None,
       handleoptions: false,
       as_class:      false,
@@ -191,7 +194,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       }),
     ) {
       is_found_raw = true;
-      load_tex_definitions(&filename, &file)?;
+      load_tex_definitions(&filename, &file, options.reloadable)?;
     } else if !options.noerror {
       // TODO: Proper missing reports
       Warn!("missing_file", name, s!("Can't find file for {name}"));
@@ -481,7 +484,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   }
 }
 
-fn load_tex_definitions(request: &str, pathname: &str) -> Result<()> {
+fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool) -> Result<()> {
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -491,7 +494,7 @@ fn load_tex_definitions(request: &str, pathname: &str) -> Result<()> {
     // since someone's presumably asking _explicitly_ for the raw TeX version.
     // It's probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    if lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(pathname) {
+    if lookup_bool(&s!("{request}_loaded")) && !reloadable && !pathname::is_reloadable(pathname) {
       return Ok(());
     }
     assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
