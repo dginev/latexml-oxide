@@ -1012,7 +1012,7 @@ LoadDefinitions!({
   DefMath!("\\natural", None, "\u{266E}");
   DefMath!("\\sharp", None, "\u{266F}");
   DefMath!("\\backslash", None, "\u{005C}", role => "MULOP");
-  DefMath!("\\partial",   None, "\u{2202}", role => "OPERATOR", meaning => "partial-differential");
+  DefMath!("\\partial",   None, "\u{2202}", role => "DIFFOP", meaning => "partial-differential");
 
   DefMath!("\\infty", None, "\u{221E}", role => "ID", meaning => "infinity");
   DefMath!("\\Box", None, "\u{25A1}");
@@ -1083,6 +1083,7 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   DefMath!("\\smallint", None, "\u{222B}",
     meaning => "integral", role => "INTOP");  // INTEGRAL (small)
+  // TODO: font => { size => 9 }, scriptpos => doScriptpos, mathstyle => 'text'
   DefMath!("\\sum",    None, "\u{2211}", role => "SUMOP", meaning => "sum");
   DefMath!("\\prod",   None, "\u{220F}", role => "SUMOP", meaning => "product");
   DefMath!("\\coprod", None, "\u{2210}", role => "SUMOP", meaning => "coproduct");
