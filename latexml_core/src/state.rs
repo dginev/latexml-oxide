@@ -2238,6 +2238,10 @@ where FnR: FnOnce(Vec<&Stored>) -> R {
 }
 
 pub fn set_state(incoming_state: State) {
+  // Reset state rotation to Main to prevent stale Sty/Std state from previous runs
+  unsafe {
+    STATE_IN_USE = RotateState::Main;
+  }
   let mut global_state = state_mut!();
   *global_state = incoming_state;
 }

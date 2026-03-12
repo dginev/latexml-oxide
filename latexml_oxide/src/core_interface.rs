@@ -63,6 +63,8 @@ impl DigestionAPI for Core {
   fn initialize_singletons(&mut self, preloads: Vec<String>) -> Result<()> {
     // reset the error REPORT singleton
     error::initialize_report();
+    // reset localized variables (if_frames, current_token, align state, etc.)
+    latexml_core::common::local_assignments::initialize_localized();
     // now handle conversion state
     gullet::initialize_gullet();
     stomach::initialize_stomach();

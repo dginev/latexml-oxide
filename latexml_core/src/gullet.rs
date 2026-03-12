@@ -23,7 +23,7 @@ use crate::{DigestedData, state};
 
 use crate::definition::Definition;
 use crate::definition::conditional::ConditionalType;
-use crate::definition::register::{RegisterType, RegisterValue};
+use crate::definition::register::{Register, RegisterType, RegisterValue};
 use crate::mouth::Mouth;
 use crate::token::{Catcode, TOKEN_ENDCSNAME, TOKEN_RELAX, Token};
 use crate::tokens::Tokens;
@@ -129,6 +129,8 @@ pub fn initialize_gullet() {
   gullet.runtime = None;
   gullet.mouthstack = VecDeque::new();
   gullet.pending_comments = VecDeque::new();
+  // Reset smuggled token from previous conversion
+  SPECIAL_RELAX_SMUGGLED.set(None);
 }
 
 /// Get the current location of input getting read
@@ -1118,6 +1120,19 @@ pub fn read_value(value_type: RegisterType) -> Result<RegisterValue> {
 }
 
 pub fn read_register_value(value_type: RegisterType) -> Result<Option<RegisterValue>> {
+  read_register_value_coerce(value_type, false)
+}
+
+/// Read a register value, optionally coercing from a compatible larger type.
+/// Perl: readRegisterValue($self, $type, $sign, $coerce)
+/// Coercion rules (from Perl %RegisterCoercionTypes):
+///   Number    <- Dimension, Glue     (extract raw i64)
+///   Dimension <- Glue                (extract skip as Dimension)
+///   MuDimension <- MuGlue            (extract skip as MuDimension)
+pub fn read_register_value_coerce(
+  value_type: RegisterType,
+  coerce: bool,
+) -> Result<Option<RegisterValue>> {
   match read_x_token(None, false, None)? {
     None => Ok(None),
     Some(token) => {
@@ -1130,6 +1145,14 @@ pub fn read_register_value(value_type: RegisterType) -> Result<Option<RegisterVa
           if register_type == value_type {
             let args = defn.read_arguments()?;
             Ok(defn.value_of(args))
+          } else if coerce {
+            // Try type coercion per Perl's %RegisterCoercionTypes
+            if let Some(coerced) = coerce_register(value_type, register_type, &defn)? {
+              Ok(Some(coerced))
+            } else {
+              unread_one(token);
+              Ok(None)
+            }
           } else {
             unread_one(token); // Unread
             Ok(None)
@@ -1143,6 +1166,45 @@ pub fn read_register_value(value_type: RegisterType) -> Result<Option<RegisterVa
         Ok(None)
       }
     },
+  }
+}
+
+/// Attempt to coerce a register value from `source_type` to `target_type`.
+fn coerce_register(
+  target_type: RegisterType,
+  source_type: RegisterType,
+  defn: &Register,
+) -> Result<Option<RegisterValue>> {
+  use crate::common::numeric_ops::NumericOps;
+  let can_coerce = matches!(
+    (target_type, source_type),
+    (RegisterType::Number, RegisterType::Dimension)
+      | (RegisterType::Number, RegisterType::Glue)
+      | (RegisterType::Dimension, RegisterType::Glue)
+      | (RegisterType::MuDimension, RegisterType::MuGlue)
+  );
+  if !can_coerce {
+    return Ok(None);
+  }
+  let args = defn.read_arguments()?;
+  if let Some(val) = defn.value_of(args) {
+    let raw = match val {
+      RegisterValue::Dimension(d) => d.value_of(),
+      RegisterValue::Glue(g) => g.value_of(),
+      RegisterValue::MuGlue(mg) => mg.value_of(),
+      RegisterValue::Number(n) => n.value_of(),
+      RegisterValue::MuDimension(md) => md.value_of(),
+      _ => return Ok(None),
+    };
+    let coerced = match target_type {
+      RegisterType::Number => RegisterValue::Number(Number::new(raw)),
+      RegisterType::Dimension => RegisterValue::Dimension(Dimension::new(raw)),
+      RegisterType::MuDimension => RegisterValue::MuDimension(MuDimension::new(raw)),
+      _ => return Ok(None),
+    };
+    Ok(Some(coerced))
+  } else {
+    Ok(None)
   }
 }
 

@@ -220,8 +220,11 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 80_complex | 1/1 | All pass |
 | 00_contrib | 1/1 | All pass |
 
-### Known infra issue: state pollution in multi-test process runs
-Thread-local singletons (STATE, GULLET, STOMACH, MODEL, LOCALIZED_VARS) don't fully reset between tests in the same process. Tests pass individually but ~50% fail when run via `cargo test`. The `initialize_singletons` function resets GULLET/STOMACH/MODEL/REPORT but search_paths and localized_vars accumulate. Root fix: comprehensive state reset in `Core::new` or process-per-test.
+### Known infra issue: `cargo test` working directory
+`cargo test` runs from `latexml_oxide/` (crate root), not the workspace root. Tests that read auxiliary files (e.g. `\openin` for `badchars.tex`, `toberead.txt`) may fail because `find_file` search paths resolve relative to the crate dir. The 4 failing tokenize tests (hashes, newlines, verb, verbata) all use `\openin`/`\read` for auxiliary `.tex` files. All tests pass when run from the workspace root. Root fix: make the test harness set cwd to workspace root, or use absolute paths in test file discovery.
+
+### Perl daemon frame pattern (not yet ported)
+Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate state per conversion. This creates a locked frame, deep-copies mutable values, and allows rollback after conversion. Rust has the code commented out as TODO (state.rs L1784-1818). Currently Rust relies on `initialize_singletons` + `Core::new` resetting STATE/GULLET/STOMACH/MODEL/REPORT/LOCALIZED_VARS, which is sufficient for single-conversion use but lacks the deep-copy rollback semantics needed for daemon mode.
 
 ### ntheorem test gap analysis
 - **Math parser tree structure** (873/896 diffs): XMApp/XMTok nesting differs due to Marpa-based parser architecture. Not fixable without parser changes (active research).
