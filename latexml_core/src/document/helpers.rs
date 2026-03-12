@@ -1,6 +1,7 @@
 use super::{Document, get_node_qname};
 use crate::common::arena;
 use crate::common::error::*;
+use crate::common::xml::XML_NS;
 use libxml::tree::Node;
 
 /// In some cases we could have e.g. a \noindent followed by a {table},
@@ -12,6 +13,41 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> 
     if prev_opt.is_none() || get_node_qname(&prev_opt.unwrap()) != arena::pin_static("ltx:para") {
       // If `node` WAS the 1st child
       document.add_class(&mut node.get_parent().unwrap(), "ltx_pruned_first")?;
+    }
+    // Decrement the ID counter on the ancestor that generated this node's id,
+    // so that the pruned para's id slot gets reused by the next para.
+    if let Some(id) = node.get_attribute_ns("id", XML_NS) {
+      // Extract the prefix from the id (e.g. "p7" → prefix "p", counter "7")
+      if let Some(pos) = id.rfind('.') {
+        let suffix = &id[pos + 1..];
+        let prefix: String = suffix.chars().take_while(|c| !c.is_ascii_digit()).collect();
+        let ctrkey = format!("_ID_counter_{}_", prefix);
+        if let Some(mut ancestor) = node.get_parent() {
+          if let Some(ctr_str) = ancestor.get_attribute(&ctrkey) {
+            if let Ok(ctr) = ctr_str.parse::<u32>() {
+              if ctr > 0 {
+                ancestor.set_attribute(&ctrkey, &(ctr - 1).to_string())?;
+              }
+            }
+          }
+        }
+      } else {
+        // No dot — top-level id like "p7"
+        let prefix: String = id.chars().take_while(|c| !c.is_ascii_digit()).collect();
+        let ctrkey = format!("_ID_counter_{}_", prefix);
+        // Find the ancestor with the counter (root element)
+        if let Some(root) = document.get_document().get_root_element() {
+          let mut root = root;
+          if let Some(ctr_str) = root.get_attribute(&ctrkey) {
+            if let Ok(ctr) = ctr_str.parse::<u32>() {
+              if ctr > 0 {
+                root.set_attribute(&ctrkey, &(ctr - 1).to_string())?;
+              }
+            }
+          }
+        }
+      }
+      document.unrecord_id(&id);
     }
     node.unlink();
   }
