@@ -68,7 +68,9 @@ LoadDefinitions!({
           );
           op = "";
         }
-      } else if mode == "inline_math" {
+      } else if mode == "math" {
+        // Perl L62: `elsif ($mode eq 'math')` — because beginMode("inline_math")
+        // maps to MODE="math" via bindable_mode. NOT "inline_math".
         op = "\\lx@end@inline@math";
       } else if gullet::if_next(T_MATH!())? {
         // TODO: Perl checks `($bound =~ /vertical$/)` here, but our BOUND_MODE tracking
