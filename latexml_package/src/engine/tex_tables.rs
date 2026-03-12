@@ -87,12 +87,19 @@ LoadDefinitions!({
     });
   });
 
+  // Perl: p{Dimension} — before wraps content in \vtop{\hbox to <width>\relax{...}}.
+  // Width flows through \hbox BoxSpecification, vattach through \vtop → insertBlock.
+  // Note: Perl includes "to <dim>\relax" in before tokens for structural wrapping,
+  // but that causes trim_column_template mismatch (BoxSpec reverts differently).
+  // We keep the simpler before tokens; the width attribute goes to the cell and
+  // canHaveAttribute filtering + insertBlock handle attribute placement.
   DefColumnType!("p{Dimension}", sub[(width)] {
     with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
       before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\hbox"), T_BEGIN!())),
       after: Some(Tokens!(T_END!(), T_END!())),
       align: Some(Align::Justify),
       width: Some(width),
+      vattach: Some("top".to_string()),
       ..Cell::default()}));
   });
 
