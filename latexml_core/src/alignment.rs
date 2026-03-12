@@ -207,16 +207,14 @@ impl Alignment {
     }
     self.current_column += 1;
     let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
-    if let Some(colspec) = current_row.get_column_mut(self.current_column) {
-      Ok(Some(colspec))
+    if current_row.get_column_mut(self.current_column).is_some() {
+      Ok(current_row.get_column_mut(self.current_column))
     } else {
+      // Perl: Error then add fallback column with align=center
       Error!("unexpected", "&", "Extra alignment tab '&'");
-      // DG: Mutability issue, should we do an alternative recovery?
-      //     or change the call interface?
-      //
-      // let fallback_cell = Cell{align: Some(Align::Center),..Cell::default()};
-      // current_row.add_column(fallback_cell);
-      Ok(None)
+      let fallback = Cell { align: Some(Align::Center), ..Cell::default() };
+      current_row.add_column(fallback);
+      Ok(current_row.get_column_mut(self.current_column))
     }
   }
 
