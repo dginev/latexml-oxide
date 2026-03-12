@@ -10,13 +10,15 @@ use latexml_core::common::error::*;
 //
 // I. Add your custom binding definition as a module delcaration here
 pub mod mytemplate_sty;
-pub mod scopemacro_sty;
+pub mod scopemacro_tex;
 
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
     "mytemplate.sty" => Some(mytemplate_sty::load_definitions()),
-    "scopemacro.sty" => Some(scopemacro_sty::load_definitions()),
+    // Document-level binding: loaded by load_external_binding("scopemacro")
+    // when processing scopemacro.tex — mirrors scopemacro.latexml in Perl
+    "scopemacro" => Some(scopemacro_tex::load_definitions()),
     _ => None,
   }
 }

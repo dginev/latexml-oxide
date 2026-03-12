@@ -215,7 +215,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 12_grouping | 2/2 | All pass |
 | 20_digestion | 10/10 | All pass |
 | 22_fonts | 20/20 | All pass |
-| 50_structure | 1/1 (namespace) | All pass |
+| 50_structure | 41/41 | All pass — includes 12 new package bindings (subfigure, bibunits, natbib, glossaries, subfiles, graphicx, subcaption, enumitem, epigraph, float, newfloat, paralist) |
 | 55_theorem | 4/5 | `ntheorem` fails: 896 diff lines, 873 are math parser tree structure diffs (known Marpa-based divergence). 23 non-math diffs from simplified eqnarray (no MathFork/MathBranch). |
 | 80_complex | 1/1 | All pass |
 
