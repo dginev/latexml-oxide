@@ -11,6 +11,24 @@ LoadDefinitions!({
     AssignValue!("BIB_CONFIG", Stored::Strings(Rc::new([arena::pin("bbl")])), Scope::Global);
   });
 
+  // bibconfig KeyVal: comma-separated list of bib config values
+  // e.g. \usepackage[bibconfig=bib,bbl]{latexml}
+  // TODO: DefKeyVal!("LTXML", "bibconfig", "Semiverbatim", "", code => ...)
+  // For now, the bibtex/nobibtex options cover the main use cases.
+
+  // Lexeme serialization for math formulas
+  DeclareOption!("mathlexemes", {
+    AssignValue!("LEXEMATIZE_MATH" => true, Scope::Global);
+  });
+
+  // Header guessing for tabular environments
+  DeclareOption!("guesstabularheaders", {
+    AssignValue!("GUESS_TABULAR_HEADERS" => true, Scope::Global);
+  });
+  DeclareOption!("noguesstabularheaders", {
+    AssignValue!("GUESS_TABULAR_HEADERS" => false, Scope::Global);
+  });
+
   // Finer control over which (if any) raw .sty/.cls files to include
   DeclareOption!("rawstyles", {
     AssignValue!("INCLUDE_STYLES"  => true, Scope::Global);

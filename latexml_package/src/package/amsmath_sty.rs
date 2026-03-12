@@ -55,6 +55,15 @@ LoadDefinitions!({
   // DefConstructor('\mspace{MuDimension}', "<ltx:XMHint name='mspace' width='#1'/>");
 
   //======================================================================
+  // Section 4.10 Over and under arrows
+  // (overset/underset already in LaTeX core via latex_ch7)
+  // \overunderset is amsmath-specific
+  DefConstructor!(
+    "\\overunderset InScriptStyle InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#2</ltx:XMWrap><ltx:XMArg>#3</ltx:XMArg></ltx:XMApp></ltx:XMApp>"###
+  );
+
+  //======================================================================
   // Section 4.14.2 Vertical bar notations
   DefMath!("\\lvert", "|", role => "OPEN",  stretchy => false);
   DefMath!("\\lVert", "\u{2225}", role => "OPEN",  stretchy => false);

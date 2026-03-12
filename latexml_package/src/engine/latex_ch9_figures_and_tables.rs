@@ -108,9 +108,8 @@ LoadDefinitions!({
     "<ltx:toccaption>#1</ltx:toccaption>", //sizer => 0
     mode => "text");
 
-  // TODO: implement optional argument {figure}[]
-  DefEnvironment!("{figure}",r###"
-  <ltx:figure xml:id='#id' inlist='#inlist'>
+  DefEnvironment!("{figure}[]",r###"
+  <ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>
     #tags
     #body
   </ltx:figure>
