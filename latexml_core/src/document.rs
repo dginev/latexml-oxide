@@ -1404,11 +1404,25 @@ impl Document {
           // val = self.record_id(val, node); // TODO
           to.set_attribute(key, val)?;
         }
-      } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str())
-        || MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str())
-        || MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str())
-      {
-        todo!();
+      } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
+        if let Some(existing) = to.get_attribute(key) {
+          let merged = format!("{existing} {val}");
+          to.set_attribute(key, &merged)?;
+        } else {
+          to.set_attribute(key, val)?;
+        }
+      } else if MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str()) {
+        if let Some(existing) = to.get_attribute(key) {
+          let merged = format!("{existing}; {val}");
+          to.set_attribute(key, &merged)?;
+        } else {
+          to.set_attribute(key, val)?;
+        }
+      } else if MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str()) {
+        // For now, just set it if not present (full implementation would parse+sum)
+        if !to.has_attribute(key) {
+          to.set_attribute(key, val)?;
+        }
       } else if !to.has_attribute(key) {
         // || force...
         // Else if attribute not present on $to, or if we specificallly override it, just copy
