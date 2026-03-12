@@ -55,12 +55,48 @@ LoadDefinitions!({
   // DefConstructor('\mspace{MuDimension}', "<ltx:XMHint name='mspace' width='#1'/>");
 
   //======================================================================
+  // Section 4.9 Extensible arrows
+  // Perl: amsmath.sty.ltxml lines 921-950
+  DefConstructor!(
+    "\\lx@long@arrow DefToken {} OptionalInScriptStyle InScriptStyle",
+    r###"?#3(<ltx:XMApp role='ARROW'><ltx:XMWrap role='UNDERACCENT'>#3</ltx:XMWrap><ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp></ltx:XMApp>)(<ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp>)"###
+  );
+  DefMacro!("\\xrightarrow", "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}");
+  DefMacro!("\\xleftarrow", "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}");
+  DefMath!("\\lx@stretchy@leftarrow", "\u{2190}",
+    role => "ARROW", stretchy => true, alias => "\\leftarrow");
+  DefMath!("\\lx@stretchy@rightarrow", "\u{2192}",
+    role => "ARROW", stretchy => true, alias => "\\rightarrow");
+
+  //======================================================================
   // Section 4.10 Over and under arrows
+  // Perl: amsmath.sty.ltxml lines 906-915
+  DefMath!("\\underrightarrow{}", "\u{2192}",
+    operator_role => "UNDERACCENT", operator_stretchy => true);
+  DefMath!("\\underleftarrow{}", "\u{2190}",
+    operator_role => "UNDERACCENT", operator_stretchy => true);
+  DefMath!("\\overleftrightarrow{}", "\u{2194}",
+    operator_role => "OVERACCENT", operator_stretchy => true);
+  DefMath!("\\underleftrightarrow{}", "\u{2194}",
+    operator_role => "UNDERACCENT", operator_stretchy => true);
   // (overset/underset already in LaTeX core via latex_ch7)
   // \overunderset is amsmath-specific
   DefConstructor!(
     "\\overunderset InScriptStyle InScriptStyle {}",
     r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#2</ltx:XMWrap><ltx:XMArg>#3</ltx:XMArg></ltx:XMApp></ltx:XMApp>"###
+  );
+
+  //======================================================================
+  // Section 4.11 Fractions and related commands
+
+  // Section 4.11.1 The \frac, \dfrac, and \tfrac commands
+  DefConstructor!(
+    "\\tfrac ScriptStyle ScriptStyle",
+    r###"<ltx:XMApp><ltx:XMTok meaning='divide' role='FRACOP' mathstyle='text'/><ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
+  DefConstructor!(
+    "\\dfrac TextStyle TextStyle",
+    r###"<ltx:XMApp><ltx:XMTok meaning='divide' role='FRACOP' mathstyle='display'/><ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
   );
 
   //======================================================================

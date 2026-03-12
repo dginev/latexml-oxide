@@ -859,31 +859,24 @@ LoadDefinitions!({
   reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
   });
-  // TODO: Add when needed
-  // DefParameterType!(TextStyle, sub[inner, _extra] {
-  //     $_[0]->readArg; },
-  //   beforeDigest => sub {
-  //     $_[0]->bgroup;
-  //     MergeFont(mathstyle => 'text'); },
-  //   afterDigest => sub {
-  //     $_[0]->egroup; },
-  //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // DefParameterType!(ScriptStyle, sub[inner, _extra] {
-  //     $_[0]->readArg; },
-  //   beforeDigest => sub {
-  //     $_[0]->bgroup;
-  //     MergeFont(mathstyle => 'script'); },
-  //   afterDigest => sub {
-  //     $_[0]->egroup; },
-  //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // DefParameterType!(ScriptscriptStyle, sub[inner, _extra] {
-  //     $_[0]->readArg; },
-  //   beforeDigest => sub {
-  //     $_[0]->bgroup;
-  //     MergeFont(mathstyle => 'scriptscript'); },
-  //   afterDigest => sub {
-  //     $_[0]->egroup; },
-  //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
+  DefParameterType!(TextStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
+  before_digest => {
+    bgroup();
+    MergeFont!(mathstyle => "text");
+  },
+  after_digest => { egroup()?; },
+  reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
+  DefParameterType!(ScriptStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
+  before_digest => {
+    bgroup();
+    MergeFont!(mathstyle => "script");
+  },
+  after_digest => { egroup()?; },
+  reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
   // # Perverse naming convention: not script style, but in the style of a script relative to
   // current.
   DefParameterType!(InScriptStyle, sub[_inner, _extra] {
