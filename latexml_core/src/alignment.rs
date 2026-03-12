@@ -133,7 +133,7 @@ impl Alignment {
       open_column: config.open_column,
       close_column: config.close_column,
       current_column: 0,
-      is_math: false,
+      is_math: config.is_math,
       in_row: false,
       in_column: false,
       in_tabular_head: false,
