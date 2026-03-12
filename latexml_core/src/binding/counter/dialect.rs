@@ -417,6 +417,37 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
   }
 }
 
+/// Use to peek for FOLLOWING \label{...} to support label-derived reference numbers
+/// (Perl: MaybePeekLabel)
+pub fn maybe_peek_label() -> Result<()> {
+  if has_value("LABEL_MAPPING_HOOK") {
+    let peek = crate::gullet::read_non_space()?;
+    if let Some(ref token) = peek {
+      if x_equals(token, &T_CS!("\\label")) {
+        state::begin_semiverbatim(None);
+        let arg = crate::gullet::read_arg(crate::gullet::ExpansionLevel::Off)?;
+        state::end_semiverbatim()?;
+        let arg_str = arg.to_string();
+        let label = clean_label(&arg_str, Some("")).into_owned();
+        state::assign_value(
+          "PEEKED_LABEL",
+          Stored::String(arena::pin(&label)),
+          Some(Scope::Global),
+        );
+        // Put back the arg wrapped in braces so \label can re-read it
+        crate::gullet::unread(Tokens!(T_BEGIN!(), arg, T_END!()));
+      } else {
+        state::remove_value("PROCESSED_LABEL");
+        state::remove_value("PEEKED_LABEL");
+      }
+    }
+    if let Some(token) = peek {
+      crate::gullet::unread_one(token);
+    }
+  }
+  Ok(())
+}
+
 /// Use to note a discovered label to support label-derived refererence numbers
 /// Can by used by \label, among others. Note we only record the label
 /// if it hasn't already been peeked, and consumed.
@@ -493,6 +524,18 @@ pub fn ref_step_id(ctype: &str) -> Result<HashMap<Stored>> {
   def_macro(T_CS!("\\@currentID"), None, T_CS!(&the_ctr_id), None)?;
   Ok(stored_map!("id" =>
     clean_id(&digest_literal(T_CS!(the_ctr_id))?.to_string())))
+}
+
+/// Recycle the last ID without incrementing (Perl: RefCurrentID)
+/// Useful if the last ID-ed box got pruned.
+pub fn ref_current_id(ctype: &str) -> Result<HashMap<Stored>> {
+  let ctr = with_mapping("counter_for_type", ctype, |mapping| match mapping {
+    Some(map) => map.to_string(),
+    None => ctype.to_string(),
+  });
+  let the_ctr_id = s!("\\the{ctr}@ID");
+  let id = clean_id(&digest_literal(T_CS!(the_ctr_id))?.to_string());
+  Ok(stored_map!("id" => id))
 }
 
 /// Resets the counter `ctr` to zero.

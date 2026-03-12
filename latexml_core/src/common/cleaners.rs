@@ -2,8 +2,14 @@ use crate::binding::def::dialect::{
   DIRTY_ID_IDIOM_RE, LEADING_PROTOCOL_RE, NON_ID_CHARSET_RE, SPACES_RE, TILDE_NOISE_RE,
   TRAILING_SLASH_RE,
 };
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::borrow::Cow;
 use unidecode::unidecode;
+use unicode_normalization::UnicodeNormalization;
+
+static TRAILING_PUNCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\.,;]+$").unwrap());
+static NON_ALNUM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^a-zA-Z0-9]").unwrap());
 
 //======================================================================
 // Cleaners
@@ -79,13 +85,43 @@ pub fn clean_label<'a>(label: &'a str, prefix_opt: Option<&str>) -> Cow<'a, str>
   }
 }
 
+/// Clean string for use in index keys (Perl: CleanIndexKey)
+/// Applies NFC normalization and removes trailing punctuation.
+pub fn clean_index_key(key: &str) -> String {
+  let trimmed = key.trim();
+  let normalized: String = trimmed.nfc().collect();
+  TRAILING_PUNCT_RE.replace(&normalized, "").to_string()
+}
+
+/// Clean string for use as a CSS class name (Perl: CleanClassName)
+/// Decomposes to NFD, removes non-alphanumeric chars, recomposes to NFC.
+pub fn clean_class_name(key: &str) -> String {
+  let trimmed = key.trim();
+  let decomposed: String = trimmed.nfd().collect();
+  let cleaned = NON_ALNUM_RE.replace_all(&decomposed, "");
+  cleaned.nfc().collect()
+}
+
 /// cleans a string down to characters acceptable for a bibliography key
 pub fn clean_bib_key(key: &str) -> String {
   // Originally lc() here, but let's preserve case till Postproc.
-  let mut clean_key = key.trim_start();
-  clean_key = clean_key.trim_end();
-  // ??? key =~ s/\s//sg;
-  clean_key.to_string()
+  let trimmed = key.trim();
+  SPACES_RE.replace_all(trimmed, "").to_string()
+}
+
+/// Return the bibkey in a form to ACTUALLY lookup (Perl: NormalizeBibKey)
+/// Usually use clean_bib_key to preserve key in the original form (case)
+pub fn normalize_bib_key(key: &str) -> String {
+  clean_bib_key(key).to_lowercase()
+}
+
+/// Split comma-separated text into trimmed tokens (Perl: TrimmedCommaList)
+pub fn trimmed_comma_list(text: &str) -> Vec<String> {
+  let trimmed = text.trim();
+  if trimmed.is_empty() {
+    return Vec::new();
+  }
+  trimmed.split(',').map(|s| s.trim().to_string()).collect()
 }
 
 /// cleans a string down to characters acceptable for a URL

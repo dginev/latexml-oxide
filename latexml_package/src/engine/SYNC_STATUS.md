@@ -548,3 +548,66 @@ Rust equivalents: `enter_horizontal()` / `leave_horizontal()?` / `leave_horizont
 - Only ~20% ported (Select and Replace operators)
 - **Missing:** Pattern compilation, label resolution, most operators
 - **Known:** Low priority until more tests exercise rewrite rules
+
+---
+
+## Package.pm Sync (Perl API layer)
+
+Audited 2026-03-11 against Package.pm (5022 lines, ~120 subroutines).
+The Rust port distributes these across multiple modules:
+- `latexml_core/src/state.rs` — value/catcode/definition lookups
+- `latexml_core/src/binding/content.rs` — digestion/expansion/option/file/color functions
+- `latexml_core/src/binding/def/dialect.rs` — Def* functions (macro, primitive, constructor, etc.)
+- `latexml_core/src/binding/counter/dialect.rs` — counter management
+- `latexml_core/src/common/cleaners.rs` — string cleaning utilities
+- `latexml_package/src/prelude/setup_binding_language.rs` — macro wrappers
+
+### Implemented (110+ of ~120 subs)
+
+All core APIs ported:
+- **State access:** LookupValue, AssignValue, PushValue, PopValue, UnshiftValue, ShiftValue, LookupMapping, AssignMapping, LookupMappingKeys
+- **Catcode/code:** LookupCatcode, AssignCatcode, LookupMathcode, AssignMathcode, LookupSFcode, AssignSFcode, LookupLCcode, AssignLCcode, LookupUCcode, AssignUCcode, LookupDelcode, AssignDelcode
+- **Definitions:** LookupMeaning, LookupDefinition, InstallDefinition, XEquals, IsDefined
+- **Def forms:** DefMacro/I, DefPrimitive/I, DefConstructor/I, DefEnvironment/I, DefConditional/I, DefRegister/I, DefMath/I
+- **Digestion:** Let, Digest, DigestText, DigestLiteral, DigestIf, Expand, ExpandPartially, Invocation, RawTeX
+- **Counters:** NewCounter, CounterValue, SetCounter, AddToCounter, StepCounter, RefStepCounter, RefStepID, ResetCounter, GenerateID, deactivateCounterScope
+- **File loading:** FindFile, Input, InputContent, InputDefinitions, RequirePackage, LoadClass, LoadPool, loadTeXDefinitions, loadTeXContent
+- **Options:** DeclareOption, PassOptions, ProcessOptions, resetOptions, AddToMacro
+- **Model:** Tag, DocType, RelaxNGSchema, RegisterNamespace, RegisterDocumentNamespace
+- **Font:** DeclareFontMap, LoadFontMap, decodeMathChar
+- **Other:** StartSemiverbatim, EndSemiverbatim, Tokenize, TokenizeInternal, requireMath, forbidMath, LookupRegister, LookupDimension, AssignRegister, DefParameterType, DefColumnType, allocateRegister, roman, Roman, CleanID, CleanLabel, CleanBibKey, CleanURL, ComposeURL, DefRewrite, DefMathRewrite, DefLigature, DefMathLigature, RequireResource, LookupColor, MaybeNoteLabel, AtBeginDocument, AtEndDocument, dualize_arglist, getXMArgID, defRobustCS
+
+### Newly implemented (2026-03-11)
+
+- **`IfCondition`** — `if_condition()` in content.rs. Tests a conditional and returns boolean. Reads arguments, invokes test closure, handles `\iftrue`/`\iffalse` fallbacks. Added `get_test()`/`get_conditional_type()` to Definition trait.
+- **`SetCondition`** — `set_condition()` in content.rs. Sets `\newif`-type conditionals by Let to `\iftrue`/`\iffalse`.
+- **`RefCurrentID`** — `ref_current_id()` in counter/dialect.rs. Recycles last ID without incrementing (Perl L876-881).
+- **`MaybePeekLabel`** — `maybe_peek_label()` in counter/dialect.rs. Peeks for following `\label{...}` to support label-derived reference numbers (Perl L818-833).
+- **`ExecuteOptions`** — `execute_options()` in content.rs + fixed `\ExecuteOptions` primitive in latex_ch5_packages.rs (was TODO stub).
+- **`FontDecode`** — `font_decode()` in content.rs. Decodes codepoint through fontmap with family-specific map support.
+- **`FontDecodeString`** — `font_decode_string()` in content.rs. Decodes string through fontmap, supports implicit mode and UTF-8 input encoding awareness.
+- **`DefColor`** — `def_color()` in content.rs. Stores color value and defines `\\color@{name}` macro (Perl L3003-3015).
+- **`DefColorModel`** — `def_color_model()` in content.rs. Stores derived color model info (Perl L3021-3024).
+- **`CleanIndexKey`** — `clean_index_key()` in cleaners.rs. NFC normalization + trailing punctuation removal (Perl L513-525).
+- **`CleanClassName`** — `clean_class_name()` in cleaners.rs. NFD decomposition, non-alnum removal, NFC recompose (Perl L527-535).
+- **`NormalizeBibKey`** — `normalize_bib_key()` in cleaners.rs. Lowercase of clean_bib_key (Perl L546-548).
+- **`TrimmedCommaList`** — `trimmed_comma_list()` in cleaners.rs. Split on commas, trim each (Perl L570-575).
+- **`CleanBibKey` fix** — Now removes ALL whitespace (Perl `s/\s//sg`), was only trimming edges.
+
+### Still missing / deferred
+
+| Perl Function | Status | Notes |
+|---|---|---|
+| `createXMRefs` | DEFERRED | Complex DOM manipulation; used by math parser for XMRef creation. Will port when math absorption is exercised. |
+| `defmath_introspective` | N/A | Perl runtime introspection; not applicable in compiled Rust |
+| `CheckOptions` | N/A | Compile-time type checking replaces this in Rust |
+| `DefExpandable` | N/A | Deprecated in Perl; use DefMacro instead |
+| `ClearAutoLoad` | DEFERRED | Autoload infrastructure not yet needed |
+| `maybeRequireDependencies` | DEFERRED | Heuristic TeX source scanning; Rust binding dispatch handles differently |
+| `maybeReportSearchPaths` | DEFERRED | Minor logging utility |
+| `FindFile_fallback` | DEFERRED | arXiv version-suffix stripping logic, skeleton exists |
+| `LoadFormat` | DEFERRED | `.pool`/`.fmt` bootstrap; handled inline in Rust |
+| `processRewriteSpecs` | DEFERRED | Internal to DefRewrite; handled in Rewrite struct construction |
+| `ProcessPendingResources` | EXISTS | Already `document.process_pending_resources()` |
+| `maybePreemptRefnum` | PARTIAL | Skeleton exists with `todo!()` — needs LABEL_MAPPING_HOOK closure type |
+| `IsEmpty` (standalone) | PARTIAL | Method on Digested exists; standalone variadic version not needed in Rust |
