@@ -229,7 +229,7 @@ LoadDefinitions!({
     //   return; },
     // beforeDigestEnd => sub { Digest(T_CS('\maybe@end@title')); },
     locked => true,
-    mode => "text"
+    mode => "internal_vertical"
   );
 
   Tag!("ltx:titlepage", auto_close => true);

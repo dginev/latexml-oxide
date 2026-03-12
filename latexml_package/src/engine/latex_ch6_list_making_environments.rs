@@ -82,14 +82,14 @@ LoadDefinitions!({
     properties => { BeginItemize!("itemize", "@item") },
     before_digest_end => { Digest!("\\par") },
     locked => true,
-    mode => "text"
+    mode => "internal_vertical"
   );
   DefEnvironment!("{enumerate}",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     properties => { BeginItemize!("enumerate", "enum") },
     before_digest_end => { Digest!("\\par") },
     locked => true,
-    mode => "text"
+    mode => "internal_vertical"
   );
   DefEnvironment!("{description}",
     "<ltx:description  xml:id='#id'>#body</ltx:description>",
@@ -97,7 +97,7 @@ LoadDefinitions!({
     properties => { BeginItemize!("description", "@desc") },
     before_digest_end => { Digest!("\\par") },
     locked => true,
-    mode => "text"
+    mode => "internal_vertical"
   );
 
   DefMacro!("\\makelabel{}", "#1");
