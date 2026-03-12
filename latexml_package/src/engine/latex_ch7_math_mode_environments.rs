@@ -221,6 +221,8 @@ LoadDefinitions!({
     }
   }, protected => true);
 
+  Tag!("ltx:equationgroup", auto_close => true);
+
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => sub[document, node] {
     document.generate_id(node, "m")?;

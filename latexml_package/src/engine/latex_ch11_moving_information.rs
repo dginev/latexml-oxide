@@ -55,12 +55,13 @@ LoadDefinitions!({
   }
   );
 
-  // # If a node has been labeled, but still  hasn't yet got an id by afterClose:late,
-  // # we'd better generate an id for it.
-  // Tag('ltx:*', 'afterClose:late' => sub {
-  //     my ($document, $node) = @_;
-  //     if ($node->hasAttribute('labels') && !($node->hasAttribute('xml:id'))) {
-  //       GenerateID($document, $node); } });
+  // If a node has been labeled, but still hasn't yet got an id by afterClose:late,
+  // we'd better generate an id for it.
+  Tag!("ltx:*", after_close_late => sub[document, node] {
+    if node.has_attribute("labels") && !node.has_attribute("xml:id") {
+      document.generate_id(node, "")?;
+    }
+  });
 
   // # These will get filled in during postprocessing.
   // # * is added to accommodate hyperref
