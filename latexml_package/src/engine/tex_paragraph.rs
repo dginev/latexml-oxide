@@ -111,7 +111,8 @@ LoadDefinitions!({
       let mode = lookup_string("MODE");
       let bound = lookup_string("BOUND_MODE");
       if mode == "horizontal" && bound.ends_with("vertical") {
-        // TODO: repackHorizontal (packages horizontal items into a List)
+        // Perl: $stomach->repackHorizontal;
+        repack_horizontal();
         assign_value_inplace("MODE", &bound.to_string()); // Resume vertical/internal_vertical
       }
       state::assign_value("parshape", Stored::None, None);

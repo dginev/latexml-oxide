@@ -598,8 +598,8 @@ LoadDefinitions!({
       } else { (None, None, None) }
     } else { (None, None, None) };
 
-    // TODO: leave_horizontal causes io_test failure — investigate
-    // leave_horizontal()?;
+    // Perl: $stomach->leaveHorizontal;
+    leave_horizontal()?;
     let w_pt: Option<f64> = width.as_ref().and_then(|w| w.strip_suffix("pt").and_then(|s| s.parse().ok()));
     let h_pt: Option<f64> = height.as_ref().and_then(|h| h.strip_suffix("pt").and_then(|s| s.parse().ok()));
 

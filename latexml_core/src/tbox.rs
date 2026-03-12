@@ -87,6 +87,16 @@ impl Tbox {
       tokens_opt
     };
 
+    // Perl: if ((!defined $properties{isSpace}) && (defined $string) && ($string =~ /^\s*$/)) {
+    //         $properties{isSpace} = 1; }
+    // Auto-mark all-whitespace text as isSpace (matches Perl Box() behavior)
+    if !properties.contains_key("isSpace") && text != empty_sym {
+      let is_all_ws = arena::with(text, |s| !s.is_empty() && s.chars().all(|c| c.is_whitespace()));
+      if is_all_ws {
+        properties.insert("isSpace", Stored::Bool(true));
+      }
+    }
+
     if properties.contains_key("isSpace")
       && (properties.contains_key("width")
         || properties.contains_key("height")
