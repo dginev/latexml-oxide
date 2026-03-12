@@ -54,10 +54,10 @@ Updated 2026-03-11. Only lists open gaps & TODOs; completed items live in git hi
 
 **plain.rs** — GAPS
 - Missing: `\alloc@{}{}{}{}{}`, `\@@oalign/@@ooalign`, `\multispan`, `\hglue`, `\displaylines`, `\@math@daccent/baccent`, `\lx@hack@bordermatrix`
-- `\leavevmode` is no-op (needs `enterHorizontal`)
+- `\leavevmode` calls `enter_horizontal()` (synced)
 - `\joinrel`/`\@@joinrel` return errors
 - Missing: `\smallint` font size, `\phantom/hphantom/vphantom` afterDigest sizing
-- Role difference: `\neg/\lnot` use "FUNCTION" (Perl: "BIGOP") — needs verification
+- `\neg/\lnot` now use role "BIGOP" (matching Perl)
 
 ### Phase 4: LaTeX Chapters
 

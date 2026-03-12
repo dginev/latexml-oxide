@@ -1006,8 +1006,8 @@ LoadDefinitions!({
   // Also, should probably carry info about Binding for OpenMath
   DefMath!("\\forall", None, "\u{2200}", role => "BIGOP",    meaning => "for-all");
   DefMath!("\\exists", None, "\u{2203}", role => "BIGOP",    meaning => "exists");
-  DefMath!("\\neg",    None, "\u{00AC}",  role => "FUNCTION", meaning => "not");
-  DefMath!("\\lnot",   None, "\u{00AC}",  role => "FUNCTION", meaning => "not");
+  DefMath!("\\neg",    None, "\u{00AC}",  role => "BIGOP", meaning => "not");
+  DefMath!("\\lnot",   None, "\u{00AC}",  role => "BIGOP", meaning => "not");
   DefMath!("\\flat", None, "\u{266D}");
   DefMath!("\\natural", None, "\u{266E}");
   DefMath!("\\sharp", None, "\u{266F}");
