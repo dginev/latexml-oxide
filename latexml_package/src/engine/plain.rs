@@ -1446,11 +1446,10 @@ LoadDefinitions!({
   DefMath!("\\mathring Digested", "\u{030A}", operator_role => "OVERACCENT"); // COMBINING RING ABOVE
   DefMath!("\\widehat Digested", "\u{005E}", operator_role => "OVERACCENT"); // CIRCUMFLEX ACCENT [plain? also amsfonts]
   DefMath!("\\widetilde Digested", "\u{007E}", operator_role => "OVERACCENT"); // TILDE [plain? also amsfonts]
-  // These aren"t handled as simple accents by TeX, so no Digested
-  DefMath!("\\overbrace {}", "\u{23DE}", operator_role => "OVERACCENT",       // TOP CURLY BRACKET
-    scriptpos => "mid", robust => true);
-  DefMath!("\\underbrace {}", "\u{23DF}", operator_role => "UNDERACCENT",     // BOTTOM CURLY BRACKET
-    scriptpos => "mid", robust => true);
+  // Perl: math_common.pool.ltxml lines 535-536
+  // overbrace/underbrace canonical defs are \lx@math@* in tex_math.rs
+  Let!("\\overbrace", "\\lx@math@overbrace");
+  Let!("\\underbrace", "\\lx@math@underbrace");
 
   // NOTE that all the above accents REQUIRE math mode
   // EXCEPT underline, overrightarrow and overleftarrow!

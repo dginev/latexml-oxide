@@ -639,22 +639,47 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \overline               c  puts a line over the following character or subformula.
   // \underline              c  puts a line under the following character or subformula.
-  DefMath!("\\overline Digested", "\u{00AF}",  operator_role => "OVERACCENT"); // MACRON
+  // Perl: TeX_Math.pool.ltxml lines 951-987
+  // Note that (over|under) brace accents act like \limit, but lines, arrows do NOT!
+  DefMath!("\\lx@math@overline{}", "\u{00AF}", operator_role => "OVERACCENT",
+    operator_stretchy => true, name => "overline", alias => "\\overline");
+  DefConstructor!(
+    "\\lx@text@overline{}",
+    "<ltx:text framed='overline' _noautoclose='true'>#1</ltx:text>",
+    enter_horizontal => true
+  );
   DefMath!("\\lx@math@underline{}", "\u{00AF}", operator_role => "UNDERACCENT",
-    name => "underline", alias => "\\underline");
+    operator_stretchy => true, name => "underline", alias => "\\underline");
   DefConstructor!(
     "\\lx@text@underline{}",
-    "<ltx:text framed='underline' _noautoclose='true'>#1</ltx:text>"
+    "<ltx:text framed='underline' _noautoclose='true'>#1</ltx:text>",
+    enter_horizontal => true
   );
   DefMath!("\\lx@math@overrightarrow{}", "\u{2192}", operator_role => "OVERACCENT",
-    name => "overrightarrow", alias => "\\overrightarrow");
+    operator_stretchy => true, name => "overrightarrow", alias => "\\overrightarrow");
   DefMath!("\\lx@math@overleftarrow{}", "\u{2190}", operator_role => "OVERACCENT",
-    name => "overleftarrow", alias => "\\overleftarrow");
+    operator_stretchy => true, name => "overleftarrow", alias => "\\overleftarrow");
+  DefMath!("\\lx@math@underrightarrow{}", "\u{2192}", operator_role => "UNDERACCENT",
+    operator_stretchy => true, name => "underrightarrow", alias => "\\underrightarrow");
+  DefMath!("\\lx@math@underleftarrow{}", "\u{2190}", operator_role => "UNDERACCENT",
+    operator_stretchy => true, name => "underleftarrow", alias => "\\underleftarrow");
+  DefMath!("\\lx@math@overbrace{}", "\u{23DE}", operator_role => "OVERACCENT",
+    scriptpos => "mid", operator_stretchy => true,
+    name => "overbrace", alias => "\\overbrace", robust => true);
+  DefMath!("\\lx@math@underbrace{}", "\u{23DF}", operator_role => "UNDERACCENT",
+    scriptpos => "mid", operator_stretchy => true,
+    name => "underbrace", alias => "\\underbrace", robust => true);
 
-  // Careful: Use \protect so that it doesn"t expand too early in alignments, etc.
+  // Careful: Use \protect so that it doesn't expand too early in alignments, etc.
+  DefMacro!(
+    "\\overline{}",
+    r"\protect\ifmmode\lx@math@overline{#1}\else\lx@text@overline{#1}\fi",
+    locked => true
+  );
   DefMacro!(
     "\\underline{}",
-    r"\protect\ifmmode\lx@math@underline{#1}\else\lx@text@underline{#1}\fi"
+    r"\protect\ifmmode\lx@math@underline{#1}\else\lx@text@underline{#1}\fi",
+    locked => true
   );
 
   //======================================================================
