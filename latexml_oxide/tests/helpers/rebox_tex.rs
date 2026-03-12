@@ -12,6 +12,7 @@ LoadDefinitions!({
 
   // Deferred reuse of Whatsit
   DefConstructor!("\\SaveBox{}", "#1",
+    enter_horizontal => true,
     after_digest => sub[whatsit] {
       state::assign_value("SAVED_WHATSIT", whatsit.get_arg(1), Some(Scope::Global)); });
   DefConstructor!("\\UseBox", "#savedbox",

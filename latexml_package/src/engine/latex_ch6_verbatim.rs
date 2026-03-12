@@ -121,11 +121,13 @@ LoadDefinitions!({
   DefConstructor!("\\@internal@math@verb{} Undigested {}",
     "<ltx:XMTok font='#font'>#3</ltx:XMTok>",
     mode      => "text",
+    enter_horizontal => true,
     font      => { family => "typewriter", series => "medium", shape => "upright" },
     reversion => "\\verb#1#2#3#2");
   DefConstructor!("\\@internal@text@verb{} Undigested {}",
     "<ltx:verbatim font='#font'>#3</ltx:verbatim>",
     font            => { family => "typewriter", series => "medium", shape => "upright" },
+    enter_horizontal => true,
     before_construct => sub[doc,_whatsit] {
       if !document::can_contain(doc.get_element().as_ref().unwrap(), "#PCDATA") {
         doc.open_element("ltx:p", None, None)?;

@@ -87,6 +87,7 @@ LoadDefinitions!({
       ))
     },
     sizer     => "#5",
+    enter_horizontal => true,
     reversion => "#1#2#4#3");
 
   // These are the expansions of \DeclareUrlCommand

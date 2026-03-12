@@ -156,19 +156,8 @@ LoadDefinitions!({
   </ltx:equation>",
   alias        => "$$",
   before_digest => {
+    // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
     begin_mode("display_math")?;
-    if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
-      let everymath_toks = everymath_toks.unlist();
-      if !everymath_toks.is_empty() {
-        gullet::unread(Tokens::new(everymath_toks));
-      }
-    }
-    if let Some(RegisterValue::Tokens(everydisplay_toks)) = state::lookup_register("\\everydisplay", Vec::new())? {
-      let everydisplay_toks = everydisplay_toks.unlist();
-      if !everydisplay_toks.is_empty() {
-        gullet::unread(Tokens::new(everydisplay_toks));
-      }
-    }
   },
   properties  => { ref_step_id("equation") },
   capture_body => true);

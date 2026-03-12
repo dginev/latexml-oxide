@@ -158,21 +158,8 @@ LoadDefinitions!({
     before_digest => {
       // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 135)
       enter_horizontal();
+      // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
       begin_mode("display_math")?;
-      // Inject \everymath tokens (Perl: Stomach.pm line 504-507)
-      if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
-        let everymath_toks = everymath_toks.unlist();
-        if !everymath_toks.is_empty() {
-          gullet::unread(Tokens::new(everymath_toks));
-        }
-      }
-      // Inject \everydisplay tokens
-      if let Some(RegisterValue::Tokens(everydisplay_toks)) = state::lookup_register("\\everydisplay", Vec::new())? {
-        let everydisplay_toks = everydisplay_toks.unlist();
-        if !everydisplay_toks.is_empty() {
-          gullet::unread(Tokens::new(everydisplay_toks));
-        }
-      }
     },
     capture_body  => true );
 
@@ -186,13 +173,8 @@ LoadDefinitions!({
     before_digest => {
       // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 151)
       enter_horizontal();
+      // begin_mode handles \everymath injection (Stomach.pm lines 504-507)
       begin_mode("inline_math")?;
-      if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
-        let everymath_toks = everymath_toks.unlist();
-        if !everymath_toks.is_empty() {
-          gullet::unread(Tokens::new(everymath_toks));
-        }
-      }
     },
     capture_body => true);
   DefConstructor!(T_CS!("\\lx@end@inline@math"), None, None,
