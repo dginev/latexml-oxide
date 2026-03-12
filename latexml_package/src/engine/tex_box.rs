@@ -237,7 +237,7 @@ LoadDefinitions!({
       document.maybe_close_element("svg:g")?;
     }
   },
-  mode => "text",
+  mode => "restricted_horizontal",
   bounded => true,
   sizer => "#2",
   //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
@@ -272,7 +272,7 @@ LoadDefinitions!({
       let _block = insert_block(document, contents, string_map!("vattach" => "bottom"));
     },
     sizer       => "#2",
-    mode        => "text",
+    mode        => "internal_vertical",
     after_digest => sub[_whatsit] {
       // TODO: Height arith
         // let spec = whatsit.get_arg(1);
@@ -290,7 +290,7 @@ LoadDefinitions!({
       insert_block(document, contents, string_map!("vattach" => "top"))?;
     },
     // sizer       => '#2',
-    mode        => "text",
+    mode        => "internal_vertical",
     after_digest => sub[_whatsit] {
       // TODO: Height arith
       //   my $spec = $whatsit.get_arg(1);

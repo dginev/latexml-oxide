@@ -41,7 +41,7 @@ LoadDefinitions!({
     "#1",
     reversion    => r"\begin{tabbing}#1\end{tabbing}",
     before_digest => { stomach::bgroup(); },
-    mode         => "text");
+    mode         => "internal_vertical");
 
   DefMacro!("\\@tabbing@tabset", r"\@tabbing@tabset@marker&");
   DefMacro!("\\@tabbing@nexttab", r"\@tabbing@nexttab@marker&");

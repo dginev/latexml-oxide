@@ -101,11 +101,12 @@ LoadDefinitions!({
   // # These may need to float up to where they're allowed,
   // # or they may need to close <p> or similar.
   // TODO: prefix both replacements with ^^ when we can compile them.
-  DefConstructor!("\\@@caption{}", "<ltx:caption>#1</ltx:caption>");
+  DefConstructor!("\\@@caption{}", "<ltx:caption>#1</ltx:caption>",
+    mode => "text");
   DefConstructor!(
     "\\@@toccaption{}",
-    "<ltx:toccaption>#1</ltx:toccaption>" //sizer => 0
-  );
+    "<ltx:toccaption>#1</ltx:toccaption>", //sizer => 0
+    mode => "text");
 
   // TODO: implement optional argument {figure}[]
   DefEnvironment!("{figure}",r###"
@@ -118,7 +119,8 @@ LoadDefinitions!({
     before_digest => { DefMacro!("\\@captype", "figure"); },
     after_digest  => sub[tag] {
       rescue_caption_counters("figure", tag);
-    }
+    },
+    mode => "internal_vertical"
   );
   // DefEnvironment('{figure*}[]',
   //   "<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>"
@@ -133,7 +135,8 @@ LoadDefinitions!({
     // TODO:
     // properties   => { layout => 'vertical' },
     before_digest => { DefMacro!("\\@captype", "table"); },
-    after_digest  => sub[whatsit] { rescue_caption_counters("table", whatsit); });
+    after_digest  => sub[whatsit] { rescue_caption_counters("table", whatsit); },
+    mode => "internal_vertical");
   // DefEnvironment('{table*}[]',
   //   "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>"
   //     . "#tags"

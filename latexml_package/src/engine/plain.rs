@@ -1831,8 +1831,8 @@ LoadDefinitions!({
   // otherwise, to the attribute.
   DefConstructor!("\\footnote{}{}",
     "^<ltx:note role='footnote' ?#mark(mark='#mark')()>?#prenote(#prenote )()#2</ltx:note>",
-    mode => "text", bounded => true,
-    before_digest => sub { reenter_text_mode(true); neutralize_font(); },
+    mode => "internal_vertical",
+    before_digest => sub { neutralize_font(); },
     after_digest => sub[whatsit] {
       let mark_clone = whatsit.get_arg(1).cloned();
       if let Some(mark) = mark_clone {

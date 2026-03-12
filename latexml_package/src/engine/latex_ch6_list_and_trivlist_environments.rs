@@ -44,7 +44,8 @@ LoadDefinitions!({
     "<ltx:itemize>#body</ltx:itemize>",
     properties => {
       begin_itemize("trivlist", None, BeginItemizeOptions::default()) },
-    before_digest_end => { Digest!("\\par")?; }
+    before_digest_end => { Digest!("\\par")?; },
+    mode => "internal_vertical"
   );
 
   DefMacro!("\\trivlist@item", "\\par\\trivlist@item@");

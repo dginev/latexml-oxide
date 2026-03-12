@@ -5,14 +5,13 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: Let('\@block@cr', '\lx@newline');  # Obsolete, but in case still used
   Let!("\\@block@cr", "\\lx@newline");
-  // Perl: mode => 'internal_vertical' — quote/quotation/verse don't override \\ or \par
   DefEnvironment!("{quote}",
     "<ltx:quote>#body</ltx:quote>",
-    mode => "text");
+    mode => "internal_vertical");
   DefEnvironment!("{quotation}",
     "<ltx:quote>#body</ltx:quote>",
-    mode => "text");
+    mode => "internal_vertical");
   DefEnvironment!("{verse}",
     "<ltx:quote role='verse'>#body</ltx:quote>",
-    mode => "text");
+    mode => "internal_vertical");
 });
