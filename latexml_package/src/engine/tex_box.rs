@@ -4,6 +4,17 @@
 
 use crate::prelude::*;
 
+/// Perl: hackVBoxAttachment($box, $valign)
+/// Sets vattach on the box, with special handling for \halign alignment objects.
+fn hack_vbox_attachment(whatsit: &mut Whatsit, valign: &'static str) {
+  if let Some(content_box) = whatsit.get_arg_mut(2) {
+    // Perl: if alignment property exists AND definition is \halign,
+    // copy vattach to alignment's attributes hash. Otherwise set on box.
+    // TODO: Full \halign alignment attribute propagation
+    content_box.set_property("vattach", valign);
+  }
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Box Family of primitive control sequences
@@ -207,16 +218,22 @@ LoadDefinitions!({
     let contents = contents_opt.as_ref().unwrap();
     let current_opt = document.get_element();
 
-    // What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
-    //  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
-    let is_svg  = if let Some(ref current) = current_opt {
+    // Perl: $tag eq 'ltx:_CaptureBlock_' — detect if going into insertBlock
+    let is_svg = if let Some(ref current) = current_opt {
       document::with_node_qname(current, |qname| qname.starts_with("svg:"))
     } else { false };
     let vmode = if let Some(ref current) = current_opt {
-      current.has_attribute("_vertical_mode_")
+      document::with_node_qname(current, |qname| qname == "ltx:_CaptureBlock_")
     } else { false };
+    // Perl: $inline = $document->canContain($current, '#PCDATA')
+    let inline = if let Some(ref current) = current_opt {
+      document::can_contain(current, "#PCDATA")
+    } else { false };
+    // Perl: $newtag = ($issvg ? 'svg:g' : ($vmode ? ($inline ? 'ltx:inline-block' : 'ltx:p')
+    //                                              : 'ltx:text'))
     let newtag = if is_svg { "svg:g" }
-      else if vmode { "ltx:p" } else { "ltx:text" };
+      else if vmode { if inline { "ltx:inline-block" } else { "ltx:p" } }
+      else { "ltx:text" };
     let width : String = if let Some(Stored::Dimension(ref w)) = props.get("width") {
       w.to_attribute()
     } else {
@@ -224,9 +241,6 @@ LoadDefinitions!({
     };
     let node = document.open_element(newtag,
       Some(string_map!("_noautoclose" => "true", "width" => width)), None)?;
-    // Note on the clone: Remember that contents is a Digested,
-    // i.e. we are cloning an Rc<> wrapper, which is relatively cheap.
-    // see the documentation on `Digested` on why we don't have a neater way of dealing with this.
     document.absorb(contents, None)?;
     if !is_svg {
       while !document.get_element().unwrap().has_attribute("_beginscope") &&
@@ -262,6 +276,8 @@ LoadDefinitions!({
     if let Some(w) = width {
       whatsit.set_width(w);
     }
+    // Perl: $whatsit->setProperty(content_box => $box)
+    whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
   });
 
   // TODO:
@@ -277,12 +293,12 @@ LoadDefinitions!({
       }
     },
     sizer       => "#2",
+    properties  => { stored_map!("vattach" => "bottom") },
     mode        => "internal_vertical",
     after_digest => sub[whatsit] {
-      // Perl: hackVBoxAttachment + set is_vbox, content_box
-      if let Some(content_box) = whatsit.get_arg_mut(2) {
-        content_box.set_property("vattach", "bottom");
-      }
+      // Perl: hackVBoxAttachment($box, 'bottom')
+      hack_vbox_attachment(whatsit, "bottom");
+      whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
       whatsit.set_property("is_vbox", true);
       // TODO: Height arith for BoxSpecification 'to'/'spread'
     }
@@ -297,13 +313,13 @@ LoadDefinitions!({
         insert_block(document, contents, string_map!("vattach" => "top"))?;
       }
     },
-    // sizer       => '#2',
+    sizer       => "#2",
+    properties  => { stored_map!("vattach" => "top") },
     mode        => "internal_vertical",
     after_digest => sub[whatsit] {
-      // Perl: hackVBoxAttachment + set is_vbox, content_box
-      if let Some(content_box) = whatsit.get_arg_mut(2) {
-        content_box.set_property("vattach", "top");
-      }
+      // Perl: hackVBoxAttachment($box, 'top')
+      hack_vbox_attachment(whatsit, "top");
+      whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
       whatsit.set_property("is_vbox", true);
       // TODO: Height arith for BoxSpecification 'to'/'spread'
     }
