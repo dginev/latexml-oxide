@@ -31,6 +31,7 @@ use self::template::{Align, Axis, BorderSpec, ColumnSpec, Row, Template, Templat
 use crate::common::arena;
 use crate::common::arena::SymHashMap;
 use crate::common::dimension::Dimension;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::digested::Digested;
@@ -499,8 +500,9 @@ impl BoxOps for Alignment {
         if let Some(ref vattach) = cell.vattach {
           cell_attrs.insert(String::from("vattach"), vattach.clone());
         }
-        // TODO: add to cell_attrs
-        //  width => $$cell{width},
+        if let Some(w) = cell.width {
+          cell_attrs.insert(String::from("width"), w.to_attribute());
+        }
         if let Some(vpad) = vpad_opt {
           cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
         }
