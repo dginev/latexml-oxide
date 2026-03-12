@@ -20,12 +20,15 @@ LoadDefinitions!({
     AssignRegister!("\\lineskip"     , Glue::new_spec("3pt", None, None, None, None).into());
     bgroup(); },
   after_digest => sub[_whatsit] {
-    // TODO
-    // $_[1]->getSize;    # precompute while binding in effect
     egroup()?; },
   // Note: does not get layout=vertical, since linebreaks are explicit
-  // TODO
-  // properties => { align => sub { ($_[1] ? $alignments{ ToString($_[1]) } : undef); },
-  //   vattach => 'bottom' },                # for size computation
+  properties => sub[args] {
+    let align = args[0].as_ref().map(|a| {
+      match a.to_string().as_str() {
+        "l" => "left", "r" => "right", _ => ""
+      }
+    }).unwrap_or("");
+    Ok(stored_map!("align" => align, "vattach" => "bottom"))
+  },
   mode => "text");
 });

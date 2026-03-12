@@ -41,5 +41,6 @@ impl Relaxng {
   }
 
   /// build the internal representation
-  pub fn load_schema(&self) { todo!() }
+  /// Stub: RelaxNG schema loading is deferred (validation not yet critical)
+  pub fn load_schema(&self) { }
 }

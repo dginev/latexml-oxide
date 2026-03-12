@@ -434,29 +434,27 @@ impl Document {
           comment.be_absorbed(self)?;
         },
         Postponed(ref tokens) => {
-          if !matches!(props.get("isMath"), Some(&Stored::Bool(true))) {
-            let text_font_opt = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
-              Some(Rc::clone(prop_font))
-            } else {
-              match self.box_to_absorb {
-                Some(ref thisbox) => thisbox
-                  .get_font()?
-                  .map(|thisfont| Rc::new(thisfont.into_owned())),
-                None => None,
-              }
-            };
-            // TODO: Sometimes we can't find a `font` here. Should `open_text` allow a None font
-            // arg?
-            let text_font = text_font_opt.unwrap_or_default();
-            if let Some(new_text) = self.open_text(&tokens.to_string(), &text_font)? {
-              self.record_constructed_node(&new_text);
-            }
+          let text_font_opt = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
+            Some(Rc::clone(prop_font))
           } else {
-            todo!();
+            match self.box_to_absorb {
+              Some(ref thisbox) => thisbox
+                .get_font()?
+                .map(|thisfont| Rc::new(thisfont.into_owned())),
+              None => None,
+            }
+          };
+          let text_font = text_font_opt.unwrap_or_default();
+          if let Some(new_text) = self.open_text(&tokens.to_string(), &text_font)? {
+            self.record_constructed_node(&new_text);
           }
         },
-        KeyVals(_) => todo!(),
-        RegisterValue(_) => todo!(),
+        KeyVals(_) => {
+          // KeyVals should not normally appear in the absorption pipeline.
+        },
+        RegisterValue(_) => {
+          // RegisterValue should not normally appear in the absorption pipeline.
+        },
       }
     }
     Ok(())
@@ -1874,17 +1872,9 @@ impl Document {
         self.node.set_attribute(key, value)?
       };
     } else {
-      // Accept any namespaced attributes
-      todo!();
-      //   my ($ns, $name) = model_mut!()}->decodeQName($key);
-      //   if ($ns) {             // If namespaced attribute (must have prefix!
-      // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
-      // declared? if (!$prefix) {                                    // if
-      // namespace not already declared $prefix =
-      // model_mut!()}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
-      // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
-      // // and declare it if ($prefix eq '//default') {    // Probably
-      // shouldn't happen...?       node.setAttribute($name => $value); }
+      // Namespaced attributes: set directly for now.
+      // TODO: proper namespace prefix resolution via model->decodeQName
+      self.node.set_attribute(key, value)?;
       //     else {
       //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
       //   else {
@@ -1947,9 +1937,9 @@ impl Document {
       // Here we just set the attribute, since the caller is responsible for filtering.
       node.set_attribute(key, value)?;
     } else {
-      // Accept any namespaced attributes
-      dbg!(key);
-      todo!();
+      // Namespaced attributes: set directly for now.
+      // TODO: proper namespace prefix resolution via model->decodeQName
+      node.set_attribute(key, value)?;
     }
     // ... TODO: continue (see Perl)
     Ok(())

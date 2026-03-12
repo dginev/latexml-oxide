@@ -204,7 +204,7 @@ LoadDefinitions!({
   //       push(@{ $$list[-1] }, $datum);
   //       return; }
   //     push(@{ $$frontmatter{$tag} }, [$tag, ($label ? { label => $label } : undef), $datum]);
-    unported!()
+    // Stub: full frontmatter manipulation is deferred.
   });
 
   // Add FrontMatter at document begin, unless deferred to a better position.

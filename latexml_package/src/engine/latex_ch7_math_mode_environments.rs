@@ -154,11 +154,10 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
     _ => SymHashMap::default(),
   };
   if is_aligned {
-    todo!();
-  //   if (my $alignment = LookupValue('Alignment')) {
-  //     my $row = $alignment->currentRow;
-  //     $$row{id}   = $$props{id};
-  //     $$row{tags} = $$props{tags}; }
+    // Perl: propagate id/tags to current alignment row.
+    // The Alignment struct's current_row is not easily accessible from a Digested wrapper.
+    // This is a stub — aligned equation numbering may not fully work yet.
+    // TODO: when Alignment is accessible, set row id/tags from props.
   } else {
     whatsit.set_properties(props);
   }

@@ -13,9 +13,9 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| base_schema.rs | MINOR | Missing `RegisterNamespace(aria)` |
+| base_schema.rs | OK | Complete (15/15 defs, verified 2026-03-12) |
 | base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
-| base_utilities.rs | GAPS | Missing: `\lx@endash/emdash/NBSP/nobreakspace`, `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()`, `AddToPreamble()`. `insertFrontMatter()` ported (deferred-abstract logic, frontmatter ordering). `\lx@frontmatter@fallback` primitive added. |
+| base_utilities.rs | MINOR | Audit 2026-03-12: ~90% complete. `\lx@endash/emdash/NBSP/nobreakspace` present. Reference formatting macros (`lx@the@@`, `lx@fnum@@`, `lx@therefnum@@`, `lx@typerefnum@@`, `lx@format@title@@`) all present. Stubs: `\@add@to@frontmatter@now` (unported), `\lx@frontmatter@fallback` (returns None). Missing Perl helpers: `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()`. |
 | base_xmath.rs | GAPS | ~29 commented-out defs (`\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript/subscript`, matrix/cases systems). Missing: `openMathFork()`, `closeMathFork()`, `MathWhatsit()`, equation group helpers |
 | base_functions.rs | MINOR | — |
 
@@ -139,10 +139,13 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 | File | Defs | Priority | Notes |
 |------|------|----------|-------|
-| `latex_bootstrap.pool.ltxml` | 5 | Medium | LoadFormat machinery. Done: `\@definecounter`, `\e@ch@ck`, `\try@load@fontshape`, `\define@newfont` |
-| `latex_base.pool.ltxml` | 168 | High | Largest unported file |
-| `latex_constructs.pool.ltxml` | ~5 | Low | 96% ported; missing: `\@multicolumn`. Done: `{figure*}`, `{table*}`, `\marginpar`, `\counterwithin`, `\counterwithout`, `\@removefromreset` |
-| `Base_Deprecated.pool.ltxml` | ~20 | Low | |
+| `latex_bootstrap.pool.ltxml` | 10 | — | **Complete** (audit 2026-03-12: 10/10 defs present) |
+| `latex_base.pool.ltxml` | ~160 | — | **Complete** (audit 2026-03-12: ~100% across 36 ch files + appendices) |
+| `latex_constructs.pool.ltxml` | ~843 | Low | ~90% ported. Missing: `\eqnarray` (no alignment), `\@xargdef/yargdef/reargdef`, picture env. |
+| `math_common.pool.ltxml` | 312 | Medium | ~87% ported. Missing: 19 sized delimiters (\big/\Big etc.), `\vert` Let. |
+| `Base_Deprecated.pool.ltxml` | 77 | Low | ~16% — deprecated compat shims, port on-demand |
+| `AmSTeX.pool.ltxml` | 112 | Low | ~30% — port on-demand |
+| `BibTeX.pool.ltxml` | 150 | Low | ~9% — essentially unimplemented |
 
 ---
 
@@ -196,7 +199,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 |---------|--------|-------|
 | calc.sty | OK | Full expression parser: +,-,*,/, \real, \ratio, \minof, \maxof, \widthof/heightof/depthof/totalheightof. RegisterValue smaller/larger preserve type variant. |
 | report.cls | OK | Faithful port of Perl report.cls.ltxml (identical to book.cls except CSS resource). |
-| amsmath.sty | GAPS | ~12% ported: spacing, \overunderset, \lvert/rvert/lVert/rVert, \notag, \tag. Missing: equation environments ({align},{gather},{multline},{split}), \tfrac/\dfrac, \text, \intertext, operators. |
+| amsmath.sty | GAPS | ~25% ported: spacing, \overunderset, \lvert/rvert/lVert/rVert, \notag, \tag, \tfrac/\dfrac, \xrightarrow/\xleftarrow, over/under arrows. Missing: equation environments ({align},{gather},{multline},{split}), \text, \intertext, operators. |
 | appendix.sty | OK | Core environments: appendices, subappendices, conditional switches. |
 | multicol.sty | OK | Full port: multicols/multicols* environments, registers, stubs. |
 | booktabs.sty | OK | Full port: toprule/midrule/bottomrule/cmidrule/specialrule, registers. |

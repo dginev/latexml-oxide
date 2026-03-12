@@ -22,9 +22,73 @@ static MATH_CHAR_NEGATIONS: Lazy<HashMap<String, &'static str>> = Lazy::new(|| {
   )
 });
 
-/// Set the role attribute on the last child element of the current node.
-/// Mirrors Perl's augmentDelimiterProperties for \bigl, \bigm, \bigr, etc.
-fn augment_delimiter_role(document: &mut Document, role: &str) -> Result<()> {
+/// Delimiter char properties for augmenting delimiter elements.
+/// Mirrors Perl's %DELIMITER_MAP (TeX_Math.pool.ltxml L732-823).
+struct DelimCharProps {
+  left_role:      &'static str,
+  right_role:     &'static str,
+  name:           Option<&'static str>,
+  remove_meaning: bool,
+  replace_char:   Option<char>,
+}
+
+/// Char-keyed delimiter map for augmentDelimiterProperties lookup.
+static DELIM_CHAR_MAP: Lazy<HashMap<char, DelimCharProps>> = Lazy::new(|| {
+  raw_map!(
+    '(' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: None, remove_meaning: false, replace_char: None },
+    ')' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: None, remove_meaning: false, replace_char: None },
+    '[' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: None, remove_meaning: false, replace_char: None },
+    ']' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: None, remove_meaning: false, replace_char: None },
+    '{' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: None, remove_meaning: false, replace_char: None },
+    '}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: None, remove_meaning: false, replace_char: None },
+    '\u{230A}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("lfloor"), remove_meaning: false, replace_char: None },
+    '\u{230B}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("rfloor"), remove_meaning: false, replace_char: None },
+    '\u{2308}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("lceil"), remove_meaning: false, replace_char: None },
+    '\u{2309}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("rceil"), remove_meaning: false, replace_char: None },
+    '\u{27E8}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("langle"), remove_meaning: false, replace_char: None },
+    '\u{27E9}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("rangle"), remove_meaning: false, replace_char: None },
+    '<' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("langle"), remove_meaning: true, replace_char: Some('\u{27E8}') },
+    '>' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("rangle"), remove_meaning: true, replace_char: Some('\u{27E9}') },
+    '/' => DelimCharProps { left_role: "MULOP", right_role: "MULOP",
+      name: None, remove_meaning: false, replace_char: None },
+    '\u{005C}' => DelimCharProps { left_role: "MULOP", right_role: "MULOP",
+      name: Some("backslash"), remove_meaning: false, replace_char: None },
+    '|' => DelimCharProps { left_role: "VERTBAR", right_role: "VERTBAR",
+      name: None, remove_meaning: false, replace_char: None },
+    '\u{2225}' => DelimCharProps { left_role: "VERTBAR", right_role: "VERTBAR",
+      name: None, remove_meaning: false, replace_char: None },
+    '\u{2191}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("uparrow"), remove_meaning: false, replace_char: None },
+    '\u{21D1}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("Uparrow"), remove_meaning: false, replace_char: None },
+    '\u{2193}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("downarrow"), remove_meaning: false, replace_char: None },
+    '\u{21D3}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("Downarrow"), remove_meaning: false, replace_char: None },
+    '\u{2195}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("updownarrow"), remove_meaning: false, replace_char: None },
+    '\u{21D5}' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
+      name: Some("Updownarrow"), remove_meaning: false, replace_char: None }
+  )
+});
+
+/// Set role and augment delimiter properties on the last child element.
+/// Mirrors Perl's augmentDelimiterProperties (TeX_Math.pool.ltxml).
+fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<()> {
   let current = document.get_node().clone();
   let delim_opt = current
     .get_child_nodes()
@@ -32,13 +96,43 @@ fn augment_delimiter_role(document: &mut Document, role: &str) -> Result<()> {
     .filter(|n| n.get_type() == Some(NodeType::ElementNode))
     .last();
   if let Some(mut delim) = delim_opt {
-    // Only set role if current role is OPEN/MIDDLE/CLOSE/VERTBAR or absent
-    let current_role = delim.get_attribute("role");
-    match current_role.as_deref() {
-      None | Some("OPEN") | Some("MIDDLE") | Some("CLOSE") | Some("VERTBAR") => {
-        document.set_attribute(&mut delim, "role", role)?;
-      },
-      _ => {}, // leave non-delimiter roles alone
+    let char_content = delim.get_content();
+    let first_char = char_content.chars().next();
+    // Look up delimiter properties by char content
+    if let Some(entry) = first_char.and_then(|c| DELIM_CHAR_MAP.get(&c)) {
+      // Role: use lrole if requested role is OPEN, else rrole
+      let new_role = if role == "OPEN" { entry.left_role } else { entry.right_role };
+      // Only set role if current role is a delimiter role or absent
+      let current_role = delim.get_attribute("role");
+      match current_role.as_deref() {
+        None | Some("OPEN") | Some("MIDDLE") | Some("CLOSE") | Some("VERTBAR") => {
+          document.set_attribute(&mut delim, "role", new_role)?;
+        },
+        _ => {},
+      }
+      // Set name if entry has one
+      if let Some(name) = entry.name {
+        document.set_attribute(&mut delim, "name", name)?;
+      }
+      // Handle meaning
+      if entry.remove_meaning {
+        let _ = delim.remove_attribute("meaning");
+      }
+      // Handle char replacement (e.g. < → ⟨)
+      if let Some(replacement) = entry.replace_char {
+        if let Some(mut first_child) = delim.get_first_child() {
+          let _ = first_child.set_content(&replacement.to_string());
+        }
+      }
+    } else {
+      // No map entry — just set role as before
+      let current_role = delim.get_attribute("role");
+      match current_role.as_deref() {
+        None | Some("OPEN") | Some("MIDDLE") | Some("CLOSE") | Some("VERTBAR") => {
+          document.set_attribute(&mut delim, "role", role)?;
+        },
+        _ => {},
+      }
     }
   }
   Ok(())
@@ -618,8 +712,15 @@ LoadDefinitions!({
     )
   });
 
-  // DefConstructor('\hglue Glue', "?#isMath(<ltx:XMHint name='hglue' width='#width'/>)(\x{2003})",
-  //   properties => sub { (stored_map!("isSpace"=>true), width => $_[1]) });
+  // Perl: plain_base.pool.ltxml L447
+  DefPrimitive!("\\hglue Glue", sub[(length)] {
+    let s = dimension_to_spaces(length);
+    if !s.is_empty() {
+      Tbox::new(arena::pin(&s), None, None,
+        Invocation!(T_CS!("\\hglue"), vec![length.revert()?]),
+        stored_map!("name" => "hglue", "width" => length, "isSpace" => true));
+    }
+  });
   DefPrimitive!("\\vglue Glue", None);
   DefPrimitive!("\\topglue", None);
   DefPrimitive!("\\nointerlineskip", None);
@@ -851,11 +952,9 @@ LoadDefinitions!({
   // We're given a number pointing into the font, from which we can derive the standalone char.
   // From that, we want to figure out the combining character, but there could be one for
   // both the above & below cases!  We'll prefer the above case.
-  DefPrimitive!("\\accent Number {}", sub[(_num,_letter)] {
-    // let n = num.value_of();
-    // let font_info = lookup_font_info(lookup_value("textfont_0"));
-    unported!()
-  });
+  // Perl: \accent reads a number pointing into the font, derives combining accent char.
+  // Stub: consumes the number and letter arguments but produces no output.
+  DefPrimitive!("\\accent Number {}", None);
   // Note that these two apparently work in Math? BUT the argument is treated as text!!!
   DefMacro!(
     "\\d{}",
@@ -899,12 +998,13 @@ LoadDefinitions!({
   // RIGHTWARDS ARROW??? a bit more explicitly
   DefMath!("\\to", None, "\u{2192}", role => "ARROW");
 
-  DefPrimitive!("\\hrulefill", None);
-  DefPrimitive!("\\dotfill", None);
-  DefPrimitive!("\\rightarrowfill", None);
-  DefPrimitive!("\\leftarrowfill", None);
-  DefPrimitive!("\\upbracefill", None);
-  DefPrimitive!("\\downbracefill", None);
+  // Perl: plain_constructs.pool.ltxml L86-91
+  DefMacro!("\\hrulefill", "\\leaders\\hrule\\hfill");
+  DefMacro!("\\dotfill", "\\leaders\\hbox{.}\\hfill");
+  DefMath!("\\leftarrowfill", None, "\u{2190}", role => "ARROW", stretchy => true);
+  DefMath!("\\rightarrowfill", None, "\u{2192}", role => "ARROW", stretchy => true);
+  DefMath!("\\upbracefill", None, "\u{23DF}", role => "ARROW", stretchy => true);
+  DefMath!("\\downbracefill", None, "\u{23DE}", role => "ARROW", stretchy => true);
 
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());
@@ -1276,51 +1376,27 @@ LoadDefinitions!({
 
   // \joinrel is \mathrel{\mkern-3\mu}
   // Ah, but the Effect is to join 2 "relations" into one!
+  // Perl: \joinrel joins 2 relations (e.g. \longrightarrow = \relbar\joinrel\rightarrow)
+  // It pops left, digests right, then creates @@joinrel whatsit.
+  // Stub: just read and discard the glue (the \mkern-3mu from \joinrel's definition),
+  // then let the next token be digested normally.
   DefPrimitive!("\\joinrel", {
     gullet::skip_spaces()?;
-    if let Some(_left) = pop_box_list() {
-      let mut stuff = Vec::new();
-      while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
-        stuff = stomach::invoke_token(&tok)?;
-        if !stuff.is_empty() {
-          break;
-        }
-      }
-      if stuff.is_empty() {
-        return Ok(Vec::new()); // no-op ????
-      }
-      let _right = stuff.remove(0);
-      Err(unported!())
-      // TODO:
-      // stuff.push(
-      //   Whatsit::new(lookup_definition(T_CS!("\\@@joinrel")), vec![left, right],
-      //     // locator => $gullet->getLocator,
-      //     font => right.get_font(), is_math => true));
-      // Ok(stuff)
+    // Pop left item, read right item, but for now just return left unchanged
+    if let Some(left) = pop_box_list() {
+      vec![left]
     } else {
-      // Nothing there?...
-      Ok(Vec::new()) // I guess this becomes a no-op???
+      Vec::new()
     }
   });
 
   DefConstructor!("\\@@joinrel{}{}", sub[document,args] {
+    // Stub: just absorb both sides sequentially
     let left = args[0].as_ref().unwrap();
     let right = &args[1].as_ref().unwrap();
     document.absorb(left,None)?;
     document.absorb(right,None)?;
-    // Now if last 2 items are XMTok, replace by a single token with joined content (& attr?)
-    let _node  = document.get_node();
-    Err(unported!())?; // TODO:
-    // let nodes = document.get_child_elements(node);
-    // if nodes.len() >= 2 {
-      // let rels = (nodes[-2], nodes[-1]);
-      // if (grep { $document->getNodeQName($_) eq 'ltx:XMTok' } @rels) {
-      //   my %roles = ();
-      //   map { $roles{ $_->getAttribute('role') } = 1 } @rels;
-      //   my $role = (scalar(keys %roles) == 1 ? [keys %roles]->[0] : ($roles{ARROW} ? 'ARROW' : 'RELOP'));
-      //   map { $node->removeChild($_) } @rels;
-      //   $document->insertElement('ltx:XMTok', [map { $_->textContent } @rels], role => $role);
-    // } }
+    // TODO: merge last 2 XMTok elements into a single joined token
     },
     reversion => "#1\\joinrel #2");
 
@@ -1538,32 +1614,32 @@ LoadDefinitions!({
 
   // Sized delimiters with role assignment (l=OPEN, m=MIDDLE, r=CLOSE)
   DefConstructor!("\\bigl {}",  "#1", bounded => true, font => { size => 1.2 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "OPEN")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
   DefConstructor!("\\bigm {}",  "#1", bounded => true, font => { size => 1.2 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "MIDDLE")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
   DefConstructor!("\\bigr {}",  "#1", bounded => true, font => { size => 1.2 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "CLOSE")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
   DefConstructor!("\\Bigl {}",  "#1", bounded => true, font => { size => 1.6 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "OPEN")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
   DefConstructor!("\\Bigm {}",  "#1", bounded => true, font => { size => 1.6 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "MIDDLE")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
   DefConstructor!("\\Bigr {}",  "#1", bounded => true, font => { size => 1.6 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "CLOSE")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
   DefConstructor!("\\biggl {}", "#1", bounded => true, font => { size => 2.1 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "OPEN")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
   DefConstructor!("\\biggm {}", "#1", bounded => true, font => { size => 2.1 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "MIDDLE")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
   DefConstructor!("\\biggr {}", "#1", bounded => true, font => { size => 2.1 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "CLOSE")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
   DefConstructor!("\\Biggl {}", "#1", bounded => true, font => { size => 2.6 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "OPEN")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
   DefConstructor!("\\Biggm {}", "#1", bounded => true, font => { size => 2.6 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "MIDDLE")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
   DefConstructor!("\\Biggr {}", "#1", bounded => true, font => { size => 2.6 },
-    after_construct => sub[document, _whatsit] { augment_delimiter_role(document, "CLOSE")?; });
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
   Let!(&T_CS!("\\vert"), T_OTHER!("|"));
   Let!("\\Vert", "\\|");

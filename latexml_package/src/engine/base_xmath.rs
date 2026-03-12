@@ -38,7 +38,7 @@ LoadDefinitions!({
   after_construct => sub[document,whatsit] {
     let node    = document.get_node().clone(); // This should be the wrapper just added.
     let meaning = whatsit.get_arg(1).unwrap().to_string();
-    add_meaning_rec(document, node, meaning)?;
+    add_meaning_rec(document, node, &meaning)?;
   });
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Support for constructing mathematical expressions
@@ -258,18 +258,49 @@ LoadDefinitions!({
             None => Tokens!()
           }},
           "dual" => {
-            todo!()
-            // Tokens!(T_CS!("\\lx@dual"))
-            //               : ($r eq 'dual'
-            //                 ? Tokens(T_CS('\lx@dual'), I_keyvals($kvs),
-            //                   T_BEGIN, ($cr || Revert($c)), T_END,
-            //                   T_BEGIN, ($pr || Revert($p)), T_END)
+            // Perl: Tokens(T_CS('\lx@dual'), I_keyvals($kvs),
+            //   T_BEGIN, ($cr || Revert($c)), T_END,
+            //   T_BEGIN, ($pr || Revert($p)), T_END)
+            let c_rev = match &cr {
+              Some(Stored::Reversion(Reversion::Tokens(tks))) => tks.clone(),
+              Some(Stored::Reversion(Reversion::Closure(cl))) => cl(wself,args)?,
+              Some(Stored::Tokens(tks)) => tks.clone(),
+              _ => match c { Some(inner) => inner.revert()?, None => Tokens!() },
+            };
+            let p_rev = match &pr {
+              Some(Stored::Reversion(Reversion::Tokens(tks))) => tks.clone(),
+              Some(Stored::Reversion(Reversion::Closure(cl))) => cl(wself,args)?,
+              Some(Stored::Tokens(tks)) => tks.clone(),
+              _ => match p { Some(inner) => inner.revert()?, None => Tokens!() },
+            };
+            let mut tks = vec![T_CS!("\\lx@dual"), T_BEGIN!()];
+            tks.extend(c_rev.unlist());
+            tks.push(T_END!());
+            tks.push(T_BEGIN!());
+            tks.extend(p_rev.unlist());
+            tks.push(T_END!());
+            Tokens::new(tks)
           },
           _other => {
-            todo!()
-            //                 : (($LaTeXML::DUAL_BRANCH || '') eq 'presentation'    # Context dependent reversion
-            //                   ? $pr || Revert($p)
-            //                   : $cr || Revert($c))))); }
+            // Context-dependent reversion: use presentation if DUAL_BRANCH is "presentation",
+            // otherwise use content
+            let dual_branch = state::lookup_value("DUAL_BRANCH")
+              .map(|v| v.to_string()).unwrap_or_default();
+            if dual_branch == "presentation" {
+              match &pr {
+                Some(Stored::Reversion(Reversion::Tokens(tks))) => tks.clone(),
+                Some(Stored::Reversion(Reversion::Closure(cl))) => cl(wself,args)?,
+                Some(Stored::Tokens(tks)) => tks.clone(),
+                _ => match p { Some(inner) => inner.revert()?, None => Tokens!() },
+              }
+            } else {
+              match &cr {
+                Some(Stored::Reversion(Reversion::Tokens(tks))) => tks.clone(),
+                Some(Stored::Reversion(Reversion::Closure(cl))) => cl(wself,args)?,
+                Some(Stored::Tokens(tks)) => tks.clone(),
+                _ => match c { Some(inner) => inner.revert()?, None => Tokens!() },
+              }
+            }
           }
         };
         Ok(reverted)
@@ -819,16 +850,23 @@ LoadDefinitions!({
   // TODO: Continue MathFork and equationgroup
 });
 
-pub fn add_meaning_rec(_document: &mut Document, _node: Node, _meaning: String) -> Result<()> {
-  // if ($node->nodeType == XML_ELEMENT_NODE) {
-  //   my $qname = $document->getModel->getNodeQName($node);
-  //   if    ($qname eq 'ltx:XMArg') { }              # DONT cross through into arguments!
-  //   elsif ($qname eq 'ltx:XMTok') {
-  //     if ((($node->getAttribute('role') || 'UNKNOWN') eq 'UNKNOWN')
-  //       && !$node->getAttribute('meaning')) {
-  //       $document->setAttribute($node, meaning => $meaning); } }
-  //   else {
-  //     foreach my $c ($node->childNodes) {
-  // addMeaningRec($document, $c, $meaning); } } }
-  todo!()
+/// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
+pub fn add_meaning_rec(document: &mut Document, node: Node, meaning: &str) -> Result<()> {
+  if node.get_type() != Some(NodeType::ElementNode) {
+    return Ok(());
+  }
+  let qname = document::get_node_qname(&node);
+  if qname == arena::pin_static("ltx:XMArg") {
+    // DON'T cross through into arguments
+  } else if qname == arena::pin_static("ltx:XMTok") {
+    let role = node.get_attribute("role").unwrap_or_default();
+    if (role.is_empty() || role == "UNKNOWN") && !node.has_attribute("meaning") {
+      document.set_attribute(&mut node.clone(), "meaning", meaning)?;
+    }
+  } else {
+    for child in node.get_child_nodes() {
+      add_meaning_rec(document, child, meaning)?;
+    }
+  }
+  Ok(())
 }

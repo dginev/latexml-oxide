@@ -749,6 +749,9 @@ impl From<Dimension> for Stored {
 impl From<MuDimension> for Stored {
   fn from(value: MuDimension) -> Self { Stored::MuDimension(value) }
 }
+impl From<Glue> for Stored {
+  fn from(value: Glue) -> Self { Stored::Glue(value) }
+}
 impl From<MuGlue> for Stored {
   fn from(value: MuGlue) -> Self { Stored::MuGlue(value) }
 }
