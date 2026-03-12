@@ -8,6 +8,17 @@ LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Box Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  // Perl: TeX_Box.pool.ltxml lines 50-55
+  // Hidden bgroup/egroup: scoping without visible { } in reversion
+  DefConstructor!("\\lx@hidden@bgroup", "#body",
+    before_digest => { bgroup(); },
+    capture_body => true
+  );
+  DefConstructor!("\\lx@hidden@egroup", "",
+    after_digest => sub[_whatsit] { egroup()?; }
+  );
+
   //======================================================================
   // These define the handler for { } (or anything of catcode BEGIN, END)
 
