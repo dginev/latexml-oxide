@@ -86,7 +86,7 @@ pub fn split(pathname: &str) -> (String, String, String) {
     Some(dir) => dir.to_string_lossy().to_string(),
     None => String::new(),
   };
-  let name = match canonical_path.file_name() {
+  let name = match canonical_path.file_stem() {
     Some(n) => n.to_string_lossy().to_string(),
     None => String::new(),
   };
