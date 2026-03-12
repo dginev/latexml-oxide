@@ -1258,7 +1258,7 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         let decimal = i64::from_str_radix(&read_digits(&HEX_RE, true)?, 16)?;
         Ok(Some(Number::new(decimal)))
       } else if token == T_OTHER!("`") {
-        //  Read Charcode
+        //  Read Charcode: `<character token><one optional space>
         let mut s = match read_token()? {
           None => String::new(),
           Some(next) => next.to_string(),
@@ -1267,6 +1267,8 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
           s.remove(0);
         }
         let s_char = s.chars().next().unwrap();
+        // Perl: skip1Space($self, 1); — consume one optional space after charcode
+        skip_one_space()?;
         Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
       } else {
         unread_one(token); // Unread
