@@ -44,8 +44,8 @@ LoadDefinitions!({
   DefRegister!("\\oddsidemargin"   => Dimension::new(0));
   DefRegister!("\\marginparwidth"  => Dimension::new(0));
   DefRegister!("\\marginparsep"    => Dimension::new(0));
-  DefRegister!("\\columnwidth"     => Dimension!("345pt"));
-  DefRegister!("\\linewidth"       => Dimension!("345pt"));
+  DefRegister!("\\columnwidth"     => Dimension!("6in"));
+  DefRegister!("\\linewidth"       => Dimension!("6in"));
   DefRegister!("\\baselinestretch" => Dimension::new(0));
   // Perl: latex_base.pool.ltxml lines 309-311
   DefRegister!("\\columnsep"       => Dimension::new(0));
