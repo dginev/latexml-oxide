@@ -14,11 +14,41 @@ LoadDefinitions!({
   // C.1.6 The \\ Command
   //======================================================================
   // In math, \\ is just a formatting hint, unless within an array, cases, .. environment.
-  DefConstructor!("\\\\ OptionalMatch:* [Glue]",
-    "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
+  // Perl: DefConstructor('\lx@newline OptionalMatch:* [Glue]', sub { ... });
+  // Complex constructor that checks document context:
+  //   - in math: insert <ltx:XMHint name='newline'/>
+  //   - no context or _CaptureBlock_: skip
+  //   - ltx:p with parent _CaptureBlock_: maybeCloseElement('ltx:p')
+  //   - can contain ltx:break: insert <ltx:break/>
+  DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document] {
+    if lookup_bool("IN_MATH") {
+      document.insert_element("ltx:XMHint", Vec::new(), Some(map!("name" => s!("newline"))))?;
+    } else {
+      if let Some(context) = document.get_element() {
+        let tag = document::get_node_qname(&context);
+        let capture_block = arena::pin_static("ltx:_CaptureBlock_");
+        if tag == capture_block {
+          // skip, if in insertBlock
+        } else if tag == arena::pin_static("ltx:p") {
+          // Close <p> if parent is _CaptureBlock_
+          if let Some(parent) = context.get_parent() {
+            if document::get_node_qname(&parent) == capture_block {
+              document.maybe_close_element("ltx:p")?;
+            } else if document::can_contain(&context, "ltx:break") {
+              document.insert_element("ltx:break", Vec::new(), None)?;
+            }
+          }
+        } else if document::can_contain(&context, "ltx:break") {
+          document.insert_element("ltx:break", Vec::new(), None)?;
+        }
+      }
+      // else: no context => skip
+    }
+  },
     reversion => Tokens!(T_CS!("\\\\"), T_CR!()),
     properties => { stored_map!("isBreak" => true) },
   );
+  Let!("\\\\", "\\lx@newline");
 
   DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
     reversion  => Tokens!(T_CS!("\\newline"), T_CR!()),

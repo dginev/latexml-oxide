@@ -52,9 +52,8 @@ LoadDefinitions!({
   // \deadcycles       iq is the number of times \output was called since the last \shipout.
   // \maxdeadcycles    pi is the maximum allowed value of \deadcycles before an error is generated.
   // Perl: $stomach->leaveHorizontal; $stomach->getGullet->flush;
-  // TODO: leave_horizontal() before flush — fires \par which can fail if stack is
-  // already unwound at end-of-document. Needs investigation.
   DefPrimitive!("\\lx@end@document", {
+    leave_horizontal()?;
     gullet::flush();
   });
   Let!("\\end", "\\lx@end@document");
