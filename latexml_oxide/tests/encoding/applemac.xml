@@ -127,7 +127,7 @@
               </Math></td>
             <td align="center"><Math mode="inline" tex="\partial" text="partial-differential" xml:id="S1.p1.m7">
                 <XMath>
-                  <XMTok meaning="partial-differential" name="partial" role="OPERATOR">∂</XMTok>
+                  <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\Sigma" text="Sigma" xml:id="S1.p1.m8">
@@ -166,7 +166,7 @@
             <td align="center">¡</td>
             <td align="center"><Math mode="inline" tex="\lnot" text="not" xml:id="S1.p1.m13">
                 <XMath>
-                  <XMTok meaning="not" name="lnot" role="FUNCTION">¬</XMTok>
+                  <XMTok meaning="not" name="lnot" role="BIGOP">¬</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\surd" text="square-root" xml:id="S1.p1.m14">
@@ -253,12 +253,12 @@
             <td align="center">Û</td>
             <td align="center">Ù</td>
             <td align="center">ı</td>
-            <td align="center">^</td>
-            <td align="center">~</td>
+            <td align="center">ˆ</td>
+            <td align="center">˜</td>
             <td align="center">¯</td>
             <td align="center">˘</td>
             <td align="center">˙</td>
-            <td align="center">o</td>
+            <td align="center">˚</td>
             <td align="center">¸</td>
             <td align="center">˝</td>
             <td align="center">˛</td>
