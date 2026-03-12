@@ -833,5 +833,26 @@ fn xnew(text: String) -> XProps {
   }
 }
 
-// fn absent() -> XM {
-//   new_props(Some(Cow::Borrowed("absent")), None, None).into() }
+fn absent() -> XM {
+  let props = XProps {
+    meaning: Some(Cow::Borrowed("absent")),
+    ..XProps::default()
+  };
+  props.into()
+}
+
+/// Prefix arrow: `→ expr` becomes `Apply(→, absent, expr)` — matching Perl's `AnyOp Expression`
+pub fn prefix_arrow_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => arrowop, right);
+  Ok(Some(XM::Apply(
+    arrowop.into(),
+    Args(vec![Some(absent()), right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}

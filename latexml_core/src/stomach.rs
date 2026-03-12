@@ -18,6 +18,7 @@ use crate::state::*;
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
+use crate::definition::register::RegisterValue;
 use crate::{BoxOps, Digested, TexMode, gullet};
 
 /// Hook for decoding math characters (Perl: decodeMathChar).
@@ -368,12 +369,18 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
     assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
     set_mode(bound_mode)?;
-    // Perl: inject \everymath / \everydisplay tokens (Stomach.pm lines 504-507)
-    // NOTE: This injection is already handled by individual math mode
-    // constructors in tex_math.rs ($, $$, \(, \[, etc.), so enabling it
-    // here in begin_mode would cause DOUBLE injection. Only enable when
-    // the tex_math.rs constructors stop doing their own injection.
-    // TODO: consolidate everymath injection to this single location.
+    // Perl Stomach.pm lines 504-507: inject \everymath or \everydisplay tokens
+    // Display math gets \everydisplay, inline math gets \everymath (not both).
+    if bound_mode.contains("math") {
+      let is_display = bound_mode == "display_math";
+      let reg_name = if is_display { "\\everydisplay" } else { "\\everymath" };
+      if let Some(RegisterValue::Tokens(toks)) = lookup_register(reg_name, Vec::new())? {
+        let toks = toks.unlist();
+        if !toks.is_empty() {
+          gullet::unread(Tokens::new(toks));
+        }
+      }
+    }
     Ok(())
   } else {
     Warn!("unexpected", mode, s!("Cannot enter {mode} mode"));

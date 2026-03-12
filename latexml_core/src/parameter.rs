@@ -367,13 +367,8 @@ impl Parameter {
     mut value_arg: ArgWrap,
     _fordefn: Option<&Constructor>,
   ) -> Result<Option<Digested>> {
-    // TODO: Perl captures MODE before/after digestion and calls leaveHorizontal_internal
-    // if mode changed and original mode wasn't 'horizontal'. Deferred until MODE tracking
-    // infrastructure is fully mature (currently causes percent_test regression).
-    // Perl: my $mode = $STATE->lookupValue('MODE');
-    //   ... (digest) ...
-    //   my $newmode = $STATE->lookupValue('MODE');
-    //   $stomach->leaveHorizontal_internal if ($mode ne $newmode) && ($mode ne 'horizontal');
+    // Perl Parameter.pm lines 122,139-141: capture MODE, check after digest
+    let mode = lookup_string("MODE");
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes();
@@ -432,6 +427,12 @@ impl Parameter {
     }
 
     self.revert_catcodes()?;
+
+    // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
+    let newmode = lookup_string("MODE");
+    if mode != newmode && mode != "horizontal" {
+      crate::stomach::leave_horizontal_internal();
+    }
 
     Ok(digested_value)
   }

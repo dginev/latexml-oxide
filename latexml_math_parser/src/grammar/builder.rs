@@ -89,7 +89,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     // Formula
     formula = expression
-      | formula relop expression => infix_relation;
+      | formula relop expression => infix_relation
+      | formula arrow expression => infix_relation
+      | arrow expression => prefix_arrow_apply;
 
     statement = formula
       | statement metarelop formula => infix_relation;
@@ -146,7 +148,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | scripted_factor_r11 postsubarg => postfix_script;
     factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
-    anyop = addop | mulop | relop | metarelop
+    anyop = addop | mulop | relop | arrow | metarelop
       | bigop | sumop | intop
       | limitop | diffop | vertbar | supop;
 
