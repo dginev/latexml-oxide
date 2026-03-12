@@ -2,6 +2,8 @@ use crate::Object;
 use crate::common::error::*;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::RegisterType;
+use crate::definition::register::RegisterValue;
+use crate::digested::Digested;
 use crate::mouth;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
@@ -11,6 +13,10 @@ use std::fmt;
 pub struct Number(pub i64);
 impl Object for Number {
   fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.0.to_string()))) }
+  // Perl: beDigested returns $self (duck typing). In Rust, wrap as RegisterValue.
+  fn be_digested(self) -> Result<Digested> {
+    Ok(Digested::from(RegisterValue::Number(self)))
+  }
 }
 impl NumericOps for Number {
   fn new(number: i64) -> Self { Number(number) }
