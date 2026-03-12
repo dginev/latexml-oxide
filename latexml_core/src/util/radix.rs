@@ -74,7 +74,7 @@ const RMLETTERS: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
 pub fn radix_roman(mut n: i64) -> String {
   let mut s = String::new();
   let mut div = 1000;
-  if n > div {
+  if n >= div {
     s = (0..(n / div)).map(|_| 'm').collect::<String>();
   }
 
