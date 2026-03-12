@@ -70,7 +70,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 | latex_ch3_sentences_and_paragraphs.rs | OK | `enterHorizontal` now auto via `mode => "text"` |
 | latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag`. `backmatterelement` property for appendix sections implemented (matches Perl `find_insertion_point` behavior). |
 | latex_ch5_packages.rs | MINOR | Done: `\PassOptionsToPackage/Class`, `\OptionNotUsed`, `\@unknownoptionerror`. Missing: `\@onefilewithoptions`, `ProcessOptions` inorder flag |
-| latex_ch7_math_mode_environments.rs | GAPS | Missing: equation numbering, `\nonumber`, `\tag`, `\lefteqn`, `\intertext`, eqnarray |
+| latex_ch7_math_mode_environments.rs | GAPS | Done: `retract_equation()`, `\nonumber`, `\lx@equation@nonumber`, `\lx@equation@retract`, `\lx@equation@settag`/`@`, `{equation*}`, `after_equation` postset branch. Missing: `\lefteqn`, `\intertext`, eqnarray, `{align}`/`{gather}`/`{multline}` |
 | latex_ch7_math_common_structures.rs | GAPS | Missing: `\frac` sizer, mathstyle property calc |
 | latex_ch7_math_common_delimiters.rs | EMPTY | 0% ported |
 | latex_ch8_defining_commands.rs | GAPS | Missing: `\DeclareMathAccent`, `\DeclareFontShape/Family`, many font declaration primitives |
@@ -195,7 +195,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 |---------|--------|-------|
 | calc.sty | OK | Full expression parser: +,-,*,/, \real, \ratio, \minof, \maxof, \widthof/heightof/depthof/totalheightof. RegisterValue smaller/larger preserve type variant. |
 | report.cls | OK | Faithful port of Perl report.cls.ltxml (identical to book.cls except CSS resource). |
-| amsmath.sty | GAPS | ~8% ported: spacing (\medspace etc), \lvert/rvert/lVert/rVert, \overunderset. Missing: equation environments, \tfrac/\dfrac, \text, \intertext, operators. |
+| amsmath.sty | GAPS | ~12% ported: spacing, \overunderset, \lvert/rvert/lVert/rVert, \notag, \tag. Missing: equation environments ({align},{gather},{multline},{split}), \tfrac/\dfrac, \text, \intertext, operators. |
 | appendix.sty | OK | Core environments: appendices, subappendices, conditional switches. |
 | multicol.sty | OK | Full port: multicols/multicols* environments, registers, stubs. |
 | booktabs.sty | OK | Full port: toprule/midrule/bottomrule/cmidrule/specialrule, registers. |
