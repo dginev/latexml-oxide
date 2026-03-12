@@ -193,16 +193,58 @@ LoadDefinitions!({
 
   //======================================================================
   // Framing support
-  DefConstructor!("\\lx@addframing", sub[document, _args] {
+  // Perl: ntheorem.sty.ltxml lines 213-220
+  DefConstructor!("\\lx@addframing", sub[document, _args, props] {
     let mut node = document.get_element().unwrap();
     document.set_attribute(&mut node, "framed", "rectangle")?;
+    // Add padding from \FrameSep register
+    if let Some(Stored::String(margin)) = props.get("margin") {
+      let margin_str = arena::with(*margin, |s| s.to_string());
+      let pad = s!("padding:{}pt;", margin_str);
+      let existing = node.get_attribute("cssstyle").unwrap_or_default();
+      let css = if existing.is_empty() { pad } else { s!("{};{}", existing, pad) };
+      document.set_attribute(&mut node, "cssstyle", &css)?;
+    }
+  },
+  properties => sub[_args] {
+    let margin = LookupRegisterOrDefault!("\\FrameSep");
+    let pt_val = match margin {
+      RegisterValue::Dimension(d) => d.pt_value(None),
+      _ => 9.0, // default 3*\fboxsep = 9pt
+    };
+    Ok(stored_map!("margin" => s!("{}", pt_val)))
   });
 
+  // Perl: ntheorem.sty.ltxml lines 228-248
+  // Executes \theoremframecommand on dummy text, captures result,
+  // and copies background/frame attributes to the theorem.
   DefMacro!("\\lx@snapshot@framing", "\\lx@@snapshot@framing{\\theoremframecommand{foo}}");
   DefConstructor!("\\lx@@snapshot@framing{}", sub[document, args] {
-    // Simplified: just mark as framed
-    let mut node = document.get_element().unwrap();
-    document.set_attribute(&mut node, "framed", "rectangle")?;
+    let mut theorem = document.get_element().unwrap();
+    // Absorb the frame command result into a temporary capture element
+    let capture = document.open_element("ltx:_Capture_", None, None)?;
+    if let Some(frame_content) = args[0].as_ref() {
+      document.absorb(frame_content, None)?;
+    }
+    document.close_element("ltx:_Capture_")?;
+    // Extract attributes from the frame result
+    if let Some(frame) = capture.get_first_child() {
+      if let Some(bg) = frame.get_attribute("backgroundcolor") {
+        document.set_attribute(&mut theorem, "backgroundcolor", &bg)?;
+      }
+      if let Some(css) = frame.get_attribute("cssstyle") {
+        let existing = theorem.get_attribute("cssstyle").unwrap_or_default();
+        let combined = if existing.is_empty() { css.clone() } else { s!("{};{}", existing, css) };
+        document.set_attribute(&mut theorem, "cssstyle", &combined)?;
+      }
+      if let Some(framed) = frame.get_attribute("framed") {
+        document.set_attribute(&mut theorem, "framed", &framed)?;
+      }
+      if let Some(fc) = frame.get_attribute("framecolor") {
+        document.set_attribute(&mut theorem, "framecolor", &fc)?;
+      }
+    }
+    document.remove_node(capture);
   });
 
   DefMacro!("\\newframedtheorem{}[]{}[]",
