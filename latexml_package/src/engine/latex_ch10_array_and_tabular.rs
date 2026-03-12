@@ -1,3 +1,4 @@
+use crate::engine::tex_tables::alignment_bindings;
 use crate::prelude::*;
 //======================================================================
 // C.10.2 The array and tabular Environments
@@ -152,22 +153,41 @@ LoadDefinitions!({
   DefMacro!("\\extracolsep{}", None);
 
   // Array and similar environments
-
-  // DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[(pos,template)] {
-  // my $attr = { vattach => translateAttachment($pos),
-  //   role => 'ARRAY' };
-  // # Determine column and row separations, if non default
-  // my $colsep = LookupDimension('\arraycolsep');
-  // if ($colsep && ($colsep->valueOf != LookupDimension('\lx@default@arraycolsep')->valueOf)) {
-  //   $$attr{colsep} = $colsep; }
-  // my $str = ToString(Expand(T_CS('\arraystretch')));
-  // if ($str != 1) {
-  //   $$attr{rowsep} = Dimension(($str - 1) . 'em'); }
-  // alignmentBindings($template, 'math', attributes => $attr);
-  // MergeFont(mathstyle => 'text');
-  // Let("\\\\", '\lx@alignment@newline');
-
-  // });
+  // Perl: latex_constructs.pool.ltxml lines 3792-3809
+  DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[(pos, template)] {
+    let mut attrs = HashMap::default();
+    let attachment = pos.map(|a| translate_attachment(&a.to_string()))
+      .unwrap_or_else(|| translate_attachment(""));
+    attrs.insert(String::from("vattach"), attachment.to_string());
+    attrs.insert(String::from("role"), String::from("ARRAY"));
+    // Determine column and row separations, if non default
+    let colsep = lookup_dimension("\\arraycolsep");
+    if let Some(sep) = colsep {
+      if sep.value_of()
+        != lookup_dimension("\\lx@default@arraycolsep")
+          .unwrap_or_default()
+          .value_of()
+      {
+        attrs.insert(String::from("colsep"), sep.to_attribute());
+      }
+    }
+    let astr = gullet::do_expand(T_CS!("\\arraystretch"))?.to_string();
+    if astr != "1" {
+      if let Ok(astr_f) = astr.parse::<f64>() {
+        if astr_f != 1.0 {
+          let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
+          attrs.insert(String::from("rowsep"), rowsep.to_attribute());
+        }
+      }
+    }
+    alignment_bindings(template, String::from("math"), SymHashMap::default(), attrs);
+    // Perl: if display math, switch to text mathstyle
+    if state::lookup_string("MODE").ends_with("math") {
+      MergeFont!(mathstyle => "text");
+    }
+    Let!("\\\\", "\\lx@alignment@newline");
+    Let!("\\lx@intercol", "\\lx@math@intercol");
+  });
 
   DefMacro!(
     "\\array[]{}",

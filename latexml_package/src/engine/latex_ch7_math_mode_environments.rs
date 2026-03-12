@@ -209,6 +209,11 @@ fn retract_equation() {
   }
 }
 
+// TODO: Perl: latex_constructs.pool.ltxml lines 2287-2325
+// Full eqnarrayBindings() with alignment template, custom containers,
+// row hooks, and rearrangeEqnarray post-processing. Deferred until
+// alignment-based eqnarray infrastructure is fully ported.
+
 LoadDefinitions!({
   DefMacro!("\\@eqnnum", "(\\theequation)", locked => true);
   DefMacro!("\\fnum@equation", "\\@eqnnum");
@@ -357,6 +362,70 @@ LoadDefinitions!({
       result
     }
   }, protected => true);
+
+  // TODO: Perl latex_constructs.pool.ltxml lines 2237-2239
+  // \@equationgroup@numbering RequiredKeyVals — full impl needs alignment-based eqnarray
+  // DefPrimitive!("\\@equationgroup@numbering RequiredKeyVals", sub[(kv_opt)] { ... });
+
+  // Perl: latex_constructs.pool.ltxml lines 2262-2335
+  // Full eqnarray with alignment is complex; using simplified environment for now
+  // that produces equationgroup > equation > Math structure.
+  // TODO: implement full eqnarrayBindings with alignment template
+  DefEnvironment!("{eqnarray}",
+    "<ltx:equationgroup class='ltx_eqn_eqnarray' xml:id='#id'>\
+      <ltx:equation xml:id='#eq_id'>#tags\
+        <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
+      </ltx:equation>\
+    </ltx:equationgroup>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!(
+        "numbered" => true, "preset" => true,
+        "deferretract" => true, "grouped" => true));
+      before_equation()?;
+    },
+    properties => sub[_args] {
+      let mut props = ref_step_id("@equationgroup")?;
+      let eq_props = ref_step_id("equation")?;
+      if let Some(eq_id) = eq_props.get("id") {
+        props.insert("eq_id", eq_id.clone());
+      }
+      Ok(props)
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(whatsit)?;
+    },
+    locked => true);
+
+  DefEnvironment!("{eqnarray*}",
+    "<ltx:equationgroup class='ltx_eqn_eqnarray' xml:id='#id'>\
+      <ltx:equation xml:id='#eq_id'>#tags\
+        <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
+      </ltx:equation>\
+    </ltx:equationgroup>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!(
+        "numbered" => true, "preset" => true,
+        "retract" => true, "grouped" => true));
+      before_equation()?;
+    },
+    properties => sub[_args] {
+      let mut props = ref_step_id("@equationgroup")?;
+      let eq_props = ref_step_id("equation")?;
+      if let Some(eq_id) = eq_props.get("id") {
+        props.insert("eq_id", eq_id.clone());
+      }
+      Ok(props)
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(whatsit)?;
+    },
+    locked => true);
+
+  // Perl: latex_constructs.pool.ltxml lines 2258-2259
+  Let!("\\displ@y", "\\displaystyle");
+  DefMacro!("\\@lign", None, None);
 
   Tag!("ltx:equationgroup", auto_close => true);
 

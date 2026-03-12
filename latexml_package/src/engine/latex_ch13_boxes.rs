@@ -303,9 +303,9 @@ LoadDefinitions!({
     enter_horizontal => true,
     properties => sub[args] {
       Ok(stored_map!(
-        "offset" => args[0].as_ref().map(|a| a.to_string()).unwrap_or_default(),
-        "width" => args[1].as_ref().map(|a| a.to_string()).unwrap_or_default(),
-        "height" => args[2].as_ref().map(|a| a.to_string()).unwrap_or_default()
+        "offset" => args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
+        "width" => args[1].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
+        "height" => args[2].as_ref().map(|a| a.to_attribute()).unwrap_or_default()
       ))
     }
   );

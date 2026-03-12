@@ -821,7 +821,7 @@ fn textrec(
       .collect::<Vec<_>>()
       .join("")
   } else if tag == arena::pin_static("ltx:XMArray") {
-    textrec_array(&node)
+    textrec_array(&node, document)
   } else {
     s!("[{}]", p_get_value(&node))
   }
@@ -902,14 +902,28 @@ fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document) ->
   }
 }
 
-fn textrec_array(_node: &Node) -> String {
-  // my $name = $node->getAttribute('meaning') || $node->getAttribute('name')
-  // || 'Array';   my @rows = ();
-  //   foreach my $row (element_nodes($node)) {
-  // push(@rows, '[' . join(', ', map { ($_->firstChild ?
-  // textrec($_->firstChild) : '') } element_nodes($row)) . ']'); } return $name
-  // . '[' . join(', ', @rows) . ']';
-  todo!()
+fn textrec_array(node: &Node, document: &Document) -> String {
+  let name = node
+    .get_attribute("meaning")
+    .or_else(|| node.get_attribute("name"))
+    .unwrap_or_else(|| String::from("Array"));
+  let rows: Vec<String> = element_nodes(node)
+    .into_iter()
+    .map(|row| {
+      let cells: Vec<String> = element_nodes(&row)
+        .into_iter()
+        .map(|cell| {
+          if let Some(first_child) = cell.get_first_child() {
+            textrec(&first_child, None, None, document)
+          } else {
+            String::new()
+          }
+        })
+        .collect();
+      format!("[{}]", cells.join(", "))
+    })
+    .collect();
+  format!("{}[{}]", name, rows.join(", "))
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
