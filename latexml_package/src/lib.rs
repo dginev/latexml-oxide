@@ -51,6 +51,8 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "enumitem.sty" => package::enumitem_sty::load_definitions(),
     "epigraph.sty" => package::epigraph_sty::load_definitions(),
     "float.sty" => package::float_sty::load_definitions(),
+    "glossaries.sty" => package::glossaries_sty::load_definitions(),
+    "graphicx.sty" => package::graphicx_sty::load_definitions(),
     "IEEEtran.cls" => package::ieeetran_cls::load_definitions(),
     "url.sty" => package::url_sty::load_definitions(),
     "xargs.sty" => package::xargs_sty::load_definitions(),
@@ -72,6 +74,11 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "cite.sty" => package::cite_sty::load_definitions(),
     "calc.sty" => package::calc_sty::load_definitions(),
     "chngcntr.sty" => package::chngcntr_sty::load_definitions(),
+    "natbib.sty" => package::natbib_sty::load_definitions(),
+    "bibunits.sty" => package::bibunits_sty::load_definitions(),
+    "subcaption.sty" => package::subcaption_sty::load_definitions(),
+    "subfigure.sty" => package::subfigure_sty::load_definitions(),
+    "subfiles.sty" => package::subfiles_sty::load_definitions(),
     _other => return None,
   })
 }
