@@ -7,6 +7,7 @@ use libxml::tree::Node;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Cell {
   pub empty:           bool,
+  pub skippable:       bool,
   pub omitted:         bool,
   pub skipped:         bool,
   pub thead_in_row:    bool,
@@ -22,6 +23,8 @@ pub struct Cell {
   pub cached_depth:    Option<Dimension>,
   pub colspan:         Option<usize>,
   pub colspanned:      Option<usize>,
+  pub rowspan:         Option<usize>,
+  pub rowspanned:      Option<usize>,
   pub boxes:           Option<Digested>,
   pub cell_type:       Option<char>,
   pub content_class:   Option<ColumnSpec>,
@@ -34,7 +37,6 @@ pub struct Cell {
   pub bottom_padding:  Option<usize>,
   pub right_padding:   Option<usize>,
   pub left_padding:    Option<usize>,
-  pub rowspan:         Option<usize>,
   pub vattach:         Option<String>,
   pub cell:            Option<Node>,
   pub x:               Option<Dimension>,

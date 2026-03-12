@@ -480,18 +480,17 @@ impl BoxOps for Alignment {
           continue;
         }
         // Normalize the border attribute
+        // Perl: join(' ', sort(map { split(/ */, $_) } $$cell{border}));
+        //       $border =~ s/(.) \1/$1$1/g;
+        let mut border_chars: Vec<char> =
+          cell.border.chars().filter(|c| !c.is_whitespace()).collect();
+        border_chars.sort();
         let mut border = String::new();
-        let mut border_iter = cell
-          .border
-          .chars()
-          .filter(|c| !c.is_whitespace())
-          .peekable();
-        while let Some(border_c) = border_iter.next() {
-          border.push(border_c);
-          if let Some(next_c) = border_iter.peek() {
-            if border_c != *next_c {
-              border.push(' ');
-            }
+        for (idx, &c) in border_chars.iter().enumerate() {
+          border.push(c);
+          // Space between different consecutive chars, no space between same chars
+          if idx + 1 < border_chars.len() && border_chars[idx + 1] != c {
+            border.push(' ');
           }
         }
         let empty =
@@ -509,9 +508,13 @@ impl BoxOps for Alignment {
         if let Some(vpad) = vpad_opt {
           cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
         }
-        //       (($$cell{colspan} || 1) != 1 ? (colspan  => $$cell{colspan})
-        // : ()),       (($$cell{rowspan} || 1) != 1 ? (rowspan  => $$cell{rowspan})
-        // : ()),
+        // Perl: colspan/rowspan attributes for spanning cells
+        if cell.colspan.unwrap_or(1) != 1 {
+          cell_attrs.insert(String::from("colspan"), cell.colspan.unwrap().to_string());
+        }
+        if cell.rowspan.unwrap_or(1) != 1 {
+          cell_attrs.insert(String::from("rowspan"), cell.rowspan.unwrap().to_string());
+        }
         if !border.is_empty() {
           cell_attrs.insert(String::from("border"), border);
         }

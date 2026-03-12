@@ -72,23 +72,125 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
             .iter()
             .all(|tb| tb.get_property_bool("isSpace")))
           && preserved_boxes(Some(boxes)).is_empty();
+        // Perl: $$cell{skippable} = $empty || isSkippable($boxes);
+        let skippable = empty || boxes.is_skippable();
         cell.cached_width = Some(w);
         cell.cached_height = Some(h);
         cell.cached_depth = Some(d);
         cell.empty = empty;
-        if empty {
+        cell.skippable = skippable;
+        if skippable {
           cell.align = None;
         }
       } else {
         cell.empty = true;
+        cell.skippable = true;
       }
     }
   }
   Ok(())
 }
-// TODO:
-/// Mark any cells that are covered by rowspan or colspan
-pub fn normalize_mark_spans(_alignment: &mut Alignment) -> Result<()> { Ok(()) }
+/// Mark any cells that are covered by rowspan or colspan.
+/// Perl: normalize_mark_spans (Alignment.pm L667-726)
+pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
+  // Examines: rowspan, colspan, pseudorow, empty
+  // Sets: skipped, colspanned, rowspanned
+  let nrows = alignment.rows.len();
+  for i in 0..nrows {
+    let ncols = alignment.rows[i].get_columns().len();
+    for j in 0..ncols {
+      let nc = alignment.rows[i].get_columns()[j].colspan.unwrap_or(1);
+      // scan the row for spanned columns that also span rows! Move rowspan to leading column
+      if nc > 1 {
+        let mut copied_rowspan = None;
+        for jj in (j + 1)..std::cmp::min(j + nc, ncols) {
+          let ccol = &mut alignment.rows[i].get_columns_mut()[jj];
+          ccol.skipped = true;
+          ccol.colspanned = Some(j); // note that this column is spanned by column j
+          if let Some(cnr) = ccol.rowspan {
+            // If this spanned column has rowspan, copy to initial column
+            copied_rowspan = Some(cnr);
+          }
+        }
+        if let Some(cnr) = copied_rowspan {
+          alignment.rows[i].get_columns_mut()[j].rowspan = Some(cnr);
+        }
+      }
+      let nr = alignment.rows[i].get_columns()[j].rowspan.unwrap_or(1);
+      if nr > 1 {
+        // If this column spans rows
+        let ncspan = alignment.rows[i].get_columns()[j].colspan.unwrap_or(1);
+        let mut nrc = nr;
+        let mut actual_nr = nr;
+        let mut ii = i + 1;
+        while nrc > 0 && ii < nrows {
+          // Prescan the columns to make sure they're empty!
+          let mut row_empty = true;
+          let rrow = &alignment.rows[ii];
+          let row_pseudo = rrow.is_pseudo();
+          if !row_pseudo {
+            nrc -= 1;
+          }
+          for jj in j..std::cmp::min(j + ncspan, rrow.get_columns().len()) {
+            if !rrow.get_columns()[jj].skippable {
+              row_empty = false;
+            }
+          }
+          if nrc == 0 {
+            // Done counting
+          } else if !row_empty {
+            // Perl: truncate rowspan if covering non-empty cells
+            let old_nr = actual_nr;
+            actual_nr -= nrc;
+            nrc = 0;
+            Info!(
+              "unexpected",
+              "rowspan",
+              s!(
+                "Rowspan {} in cell({},{}) covers non-empty cells; truncating to {}",
+                old_nr,
+                i,
+                j,
+                actual_nr
+              )
+            );
+          } else {
+            // Mark all spanned columns in this row as skipped
+            for jj in j..std::cmp::min(j + ncspan, alignment.rows[ii].get_columns().len()) {
+              let ccol = &mut alignment.rows[ii].get_columns_mut()[jj];
+              ccol.skipped = true;
+              ccol.rowspanned = Some(i); // note that this column is spanned by row i
+            }
+          }
+          ii += 1;
+        }
+        // Update rowspan if it was truncated
+        if actual_nr != nr {
+          alignment.rows[i].get_columns_mut()[j].rowspan = Some(actual_nr);
+        }
+        // Copy bottom border from last skipped row to the spanning cell
+        if ii > i + 1 {
+          let last_row_idx = ii - 1;
+          let mut sborder = String::new();
+          for jj in j..std::cmp::min(j + nc, alignment.rows[last_row_idx].get_columns().len()) {
+            let border = &alignment.rows[last_row_idx].get_columns()[jj].border;
+            if sborder.is_empty() {
+              // mask all but bottom border
+              let bottom_only: String = border.chars().filter(|c| *c == 'b' || *c == 'B').collect();
+              if !bottom_only.is_empty() {
+                sborder = bottom_only;
+              }
+            }
+          }
+          if !sborder.is_empty() {
+            alignment.rows[i].get_columns_mut()[j].border.push_str(&sborder);
+          }
+        }
+      }
+    }
+  }
+  Ok(())
+}
 /// Scan for and remove empty rows
 /// but copying borders and adjusting rowspan's & colspan's appropriately.
 pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
@@ -100,8 +202,48 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
   let mut rows = init_rows.into_iter().peekable();
   let mut filtered = VecDeque::new();
   while let Some(row) = rows.next() {
-    if row.get_columns().iter().any(|cell| !cell.empty) {
-      // Not empty! so keep it
+    // Perl L742-753: prunable if all cells are skippable (not just empty).
+    // But if some cells are skippable-but-not-empty (only spacing), check if
+    // they're "bracketed" by borders — if so, keep the row.
+    let mut prunable = true;
+    let mut check_bracketting = false;
+    for c in row.get_columns().iter() {
+      if c.skippable && !c.empty {
+        check_bracketting = true;
+      }
+      if !c.skippable {
+        prunable = false;
+      }
+    }
+    if prunable && check_bracketting {
+      // If spacing cells have top borders, check if next row also has top borders
+      let has_top = row
+        .get_columns()
+        .iter()
+        .any(|c| c.border.contains('t') || c.border.contains('T'));
+      if has_top {
+        if let Some(next) = rows.peek() {
+          let next_has_top = next
+            .get_columns()
+            .iter()
+            .any(|c| c.border.contains('t') || c.border.contains('T'));
+          if next_has_top {
+            prunable = false;
+          }
+        } else {
+          // Last row: check for bottom borders
+          let has_bottom = row
+            .get_columns()
+            .iter()
+            .any(|c| c.border.contains('b') || c.border.contains('B'));
+          if has_bottom {
+            prunable = false;
+          }
+        }
+      }
+    }
+    if !prunable {
+      // Not prunable, keep it
       filtered.push_back(row);
     } else if let Some(next) = rows.peek_mut() {
       // Remove empty row, but copy top border to NEXT row
