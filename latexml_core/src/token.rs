@@ -781,8 +781,7 @@ impl Token {
       let display_text = if text.len() == 1 {
         let c = text.chars().next().unwrap() as u16;
         if c < 0x020 {
-          // TODO: sprintf("%04x", c)
-          Cow::Owned(s!("U+{}/{}", c, CONTROLNAME[c as usize]))
+          Cow::Owned(s!("U+{:04x}/{}", c, CONTROLNAME[c as usize]))
         } else {
           Cow::Borrowed(text)
         }

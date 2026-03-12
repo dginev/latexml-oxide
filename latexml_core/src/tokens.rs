@@ -453,45 +453,76 @@ impl Tokens {
     Ok(Tokens::new(rescanned))
   }
 
-  /// Trims outer braces (if they balance each other)
-  /// This also trims whitespace *outer to* the removed braces.
-  pub fn strip_braces(self) -> Self {
-    let mut walker = self.0.into_iter().peekable();
-    let mut back_trailer = None;
-    while let Some(t) = walker.peek() {
-      match t.get_catcode() {
-        Catcode::BEGIN => {
-          while let Some(bt) = walker.next_back() {
-            match bt.get_catcode() {
-              Catcode::SPACE => {},  // skip trailing spaces
-              Catcode::END => break, // match & skip one }
-              _ => {
-                // FAIL: mismatched { ?
-                back_trailer = Some(bt);
-                break;
-              },
-            }
-          }
-          if back_trailer.is_some() {
-            // bail if non-matching {
-            break;
+  /// Trims outer braces (if they balance each other).
+  /// Strips exactly 1 layer of matching outer braces by default.
+  /// Should this also trim whitespace? or only if there are braces?
+  pub fn strip_braces(self) -> Self { self.strip_braces_n(1) }
+
+  /// Trims `layers` outer brace pairs (if they balance each other).
+  /// Also trims whitespace *outer to* the removed braces.
+  /// Follows the Perl Tokens.pm algorithm: first collects all balanced
+  /// brace pairs, then strips from outside-in, only removing pairs that
+  /// span the full remaining width.
+  pub fn strip_braces_n(self, mut layers: usize) -> Self {
+    let tokens = self.0;
+    let n = tokens.len();
+    if n <= 1 {
+      return Tokens::new(tokens);
+    }
+
+    let mut i0: usize = 0;
+    let mut i1: usize = n;
+
+    // skip past spaces at ends
+    while i0 < i1 && tokens[i0].get_catcode() == Catcode::SPACE {
+      i0 += 1;
+    }
+    while i1 > i0 && tokens[i1 - 1].get_catcode() == Catcode::SPACE {
+      i1 -= 1;
+    }
+
+    // Collect balanced pairs (innermost first due to stack order)
+    let mut opens: Vec<usize> = Vec::new();
+    let mut pairs: Vec<(usize, usize)> = Vec::new();
+    for i in i0..i1 {
+      match tokens[i].get_catcode() {
+        Catcode::BEGIN => opens.push(i),
+        Catcode::END => {
+          if let Some(j) = opens.pop() {
+            pairs.push((j, i));
           } else {
-            // move forward on balanced open {
-            walker.next();
+            return Tokens::new(tokens); // Unbalanced: Too many }
           }
         },
-        Catcode::SPACE => {
-          // skip leading spaces
-          walker.next();
-        },
-        _ => break, // keep any other leading case
+        _ => {},
       }
     }
-    let mut collected: Vec<Token> = walker.collect();
-    if let Some(bt) = back_trailer {
-      collected.push(bt)
+    if !opens.is_empty() {
+      return Tokens::new(tokens); // Unbalanced: Too many {
     }
-    Tokens::new(collected)
+
+    // Strip layers from outside-in.
+    // pairs is ordered innermost-first, so pop() gives outermost pair first.
+    while layers > 0 {
+      layers -= 1;
+      if let Some((j0, j1)) = pairs.pop() {
+        if j0 == i0 && j1 == i1 - 1 {
+          i0 += 1;
+          i1 -= 1;
+        }
+      }
+    }
+
+    // Empty after stripping
+    if i0 >= i1 {
+      return Tokens::new(Vec::new());
+    }
+
+    if i0 > 0 || i1 < n {
+      Tokens::new(tokens[i0..i1].to_vec())
+    } else {
+      Tokens::new(tokens)
+    }
   }
 }
 

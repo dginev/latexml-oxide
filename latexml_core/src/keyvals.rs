@@ -684,7 +684,7 @@ impl KeyVals {
           }
           // reparse (and expand) the tokens representing the value
           if !toks.is_empty() {
-            let stripped_toks = Tokens::new(toks).strip_braces();
+            let stripped_toks = Tokens::new(toks).strip_braces_n(2);
             if !stripped_toks.is_empty() {
               if let Some(Stored::Parameter(ref keytype)) = keytype_opt {
                 value = keytype.reparse(stripped_toks)?;

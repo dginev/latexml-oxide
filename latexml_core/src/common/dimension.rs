@@ -43,6 +43,18 @@ impl fmt::Display for Dimension {
 }
 
 impl Dimension {
+  /// Convert dimension to em units, using the given font's EM width (or current font if None).
+  pub fn em_value(&self, prec: Option<u8>, font: Option<&crate::common::font::Font>) -> f64 {
+    let em_width: f64 = if let Some(f) = font {
+      f.get_em_width() as f64
+    } else {
+      lookup_font()
+        .map(|f| f.get_em_width() as f64)
+        .unwrap_or(UNITY_F64 * 10.0) // fallback: 10pt
+    };
+    round_to(self.0 as f64 / em_width, prec)
+  }
+
   pub fn spec_to_f64(spec: &str) -> Result<f64> {
     if spec.is_empty() {
       Ok(0.0)
