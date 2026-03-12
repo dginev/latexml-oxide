@@ -148,9 +148,10 @@ LoadDefinitions!({
       DefMacro!(cs, None, Some(s!(r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
       \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
     }
-    let replacement_value = font::decode(code_value, Some(encoding_str), false).unwrap();
-    let replacement = PrimitiveBody::from(replacement_value);
-    def_primitive(ecs, None, Some(replacement), PrimitiveOptions::default())?;
+    if let Some(replacement_value) = font::decode(code_value, Some(encoding_str), false) {
+      let replacement = PrimitiveBody::from(replacement_value);
+      def_primitive(ecs, None, Some(replacement), PrimitiveOptions::default())?;
+    }
   });
 
   // hmmm... what needs doing here; basically it means use this encoding as the default for the
