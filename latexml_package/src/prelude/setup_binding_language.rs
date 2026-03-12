@@ -641,11 +641,18 @@ macro_rules! DefEnvironmentWO (
   use latexml_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
   let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace)).unwrap_or_default();
+  let paramlist_str = proto.trim_start().to_string();
+  let paramlist = if paramlist_str.is_empty() {
+    None
+  } else {
+    let cs = T_CS!(s!("\\{}", &name));
+    parse_parameters(&paramlist_str, &cs, true)?
+  };
   let compiled_replacement;
   compile_replacement!(compiled_replacement, $replacement);
 
   let options = $options;
-  def_environment(name, None, compiled_replacement, options);
+  def_environment(name, paramlist, compiled_replacement, options);
 }));
 
 #[macro_export]
@@ -654,9 +661,14 @@ macro_rules! DefEnvironmentIWO (
   use latexml_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
   let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace)).unwrap_or_default();
-  // TODO: What do we do with param lists?
-  //let paramlist_str = proto.trim_start().to_string();
-  def_environment(name, None, $compiled_replacement, $options);
+  let paramlist_str = proto.trim_start().to_string();
+  let paramlist = if paramlist_str.is_empty() {
+    None
+  } else {
+    let cs = T_CS!(s!("\\{}", &name));
+    parse_parameters(&paramlist_str, &cs, true)?
+  };
+  def_environment(name, paramlist, $compiled_replacement, $options);
 }));
 
 #[macro_export]

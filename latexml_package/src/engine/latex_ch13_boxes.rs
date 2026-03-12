@@ -243,45 +243,60 @@ LoadDefinitions!({
     document.maybe_close_element("ltx:p")?;
   });
 
-  // //NOTE: There are 2 extra arguments (See LaTeX Companion, p.866)
-  // //for height and inner-pos.  We're ignoring them, for now, though.
-  // DefConstructor('\parbox[][Dimension][]{Dimension}{}', sub {
-  //     my ($document, $attachment, $b, $c, $width, $body, %props) = @_;
-  //     insertBlock($document, $body,
-  //       width   => $width,
-  //       vattach => $props{vattach},
-  //       class   => 'ltx_parbox');
-  //     return; },
-  //   sizer      => '#5',
-  //   properties => sub {
-  //     (width => $_[4],
-  //       vattach => translateAttachment($_[1]),
-  //       height  => $_[2]); },
-  //   mode => 'text', bounded => 1,
-  //   beforeDigest => sub {
-  // AssignRegister('\hsize' => $_[4]);
-  //     Let('\\\\', '\lx@parboxnewline'); });
-
+  // Perl: latex_constructs.pool.ltxml lines 4795-4818
+  Let!("\\lx@parboxnewline", "\\lx@newline");
+  // NOTE: There are 2 extra arguments (See LaTeX Companion, p.866)
+  // for height and inner-pos. We're ignoring inner-pos, for now, though.
+  DefMacro!("\\parbox[] [] [] {Dimension}{}",
+    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\ifx.#2.\lx@parbox[#1]{#4}{#5}\else\lx@parbox[#1][#2][#3]{#4}{#5}\fi\lx@hidden@egroup");
+  DefConstructor!("\\lx@parbox[][Dimension] OptionalUndigested {Dimension} VBoxContents",
+    sub[document, args, props] {
+      let body = args[4].as_ref().unwrap();
+      let mut attr = string_map!("class" => "ltx_parbox");
+      if let Some(w) = props.get("width") { attr.insert("width".to_string(), w.to_string()); }
+      if let Some(v) = props.get("vattach") { attr.insert("vattach".to_string(), v.to_string()); }
+      insert_block(document, body, attr)?;
+    },
+    alias => "\\parbox",
+    properties => sub[args] {
+      let attachment = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let width = args[3].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
+      Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
+    },
+    mode => "internal_vertical",
+    before_digest => {
+      Let!("\\\\", "\\lx@newline");
+    }
+  );
   DefMacro!("\\@parboxrestore", "");
+
   DefConditional!("\\if@minipage");
-  // DefEnvironment('{minipage}[][][]{Dimension}', sub {
-  //     my ($document, $attachment, $b, $c, $width, %props) = @_;
-  //     my $vattach = translateAttachment($attachment);
-  //     insertBlock($document, $props{body},
-  //       para    => 1,
-  //       width   => $width,
-  //       vattach => $vattach,
-  //       class   => 'ltx_minipage');
-  //     return; },
-  //   mode => 'text',
-  //   properties => sub { (
-  //       width   => $_[4],
-  //       vattach => translateAttachment($_[1])); },
-  //   beforeDigest => sub {
-  //     Digest(T_CS('\@minipagetrue'));
-  // AssignRegister('\hsize' => $_[4]);
-  //     // this conflicts (& not needed?) with insertBlock
-  //     Let('\\\\', '\lx@parboxnewline'); });
+  DefMacro!("\\@setminipage", "");
+  // Perl: latex_constructs.pool.ltxml lines 4822-4846
+  DefEnvironment!("{minipage}[] OptionalUndigested [] {Dimension}",
+    sub[document, args, props] {
+      let attachment = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let vattach = translate_attachment(&attachment);
+      let width = props.get("width").map(|w| w.to_string())
+        .or_else(|| args.get(3).and_then(|a| a.as_ref()).map(|a| a.to_attribute()))
+        .unwrap_or_default();
+      let mut attr = string_map!("class" => "ltx_minipage");
+      if !width.is_empty() { attr.insert("width".to_string(), width); }
+      attr.insert("vattach".to_string(), vattach.to_string());
+      if let Some(Stored::Digested(body)) = props.get("body") {
+        insert_block(document, body, attr)?;
+      }
+      Ok(())
+    },
+    mode => "internal_vertical",
+    before_digest => {
+      stomach::digest(Tokens!(T_CS!("\\@minipagetrue")))?;
+    },
+    after_digest_begin => {
+      // TODO: set hsize/textwidth/columnwidth from width arg via whatsit access
+      Let!("\\\\", "\\lx@newline");
+    }
+  );
 
   // DefConstructor("\\rule[Dimension]{Dimension}{Dimension}",
   //   "<ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/>",

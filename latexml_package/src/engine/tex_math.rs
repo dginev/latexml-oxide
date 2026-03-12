@@ -72,11 +72,13 @@ LoadDefinitions!({
         // Perl L62: `elsif ($mode eq 'math')` — because beginMode("inline_math")
         // maps to MODE="math" via bindable_mode. NOT "inline_math".
         op = "\\lx@end@inline@math";
-      } else if gullet::if_next(T_MATH!())? {
-        // TODO: Perl checks `($bound =~ /vertical$/)` here, but our BOUND_MODE tracking
-        // isn't complete enough yet. For now, always check for $$ display math.
-        gullet::read_token()?;
-        op = "\\lx@begin@display@math";
+      } else {
+        // Perl: only check for $$ when within a vertical bound mode
+        let bound = state::lookup_string("BOUND_MODE");
+        if bound.ends_with("vertical") && gullet::if_next(T_MATH!())? {
+          gullet::read_token()?;
+          op = "\\lx@begin@display@math";
+        }
       }
     }
     if !op.is_empty() {
@@ -93,16 +95,7 @@ LoadDefinitions!({
   //======================================================================
   // Math mode in special cases: math alignments, or perverse equations for ...$text$...
   // In Perl, \lx@dollar@in@textmode is now aliased to \lx@dollar@default.
-  // But since our BOUND_MODE tracking isn't complete, we keep a simple version
-  // that just toggles inline math (no $$ display math check).
-  DefPrimitive!("\\lx@dollar@in@textmode", {
-    let mathcs = if lookup_bool("IN_MATH") {
-      T_CS!("\\lx@end@inline@math")
-    } else {
-      T_CS!("\\lx@begin@inline@math")
-    };
-    stomach::invoke_token(&mathcs)
-  });
+  Let!("\\lx@dollar@in@textmode", "\\lx@dollar@default");
   // Note that $ within a math alignment (eg array environment),
   // switches to text mode! There's no $$ for display math.
 

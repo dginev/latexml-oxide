@@ -102,9 +102,8 @@ LoadDefinitions!({
   DefMacro!("\\ext@footnote", None);
   DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
-  mode         => "text", bounded => true,
+  mode         => "internal_vertical",
   before_digest => {
-    reenter_text_mode(true);
     neutralize_font(); },
   properties   => sub [args] {
     let arg1 = args[0].as_ref();
@@ -120,7 +119,7 @@ LoadDefinitions!({
 
   DefConstructor!("\\lx@notemark[]{}[]",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags</ltx:note>",
-  mode       => "text",
+  mode       => "text", enter_horizontal => true,
   properties => sub[args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
@@ -135,7 +134,7 @@ LoadDefinitions!({
 
   DefConstructor!("\\lx@notetext[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
-  mode       => "text",
+  mode       => "internal_vertical",
   properties => sub [args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
