@@ -894,9 +894,9 @@ fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
 fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
   let cc = meaning.get_catcode();
   let font = lookup_font();
-  clear_prefixes(); // prefixes shouldn't apply here.
   match cc {
     Catcode::SPACE => {
+      clear_prefixes(); // Perl Stomach.pm line 234: prefixes shouldn't apply here.
       // Perl: if($STATE->lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
       let mode = lookup_string("MODE");
       if mode.ends_with("math") || mode.ends_with("vertical") {
@@ -913,15 +913,17 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       }
     },
     Catcode::COMMENT => {
-      let comment = meaning.to_string();
-      // TODO:
-      // let comment = font_decode_string(meaning.to_string(), None, true);
-      // However, spaces normally would have be digested away as positioning...
-      // let badspace = pack('U', 0xA0) . "\x{0335}"; // This is at space's pos in OT1
-      // $comment =~ s/\Q$badspace\E/ /g;
+      // Perl Stomach.pm lines 241-244: decode comment via font encoding
+      let decoded = font::decode_string(meaning.get_sym(), None, true);
+      let comment = arena::with(decoded, |s| {
+        // However, spaces normally would have be digested away as positioning...
+        // Replace NBSP + combining strikethrough (OT1 space position) with actual space
+        s.replace("\u{00A0}\u{0335}", " ")
+      });
       Ok(Some(Digested::from(comment)))
     },
     _ => {
+      clear_prefixes(); // Perl Stomach.pm line 247: prefixes shouldn't apply here.
       // Perl: check mathcode for IN_MATH characters (Stomach.pm lines 248-251)
       // In Perl, all math chars go through decodeMathChar which decodes via
       // the font encoding. In Rust, Tbox::new already handles IN_MATH:
