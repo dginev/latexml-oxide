@@ -3,6 +3,7 @@ use crate::Object;
 use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::RegisterType;
+use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use std::fmt;
 
@@ -47,7 +48,11 @@ impl NumericOps for MuGlue {
     }
   }
 }
-impl Object for MuGlue {}
+impl Object for MuGlue {
+  fn revert(&self) -> crate::Result<Tokens> {
+    Ok(Tokens::new(Explode!(self.to_string())))
+  }
+}
 
 impl MuGlue {
   pub fn new_full(
