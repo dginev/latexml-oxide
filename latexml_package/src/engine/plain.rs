@@ -715,11 +715,10 @@ LoadDefinitions!({
   // Perl: plain_base.pool.ltxml L447
   DefPrimitive!("\\hglue Glue", sub[(length)] {
     let s = dimension_to_spaces(length);
-    if !s.is_empty() {
-      Tbox::new(arena::pin(&s), None, None,
-        Invocation!(T_CS!("\\hglue"), vec![length.revert()?]),
-        stored_map!("name" => "hglue", "width" => length, "isSpace" => true));
-    }
+    if s.is_empty() { return Ok(Vec::new()); }
+    Tbox::new(arena::pin(&s), None, None,
+      Invocation!(T_CS!("\\hglue"), vec![length.revert()?]),
+      stored_map!("name" => "hglue", "width" => length, "isSpace" => true))
   });
   DefPrimitive!("\\vglue Glue", None);
   DefPrimitive!("\\topglue", None);
