@@ -219,6 +219,24 @@ LoadDefinitions!({
 
   DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", None);
   DefPrimitive!("\\DeclareErrorFont{}{}{}{}{}", None);
+  // Font declaration stubs (Perl latex_constructs.pool.ltxml)
+  DefPrimitive!("\\DeclareFontShape{}{}{}{}{}{}", None);
+  DefPrimitive!("\\DeclareFontFamily{}{}{}", None);
+  DefPrimitive!("\\DeclareSizeFunction{}{}", None);
+  DefPrimitive!("\\DeclareMathSizes{}{}{}{}", None);
+  DefMacro!("\\newmathalphabet{}{}{}", None, None);
+  // DeclareMathAlphabet: define math font command if not already defined
+  DefPrimitive!("\\DeclareMathAlphabet{}{}{}{}{}", sub[(cs, _enc, family, series, shape)] {
+    let cs_tok = T_CS!(cs.to_string());
+    if !IsDefined!(&cs_tok) {
+      let font : Option<Font> = Some(fontmap!(
+        family => family.to_string(),
+        series => series.to_string(),
+        shape  => shape.to_string()
+      ));
+      DefPrimitive!(cs_tok, None, None, font => font);
+    }
+  });
 
   DefMacro!("\\cdp@list", "\\@empty");
   Let!("\\cdp@elt", "\\relax");

@@ -612,6 +612,10 @@ LoadDefinitions!({
   DefMacro!("\\@minus", None, "minus");
   DefMacro!("\\@plus", None, "plus");
   DefMacro!("\\hmode@bgroup", None, "\\leavevmode\\bgroup");
+  DefMacro!("\\hb@xt@", None, "\\hbox to");
+  // Perl latex_constructs.pool.ltxml
+  DefMacro!("\\TextOrMath{}{}", "\\ifmmode#2\\else#1\\fi");
+  DefMacro!("\\eminnershape", None, None); // emphasis within emphasis styling — left to output
 
   DefMacro!(T_CS!("\\@backslashchar"), None, T_OTHER!("\\"));
   DefMacro!(T_CS!("\\@percentchar"), None, T_OTHER!("%"));

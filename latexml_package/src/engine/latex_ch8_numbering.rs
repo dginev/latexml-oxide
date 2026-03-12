@@ -52,25 +52,18 @@ LoadDefinitions!({
     RefStepCounter!(cs_expanded, false)?;
   });
 
-  // DefPrimitive('\@addtoreset{}{}', sub {
-  //     my ($stomach, $ctr, $within) = @_;
-  //     $ctr    = ToString(Expand($ctr));
-  //     $within = ToString(Expand($within));
-  //     my $unctr = "UN$ctr";    # UNctr is counter for generating ID's for UN-numbered items.
-  //     AssignValue("\\cl\@$within" =>
-  //         Tokens(T_CS($ctr), T_CS($unctr),
-  //         (LookupValue("\\cl\@$within") ? LookupValue("\\cl\@$within")->unlist : ())),
-  //       'global');
-  //     # This counter might be doing double duty generating ID's as well, so we may need to patch
-  // up.     my $prefix = LookupValue('@ID@prefix@' . $ctr);
-  //     if (defined $prefix) {
-  //       DefMacroI(T_CS("\\the$ctr\@ID"), undef,
-  //         "\\expandafter\\ifx\\csname the$within\@ID\\endcsname\\\@empty"
-  //           . "\\else\\csname the$within\@ID\\endcsname.\\fi"
-  //           . " $prefix\\csname \@$ctr\@ID\\endcsname",
-  //         scope => 'global');
-  //       DefMacroI(T_CS("\\\@$ctr\@ID"), undef, "0", scope => 'global'); }
-  //     return; });
+  // Perl latex_constructs.pool.ltxml: addtoCounterReset + defCounterID
+  DefPrimitive!("\\@addtoreset{}{}", sub[(ctr, within)] {
+    let ctr_str = Expand!(ctr).to_string();
+    let within_str = Expand!(within).to_string();
+    let unctr = s!("UN{}", ctr_str);
+    let reg = s!("\\cl@{}", within_str);
+    // Prepend ctr and UNctr to the counter reset list for 'within'
+    let prev = state::lookup_tokens(&reg).unwrap_or_default();
+    let mut toks = vec![T_CS!(ctr_str.clone()), T_CS!(unctr)];
+    toks.extend(prev.unlist());
+    state::assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
+  });
 
   DefMacro!("\\value{}", sub[(value)] {
     T_CS!(s!("\\c@{}", Expand!(value)))

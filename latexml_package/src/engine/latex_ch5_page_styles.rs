@@ -23,7 +23,8 @@ LoadDefinitions!({
   DefPrimitive!("\\leftmark", None);
   DefPrimitive!("\\rightmark", None);
   DefPrimitive!("\\pagenumbering{}", None);
-  DefMacro!("\\twocolumn[]", "#1");
+  // Perl: DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par');
+  DefMacro!("\\twocolumn[]", "\\ifx.#1.\\else\\par\\noindent#1\\fi\\par");
   DefPrimitive!("\\onecolumn", None);
 
   // Style parameters from Fig. C.3, p.182
