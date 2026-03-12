@@ -1024,10 +1024,11 @@ pub fn def_environment(
   if options.leave_horizontal {
     before_digest_env.push(before_digest_simple!({ leave_horizontal()?; }));
   }
+  // Perl Package.pm line 1908: beginMode($mode, 1) — noframe=1 since bgroup already pushed
   if let Some(ref mode) = mode {
     let bmode = mode.clone();
     let mode_closure = before_digest_simple!({
-      set_mode(&bmode)?;
+      begin_mode_opt(&bmode, true)?;
     });
     before_digest_env.push(mode_closure);
   }
@@ -1131,7 +1132,10 @@ pub fn def_environment(
     },
   };
 
-  let mut before_digest_for_endenv = options.before_digest_end;
+  let (mut before_digest_for_endenv, before_digest_end_clone) = {
+    let cloned = options.before_digest_end.clone();
+    (options.before_digest_end, cloned)
+  };
   let atend_key = s!("@environment@{name}@atend");
   let atend_hook_closure = before_digest_simple!({
     if let Some(e) = lookup_tokens(&atend_key) {
@@ -1157,16 +1161,11 @@ pub fn def_environment(
     cs: T_CS!(s!("\\{}", &name)),
     paramlist,
     replacement: compiled_replacement,
-    // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
-    //   ($options{forbidMath} ? (sub { forbidMath($name); })              : ()),
-    //   ($mode                ? (sub { $_[0]->beginMode($mode); })        : ()),
-    //   ($options{font}       ? (sub { MergeFont(%{ $options{font} }); }) : ()),
-    //   $options{beforeDigest}),
-    // afterDigest     => flatten($options{afterDigestBegin}),
-    // afterDigestBody => flatten($options{afterDigestBody}),
-    // beforeConstruct => flatten(sub { >pushFrame; }, $options{beforeConstruct}),
-    // Curiously, it's the \begin whose afterConstruct gets called.
-    // afterConstruct => flatten($options{afterConstruct}, sub { >popFrame; }),
+    // TODO: Perl Package.pm lines 1949-1969: \FOO has full hook pipeline
+    // (requireMath, forbidMath, enterHorizontal, leaveHorizontal, beginMode,
+    // font, beforeDigest, afterDigestBegin, afterDigestBody,
+    // beforeConstruct+pushFrame, afterConstruct+popFrame).
+    // Requires cloning closures from options earlier.
     nargs: options.nargs,
     capture_body: true,
     properties: options.properties.clone(),
@@ -1178,18 +1177,28 @@ pub fn def_environment(
   install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);
   let mut after_digest_end = options.after_digest;
-  after_digest_end.push(after_digest_simple!(_whatsit, {
-    egroup()?;
-  }));
+  // Perl Package.pm lines 1970-1975: \endFOO calls endMode if mode was specified
+  match mode {
+    Some(ref emode) => {
+      let emode = emode.clone();
+      after_digest_end.push(Rc::new(move |_whatsit: &mut Whatsit| {
+        end_mode(&emode)?;
+        Ok(Vec::new())
+      }));
+    },
+    None => {
+      // No mode specified — no egroup needed for this simplified closer.
+      // (The \end{FOO} constructor already handles egroup.)
+    },
+  };
 
+  // Perl Package.pm lines 1970-1975: \endFOO has beforeDigestEnd + afterDigest + endMode
   let end_name_constructor = Constructor {
     cs: T_CS!(end_name),
     paramlist: None,
     replacement: None,
+    before_digest: before_digest_end_clone,
     after_digest: after_digest_end,
-    // beforeDigest => flatten($options{beforeDigestEnd}),
-    //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
-    // ), $options{scope});
     ..Constructor::default()
   };
   install_definition(Rc::new(end_name_constructor), options.scope);

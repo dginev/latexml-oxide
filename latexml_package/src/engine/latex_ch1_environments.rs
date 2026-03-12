@@ -30,6 +30,9 @@ LoadDefinitions!({
   });
   Let!("\\@currenvline", "\\@empty");
 
+  // Perl: latex_constructs.pool.ltxml line 190
+  DefMacro!("\\@checkend{}", r"\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi}");
+
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
     let begin_name = format!("\\begin{{{name}}}");
