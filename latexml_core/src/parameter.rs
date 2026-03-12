@@ -35,6 +35,11 @@ pub type ReaderClosure = Rc<ReaderFn>;
 pub type ReversionClosure =
   Rc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens]) -> Result<Tokens>>;
 
+/// A reversion closure that operates on the original Digested argument,
+/// enabling access to structured data (e.g., KeyVals) for custom reversion formatting.
+/// Perl equivalent: the `reversion` option on DefParameterType, which receives the raw value.
+pub type DigestedReversionClosure = Rc<dyn Fn(&Digested) -> Result<Tokens>>;
+
 static LAST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\w$").unwrap());
 static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
 
@@ -50,6 +55,10 @@ pub struct Parameter {
   pub reader:        ReaderClosure,
   pub predigest:     Option<ReaderPredigestClosure>,
   pub reversion:     Option<ReversionClosure>,
+  /// Reversion closure that operates on the original Digested argument.
+  /// Takes precedence over `reversion` when the argument is a digested value.
+  /// Perl equivalent: `reversion` option on DefParameterType with `undigested => 1`.
+  pub digested_reversion: Option<DigestedReversionClosure>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest:  Vec<DigestionClosure>,
 }
@@ -73,6 +82,7 @@ impl Default for Parameter {
       }),
       predigest:     None,
       reversion:     None,
+      digested_reversion: None,
       before_digest: Vec::new(),
       after_digest:  Vec::new(),
     }
@@ -245,6 +255,7 @@ impl Parameter {
           self.optional = true;
         }
         self.reversion.clone_from(&descriptor.reversion);
+        self.digested_reversion.clone_from(&descriptor.digested_reversion);
         self.before_digest.clone_from(&descriptor.before_digest);
         self.after_digest.clone_from(&descriptor.after_digest);
         self.predigest.clone_from(&descriptor.predigest);
@@ -533,6 +544,39 @@ impl Parameters {
       if !parameter.novalue {
         if let Some(reverted_tks) = parameter.revert(arg)? {
           tokens.extend(reverted_tks.unlist());
+        }
+      }
+    }
+    Ok(tokens)
+  }
+
+  /// Revert arguments from their digested form, using `digested_reversion` when available.
+  /// This allows parameter types (like BoxSpecification) to control reversion formatting
+  /// based on the structured digested data rather than token-level reversion.
+  /// Perl equivalent: `$parameters->revertArguments($self->getArgs)`
+  pub fn revert_digested_arguments(
+    &self,
+    digested_args: &[Option<Digested>],
+  ) -> Result<Vec<Token>> {
+    let mut tokens = Vec::new();
+    for (parameter, arg_opt) in self.0.iter().zip(digested_args) {
+      if !parameter.novalue {
+        let reverted = if let Some(ref digested_rev) = parameter.digested_reversion {
+          // Use digested_reversion: operates on the raw Digested value
+          match arg_opt {
+            Some(arg) => Some(digested_rev(arg)?),
+            None => None,
+          }
+        } else {
+          // Fall back to standard reversion: Digested → Tokens → Parameter::revert
+          let token_reverted = match arg_opt {
+            Some(arg) => Some(arg.revert()?),
+            None => None,
+          };
+          parameter.revert(token_reverted)?
+        };
+        if let Some(tks) = reverted {
+          tokens.extend(tks.unlist());
         }
       }
     }

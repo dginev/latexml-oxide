@@ -154,18 +154,11 @@ LoadDefinitions!({
       Ok(Tokens!())
     }
   },
-  // TODO: What kind of directives do we need to expose this description to the main Docs page?
-  //
-  // The predigest closure is new for latexml-oxide, as it was a single closure in Perl
-  // The key problem is that in latexml-oxide the parameter type interfaces are well-typed,
-  // so it is not possible to remain elegant while at the same time
-  // have access to the stomach AND digest.
-  // Hence, the `reader` is exclusively responsible for using the gullet to obtain tokens,
-  // while early/immediate digestion via the stomach can be achieved
-  // by using the separate `predigest` interface
-  // Importantly, predigest forces the parameter to be usable
-  // only for stomach-capable bindings,
-  // namely DefConstructor, DefPrimitive or DefEnvironment
+  // The predigest closure reads the dimension from the gullet and stores it as KeyVals.
+  // This allows afterDigest to use GetKeyVal!(spec, "to") / GetKeyVal!(spec, "spread").
+  // Perl: DefParameterType('BoxSpecification', sub { ... $keyvals->setValue($key, $dim); },
+  //   reversion => sub { Tokens(Tokenize($key), Revert($dim)) },
+  //   optional => 1, undigested => 1);
   predigest => sub[key] {
     if !key.is_empty() {
       let mut keyvals = KeyVals::new(
@@ -175,6 +168,26 @@ LoadDefinitions!({
       keyvals.into()
     } else {
       Ok(None)
+    }
+  },
+  // Perl: reversion => sub { Tokens(Tokenize('to'), Revert($to)) }
+  // Produces "to128.0374pt" as letter tokens + dimension reversion tokens,
+  // matching Perl's Tokens(Tokenize('to'), Revert($to)) format exactly.
+  digested_reversion => sub[spec] {
+    if let DigestedData::KeyVals(keyval) = spec.data() {
+      if let Some(ArgWrap::Dimension(dim)) = keyval.get_value("to") {
+        let mut tks = ExplodeText!("to");
+        tks.extend(dim.revert()?.unlist());
+        Ok(Tokens::new(tks))
+      } else if let Some(ArgWrap::Dimension(dim)) = keyval.get_value("spread") {
+        let mut tks = ExplodeText!("spread");
+        tks.extend(dim.revert()?.unlist());
+        Ok(Tokens::new(tks))
+      } else {
+        Ok(Tokens!())
+      }
+    } else {
+      Ok(Tokens!())
     }
   },
   optional => true);
