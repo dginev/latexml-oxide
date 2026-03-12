@@ -811,6 +811,26 @@ LoadDefinitions!({
       // Return the closing token to be placed after the whatsit
       let result: Vec<Digested> = closing.into_iter().collect();
       Ok(result)
+    },
+    reversion => sub[whatsit, _args] {
+      use latexml_core::common::object::Object;
+      use latexml_core::state::Stored;
+      // Perl: (Revert($whatsit->getProperty('top')), $whatsit->getArg(1)->unlist, Revert($whatsit->getProperty('bottom')))
+      let mut result = Vec::new();
+      if let Some(top) = whatsit.get_property("top") {
+        if let Stored::Digested(ref d) = *top {
+          result.extend(d.revert()?.unlist());
+        }
+      }
+      if let Some(arg1) = whatsit.get_arg(1) {
+        result.extend(arg1.revert()?.unlist());
+      }
+      if let Some(bottom) = whatsit.get_property("bottom") {
+        if let Stored::Digested(ref d) = *bottom {
+          result.extend(d.revert()?.unlist());
+        }
+      }
+      Ok(Tokens::new(result))
     }
   );
 
