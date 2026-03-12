@@ -3,17 +3,22 @@ use crate::prelude::*;
 //**********************************************************************
 fn set_input_encoding(encoding: &str) -> Result<()> {
   // Initially disable all odd & upper half-plane chars
-  // TODO:
-  // for code in ((0 .. 8), 0xB, (0xE .. 0x1E), (128 .. 255)) {
-  //   let ch : char = code as char;
-  //   AssignCatcode!(ch, Catcode::ACTIVE);
-  //   Let!(&T_ACTIVE!(ch), T_CS!("\\@inpenc@undefined"));
-  // }
-  state::set_input_encoding(None); // Disable the state::level decoding, if any.
+  let undef_cs = T_CS!("\\@inpenc@undefined");
+  for code in (0..=8u8)
+    .chain(std::iter::once(0x0Bu8))
+    .chain(0x0E..=0x1Eu8)
+    .chain(128..=255u8)
+  {
+    let ch = code as char;
+    AssignCatcode!(ch, Catcode::ACTIVE);
+    Let!(T_ACTIVE!(ch), undef_cs);
+  }
+  state::set_input_encoding(None); // Disable the perl-level decoding, if any.
 
   // Then load TeX's input encoding definitions.
   input_definitions(encoding, InputDefinitionOptions {
     extension: Some("def".into()),
+    reloadable: true,
     ..InputDefinitionOptions::default()
   })?;
   // NOTE: INPUT_ENCODING is never actually used anywhere!
@@ -42,13 +47,10 @@ LoadDefinitions!({
   DefMacro!("\\IeC{}", "#1");
 
   DefMacro!("\\@inpenc@undefined", {
-    let enc_sym = get_input_encoding().unwrap();
-    let message = arena::with(enc_sym, |enc| {
-      s!(
-        "Keyboard character used is undefined in inputencoding {}",
-        enc
-      )
-    });
+    let enc = lookup_string("INPUT_ENCODING");
+    let message = s!(
+      "Keyboard character used is undefined in inputencoding {}", enc
+    );
     Error!("unexpected", "<char>", message);
   });
 
