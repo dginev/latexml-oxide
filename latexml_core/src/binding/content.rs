@@ -26,6 +26,7 @@ use crate::util::pathname::{self, PathnameFindOptions};
 use crate::Digested;
 
 use crate::binding::def::dialect::def_macro;
+use crate::definition::expandable::ExpandableOptions;
 
 static QUOTE_WRAPPED: Lazy<Regex> = Lazy::new(|| Regex::new("^\"(.+)\"$").unwrap());
 
@@ -207,9 +208,15 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     }
   }
 
-  if (is_binding || is_found_raw) && options.handleoptions {
-    // after_input_handle_options ?
-    digest(T_CS!(s!("\\{name}.{as_type}-h@@k")))?;
+  if options.handleoptions {
+    if is_binding || is_found_raw {
+      digest(T_CS!(s!("\\{name}.{as_type}-h@@k")))?;
+    }
+    // Always restore @currname/@currext and pop filename stack,
+    // even when no binding was found, to keep the stack balanced.
+    // Note: @popfilename uses \gdef to restore @currname/@currext from the stack,
+    // so it takes precedence. We also set them with def_macro as a fallback
+    // (matches Perl Package.pm lines 2635-2637).
     if !prevname.is_empty() {
       def_macro(
         T_CS!("\\@currname"),
@@ -222,7 +229,37 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(prevext)), None)?;
     }
     digest(T_CS!("\\@popfilename"))?;
-    reset_options()?; // And reset options afterwards, too.
+    // Verify @currname was correctly restored, and force-fix if not
+    let restored_name = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+      do_expand(T_CS!("\\@currname"))?.to_string()
+    } else {
+      String::new()
+    };
+    if !prevname.is_empty() && restored_name != prevname {
+      // @popfilename may have popped a stale entry; force correct value
+      def_macro(
+        T_CS!("\\@currname"),
+        None,
+        Tokens!(Explode!(prevname)),
+        Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+      )?;
+    }
+    if !prevext.is_empty() {
+      let restored_ext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
+        do_expand(T_CS!("\\@currext"))?.to_string()
+      } else {
+        String::new()
+      };
+      if restored_ext != prevext {
+        def_macro(
+          T_CS!("\\@currext"),
+          None,
+          Tokens!(Explode!(prevext)),
+          Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+        )?;
+      }
+    }
+    reset_options()?;
   }
   note_end(&s!("Loading {:?} definitions", filename));
   Ok(())
@@ -554,6 +591,9 @@ pub fn process_options() -> Result<()> {
   let opt_key = s!("opt@{}.{}", name, ext);
   let current_options = lookup_vecdeque(&opt_key).unwrap_or_default();
   let class_options = lookup_vecdeque("class_options").unwrap_or_default();
+  if !declared_options.is_empty() || !current_options.is_empty() {
+    eprintln!("DEBUG process_options: name={name:?} ext={ext:?} declared={declared_options:?} current={current_options:?}");
+  }
   // Execute options in declared order (unless \ProcessOptions*)
 
   // TODO: processing options, not yet supported
