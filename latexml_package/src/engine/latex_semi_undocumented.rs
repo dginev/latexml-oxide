@@ -202,6 +202,16 @@ LoadDefinitions!({
     "\\lx@paragraphsign\\lx@ignorehardspaces"
   );
 
+  // Perl latex_constructs.pool.ltxml: \protected@write
+  // Simplified: just digest the prelude and note the tokens (no file writing)
+  DefPrimitive!("\\protected@write{Number}{}{}", sub[(_port, prelude, _tokens)] {
+    bgroup();
+    Let!("\\thepage", "\\relax");
+    // Digest prelude for side effects
+    let _digested = digest(prelude)?;
+    egroup()?;
+  });
+
   DefPrimitive!("\\@@end", { gullet::flush() });
 
   // DG: TODO Maybe split these out?
