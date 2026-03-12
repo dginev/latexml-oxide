@@ -809,7 +809,7 @@ pub fn extract_alignment_column(
   border = s!("{}{}", colspec.border, border);
   colspec.border = border;
   colspec.boxes = Some(digested_out.clone());
-  colspec.colspan = Some(n1 - n0 + 1);
+  colspec.colspan = Some(if n1 >= n0 { n1 - n0 + 1 } else { 1 });
   //   if ($$alignment{in_tabular_head} || $$alignment{in_tabular_foot}) {
   //     $$colspec{thead}{column} = 1; }
   //   for (my $i = $n0 + 1 ; $i <= $n1 ; $i++) {
