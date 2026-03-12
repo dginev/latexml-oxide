@@ -191,7 +191,12 @@ LoadDefinitions!({
   //       title     => $title,
   //       titlefont => $title->getFont); });
 
-  // DefPrimitiveI('\indexspace',   undef, undef);
-  // DefPrimitiveI('\makeindex',    undef, undef);
-  // DefPrimitiveI('\makeglossary', undef, undef);
+  // Perl: latex_constructs.pool.ltxml L4587
+  DefPrimitive!("\\indexspace", None);
+  DefPrimitive!("\\makeindex", None);
+  DefPrimitive!("\\makeglossary", None);
+
+  // Stub for \index — just discard the argument for now.
+  // Full process_index_phrases expansion is deferred.
+  DefPrimitive!("\\index {}", None);
 });

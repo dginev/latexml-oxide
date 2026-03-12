@@ -100,12 +100,13 @@ LoadDefinitions!({
 
   // # These may need to float up to where they're allowed,
   // # or they may need to close <p> or similar.
-  // TODO: prefix both replacements with ^^ when we can compile them.
-  DefConstructor!("\\@@caption{}", "<ltx:caption>#1</ltx:caption>",
+  // Perl: latex_constructs.pool.ltxml L3423-3427
+  // ^^ prefix means "float up" in LaTeXML's document model
+  DefConstructor!("\\@@caption{}", "^^<ltx:caption>#1</ltx:caption>",
     mode => "text");
   DefConstructor!(
     "\\@@toccaption{}",
-    "<ltx:toccaption>#1</ltx:toccaption>", //sizer => 0
+    "^^<ltx:toccaption>#1</ltx:toccaption>", //sizer => 0
     mode => "text");
 
   DefEnvironment!("{figure}[]",r###"
@@ -137,8 +138,7 @@ LoadDefinitions!({
   );
   DefEnvironment!("{table}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
-    // TODO:
-    // properties   => { layout => 'vertical' },
+    properties   => { stored_map!("layout" => "vertical") },
     before_digest => { DefMacro!("\\@captype", "table"); },
     after_digest  => sub[whatsit] { rescue_caption_counters("table", whatsit); },
     mode => "internal_vertical");

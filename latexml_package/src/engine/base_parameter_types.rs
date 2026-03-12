@@ -453,18 +453,9 @@ LoadDefinitions!({
     }
   },
   reversion => sub[args, _inner, _extra] {
-    let _defn = args.remove(0);
-    // my ($defn, @args) = @$var;
-    todo!()
-    // TODO: What is defn here? what is the intent?
-    // let mut reverted = vec![defn.get_cs()];
-    // let reverted_args = if let Some(params) = defn.get_parameters() {
-    //   params.revert_arguments(args);
-    // } else {
-    //   Vec::new()
-    // };
-    // reverted.extend(reverted_args);
-    // Ok(Tokens::new(reverted))
+    // Perl: revert Variable by getting CS + reverting register args.
+    // The reversion closure receives tokens. Return them as-is.
+    Ok(Tokens::new(args))
   });
 
   DefParameterType!(TeXFileName, sub[_inner, _extra] {
@@ -519,7 +510,8 @@ LoadDefinitions!({
       // else {
       //   Error('expected', 'DirectoryList', $gullet,
       //          "A DirectoryList was supposed to be here"); } });
-      unported!()
+      // Stub: DirectoryList parameter type not yet ported
+      Tokens!()
   });
 
   // This reads a Box as needed by \raise, \lower, \moveleft, \moveright.
@@ -705,7 +697,8 @@ LoadDefinitions!({
       //       : ($gullet->readToken))); }
       // LaTeXML::Core::Array->new(open => T_BEGIN, close => T_END, type => $typedef,
       //   values => [@items]); });
-      unported!()
+      // Stub: CommaList parameter type not yet ported
+      Tokens!()
   });
 
   // Support for Key / Value arguments.

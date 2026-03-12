@@ -953,9 +953,14 @@ pub fn checkout_value(key: &str) -> Option<Stored> {
 /// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
 pub fn checkin_value(key: &str, value: Stored) {
   match state_mut!().value.get_mut(&arena::pin(key)) {
-    None => todo!(),
+    None => {
+      // Key was never assigned — silently ignore the checkin
+      eprintln!("Warning: checkin_value called for unknown key '{key}'");
+    },
     Some(vvec) => match vvec.front_mut() {
-      None => todo!(),
+      None => {
+        eprintln!("Warning: checkin_value called with empty value stack for key '{key}'");
+      },
       Some(found) => {
         match found {
           Stored::None => std::mem::replace(found, value),

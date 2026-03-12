@@ -283,29 +283,39 @@ LoadDefinitions!({
     Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), reverted, T_OTHER!("]"), T_CR!()))
   });
 
-  // TODO:
-  // # \lx@intercol is our replacement for LaTeX's \@acol which places intercolumn space in tabular
-  // # (but NOT used by TeX's \halign!)
-  // DefMacro('\lx@intercol', '');
-  // # Candidates for binding \lx@intercol for LaTeX tabular or math arrays
-  // # These provide "padding" of half tabcolsep, since added before & after columns
-  // # [these could be \hskip\tabcolsep, but the expansion confounds trimColumnSpec]
-  // DefConstructor('\lx@text@intercol', sub {
-  //     my ($document, %props) = @_;
-  //     $document->absorb(DimensionToSpaces($props{width})); },
-  //   reversion  => '\lx@intercol',
-  //   properties => sub {
-  //     my $defn;
-  //     my $w = (($defn = $STATE->lookupDefinition(T_CS('\tabcolsep'))) && $defn->isRegister
-  //       ? $defn->valueOf : Dimension(0));
-  //     (width => $w, isSpace => 1); });
-  // DefConstructor('\lx@math@intercol', "",    # mspace ???
-  //   reversion  => '\lx@intercol',
-  //   properties => sub {
-  //     my $defn;
-  //     my $w = (($defn = $STATE->lookupDefinition(T_CS('\arraycolsep'))) && $defn->isRegister
-  //       ? $defn->valueOf : Dimension(0));
-  //     (width => $w, isSpace => 1); });
+  // Perl: \lx@intercol is our replacement for LaTeX's \@acol for intercolumn space
+  DefMacro!("\\lx@intercol", "");
+  // Perl: Candidates for binding \lx@intercol for LaTeX tabular or math arrays
+  DefConstructor!("\\lx@text@intercol", sub[document, _args, props] {
+    if let Some(width) = props.get("width") {
+      let dim: Option<Dimension> = (&*width).into();
+      if let Some(d) = dim {
+        let s = dimension_to_spaces(d);
+        if !s.is_empty() {
+          document.absorb_string(&s, &SymHashMap::default())?;
+        }
+      }
+    }
+  },
+  reversion => Tokens!(T_CS!("\\lx@intercol")),
+  properties => {
+    let w = match state::lookup_register("\\tabcolsep", Vec::new())? {
+      Some(RegisterValue::Dimension(d)) => d,
+      Some(RegisterValue::Glue(g)) => Dimension::new(g.value_of()),
+      _ => Dimension::default(),
+    };
+    stored_map!("width" => w, "isSpace" => true)
+  });
+  DefConstructor!("\\lx@math@intercol", "",
+  reversion => Tokens!(T_CS!("\\lx@intercol")),
+  properties => {
+    let w = match state::lookup_register("\\arraycolsep", Vec::new())? {
+      Some(RegisterValue::Dimension(d)) => d,
+      Some(RegisterValue::Glue(g)) => Dimension::new(g.value_of()),
+      _ => Dimension::default(),
+    };
+    stored_map!("width" => w, "isSpace" => true)
+  });
 
   //======================================================================
   // Various decorations within alignments, rules, headers, etc

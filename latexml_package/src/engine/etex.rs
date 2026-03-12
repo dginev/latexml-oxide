@@ -375,9 +375,9 @@ LoadDefinitions!({
       let close = gullet::read_x_token(None, false, None)?;
       // close parenthesis should have terminated recursive call
       if close.is_none() || close != Some(T_OTHER!(")")) {
-        todo!();
-        //       Error('expected', ')', $gullet,
-        //         "Missing close parenthesis in $type expr.", "Got " . ToString($close));
+        let got = close.map(|t| t.stringify().to_string()).unwrap_or_else(|| "EOF".to_string());
+        let message = format!("Missing close parenthesis in {:?} expr. Got {}", rtype, got);
+        Error!("expected", ")", message);
       }
       i_value
     } else {

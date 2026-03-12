@@ -210,8 +210,8 @@ impl PartialEq for Constructor {
 }
 
 impl fmt::Display for Constructor {
-  fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-    todo!();
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", <Self as Definition>::stringify_type(self, "Constructor"))
   }
 }
 impl Object for Constructor {

@@ -68,10 +68,9 @@ LoadDefinitions!({
   DefPrimitive!("\\mathunderscore", "_");
   DefPrimitive!("\\mathellipsis", "\u{2026}");
 
-  // Are these glyph "pieces" or use alone?
-  // TODO
-  // DefMathI('\arrowvert', undef, "|",        role => 'VERTBAR');
-  // DefMathI('\Arrowvert', undef, "\u{2225}", role => 'VERTBAR');
+  // Perl: plain_constructs.pool.ltxml — glyph pieces that also work as delimiters
+  DefMath!("\\arrowvert", None, "|", role => "VERTBAR");
+  DefMath!("\\Arrowvert", None, "\u{2225}", role => "VERTBAR");
 
   // The following are glyph "pieces"...
   DefPrimitive!("\\braceld", "\u{239D}"); //   left brace down part
@@ -79,8 +78,10 @@ LoadDefinitions!({
   DefPrimitive!("\\bracerd", "\u{23A0}"); //   right brace down part
   DefPrimitive!("\\braceru", "\u{239E}"); //   right brace up part
 
-  // DefMathI('\cdotp', undef, "\u{22C5}", role => 'MULOP');
-  // DefMathI('\ldotp', undef, ".",        role => 'MULOP');
+  // Perl: plain_constructs.pool.ltxml
+  DefMath!("\\cdotp", None, "\u{22C5}", role => "MULOP");
+  DefMath!("\\ldotp", None, ".", role => "MULOP");
+  // intop/ointop need scriptpos/mathstyle closures — deferred
   // DefMathI('\intop', undef, "\u{222B}", role => 'INTOP', meaning => 'integral',
   //   scriptpos => \&doScriptpos, mathstyle => \&doVariablesizeOp);
   // DefMathI('\ointop', undef, "\u{222E}", role => 'INTOP', meaning => 'contour-integral',
@@ -93,9 +94,9 @@ LoadDefinitions!({
 
   DefPrimitive!("\\lmoustache", "\u{23B0}");
   DefPrimitive!("\\rmoustache", "\u{23B1}");
-  // TODO
-  // DefMathI('\mapstochar', undef, "\u{21A6}", role => 'ARROW', meaning => 'maps-to');
-  // DefMathI('\owns',       undef, "\u{220B}", role => 'RELOP', meaning => 'contains');
+  // Perl: plain_constructs.pool.ltxml
+  DefMath!("\\mapstochar", None, "\u{21A6}", role => "ARROW", meaning => "maps-to");
+  DefMath!("\\owns", None, "\u{220B}", role => "RELOP", meaning => "contains");
 
   // \symbol lookup symbol in font by index?
 });
