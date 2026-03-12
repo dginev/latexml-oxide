@@ -321,8 +321,13 @@ impl Tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(*token);
-      } else if let Some(ref arg) = args[&token.with_str(|ts| ts.parse::<usize>().unwrap()) - 1] {
-        result.extend(arg.clone().into_owned().unlist());
+      } else {
+        let idx = token.with_str(|ts| ts.parse::<usize>().unwrap_or(0));
+        if idx > 0 && idx <= args.len() {
+          if let Some(ref arg) = args[idx - 1] {
+            result.extend(arg.clone().into_owned().unlist());
+          }
+        }
       }
     }
     Tokens::new(result)
