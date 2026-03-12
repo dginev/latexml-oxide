@@ -9,33 +9,96 @@ pub fn start_appendices(kind: &str) { begin_appendices(kind) }
 // Class files should define \@appendix to call this as startAppendices('section') or chapter...
 // counter is also the element name!
 
-pub fn begin_appendices(_counter: &str) {
-  todo!();
-  // Let('\lx@save@theappendex',    '\the' . $counter,         'global');
-  // Let('\lx@save@theappendex@ID', '\the' . $counter . '@ID', 'global');
-  // Let('\lx@save@appendix',       T_CS!('\\' . $counter),     'global');
-  // Let('\lx@save@@appendix',      T_CS!('\@appendix'),        'global');
-  // AssignMapping('BACKMATTER_ELEMENT', 'ltx:appendix' => 'ltx:' . $counter);
-  // if (LookupDefinition(T_CS!('\c@chapter'))    # Has \chapter defined
-  //   && ($counter ne 'chapter')) {             # And appendices are below the chapter level.
-  //   NewCounter($counter, 'chapter', idprefix => 'A');
-  //   DefMacroI('\the' . $counter, undef, '\thechapter.\Alph{' . $counter . '}', scope =>
-  // 'global'); } else {
-  //   NewCounter($counter, 'document', idprefix => 'A');
-  //   DefMacroI('\the' . $counter, undef, '\Alph{' . $counter . '}', scope => 'global'); }
-  // AssignMapping('counter_for_type', appendix => $counter);
-  // Let(T_CS!('\\' . $counter), T_CS!('\@@appendix'), 'global');
-  // Let(T_CS!('\@appendix'),    T_CS!('\relax'),      'global');
+pub fn begin_appendices(counter: &str) {
+  // Save current definitions for restoration
+  let the_ctr = s!("\\the{counter}");
+  let the_ctr_id = s!("\\the{counter}@ID");
+  let cs_ctr = T_CS!(s!("\\{counter}"));
+  state::let_i(
+    &T_CS!("\\lx@save@theappendex"),
+    &T_CS!(the_ctr.clone()),
+    Some(Scope::Global),
+  );
+  state::let_i(
+    &T_CS!("\\lx@save@theappendex@ID"),
+    &T_CS!(the_ctr_id.clone()),
+    Some(Scope::Global),
+  );
+  state::let_i(
+    &T_CS!("\\lx@save@appendix"),
+    &cs_ctr,
+    Some(Scope::Global),
+  );
+  state::let_i(
+    &T_CS!("\\lx@save@@appendix"),
+    &T_CS!("\\@appendix"),
+    Some(Scope::Global),
+  );
+  state::assign_mapping(
+    "BACKMATTER_ELEMENT",
+    "ltx:appendix",
+    Some(s!("ltx:{counter}")),
+  );
+  let has_chapter = lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some();
+  if has_chapter && counter != "chapter" {
+    // Appendices are below the chapter level
+    let _ = new_counter(counter, "chapter", Some(NewDefault!(NewCounterOptions, idprefix => "A")));
+    let expansion: String = s!("\\thechapter.\\Alph{{{counter}}}");
+    let _ = def_macro(
+      T_CS!(the_ctr),
+      None,
+      Some(ExpansionBody::from(expansion)),
+      Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))),
+    );
+  } else {
+    let _ = new_counter(counter, "document", Some(NewDefault!(NewCounterOptions, idprefix => "A")));
+    let expansion: String = s!("\\Alph{{{counter}}}");
+    let _ = def_macro(
+      T_CS!(the_ctr),
+      None,
+      Some(ExpansionBody::from(expansion)),
+      Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))),
+    );
+  }
+  // Reset the counter to 0
+  let _ = state::assign_register(
+    &s!("\\c@{counter}"),
+    RegisterValue::Number(Number::new(0)),
+    None,
+    Vec::new(),
+  );
+  state::assign_mapping("counter_for_type", "appendix", Some(counter.to_string()));
+  state::let_i(&cs_ctr, &T_CS!("\\@@appendix"), Some(Scope::Global));
+  state::let_i(&T_CS!("\\@appendix"), &T_CS!("\\relax"), Some(Scope::Global));
 }
 
 pub fn end_appendices() {
-  todo!();
-  // if (my $counter = LookupMapping('BACKMATTER_ELEMENT', 'ltx:appendix')) {
-  //   $counter =~ s/^ltx://;
-  //   Let('\the' . $counter,         '\lx@save@theappendex',    'global');
-  //   Let('\the' . $counter . '@ID', '\lx@save@theappendex@ID', 'global');
-  //   Let(T_CS!('\\' . $counter),     '\lx@save@appendix',       'global');
-  //   Let(T_CS!('\@appendix'),        '\lx@save@@appendix',      'global'); }
+  if let Some(counter_stored) = state::lookup_mapping("BACKMATTER_ELEMENT", "ltx:appendix") {
+    let counter_full = counter_stored.to_string();
+    let counter = counter_full.strip_prefix("ltx:").unwrap_or(&counter_full);
+    let the_ctr = s!("\\the{counter}");
+    let the_ctr_id = s!("\\the{counter}@ID");
+    state::let_i(
+      &T_CS!(the_ctr),
+      &T_CS!("\\lx@save@theappendex"),
+      Some(Scope::Global),
+    );
+    state::let_i(
+      &T_CS!(the_ctr_id),
+      &T_CS!("\\lx@save@theappendex@ID"),
+      Some(Scope::Global),
+    );
+    state::let_i(
+      &T_CS!(s!("\\{counter}")),
+      &T_CS!("\\lx@save@appendix"),
+      Some(Scope::Global),
+    );
+    state::let_i(
+      &T_CS!("\\@appendix"),
+      &T_CS!("\\lx@save@@appendix"),
+      Some(Scope::Global),
+    );
+  }
 }
 
 pub fn make_note_tags(
