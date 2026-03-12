@@ -493,8 +493,6 @@ impl BoxOps for Alignment {
             border.push(' ');
           }
         }
-        let empty =
-          cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty()?;
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
         if let Some(align) = cell.align {
@@ -538,7 +536,8 @@ impl BoxOps for Alignment {
         //       cached_width => $$cell{cached_width}, cached_height => $$cell{cached_height},
         // cached_depth => $$cell{cached_depth})
         cell.cell = open_column_fn(document, cell_attrs)?;
-        if !empty {
+        // Perl L362: absorb cell content only if !skippable (not just !empty)
+        if !cell.skippable {
           let box_ref = cell.boxes.as_ref().unwrap();
           // local $LaTeXML::BOX
           document.set_box_to_absorb(Some(box_ref.clone()));
