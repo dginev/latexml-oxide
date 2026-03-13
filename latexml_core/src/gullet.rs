@@ -183,8 +183,14 @@ pub fn unread_mut(tokens: &mut Tokens) {
     }
   };
 }
-/// Unreads a single `Token` to the start of the token stream
+/// Unreads a single `Token` to the start of the token stream.
+/// Perl: unread() always adjusts $ALIGN_STATE when unreading { or } tokens.
 pub fn unread_one(token: Token) {
+  match token.get_catcode() {
+    Catcode::BEGIN => decrement_align_group_count(), // Retract scanned brace
+    Catcode::END => increment_align_group_count(),
+    _ => {},
+  }
   if let Some(ref mut runtime) = gullet_mut!().runtime {
     runtime.pushback.push_front(token);
   };
@@ -540,12 +546,8 @@ pub fn read_x_token(
     } else {
       // Perl Gullet.pm L421-422: track { and } at scan level for ALIGN_STATE
       match token.get_catcode() {
-        Catcode::BEGIN => {
-          increment_align_group_count();
-        },
-        Catcode::END => {
-          decrement_align_group_count();
-        },
+        Catcode::BEGIN => increment_align_group_count(),
+        Catcode::END => decrement_align_group_count(),
         _ => {},
       }
       return Ok(Some(token));
@@ -1826,8 +1828,6 @@ fn handle_marker(marker_token: Token) {
   marker_token.with_str(|arg| match arg {
     "before-column" => {
       // Were in before-column template
-      // let alignment = lookup_alignment();
-      // Debug("Halign $alignment: alignment => 0") if $LaTeXML::DEBUG{halign};
       set_align_group_count(0);
     }, // switch to column proper!
     "after-column" => { // Were in before-column template

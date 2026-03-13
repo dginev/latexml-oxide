@@ -628,7 +628,9 @@ pub fn predigest_box_contents_with_mode(
   Ok(Some(list.into()))
 }
 
-/// Legacy predigest — kept for cases that don't need full body reading.
+
+/// Predigest box contents by invoking T_BEGIN, which triggers
+/// the stomach's bgroup/egroup mechanism to properly handle the box body.
 pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   let mut contents = stomach::invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {

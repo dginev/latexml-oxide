@@ -126,3 +126,34 @@ patterns like `#1#2` as well.
 provided strings, verify the default makes sense. Silent fallbacks can mask bugs
 for months — the sizer was returning (0,0,0) which just happened to trigger
 column pruning instead of panicking.
+
+---
+
+## 7. `align_group_count` (`$ALIGN_STATE`): scan-level only, retract on unread
+
+**Discovery:** Nested `\vbox{\halign{...}}` inside an outer `\halign` caused
+outer column-end tokens (`&`, `\cr`) to not fire `handle_template`, because
+`align_group_count` was >0 when it should have been 0.
+
+**Root cause (two bugs):**
+
+1. **`unread_one` didn't adjust agc.** Perl's `unread()` sub (Gullet.pm L340-359)
+   always adjusts `$ALIGN_STATE` for `{` and `}` tokens, whether unreading one
+   or many tokens. Rust had `unread_one` (no adjustment) and `unread_vec` (with
+   adjustment). Functions like `skip_spaces()` → `read_non_space()` read `{` via
+   `read_token()` (incrementing agc), then unread it via `unread_one` (no
+   decrement). The `{` would be re-read later, double-incrementing.
+
+2. **`stomach::bgroup()/egroup()` adjusted agc.** Perl's bgroup/egroup
+   (Stomach.pm L327-342) do NOT touch `$ALIGN_STATE`. It's tracked only at the
+   scan level (in `readToken`/`readXToken`). The Rust code had
+   `increment_align_group_count()` in `bgroup()` and `decrement_align_group_count()`
+   in `egroup()`, causing double-counting for every `{`/`}` pair.
+
+**Fix:** Added agc adjustment to `unread_one` for BEGIN/END tokens. Removed agc
+tracking from `bgroup()`/`egroup()`.
+
+**Key insight:** `$ALIGN_STATE` is a scan-level concept (TeX §309). It must be
+incremented/decremented exactly once per `{`/`}` token as it passes through
+`readToken` or `readXToken`, and must be retracted when tokens are unread.
+The stomach's group machinery is a separate concern.

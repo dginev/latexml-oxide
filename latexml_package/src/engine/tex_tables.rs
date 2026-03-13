@@ -740,7 +740,6 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
       //   stomach.box_list.extend(invoked.into_iter());
       } else {
         // Else, we're getting some actual content for the column
-        // eprintln!("Halign: COLUMN invoking {}", token.stringify());// if $LaTeXML::DEBUG{halign};
         let invoked = stomach::invoke_token(&token)?;
         extend_box_list(invoked);
         // eprintln!("Halign: COLUMN {} ==> {}",token.stringify(),

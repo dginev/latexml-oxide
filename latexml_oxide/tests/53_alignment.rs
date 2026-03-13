@@ -9,7 +9,6 @@ fn tabtab_test() {
 }
 
 #[test]
-#[ignore] // diffs — alignment engine issues
 fn halign_test() {
   latexml_test_single("tests/alignment/halign.tex", "halign", DIR, None, None);
 }
