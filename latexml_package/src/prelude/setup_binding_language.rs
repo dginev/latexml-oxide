@@ -640,14 +640,6 @@ macro_rules! parse_prototype(
     latexml_core::common::def_parser::parse_prototype($proto, true)? }};
 );
 
-// sub DocType {
-//   my ($rootelement, $pubid, $sysid, %namespaces) = @_;
-//   let model = state->getModel;
-//   $model->setDocType($rootelement, $pubid, $sysid);
-//   foreach let prefix (keys %namespaces) {
-//     $model->registerDocumentNamespace($prefix => $namespaces{$prefix}); }
-//   return; }
-
 #[macro_export]
 macro_rules! DefEnvironmentWO (
   ($proto_raw:expr, $replacement:expr, $options:expr) => ({
@@ -1562,14 +1554,14 @@ macro_rules! MuGlue {
   ($spec:expr) => {{ MuGlue::new_spec($spec, None, None, None, None) }};
 }
 
+/// Register document namespaces. Replaces the old `DocType!` macro (DTD not supported in Rust port).
+/// The root element, public ID, and system ID arguments are accepted for compatibility but ignored.
 #[macro_export]
-macro_rules! DocType {
+macro_rules! RegisterDocumentNamespaces {
   ($rootelement:expr, $pubid:expr, $sysid:expr) => {
-    let mut namespaces: HashMap<String, String> = HashMap::default();
-    DocType!($rootelement, $pubid, $sysid, namespaces)
+    // No-op: DTD schema type not supported. Arguments retained for documentation/compatibility.
   };
   ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr) => {{
-    model::set_doc_type($rootelement, $pubid, $sysid);
     for (prefix, value) in $namespaces.iter() {
       model::register_document_namespace(prefix, Some(value));
     }

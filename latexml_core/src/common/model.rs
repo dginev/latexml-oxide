@@ -15,7 +15,7 @@ use crate::util::pathname;
 use libxml::tree::Node;
 
 use super::arena::{
-  DTD_SYM, EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM,
+  EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM,
   RELAXNG_SYM, SymHashMap, WILD_CARD_SYM,
 };
 
@@ -87,7 +87,7 @@ impl Model {
   /// Namespaces
   ///**********************************************************************
   /// There are TWO namespace mappings!!!
-  /// One for coding, one for the DocType.
+  /// One for coding, one for the document output.
   ///
   /// Coding: this namespace mapping associates prefixes to namespace URIs for
   ///   use in the latexml code, constructors and such.
@@ -264,15 +264,6 @@ impl Model {
   }
 }
 
-pub fn set_doc_type(roottag: &str, publicid: &str, systemid: &str) {
-  model_mut!().schema_data = Some(vec![
-    *DTD_SYM,
-    arena::pin(roottag),
-    arena::pin(publicid),
-    arena::pin(systemid),
-  ]);
-}
-
 pub fn set_relaxng_schema(schema: &str) { model_mut!().set_relaxng_schema(schema) }
 pub fn add_schema_declaration(document: &mut Document) {
   if let Some(ref schema) = model!().schema {
@@ -302,38 +293,23 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
     model.register_namespace("xhtml", Some("http://www.w3.org/1999/xhtml"));
     model.permissive = true;
   } // Actually, they could have declared all sorts of Tags....
-  let mut schema_type = *EMPTY_SYM;
-  match model.schema_data {
-    None => {},
-    Some(ref data) => {
-      schema_type = data[0];
-      if schema_type == *DTD_SYM {
-        // NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
-        // ($roottag, $publicid, $systemid) = @data;
-        name = arena::with(*data.last().unwrap(), |data_str| {
-          data_str.replace(".dtd", "")
-        });
-        model.schema = Some(Relaxng {
-          name: "DTD".to_string(), // HACK, phase out DTD support!
-          ..Relaxng::default()
-        });
-        // $systemid);
-      } else if schema_type == *RELAXNG_SYM {
-        name = arena::to_string(data[1]);
-        model.schema = Some(Relaxng {
-          name: name.clone(),
-          ..Relaxng::default()
-        });
-      } else {
-        let message = arena::with(schema_type, |schema_type_str| {
-          s!("Can't load a schema of type {schema_type_str:?}")
-        });
-        Error!("unknown", "schematype", message)
-      }
-    },
-  };
+  // Only RelaxNG schemas are supported (DTD support removed from Rust port)
+  if let Some(ref data) = model.schema_data {
+    if data[0] == *RELAXNG_SYM {
+      name = arena::to_string(data[1]);
+      model.schema = Some(Relaxng {
+        name: name.clone(),
+        ..Relaxng::default()
+      });
+    } else {
+      let message = arena::with(data[0], |schema_type_str| {
+        s!("Can't load a schema of type {schema_type_str:?}")
+      });
+      Error!("unknown", "schematype", message)
+    }
+  }
 
-  if !model.no_compiled {
+  if !model.no_compiled && model.schema.is_some() {
     let paths: Option<Vec<String>> = if search_paths.is_empty() {
       None
     } else {
@@ -342,7 +318,7 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
     let pathname_opt = pathname::find(&name, pathname::PathnameFindOptions {
       paths,
       extensions: Some(vec![s!("model")]),
-      installation_subdir: Some(arena::with(schema_type, |str| s!("resources/{str}"))),
+      installation_subdir: Some(s!("resources/RelaxNG")),
     });
 
     match pathname_opt {
@@ -675,7 +651,7 @@ pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
 
   let mut model = model_mut!();
   if model.permissive && tag == *H_DOC_SYM && child != *H_PCDATA_SYM {
-    return true; // No DTD? Punt!
+    return true; // No schema? Punt!
   }
 
   // Else query tag properties.
@@ -702,7 +678,7 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
   };
   let model = model!();
   if model.permissive && tag == "#Document" && child != "#PCDATA" {
-    return true; // No DTD? Punt!
+    return true; // No schema? Punt!
   }
 
   // Else query tag properties.

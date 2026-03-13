@@ -20,7 +20,7 @@ Cargo workspace with 6 crates:
 - **latexml_contrib** — User-contributed style packages
 
 Supporting directories:
-- `resources/` — CSS, DTD, JavaScript, RelaxNG schemas, XSLT, Profiles
+- `resources/` — CSS, JavaScript, RelaxNG schemas, XSLT, Profiles
 - `tools/` — Utility scripts (e.g. `compile_metrics.pl`)
 - `.githooks/` — Pre-push hook for quality checks
 - `docs/` — Internal project documentation (see below)
@@ -88,6 +88,7 @@ git config --local core.hooksPath .githooks/
 - **State** is a thread-local, global, mutable singleton (see CHANGELOG 0.3.2 decision)
 - Uses a **string interner** for efficient symbol handling
 - TeX macro definitions can be compiled at compile-time via proc macros in `latexml_codegen`
+- **No DTD support** — the Rust port only supports RelaxNG schemas. DTD-based document tests (namespace ns1–ns5, xii) are permanently ignored. The `DocType!` macro has been removed; `RegisterDocumentNamespaces!` handles namespace registration only.
 - The port aims to be **faithful to the Perl original** while using idiomatic Rust where possible
 - Test files (`.t` extension) mirror the original LaTeXML Perl test suite; `.rs` files are the Rust equivalents
 - most tests are regression-oriented. They contain a complete TeX input, and can experience failures in many different intermediate stages.

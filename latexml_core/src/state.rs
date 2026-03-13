@@ -2033,15 +2033,21 @@ pub fn compute_indirect_model() -> IndirectModel {
   let mut imodel: IndirectModel = SymHashMap::default();
   // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
   let mut openable: HashSet<SymStr> = HashSet::default();
-  for tag in model::get_tags() {
-    if let Some(x) = state!().tag_properties.get(&tag) {
+  // Collect all known tags: from the schema model AND from state tag_properties
+  let mut all_tags: HashSet<SymStr> = model::get_tags().into_iter().collect();
+  for tag in state!().tag_properties.keys() {
+    all_tags.insert(*tag);
+  }
+  for tag in &all_tags {
+    if let Some(x) = state!().tag_properties.get(tag) {
       if let Some(true) = x.auto_open {
-        openable.insert(tag);
+        openable.insert(*tag);
       }
     }
   }
 
-  for tag in model::get_tags() {
+  for tag in &all_tags {
+    let tag = *tag;
     let mut desc: SymHashMap<SymHashMap<usize>> = SymHashMap::default();
     compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
     let desc_keys: Vec<SymStr> = desc.keys().copied().collect();

@@ -220,11 +220,11 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-13 evening)
+## Test Suite Status (2026-03-13 night)
 
-**Current totals: 139 pass, 0 fail, 42 ignored test functions**
+**Current totals: 155 pass, 0 fail, 34 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 44% of Perl test cases passing**
+**Coverage: 49% of Perl test cases passing**
 
 | Suite | Pass/Total | Notes |
 |-------|-----------|-------|
@@ -236,19 +236,20 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 10_expansion | 36/36 | All pass (Rust 48 .tex, Perl 47) |
 | 12_grouping | 2/2 | All pass |
 | 20_digestion | 10/10 | All pass |
-| 22_fonts | 7/23 | 7 pass; 16 ignored |
-| 32_keyval | 1/7 | 1 pass; 6 ignored (xkeyval loop, keyval style) |
-| 33_keyval_options | 0/11 | **All ignored** — xkeyval infinite loop |
-| 50_structure | 26/44 | 26 pass; 18 disabled (.todo — need packages) |
-| 52_namespace | 0/5 | **All ignored** — needs `.latexml` document-level bindings |
+| 22_fonts | 8/23 | 8 pass; 15 ignored |
+| 30_encoding | 26/26 | All pass |
+| 32_keyval | 4/7 | 4 pass; 3 ignored (keyval style, xkeyval style/view) |
+| 33_keyval_options | 11/11 | All pass |
+| 50_structure | 24/24 | All pass (18 .todo disabled at build level) |
+| 52_namespace | 0/5 | **All ignored** — DTD not supported in Rust port |
 | 53_alignment | 0/2 | **All ignored** — nested tabular flattening, thead detection |
-| 55_theorem | 4/5 | 4 pass; ntheorem ignored (math parser diffs) |
+| 55_theorem | 4/4 | All pass (ntheorem disabled) |
+| 56_ams | 0/1 | **All ignored** — needs amsmath environments |
 | 65_graphics | 0/1 | **All ignored** — color.sty recursion |
-| 70_parse | 0/28 | **All ignored** — math parser regression tests |
+| 70_parse | 0/1 | **All ignored** — math parser regression tests |
 | 700_unit_parse | 3/3 | |
-| 80_complex | 0/1 | **All ignored** — complex test failures |
-| 81_babel | 0/6 | **All ignored** — needs babel language `.ldf` files |
-| 24_encoding | 24/24 | All pass |
+| 80_complex | 1/5 | xii passes; 4 ignored (need class bindings) |
+| 81_babel | 0/1 | **All ignored** — needs babel language `.ldf` files |
 
 ### Perl-only tests (not yet copied to Rust)
 
@@ -422,12 +423,10 @@ These are foundational fixes that unblock large batches of tests across multiple
 **Effort:** Medium.
 **Yield:** Unlocks csquotes structure test.
 
-### Phase 7: Namespace + Document Bindings (target: ~285 → ~290)
+### Phase 7: ~~Namespace + Document Bindings~~ REMOVED
 
-#### 7A. Port .latexml document binding infrastructure — unlocks 5 namespace tests
-**Work:** Implement the `.latexml` file format — document-level bindings that define custom namespaces, schemas, and element mappings. Create Rust equivalents of ns1–ns5 `.latexml` files.
-**Effort:** Medium — new infrastructure but well-scoped.
-**Yield:** +5 tests
+DTD support removed from Rust port (decision 2026-03-13). Only RelaxNG schemas supported.
+Namespace tests (ns1–ns5) permanently ignored. xii.tex converted to use standard LaTeXML elements.
 
 ### Phase 8: Complex Integration + New Suites (target: ~290 → ~320+)
 
@@ -463,16 +462,16 @@ These are foundational fixes that unblock large batches of tests across multiple
 
 | Phase | Cumulative Tests | Delta | Key Infrastructure |
 |-------|-----------------|-------|--------------------|
-| Current | 139 | — | — |
-| Phase 1 (infrastructure) | ~180 | +41 | xkeyval, local .ltxml, structure packages |
-| Phase 2 (fonts) | ~195 | +15 | per-font hyphenchar, fontname format, font sizes |
-| Phase 3 (alignment) | ~215 | +20 | nested tabular, alignment packages |
-| Phase 4 (math) | ~260 | +45 | parser tests, amsmath, eqnarray |
-| Phase 5 (graphics) | ~275 | +15 | color, xcolor, graphicx, pgf/tikz |
-| Phase 6 (languages) | ~285 | +10 | babel, csquotes |
-| Phase 7 (namespace) | ~290 | +5 | .latexml bindings |
-| Phase 8 (integration) | ~320 | +30 | complex tests, expl3, beamer |
-| Phase 9 (post-proc) | ~354 | +34 | XSLT, MathML, HTML5 output |
+| Current | 155 | — | — |
+| Phase 1 (infrastructure) | ~190 | +35 | local .ltxml, structure packages |
+| Phase 2 (fonts) | ~205 | +15 | per-font hyphenchar, fontname format, font sizes |
+| Phase 3 (alignment) | ~225 | +20 | nested tabular, alignment packages |
+| Phase 4 (math) | ~270 | +45 | parser tests, amsmath, eqnarray |
+| Phase 5 (graphics) | ~285 | +15 | color, xcolor, graphicx, pgf/tikz |
+| Phase 6 (languages) | ~295 | +10 | babel, csquotes |
+| Phase 7 (namespace) | — | — | REMOVED (DTD not supported) |
+| Phase 8 (integration) | ~325 | +30 | complex tests, expl3, beamer |
+| Phase 9 (post-proc) | ~354 | +29 | XSLT, MathML, HTML5 output |
 | **Full Perl parity** | **~354** | | **all suites, all tests** |
 
 ### Critical Path Dependencies
@@ -480,16 +479,14 @@ These are foundational fixes that unblock large batches of tests across multiple
 ```
 expl3 ──→ soul, wasysym, cancels, mathcolor, fontspec, beamer
 color.sty ──→ xcolor ──→ tikz, beamer, colortbl, ntheorem backgrounds
-xkeyval ──→ 17 keyval tests, many packages using \define@key
 alignment engine ──→ eqnarray ──→ ntheorem, amsmath {align}
 local .ltxml loading ──→ keyvalstyle, structure .todo tests
 ```
 
 ### Immediate Next Actions (prioritized)
 1. Fix "misdefined expansion" warning (diagnostic)
-2. Port xkeyval.sty.ltxml (unlocks 17 tests)
-3. Implement local .sty.ltxml loading from test directories
-4. Enable structure .todo tests one by one
-5. Per-font `\hyphenchar` + `\fontname` format fixes
-6. Fix nested tabular in alignment engine
-7. Port color.sty.ltxml
+2. Implement local .sty.ltxml loading from test directories
+3. Enable structure .todo tests one by one
+4. Per-font `\hyphenchar` + `\fontname` format fixes
+5. Fix nested tabular in alignment engine
+6. Port color.sty.ltxml

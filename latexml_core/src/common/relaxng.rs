@@ -31,13 +31,10 @@ impl Relaxng {
   /// declare the schema on a given `Document`
   pub fn add_schema_declaration(&self, document: &mut Document) {
     let mut attributes = HashMap::default();
-    if self.name != "DTD" {
-      // provisions for phasing out DTD
-      attributes.insert(s!("RelaxNGSchema"), self.name.clone());
-      document
-        .insert_pi("latexml", Some(attributes))
-        .expect("should never fail");
-    }
+    attributes.insert(s!("RelaxNGSchema"), self.name.clone());
+    document
+      .insert_pi("latexml", Some(attributes))
+      .expect("should never fail");
   }
 
   /// build the internal representation

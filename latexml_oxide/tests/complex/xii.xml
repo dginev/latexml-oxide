@@ -1,117 +1,119 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<song>
-  <verse>
-    <line>On the first day of Christmas my true love gave to me</line>
-    <line>a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the second day of Christmas my true love gave to me</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the third day of Christmas my true love gave to me</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the fourth day of Christmas my true love gave to me</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the fifth day of Christmas my true love gave to me</line>
-    <line>five gold rings</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the sixth day of Christmas my true love gave to me</line>
-    <line>six geese a laying</line>
-    <line>five gold rings</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the seventh day of Christmas my true love gave to me</line>
-    <line>seven swans a swimming</line>
-    <line>six geese a laying</line>
-    <line>five gold rings</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the eighth day of Christmas my true love gave to me</line>
-    <line>eight maids a milking</line>
-    <line>seven swans a swimming</line>
-    <line>six geese a laying</line>
-    <line>five gold rings</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the ninth day of Christmas my true love gave to me</line>
-    <line>nine ladies dancing</line>
-    <line>eight maids a milking</line>
-    <line>seven swans a swimming</line>
-    <line>six geese a laying</line>
-    <line>five gold rings</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the tenth day of Christmas my true love gave to me</line>
-    <line>ten lords a leaping</line>
-    <line>nine ladies dancing</line>
-    <line>eight maids a milking</line>
-    <line>seven swans a swimming</line>
-    <line>six geese a laying</line>
-    <line>five gold rings</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the eleventh day of Christmas my true love gave to me</line>
-    <line>eleven pipers piping</line>
-    <line>ten lords a leaping</line>
-    <line>nine ladies dancing</line>
-    <line>eight maids a milking</line>
-    <line>seven swans a swimming</line>
-    <line>six geese a laying</line>
-    <line>five gold rings</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-  <verse>
-    <line>On the twelfth day of Christmas my true love gave to me</line>
-    <line>twelve drummers drumming</line>
-    <line>eleven pipers piping</line>
-    <line>ten lords a leaping</line>
-    <line>nine ladies dancing</line>
-    <line>eight maids a milking</line>
-    <line>seven swans a swimming</line>
-    <line>six geese a laying</line>
-    <line>five gold rings</line>
-    <line>four calling birds</line>
-    <line>three french hens</line>
-    <line>two turtle doves</line>
-    <line>and a partridge in a pear tree.</line>
-  </verse>
-</song>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <para>
+    <p>On the first day of Christmas my true love gave to me</p>
+    <p>a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the second day of Christmas my true love gave to me</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the third day of Christmas my true love gave to me</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the fourth day of Christmas my true love gave to me</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the fifth day of Christmas my true love gave to me</p>
+    <p>five gold rings</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the sixth day of Christmas my true love gave to me</p>
+    <p>six geese a laying</p>
+    <p>five gold rings</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the seventh day of Christmas my true love gave to me</p>
+    <p>seven swans a swimming</p>
+    <p>six geese a laying</p>
+    <p>five gold rings</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the eighth day of Christmas my true love gave to me</p>
+    <p>eight maids a milking</p>
+    <p>seven swans a swimming</p>
+    <p>six geese a laying</p>
+    <p>five gold rings</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the ninth day of Christmas my true love gave to me</p>
+    <p>nine ladies dancing</p>
+    <p>eight maids a milking</p>
+    <p>seven swans a swimming</p>
+    <p>six geese a laying</p>
+    <p>five gold rings</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the tenth day of Christmas my true love gave to me</p>
+    <p>ten lords a leaping</p>
+    <p>nine ladies dancing</p>
+    <p>eight maids a milking</p>
+    <p>seven swans a swimming</p>
+    <p>six geese a laying</p>
+    <p>five gold rings</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the eleventh day of Christmas my true love gave to me</p>
+    <p>eleven pipers piping</p>
+    <p>ten lords a leaping</p>
+    <p>nine ladies dancing</p>
+    <p>eight maids a milking</p>
+    <p>seven swans a swimming</p>
+    <p>six geese a laying</p>
+    <p>five gold rings</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+  <para>
+    <p>On the twelfth day of Christmas my true love gave to me</p>
+    <p>twelve drummers drumming</p>
+    <p>eleven pipers piping</p>
+    <p>ten lords a leaping</p>
+    <p>nine ladies dancing</p>
+    <p>eight maids a milking</p>
+    <p>seven swans a swimming</p>
+    <p>six geese a laying</p>
+    <p>five gold rings</p>
+    <p>four calling birds</p>
+    <p>three french hens</p>
+    <p>two turtle doves</p>
+    <p>and a partridge in a pear tree.</p>
+  </para>
+</document>
