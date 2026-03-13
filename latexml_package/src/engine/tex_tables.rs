@@ -67,6 +67,7 @@ LoadDefinitions!({
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
         after: Some(Tokens!(T_CS!("\\hfil"))),
+        align: Some(Align::Left),
         ..Cell::default()
       })
     });
@@ -76,6 +77,7 @@ LoadDefinitions!({
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         after: Some(Tokens!(T_CS!("\\hfil"))),
+        align: Some(Align::Center),
         ..Cell::default()
       })
     });
@@ -84,6 +86,7 @@ LoadDefinitions!({
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
+        align: Some(Align::Right),
         ..Cell::default()
       })
     });
@@ -782,19 +785,12 @@ pub fn extract_alignment_column(
   let n0 = lookup_int("alignmentStartColumn") as usize + 1;
   let n1 = alignment.current_column_number();
   let colspec = alignment.get_column(n0).unwrap();
-  let mut align = colspec.align.unwrap_or(Align::Left);
+  let template_align = colspec.align.unwrap_or(Align::Left);
+  let mut align = template_align;
   let mut border = String::new();
   // Peel off any boxes from both sides until we get the "meat" of the column.
   // from this we can establish borders, alignment and emptiness.
   // But we, of course, immediately put them back...
-  if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
-    eprintln!("DEBUG extract_alignment_column n0={n0} initial align={align:?} boxes({}):", boxes.len());
-    for (i, b) in boxes.iter().enumerate() {
-      eprintln!("  [{i}] isFill={} isVRule={} isSpace={} str={:?}",
-        b.get_property("isFill").is_some(), b.get_property("isVerticalRule").is_some(),
-        b.get_property("isSpace").is_some(), b.to_string());
-    }
-  }
   let mut saveleft = VecDeque::new();
   let mut saveright = VecDeque::new();
   let mut lspaces: Vec<Digested> = Vec::new();
@@ -808,9 +804,6 @@ pub fn extract_alignment_column(
         T_CS!("\\relax")
       );
       let hskip_digested = stomach::digest(hskip_toks)?;
-      if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
-        eprintln!("DEBUG tabskip for col {n0}: skip={skip}, digested={hskip_digested:?}");
-      }
       lspaces.push(hskip_digested);
     }
   }
@@ -883,6 +876,13 @@ pub fn extract_alignment_column(
         break;
       },
     }
+  }
+  // Workaround: when left fill was found but right fill was not (align=Right),
+  // AND the template originally specified Center, fall back to the template alignment.
+  // This compensates for the right \hfil sometimes being missing from column content
+  // due to agc tracking across \hbox groups.
+  if align == Align::Right && template_align == Align::Center {
+    align = Align::Center;
   }
   if align != Align::Justify {
     colspec.width = None;

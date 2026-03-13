@@ -518,6 +518,12 @@ impl Digested {
           true
         } else if let Ok(Some(body)) = w.get_body() {
           body.is_skippable()
+        } else if let Some(ref prop) = w.get_property("content_box") {
+          // Perl: $thing->getProperty('content_box') — for \hbox etc.
+          match &**prop {
+            Stored::Digested(cb) => cb.is_skippable(),
+            _ => false,
+          }
         } else {
           false
         }

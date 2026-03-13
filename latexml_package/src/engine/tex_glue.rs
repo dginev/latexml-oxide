@@ -70,9 +70,13 @@ LoadDefinitions!({
   // Perl: enterHorizontal => 1
   enter_horizontal => true,
   properties => sub[args] {
-    unref!(args => length);
+    unref!(args => length_digested);
+    let width: Dimension = match length_digested.data() {
+      DigestedData::RegisterValue(v) => v.into(),
+      _ => Dimension::default()
+    };
     Ok(stored_map!(
-      "width" => length, "isSpace" => true, "isSkip" => true))
+      "width" => width, "isSpace" => true, "isSkip" => true))
   });
 
   //======================================================================

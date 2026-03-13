@@ -535,31 +535,42 @@ impl BoxOps for Alignment {
         // Based on lspaces/rspaces width relative to 0.2em threshold
         let mut classes: Vec<String> = Vec::new();
         let empty = cell.empty;
-        let has_boxes = cell.boxes.is_some();
+        // Perl: $$cell{boxes} — truthy when boxes is defined and non-empty
+        let has_boxes = cell
+          .boxes
+          .as_ref()
+          .is_some_and(|b| !b.is_empty().unwrap_or(true));
         let mut pre_absorb: Option<Digested> = None;
         let mut post_absorb: Option<Digested> = None;
-        if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
-          eprintln!("DEBUG be_absorbed cell: empty={empty} has_boxes={has_boxes} tabskip={:?} lspaces={}", cell.tabskip, cell.lspaces.is_some());
-        }
         if !ismath {
           // 0.2em ≈ 131072 scaled points; 1.5em ≈ 983040 scaled points (at 10pt font)
           let threshold_02em: i64 = 131072;
           let threshold_15em: i64 = 983040;
-          // Perl: $cell{lspaces}->getWidth->valueOf
-          // Use tabskip directly as lpad when lspaces comes from tabskip
+          // Perl: $lpad = ($$cell{lspaces} ? $$cell{lspaces}->getWidth->valueOf : 0)
           let lpad = cell
-            .tabskip
-            .map(|g| g.value_of())
-            .unwrap_or(0);
-          let rpad: i64 = 0; // rspaces not populated from tabskip
+            .lspaces
+            .as_ref()
+            .and_then(|ls| ls.get_width(None).ok().flatten())
+            .map(|rv| rv.value_of())
+            .unwrap_or_else(|| {
+              // When lspaces is unset but template has fill/spacing commands,
+              // assume spacing exists (workaround for missing rspaces extraction)
+              if template_has_fill(&cell.before) { threshold_02em } else { 0 }
+            });
+          // Perl: $rpad = ($$cell{rspaces} ? $$cell{rspaces}->getWidth->valueOf : 0)
+          let rpad = cell
+            .rspaces
+            .as_ref()
+            .and_then(|rs| rs.get_width(None).ok().flatten())
+            .map(|rv| rv.value_of())
+            .unwrap_or_else(|| {
+              if template_has_fill(&cell.after) { threshold_02em } else { 0 }
+            });
           if (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
             // do nothing — use CSS default padding
           } else {
-            if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
-              eprintln!("DEBUG pre_absorb: lpad={lpad} lspaces.is_some={}", cell.lspaces.is_some());
-            }
             pre_absorb = cell.lspaces.take();
           }
           if (!empty || has_boxes) && rpad < threshold_02em {
@@ -597,29 +608,7 @@ impl BoxOps for Alignment {
           }
           // Perl L365: absorb pre-spacing (lspaces > 1.5em)
           if let Some(ref pre) = pre_absorb {
-            if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
-              eprintln!("DEBUG absorbing pre_absorb: {:?}", pre.data());
-            }
             document.absorb(pre, None)?;
-            if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
-              let node = document.get_node();
-              let children = node.get_child_nodes();
-              eprintln!("DEBUG after pre_absorb: node={} children={}",
-                with_node_qname(&node, |n| n.to_string()),
-                children.len());
-              for (i, child) in children.iter().enumerate() {
-                let ct = child.get_type();
-                let cc = child.get_content();
-                eprintln!("  child[{i}]: type={ct:?} content={cc:?}");
-              }
-            }
-          }
-          if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
-            let boxes_list = box_ref.unlist();
-            eprintln!("DEBUG cell boxes before absorb ({} items):", boxes_list.len());
-            for (bi, bx) in boxes_list.iter().enumerate() {
-              eprintln!("  box[{bi}]: {:?} str={:?}", std::mem::discriminant(bx.data()), bx.to_string());
-            }
           }
           document.absorb(box_ref, None)?;
           // Perl L367: absorb post-spacing (rspaces > 1.5em)
@@ -632,19 +621,6 @@ impl BoxOps for Alignment {
           }
           // expire local $LaTeXML::BOX
           document.expire_box_to_absorb();
-        }
-        if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() && pre_absorb.is_some() {
-          // dump the td node's children before closing
-          if let Some(ref td_node) = cell.cell {
-            let children = td_node.get_child_nodes();
-            eprintln!("DEBUG td before close: {} children", children.len());
-            for (i, child) in children.iter().enumerate() {
-              let ct = child.get_type();
-              let cc = child.get_content();
-              let cname = child.get_name();
-              eprintln!("  child[{i}]: type={ct:?} name={cname} content={:?}", &cc[..cc.len().min(80)]);
-            }
-          }
         }
         let close_column_fn = &self.close_column;
         close_column_fn(document)?;
@@ -799,6 +775,21 @@ pub fn matrix_template() -> Template {
 // Then, assuming that headers will be first and be noticably `different' from data lines,
 // and also that the data lines will have similar structure,  we'll attempt to
 // recognize groups of header lines and groups data lines, possibly alternating.
+
+/// Check whether a template token list contains fill/spacing commands
+/// like \hfil, \hfill, \hskip, \lx@intercol. Used as a fallback when
+/// lspaces/rspaces extraction missed the template spacing.
+fn template_has_fill(tokens: &Option<Tokens>) -> bool {
+  if let Some(ref toks) = tokens {
+    for tok in toks.unlist_ref() {
+      let s = tok.to_string();
+      if s == "\\hfil" || s == "\\hfill" || s == "\\hskip" || s == "\\lx@intercol" {
+        return true;
+      }
+    }
+  }
+  false
+}
 
 fn guess_alignment_headers(
   document: &mut Document,
