@@ -54,11 +54,27 @@ LoadDefinitions!({
     DefPrimitive!(cs, None, None, font => props_opt);
   });
 
-  DefMacro!(
-    T_CS!("\\fontname"),
-    None,
-    Tokens::new(Explode!("fontname not implemented"))
-  );
+  // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}
+  //       || "fontname not available") })
+  DefMacro!("\\fontname FontToken", sub[args] {
+    let token = args.into_iter().next().unwrap().expected_token();
+    let cs_str = token.to_string();
+    // Check if token is \font (current font)
+    let name = if cs_str == "\\font" {
+      state::lookup_font().and_then(|f| f.name.as_ref().map(|n| n.to_string()))
+    } else {
+      // Look up fontinfo_<cs>
+      let key = s!("fontinfo_{}", cs_str);
+      state::lookup_value(&key).and_then(|stored| {
+        if let Stored::Font(f) = stored {
+          f.name.as_ref().map(|n| n.to_string())
+        } else {
+          None
+        }
+      })
+    };
+    Tokens::new(Explode!(name.unwrap_or_else(|| s!("fontname not available"))))
+  });
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
     getter => sub[args] {
       let p = args.remove(0).expect_number().value_of();

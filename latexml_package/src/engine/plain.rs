@@ -640,7 +640,8 @@ LoadDefinitions!({
     Let!(&T_ACTIVE!('\r'), T_CS!("\\@break")); // More appropriate than \par, I think?
   });
 
-  DefConstructor!("\\@break", "<ltx:break/>");
+  DefConstructor!("\\@break", "<ltx:break/>",
+    properties => { stored_map!("isBreak" => true) });
 
   TeX!(
     r"
@@ -727,8 +728,10 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\vglue Glue", None);
   DefPrimitive!("\\topglue", None);
-  DefPrimitive!("\\nointerlineskip", None);
-  DefPrimitive!("\\offinterlineskip", None);
+  // Perl: DefMacroI('\nointerlineskip',undef,'\prevdepth-1000\p@');
+  DefMacro!("\\nointerlineskip", r"\prevdepth-1000\p@");
+  // Perl: DefMacroI('\offinterlineskip',undef, '\baselineskip-1000\p@\lineskip\z@ \lineskiplimit\maxdimen');
+  DefMacro!("\\offinterlineskip", r"\baselineskip-1000\p@\lineskip\z@ \lineskiplimit\maxdimen");
 
   DefMacro!("\\smallskip", "\\vskip\\smallskipamount");
   DefMacro!("\\medskip", "\\vskip\\medskipamount");
@@ -1782,44 +1785,48 @@ LoadDefinitions!({
     r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}"
   );
 
+  // Perl: DefConstructor('\phantom{}', "?#isMath(...)(...)", properties => {isSpace=>1}, afterDigest => ...)
   DefConstructor!(
     "\\phantom{}",
     "?#isMath(<ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
-  ); // !?!?!?!
-  // TODO:
-  // properties  => { isSpace => 1 },
-  // afterDigest => sub {
-  //   my $whatsit = $_[1];
-  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-  //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    properties => { stored_map!("isSpace" => true) },
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg_mut(1) {
+        let (w, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(w));
+        whatsit.set_property("height", Stored::Dimension(h));
+        whatsit.set_property("depth", Stored::Dimension(d));
+      }
+    });
 
   DefConstructor!(
     "\\hphantom{}",
     "?#isMath(<ltx:XMHint width='#width' name='hphantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
-  ); // !?!?!?!
-  // TODO:
-  // properties  => { isSpace => 1 },
-  // afterDigest => sub {
-  //   my $whatsit = $_[1];
-  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-  //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    properties => { stored_map!("isSpace" => true) },
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg_mut(1) {
+        let (w, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(w));
+        whatsit.set_property("height", Stored::Dimension(h));
+        whatsit.set_property("depth", Stored::Dimension(d));
+      }
+    });
 
   DefConstructor!(
     "\\vphantom{}",
     "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
-  ); // !?!?!?!
-  // TODO:
-  // properties  => { isSpace => 1 },
-  // afterDigest => sub {
-  //   my $whatsit = $_[1];
-  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-  //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    properties => { stored_map!("isSpace" => true) },
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg_mut(1) {
+        let (w, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(w));
+        whatsit.set_property("height", Stored::Dimension(h));
+        whatsit.set_property("depth", Stored::Dimension(d));
+      }
+    });
 
   DefConstructor!("\\mathstrut", "?#isMath(<ltx:XMHint name='mathstrut'/>)()",
     properties => { stored_map!("isSpace" => true) });
@@ -1983,10 +1990,11 @@ LoadDefinitions!({
 
   // What should this do? (needs to work with alignments..)
   // see https://www.tug.org/TUGboat/tb07-1/tb14beet.pdf
-  // use in arXiv:hep-th/0001208
-  // TODO:
-  // DefMacro!("\\displaylines{}", r###"\halign{\hbox
-  // to\displaywidth{$\hfil\displaystyle##\hfil$}\crcr#1\crcr}"###);
+  // Perl: DefMacro('\displaylines{}', '\halign{\hbox to\displaywidth{...}\crcr#1\crcr}')
+  DefMacro!(
+    "\\displaylines{}",
+    r"\halign{\hbox to\displaywidth{$\hfil\displaystyle##\hfil$}\crcr#1\crcr}"
+  );
 
   DefMacro!(
     "\\eqalign{}",
