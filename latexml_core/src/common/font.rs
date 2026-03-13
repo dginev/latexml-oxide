@@ -1533,6 +1533,78 @@ pub fn font_match_xpaths(font: &str) -> String {
 /// so that if anything above 128 comes in, it must already be Unicode!.
 /// The lower half plane still needs to go through decoding, though, to deal
 /// with TeX's rearrangement of ASCII...
+/// Push a fontmap character to a string, handling known multi-char entries.
+fn push_fontmap_char(result: &mut String, c: char, _code: u8) {
+  // T1 position 223: "SS" (capital sharp S as two chars)
+  if c == '\u{1E9E}' {
+    result.push_str("SS");
+    return;
+  }
+  // For standalone combining characters (Unicode Mn category), prepend NBSP as base.
+  // Perl fontmaps encode these as UTF(0xA0)."\x{combining}" (two-char strings).
+  if is_combining_mark(c) {
+    result.push('\u{00A0}');
+  }
+  result.push(c);
+}
+
+/// Check if a character is a Unicode combining mark (category Mn).
+fn is_combining_mark(c: char) -> bool {
+  matches!(c as u32,
+    0x0300..=0x036F   // Combining Diacritical Marks
+    | 0x1AB0..=0x1AFF // Combining Diacritical Marks Extended
+    | 0x1DC0..=0x1DFF // Combining Diacritical Marks Supplement
+    | 0x20D0..=0x20FF // Combining Diacritical Marks for Symbols
+    | 0xFE20..=0xFE2F // Combining Half Marks
+  )
+}
+
+/// Decode a codepoint, returning a SymStr that may contain multiple characters.
+/// This handles Perl font map entries like `UTF(0xA0)."\x{0335}"` (OT1 pos 32).
+pub fn decode_str(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<SymStr> {
+  // First, check for multi-char overrides (for entries that can't fit in Option<char>)
+  if let Some(s) = lookup_multichar_override(code, encoding_opt.as_deref()) {
+    return Some(arena::pin(s));
+  }
+  if let Some(c) = decode(code, encoding_opt, implicit) {
+    // T1 position 223: "SS" (capital sharp S as two chars)
+    if c == '\u{1E9E}' {
+      return Some(arena::pin_static("SS"));
+    }
+    // For standalone combining characters, prepend NBSP as base character
+    // (Perl fontmaps encode these as UTF(0xA0)."\x{combining}")
+    if is_combining_mark(c) {
+      return Some(arena::pin(format!("\u{00A0}{c}")));
+    }
+    Some(arena::pin_char(c))
+  } else {
+    None
+  }
+}
+
+/// Look up multi-char override for a given encoding position.
+/// Returns Some(String) if a multi-char override exists.
+fn lookup_multichar_override(code: u8, encoding_opt: Option<&str>) -> Option<String> {
+  let encoding = match encoding_opt {
+    Some(enc) if !enc.is_empty() => enc.to_string(),
+    _ => {
+      let font = lookup_font();
+      font.and_then(|f| f.get_encoding().map(|e| e.to_string()))?
+    },
+  };
+  if encoding.is_empty() {
+    return None;
+  }
+  let mapname = format!("{encoding}_fontmap_multichar");
+  with_value(&mapname, |val_opt| {
+    if let Some(Stored::HashString(ref map)) = val_opt {
+      map.get(&code.to_string()).cloned()
+    } else {
+      None
+    }
+  })
+}
+
 pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<char> {
   let mut font = None;
   let encoding = match encoding_opt {
@@ -1627,6 +1699,20 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
     }
   }
 
+  // Load multi-char overrides if available
+  let multichar_map: Option<HashMap<String, String>> = if !encoding.is_empty() {
+    let mapname = format!("{encoding}_fontmap_multichar");
+    with_value(&mapname, |val_opt| {
+      if let Some(Stored::HashString(ref m)) = val_opt {
+        Some(m.clone())
+      } else {
+        None
+      }
+    })
+  } else {
+    None
+  };
+
   let mut result_string: String = String::new();
   arena::with(string, |str| {
     for c in str.chars() {
@@ -1634,8 +1720,15 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
         if let Some(ref map_ref) = map {
           let code = c as u16; // u16, so that Unicode chars get cast correctly
           if code < 128 {
+            // Check multi-char override first
+            if let Some(ref mc) = multichar_map {
+              if let Some(mc_str) = mc.get(&(code as u8).to_string()) {
+                result_string.push_str(mc_str);
+                continue;
+              }
+            }
             if let Some(Some(mapc_val)) = map_ref.get(code as usize) {
-              result_string.push(*mapc_val);
+              push_fontmap_char(&mut result_string, *mapc_val, code as u8);
             }
           } else {
             result_string.push(c);
@@ -1645,8 +1738,15 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
         }
       } else if let Some(ref map_ref) = map {
         let code = c as u8;
+        // Check multi-char override first
+        if let Some(ref mc) = multichar_map {
+          if let Some(mc_str) = mc.get(&code.to_string()) {
+            result_string.push_str(mc_str);
+            continue;
+          }
+        }
         if let Some(Some(mapc_val)) = map_ref.get(code as usize) {
-          result_string.push(*mapc_val);
+          push_fontmap_char(&mut result_string, *mapc_val, code);
         }
       }
     }

@@ -4,7 +4,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, SymStr};
+use crate::common::arena::{self, SymStr, EMPTY_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font;
@@ -640,10 +640,8 @@ impl Definition for Register {
           )
         } else {
           Tbox::new(
-            arena::pin_char(
-              font::decode(self.value.clone().unwrap().value_of() as u8, None, false)
-                .unwrap_or_default(),
-            ),
+            font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
+              .unwrap_or(*EMPTY_SYM),
             None,
             None,
             Tokens!(
