@@ -103,11 +103,18 @@ LoadDefinitions!({
   );
 
   // Perl: enterHorizontal => 1
+  // properties => { frame => sub { ToString($_[1] || 'rectangle'); }}
   DefConstructor!(
     "\\lx@framed[]{}",
-    "<ltx:text framed='#frame' _noautoclose='1'>#2</ltx:text>",
-    enter_horizontal => true
-    /* TODO: properties => { frame => sub { ToString($_[1] || 'rectangle'); }} */
+    "<ltx:text framed='#frame'>#2</ltx:text>",
+    enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let frame = whatsit.get_arg(1)
+        .map(|a| a.to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "rectangle".to_string());
+      whatsit.set_property("frame", Stored::from(frame));
+    }
   );
   // Perl: enterHorizontal => 1
   DefConstructor!(
@@ -116,25 +123,17 @@ LoadDefinitions!({
     enter_horizontal => true
   );
 
-  // sub reportNoUnicode {
-  //   my ($cs) = @_;
-  //   $cs = ToString($cs);
-  //   if (!LookupMapping('missing_unicode' => $cs)) {
-  //     Warn('expected', 'unicode', $cs,
-  //       "There's no Unicode equivalent for the symbol '$cs'");
-  //     AssignMapping('missing_unicode' => $cs => 1); }
-  //   return; }
-  // # Slightly contrived so that this can be used within a DefMath
-  // # and still declare & get the semantic properties.
-  // DefPrimitive('\lx@math@nounicode DefToken', sub {
-  //     my ($stomach, $cs) = @_;
-  //     reportNoUnicode($cs);
-  //     Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode'); });
-
-  // DefConstructor('\lx@text@nounicode DefToken',
-  //   "<ltx:text _no_autoclose='true' class='ltx_nounicode'>#1</ltx:text>",
-  //   afterDigest => sub {
-  //     reportNoUnicode(ToString($_[1]->getArg(0))); });
+  // WARNING: These two definitions MUST be active. When they were commented out,
+  // \lx@nounicode expanded to \lx@text@nounicode which was undefined, causing
+  // an unbounded memory leak / infinite loop that OOM-killed tests.
+  //
+  // Perl: DefPrimitive('\lx@math@nounicode DefToken', sub { Box(ToString($cs), ...) });
+  DefConstructor!("\\lx@math@nounicode DefToken",
+    "<ltx:text class='ltx_nounicode'>#1</ltx:text>");
+  // Perl: DefConstructor('\lx@text@nounicode DefToken',
+  //   "<ltx:text _no_autoclose='true' class='ltx_nounicode'>#1</ltx:text>", ...);
+  DefConstructor!("\\lx@text@nounicode DefToken",
+    "<ltx:text class='ltx_nounicode'>#1</ltx:text>");
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Box creation commands

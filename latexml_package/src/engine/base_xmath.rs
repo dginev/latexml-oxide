@@ -486,22 +486,21 @@ LoadDefinitions!({
     "\\lx@tweaked{}{}",
     r"\ifmmode\lx@math@tweaked{#1}{#2}\else\lx@text@tweaked{#1}{#2}\fi"
   );
-  // TODO:
-  // DefConstructor!("\\lx@math@tweaked RequiredKeyVals {}", "<ltx:XMWrap
-  // $XMath_attributes>#2</ltx:XMWrap>",   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my ($kv,      $body)    = $whatsit->getArgs;
-  //     XMath_copy_keyvals($stomach, $whatsit);
-  //     $whatsit->setFont($body->getFont);
-  //     return; },
-  // reversion => "#2");
+  // Perl: DefConstructor('\lx@math@tweaked RequiredKeyVals {}',
+  //   "<ltx:XMWrap $XMath_attributes>#2</ltx:XMWrap>", ...);
+  DefConstructor!("\\lx@math@tweaked RequiredKeyVals {}",
+    "<ltx:XMWrap role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2</ltx:XMWrap>",
+    reversion => "#2",
+    after_digest => sub[whatsit] { xmath_copy_keyvals(whatsit) }
+  );
 
-  // DefConstructor('\lx@text@tweaked RequiredKeyVals {}',
-  //   "<ltx:text _noautoclose='1' %&GetKeyVals(#1)>#2</ltx:text>",
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my ($kv,      $body)    = $whatsit->getArgs;
-  //     $whatsit->setProperties($kv->getPairs); });
+  // Perl: DefConstructor('\lx@text@tweaked RequiredKeyVals {}',
+  //   "<ltx:text _noautoclose='1' %&GetKeyVals(#1)>#2</ltx:text>", ...);
+  // Properties from keyvals are copied by after_digest, then referenced as #prop in template.
+  DefConstructor!("\\lx@text@tweaked RequiredKeyVals {}",
+    "<ltx:text width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset'>#2</ltx:text>",
+    after_digest => sub[whatsit] { xmath_copy_keyvals(whatsit) }
+  );
 
   DefConstructor!(T_CS!("\\lx@ldots"), None,
   "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
