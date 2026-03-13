@@ -48,8 +48,8 @@ LoadDefinitions!({
     '\u{2022}', '\u{2103}', '$', '\u{00A2}', '\u{0192}', '\u{20A1}', '\u{20A9}', '\u{20A6}',
     // 0x90-0x97: guarani sign (Perl: "G\x{20D2}", G + combining long vertical line overlay),
     //   peso, lira, prescription, interrobang, gnaborretni, dong, trademark
-    // Perl: position 144 is "G\x{20D2}" (two chars). We use U+20B2 GUARANI SIGN as best single char.
-    '\u{20B2}', '\u{20B1}', '\u{20A4}', '\u{211E}', '\u{203D}', '\u{2E18}', '\u{20AB}', '\u{2122}',
+    // pos 0x90: multi-char "G\x{20D2}" handled by DeclareFontMapMultichar
+    'G', '\u{20B1}', '\u{20A4}', '\u{211E}', '\u{203D}', '\u{2E18}', '\u{20AB}', '\u{2122}',
     // 0x98-0x9F: per ten thousand, pilcrow, baht, numero, discount percentage, estimated, white bullet, service mark
     '\u{2031}', '\u{00B6}', '\u{0E3F}', '\u{2116}', '\u{2052}', '\u{212E}', '\u{25E6}', '\u{2120}',
     // 0xA0-0xA7: left square bracket with quill, right square bracket with quill, cent, pound, currency, yen, broken bar, section
@@ -77,4 +77,8 @@ LoadDefinitions!({
     // 0xF8-0xFF: undef x8
     None, None, None, None, None, None, None, None
   ]);
+  // Multi-char overrides: base char + combining char
+  DeclareFontMapMultichar!("TS1", {
+    0x90u8 => "G\u{20D2}",   // G + COMBINING LONG VERTICAL LINE OVERLAY (guarani sign)
+  });
 });

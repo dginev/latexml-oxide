@@ -605,6 +605,22 @@ pub fn def_math_primitive(
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         let state_font = lookup_font().unwrap();
+        // Dynamic mathstyle: doVariablesizeOp — "display" in display, "text" otherwise
+        if properties.dynamic_mathstyle {
+          let is_display = state_font
+            .get_mathstyle()
+            .map_or(false, |s| s.as_ref() == "display");
+          properties.mathstyle =
+            Some(if is_display { "display" } else { "text" }.to_string());
+        }
+        // Dynamic scriptpos: doScriptpos — "mid" in display, "post" otherwise
+        if properties.dynamic_scriptpos {
+          let is_display = state_font
+            .get_mathstyle()
+            .map_or(false, |s| s.as_ref() == "display");
+          properties.scriptpos =
+            Some(if is_display { "mid" } else { "post" }.to_string());
+        }
         let font = Rc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None)?;
           state_font

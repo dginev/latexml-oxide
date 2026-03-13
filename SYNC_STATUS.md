@@ -1,6 +1,58 @@
 # Sync Status — 2026-03-12
 
-**107 pass, 40 fail (pre-existing), 6 ignored**
+**134 pass, 16 fail, 4 ignored** (was 107/40/6 before encoding & math fixes)
+
+## Recent Fixes (2026-03-12, session 2)
+
+### Dynamic mathstyle/scriptpos for variable-size operators
+- Added `dynamic_mathstyle` and `dynamic_scriptpos` bool flags to `MathPrimitiveOptions`
+- `def_math_primitive` now computes mathstyle/scriptpos at invocation time from current font
+- Perl `doVariablesizeOp`: "display" in display mode, "text" in inline → `dynamic_mathstyle`
+- Perl `doScriptpos`: "mid" in display mode, "post" in inline → `dynamic_scriptpos`
+- Key finding: `\int`/`\oint` have only `mathstyle` (no scriptpos); `\sum`/`\prod`/etc have both
+- `\smallint` has dynamic scriptpos but STATIC `mathstyle => "text"`
+- Added `mathstyle` handler to `defi_opts!` macro for `Option<String>` literal values
+- Files: `math_primitive.rs`, `dialect.rs`, `plain.rs`, `setup_binding_language.rs`
+- **Fixed applemac_test** (was the last encoding failure, all 26 encoding tests now pass)
+
+### Encoding test fixes (session 1, carried over)
+- vrule/hrule whatsit sizing with cached_width/cached_height/cached_depth
+- Dimension `to_attribute()` for 1-decimal-place formatting
+- isVerticalRule logic corrected (only set when height dominates)
+- Float superscript italic font preservation via `document.set_attribute`
+- `\dots` sizer added for non-zero computed width in tabulars
+- Fixed 6 cp* encoding tests, 3 ansi/cp12* tests, 1 applemac test
+
+### Test status breakdown
+| Suite | Pass | Fail | Ignored |
+|-------|------|------|---------|
+| hello | 1 | 0 | 0 |
+| contrib | 1 | 0 | 0 |
+| unit_state | 9 | 0 | 0 |
+| unit_tokens | 1 | 0 | 0 |
+| tokenize | 14 | 0 | 0 |
+| expansion | 36 | 0 | 0 |
+| grouping | 2 | 0 | 0 |
+| digestion | 10 | 0 | 0 |
+| fonts | 1 | 0 | 0 |
+| encoding | 26 | 0 | 0 |
+| math | 2 | 12 | 0 |
+| structure | 24 | 0 | 0 |
+| namespace | 0 | 0 | 1 |
+| alignment | 0 | 2 | 0 |
+| theorem | 4 | 0 | 0 |
+| ams | 0 | 0 | 1 |
+| graphics | 0 | 1 | 0 |
+| unit_parse | 3 | 0 | 0 |
+| parse | 0 | 0 | 1 |
+| complex | 0 | 1 | 0 |
+| babel | 0 | 0 | 1 |
+
+### Pre-existing failures (not caused by recent changes)
+- **12 math tests**: math parser role/structure issues (UNKNOWN vs ID, function application)
+- **2 alignment tests**: nested tabular layout (tabtab, halign)
+- **1 graphics test**: infinite recursion in `\usepackage{color}`
+- **1 complex test**: aastex631 class attribute/resource issues
 
 ## Recent Gap Fix Progress (2026-03-12)
 

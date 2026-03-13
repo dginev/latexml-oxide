@@ -577,7 +577,12 @@ LoadDefinitions!({
     keyvals
   },
   optional => true,
-  predigest => sub[arg] { Ok(arg.undigested()) });
+  predigest => sub[arg] {
+    match arg {
+      ArgWrap::KV(kv) => Ok(Some(Digested::from(*kv))),
+      _ => Ok(arg.undigested()),
+    }
+  });
 
   // \hrule, \vrule are awkward in trying to deal with 3 cases
   //  * as rules within an alignment/table
@@ -588,25 +593,42 @@ LoadDefinitions!({
     "?#invisible()(?#isVerticalRule()(<ltx:rule ?#rheight(height='#rheight') ?#rdepth(depth='#rdepth')\
        ?#rwidth(width='#rwidth') ?#color(color='#color')/>))",
   after_digest => sub [whatsit] {
-    // Extract dimensions from keyvals arg
+    // Extract dimensions from keyvals arg (Perl: TeX_Box.pool.ltxml L752-760)
     use latexml_core::digested::DigestedData;
-    let (width, height, depth) = if let Some(d) = whatsit.get_arg(1) {
+    use latexml_core::definition::argument::ArgWrap;
+    use latexml_core::common::dimension::Dimension;
+    let arg1 = whatsit.get_arg(1);
+    let (width, height, depth) = if let Some(d) = &arg1 {
       if let DigestedData::KeyVals(kv) = d.data() {
-        (kv.get_value("width").map(ToString::to_string),
-         kv.get_value("height").map(ToString::to_string),
-         kv.get_value("depth").map(ToString::to_string))
+        let w = kv.get_value("width").and_then(|a| if let ArgWrap::Dimension(d) = a { Some(*d) } else { None });
+        let h = kv.get_value("height").and_then(|a| if let ArgWrap::Dimension(d) = a { Some(*d) } else { None });
+        let d = kv.get_value("depth").and_then(|a| if let ArgWrap::Dimension(d) = a { Some(*d) } else { None });
+        (w, h, d)
       } else { (None, None, None) }
     } else { (None, None, None) };
 
-    // Perl: $stomach->enterHorizontal (TeX_Box.pool.ltxml line 756)
+    // Perl: $stomach->enterHorizontal
     enter_horizontal();
-    let w_pt: Option<f64> = width.as_ref().and_then(|w| w.strip_suffix("pt").and_then(|s| s.parse().ok()));
-    let h_pt: Option<f64> = height.as_ref().and_then(|h| h.strip_suffix("pt").and_then(|s| s.parse().ok()));
 
-    // Perl: rwidth => $width (raw, could be undef); cwidth => $width || Dimension('0.4pt')
-    if let Some(w) = &width { whatsit.set_property("rwidth", w.clone()); }
-    if let Some(h) = &height { whatsit.set_property("rheight", h.clone()); }
-    if let Some(d) = &depth { whatsit.set_property("rdepth", d.clone()); }
+    // Perl: rwidth => $width, cwidth => $width || Dimension('0.4pt'), etc.
+    // Use to_attribute() for 1-decimal-place formatting matching Perl's Dimension->toAttribute
+    use latexml_core::common::numeric_ops::NumericOps;
+    if let Some(w) = width { whatsit.set_property("rwidth", w.to_attribute()); }
+    if let Some(h) = height { whatsit.set_property("rheight", h.to_attribute()); }
+    if let Some(d) = depth { whatsit.set_property("rdepth", d.to_attribute()); }
+    // Set computed sizes (Perl: cwidth/cheight/cdepth) as cached_width/cached_height/cached_depth
+    // These are used by get_size() to determine box dimensions for alignment cell sizing.
+    // Perl: cwidth => $width || Dimension('0.4pt')
+    let default_width: Dimension = "0.4pt".parse().unwrap_or_default();
+    let cwidth = width.unwrap_or(default_width);
+    let cheight = height.unwrap_or_default();
+    let cdepth = depth.unwrap_or_default();
+    whatsit.set_property("cached_width", cwidth);
+    whatsit.set_property("cached_height", cheight);
+    whatsit.set_property("cached_depth", cdepth);
+
+    let w_pt = width.map(|d| d.value_of() as f64 / 65536.0);
+    let h_pt = height.map(|d| d.value_of() as f64 / 65536.0);
 
     if let Some(_alignment) = lookup_alignment() {
       // Perl: set isVerticalRule only if dimensions suggest a real rule
@@ -637,22 +659,32 @@ LoadDefinitions!({
   },
   after_digest => sub [whatsit] {
     use latexml_core::digested::DigestedData;
+    use latexml_core::definition::argument::ArgWrap;
+    use latexml_core::common::numeric_ops::NumericOps;
     let (width, height, depth) = if let Some(d) = whatsit.get_arg(1) {
       if let DigestedData::KeyVals(kv) = d.data() {
-        (kv.get_value("width").map(ToString::to_string),
-         kv.get_value("height").map(ToString::to_string),
-         kv.get_value("depth").map(ToString::to_string))
+        let w = kv.get_value("width").and_then(|a| if let ArgWrap::Dimension(d) = a { Some(*d) } else { None });
+        let h = kv.get_value("height").and_then(|a| if let ArgWrap::Dimension(d) = a { Some(*d) } else { None });
+        let d = kv.get_value("depth").and_then(|a| if let ArgWrap::Dimension(d) = a { Some(*d) } else { None });
+        (w, h, d)
       } else { (None, None, None) }
     } else { (None, None, None) };
 
     // Perl: $stomach->leaveHorizontal;
     leave_horizontal()?;
-    let w_pt: Option<f64> = width.as_ref().and_then(|w| w.strip_suffix("pt").and_then(|s| s.parse().ok()));
-    let h_pt: Option<f64> = height.as_ref().and_then(|h| h.strip_suffix("pt").and_then(|s| s.parse().ok()));
+    let w_pt = width.map(|d| d.value_of() as f64 / 65536.0);
+    let h_pt = height.map(|d| d.value_of() as f64 / 65536.0);
 
-    whatsit.set_property("rwidth", width.unwrap_or_else(|| "100%".to_string()));
-    whatsit.set_property("rheight", height.unwrap_or_else(|| "1px".to_string()));
-    if let Some(d) = &depth { whatsit.set_property("rdepth", d.clone()); }
+    // Perl: rwidth => $width || '100%', rheight => $height || '1px'
+    whatsit.set_property("rwidth", width.map(|w| w.to_attribute()).unwrap_or_else(|| "100%".to_string()));
+    whatsit.set_property("rheight", height.map(|h| h.to_attribute()).unwrap_or_else(|| "1px".to_string()));
+    if let Some(d) = depth { whatsit.set_property("rdepth", d.to_attribute()); }
+    // Set computed sizes for alignment cell sizing
+    let cheight = height.unwrap_or_else(|| "1px".parse::<latexml_core::common::dimension::Dimension>().unwrap_or_default());
+    let cdepth = depth.unwrap_or_default();
+    whatsit.set_property("cached_height", cheight);
+    whatsit.set_property("cached_depth", cdepth);
+    // hrule defaults to full width — don't cache a specific width
 
     if let Some(_alignment) = lookup_alignment() {
       // Perl: set isHorizontalRule only if dimensions suggest a real rule

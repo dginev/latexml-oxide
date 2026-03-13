@@ -99,8 +99,11 @@ LoadDefinitions!({
           DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)),
             scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
+          // Load fontmap BEFORE the enc def file, so \DeclareTextSymbol
+          // can look up glyph positions during def loading.
+          let has_fontmap = load_font_map(&encoding).is_some();
           InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
-          if load_font_map(&encoding).is_some() {
+          if has_fontmap {
             MergeFont!(encoding => encoding);
           }
         } else {

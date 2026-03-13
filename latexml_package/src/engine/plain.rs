@@ -1180,28 +1180,43 @@ LoadDefinitions!({
 
   //----------------------------------------------------------------------
   // Table 3.8. Variable-sized Symbols (from math_common.pool.ltxml)
-  // TODO: scriptpos and mathstyle are closures in Perl (doScriptpos / doVariablesizeOp)
-  //   that depend on the current display style at typesetting time. Not yet ported as closures.
-  //   doScriptpos => "mid" in display mode, "post" in inline mode.
-  //   doVariablesizeOp => "display" in display mode, "text" in inline mode.
+  // Perl: scriptpos => \&doScriptpos  — "mid" in display, "post" in inline
+  //       mathstyle => \&doVariablesizeOp — "display" in display, "text" in inline
+  // NOTE: \int and \oint have NO scriptpos (only mathstyle)
+  //       \smallint has scriptpos but STATIC mathstyle => 'text'
   //----------------------------------------------------------------------
   DefMath!("\\smallint", None, "\u{222B}",
-    meaning => "integral", role => "INTOP");  // INTEGRAL (small)
-  // TODO: font => { size => 9 }, scriptpos => doScriptpos, mathstyle => 'text'
-  DefMath!("\\sum",    None, "\u{2211}", role => "SUMOP", meaning => "sum");
-  DefMath!("\\prod",   None, "\u{220F}", role => "SUMOP", meaning => "product");
-  DefMath!("\\coprod", None, "\u{2210}", role => "SUMOP", meaning => "coproduct");
-  DefMath!("\\int",    None, "\u{222B}", role => "INTOP", meaning => "integral");
-  DefMath!("\\oint",   None, "\u{222E}", role => "INTOP", meaning => "contour-integral");
-  DefMath!("\\bigcap",    None, "\u{22C2}", role => "SUMOP", meaning => "intersection");
-  DefMath!("\\bigcup",    None, "\u{22C3}", role => "SUMOP", meaning => "union");
-  DefMath!("\\bigsqcup",  None, "\u{2A06}", role => "SUMOP", meaning => "square-union");
-  DefMath!("\\bigvee",    None, "\u{22C1}", role => "SUMOP", meaning => "or");
-  DefMath!("\\bigwedge",  None, "\u{22C0}", role => "SUMOP", meaning => "and");
-  DefMath!("\\bigodot",   None, "\u{2A00}", role => "SUMOP");
-  DefMath!("\\bigotimes", None, "\u{2A02}", role => "SUMOP", meaning => "tensor-product");
-  DefMath!("\\bigoplus",  None, "\u{2A01}", role => "SUMOP", meaning => "direct-sum");
-  DefMath!("\\biguplus",  None, "\u{2A04}", role => "SUMOP", meaning => "symmetric-difference");
+    meaning => "integral", role => "INTOP",
+    dynamic_scriptpos => true, mathstyle => "text");
+  // TODO: font => { size => 9 }
+  DefMath!("\\sum",    None, "\u{2211}", role => "SUMOP", meaning => "sum",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\prod",   None, "\u{220F}", role => "SUMOP", meaning => "product",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\coprod", None, "\u{2210}", role => "SUMOP", meaning => "coproduct",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\int",    None, "\u{222B}", role => "INTOP", meaning => "integral",
+    dynamic_mathstyle => true);
+  DefMath!("\\oint",   None, "\u{222E}", role => "INTOP", meaning => "contour-integral",
+    dynamic_mathstyle => true);
+  DefMath!("\\bigcap",    None, "\u{22C2}", role => "SUMOP", meaning => "intersection",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\bigcup",    None, "\u{22C3}", role => "SUMOP", meaning => "union",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\bigsqcup",  None, "\u{2A06}", role => "SUMOP", meaning => "square-union",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\bigvee",    None, "\u{22C1}", role => "SUMOP", meaning => "or",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\bigwedge",  None, "\u{22C0}", role => "SUMOP", meaning => "and",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\bigodot",   None, "\u{2A00}", role => "SUMOP",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\bigotimes", None, "\u{2A02}", role => "SUMOP", meaning => "tensor-product",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\bigoplus",  None, "\u{2A01}", role => "SUMOP", meaning => "direct-sum",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\biguplus",  None, "\u{2A04}", role => "SUMOP", meaning => "symmetric-difference",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
 
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.4. Binary Operation Symbols, p.42
@@ -1481,6 +1496,7 @@ LoadDefinitions!({
   DefConstructor!(
     "\\dots",
     "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
+    sizer      => "\u{2026}",
     properties => {
       if lookup_bool("IN_MATH") {
         Ok(stored_map!("font" => lookup_font().unwrap().merge(

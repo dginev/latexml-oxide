@@ -89,6 +89,7 @@ pub struct Mouth {
   // pub handle : Option<File>,
   chars:                  VecDeque<char>,
   buffer:                 VecDeque<String>,
+  raw_buffer:             VecDeque<Vec<u8>>,
   reader:                 Option<BufReader<File>>,
 }
 
@@ -116,6 +117,7 @@ impl Default for Mouth {
       saved_at_cc:            None,
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
+      raw_buffer:             VecDeque::new(),
       reader:                 None,
     }
   }
@@ -262,6 +264,7 @@ impl Mouth {
       let reader = BufReader::new(f);
       self.reader = Some(reader);
       self.buffer = VecDeque::new();
+      self.raw_buffer = VecDeque::new();
     }
     Ok(())
   }
@@ -303,6 +306,7 @@ impl Mouth {
   }
   pub fn finish(&mut self) {
     self.buffer = VecDeque::new();
+    self.raw_buffer = VecDeque::new();
     self.chars = VecDeque::new();
     self.lineno = 0;
     self.colno = 0;
@@ -340,6 +344,75 @@ impl Mouth {
     lines
   }
 
+  /// Split raw bytes into lines without decoding, splitting on \r\n, \r, or \n.
+  fn split_raw_lines(bytes: &[u8]) -> VecDeque<Vec<u8>> {
+    let mut lines = VecDeque::new();
+    let mut start = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+      if bytes[i] == b'\r' {
+        lines.push_back(bytes[start..i].to_vec());
+        if i + 1 < bytes.len() && bytes[i + 1] == b'\n' {
+          i += 1; // skip \n after \r
+        }
+        start = i + 1;
+      } else if bytes[i] == b'\n' {
+        lines.push_back(bytes[start..i].to_vec());
+        start = i + 1;
+      }
+      i += 1;
+    }
+    // Add remaining bytes (last line without trailing newline)
+    if start < bytes.len() {
+      lines.push_back(bytes[start..].to_vec());
+    }
+    lines
+  }
+
+  /// Decode a raw byte line using the current encoding setting.
+  /// Matches Perl's per-line decode behavior.
+  fn decode_bytes(raw_line: &[u8], location: String) -> String {
+    if let Some(ref encoding_sym) = get_input_encoding() {
+      let encoding_name = crate::common::arena::to_string(*encoding_sym);
+      let file_str = if encoding_name.eq_ignore_ascii_case("iso-8859-1")
+        || encoding_name.eq_ignore_ascii_case("latin1")
+        || encoding_name.eq_ignore_ascii_case("latin-1")
+      {
+        raw_line.iter().map(|&b| b as char).collect::<String>()
+      } else {
+        // Fallback: try UTF-8 with lossy conversion
+        String::from_utf8_lossy(raw_line).into_owned()
+      };
+      let replaced = file_str.replace('\u{FFFD}', " ");
+      if replaced.len() != file_str.len() {
+        Info!(
+          "misdefined",
+          &encoding_name,
+          s!("input isn't valid under encoding {}", &encoding_name),
+          "",
+          "",
+          location
+        );
+      }
+      replaced
+    } else {
+      // No encoding set — interpret as UTF-8, with fallback.
+      // For non-UTF-8 bytes, we keep them as raw Latin-1 chars.
+      // This matches Perl which passes raw bytes through when
+      // PERL_INPUT_ENCODING is undef (disabled by inputenc).
+      match str::from_utf8(raw_line) {
+        Ok(s) => s.to_string(),
+        Err(_) => {
+          // When no encoding is set but bytes aren't valid UTF-8,
+          // treat as raw bytes (Latin-1 passthrough).
+          // This happens after inputenc disables PERL_INPUT_ENCODING
+          // and the remaining file lines contain high bytes.
+          raw_line.iter().map(|&b| b as char).collect::<String>()
+        },
+      }
+    }
+  }
+
   /// Original LaTeXML:
   /// This is (hopefully) a correct way to split a line into "chars",
   /// or what is probably more desired is "Grapheme clusters" (even "extended")
@@ -348,9 +421,19 @@ impl Mouth {
   /// If it's not the way XeTeX does it, perhaps, it must be that ALL combining chars
   /// have to be converted to the proper accent control sequences!
   fn get_next_line(&mut self) -> Option<String> {
+    if self.buffer.is_empty() && !self.raw_buffer.is_empty() {
+      // Decode the next raw byte line lazily using the current encoding.
+      // This matches Perl's approach: each line is decoded with the encoding
+      // that is active at the time the line is read, allowing inputenc to
+      // change encoding mid-file.
+      if let Some(raw_line) = self.raw_buffer.pop_front() {
+        let decoded = Mouth::decode_bytes(&raw_line, self.get_location());
+        self.buffer.push_back(decoded);
+      }
+    }
     if self.buffer.is_empty() {
       if let Some(ref mut reader) = self.reader {
-        // file mouth case
+        // file mouth case — read all bytes, split into raw lines, decode lazily
         let mut file_bytes = Vec::new();
         let _num_bytes = match reader.read_to_end(&mut file_bytes) {
           Ok(count) => count,
@@ -362,47 +445,13 @@ impl Mouth {
         };
         // remove the now exhausted reader
         self.reader.take();
-        // Note: the original latexml code first split the perl string into lines, and only THEN
-        // decoded it however, executing a rust regex on a Vec<u8> is
-        // just not going to be a sane way forward. we will first decode
-        // the read-in bytes to the right String form, and THEN split lines.
-        // as such, decoding is the first action taken on bytes read in from a file.
-        if let Some(ref encoding_sym) = get_input_encoding() {
-          // Perl: decode with Encode::FB_DEFAULT, then replace \x{FFFD} with space
-          let encoding_name = crate::common::arena::to_string(*encoding_sym);
-          // For now, support latin-1/iso-8859-1 (most common non-UTF-8 TeX encoding)
-          let file_str = if encoding_name.eq_ignore_ascii_case("iso-8859-1")
-            || encoding_name.eq_ignore_ascii_case("latin1")
-            || encoding_name.eq_ignore_ascii_case("latin-1")
-          {
-            file_bytes.iter().map(|&b| b as char).collect::<String>()
-          } else {
-            // Fallback: try UTF-8 with lossy conversion
-            String::from_utf8_lossy(&file_bytes).into_owned()
-          };
-          // Perl: replace replacement chars with space and warn
-          let replaced = file_str.replace('\u{FFFD}', " ");
-          if replaced.len() != file_str.len() {
-            Info!("misdefined", &encoding_name,
-              s!("input isn't valid under encoding {}", &encoding_name), "", "",
-              self.get_location());
-          }
-          self.buffer = Mouth::split_lines(&replaced);
-        } else {
-          // no encoding, interpret as unicode!
-          match str::from_utf8(&file_bytes) {
-            Ok(file_str) => {
-              self.buffer = Mouth::split_lines(file_str);
-            },
-            Err(e) => {
-              let message = s!("input isn't valid under encoding utf8: {:?}", e);
-              Info!("misdefined", "utf8", message, "", "", self.get_location());
-              let file_str = String::from_utf8_lossy(&file_bytes);
-              // Perl: replace \x{FFFD} with space
-              let replaced = file_str.replace('\u{FFFD}', " ");
-              self.buffer = Mouth::split_lines(&replaced);
-            },
-          };
+        // Split raw bytes into lines without decoding (preserving raw bytes).
+        // Each line is decoded lazily via decode_bytes() using the CURRENT encoding.
+        self.raw_buffer = Mouth::split_raw_lines(&file_bytes);
+        // Decode the first line now
+        if let Some(raw_line) = self.raw_buffer.pop_front() {
+          let decoded = Mouth::decode_bytes(&raw_line, self.get_location());
+          self.buffer.push_back(decoded);
         }
       }
     }
@@ -468,6 +517,7 @@ impl Mouth {
   pub fn has_more_input(&mut self) -> bool {
     !self.is_eol()
       || !self.buffer.is_empty()
+      || !self.raw_buffer.is_empty()
       || (self.reader.is_some()
         && !self
           .reader

@@ -16,6 +16,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   state::set_input_encoding(None); // Disable the perl-level decoding, if any.
 
   // Then load TeX's input encoding definitions.
+  // Then load TeX's input encoding definitions.
   input_definitions(encoding, InputDefinitionOptions {
     extension: Some("def".into()),
     reloadable: true,
