@@ -180,6 +180,14 @@ fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
     let path = format!("/tmp/latexml_actual_{name}.xml");
     std::fs::write(&path, &doc_str).ok();
     eprintln!("Saved actual XML to {path}");
+    // Also save using libxml's built-in serializer for comparison
+    let path2 = format!("/tmp/latexml_actual_{name}_libxml.xml");
+    let libxml_str = doc.document.to_string_with_options(libxml::tree::SaveOptions {
+      format: true,
+      ..libxml::tree::SaveOptions::default()
+    });
+    std::fs::write(&path2, &libxml_str).ok();
+    eprintln!("Saved libxml XML to {path2}");
   }
   doc_str.split('\n').map(ToString::to_string).collect()
 }

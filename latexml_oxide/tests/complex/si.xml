@@ -244,14 +244,14 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMTok meaning="3.430" role="NUMBER" xml:id="S1.SS1.p1.m4.3">3.430</XMTok>
               </XMApp>
             </XMath>
-          </Math><break/><Math mode="inline" tex="\pi" text="\pi" xml:id="S1.SS1.p1.m5">
+          </Math><break/><Math mode="inline" tex="\pi" text="π" xml:id="S1.SS1.p1.m5">
             <XMath>
-              <XMTok font="italic" meaning="\pi" name="pi" role="UNKNOWN">π</XMTok>
+              <XMTok font="italic" meaning="π" name="pi" role="UNKNOWN">π</XMTok>
             </XMath>
-          </Math><break/><Math mode="inline" tex="2\pi" text="2\pi" xml:id="S1.SS1.p1.m6">
+          </Math><break/><Math mode="inline" tex="2\pi" text="2π" xml:id="S1.SS1.p1.m6">
             <XMath>
               <XMDual>
-                <XMTok meaning="2\pi" role="NUMBER"/>
+                <XMTok meaning="2π" role="NUMBER"/>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="2" role="NUMBER">2</XMTok>
@@ -259,11 +259,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 </XMApp>
               </XMDual>
             </XMath>
-          </Math><break/><Math mode="inline" tex="\pi\text{/}3" text="\pi / 3" xml:id="S1.SS1.p1.m7">
+          </Math><break/><Math mode="inline" tex="\pi\text{/}3" text="π / 3" xml:id="S1.SS1.p1.m7">
             <XMath>
               <XMApp>
                 <XMText meaning="divide" role="MULOP" xml:id="S1.SS1.p1.m7.2">/</XMText>
-                <XMTok font="italic" meaning="\pi" name="pi" role="UNKNOWN" xml:id="S1.SS1.p1.m7.1">π</XMTok>
+                <XMTok font="italic" meaning="π" name="pi" role="UNKNOWN" xml:id="S1.SS1.p1.m7.1">π</XMTok>
                 <XMTok meaning="3" role="NUMBER" xml:id="S1.SS1.p1.m7.3">3</XMTok>
               </XMApp>
             </XMath>
@@ -516,12 +516,12 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
       </para>
       <para xml:id="S1.SS1.p5">
         <p>Pretty nonsensical stuff?
-<Math mode="inline" tex="1.\pi\text{\times}{10}^{3}" text="1.\piE+3" xml:id="S1.SS1.p5.m1">
+<Math mode="inline" tex="1.\pi\text{\times}{10}^{3}" text="1.πE+3" xml:id="S1.SS1.p5.m1">
             <XMath>
-              <XMApp meaning="1.\piE+3">
+              <XMApp meaning="1.πE+3">
                 <XMText meaning="times" role="MULOP" xml:id="S1.SS1.p5.m1.2">×</XMText>
                 <XMDual xml:id="S1.SS1.p5.m1.1">
-                  <XMTok meaning="1.\pi" role="NUMBER"/>
+                  <XMTok meaning="1.π" role="NUMBER"/>
                   <XMWrap>
                     <XMTok meaning="1" role="NUMBER" xml:id="S1.SS1.p5.m1.1.1">1</XMTok>
                     <XMTok role="PERIOD">.</XMTok>
@@ -539,10 +539,10 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <XMath>
               <XMTok meaning="1234.1234" role="NUMBER">1234.1234</XMTok>
             </XMath>
-          </Math><break/><break/><break/><Math mode="inline" tex="3\xi" text="3\xi" xml:id="S1.SS1.p5.m3">
+          </Math><break/><break/><break/><Math mode="inline" tex="3\xi" text="3ξ" xml:id="S1.SS1.p5.m3">
             <XMath>
               <XMDual>
-                <XMTok meaning="3\xi" role="NUMBER"/>
+                <XMTok meaning="3ξ" role="NUMBER"/>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="3" role="NUMBER">3</XMTok>
@@ -550,10 +550,10 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 </XMApp>
               </XMDual>
             </XMath>
-          </Math><break/><Math mode="inline" tex="3\xi" text="3\xi" xml:id="S1.SS1.p5.m4">
+          </Math><break/><Math mode="inline" tex="3\xi" text="3ξ" xml:id="S1.SS1.p5.m4">
             <XMath>
               <XMDual>
-                <XMTok meaning="3\xi" role="NUMBER"/>
+                <XMTok meaning="3ξ" role="NUMBER"/>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="3" role="NUMBER">3</XMTok>
@@ -561,10 +561,10 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 </XMApp>
               </XMDual>
             </XMath>
-          </Math><break/><Math mode="inline" tex="3\xi" text="3\odd" xml:id="S1.SS1.p5.m5">
+          </Math><break/><Math mode="inline" tex="3\xi" text="3ξ" xml:id="S1.SS1.p5.m5">
             <XMath>
               <XMDual>
-                <XMTok meaning="3\odd" role="NUMBER"/>
+                <XMTok meaning="3ξ" role="NUMBER"/>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="3" role="NUMBER">3</XMTok>
@@ -572,10 +572,10 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 </XMApp>
               </XMDual>
             </XMath>
-          </Math><break/><Math mode="inline" tex="3\xi" text="3\odd" xml:id="S1.SS1.p5.m6">
+          </Math><break/><Math mode="inline" tex="3\xi" text="3ξ" xml:id="S1.SS1.p5.m6">
             <XMath>
               <XMDual>
-                <XMTok meaning="3\odd" role="NUMBER"/>
+                <XMTok meaning="3ξ" role="NUMBER"/>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="3" role="NUMBER">3</XMTok>
@@ -583,10 +583,10 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 </XMApp>
               </XMDual>
             </XMath>
-          </Math><break/><Math mode="inline" tex="3\xi" text="3\odder" xml:id="S1.SS1.p5.m7">
+          </Math><break/><Math mode="inline" tex="3\xi" text="3ξ" xml:id="S1.SS1.p5.m7">
             <XMath>
               <XMDual>
-                <XMTok meaning="3\odder" role="NUMBER"/>
+                <XMTok meaning="3ξ" role="NUMBER"/>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok meaning="3" role="NUMBER">3</XMTok>
@@ -627,16 +627,16 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 </XMDual>
               </XMApp>
             </XMath>
-          </Math><break/><Math mode="inline" tex="1.23(\pi)" text="uncertain@(1.23, 0.0π)" xml:id="S1.SS1.p6.m3">
+          </Math><break/><Math mode="inline" tex="1.23(\pi)" text="uncertain@(1.23, 0.π)" xml:id="S1.SS1.p6.m3">
             <XMath>
               <XMApp>
                 <XMTok meaning="uncertain" role="MULOP">⁢</XMTok>
                 <XMTok meaning="1.23" role="NUMBER" xml:id="S1.SS1.p6.m3.1">1.23</XMTok>
-                <XMDual meaning="0.0π" xml:id="S1.SS1.p6.m3.2">
+                <XMDual meaning="0.π" xml:id="S1.SS1.p6.m3.2">
                   <XMRef idref="S1.SS1.p6.m3.2.1"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" meaning="\pi" name="pi" role="UNKNOWN" xml:id="S1.SS1.p6.m3.2.1">π</XMTok>
+                    <XMTok font="italic" meaning="π" name="pi" role="UNKNOWN" xml:id="S1.SS1.p6.m3.2.1">π</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -1339,7 +1339,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMWrap>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="12\text{~{}}345" text="12345" xml:id="S1.SS4.SSS1.p4.m3">
+            </Math> <break/><Math mode="inline" tex="12\text{~}345" text="12345" xml:id="S1.SS4.SSS1.p4.m3">
               <XMath>
                 <XMDual>
                   <XMTok meaning="12345" role="NUMBER"/>
@@ -1718,7 +1718,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             </Math> <break/></p>
         </para>
         <para xml:id="S1.SS4.SSS7.p2">
-          <p><Math mode="inline" tex="1.234(5)\text{\times}\pi" text="uncertain@(1.234, 0.005) * \pi" xml:id="S1.SS4.SSS7.p2.m1">
+          <p><Math mode="inline" tex="1.234(5)\text{\times}\pi" text="uncertain@(1.234, 0.005) * π" xml:id="S1.SS4.SSS7.p2.m1">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S1.SS4.SSS7.p2.m1.2">×</XMText>
@@ -1734,10 +1734,10 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                       </XMWrap>
                     </XMDual>
                   </XMApp>
-                  <XMTok font="italic" meaning="\pi" name="pi" role="UNKNOWN" xml:id="S1.SS4.SSS7.p2.m1.3">π</XMTok>
+                  <XMTok font="italic" meaning="π" name="pi" role="UNKNOWN" xml:id="S1.SS4.SSS7.p2.m1.3">π</XMTok>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="(1.234\pm 0.005)\text{\times}\pi" text="uncertain@(1.234, 0.005) * \pi" xml:id="S1.SS4.SSS7.p2.m2">
+            </Math> <break/><Math mode="inline" tex="(1.234\pm 0.005)\text{\times}\pi" text="uncertain@(1.234, 0.005) * π" xml:id="S1.SS4.SSS7.p2.m2">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S1.SS4.SSS7.p2.m2.2">×</XMText>
@@ -1757,7 +1757,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
-                  <XMTok font="italic" meaning="\pi" name="pi" role="UNKNOWN" xml:id="S1.SS4.SSS7.p2.m2.3">π</XMTok>
+                  <XMTok font="italic" meaning="π" name="pi" role="UNKNOWN" xml:id="S1.SS4.SSS7.p2.m2.3">π</XMTok>
                 </XMApp>
               </XMath>
             </Math> <break/></p>
@@ -2461,7 +2461,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="2.67°" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMHint depth="0.0pt" height="0.0pt" meaning="times" name="thinspace" role="MULOP" width="3.0mu"/>
                     <XMTok meaning="2.67" role="NUMBER">2.67</XMTok>
                     <XMTok lpadding="0pt" meaning="arcdegree" role="UNKNOWN">°</XMTok>
                   </XMApp>
@@ -2507,13 +2507,22 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="6°7′6.5″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok meaning="6" role="NUMBER">6</XMTok>
-                    <XMTok lpadding="0pt" meaning="arcdegree" role="UNKNOWN" rpadding="1.7pt">°</XMTok>
-                    <XMTok meaning="7" role="NUMBER">7</XMTok>
-                    <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN" rpadding="1.7pt">′</XMTok>
-                    <XMTok meaning="6.5" role="NUMBER">6.5</XMTok>
-                    <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                    <XMHint depth="0.0pt" height="0.0pt" meaning="plus" name="thinspace" role="ADDOP" width="3.0mu"/>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok meaning="6" role="NUMBER">6</XMTok>
+                      <XMTok lpadding="0pt" meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok meaning="7" role="NUMBER">7</XMTok>
+                      <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN">′</XMTok>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok meaning="6.5" role="NUMBER">6.5</XMTok>
+                      <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
@@ -2591,19 +2600,19 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="-0°2′" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
                     <XMApp>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok meaning="0" role="NUMBER">0</XMTok>
                         <XMTok lpadding="0pt" meaning="arcdegree" role="UNKNOWN">°</XMTok>
                       </XMApp>
-                    </XMApp>
-                    <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN">′</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="2" role="NUMBER">2</XMTok>
+                        <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN">′</XMTok>
+                      </XMApp>
                     </XMApp>
                   </XMApp>
                 </XMDual>
@@ -2613,19 +2622,19 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="-0°3″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
                     <XMApp>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok meaning="0" role="NUMBER">0</XMTok>
                         <XMTok lpadding="0pt" meaning="arcdegree" role="UNKNOWN">°</XMTok>
                       </XMApp>
-                    </XMApp>
-                    <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok meaning="3" role="NUMBER">3</XMTok>
-                      <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="3" role="NUMBER">3</XMTok>
+                        <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      </XMApp>
                     </XMApp>
                   </XMApp>
                 </XMDual>
@@ -2638,19 +2647,19 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="-1°0′" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
                     <XMApp>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok meaning="1" role="NUMBER">1</XMTok>
                         <XMTok lpadding="0pt" meaning="arcdegree" role="UNKNOWN">°</XMTok>
                       </XMApp>
-                    </XMApp>
-                    <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok meaning="0" role="NUMBER">0</XMTok>
-                      <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN">′</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN">′</XMTok>
+                      </XMApp>
                     </XMApp>
                   </XMApp>
                 </XMDual>
@@ -2674,19 +2683,19 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="-0′3″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
                     <XMApp>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok meaning="0" role="NUMBER">0</XMTok>
                         <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN">′</XMTok>
                       </XMApp>
-                    </XMApp>
-                    <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok meaning="3" role="NUMBER">3</XMTok>
-                      <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="3" role="NUMBER">3</XMTok>
+                        <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      </XMApp>
                     </XMApp>
                   </XMApp>
                 </XMDual>
@@ -2699,19 +2708,19 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="-1°0″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
                     <XMApp>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok meaning="1" role="NUMBER">1</XMTok>
                         <XMTok lpadding="0pt" meaning="arcdegree" role="UNKNOWN">°</XMTok>
                       </XMApp>
-                    </XMApp>
-                    <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok meaning="0" role="NUMBER">0</XMTok>
-                      <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      </XMApp>
                     </XMApp>
                   </XMApp>
                 </XMDual>
@@ -2721,19 +2730,19 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMDual>
                   <XMTok meaning="-2′0″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
                     <XMApp>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok meaning="2" role="NUMBER">2</XMTok>
                         <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN">′</XMTok>
                       </XMApp>
-                    </XMApp>
-                    <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok meaning="0" role="NUMBER">0</XMTok>
-                      <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      </XMApp>
                     </XMApp>
                   </XMApp>
                 </XMDual>
@@ -2877,7 +2886,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                       <XMTok lpadding="0pt" meaning="arcminute" role="UNKNOWN">′</XMTok>
                     </XMApp>
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="6" role="NUMBER">6</XMTok>
                       <XMTok font="italic" width="0pt">.</XMTok>
                       <XMTok lpadding="0pt" meaning="arcsecond" role="UNKNOWN">″</XMTok>
@@ -2904,8 +2913,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">1</tag>
         <tag role="typerefnum">Table 1</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">1</tag>SI base units</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 1</tag>SI base units</caption>
+      <toccaption><tag close=" ">1</tag>SI base units</toccaption>
+      <caption><tag close=": ">Table 1</tag>SI base units</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -2987,8 +2996,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">2</tag>
         <tag role="typerefnum">Table 2</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">2</tag>Coherent derived units</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 2</tag>Coherent derived units</caption>
+      <toccaption><tag close=" ">2</tag>Coherent derived units</toccaption>
+      <caption><tag close=": ">Table 2</tag>Coherent derived units</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -3186,8 +3195,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">3</tag>
         <tag role="typerefnum">Table 3</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">3</tag>Non-SI units</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 3</tag>Non-SI units</caption>
+      <toccaption><tag close=" ">3</tag>Non-SI units</toccaption>
+      <caption><tag close=": ">Table 3</tag>Non-SI units</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -3296,8 +3305,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">4</tag>
         <tag role="typerefnum">Table 4</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">4</tag>Expermental Non-SI units</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 4</tag>Expermental Non-SI units</caption>
+      <toccaption><tag close=" ">4</tag>Expermental Non-SI units</toccaption>
+      <caption><tag close=": ">Table 4</tag>Expermental Non-SI units</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -3446,8 +3455,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">5</tag>
         <tag role="typerefnum">Table 5</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">5</tag>Other non-SI units</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 5</tag>Other non-SI units</caption>
+      <toccaption><tag close=" ">5</tag>Other non-SI units</toccaption>
+      <caption><tag close=": ">Table 5</tag>Other non-SI units</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -3547,8 +3556,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">6</tag>
         <tag role="typerefnum">Table 6</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">6</tag>Other non-SI units</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 6</tag>Other non-SI units</caption>
+      <toccaption><tag close=" ">6</tag>Other non-SI units</toccaption>
+      <caption><tag close=": ">Table 6</tag>Other non-SI units</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -3992,8 +4001,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">7</tag>
         <tag role="typerefnum">Table 7</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">7</tag>Abbreviated units</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 7</tag>Abbreviated units</caption>
+      <toccaption><tag close=" ">7</tag>Abbreviated units</toccaption>
+      <caption><tag close=": ">Table 7</tag>Abbreviated units</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -4847,8 +4856,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">8</tag>
         <tag role="typerefnum">Table 8</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">8</tag>Binary prefixes</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 8</tag>Binary prefixes</caption>
+      <toccaption><tag close=" ">8</tag>Binary prefixes</toccaption>
+      <caption><tag close=": ">Table 8</tag>Binary prefixes</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -5503,7 +5512,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\mathrm{J}\text{\text{~{}div~{}}}\text{(}\mathrm{mol}\text{\,}\mathrm{K}\text{)}" text="joule / mole * kelvin" xml:id="S2.SS1.SSS2.p2.m3">
+            </Math> <break/><Math mode="inline" tex="\mathrm{J}\text{\text{~div~}}\text{(}\mathrm{mol}\text{\,}\mathrm{K}\text{)}" text="joule / mole * kelvin" xml:id="S2.SS1.SSS2.p2.m3">
               <XMath>
                 <XMApp>
                   <XMText meaning="divide" role="MULOP" xml:id="S2.SS1.SSS2.p2.m3.2"> div </XMText>
@@ -5990,7 +5999,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             </Math><break/></p>
         </para>
         <para xml:id="S2.SS1.SSS6.p2">
-          <p><Math mode="inline" tex="{\mathrm{(kg~{}of~{}pol)}}^{2}\text{\,}{\mathrm{(mol~{}of~{}cat)}}^{-1}\text{%&#10;\,}{\mathrm{h}}^{-1}" text="power@(gram, 2) * power@(mole, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p2.m1">
+          <p><Math mode="inline" tex="{\mathrm{(kg~of~pol)}}^{2}\text{\,}{\mathrm{(mol~of~cat)}}^{-1}\text{\,}{%&#10;\mathrm{h}}^{-1}" text="power@(gram, 2) * power@(mole, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p2.m1">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS6.p2.m1.4"> </XMText>
@@ -6347,7 +6356,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             </Math> <break/><Math mode="inline" tex="2.67\text{\ }\mathrm{F}" text="2.67 * farad" xml:id="S2.SS2.SSS2.p1.m2">
               <XMath>
                 <XMApp>
-                  <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS2.p1.m2.2"> </XMText>
+                  <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS2.p1.m2.2"> </XMText>
                   <XMTok meaning="2.67" role="NUMBER" xml:id="S2.SS2.SSS2.p1.m2.1">2.67</XMTok>
                   <XMTok class="ltx_unit" meaning="farad" role="ID" xml:id="S2.SS2.SSS2.p1.m2.3">F</XMTok>
                 </XMApp>
@@ -6936,8 +6945,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">9</tag>
         <tag role="typerefnum">Table 9</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">9</tag>Standard behaviour of the <text font="typewriter">S</text> column type.</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 9</tag>Standard behaviour of the <text font="typewriter">S</text> column type.</caption>
+      <toccaption><tag close=" ">9</tag>Standard behaviour of the <text font="typewriter">S</text> column type.</toccaption>
+      <caption><tag close=": ">Table 9</tag>Standard behaviour of the <text font="typewriter">S</text> column type.</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -7025,8 +7034,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">10</tag>
         <tag role="typerefnum">Table 10</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">10</tag>Detection of surrounding material in an <text font="typewriter">S</text> column.</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 10</tag>Detection of surrounding material in an <text font="typewriter">S</text> column.</caption>
+      <toccaption><tag close=" ">10</tag>Detection of surrounding material in an <text font="typewriter">S</text> column.</toccaption>
+      <caption><tag close=": ">Table 10</tag>Detection of surrounding material in an <text font="typewriter">S</text> column.</caption>
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
@@ -7064,9 +7073,9 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="refnum">11</tag>
         <tag role="typerefnum">Table 11</tag>
       </tags>
-      <toccaption class="ltx_centering"><tag close=" ">11</tag>Controlling complex alignment with the tablenum macro.</toccaption>
-      <caption class="ltx_centering"><tag close=": ">Table 11</tag>Controlling complex alignment with the tablenum macro.</caption>
-      <tabular class="ltx_centering ltx_guessed_headers ltx_flex_size_2" vattach="middle">
+      <toccaption><tag close=" ">11</tag>Controlling complex alignment with the tablenum macro.</toccaption>
+      <caption><tag close=": ">Table 11</tag>Controlling complex alignment with the tablenum macro.</caption>
+      <tabular class="ltx_centering ltx_figure_panel ltx_guessed_headers" vattach="middle">
         <tbody>
           <tr>
             <td align="left" border="tt" thead="row">Heading</td>
@@ -7105,7 +7114,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           </tr>
         </tfoot>
       </tabular>
-      <tabular class="ltx_centering ltx_guessed_headers ltx_flex_size_2" vattach="middle">
+      <tabular class="ltx_centering ltx_figure_panel ltx_guessed_headers" vattach="middle">
         <thead>
           <tr>
             <td align="left" border="tt" thead="column row">Heading</td>
@@ -7399,8 +7408,8 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tag role="refnum">15</tag>
           <tag role="typerefnum">Table 15</tag>
         </tags>
-        <toccaption class="ltx_centering"><tag close=" ">15</tag>Aligning the <text font="typewriter">S</text> column.</toccaption>
-        <caption class="ltx_centering"><tag close=": ">Table 15</tag>Aligning the <text font="typewriter">S</text> column.</caption>
+        <toccaption><tag close=" ">15</tag>Aligning the <text font="typewriter">S</text> column.</toccaption>
+        <caption><tag close=": ">Table 15</tag>Aligning the <text font="typewriter">S</text> column.</caption>
         <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
           <thead>
             <tr>
@@ -7517,8 +7526,8 @@ uncertainty</title>
           <tag role="refnum">16</tag>
           <tag role="typerefnum">Table 16</tag>
         </tags>
-        <toccaption class="ltx_centering"><tag close=" ">16</tag>Reserving space in <text font="typewriter">S</text> columns.</toccaption>
-        <caption class="ltx_centering"><tag close=": ">Table 16</tag>Reserving space in <text font="typewriter">S</text> columns.</caption>
+        <toccaption><tag close=" ">16</tag>Reserving space in <text font="typewriter">S</text> columns.</toccaption>
+        <caption><tag close=": ">Table 16</tag>Reserving space in <text font="typewriter">S</text> columns.</caption>
         <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
           <thead>
             <tr>
@@ -7730,10 +7739,10 @@ uncertainty</title>
                     </XMApp>
                   </XMath>
                 </Math></td>
-              <td align="left" border="bb"><Math mode="inline" tex="\pm 3.76" text="\pm3.76" xml:id="S3.T16.m23">
+              <td align="left" border="bb"><Math mode="inline" tex="\pm 3.76" text="±3.76" xml:id="S3.T16.m23">
                   <XMath>
                     <XMDual>
-                      <XMTok meaning="\pm3.76" role="NUMBER"/>
+                      <XMTok meaning="±3.76" role="NUMBER"/>
                       <XMApp>
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
                         <XMTok meaning="3.76" role="NUMBER">3.76</XMTok>
@@ -7772,8 +7781,8 @@ uncertainty</title>
           <tag role="refnum">17</tag>
           <tag role="typerefnum">Table 17</tag>
         </tags>
-        <toccaption class="ltx_centering"><tag close=" ">17</tag>Reserving space for comparators in <text font="typewriter">S</text> columns.</toccaption>
-        <caption class="ltx_centering"><tag close=": ">Table 17</tag>Reserving space for comparators in <text font="typewriter">S</text> columns.</caption>
+        <toccaption><tag close=" ">17</tag>Reserving space for comparators in <text font="typewriter">S</text> columns.</toccaption>
+        <caption><tag close=": ">Table 17</tag>Reserving space for comparators in <text font="typewriter">S</text> columns.</caption>
         <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
           <thead>
             <tr>
@@ -7887,8 +7896,8 @@ uncertainty</title>
           <tag role="refnum">18</tag>
           <tag role="typerefnum">Table 18</tag>
         </tags>
-        <toccaption class="ltx_centering"><tag close=" ">18</tag>Using the <text font="typewriter">table-format</text> option.</toccaption>
-        <caption class="ltx_centering"><tag close=": ">Table 18</tag>Using the <text font="typewriter">table-format</text> option.</caption>
+        <toccaption><tag close=" ">18</tag>Using the <text font="typewriter">table-format</text> option.</toccaption>
+        <caption><tag close=": ">Table 18</tag>Using the <text font="typewriter">table-format</text> option.</caption>
         <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
           <thead>
             <tr>
@@ -8063,10 +8072,10 @@ uncertainty</title>
                     </XMApp>
                   </XMath>
                 </Math></td>
-              <td align="left" border="bb"><Math mode="inline" tex="\pm 3.76" text="\pm3.76" xml:id="S3.T18.m19">
+              <td align="left" border="bb"><Math mode="inline" tex="\pm 3.76" text="±3.76" xml:id="S3.T18.m19">
                   <XMath>
                     <XMDual>
-                      <XMTok meaning="\pm3.76" role="NUMBER"/>
+                      <XMTok meaning="±3.76" role="NUMBER"/>
                       <XMApp>
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
                         <XMTok meaning="3.76" role="NUMBER">3.76</XMTok>
@@ -8105,8 +8114,8 @@ uncertainty</title>
           <tag role="refnum">19</tag>
           <tag role="typerefnum">Table 19</tag>
         </tags>
-        <toccaption class="ltx_centering"><tag close=" ">19</tag>Text before and after numbers.</toccaption>
-        <caption class="ltx_centering"><tag close=": ">Table 19</tag>Text before and after numbers.</caption>
+        <toccaption><tag close=" ">19</tag>Text before and after numbers.</toccaption>
+        <caption><tag close=": ">Table 19</tag>Text before and after numbers.</caption>
         <tabular class="ltx_centering" vattach="middle">
           <tbody>
             <tr>
@@ -8536,8 +8545,8 @@ uncertainty</title>
           <tag role="refnum">25</tag>
           <tag role="typerefnum">Table 25</tag>
         </tags>
-        <toccaption class="ltx_centering"><tag close=" ">25</tag>Aligning without parsing.</toccaption>
-        <caption class="ltx_centering"><tag close=": ">Table 25</tag>Aligning without parsing.</caption>
+        <toccaption><tag close=" ">25</tag>Aligning without parsing.</toccaption>
+        <caption><tag close=": ">Table 25</tag>Aligning without parsing.</caption>
         <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
           <thead>
             <tr>
@@ -8720,8 +8729,8 @@ uncertainty</title>
           <tag role="refnum">26</tag>
           <tag role="typerefnum">Table 26</tag>
         </tags>
-        <toccaption class="ltx_centering"><tag close=" ">26</tag>Aligning text in <text font="typewriter">S</text> columns.</toccaption>
-        <caption class="ltx_centering"><tag close=": ">Table 26</tag>Aligning text in <text font="typewriter">S</text> columns.</caption>
+        <toccaption><tag close=" ">26</tag>Aligning text in <text font="typewriter">S</text> columns.</toccaption>
+        <caption><tag close=": ">Table 26</tag>Aligning text in <text font="typewriter">S</text> columns.</caption>
         <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
           <thead>
             <tr>

@@ -58,7 +58,13 @@ LoadDefinitions!({
       // TODO: SVG translate handling
       // TODO: isMath => XMHint element
     } else {
-      document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;
+      let spaces = dimension_to_spaces(length);
+      if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
+        let parent = document.get_node();
+        let pname = document::with_node_qname(parent, |n| n.to_string());
+        eprintln!("DEBUG hskip absorb: length={length:?} spaces={:?} len={} parent={pname}", spaces, spaces.len());
+      }
+      document.absorb_string(&spaces, &SymHashMap::default())?;
     }
   },
   // Perl: enterHorizontal => 1

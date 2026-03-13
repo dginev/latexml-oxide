@@ -282,7 +282,7 @@ impl Alignment {
 
   pub fn omit_next_column(&mut self) {
     if let Some(cw) = self.current_row {
-      if let Some(column) = self.rows.get_mut(cw).unwrap().get_column_mut(cw + 1) {
+      if let Some(column) = self.rows.get_mut(cw).unwrap().get_column_mut(self.current_column + 1) {
         column.omitted = true;
       }
     }
@@ -531,6 +531,56 @@ impl BoxOps for Alignment {
             cell_attrs.insert(String::from("thead"), thead);
           }
         }
+        // Perl Alignment.pm L332-347: ltx_nopad_l/ltx_nopad_r CSS classes
+        // Based on lspaces/rspaces width relative to 0.2em threshold
+        let mut classes: Vec<String> = Vec::new();
+        let empty = cell.empty;
+        let has_boxes = cell.boxes.is_some();
+        let mut pre_absorb: Option<Digested> = None;
+        let mut post_absorb: Option<Digested> = None;
+        if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
+          eprintln!("DEBUG be_absorbed cell: empty={empty} has_boxes={has_boxes} tabskip={:?} lspaces={}", cell.tabskip, cell.lspaces.is_some());
+        }
+        if !ismath {
+          // 0.2em ≈ 131072 scaled points; 1.5em ≈ 983040 scaled points (at 10pt font)
+          let threshold_02em: i64 = 131072;
+          let threshold_15em: i64 = 983040;
+          // Perl: $cell{lspaces}->getWidth->valueOf
+          // Use tabskip directly as lpad when lspaces comes from tabskip
+          let lpad = cell
+            .tabskip
+            .map(|g| g.value_of())
+            .unwrap_or(0);
+          let rpad: i64 = 0; // rspaces not populated from tabskip
+          if (!empty || has_boxes) && lpad < threshold_02em {
+            classes.push("ltx_nopad_l".to_string());
+          } else if lpad < threshold_15em {
+            // do nothing — use CSS default padding
+          } else {
+            if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
+              eprintln!("DEBUG pre_absorb: lpad={lpad} lspaces.is_some={}", cell.lspaces.is_some());
+            }
+            pre_absorb = cell.lspaces.take();
+          }
+          if (!empty || has_boxes) && rpad < threshold_02em {
+            classes.push("ltx_nopad_r".to_string());
+          } else if rpad < threshold_15em {
+            // do nothing — use CSS default padding
+          } else {
+            post_absorb = cell.rspaces.take();
+          }
+        }
+        if let Some(ref cell_class) = cell.class {
+          classes.insert(0, cell_class.clone());
+        }
+        let class_str: String = classes
+          .into_iter()
+          .filter(|s| !s.is_empty())
+          .collect::<Vec<_>>()
+          .join(" ");
+        if !class_str.is_empty() {
+          cell_attrs.insert(String::from("class"), class_str);
+        }
         //       # Which properties do we expose to the constructor?
         //       x      => $$cell{x}, y => $$cell{y},
         //       cached_width => $$cell{cached_width}, cached_height => $$cell{cached_height},
@@ -545,13 +595,56 @@ impl BoxOps for Alignment {
             // Hacky!
             document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None)?;
           }
+          // Perl L365: absorb pre-spacing (lspaces > 1.5em)
+          if let Some(ref pre) = pre_absorb {
+            if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
+              eprintln!("DEBUG absorbing pre_absorb: {:?}", pre.data());
+            }
+            document.absorb(pre, None)?;
+            if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
+              let node = document.get_node();
+              let children = node.get_child_nodes();
+              eprintln!("DEBUG after pre_absorb: node={} children={}",
+                with_node_qname(&node, |n| n.to_string()),
+                children.len());
+              for (i, child) in children.iter().enumerate() {
+                let ct = child.get_type();
+                let cc = child.get_content();
+                eprintln!("  child[{i}]: type={ct:?} content={cc:?}");
+              }
+            }
+          }
+          if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
+            let boxes_list = box_ref.unlist();
+            eprintln!("DEBUG cell boxes before absorb ({} items):", boxes_list.len());
+            for (bi, bx) in boxes_list.iter().enumerate() {
+              eprintln!("  box[{bi}]: {:?} str={:?}", std::mem::discriminant(bx.data()), bx.to_string());
+            }
+          }
           document.absorb(box_ref, None)?;
+          // Perl L367: absorb post-spacing (rspaces > 1.5em)
+          if let Some(ref post) = post_absorb {
+            document.absorb(post, None)?;
+          }
           if ismath {
             // Hacky!
             document.close_element("ltx:XMArg")?;
           }
           // expire local $LaTeXML::BOX
           document.expire_box_to_absorb();
+        }
+        if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() && pre_absorb.is_some() {
+          // dump the td node's children before closing
+          if let Some(ref td_node) = cell.cell {
+            let children = td_node.get_child_nodes();
+            eprintln!("DEBUG td before close: {} children", children.len());
+            for (i, child) in children.iter().enumerate() {
+              let ct = child.get_type();
+              let cc = child.get_content();
+              let cname = child.get_name();
+              eprintln!("  child[{i}]: type={ct:?} name={cname} content={:?}", &cc[..cc.len().min(80)]);
+            }
+          }
         }
         let close_column_fn = &self.close_column;
         close_column_fn(document)?;
@@ -674,7 +767,10 @@ pub fn read_alignment_template() -> Result<Template> {
   }
   tokens.push(T_END!());
   with_current_build_template(|template_opt| {
-    template_opt.unwrap().set_reversion(Tokens::new(tokens))
+    let t = template_opt.unwrap();
+    t.set_reversion(Tokens::new(tokens));
+    // Perl Alignment.pm L912: $BUILD_TEMPLATE->finish
+    t.finish();
   });
   Ok(take_build_template().unwrap())
 }

@@ -21,7 +21,6 @@ fn latextheorem_test() {
   latexml_test_single("tests/theorem/latextheorem.tex", "latextheorem", DIR, Some(&REQUIRES), None);
 }
 
-#[test]
 #[ignore] // ntheorem: 897 math parser tree diffs (known Marpa-based divergence)
 fn ntheorem_test() {
   latexml_test_single("tests/theorem/ntheorem.tex", "ntheorem", DIR, Some(&REQUIRES), None);

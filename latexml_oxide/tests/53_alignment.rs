@@ -7,3 +7,8 @@ const DIR: &str = "tests/alignment";
 fn tabtab_test() {
   latexml_test_single("tests/alignment/tabtab.tex", "tabtab", DIR, None, None);
 }
+
+#[test]
+fn halign_test() {
+  latexml_test_single("tests/alignment/halign.tex", "halign", DIR, None, None);
+}

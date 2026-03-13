@@ -663,7 +663,8 @@ LoadDefinitions!({
         _ => false,
       };
       if dominated_by_width {
-        // TODO: $alignment->addLine('t');
+        _alignment.alignment_cell().unwrap().borrow_mut()
+          .add_line("t", Vec::new());
         whatsit.set_property("isHorizontalRule", true);
       }
     }
