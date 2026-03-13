@@ -67,7 +67,13 @@ pub struct MathPrimitiveOptions {
   pub reorder:                bool,
   pub dual:                   bool,
   pub mathstyle:              Option<String>,
+  /// Dynamic mathstyle: compute "display"/"text" based on current font mathstyle at invocation time
+  /// Perl: mathstyle => \&doVariablesizeOp
+  pub dynamic_mathstyle:      bool,
   pub scriptpos:              Option<String>,
+  /// Dynamic scriptpos: compute "mid"/"post" based on current font mathstyle at invocation time
+  /// Perl: scriptpos => \&doScriptpos
+  pub dynamic_scriptpos:      bool,
   pub operator_scriptpos:     Option<usize>,
   pub stretchy:               Option<bool>,
   pub operator_stretchy:      Option<bool>,
@@ -109,7 +115,9 @@ impl Default for MathPrimitiveOptions {
       reorder:                false,
       dual:                   false,
       mathstyle:              None,
+      dynamic_mathstyle:      false,
       scriptpos:              None,
+      dynamic_scriptpos:      false,
       operator_scriptpos:     None,
       stretchy:               None,
       operator_stretchy:      None,

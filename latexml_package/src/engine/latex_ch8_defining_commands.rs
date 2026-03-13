@@ -98,17 +98,14 @@ LoadDefinitions!({
   sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
     let nargs = nargs.value_of() as usize;
-
-    let encoding = Expand!(encoding);
+    let encoding_str = Expand!(encoding).to_string();
+    let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
+    let ecs_args = convert_latex_args(nargs, opts.clone())?;
+    DefMacro!(ecs, ecs_args, expansion.clone());
     if !IsDefined!(&cs) {    // If not already defined...
-      DefMacro!(cs, None, Some(s!(r#"""
-      \expandafter\ifx\csname\cf@encoding\string{}\endcsname\relax\csname?\string{}\endcsname\else
-      \csname\cf@encoding\string{}\endcsname\fi
-      """#, cs_str, cs_str, cs_str).into()));
+      let cs_args = convert_latex_args(nargs, opts)?;
+      DefMacro!(cs, cs_args, expansion);
     }
-     let ecs = T_CS!(s!("\\{}{}", encoding, cs_str));
-     let ecs_args = convert_latex_args(nargs, opts)?;
-     DefMacro!(ecs, ecs_args, expansion);
   });
 
   DefMacro!(
@@ -120,15 +117,16 @@ LoadDefinitions!({
   sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
     let nargs = nargs.value_of() as usize;
-    if IsDefinable!(&cs) { // If not already defined...
-      DefMacro!(cs, None, Some(s!(
-        r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\csname?\string{cs_str}\endcsname
-        \else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
-    }
-    let ecs = T_CS!(s!("\\{}{}", encoding, cs_str));
+    let encoding_str = Expand!(encoding).to_string();
+    let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     if !IsDefined!(&ecs) { // If not already defined...
-      let ecs_args = convert_latex_args(nargs, opts)?;
-      DefMacro!(ecs, ecs_args, expansion);
+      let ecs_args = convert_latex_args(nargs, opts.clone())?;
+      DefMacro!(ecs, ecs_args, expansion.clone());
+    }
+    if IsDefinable!(&cs) { // If not already defined...
+      // Define base command: use encoding-specific expansion directly
+      let cs_args = convert_latex_args(nargs, opts)?;
+      DefMacro!(cs, cs_args, expansion);
     }
   });
 
@@ -142,15 +140,21 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[(cs, encoding, code)] {
     let code_value = code.value_of() as u8;
     let cs_str = cs.to_string();
-    let ecs = T_CS!(s!("\\{encoding}{cs_str}"));
     let encoding_str = Expand!(encoding).to_string();
-    if IsDefinable!(&cs) {    // If not already defined...
+    let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
+    if let Some(replacement_value) = font::decode(code_value, Some(encoding_str), false) {
+      // Define the encoding-specific command
+      def_primitive(ecs, None, Some(PrimitiveBody::from(replacement_value)),
+        PrimitiveOptions::default())?;
+      // Also define the base command directly if not already defined
+      if IsDefinable!(&cs) {
+        def_primitive(cs, None, Some(PrimitiveBody::from(replacement_value)),
+          PrimitiveOptions::default())?;
+      }
+    } else if IsDefinable!(&cs) {
+      // Can't decode: define conditional fallback
       DefMacro!(cs, None, Some(s!(r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
       \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
-    }
-    if let Some(replacement_value) = font::decode(code_value, Some(encoding_str), false) {
-      let replacement = PrimitiveBody::from(replacement_value);
-      def_primitive(ecs, None, Some(replacement), PrimitiveOptions::default())?;
     }
   });
 
@@ -256,6 +260,30 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\LastDeclaredEncoding", None, None);
+
+  // \DeclareUnicodeCharacter — from utf8.def / latex_constructs
+  // Maps a hex codepoint to an expansion, making the character active.
+  DefPrimitive!("\\DeclareUnicodeCharacter Expanded {}", sub[(hexcode, expansion)] {
+    let hex_str = hexcode.to_string();
+    let hex_str = hex_str.trim();
+    if hex_str.chars().all(|c| c.is_ascii_hexdigit()) && !hex_str.is_empty() {
+      if let Ok(cp) = u32::from_str_radix(hex_str, 16) {
+        if cp <= 0x10FFFF {
+          if let Some(ch) = char::from_u32(cp) {
+            AssignCatcode!(ch, Catcode::ACTIVE);
+            DefMacro!(T_ACTIVE!(ch), None, expansion);
+          }
+        } else {
+          Error!("unexpected", hex_str,
+            s!("{} too large for Unicode. Values between 0 and 10FFFF are permitted.", hex_str));
+        }
+      }
+    } else {
+      Error!("unexpected", hex_str,
+        s!("Non-hex value {} in \\DeclareUnicodeCharacter", hex_str));
+    }
+  });
+
   DefPrimitive!("\\DeclareFontSubstitution{}{}{}{}", None);
   DefPrimitive!("\\DeclareFontEncodingDefaults{}{}", None);
   DefMacro!("\\LastDeclaredEncoding", None, None);

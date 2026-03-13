@@ -319,8 +319,7 @@ impl BoxOps for Digested {
       Comment(c) => caller(c.get_properties()),
       Whatsit(w) => caller(w.borrow().get_properties()),
       Alignment(w) => caller(w.borrow().get_properties()),
-      KeyVals(kvs) => caller(kvs.get_properties()),
-      Postponed(_) | RegisterValue(_) => caller(&NO_PROPERTIES),
+      KeyVals(_) | Postponed(_) | RegisterValue(_) => caller(&NO_PROPERTIES),
     }
   }
   // Note: get_properties_mut is not implemented, as it would generically require a RefCell

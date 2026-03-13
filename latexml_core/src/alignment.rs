@@ -966,7 +966,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
       col.content_length = Some(if col.content_class == Some(ColumnSpec::Graphics) {
         1000
       } else if col.cell.is_some() {
-        col.cell.as_ref().unwrap().get_content().len()
+        col.cell.as_ref().unwrap().get_content().chars().count()
       } else {
         0
       });
@@ -1547,7 +1547,7 @@ fn alignment_skip_data(
   if i >= tab_lines_length {
     return 0;
   }
-  // eprintln!("Scanning for data");
+  // eprintln!("Scanning for data at {i}");
   let mut n = 1;
   while i + n < tab_lines_length {
     if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold

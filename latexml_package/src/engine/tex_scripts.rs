@@ -419,8 +419,33 @@ LoadDefinitions!({
           if let Some(xmarg) = xmarg_children.first() {
             let text = xmarg.get_content();
             let qname = if role == "FLOATSUPERSCRIPT" { "ltx:sup" } else { "ltx:sub" };
+            // Perl: local $LaTeXML::BOX = $document->getNodeBox($xmarg[0]);
+            // Check if child XMTok has a font attribute to preserve
+            // Perl: local $LaTeXML::BOX = $document->getNodeBox($xmarg[0]);
+            // Check child XMTok font to preserve italic/bold styling (from math mode)
+            let font_attr = xmarg.get_child_nodes().into_iter()
+              .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+              .find_map(|n| {
+                // Check XML font attribute first
+                let attr = n.get_attribute("font");
+                if attr.is_some() { return attr; }
+                // Check the stored node font for italic shape
+                let node_font = document.get_node_font(&n);
+                node_font.get_shape().and_then(|s|
+                  if s.as_ref() == "italic" { Some("italic".to_string()) } else { None }
+                )
+              });
             document.open_element(qname, None, None)?;
-            document.get_node_mut().append_text(&text)?;
+            if let Some(ref font) = font_attr {
+              // Create ltx:text and set font attribute directly
+              // (open_element skips "font" key in attributes hash)
+              let mut text_node = document.open_element("ltx:text", None, None)?;
+              document.set_attribute(&mut text_node, "font", font)?;
+              document.get_node_mut().append_text(&text)?;
+              document.close_element("ltx:text")?;
+            } else {
+              document.get_node_mut().append_text(&text)?;
+            }
             document.close_element(qname)?;
             replaced = true;
           }

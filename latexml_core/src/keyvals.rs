@@ -157,7 +157,8 @@ impl BoxOps for KeyVals {
     crate::common::dimension::Dimension,
     crate::common::dimension::Dimension,
   )> {
-    todo!() // TODO
+    use crate::common::dimension::Dimension;
+    Ok((Dimension::default(), Dimension::default(), Dimension::default()))
   }
 }
 #[derive(Debug, Clone, Default, PartialEq)]

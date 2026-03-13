@@ -2111,6 +2111,16 @@ macro_rules! defi_opts {
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
   defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ scriptpos @ Some($flag.to_string()) ] })
   };
+  // mathstyle: Option<String>
+  (@munch ( $(,)? mathstyle $(:)?$(=>)? $literal:literal, $($next:tt)*)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+    [ mathstyle @ Some($literal.to_string()) ] })
+  };
+  (@munch ( $(,)? mathstyle $(:)?$(=>)? $literal:literal)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ mathstyle @ Some($literal.to_string()) ] })
+  };
   // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {

@@ -105,11 +105,7 @@ impl Definition for Primitive {
           todo!(); // we need to generalize the revert functions to take ArgWrap-typed arguments
           // box_tokens.extend(params.revert_arguments(args)?);
         }
-        let box_props = if symbol == *EMPTY_SYM {
-          SymHashMap::default()
-        } else {
-          stored_map!("isEmpty" => true)
-        };
+        let box_props = SymHashMap::default();
         invoked_boxes.push(Digested::from(Tbox::new(
           symbol,
           None,
