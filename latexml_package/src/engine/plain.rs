@@ -328,10 +328,15 @@ LoadDefinitions!({
                    * properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } } */
   );
   DefMacro!("\\hidewidth", None);
-  // DefMacro('\multispan{Number}', sub {
-  //     my ($gullet, $span) = @_;
-  //     $span = $span->valueOf;
-  //     (T_CS('\omit'), map { (T_CS('\span'), T_CS('\omit')) } 1 .. $span - 1); });
+  DefMacro!("\\multispan{Number}", sub[(span)] {
+    let n = span.value_of();
+    let mut tks = vec![T_CS!("\\omit")];
+    for _ in 1..n {
+      tks.push(T_CS!("\\span"));
+      tks.push(T_CS!("\\omit"));
+    }
+    Ok(Tokens::new(tks))
+  });
 
   //======================================================================
   // TeX Book, Appendix B, p. 344

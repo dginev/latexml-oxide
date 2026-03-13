@@ -250,6 +250,8 @@ pub fn tabular_bindings(
   } // Account for html space
   alignment_bindings(template, String::from("text"), properties, xml_attributes);
   state::let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);
+  // Perl latex_constructs L3689: Let('\lx@intercol', '\lx@text@intercol')
+  state::let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@text@intercol"), None);
   state::let_i(&T_CS!("\\tabularnewline"), &T_CS!("\\\\"), None);
   // NOTE: Fit this back in!!!!!!!
   // Do like AddToMacro, but NOT global!

@@ -1,5 +1,6 @@
 use super::template::{Align, BorderSpec, ColumnSpec};
 use crate::common::dimension::Dimension;
+use crate::common::glue::Glue;
 use crate::digested::Digested;
 use crate::tokens::Tokens;
 use libxml::tree::Node;
@@ -42,6 +43,14 @@ pub struct Cell {
   pub x:               Option<Dimension>,
   pub y:               Option<Dimension>,
   pub border:          String,
+  /// Perl: $$colspec{tabskip} — intercolumn glue from \halign template
+  pub tabskip:         Option<Glue>,
+  /// Perl: $$colspec{lspaces} — left-side spacing (incl. tabskip)
+  pub lspaces:         Option<Digested>,
+  /// Perl: $$colspec{rspaces} — right-side spacing
+  pub rspaces:         Option<Digested>,
+  /// Perl: $$cell{class} — CSS class for the cell
+  pub class:           Option<String>,
 }
 impl Cell {
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {

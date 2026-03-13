@@ -393,7 +393,12 @@ pub fn read_token() -> Result<Option<Token>> {
     // Wow!!!!! See TeX the Program \S 309
     if let Some(ref nextt) = next_token {
       let mut check_dont_expand = true;
-      // SHOULD count nesting of { }!!! when SCANNED (not digested)
+      // Perl Gullet.pm L322-323: track { and } at scan level for ALIGN_STATE
+      match nextt.get_catcode() {
+        Catcode::BEGIN => increment_align_group_count(),
+        Catcode::END => decrement_align_group_count(),
+        _ => {},
+      }
       if (align_group_count() == 0) && has_reading_alignment() {
         if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
           check_dont_expand = false;
@@ -533,6 +538,16 @@ pub fn read_x_token(
         },
       }
     } else {
+      // Perl Gullet.pm L421-422: track { and } at scan level for ALIGN_STATE
+      match token.get_catcode() {
+        Catcode::BEGIN => {
+          increment_align_group_count();
+        },
+        Catcode::END => {
+          decrement_align_group_count();
+        },
+        _ => {},
+      }
       return Ok(Some(token));
     }
   }
@@ -699,6 +714,8 @@ pub fn read_balanced(
           }
         },
         Catcode::END => {
+          // Perl Gullet.pm L476: track ALIGN_STATE for } inside readBalanced
+          decrement_align_group_count();
           level -= 1;
           if level <= 0 {
             break;
@@ -706,6 +723,8 @@ pub fn read_balanced(
           tokens.push(token);
         },
         Catcode::BEGIN => {
+          // Perl Gullet.pm L482: track ALIGN_STATE for { inside readBalanced
+          increment_align_group_count();
           level += 1;
           tokens.push(token);
         },
@@ -983,12 +1002,8 @@ pub fn read_cs_name() -> Result<Token> {
 pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
   while let Some(token) = read_token()? {
     let cc = token.get_catcode();
-    // Perl L128-130: track ALIGN_STATE for braces during conditional skipping
-    if cc == Catcode::BEGIN {
-      increment_align_group_count();
-    } else if cc == Catcode::END {
-      decrement_align_group_count();
-    } else if cc.is_active_or_cs() {
+    // Perl L128-130: ALIGN_STATE tracking for { and } now handled by read_token itself
+    if cc.is_active_or_cs() {
       if let Some(cond_type) = lookup_conditional(&token) {
         return Ok(Some((token, cond_type)));
       }
@@ -1788,6 +1803,12 @@ pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
     Catcode::CS | Catcode::ACTIVE => {
       // Embedded version of Equals, knowing both are tokens
       let defn = lookup_meaning(token).unwrap_or_else(|| Stored::Token(*token));
+      // Perl Gullet.pm L273: if meaning is a Token with CC_ALIGN, treat as alignment tab
+      if let Stored::Token(t) = &defn {
+        if t.get_catcode() == Catcode::ALIGN {
+          return Some((*token, "align", false));
+        }
+      }
       for end in *COLUMN_ENDS {
         let e = &end.0;
         // Would be nice to cache the defns, but don't know when they're present & constant!

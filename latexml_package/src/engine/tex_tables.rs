@@ -4,7 +4,9 @@
 
 use crate::prelude::*;
 use latexml_core::alignment::read_alignment_template;
+use latexml_core::alignment::template::TemplateConfig;
 use std::cell::{RefCell, RefMut};
+use std::collections::VecDeque;
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -116,9 +118,14 @@ LoadDefinitions!({
     tks
   });
 
+  // Perl TeX_Tables L81-86: @{} disables intercolumn before and after
   DefColumnType!("@{}", sub[(filler)] {
-    with_current_build_template(|template_opt| 
-      template_opt.unwrap().add_between_column(filler.unlist())); });
+    with_current_build_template(|template_opt| {
+      let t = template_opt.unwrap();
+      t.disable_intercolumn();
+      t.add_between_column(filler.unlist());
+      t.disable_intercolumn();
+    }); });
 
   //======================================================================
   // Table Line endings
@@ -191,29 +198,61 @@ LoadDefinitions!({
   //     Loop while read_column
   //======================================================================
 
-  // TODO:
-  //   DefConstructor('\halign BoxSpecification',
-  // "#alignment",
-  // reversion => sub {
-  //   my ($whatsit, $spec) = @_;
-  //   my $template  = $whatsit->getProperty('template');
-  //   my $alignment = $whatsit->getProperty('alignment');
-  //   Tokens(T_CS('\halign'), Revert($spec), T_BEGIN, Revert($template), T_CS('\cr'),
-  //     Revert($alignment), T_END); },
-  // bounded => 1,
-  // #  sizer       => '#1',
-  // sizer       => sub { $_[0]->getProperty('alignment')->getSize; },
-  // afterDigest => sub {
-  //   my ($stomach, $whatsit) = @_;
-  //   $stomach->bgroup;    # This will be closed by the \halign's closing }  (or will it?)
-  //   my $template = parseHAlignTemplate($stomach->getGullet, $whatsit);
-  //   my $spec     = $whatsit->getArg(1);
-  //   alignmentBindings($template, undef,
-  //     attributes => { width => orNull(GetKeyVal($spec, 'to')) });
-  //   digestAlignmentBody($stomach, $whatsit);
-  //   $stomach->egroup;
-  //   $LaTeXML::ALIGN_STATE--;    # Balance the opening { OUTSIDE of the masking of ALIGN_STATE
-  //   return; });
+  // Perl TeX_Tables L159-184: \halign BoxSpecification
+  DefConstructor!("\\halign BoxSpecification", "#alignment",
+    reversion => sub[whatsit, _args] {
+      let mut tks = vec![T_CS!("\\halign")];
+      if let Some(spec) = whatsit.get_arg(1) {
+        tks.extend(spec.revert()?.unlist());
+      }
+      tks.push(T_BEGIN!());
+      if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
+        tks.extend(template_tks.clone().unlist());
+      }
+      tks.push(T_CS!("\\cr"));
+      if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
+        if let DigestedData::Alignment(data) = alignment_d.data() {
+          tks.extend(data.borrow().revert()?.unlist());
+        }
+      }
+      tks.push(T_END!());
+      Ok(Tokens::new(tks))
+    },
+    bounded => true,
+    leave_horizontal => true,
+    sizer => sub[whatsit] {
+      if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
+        let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
+        Ok((w, h, d))
+      } else {
+        Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+      }
+    },
+    before_construct => sub[document, _whatsit] {
+      document.maybe_close_element("ltx:p")?;
+    },
+    after_digest => sub[whatsit] {
+      whatsit.set_property("mode", Stored::from("internal_vertical"));
+      begin_mode("restricted_horizontal")?;
+      let template = parse_halign_template(whatsit)?;
+      // Get width from BoxSpecification 'to' key
+      let width_attr: Option<String> = {
+        let spec = whatsit.get_arg(1);
+        if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
+          Some(w.to_attribute())
+        } else {
+          None
+        }
+      };
+      let mut xml_attrs = HashMap::default();
+      if let Some(w) = width_attr {
+        xml_attrs.insert(String::from("width"), w);
+      }
+      alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
+      digest_alignment_body(whatsit)?;
+      end_mode("restricted_horizontal")?;
+      decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+    });
 
   DefMacro!("\\lx@alignment@row@before", None);
   DefMacro!("\\lx@alignment@row@after", None);
@@ -758,6 +797,23 @@ pub fn extract_alignment_column(
   }
   let mut saveleft = VecDeque::new();
   let mut saveright = VecDeque::new();
+  let mut lspaces: Vec<Digested> = Vec::new();
+  let mut rspaces: Vec<Digested> = Vec::new();
+  // Perl L476-477: add tabskip as \hskip to lspaces
+  if let Some(skip) = &colspec.tabskip {
+    if skip.value_of() != 0 {
+      let hskip_toks = Tokens!(
+        T_CS!("\\hskip"),
+        ExplodeText!(&skip.to_string()),
+        T_CS!("\\relax")
+      );
+      let hskip_digested = stomach::digest(hskip_toks)?;
+      if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
+        eprintln!("DEBUG tabskip for col {n0}: skip={skip}, digested={hskip_digested:?}");
+      }
+      lspaces.push(hskip_digested);
+    }
+  }
   while let Some(front_box) = boxes.pop_front() {
     match front_box.data() {
       DigestedData::List(_) => {
@@ -771,11 +827,16 @@ pub fn extract_alignment_column(
       },
       _ if front_box.get_property("isVerticalRule").is_some() => {
         border.push('l');
+        // Perl L487-489: space before | ? move lspaces to previous column
+        // (deferred until after we release colspec borrow)
+        lspaces.clear(); // discard lspaces when border found
+      },
+      _ if front_box.get_property("isSpace").is_some() => {
+        lspaces.push(front_box);
       },
       item
         if front_box.get_property("isHorizontalRule").is_some()
           || front_box.get_property("alignmentSkippable").is_some()
-          || front_box.get_property("isSpace").is_some()
           || matches!(item, DigestedData::Comment(_))
           || front_box.is_empty()? =>
       {
@@ -803,11 +864,14 @@ pub fn extract_alignment_column(
       },
       _ if last_box.get_property("isVerticalRule").is_some() => {
         border.push('r');
+        rspaces.clear(); // Perl L508: discard spacing after rule
+      },
+      _ if last_box.get_property("isSpace").is_some() => {
+        rspaces.insert(0, last_box);
       },
       item
         if last_box.get_property("isHorizontalRule").is_some()
           || last_box.get_property("alignmentSkippable").is_some()
-          || last_box.get_property("isSpace").is_some()
           || matches!(item, DigestedData::Comment(_))
           || last_box.is_empty()? =>
       {
@@ -839,6 +903,13 @@ pub fn extract_alignment_column(
   border = s!("{}{}", colspec.border, border);
   colspec.border = border;
   colspec.boxes = Some(digested_out.clone());
+  // Perl L526-527: store lspaces/rspaces
+  if !lspaces.is_empty() {
+    colspec.lspaces = Some(List::new(lspaces).into());
+  }
+  if !rspaces.is_empty() {
+    colspec.rspaces = Some(List::new(rspaces).into());
+  }
   colspec.colspan = Some(if n1 >= n0 { n1 - n0 + 1 } else { 1 });
   //   if ($$alignment{in_tabular_head} || $$alignment{in_tabular_foot}) {
   //     $$colspec{thead}{column} = 1; }
@@ -883,4 +954,155 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
   } else {
     Err("read_newline_args should only be called with a proper 'Alignment' active in state".into())
   }
+}
+
+// Perl TeX_Tables L187-240: Parse an \halign style alignment template from Gullet
+fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
+  let t = gullet::read_non_space()?;
+  if t.as_ref().map(|t| t.get_catcode()) != Some(Catcode::BEGIN) {
+    Error!("expected", "\\bgroup", "Missing \\halign box");
+  }
+  let mut before = true; // true if we're before a # in current column
+  let mut pre: Vec<Token> = Vec::new();
+  let mut post: Vec<Token> = Vec::new();
+  let mut cols: Vec<Cell> = Vec::new();
+  let mut repeated = false;
+  let mut nonreps: Vec<Cell> = Vec::new();
+  let mut tokens: Vec<Token> = Vec::new();
+  // Perl L197-198: track tabskip per column
+  let mut tabskip = match lookup_register("\\tabskip", Vec::new())? {
+    Some(RegisterValue::Glue(g)) => g,
+    _ => Glue::new(0),
+  };
+  let mut nexttabskip = tabskip;
+  // Only expand certain things; See TeX book p.238
+  local_align_group_count(1000000);
+  while let Some(t) = gullet::read_token()? {
+    let cc = t.get_catcode();
+    if t == T_CS!("\\tabskip") {
+      // Read the tabskip assignment
+      gullet::read_keyword(&["="])?;
+      nexttabskip = gullet::read_glue()?;
+    } else if t == T_CS!("\\span") {
+      // ex-span-ded next token
+      let expanded = gullet::read_x_token(Some(false), false, None)?;
+      if let Some(xt) = expanded {
+        gullet::unread_one(xt);
+      }
+    } else if cc == Catcode::PARAM {
+      // Found the template's column slot
+      before = false;
+      tokens.push(t);
+    } else if cc == Catcode::ALIGN
+      || t == T_CS!("\\cr")
+      || t == T_CS!("\\crcr")
+    {
+      // End the column
+      if before {
+        // Leading & means repeated columns
+        repeated = true;
+        nonreps = std::mem::take(&mut cols);
+      } else {
+        // Finished column spec; add it
+        cols.push(Cell {
+          before: if pre.is_empty() {
+            None
+          } else {
+            Some(Tokens::new(before_cell_unlist(std::mem::take(&mut pre))))
+          },
+          after: if post.is_empty() {
+            None
+          } else {
+            Some(Tokens::new(after_cell_unlist(std::mem::take(&mut post))))
+          },
+          tabskip: if tabskip.value_of() != 0 {
+            Some(tabskip)
+          } else {
+            None
+          },
+          ..Cell::default()
+        });
+        tabskip = nexttabskip;
+        pre.clear();
+        post.clear();
+        before = true;
+      }
+      if cc != Catcode::ALIGN {
+        break; // \cr or \crcr ends the template
+      }
+      tokens.push(t);
+    } else if before {
+      // Other random tokens go into the column's pre-template
+      if !pre.is_empty() || cc != Catcode::SPACE {
+        pre.push(t.clone());
+      }
+      tokens.push(t);
+    } else {
+      // Or the post-template
+      if !post.is_empty() || cc != Catcode::SPACE {
+        post.push(t.clone());
+      }
+      tokens.push(t);
+    }
+  }
+  expire_align_group_count();
+  // Store the template's token representation for reversion
+  let template_tokens = Tokens::new(tokens.clone());
+  whatsit.set_property("template_tokens", Stored::Tokens(template_tokens));
+  // Now create & return the template object
+  let template = if repeated {
+    Template::new(TemplateConfig {
+      columns: Some(nonreps),
+      repeated: cols,
+      tokens: Some(tokens),
+      ..TemplateConfig::default()
+    })
+  } else {
+    Template::new(TemplateConfig {
+      columns: Some(cols),
+      tokens: Some(tokens),
+      ..TemplateConfig::default()
+    })
+  };
+  Ok(template)
+}
+
+// Perl TeX_Tables L735-745: beforeCellUnlist
+// Reorder `$ \hfil` → `\hfil $` in template tokens
+fn before_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
+  let mut toks: VecDeque<Token> = tokens.into();
+  let mut result = Vec::new();
+  while let Some(t) = toks.pop_front() {
+    if t == T_MATH!() {
+      if let Some(next) = toks.front() {
+        if *next == T_CS!("\\hfil") {
+          result.push(toks.pop_front().unwrap()); // push \hfil
+          toks.push_front(t); // put $ back
+          continue;
+        }
+      }
+    }
+    result.push(t);
+  }
+  result
+}
+
+// Perl TeX_Tables L747-757: afterCellUnlist
+// Reorder `\hfil $` → `$ \hfil` in template tokens (reverse scan)
+fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
+  let mut toks: VecDeque<Token> = tokens.into();
+  let mut result: VecDeque<Token> = VecDeque::new();
+  while let Some(t) = toks.pop_back() {
+    if t == T_MATH!() {
+      if let Some(prev) = toks.back() {
+        if *prev == T_CS!("\\hfil") {
+          result.push_front(toks.pop_back().unwrap()); // push \hfil to front
+          toks.push_back(t); // put $ back
+          continue;
+        }
+      }
+    }
+    result.push_front(t);
+  }
+  result.into()
 }

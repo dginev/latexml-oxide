@@ -181,25 +181,26 @@ pub struct TemplateConfig {
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Template {
-  repeating:          bool,
-  pseudorow:          bool,
-  non_repeating:      usize,
-  repeated:           Vec<Cell>,
-  reversion:          Option<Tokens>,
-  columns:            Vec<Cell>,
-  pub tokens:         Vec<Token>,
-  padding:            Option<Dimension>,
-  pub top_padding:    Option<Dimension>,
-  pub bottom_padding: Option<Dimension>,
-  pub before:         VecDeque<Digested>,
-  pub after:          VecDeque<Digested>,
-  save_before:        VecDeque<Token>,
-  save_between:       VecDeque<Token>,
-  pub cached_width:   Option<Dimension>,
-  pub cached_height:  Option<Dimension>,
-  pub cached_depth:   Option<Dimension>,
-  pub x:              Option<Dimension>,
-  pub y:              Option<Dimension>,
+  repeating:            bool,
+  pseudorow:            bool,
+  non_repeating:        usize,
+  repeated:             Vec<Cell>,
+  reversion:            Option<Tokens>,
+  columns:              Vec<Cell>,
+  pub tokens:           Vec<Token>,
+  padding:              Option<Dimension>,
+  pub top_padding:      Option<Dimension>,
+  pub bottom_padding:   Option<Dimension>,
+  pub before:           VecDeque<Digested>,
+  pub after:            VecDeque<Digested>,
+  save_before:          VecDeque<Token>,
+  save_between:         VecDeque<Token>,
+  disabled_intercolumn: bool,
+  pub cached_width:     Option<Dimension>,
+  pub cached_height:    Option<Dimension>,
+  pub cached_depth:     Option<Dimension>,
+  pub x:                Option<Dimension>,
+  pub y:                Option<Dimension>,
 }
 
 impl Display for Template {
@@ -229,6 +230,7 @@ impl Template {
       non_repeating,
       save_before,
       save_between,
+      disabled_intercolumn: false,
       before: VecDeque::new(),
       after: VecDeque::new(),
       padding: None,
@@ -247,6 +249,27 @@ impl Template {
   pub fn set_repeating(&mut self) { self.repeating = true; }
   pub fn set_padding(&mut self, d: Dimension) { self.padding = Some(d); }
   pub fn get_padding(&self) -> Option<&Dimension> { self.padding.as_ref() }
+
+  /// Perl Template.pm L76-80: disableIntercolumn
+  pub fn disable_intercolumn(&mut self) { self.disabled_intercolumn = true; }
+
+  /// Perl Template.pm L113-118: finish
+  /// Appends \lx@intercol to last column's after unless disabled_intercolumn
+  pub fn finish(&mut self) {
+    let last = if self.repeating {
+      self.repeated.last_mut()
+    } else {
+      self.columns.last_mut()
+    };
+    if let Some(prev) = last {
+      if !self.disabled_intercolumn {
+        let mut after = prev.after.clone().unwrap_or_default().unlist();
+        after.push(T_CS!("\\lx@intercol"));
+        prev.after = Some(Tokens::new(after));
+      }
+    }
+  }
+
   // These add material before & after the current column
   pub fn add_before_column(&mut self, mut new: VecDeque<Token>) {
     let current_sb = self.save_before.drain(..);
@@ -262,21 +285,49 @@ impl Template {
     }
   }
 
-  // Or between this column & next...
+  // Perl Template.pm L65-74: addBetweenColumn
   pub fn add_between_column(&mut self, tokens: Vec<Token>) {
     if let Some(current_column) = self.columns.last_mut() {
+      let mut combined = Vec::new();
       let current_after = current_column.after.clone().unwrap_or_default().unlist();
-      current_column.after = Some(Tokens!(current_after, tokens));
+      combined.extend(current_after);
+      // Perl L69-70: prepend \lx@intercol unless disabled_intercolumn
+      if !self.disabled_intercolumn {
+        combined.push(T_CS!("\\lx@intercol"));
+      }
+      combined.extend(tokens);
+      current_column.after = Some(Tokens::new(combined));
     } else {
       self.save_between.extend(tokens);
     }
   }
 
+  // Perl Template.pm L82-110: addColumn
   pub fn add_column(&mut self, mut col: Cell) {
+    // Perl L85-87: append \lx@intercol to previous column's after unless disabled_intercolumn
+    if let Some(prev) = if self.repeating {
+      self.repeated.last_mut()
+    } else {
+      self.columns.last_mut()
+    } {
+      if !self.disabled_intercolumn {
+        let mut after = prev.after.clone().unwrap_or_default().unlist();
+        after.push(T_CS!("\\lx@intercol"));
+        prev.after = Some(Tokens::new(after));
+      }
+    }
+    // Perl L88-95: build before from save_between + \lx@intercol + properties before + save_before
     let mut before = Vec::new();
     if !self.save_between.is_empty() {
       before.extend(self.save_between.clone());
     }
+    // Perl L90: push \lx@intercol unless disabled_intercolumn
+    if !self.disabled_intercolumn {
+      before.push(T_CS!("\\lx@intercol"));
+    }
+    // Perl L91: delete disabled_intercolumn
+    self.disabled_intercolumn = false;
+
     if let Some(prop_before) = col.before {
       before.extend(prop_before.unlist());
     }
