@@ -16,13 +16,13 @@ fn emph_test() {
 // -- Tests with diffs (need targeted fixes) --
 
 #[test]
-#[ignore] // diffs — table rows short by 1 column (alignment padding)
+#[ignore] // diffs — 1 remaining: \font-defined bold not producing <text font="bold"> wrapping
 fn accents_test() {
   latexml_test_single("tests/fonts/accents.tex", "accents", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — table alignment padding
+#[ignore] // diffs — \fontname not implemented (shows "fontname not implemented" instead of cmr10)
 fn fonts_test() {
   latexml_test_single("tests/fonts/fonts.tex", "fonts", DIR, None, None);
 }
@@ -34,13 +34,12 @@ fn mixed_test() {
 }
 
 #[test]
-#[ignore] // diffs — table alignment padding
+#[ignore] // diffs — \fontname not implemented (shows "fontname not implemented" instead of cmr10)
 fn plainfonts_test() {
   latexml_test_single("tests/fonts/plainfonts.tex", "plainfonts", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — table alignment padding
 fn textcomp_test() {
   latexml_test_single("tests/fonts/textcomp.tex", "textcomp", DIR, None, None);
 }

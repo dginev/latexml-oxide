@@ -1001,13 +1001,12 @@ pub fn def_environment(
   let end_name = s!("\\end{{{name}}}");
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
 
-  // Perl: mode => 'text' becomes restricted_horizontal for environments (no enterHorizontal)
-  // Perl also defaults to restricted_horizontal when mode is None, but we keep
-  // existing Rust behavior of not setting mode when None, to avoid regressions.
-  let mode = if options.mode.as_deref() == Some("text") {
-    Some("restricted_horizontal".to_string())
-  } else {
-    options.mode
+  // Perl Package.pm line 1885: $mode = 'restricted_horizontal' if !$mode || ($mode eq 'text');
+  // Environments ALWAYS have a mode — defaults to restricted_horizontal.
+  // This means \end{env} always calls endMode(), never egroup().
+  let mode = match options.mode.as_deref() {
+    None | Some("text") => Some("restricted_horizontal".to_string()),
+    _ => options.mode,
   };
 
   if options.require_math {

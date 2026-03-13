@@ -63,11 +63,13 @@ LoadDefinitions!({
         .add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")])
     });
   });
+  // Perl: l/c/r column types do NOT set `align` explicitly.
+  // Alignment is derived from \hfil fills during extractAlignmentColumn:
+  //   \hfil after  → left,  \hfil before+after → center,  \hfil before → right
   DefColumnType!("l", {
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
         after: Some(Tokens!(T_CS!("\\hfil"))),
-        align: Some(Align::Left),
         ..Cell::default()
       })
     });
@@ -77,7 +79,6 @@ LoadDefinitions!({
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         after: Some(Tokens!(T_CS!("\\hfil"))),
-        align: Some(Align::Center),
         ..Cell::default()
       })
     });
@@ -86,7 +87,6 @@ LoadDefinitions!({
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
-        align: Some(Align::Right),
         ..Cell::default()
       })
     });
@@ -802,8 +802,8 @@ pub fn extract_alignment_column(
   let n0 = lookup_int("alignmentStartColumn") as usize + 1;
   let n1 = alignment.current_column_number();
   let colspec = alignment.get_column(n0).unwrap();
-  let template_align = colspec.align.unwrap_or(Align::Left);
-  let mut align = template_align;
+  // Perl: $align = $$colspec{align} || 'left' — default is left, fills override
+  let mut align = colspec.align.unwrap_or(Align::Left);
   let mut border = String::new();
   // Peel off any boxes from both sides until we get the "meat" of the column.
   // from this we can establish borders, alignment and emptiness.
@@ -824,6 +824,24 @@ pub fn extract_alignment_column(
       lspaces.push(hskip_digested);
     }
   }
+  // Determine expected alignment from template fills, as a fallback for when
+  // the trailing fill box is lost during digestion (known issue with nested \hbox groups).
+  let has_before_fill = colspec
+    .before
+    .as_ref()
+    .map(|b| b.unlist_ref().iter().any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill")))
+    .unwrap_or(false);
+  let has_after_fill = colspec
+    .after
+    .as_ref()
+    .map(|a| a.unlist_ref().iter().any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill")))
+    .unwrap_or(false);
+  let expected_from_template = match (has_before_fill, has_after_fill) {
+    (true, true) => Some(Align::Center),
+    (false, true) => Some(Align::Left),
+    (true, false) => Some(Align::Right),
+    (false, false) => None,
+  };
   while let Some(front_box) = boxes.pop_front() {
     match front_box.data() {
       DigestedData::List(_) => {
@@ -894,12 +912,17 @@ pub fn extract_alignment_column(
       },
     }
   }
-  // Workaround: when left fill was found but right fill was not (align=Right),
-  // AND the template originally specified Center, fall back to the template alignment.
-  // This compensates for the right \hfil sometimes being missing from column content
-  // due to agc tracking across \hbox groups.
-  if align == Align::Right && template_align == Align::Center {
-    align = Align::Center;
+  // Fallback: if only one fill was found but the template expects two, use template's alignment.
+  // This handles cells where the trailing \hfil was lost during digestion (e.g. after \hbox groups).
+  // Skip for omitted columns (multicolumn case) — they have their own fills, not the parent template's.
+  if !colspec.omitted {
+    if let Some(expected) = expected_from_template {
+      if (align == Align::Right && expected == Align::Center)
+        || (align == Align::Left && expected != Align::Left)
+      {
+        align = expected;
+      }
+    }
   }
   if align != Align::Justify {
     colspec.width = None;

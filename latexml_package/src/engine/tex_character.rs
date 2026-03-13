@@ -282,3 +282,47 @@ pub fn apply_accent(
     SymHashMap::default(),
   ))
 }
+
+/// Accent data entry: maps a character (combiner or standalone) to its accent properties.
+/// Perl: @accent_data in LaTeXML/Util/Unicode.pm
+pub struct AccentEntry {
+  pub combiner: char,
+  pub standalone: &'static str,
+}
+
+/// Lookup accent data by standalone or combiner character.
+/// Perl: sub unicode_accent in LaTeXML/Util/Unicode.pm
+pub fn unicode_accent(glyph: &str) -> Option<&'static AccentEntry> {
+  // Table from Perl: @accent_data in LaTeXML/Util/Unicode.pm
+  static ACCENT_DATA: &[AccentEntry] = &[
+    AccentEntry { combiner: '\u{0300}', standalone: "\u{0060}" },     // grave `
+    AccentEntry { combiner: '\u{0301}', standalone: "\u{00B4}" },     // acute ´
+    AccentEntry { combiner: '\u{0302}', standalone: "\u{02C6}" },     // hat ˆ
+    AccentEntry { combiner: '\u{0308}', standalone: "\u{00A8}" },     // ddot ¨
+    AccentEntry { combiner: '\u{0303}', standalone: "\u{02DC}" },     // tilde ˜
+    AccentEntry { combiner: '\u{0304}', standalone: "\u{00AF}" },     // bar ¯
+    AccentEntry { combiner: '\u{0307}', standalone: "\u{02D9}" },     // dot ˙
+    AccentEntry { combiner: '\u{030B}', standalone: "\u{02DD}" },     // dtick ˝
+    AccentEntry { combiner: '\u{0306}', standalone: "\u{02D8}" },     // breve ˘
+    AccentEntry { combiner: '\u{030C}', standalone: "\u{02C7}" },     // check ˇ
+    AccentEntry { combiner: '\u{030A}', standalone: "\u{02DA}" },     // ring ˚
+    AccentEntry { combiner: '\u{20D7}', standalone: "\u{00A0}\u{20D7}" }, // vec
+    AccentEntry { combiner: '\u{0311}', standalone: "\u{00A0}\u{0311}" }, // arch (inv breve)
+    AccentEntry { combiner: '\u{0361}', standalone: "\u{00A0}\u{0361}" }, // tie
+    AccentEntry { combiner: '\u{0327}', standalone: "\u{00B8}" },     // cedilla ¸
+    AccentEntry { combiner: '\u{0323}', standalone: "." },            // underdot
+    AccentEntry { combiner: '\u{0331}', standalone: "_" },            // underbar
+    AccentEntry { combiner: '\u{0326}', standalone: "," },            // lfhook
+    AccentEntry { combiner: '\u{0328}', standalone: "\u{02DB}" },     // ogonek ˛
+  ];
+
+  for entry in ACCENT_DATA {
+    if entry.standalone == glyph {
+      return Some(entry);
+    }
+    if glyph.len() == entry.combiner.len_utf8() && glyph.starts_with(entry.combiner) {
+      return Some(entry);
+    }
+  }
+  None
+}
