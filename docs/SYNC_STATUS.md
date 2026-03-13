@@ -222,7 +222,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-13 night)
 
-**Current totals: 155 pass, 0 fail, 34 ignored test functions**
+**Current totals: 156 pass, 0 fail, 33 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 49% of Perl test cases passing**
 
@@ -242,7 +242,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 33_keyval_options | 11/11 | All pass |
 | 50_structure | 24/24 | All pass (18 .todo disabled at build level) |
 | 52_namespace | 0/5 | **All ignored** — DTD not supported in Rust port |
-| 53_alignment | 0/2 | **All ignored** — nested tabular flattening, thead detection |
+| 53_alignment | 1/2 | tabtab passes; halign ignored (51 diffs — thead detection) |
 | 55_theorem | 4/4 | All pass (ntheorem disabled) |
 | 56_ams | 0/1 | **All ignored** — needs amsmath environments |
 | 65_graphics | 0/1 | **All ignored** — color.sty recursion |
@@ -348,11 +348,8 @@ These are foundational fixes that unblock large batches of tests across multiple
 
 ### Phase 3: Alignment Engine (target: ~195 → ~215)
 
-#### 3A. Fix nested tabular handling — unlocks tabtab_test
-**Root cause:** Inner `\halign` content gets flattened into outer tabular instead of creating nested `<tabular>`.
-**Work:** The alignment engine needs to properly scope nested `\halign` calls. When a cell contains `\begin{tabular}`, it should create a new alignment scope without interfering with the parent.
-**Effort:** Medium — alignment.rs scoping fix.
-**Yield:** +1 test (tabtab)
+#### 3A. ~~Fix nested tabular handling — unlocks tabtab_test~~ DONE
+**Fixed:** Sizer string parsing (`IntoOption<SizingClosure> for &str`) only handled `#digit` patterns, not `#property_name`. The `\lx@begin@alignment` constructor uses `sizer => "#alignment"` which was being parsed as arg 1 instead of property lookup. Fixed in `traits.rs` to match Perl's `$sizer =~ /^(#\w+)*$/` pattern.
 
 #### 3B. Fix thead detection — unlocks halign_test (51 diffs)
 **Root cause:** `ltx_guessed_headers` class and `thead="column"` attributes being added by heuristic that shouldn't fire, or firing differently than Perl.

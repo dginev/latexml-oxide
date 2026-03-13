@@ -100,3 +100,29 @@ using default OTHER catcode", so restore to OTHER explicitly.
 **Key insight:** State lookups returning `None` for defaults is a common pattern.
 Always consider what `None` means in context — it might mean "default value"
 rather than "no value".
+
+---
+
+## 6. Sizer string parsing: `#property_name` vs `#digit`
+
+**Discovery:** Nested tabulars (tabtab_test) lost their 3rd column — the inner
+tabular whatsit reported width=0, causing `normalize_prune_columns` to remove it.
+
+**Analysis:** `\lx@begin@alignment` has `sizer => "#alignment"`. In Perl,
+`Whatsit::computeSize` (Whatsit.pm L257-260) parses sizer strings with
+`$sizer =~ /^(#\w+)*$/` — each `#token` is checked: if numeric, `getArg($n)`;
+if alphabetic, look up `$$props{$name}`.
+
+In Rust, `IntoOption<Option<SizingClosure>> for &str` (traits.rs) only handled
+`#digit` — `"alignment".parse::<usize>()` failed and defaulted to arg 1 via
+`unwrap_or(1)`. So `sizer => "#alignment"` was silently computing size of arg 1
+(the optional `[]` arg) instead of the alignment property.
+
+**Fix:** Rewrote the sizer string parser to match Perl: parse each `#word` as
+either numeric (arg lookup) or alphabetic (property lookup). Supports compound
+patterns like `#1#2` as well.
+
+**Key insight:** Any time `parse::<usize>().unwrap_or(default)` is used on user-
+provided strings, verify the default makes sense. Silent fallbacks can mask bugs
+for months — the sizer was returning (0,0,0) which just happened to trigger
+column pruning instead of panicking.
