@@ -184,18 +184,57 @@ LoadDefinitions!({
   DefMacro!("\\UseTextSymbol{}{}", "{\\fontencoding{#1}#2}");
   DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
 
-  // DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', sub {
-  //     my ($stomach, $cs, $kind, $class, $code) = @_;
-  //     $class = ToString($class);
-  //     my $info = LookupValue('fontdeclaration@' . $class);
-  //     my $glyph = FontDecode($code->valueOf, ($info ? $$info{encoding} : $class));
-  //     DefMathI($cs, 'Digested', $glyph, operator_role => 'OVERACCENT');
-  //     return; });
+  // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)
+  DefPrimitive!("\\DeclareMathAccent DefToken {}{} {Number}",
+  sub[(cs, _kind, class, code)] {
+    let class_str = class.to_string();
+    let encoding = lookup_value(&s!("fontdeclaration@{}", class_str))
+      .and_then(|v| if let Stored::Font(ref f) = v { f.get_encoding().map(|e| e.to_string()) } else { None })
+      .unwrap_or(class_str);
+    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), None);
+    if let Some(ch) = glyph {
+      let presentation = ch.to_string();
+      let paramlist = parse_parameters("Digested", &cs, true)?;
+      let mut opts = MathPrimitiveOptions::default();
+      opts.operator_role = Some("OVERACCENT".to_string());
+      def_math(cs.clone(), paramlist, presentation, opts)?;
+    }
+  });
+
+  // Perl: DefPrimitive('\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}', ...)
+  // my $symboltype_roles = { '\mathord' => 'ID', '\mathop' => 'BIGOP', '\mathbin' => 'BINOP',
+  //   '\mathrel' => 'RELOP', '\mathopen' => 'OPEN', '\mathclose' => 'CLOSE', '\mathpunct' => 'PUNCT' };
+  DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}",
+  sub[(cs, sym_type, fontkind, code)] {
+    let mut encoding = fontkind.to_string();
+    if let Some(Stored::Font(ref decl)) = lookup_value(&s!("fontdeclaration@{}", encoding)) {
+      if let Some(enc) = decl.get_encoding() {
+        encoding = enc.to_string();
+      }
+    }
+    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), None);
+    let role = match sym_type.to_string().as_str() {
+      "\\mathord"  => Some("ID"),
+      "\\mathop"   => Some("BIGOP"),
+      "\\mathbin"  => Some("BINOP"),
+      "\\mathrel"  => Some("RELOP"),
+      "\\mathopen" => Some("OPEN"),
+      "\\mathclose"=> Some("CLOSE"),
+      "\\mathpunct"=> Some("PUNCT"),
+      _ => None,
+    };
+    if let Some(ch) = glyph {
+      let presentation = ch.to_string();
+      let mut opts = MathPrimitiveOptions::default();
+      if let Some(r) = role {
+        opts.role = Some(r.to_string());
+      }
+      def_math(cs.clone(), None, presentation, opts)?;
+    }
+  });
 
   DefPrimitive!("\\DeclareMathDelimiter{}{}{}{}", None);
-  // sub { ignoredDefinition("DeclareMathAccent", $_[1]); });
   DefPrimitive!("\\DeclareMathRadical{}{}{}{}{}", None);
-  // sub { ignoredDefinition("DeclareMathAccent", $_[1]); });
   DefPrimitive!("\\DeclareMathVersion{}", None);
   DefPrimitive!("\\DeclarePreloadSizes{}{}{}{}{}", None);
 

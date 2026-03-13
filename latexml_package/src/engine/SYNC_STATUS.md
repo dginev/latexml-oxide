@@ -16,7 +16,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 | base_schema.rs | OK | Complete (15/15 defs, verified 2026-03-12) |
 | base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
 | base_utilities.rs | MINOR | Audit 2026-03-12: ~90% complete. `\lx@endash/emdash/NBSP/nobreakspace` present. Reference formatting macros (`lx@the@@`, `lx@fnum@@`, `lx@therefnum@@`, `lx@typerefnum@@`, `lx@format@title@@`) all present. Stubs: `\@add@to@frontmatter@now` (unported), `\lx@frontmatter@fallback` (returns None). Missing Perl helpers: `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()`. |
-| base_xmath.rs | GAPS | ~29 commented-out defs (`\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript/subscript`, matrix/cases systems). Missing: `openMathFork()`, `closeMathFork()`, `MathWhatsit()`, equation group helpers |
+| base_xmath.rs | GAPS | ~24 commented-out defs (matrix/cases systems, `\lx@padded`, tweaked). Done: `\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript/subscript`. Missing: `openMathFork()`, `closeMathFork()`, `MathWhatsit()`, equation group helpers |
 | base_functions.rs | MINOR | — |
 
 ### Phase 1: TeX Primitives (High-Gap)

@@ -1,11 +1,5 @@
 // Font tests — no infinite loops in test harness (binary hangs are separate).
 // Tests need cargo clean after adding new .tex/.xml pairs.
-//
-// Blocked tests (0 diffs but crash):
-//   acc, cancels, soul, mathaccents, abxtest, mathcolor, stmaryrd, wasysym
-//     → need \DeclareMathAccent, \DeclareMathSymbol, \Gin, \ExplSyntaxOn, \newfont
-//   omencodings (1 diff) → known OML font map single-char limitation (U+0311 vs U+0361)
-//   sizes (crash) → many diffs after lastkern fix
 use latexml::util::test::*;
 const DIR: &str = "tests/fonts";
 
@@ -17,4 +11,122 @@ fn textsymbols_test() {
 #[test]
 fn emph_test() {
   latexml_test_single("tests/fonts/emph.tex", "emph", DIR, None, None);
+}
+
+// -- Tests with diffs (need targeted fixes) --
+
+#[test]
+fn accents_test() {
+  latexml_test_single("tests/fonts/accents.tex", "accents", DIR, None, None);
+}
+
+#[test]
+fn fonts_test() {
+  latexml_test_single("tests/fonts/fonts.tex", "fonts", DIR, None, None);
+}
+
+#[test]
+fn mixed_test() {
+  latexml_test_single("tests/fonts/mixed.tex", "mixed", DIR, None, None);
+}
+
+#[test]
+fn plainfonts_test() {
+  latexml_test_single("tests/fonts/plainfonts.tex", "plainfonts", DIR, None, None);
+}
+
+#[test]
+fn textcomp_test() {
+  latexml_test_single("tests/fonts/textcomp.tex", "textcomp", DIR, None, None);
+}
+
+#[test]
+fn ulem_test() {
+  latexml_test_single("tests/fonts/ulem.tex", "ulem", DIR, None, None);
+}
+
+#[test]
+fn omencodings_test() {
+  latexml_test_single("tests/fonts/omencodings.tex", "omencodings", DIR, None, None);
+}
+
+#[test]
+fn mathbbol_test() {
+  latexml_test_single("tests/fonts/mathbbol.tex", "mathbbol", DIR, None, None);
+}
+
+#[test]
+fn bbold_test() {
+  latexml_test_single("tests/fonts/bbold.tex", "bbold", DIR, None, None);
+}
+
+#[test]
+fn ding_test() {
+  latexml_test_single("tests/fonts/ding.tex", "ding", DIR, None, None);
+}
+
+#[test]
+fn esint_test() {
+  latexml_test_single("tests/fonts/esint.tex", "esint", DIR, None, None);
+}
+
+#[test]
+fn marvosym_test() {
+  latexml_test_single("tests/fonts/marvosym.tex", "marvosym", DIR, None, None);
+}
+
+// -- Tests that crash (need package/subsystem work) --
+
+#[test]
+#[ignore] // crash in alignment.rs — needs \mathgroup, \color@setgroup
+fn acc_test() {
+  latexml_test_single("tests/fonts/acc.tex", "acc", DIR, None, None);
+}
+
+#[test]
+#[ignore] // crash in math parser — needs \DeclareMathAccent chain working
+fn mathaccents_test() {
+  latexml_test_single("tests/fonts/mathaccents.tex", "mathaccents", DIR, None, None);
+}
+
+#[test]
+#[ignore] // needs stmaryrd.sty symbols via \DeclareMathSymbol
+fn stmaryrd_test() {
+  latexml_test_single("tests/fonts/stmaryrd.tex", "stmaryrd", DIR, None, None);
+}
+
+#[test]
+#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
+fn mathcolor_test() {
+  latexml_test_single("tests/fonts/mathcolor.tex", "mathcolor", DIR, None, None);
+}
+
+#[test]
+#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
+fn wasysym_test() {
+  latexml_test_single("tests/fonts/wasysym.tex", "wasysym", DIR, None, None);
+}
+
+#[test]
+#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
+fn cancels_test() {
+  latexml_test_single("tests/fonts/cancels.tex", "cancels", DIR, None, None);
+}
+
+#[test]
+#[ignore] // needs \ExplSyntaxOn (graphics/expl3)
+fn soul_test() {
+  latexml_test_single("tests/fonts/soul.tex", "soul", DIR, None, None);
+}
+
+#[test]
+#[ignore] // needs \hexnumber@, \mathxfam (font allocation)
+fn abxtest_test() {
+  latexml_test_single("tests/fonts/abxtest.tex", "abxtest", DIR, None, None);
+}
+
+#[test]
+#[ignore] // many diffs after lastkern fix
+fn sizes_test() {
+  latexml_test_single("tests/fonts/sizes.tex", "sizes", DIR, None, None);
 }

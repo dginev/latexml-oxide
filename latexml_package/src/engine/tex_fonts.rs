@@ -201,9 +201,9 @@ LoadDefinitions!({
       'p', 'q', 'r', 's', 't', 'u', 'v',
       'w', // x          y           z           dotless i    dotless j    weier-p    arrow
       // acc.inv.breve
-      'x', 'y', 'z', '\u{0131}', 'j', '\u{2118}', '\u{2192}', '\u{0311}'
+      'x', 'y', 'z', '\u{0131}', 'j', '\u{2118}', '\u{2192}', '\u{0361}'
     ]
-  ); // TODO: '\u{00A0}' .'\u{0311}'
+  ); // Perl: '\u{00A0}' . '\u{0361}' — two-char string, we use U+0361 only
 
   #[rustfmt::skip]
   DeclareFontMap!(
