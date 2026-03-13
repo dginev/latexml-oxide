@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/font.rs`."><title>font.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (3b1b0ef4d 2026-03-11)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>font.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::binding::content::{load_font_map, preload_font_map};
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/font.rs`."><title>font.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (3102493c7 2026-03-12)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>font.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::binding::content::{load_font_map, preload_font_map};
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM, SymHashMap, SymStr};
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{NumericOps, UNITY_F64};
@@ -1533,138 +1533,238 @@
 <a href=#1533 id=1533 data-nosnippet>1533</a>/// so that if anything above 128 comes in, it must already be Unicode!.
 <a href=#1534 id=1534 data-nosnippet>1534</a>/// The lower half plane still needs to go through decoding, though, to deal
 <a href=#1535 id=1535 data-nosnippet>1535</a>/// with TeX's rearrangement of ASCII...
-<a href=#1536 id=1536 data-nosnippet>1536</a></span><span class="kw">pub fn </span>decode(code: u8, encoding_opt: <span class="prelude-ty">Option</span>&lt;String&gt;, implicit: bool) -&gt; <span class="prelude-ty">Option</span>&lt;char&gt; {
-<a href=#1537 id=1537 data-nosnippet>1537</a>  <span class="kw">let </span><span class="kw-2">mut </span>font = <span class="prelude-val">None</span>;
-<a href=#1538 id=1538 data-nosnippet>1538</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
-<a href=#1539 id=1539 data-nosnippet>1539</a>    <span class="prelude-val">Some</span>(enc) =&gt; Cow::Owned(enc),
-<a href=#1540 id=1540 data-nosnippet>1540</a>    <span class="prelude-val">None </span>=&gt; {
-<a href=#1541 id=1541 data-nosnippet>1541</a>      font = lookup_font();
-<a href=#1542 id=1542 data-nosnippet>1542</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
-<a href=#1543 id=1543 data-nosnippet>1543</a>        <span class="kw">match </span>font.get_encoding() {
-<a href=#1544 id=1544 data-nosnippet>1544</a>          <span class="prelude-val">None </span>=&gt; Cow::Borrowed(<span class="string">""</span>),
-<a href=#1545 id=1545 data-nosnippet>1545</a>          <span class="prelude-val">Some</span>(encoding) =&gt; encoding.clone(),
-<a href=#1546 id=1546 data-nosnippet>1546</a>        }
-<a href=#1547 id=1547 data-nosnippet>1547</a>      } <span class="kw">else </span>{
-<a href=#1548 id=1548 data-nosnippet>1548</a>        Cow::Borrowed(<span class="string">""</span>)
-<a href=#1549 id=1549 data-nosnippet>1549</a>      }
-<a href=#1550 id=1550 data-nosnippet>1550</a>    },
-<a href=#1551 id=1551 data-nosnippet>1551</a>  };
-<a href=#1552 id=1552 data-nosnippet>1552</a>
-<a href=#1553 id=1553 data-nosnippet>1553</a>  <span class="kw">let </span><span class="kw-2">mut </span>map: <span class="prelude-ty">Option</span>&lt;Fontmap&gt; = <span class="prelude-val">None</span>;
-<a href=#1554 id=1554 data-nosnippet>1554</a>  <span class="kw">if </span>!encoding.is_empty() {
-<a href=#1555 id=1555 data-nosnippet>1555</a>    preload_font_map(<span class="kw-2">&amp;</span>encoding).expect(<span class="string">"preloading a font map should succeed?"</span>);
-<a href=#1556 id=1556 data-nosnippet>1556</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(encmap) = load_font_map(<span class="kw-2">&amp;</span>encoding) {
-<a href=#1557 id=1557 data-nosnippet>1557</a>      <span class="comment">// OK got some map.
-<a href=#1558 id=1558 data-nosnippet>1558</a>      </span>map = <span class="prelude-val">Some</span>(encmap);
-<a href=#1559 id=1559 data-nosnippet>1559</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
-<a href=#1560 id=1560 data-nosnippet>1560</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = (<span class="kw-2">*</span>font).get_family() {
-<a href=#1561 id=1561 data-nosnippet>1561</a>          with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap"</span>), |fmap_opt| {
-<a href=#1562 id=1562 data-nosnippet>1562</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(fmap) = fmap_opt {
-<a href=#1563 id=1563 data-nosnippet>1563</a>              map = fmap.into(); <span class="comment">// Use the family specific map, if any.
-<a href=#1564 id=1564 data-nosnippet>1564</a>            </span>}
-<a href=#1565 id=1565 data-nosnippet>1565</a>          });
-<a href=#1566 id=1566 data-nosnippet>1566</a>        }
-<a href=#1567 id=1567 data-nosnippet>1567</a>      }
-<a href=#1568 id=1568 data-nosnippet>1568</a>    }
-<a href=#1569 id=1569 data-nosnippet>1569</a>  }
-<a href=#1570 id=1570 data-nosnippet>1570</a>
-<a href=#1571 id=1571 data-nosnippet>1571</a>  <span class="kw">if </span>implicit {
-<a href=#1572 id=1572 data-nosnippet>1572</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = map {
-<a href=#1573 id=1573 data-nosnippet>1573</a>      <span class="kw">if </span>code &lt; <span class="number">128 </span>{
-<a href=#1574 id=1574 data-nosnippet>1574</a>        <span class="kw">match </span>map.get(code <span class="kw">as </span>usize) {
-<a href=#1575 id=1575 data-nosnippet>1575</a>          <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1576 id=1576 data-nosnippet>1576</a>          <span class="prelude-val">Some</span>(c) =&gt; <span class="kw-2">*</span>c,
-<a href=#1577 id=1577 data-nosnippet>1577</a>        }
-<a href=#1578 id=1578 data-nosnippet>1578</a>      } <span class="kw">else </span>{
-<a href=#1579 id=1579 data-nosnippet>1579</a>        <span class="prelude-val">Some</span>(code.into())
-<a href=#1580 id=1580 data-nosnippet>1580</a>      }
-<a href=#1581 id=1581 data-nosnippet>1581</a>    } <span class="kw">else </span>{
-<a href=#1582 id=1582 data-nosnippet>1582</a>      <span class="prelude-val">Some</span>(code.into())
-<a href=#1583 id=1583 data-nosnippet>1583</a>    }
-<a href=#1584 id=1584 data-nosnippet>1584</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(map) = map {
-<a href=#1585 id=1585 data-nosnippet>1585</a>    <span class="kw">match </span>map.get(code <span class="kw">as </span>usize) {
-<a href=#1586 id=1586 data-nosnippet>1586</a>      <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1587 id=1587 data-nosnippet>1587</a>      <span class="prelude-val">Some</span>(c) =&gt; <span class="kw-2">*</span>c,
-<a href=#1588 id=1588 data-nosnippet>1588</a>    }
-<a href=#1589 id=1589 data-nosnippet>1589</a>  } <span class="kw">else </span>{
-<a href=#1590 id=1590 data-nosnippet>1590</a>    <span class="prelude-val">None
-<a href=#1591 id=1591 data-nosnippet>1591</a>  </span>}
-<a href=#1592 id=1592 data-nosnippet>1592</a>}
-<a href=#1593 id=1593 data-nosnippet>1593</a>
-<a href=#1594 id=1594 data-nosnippet>1594</a><span class="kw">pub fn </span>decode_string(string: SymStr, encoding_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;, implicit: bool) -&gt; SymStr {
-<a href=#1595 id=1595 data-nosnippet>1595</a>  <span class="kw">let </span>empty_sym = <span class="kw-2">*</span>EMPTY_SYM;
-<a href=#1596 id=1596 data-nosnippet>1596</a>  <span class="kw">if </span>string == empty_sym {
-<a href=#1597 id=1597 data-nosnippet>1597</a>    <span class="kw">return </span>empty_sym;
-<a href=#1598 id=1598 data-nosnippet>1598</a>  }
-<a href=#1599 id=1599 data-nosnippet>1599</a>  <span class="kw">let </span><span class="kw-2">mut </span>font = <span class="prelude-val">None</span>;
-<a href=#1600 id=1600 data-nosnippet>1600</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
-<a href=#1601 id=1601 data-nosnippet>1601</a>    <span class="prelude-val">None </span>=&gt; {
-<a href=#1602 id=1602 data-nosnippet>1602</a>      font = lookup_font();
-<a href=#1603 id=1603 data-nosnippet>1603</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
-<a href=#1604 id=1604 data-nosnippet>1604</a>        font.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>))
-<a href=#1605 id=1605 data-nosnippet>1605</a>      } <span class="kw">else </span>{
-<a href=#1606 id=1606 data-nosnippet>1606</a>        <span class="string">""
-<a href=#1607 id=1607 data-nosnippet>1607</a>      </span>}
-<a href=#1608 id=1608 data-nosnippet>1608</a>    },
-<a href=#1609 id=1609 data-nosnippet>1609</a>    <span class="prelude-val">Some</span>(encoding) =&gt; encoding,
-<a href=#1610 id=1610 data-nosnippet>1610</a>  };
-<a href=#1611 id=1611 data-nosnippet>1611</a>
-<a href=#1612 id=1612 data-nosnippet>1612</a>  <span class="kw">let </span><span class="kw-2">mut </span>map: <span class="prelude-ty">Option</span>&lt;Fontmap&gt; = <span class="prelude-val">None</span>;
-<a href=#1613 id=1613 data-nosnippet>1613</a>  <span class="kw">if </span>!encoding.is_empty() {
-<a href=#1614 id=1614 data-nosnippet>1614</a>    preload_font_map(encoding).expect(<span class="string">"preload_font_map should succeed?"</span>);
-<a href=#1615 id=1615 data-nosnippet>1615</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(encmap) = load_font_map(encoding) {
-<a href=#1616 id=1616 data-nosnippet>1616</a>      <span class="comment">// OK got some map.
-<a href=#1617 id=1617 data-nosnippet>1617</a>      </span>map = <span class="prelude-val">Some</span>(encmap);
-<a href=#1618 id=1618 data-nosnippet>1618</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
-<a href=#1619 id=1619 data-nosnippet>1619</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = (<span class="kw-2">*</span>font).get_family() {
-<a href=#1620 id=1620 data-nosnippet>1620</a>          with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_{}_fontmap"</span>, encoding, family), |fmap_opt| {
-<a href=#1621 id=1621 data-nosnippet>1621</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(fmap) = fmap_opt {
-<a href=#1622 id=1622 data-nosnippet>1622</a>              map = fmap.into(); <span class="comment">// Use the family specific map, if any.
-<a href=#1623 id=1623 data-nosnippet>1623</a>            </span>}
-<a href=#1624 id=1624 data-nosnippet>1624</a>          });
-<a href=#1625 id=1625 data-nosnippet>1625</a>        }
-<a href=#1626 id=1626 data-nosnippet>1626</a>      }
-<a href=#1627 id=1627 data-nosnippet>1627</a>    }
-<a href=#1628 id=1628 data-nosnippet>1628</a>  }
-<a href=#1629 id=1629 data-nosnippet>1629</a>
-<a href=#1630 id=1630 data-nosnippet>1630</a>  <span class="kw">let </span><span class="kw-2">mut </span>result_string: String = String::new();
-<a href=#1631 id=1631 data-nosnippet>1631</a>  arena::with(string, |str| {
-<a href=#1632 id=1632 data-nosnippet>1632</a>    <span class="kw">for </span>c <span class="kw">in </span>str.chars() {
-<a href=#1633 id=1633 data-nosnippet>1633</a>      <span class="kw">if </span>implicit {
-<a href=#1634 id=1634 data-nosnippet>1634</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>map_ref) = map {
-<a href=#1635 id=1635 data-nosnippet>1635</a>          <span class="kw">let </span>code = c <span class="kw">as </span>u16; <span class="comment">// u16, so that Unicode chars get cast correctly
-<a href=#1636 id=1636 data-nosnippet>1636</a>          </span><span class="kw">if </span>code &lt; <span class="number">128 </span>{
-<a href=#1637 id=1637 data-nosnippet>1637</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map_ref.get(code <span class="kw">as </span>usize) {
-<a href=#1638 id=1638 data-nosnippet>1638</a>              result_string.push(<span class="kw-2">*</span>mapc_val);
-<a href=#1639 id=1639 data-nosnippet>1639</a>            }
-<a href=#1640 id=1640 data-nosnippet>1640</a>          } <span class="kw">else </span>{
-<a href=#1641 id=1641 data-nosnippet>1641</a>            result_string.push(c);
-<a href=#1642 id=1642 data-nosnippet>1642</a>          }
-<a href=#1643 id=1643 data-nosnippet>1643</a>        } <span class="kw">else </span>{
-<a href=#1644 id=1644 data-nosnippet>1644</a>          result_string.push(c)
-<a href=#1645 id=1645 data-nosnippet>1645</a>        }
-<a href=#1646 id=1646 data-nosnippet>1646</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>map_ref) = map {
-<a href=#1647 id=1647 data-nosnippet>1647</a>        <span class="kw">let </span>code = c <span class="kw">as </span>u8;
-<a href=#1648 id=1648 data-nosnippet>1648</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map_ref.get(code <span class="kw">as </span>usize) {
-<a href=#1649 id=1649 data-nosnippet>1649</a>          result_string.push(<span class="kw-2">*</span>mapc_val);
-<a href=#1650 id=1650 data-nosnippet>1650</a>        }
-<a href=#1651 id=1651 data-nosnippet>1651</a>      }
-<a href=#1652 id=1652 data-nosnippet>1652</a>    }
-<a href=#1653 id=1653 data-nosnippet>1653</a>  });
-<a href=#1654 id=1654 data-nosnippet>1654</a>  arena::pin(result_string)
-<a href=#1655 id=1655 data-nosnippet>1655</a>}
-<a href=#1656 id=1656 data-nosnippet>1656</a>
-<a href=#1657 id=1657 data-nosnippet>1657</a><span class="doccomment">/// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64
-<a href=#1658 id=1658 data-nosnippet>1658</a></span><span class="kw">pub fn </span>rationalize_font_size(size: <span class="kw-2">&amp;</span>str) -&gt; f64 {
-<a href=#1659 id=1659 data-nosnippet>1659</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(symbolic) = FONT_SIZE.get(size) {
-<a href=#1660 id=1660 data-nosnippet>1660</a>    <span class="kw-2">*</span>symbolic * DEFSIZE
+<a href=#1536 id=1536 data-nosnippet>1536</a>/// Push a fontmap character to a string, handling known multi-char entries.
+<a href=#1537 id=1537 data-nosnippet>1537</a></span><span class="kw">fn </span>push_fontmap_char(result: <span class="kw-2">&amp;mut </span>String, c: char, _code: u8) {
+<a href=#1538 id=1538 data-nosnippet>1538</a>  <span class="comment">// T1 position 223: "SS" (capital sharp S as two chars)
+<a href=#1539 id=1539 data-nosnippet>1539</a>  </span><span class="kw">if </span>c == <span class="string">'\u{1E9E}' </span>{
+<a href=#1540 id=1540 data-nosnippet>1540</a>    result.push_str(<span class="string">"SS"</span>);
+<a href=#1541 id=1541 data-nosnippet>1541</a>    <span class="kw">return</span>;
+<a href=#1542 id=1542 data-nosnippet>1542</a>  }
+<a href=#1543 id=1543 data-nosnippet>1543</a>  <span class="comment">// For standalone combining characters (Unicode Mn category), prepend NBSP as base.
+<a href=#1544 id=1544 data-nosnippet>1544</a>  // Perl fontmaps encode these as UTF(0xA0)."\x{combining}" (two-char strings).
+<a href=#1545 id=1545 data-nosnippet>1545</a>  </span><span class="kw">if </span>is_combining_mark(c) {
+<a href=#1546 id=1546 data-nosnippet>1546</a>    result.push(<span class="string">'\u{00A0}'</span>);
+<a href=#1547 id=1547 data-nosnippet>1547</a>  }
+<a href=#1548 id=1548 data-nosnippet>1548</a>  result.push(c);
+<a href=#1549 id=1549 data-nosnippet>1549</a>}
+<a href=#1550 id=1550 data-nosnippet>1550</a>
+<a href=#1551 id=1551 data-nosnippet>1551</a><span class="doccomment">/// Check if a character is a Unicode combining mark (category Mn).
+<a href=#1552 id=1552 data-nosnippet>1552</a></span><span class="kw">fn </span>is_combining_mark(c: char) -&gt; bool {
+<a href=#1553 id=1553 data-nosnippet>1553</a>  <span class="macro">matches!</span>(c <span class="kw">as </span>u32,
+<a href=#1554 id=1554 data-nosnippet>1554</a>    <span class="number">0x0300</span>..=<span class="number">0x036F   </span><span class="comment">// Combining Diacritical Marks
+<a href=#1555 id=1555 data-nosnippet>1555</a>    </span>| <span class="number">0x1AB0</span>..=<span class="number">0x1AFF </span><span class="comment">// Combining Diacritical Marks Extended
+<a href=#1556 id=1556 data-nosnippet>1556</a>    </span>| <span class="number">0x1DC0</span>..=<span class="number">0x1DFF </span><span class="comment">// Combining Diacritical Marks Supplement
+<a href=#1557 id=1557 data-nosnippet>1557</a>    </span>| <span class="number">0x20D0</span>..=<span class="number">0x20FF </span><span class="comment">// Combining Diacritical Marks for Symbols
+<a href=#1558 id=1558 data-nosnippet>1558</a>    </span>| <span class="number">0xFE20</span>..=<span class="number">0xFE2F </span><span class="comment">// Combining Half Marks
+<a href=#1559 id=1559 data-nosnippet>1559</a>  </span>)
+<a href=#1560 id=1560 data-nosnippet>1560</a>}
+<a href=#1561 id=1561 data-nosnippet>1561</a>
+<a href=#1562 id=1562 data-nosnippet>1562</a><span class="doccomment">/// Decode a codepoint, returning a SymStr that may contain multiple characters.
+<a href=#1563 id=1563 data-nosnippet>1563</a>/// This handles Perl font map entries like `UTF(0xA0)."\x{0335}"` (OT1 pos 32).
+<a href=#1564 id=1564 data-nosnippet>1564</a></span><span class="kw">pub fn </span>decode_str(code: u8, encoding_opt: <span class="prelude-ty">Option</span>&lt;String&gt;, implicit: bool) -&gt; <span class="prelude-ty">Option</span>&lt;SymStr&gt; {
+<a href=#1565 id=1565 data-nosnippet>1565</a>  <span class="comment">// First, check for multi-char overrides (for entries that can't fit in Option&lt;char&gt;)
+<a href=#1566 id=1566 data-nosnippet>1566</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(s) = lookup_multichar_override(code, encoding_opt.as_deref()) {
+<a href=#1567 id=1567 data-nosnippet>1567</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(arena::pin(s));
+<a href=#1568 id=1568 data-nosnippet>1568</a>  }
+<a href=#1569 id=1569 data-nosnippet>1569</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = decode(code, encoding_opt, implicit) {
+<a href=#1570 id=1570 data-nosnippet>1570</a>    <span class="comment">// T1 position 223: "SS" (capital sharp S as two chars)
+<a href=#1571 id=1571 data-nosnippet>1571</a>    </span><span class="kw">if </span>c == <span class="string">'\u{1E9E}' </span>{
+<a href=#1572 id=1572 data-nosnippet>1572</a>      <span class="kw">return </span><span class="prelude-val">Some</span>(arena::pin_static(<span class="string">"SS"</span>));
+<a href=#1573 id=1573 data-nosnippet>1573</a>    }
+<a href=#1574 id=1574 data-nosnippet>1574</a>    <span class="comment">// For standalone combining characters, prepend NBSP as base character
+<a href=#1575 id=1575 data-nosnippet>1575</a>    // (Perl fontmaps encode these as UTF(0xA0)."\x{combining}")
+<a href=#1576 id=1576 data-nosnippet>1576</a>    </span><span class="kw">if </span>is_combining_mark(c) {
+<a href=#1577 id=1577 data-nosnippet>1577</a>      <span class="kw">return </span><span class="prelude-val">Some</span>(arena::pin(<span class="macro">format!</span>(<span class="string">"\u{00A0}{c}"</span>)));
+<a href=#1578 id=1578 data-nosnippet>1578</a>    }
+<a href=#1579 id=1579 data-nosnippet>1579</a>    <span class="prelude-val">Some</span>(arena::pin_char(c))
+<a href=#1580 id=1580 data-nosnippet>1580</a>  } <span class="kw">else </span>{
+<a href=#1581 id=1581 data-nosnippet>1581</a>    <span class="prelude-val">None
+<a href=#1582 id=1582 data-nosnippet>1582</a>  </span>}
+<a href=#1583 id=1583 data-nosnippet>1583</a>}
+<a href=#1584 id=1584 data-nosnippet>1584</a>
+<a href=#1585 id=1585 data-nosnippet>1585</a><span class="doccomment">/// Look up multi-char override for a given encoding position.
+<a href=#1586 id=1586 data-nosnippet>1586</a>/// Returns Some(String) if a multi-char override exists.
+<a href=#1587 id=1587 data-nosnippet>1587</a></span><span class="kw">fn </span>lookup_multichar_override(code: u8, encoding_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#1588 id=1588 data-nosnippet>1588</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
+<a href=#1589 id=1589 data-nosnippet>1589</a>    <span class="prelude-val">Some</span>(enc) <span class="kw">if </span>!enc.is_empty() =&gt; enc.to_string(),
+<a href=#1590 id=1590 data-nosnippet>1590</a>    <span class="kw">_ </span>=&gt; {
+<a href=#1591 id=1591 data-nosnippet>1591</a>      <span class="kw">let </span>font = lookup_font();
+<a href=#1592 id=1592 data-nosnippet>1592</a>      font.and_then(|f| f.get_encoding().map(|e| e.to_string()))<span class="question-mark">?
+<a href=#1593 id=1593 data-nosnippet>1593</a>    </span>},
+<a href=#1594 id=1594 data-nosnippet>1594</a>  };
+<a href=#1595 id=1595 data-nosnippet>1595</a>  <span class="kw">if </span>encoding.is_empty() {
+<a href=#1596 id=1596 data-nosnippet>1596</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1597 id=1597 data-nosnippet>1597</a>  }
+<a href=#1598 id=1598 data-nosnippet>1598</a>  <span class="kw">let </span>mapname = <span class="macro">format!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>);
+<a href=#1599 id=1599 data-nosnippet>1599</a>  with_value(<span class="kw-2">&amp;</span>mapname, |val_opt| {
+<a href=#1600 id=1600 data-nosnippet>1600</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(<span class="kw-2">ref </span>map)) = val_opt {
+<a href=#1601 id=1601 data-nosnippet>1601</a>      map.get(<span class="kw-2">&amp;</span>code.to_string()).cloned()
+<a href=#1602 id=1602 data-nosnippet>1602</a>    } <span class="kw">else </span>{
+<a href=#1603 id=1603 data-nosnippet>1603</a>      <span class="prelude-val">None
+<a href=#1604 id=1604 data-nosnippet>1604</a>    </span>}
+<a href=#1605 id=1605 data-nosnippet>1605</a>  })
+<a href=#1606 id=1606 data-nosnippet>1606</a>}
+<a href=#1607 id=1607 data-nosnippet>1607</a>
+<a href=#1608 id=1608 data-nosnippet>1608</a><span class="kw">pub fn </span>decode(code: u8, encoding_opt: <span class="prelude-ty">Option</span>&lt;String&gt;, implicit: bool) -&gt; <span class="prelude-ty">Option</span>&lt;char&gt; {
+<a href=#1609 id=1609 data-nosnippet>1609</a>  <span class="kw">let </span><span class="kw-2">mut </span>font = <span class="prelude-val">None</span>;
+<a href=#1610 id=1610 data-nosnippet>1610</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
+<a href=#1611 id=1611 data-nosnippet>1611</a>    <span class="prelude-val">Some</span>(enc) =&gt; Cow::Owned(enc),
+<a href=#1612 id=1612 data-nosnippet>1612</a>    <span class="prelude-val">None </span>=&gt; {
+<a href=#1613 id=1613 data-nosnippet>1613</a>      font = lookup_font();
+<a href=#1614 id=1614 data-nosnippet>1614</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
+<a href=#1615 id=1615 data-nosnippet>1615</a>        <span class="kw">match </span>font.get_encoding() {
+<a href=#1616 id=1616 data-nosnippet>1616</a>          <span class="prelude-val">None </span>=&gt; Cow::Borrowed(<span class="string">""</span>),
+<a href=#1617 id=1617 data-nosnippet>1617</a>          <span class="prelude-val">Some</span>(encoding) =&gt; encoding.clone(),
+<a href=#1618 id=1618 data-nosnippet>1618</a>        }
+<a href=#1619 id=1619 data-nosnippet>1619</a>      } <span class="kw">else </span>{
+<a href=#1620 id=1620 data-nosnippet>1620</a>        Cow::Borrowed(<span class="string">""</span>)
+<a href=#1621 id=1621 data-nosnippet>1621</a>      }
+<a href=#1622 id=1622 data-nosnippet>1622</a>    },
+<a href=#1623 id=1623 data-nosnippet>1623</a>  };
+<a href=#1624 id=1624 data-nosnippet>1624</a>
+<a href=#1625 id=1625 data-nosnippet>1625</a>  <span class="kw">let </span><span class="kw-2">mut </span>map: <span class="prelude-ty">Option</span>&lt;Fontmap&gt; = <span class="prelude-val">None</span>;
+<a href=#1626 id=1626 data-nosnippet>1626</a>  <span class="kw">if </span>!encoding.is_empty() {
+<a href=#1627 id=1627 data-nosnippet>1627</a>    preload_font_map(<span class="kw-2">&amp;</span>encoding).expect(<span class="string">"preloading a font map should succeed?"</span>);
+<a href=#1628 id=1628 data-nosnippet>1628</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(encmap) = load_font_map(<span class="kw-2">&amp;</span>encoding) {
+<a href=#1629 id=1629 data-nosnippet>1629</a>      <span class="comment">// OK got some map.
+<a href=#1630 id=1630 data-nosnippet>1630</a>      </span>map = <span class="prelude-val">Some</span>(encmap);
+<a href=#1631 id=1631 data-nosnippet>1631</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
+<a href=#1632 id=1632 data-nosnippet>1632</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = (<span class="kw-2">*</span>font).get_family() {
+<a href=#1633 id=1633 data-nosnippet>1633</a>          with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap"</span>), |fmap_opt| {
+<a href=#1634 id=1634 data-nosnippet>1634</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(fmap) = fmap_opt {
+<a href=#1635 id=1635 data-nosnippet>1635</a>              map = fmap.into(); <span class="comment">// Use the family specific map, if any.
+<a href=#1636 id=1636 data-nosnippet>1636</a>            </span>}
+<a href=#1637 id=1637 data-nosnippet>1637</a>          });
+<a href=#1638 id=1638 data-nosnippet>1638</a>        }
+<a href=#1639 id=1639 data-nosnippet>1639</a>      }
+<a href=#1640 id=1640 data-nosnippet>1640</a>    }
+<a href=#1641 id=1641 data-nosnippet>1641</a>  }
+<a href=#1642 id=1642 data-nosnippet>1642</a>
+<a href=#1643 id=1643 data-nosnippet>1643</a>  <span class="kw">if </span>implicit {
+<a href=#1644 id=1644 data-nosnippet>1644</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = map {
+<a href=#1645 id=1645 data-nosnippet>1645</a>      <span class="kw">if </span>code &lt; <span class="number">128 </span>{
+<a href=#1646 id=1646 data-nosnippet>1646</a>        <span class="kw">match </span>map.get(code <span class="kw">as </span>usize) {
+<a href=#1647 id=1647 data-nosnippet>1647</a>          <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1648 id=1648 data-nosnippet>1648</a>          <span class="prelude-val">Some</span>(c) =&gt; <span class="kw-2">*</span>c,
+<a href=#1649 id=1649 data-nosnippet>1649</a>        }
+<a href=#1650 id=1650 data-nosnippet>1650</a>      } <span class="kw">else </span>{
+<a href=#1651 id=1651 data-nosnippet>1651</a>        <span class="prelude-val">Some</span>(code.into())
+<a href=#1652 id=1652 data-nosnippet>1652</a>      }
+<a href=#1653 id=1653 data-nosnippet>1653</a>    } <span class="kw">else </span>{
+<a href=#1654 id=1654 data-nosnippet>1654</a>      <span class="prelude-val">Some</span>(code.into())
+<a href=#1655 id=1655 data-nosnippet>1655</a>    }
+<a href=#1656 id=1656 data-nosnippet>1656</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(map) = map {
+<a href=#1657 id=1657 data-nosnippet>1657</a>    <span class="kw">match </span>map.get(code <span class="kw">as </span>usize) {
+<a href=#1658 id=1658 data-nosnippet>1658</a>      <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1659 id=1659 data-nosnippet>1659</a>      <span class="prelude-val">Some</span>(c) =&gt; <span class="kw-2">*</span>c,
+<a href=#1660 id=1660 data-nosnippet>1660</a>    }
 <a href=#1661 id=1661 data-nosnippet>1661</a>  } <span class="kw">else </span>{
-<a href=#1662 id=1662 data-nosnippet>1662</a>    DEFSIZE
-<a href=#1663 id=1663 data-nosnippet>1663</a>  }
+<a href=#1662 id=1662 data-nosnippet>1662</a>    <span class="prelude-val">None
+<a href=#1663 id=1663 data-nosnippet>1663</a>  </span>}
 <a href=#1664 id=1664 data-nosnippet>1664</a>}
 <a href=#1665 id=1665 data-nosnippet>1665</a>
-<a href=#1666 id=1666 data-nosnippet>1666</a><span class="doccomment">/// convert size to percent
-<a href=#1667 id=1667 data-nosnippet>1667</a></span><span class="kw">pub fn </span>relative_font_size(newsize: f64, oldsize: f64) -&gt; String {
-<a href=#1668 id=1668 data-nosnippet>1668</a>  <span class="macro">s!</span>(<span class="string">"{}%"</span>, (<span class="number">0.5 </span>+ <span class="number">100.0 </span>* newsize / oldsize).floor())
-<a href=#1669 id=1669 data-nosnippet>1669</a>}
+<a href=#1666 id=1666 data-nosnippet>1666</a><span class="kw">pub fn </span>decode_string(string: SymStr, encoding_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;, implicit: bool) -&gt; SymStr {
+<a href=#1667 id=1667 data-nosnippet>1667</a>  <span class="kw">let </span>empty_sym = <span class="kw-2">*</span>EMPTY_SYM;
+<a href=#1668 id=1668 data-nosnippet>1668</a>  <span class="kw">if </span>string == empty_sym {
+<a href=#1669 id=1669 data-nosnippet>1669</a>    <span class="kw">return </span>empty_sym;
+<a href=#1670 id=1670 data-nosnippet>1670</a>  }
+<a href=#1671 id=1671 data-nosnippet>1671</a>  <span class="kw">let </span><span class="kw-2">mut </span>font = <span class="prelude-val">None</span>;
+<a href=#1672 id=1672 data-nosnippet>1672</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
+<a href=#1673 id=1673 data-nosnippet>1673</a>    <span class="prelude-val">None </span>=&gt; {
+<a href=#1674 id=1674 data-nosnippet>1674</a>      font = lookup_font();
+<a href=#1675 id=1675 data-nosnippet>1675</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
+<a href=#1676 id=1676 data-nosnippet>1676</a>        font.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">""</span>))
+<a href=#1677 id=1677 data-nosnippet>1677</a>      } <span class="kw">else </span>{
+<a href=#1678 id=1678 data-nosnippet>1678</a>        <span class="string">""
+<a href=#1679 id=1679 data-nosnippet>1679</a>      </span>}
+<a href=#1680 id=1680 data-nosnippet>1680</a>    },
+<a href=#1681 id=1681 data-nosnippet>1681</a>    <span class="prelude-val">Some</span>(encoding) =&gt; encoding,
+<a href=#1682 id=1682 data-nosnippet>1682</a>  };
+<a href=#1683 id=1683 data-nosnippet>1683</a>
+<a href=#1684 id=1684 data-nosnippet>1684</a>  <span class="kw">let </span><span class="kw-2">mut </span>map: <span class="prelude-ty">Option</span>&lt;Fontmap&gt; = <span class="prelude-val">None</span>;
+<a href=#1685 id=1685 data-nosnippet>1685</a>  <span class="kw">if </span>!encoding.is_empty() {
+<a href=#1686 id=1686 data-nosnippet>1686</a>    preload_font_map(encoding).expect(<span class="string">"preload_font_map should succeed?"</span>);
+<a href=#1687 id=1687 data-nosnippet>1687</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(encmap) = load_font_map(encoding) {
+<a href=#1688 id=1688 data-nosnippet>1688</a>      <span class="comment">// OK got some map.
+<a href=#1689 id=1689 data-nosnippet>1689</a>      </span>map = <span class="prelude-val">Some</span>(encmap);
+<a href=#1690 id=1690 data-nosnippet>1690</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
+<a href=#1691 id=1691 data-nosnippet>1691</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = (<span class="kw-2">*</span>font).get_family() {
+<a href=#1692 id=1692 data-nosnippet>1692</a>          with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_{}_fontmap"</span>, encoding, family), |fmap_opt| {
+<a href=#1693 id=1693 data-nosnippet>1693</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(fmap) = fmap_opt {
+<a href=#1694 id=1694 data-nosnippet>1694</a>              map = fmap.into(); <span class="comment">// Use the family specific map, if any.
+<a href=#1695 id=1695 data-nosnippet>1695</a>            </span>}
+<a href=#1696 id=1696 data-nosnippet>1696</a>          });
+<a href=#1697 id=1697 data-nosnippet>1697</a>        }
+<a href=#1698 id=1698 data-nosnippet>1698</a>      }
+<a href=#1699 id=1699 data-nosnippet>1699</a>    }
+<a href=#1700 id=1700 data-nosnippet>1700</a>  }
+<a href=#1701 id=1701 data-nosnippet>1701</a>
+<a href=#1702 id=1702 data-nosnippet>1702</a>  <span class="comment">// Load multi-char overrides if available
+<a href=#1703 id=1703 data-nosnippet>1703</a>  </span><span class="kw">let </span>multichar_map: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, String&gt;&gt; = <span class="kw">if </span>!encoding.is_empty() {
+<a href=#1704 id=1704 data-nosnippet>1704</a>    <span class="kw">let </span>mapname = <span class="macro">format!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>);
+<a href=#1705 id=1705 data-nosnippet>1705</a>    with_value(<span class="kw-2">&amp;</span>mapname, |val_opt| {
+<a href=#1706 id=1706 data-nosnippet>1706</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(<span class="kw-2">ref </span>m)) = val_opt {
+<a href=#1707 id=1707 data-nosnippet>1707</a>        <span class="prelude-val">Some</span>(m.clone())
+<a href=#1708 id=1708 data-nosnippet>1708</a>      } <span class="kw">else </span>{
+<a href=#1709 id=1709 data-nosnippet>1709</a>        <span class="prelude-val">None
+<a href=#1710 id=1710 data-nosnippet>1710</a>      </span>}
+<a href=#1711 id=1711 data-nosnippet>1711</a>    })
+<a href=#1712 id=1712 data-nosnippet>1712</a>  } <span class="kw">else </span>{
+<a href=#1713 id=1713 data-nosnippet>1713</a>    <span class="prelude-val">None
+<a href=#1714 id=1714 data-nosnippet>1714</a>  </span>};
+<a href=#1715 id=1715 data-nosnippet>1715</a>
+<a href=#1716 id=1716 data-nosnippet>1716</a>  <span class="kw">let </span><span class="kw-2">mut </span>result_string: String = String::new();
+<a href=#1717 id=1717 data-nosnippet>1717</a>  arena::with(string, |str| {
+<a href=#1718 id=1718 data-nosnippet>1718</a>    <span class="kw">for </span>c <span class="kw">in </span>str.chars() {
+<a href=#1719 id=1719 data-nosnippet>1719</a>      <span class="kw">if </span>implicit {
+<a href=#1720 id=1720 data-nosnippet>1720</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>map_ref) = map {
+<a href=#1721 id=1721 data-nosnippet>1721</a>          <span class="kw">let </span>code = c <span class="kw">as </span>u16; <span class="comment">// u16, so that Unicode chars get cast correctly
+<a href=#1722 id=1722 data-nosnippet>1722</a>          </span><span class="kw">if </span>code &lt; <span class="number">128 </span>{
+<a href=#1723 id=1723 data-nosnippet>1723</a>            <span class="comment">// Check multi-char override first
+<a href=#1724 id=1724 data-nosnippet>1724</a>            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mc) = multichar_map {
+<a href=#1725 id=1725 data-nosnippet>1725</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(mc_str) = mc.get(<span class="kw-2">&amp;</span>(code <span class="kw">as </span>u8).to_string()) {
+<a href=#1726 id=1726 data-nosnippet>1726</a>                result_string.push_str(mc_str);
+<a href=#1727 id=1727 data-nosnippet>1727</a>                <span class="kw">continue</span>;
+<a href=#1728 id=1728 data-nosnippet>1728</a>              }
+<a href=#1729 id=1729 data-nosnippet>1729</a>            }
+<a href=#1730 id=1730 data-nosnippet>1730</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map_ref.get(code <span class="kw">as </span>usize) {
+<a href=#1731 id=1731 data-nosnippet>1731</a>              push_fontmap_char(<span class="kw-2">&amp;mut </span>result_string, <span class="kw-2">*</span>mapc_val, code <span class="kw">as </span>u8);
+<a href=#1732 id=1732 data-nosnippet>1732</a>            }
+<a href=#1733 id=1733 data-nosnippet>1733</a>          } <span class="kw">else </span>{
+<a href=#1734 id=1734 data-nosnippet>1734</a>            result_string.push(c);
+<a href=#1735 id=1735 data-nosnippet>1735</a>          }
+<a href=#1736 id=1736 data-nosnippet>1736</a>        } <span class="kw">else </span>{
+<a href=#1737 id=1737 data-nosnippet>1737</a>          result_string.push(c)
+<a href=#1738 id=1738 data-nosnippet>1738</a>        }
+<a href=#1739 id=1739 data-nosnippet>1739</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>map_ref) = map {
+<a href=#1740 id=1740 data-nosnippet>1740</a>        <span class="kw">let </span>code = c <span class="kw">as </span>u8;
+<a href=#1741 id=1741 data-nosnippet>1741</a>        <span class="comment">// Check multi-char override first
+<a href=#1742 id=1742 data-nosnippet>1742</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mc) = multichar_map {
+<a href=#1743 id=1743 data-nosnippet>1743</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(mc_str) = mc.get(<span class="kw-2">&amp;</span>code.to_string()) {
+<a href=#1744 id=1744 data-nosnippet>1744</a>            result_string.push_str(mc_str);
+<a href=#1745 id=1745 data-nosnippet>1745</a>            <span class="kw">continue</span>;
+<a href=#1746 id=1746 data-nosnippet>1746</a>          }
+<a href=#1747 id=1747 data-nosnippet>1747</a>        }
+<a href=#1748 id=1748 data-nosnippet>1748</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map_ref.get(code <span class="kw">as </span>usize) {
+<a href=#1749 id=1749 data-nosnippet>1749</a>          push_fontmap_char(<span class="kw-2">&amp;mut </span>result_string, <span class="kw-2">*</span>mapc_val, code);
+<a href=#1750 id=1750 data-nosnippet>1750</a>        }
+<a href=#1751 id=1751 data-nosnippet>1751</a>      }
+<a href=#1752 id=1752 data-nosnippet>1752</a>    }
+<a href=#1753 id=1753 data-nosnippet>1753</a>  });
+<a href=#1754 id=1754 data-nosnippet>1754</a>  arena::pin(result_string)
+<a href=#1755 id=1755 data-nosnippet>1755</a>}
+<a href=#1756 id=1756 data-nosnippet>1756</a>
+<a href=#1757 id=1757 data-nosnippet>1757</a><span class="doccomment">/// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64
+<a href=#1758 id=1758 data-nosnippet>1758</a></span><span class="kw">pub fn </span>rationalize_font_size(size: <span class="kw-2">&amp;</span>str) -&gt; f64 {
+<a href=#1759 id=1759 data-nosnippet>1759</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(symbolic) = FONT_SIZE.get(size) {
+<a href=#1760 id=1760 data-nosnippet>1760</a>    <span class="kw-2">*</span>symbolic * DEFSIZE
+<a href=#1761 id=1761 data-nosnippet>1761</a>  } <span class="kw">else </span>{
+<a href=#1762 id=1762 data-nosnippet>1762</a>    DEFSIZE
+<a href=#1763 id=1763 data-nosnippet>1763</a>  }
+<a href=#1764 id=1764 data-nosnippet>1764</a>}
+<a href=#1765 id=1765 data-nosnippet>1765</a>
+<a href=#1766 id=1766 data-nosnippet>1766</a><span class="doccomment">/// convert size to percent
+<a href=#1767 id=1767 data-nosnippet>1767</a></span><span class="kw">pub fn </span>relative_font_size(newsize: f64, oldsize: f64) -&gt; String {
+<a href=#1768 id=1768 data-nosnippet>1768</a>  <span class="macro">s!</span>(<span class="string">"{}%"</span>, (<span class="number">0.5 </span>+ <span class="number">100.0 </span>* newsize / oldsize).floor())
+<a href=#1769 id=1769 data-nosnippet>1769</a>}
 </code></pre></div></section></main></body></html>

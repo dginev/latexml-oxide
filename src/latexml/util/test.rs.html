@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_oxide/src/util/test.rs`."><title>test.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (3b1b0ef4d 2026-03-11)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml/util/</div>test.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>glob::glob;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_oxide/src/util/test.rs`."><title>test.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (3102493c7 2026-03-12)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml/util/</div>test.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>glob::glob;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>libxml::parser::Parser;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>libxml::tree::{Node, SaveOptions};
@@ -180,84 +180,92 @@
 <a href=#180 id=180 data-nosnippet>180</a>    <span class="kw">let </span>path = <span class="macro">format!</span>(<span class="string">"/tmp/latexml_actual_{name}.xml"</span>);
 <a href=#181 id=181 data-nosnippet>181</a>    std::fs::write(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;</span>doc_str).ok();
 <a href=#182 id=182 data-nosnippet>182</a>    <span class="macro">eprintln!</span>(<span class="string">"Saved actual XML to {path}"</span>);
-<a href=#183 id=183 data-nosnippet>183</a>  }
-<a href=#184 id=184 data-nosnippet>184</a>  doc_str.split(<span class="string">'\n'</span>).map(ToString::to_string).collect()
-<a href=#185 id=185 data-nosnippet>185</a>}
-<a href=#186 id=186 data-nosnippet>186</a>
-<a href=#187 id=187 data-nosnippet>187</a><span class="doccomment">/// Serializes and splits by line a given `XmlDoc`
-<a href=#188 id=188 data-nosnippet>188</a></span><span class="kw">fn </span>process_dom(dom: XmlDoc, _name: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;String&gt; {
-<a href=#189 id=189 data-nosnippet>189</a>  dom
-<a href=#190 id=190 data-nosnippet>190</a>    .to_string_with_options(SaveOptions {
-<a href=#191 id=191 data-nosnippet>191</a>      format: <span class="bool-val">true</span>,
-<a href=#192 id=192 data-nosnippet>192</a>      ..SaveOptions::default()
-<a href=#193 id=193 data-nosnippet>193</a>    })
-<a href=#194 id=194 data-nosnippet>194</a>    .split(<span class="string">'\n'</span>)
-<a href=#195 id=195 data-nosnippet>195</a>    .map(ToString::to_string)
-<a href=#196 id=196 data-nosnippet>196</a>    .collect()
-<a href=#197 id=197 data-nosnippet>197</a>}
-<a href=#198 id=198 data-nosnippet>198</a>
-<a href=#199 id=199 data-nosnippet>199</a><span class="doccomment">/// Provide a default test `Core` engine for simple operations
-<a href=#200 id=200 data-nosnippet>200</a></span><span class="kw">pub fn </span>new_test_engine() -&gt; Core {
-<a href=#201 id=201 data-nosnippet>201</a>  <span class="kw">let </span>core_engine = Core::new(CoreOptions {
-<a href=#202 id=202 data-nosnippet>202</a>    preload: <span class="prelude-val">Some</span>(
-<a href=#203 id=203 data-nosnippet>203</a>      [<span class="string">"article.cls"</span>, <span class="string">"amsmath.sty"</span>]
-<a href=#204 id=204 data-nosnippet>204</a>        .map(|x| x.to_string())
-<a href=#205 id=205 data-nosnippet>205</a>        .to_vec(),
-<a href=#206 id=206 data-nosnippet>206</a>    ),
-<a href=#207 id=207 data-nosnippet>207</a>    verbosity: <span class="prelude-val">Some</span>(-<span class="number">2</span>),
-<a href=#208 id=208 data-nosnippet>208</a>    search_paths: <span class="prelude-val">None</span>,
-<a href=#209 id=209 data-nosnippet>209</a>    nomathparse: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
-<a href=#210 id=210 data-nosnippet>210</a>    include_comments: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
-<a href=#211 id=211 data-nosnippet>211</a>    ..CoreOptions::default()
-<a href=#212 id=212 data-nosnippet>212</a>  });
-<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">load_model!</span>(<span class="string">"LaTeXML"</span>);
-<a href=#214 id=214 data-nosnippet>214</a>  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
-<a href=#215 id=215 data-nosnippet>215</a>  core_engine
-<a href=#216 id=216 data-nosnippet>216</a>}
-<a href=#217 id=217 data-nosnippet>217</a>
-<a href=#218 id=218 data-nosnippet>218</a><span class="doccomment">/// Simple tokenization of a single formula, without any custom preloads
-<a href=#219 id=219 data-nosnippet>219</a>/// beyond latex and amsmath
-<a href=#220 id=220 data-nosnippet>220</a></span><span class="kw">pub fn </span>lex_single_tex_formula(
-<a href=#221 id=221 data-nosnippet>221</a>  tex: <span class="kw-2">&amp;</span>str,
-<a href=#222 id=222 data-nosnippet>222</a>  latexml: <span class="kw-2">&amp;mut </span>Core,
-<a href=#223 id=223 data-nosnippet>223</a>) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;, <span class="prelude-ty">Option</span>&lt;Node&gt;, Document) {
-<a href=#224 id=224 data-nosnippet>224</a>  <span class="kw">let </span>xml_result = latexml.convert_file(<span class="macro">format!</span>(<span class="string">"literal:\\[ {tex} \\]"</span>));
-<a href=#225 id=225 data-nosnippet>225</a>  <span class="macro">assert!</span>(xml_result.is_ok(), <span class="string">"{:?}"</span>, xml_result.err());
-<a href=#226 id=226 data-nosnippet>226</a>  <span class="kw">let </span><span class="kw-2">mut </span>doc = xml_result.unwrap();
-<a href=#227 id=227 data-nosnippet>227</a>
-<a href=#228 id=228 data-nosnippet>228</a>  <span class="comment">// grab the first formula
-<a href=#229 id=229 data-nosnippet>229</a>  </span><span class="kw">match </span>doc.findnode(<span class="string">"//*[local-name()='XMath']"</span>, <span class="prelude-val">None</span>) {
-<a href=#230 id=230 data-nosnippet>230</a>    <span class="prelude-val">Some</span>(math) =&gt; {
-<a href=#231 id=231 data-nosnippet>231</a>      <span class="kw">let </span><span class="kw-2">mut </span>idx = <span class="number">0</span>;
-<a href=#232 id=232 data-nosnippet>232</a>      <span class="kw">let </span>(lexemes, nodes) = node_to_grammar_lexemes(<span class="kw-2">&amp;</span>math, <span class="kw-2">&amp;mut </span>idx);
-<a href=#233 id=233 data-nosnippet>233</a>      (lexemes, nodes, <span class="prelude-val">Some</span>(math), doc)
-<a href=#234 id=234 data-nosnippet>234</a>    },
-<a href=#235 id=235 data-nosnippet>235</a>    <span class="prelude-val">None </span>=&gt; (Vec::new(), Vec::new(), <span class="prelude-val">None</span>, doc),
-<a href=#236 id=236 data-nosnippet>236</a>  }
-<a href=#237 id=237 data-nosnippet>237</a>}
-<a href=#238 id=238 data-nosnippet>238</a>
-<a href=#239 id=239 data-nosnippet>239</a><span class="doccomment">/// Build a test function for each "*.tex" source found in a given directory path.
-<a href=#240 id=240 data-nosnippet>240</a>/// The path should be absolute, or relative to the root latexml-oxide checkout.
-<a href=#241 id=241 data-nosnippet>241</a></span><span class="attr">#[macro_export]
-<a href=#242 id=242 data-nosnippet>242</a></span><span class="macro">macro_rules!</span> tex_tests {
-<a href=#243 id=243 data-nosnippet>243</a>  (<span class="macro-nonterminal">$dir</span>:literal) =&gt; {
-<a href=#244 id=244 data-nosnippet>244</a>    <span class="macro">tex_tests!</span>(<span class="macro-nonterminal">$dir</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#245 id=245 data-nosnippet>245</a>  };
-<a href=#246 id=246 data-nosnippet>246</a>  (<span class="macro-nonterminal">$dir</span>:literal, <span class="macro-nonterminal">$requires</span>:expr, <span class="macro-nonterminal">$dispatch</span>:expr) =&gt; {
-<a href=#247 id=247 data-nosnippet>247</a>    <span class="macro">macro_rules!</span> this_test_requires {
-<a href=#248 id=248 data-nosnippet>248</a>      () =&gt; {
-<a href=#249 id=249 data-nosnippet>249</a>        <span class="macro-nonterminal">$requires
-<a href=#250 id=250 data-nosnippet>250</a>      </span>};
-<a href=#251 id=251 data-nosnippet>251</a>    }
-<a href=#252 id=252 data-nosnippet>252</a>    <span class="macro">macro_rules!</span> this_test_dispatch {
-<a href=#253 id=253 data-nosnippet>253</a>      () =&gt; {
-<a href=#254 id=254 data-nosnippet>254</a>        <span class="macro-nonterminal">$dispatch
-<a href=#255 id=255 data-nosnippet>255</a>      </span>};
-<a href=#256 id=256 data-nosnippet>256</a>    }
-<a href=#257 id=257 data-nosnippet>257</a>    <span class="kw">use </span>latexml_codegen::GlobTeXTests;
-<a href=#258 id=258 data-nosnippet>258</a>    <span class="attr">#[derive(GlobTeXTests)]
-<a href=#259 id=259 data-nosnippet>259</a>    #[directory=<span class="macro-nonterminal">$dir</span>]
-<a href=#260 id=260 data-nosnippet>260</a>    </span><span class="kw">struct </span>_TestDirective;
-<a href=#261 id=261 data-nosnippet>261</a>  };
-<a href=#262 id=262 data-nosnippet>262</a>}
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="comment">// Also save using libxml's built-in serializer for comparison
+<a href=#184 id=184 data-nosnippet>184</a>    </span><span class="kw">let </span>path2 = <span class="macro">format!</span>(<span class="string">"/tmp/latexml_actual_{name}_libxml.xml"</span>);
+<a href=#185 id=185 data-nosnippet>185</a>    <span class="kw">let </span>libxml_str = doc.document.to_string_with_options(libxml::tree::SaveOptions {
+<a href=#186 id=186 data-nosnippet>186</a>      format: <span class="bool-val">true</span>,
+<a href=#187 id=187 data-nosnippet>187</a>      ..libxml::tree::SaveOptions::default()
+<a href=#188 id=188 data-nosnippet>188</a>    });
+<a href=#189 id=189 data-nosnippet>189</a>    std::fs::write(<span class="kw-2">&amp;</span>path2, <span class="kw-2">&amp;</span>libxml_str).ok();
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="macro">eprintln!</span>(<span class="string">"Saved libxml XML to {path2}"</span>);
+<a href=#191 id=191 data-nosnippet>191</a>  }
+<a href=#192 id=192 data-nosnippet>192</a>  doc_str.split(<span class="string">'\n'</span>).map(ToString::to_string).collect()
+<a href=#193 id=193 data-nosnippet>193</a>}
+<a href=#194 id=194 data-nosnippet>194</a>
+<a href=#195 id=195 data-nosnippet>195</a><span class="doccomment">/// Serializes and splits by line a given `XmlDoc`
+<a href=#196 id=196 data-nosnippet>196</a></span><span class="kw">fn </span>process_dom(dom: XmlDoc, _name: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;String&gt; {
+<a href=#197 id=197 data-nosnippet>197</a>  dom
+<a href=#198 id=198 data-nosnippet>198</a>    .to_string_with_options(SaveOptions {
+<a href=#199 id=199 data-nosnippet>199</a>      format: <span class="bool-val">true</span>,
+<a href=#200 id=200 data-nosnippet>200</a>      ..SaveOptions::default()
+<a href=#201 id=201 data-nosnippet>201</a>    })
+<a href=#202 id=202 data-nosnippet>202</a>    .split(<span class="string">'\n'</span>)
+<a href=#203 id=203 data-nosnippet>203</a>    .map(ToString::to_string)
+<a href=#204 id=204 data-nosnippet>204</a>    .collect()
+<a href=#205 id=205 data-nosnippet>205</a>}
+<a href=#206 id=206 data-nosnippet>206</a>
+<a href=#207 id=207 data-nosnippet>207</a><span class="doccomment">/// Provide a default test `Core` engine for simple operations
+<a href=#208 id=208 data-nosnippet>208</a></span><span class="kw">pub fn </span>new_test_engine() -&gt; Core {
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="kw">let </span>core_engine = Core::new(CoreOptions {
+<a href=#210 id=210 data-nosnippet>210</a>    preload: <span class="prelude-val">Some</span>(
+<a href=#211 id=211 data-nosnippet>211</a>      [<span class="string">"article.cls"</span>, <span class="string">"amsmath.sty"</span>]
+<a href=#212 id=212 data-nosnippet>212</a>        .map(|x| x.to_string())
+<a href=#213 id=213 data-nosnippet>213</a>        .to_vec(),
+<a href=#214 id=214 data-nosnippet>214</a>    ),
+<a href=#215 id=215 data-nosnippet>215</a>    verbosity: <span class="prelude-val">Some</span>(-<span class="number">2</span>),
+<a href=#216 id=216 data-nosnippet>216</a>    search_paths: <span class="prelude-val">None</span>,
+<a href=#217 id=217 data-nosnippet>217</a>    nomathparse: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
+<a href=#218 id=218 data-nosnippet>218</a>    include_comments: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
+<a href=#219 id=219 data-nosnippet>219</a>    ..CoreOptions::default()
+<a href=#220 id=220 data-nosnippet>220</a>  });
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="macro">load_model!</span>(<span class="string">"LaTeXML"</span>);
+<a href=#222 id=222 data-nosnippet>222</a>  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+<a href=#223 id=223 data-nosnippet>223</a>  core_engine
+<a href=#224 id=224 data-nosnippet>224</a>}
+<a href=#225 id=225 data-nosnippet>225</a>
+<a href=#226 id=226 data-nosnippet>226</a><span class="doccomment">/// Simple tokenization of a single formula, without any custom preloads
+<a href=#227 id=227 data-nosnippet>227</a>/// beyond latex and amsmath
+<a href=#228 id=228 data-nosnippet>228</a></span><span class="kw">pub fn </span>lex_single_tex_formula(
+<a href=#229 id=229 data-nosnippet>229</a>  tex: <span class="kw-2">&amp;</span>str,
+<a href=#230 id=230 data-nosnippet>230</a>  latexml: <span class="kw-2">&amp;mut </span>Core,
+<a href=#231 id=231 data-nosnippet>231</a>) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;, <span class="prelude-ty">Option</span>&lt;Node&gt;, Document) {
+<a href=#232 id=232 data-nosnippet>232</a>  <span class="kw">let </span>xml_result = latexml.convert_file(<span class="macro">format!</span>(<span class="string">"literal:\\[ {tex} \\]"</span>));
+<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">assert!</span>(xml_result.is_ok(), <span class="string">"{:?}"</span>, xml_result.err());
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="kw">let </span><span class="kw-2">mut </span>doc = xml_result.unwrap();
+<a href=#235 id=235 data-nosnippet>235</a>
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="comment">// grab the first formula
+<a href=#237 id=237 data-nosnippet>237</a>  </span><span class="kw">match </span>doc.findnode(<span class="string">"//*[local-name()='XMath']"</span>, <span class="prelude-val">None</span>) {
+<a href=#238 id=238 data-nosnippet>238</a>    <span class="prelude-val">Some</span>(math) =&gt; {
+<a href=#239 id=239 data-nosnippet>239</a>      <span class="kw">let </span><span class="kw-2">mut </span>idx = <span class="number">0</span>;
+<a href=#240 id=240 data-nosnippet>240</a>      <span class="kw">let </span>(lexemes, nodes) = node_to_grammar_lexemes(<span class="kw-2">&amp;</span>math, <span class="kw-2">&amp;mut </span>idx);
+<a href=#241 id=241 data-nosnippet>241</a>      (lexemes, nodes, <span class="prelude-val">Some</span>(math), doc)
+<a href=#242 id=242 data-nosnippet>242</a>    },
+<a href=#243 id=243 data-nosnippet>243</a>    <span class="prelude-val">None </span>=&gt; (Vec::new(), Vec::new(), <span class="prelude-val">None</span>, doc),
+<a href=#244 id=244 data-nosnippet>244</a>  }
+<a href=#245 id=245 data-nosnippet>245</a>}
+<a href=#246 id=246 data-nosnippet>246</a>
+<a href=#247 id=247 data-nosnippet>247</a><span class="doccomment">/// Build a test function for each "*.tex" source found in a given directory path.
+<a href=#248 id=248 data-nosnippet>248</a>/// The path should be absolute, or relative to the root latexml-oxide checkout.
+<a href=#249 id=249 data-nosnippet>249</a></span><span class="attr">#[macro_export]
+<a href=#250 id=250 data-nosnippet>250</a></span><span class="macro">macro_rules!</span> tex_tests {
+<a href=#251 id=251 data-nosnippet>251</a>  (<span class="macro-nonterminal">$dir</span>:literal) =&gt; {
+<a href=#252 id=252 data-nosnippet>252</a>    <span class="macro">tex_tests!</span>(<span class="macro-nonterminal">$dir</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+<a href=#253 id=253 data-nosnippet>253</a>  };
+<a href=#254 id=254 data-nosnippet>254</a>  (<span class="macro-nonterminal">$dir</span>:literal, <span class="macro-nonterminal">$requires</span>:expr, <span class="macro-nonterminal">$dispatch</span>:expr) =&gt; {
+<a href=#255 id=255 data-nosnippet>255</a>    <span class="macro">macro_rules!</span> this_test_requires {
+<a href=#256 id=256 data-nosnippet>256</a>      () =&gt; {
+<a href=#257 id=257 data-nosnippet>257</a>        <span class="macro-nonterminal">$requires
+<a href=#258 id=258 data-nosnippet>258</a>      </span>};
+<a href=#259 id=259 data-nosnippet>259</a>    }
+<a href=#260 id=260 data-nosnippet>260</a>    <span class="macro">macro_rules!</span> this_test_dispatch {
+<a href=#261 id=261 data-nosnippet>261</a>      () =&gt; {
+<a href=#262 id=262 data-nosnippet>262</a>        <span class="macro-nonterminal">$dispatch
+<a href=#263 id=263 data-nosnippet>263</a>      </span>};
+<a href=#264 id=264 data-nosnippet>264</a>    }
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="kw">use </span>latexml_codegen::GlobTeXTests;
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="attr">#[derive(GlobTeXTests)]
+<a href=#267 id=267 data-nosnippet>267</a>    #[directory=<span class="macro-nonterminal">$dir</span>]
+<a href=#268 id=268 data-nosnippet>268</a>    </span><span class="kw">struct </span>_TestDirective;
+<a href=#269 id=269 data-nosnippet>269</a>  };
+<a href=#270 id=270 data-nosnippet>270</a>}
 </code></pre></div></section></main></body></html>

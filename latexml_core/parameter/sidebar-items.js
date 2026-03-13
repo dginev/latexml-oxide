@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Parameter","Parameters"],"type":["ReaderClosure","ReaderFn","ReaderPredigestClosure","ReaderPredigestFn","ReversionClosure"]};
+window.SIDEBAR_ITEMS = {"struct":["Parameter","Parameters"],"type":["DigestedReversionClosure","ReaderClosure","ReaderFn","ReaderPredigestClosure","ReaderPredigestFn","ReversionClosure"]};
