@@ -15,6 +15,26 @@ static THOUSANDS_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
   || static_map!("en" => ",", "de" => ".", "fr" => ".", "nl" => ".", "pt" => ".", "es" => "."),
 );
 
+/// Perl: XMath_copy_keyvals — copy key-value pairs from OptionalKeyVals:XMath arg to whatsit props
+fn xmath_copy_keyvals(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
+  // Get pairs first, then set properties (avoids borrow conflict)
+  // Use get_hash_digested() since after digestion values are in cached_hash_digested
+  let pairs: Vec<(String, String)> = if let Some(arg1) = whatsit.get_arg(1) {
+    match arg1.data() {
+      DigestedData::KeyVals(ref kv) => {
+        kv.get_hash_digested().into_iter().collect()
+      }
+      _ => Vec::new(),
+    }
+  } else {
+    Vec::new()
+  };
+  for (key, val) in pairs {
+    whatsit.set_property(&key, Stored::from(val));
+  }
+  Ok(Vec::new())
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // LaTeXML Enhancemens to Math Representation to preserve Semantics
@@ -54,30 +74,30 @@ LoadDefinitions!({
   //   $whatsit->setProperties($kv->getPairs) if $kv;
   //   return; }
 
-  // # Build an ltx:XMApp, application of function/operator to arguments
-  // # first piece of (TeX) argument is expected to be the operator
-  // # Usually used on content side, but at least the arguments should be properly encapsulated:
-  // # They should build individual subtrees; use ltx::XMArg, ltx:XMWrap ... if needed
-  // DefConstructor('\lx@apply OptionalKeyVals:XMath {}{}',
-  //   "<ltx:XMApp $XMath_attributes>#2#3</ltx:XMApp>",
-  //   reversion   => '#2#3',
-  //   afterDigest => sub { XMath_copy_keyvals(@_); });
+  // Build an ltx:XMApp, application of function/operator to arguments
+  DefConstructor!("\\lx@apply OptionalKeyVals:XMath {}{}",
+    "<ltx:XMApp role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2#3</ltx:XMApp>",
+    reversion => "#2#3",
+    after_digest => sub[whatsit] { xmath_copy_keyvals(whatsit) });
 
-  // # Build an ltx:XMTok, a mathematical symbol, with given attributes
-  // # the argument should create text to be the content of the token.
-  // DefConstructor('\lx@symbol OptionalKeyVals:XMath {}',
-  //   "<ltx:XMTok $XMath_attributes>#2</ltx:XMTok>",
-  //   reversion   => '#2',
-  //   afterDigest => sub {
-  //     $_[1]->setFont($_[1]->getArg(2)->getFont);
-  //     XMath_copy_keyvals(@_); });
+  // Build an ltx:XMTok, a mathematical symbol, with given attributes
+  DefConstructor!("\\lx@symbol OptionalKeyVals:XMath {}",
+    "<ltx:XMTok role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2</ltx:XMTok>",
+    reversion => "#2",
+    after_digest => sub[whatsit] {
+      // Copy font from arg 2 to whatsit
+      if let Some(arg2) = whatsit.get_arg(2) {
+        if let Ok(Some(font)) = arg2.get_font() {
+          whatsit.set_font(Rc::new(font.into_owned()));
+        }
+      }
+      xmath_copy_keyvals(whatsit) });
 
-  // # Wrap the contents in an ltx:XMWrap, to stand as a single subtree & providing attributes
-  // # The ltx:XMWrap may be collapsed, later, by parsing
-  // DefConstructor('\lx@wrap OptionalKeyVals:XMath {}',
-  //   "<ltx:XMWrap $XMath_attributes>#2</ltx:XMWrap>",
-  //   reversion   => '#2',
-  //   afterDigest => sub { XMath_copy_keyvals(@_); });
+  // Wrap the contents in an ltx:XMWrap, to stand as a single subtree & providing attributes
+  DefConstructor!("\\lx@wrap OptionalKeyVals:XMath {}",
+    "<ltx:XMWrap role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2</ltx:XMWrap>",
+    reversion => "#2",
+    after_digest => sub[whatsit] { xmath_copy_keyvals(whatsit) });
 
   // # Convert a hashref into a list of tokens of the form key=value,...
   // sub I_keyvals {
@@ -105,56 +125,61 @@ LoadDefinitions!({
   //   my ($kv, @stuff) = @_;
   //   return Tokens(T_CS('\lx@wrap'), I_keyvals($kv), T_BEGIN, @stuff, T_END); }
 
-  // # These two accept key operator_meaning, operator_omcd to give a meaning to the sub/superscript
-  // # NOTE (BUG): We SHOULD nest paired sub/superscripts, but avoid conflicting double scripts
-  // # To do that we need to sniff at the base, whether it already contains scripts.
-  // # However, IsScript isn't quite sufficient if the scripts are hidden within Whatsits, duals,
-  // etc. # Currently, LaTeXML manages to deal with the double scripts anyway;
-  // # The reversion ALWAYS wraps the base (which will render non-optimally in images but avoid
-  // Errors) DefConstructor('\lx@superscript OptionalKeyVals:XMath {} InScriptStyle',
-  //   "<ltx:XMApp $XMath_attributes>"
-  //     . "<ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd'
-  // scriptpos='#scriptpos'/>"     . "<ltx:XMArg>#2</ltx:XMArg>"
-  //     . "<ltx:XMArg rule='Superscript'>#3</ltx:XMArg>"
-  //     . "</ltx:XMApp>",
-  //   afterDigest => sub { XMath_copy_keyvals(@_); },
-  //   reversion   => sub {
-  //     my ($whatsit, $kv, $base, $sup) = @_;
-  //     my $bump = $whatsit->getProperty('bump');
-  //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
-  //     (IsEmpty($sup)
-  //       ? Revert($base)
-  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUPER,
-  // revertScript($sup))); },   properties => sub {
-  //     my ($stomach, $kv, $base, $script) = @_;
-  //     my $basetype = IsScript($base);
-  //     my $bump     = ($basetype && ($$basetype[1] eq 'SUPERSCRIPT') ? 1 : 0);
-  //     (scriptpos => "post" . ($_[0]->getScriptLevel + $bump),
-  //       bump => $bump); },
-  //   sizer => sub { scriptSizer($_[0]->getArg(3), $_[0]->getArg(2), undef, 'SUPERSCRIPT', 'post');
-  // });
+  // Superscript with optional keyvals (operator_meaning, etc.)
+  DefConstructor!("\\lx@superscript OptionalKeyVals:XMath {} InScriptStyle",
+    "<ltx:XMApp role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'><ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/><ltx:XMArg>#2</ltx:XMArg><ltx:XMArg rule='Superscript'>#3</ltx:XMArg></ltx:XMApp>",
+    after_digest => sub[whatsit] {
+      xmath_copy_keyvals(whatsit)?;
+      // Compute scriptpos = "post" + script_level
+      let scriptpos = s!("post{}", stomach::get_script_level());
+      whatsit.set_property("scriptpos", Stored::from(scriptpos));
+      Ok(Vec::new()) },
+    reversion => sub[_whatsit, args] {
+      // Always wrap base in braces (bump=1)
+      let base = &args[1];
+      let sup = &args[2];
+      let base_rev = match base { Some(inner) => inner.revert()?, None => Tokens!() };
+      let sup_rev = match sup { Some(inner) => inner.revert()?, None => Tokens!() };
+      if sup_rev.is_empty() {
+        Ok(base_rev)
+      } else {
+        let mut tks = vec![T_BEGIN!()];
+        tks.extend(base_rev.unlist());
+        tks.push(T_END!());
+        tks.push(T_SUPER!());
+        tks.push(T_BEGIN!());
+        tks.extend(sup_rev.unlist());
+        tks.push(T_END!());
+        Ok(Tokens::new(tks))
+      }});
 
-  // DefConstructor('\lx@subscript OptionalKeyVals:XMath {} InScriptStyle',
-  //   "<ltx:XMApp $XMath_attributes>"
-  //     . "<ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd'
-  // scriptpos='#scriptpos'/>"     . "<ltx:XMArg>#2</ltx:XMArg>"
-  //     . "<ltx:XMArg rule='Subscript'>#3</ltx:XMArg>"
-  //     . "</ltx:XMApp>",
-  //   afterDigest => sub { XMath_copy_keyvals(@_); },
-  //   reversion   => sub {
-  //     my ($whatsit, $kv, $base, $sub) = @_;
-  //     my $bump = $whatsit->getProperty('bump');
-  //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
-  //     (IsEmpty($sub)
-  //       ? Revert($base)
-  //       : (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUB,
-  // revertScript($sub))); },   properties => sub {
-  //     my ($stomach, $kv, $base, $script) = @_;
-  //     my $basetype = IsScript($base);
-  //     my $bump     = ($basetype && ($$basetype[1] eq 'SUBSCRIPT') ? 1 : 0);
-  //     (scriptpos => "post" . ($_[0]->getScriptLevel + $bump),
-  //       bump => $bump); },
-  //   sizer => sub { scriptSizer($_[0]->getArg(3), $_[0]->getArg(2), undef, 'SUBSCRIPT', 'post');
+  // Subscript with optional keyvals (operator_meaning, etc.)
+  DefConstructor!("\\lx@subscript OptionalKeyVals:XMath {} InScriptStyle",
+    "<ltx:XMApp role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'><ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/><ltx:XMArg>#2</ltx:XMArg><ltx:XMArg rule='Subscript'>#3</ltx:XMArg></ltx:XMApp>",
+    after_digest => sub[whatsit] {
+      xmath_copy_keyvals(whatsit)?;
+      // Compute scriptpos = "post" + script_level
+      let scriptpos = s!("post{}", stomach::get_script_level());
+      whatsit.set_property("scriptpos", Stored::from(scriptpos));
+      Ok(Vec::new()) },
+    reversion => sub[_whatsit, args] {
+      // Always wrap base in braces (bump=1)
+      let base = &args[1];
+      let sub_arg = &args[2];
+      let base_rev = match base { Some(inner) => inner.revert()?, None => Tokens!() };
+      let sub_rev = match sub_arg { Some(inner) => inner.revert()?, None => Tokens!() };
+      if sub_rev.is_empty() {
+        Ok(base_rev)
+      } else {
+        let mut tks = vec![T_BEGIN!()];
+        tks.extend(base_rev.unlist());
+        tks.push(T_END!());
+        tks.push(T_SUB!());
+        tks.push(T_BEGIN!());
+        tks.extend(sub_rev.unlist());
+        tks.push(T_END!());
+        Ok(Tokens::new(tks))
+      }});
   // });
 
   // # Ignore $kv for the moment?????
@@ -212,6 +237,21 @@ LoadDefinitions!({
   DefKeyVal!("XMath", "reversion", "UndigestedDefKey");
   DefKeyVal!("XMath", "content_reversion", "UndigestedDefKey");
   DefKeyVal!("XMath", "presentation_reversion", "UndigestedDefKey");
+  // Common XMath attribute keys used in templates
+  DefKeyVal!("XMath", "role", "");
+  DefKeyVal!("XMath", "name", "");
+  DefKeyVal!("XMath", "meaning", "");
+  DefKeyVal!("XMath", "omcd", "");
+  DefKeyVal!("XMath", "width", "");
+  DefKeyVal!("XMath", "height", "");
+  DefKeyVal!("XMath", "xoffset", "");
+  DefKeyVal!("XMath", "yoffset", "");
+  DefKeyVal!("XMath", "lpadding", "");
+  DefKeyVal!("XMath", "rpadding", "");
+  DefKeyVal!("XMath", "operator_meaning", "");
+  DefKeyVal!("XMath", "operator_omcd", "");
+  DefKeyVal!("XMath", "scriptpos", "");
+  DefKeyVal!("XMath", "revert_as", "");
 
   DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
