@@ -1,75 +1,81 @@
 # Sync Status — 2026-03-13
 
-**136 pass, 15 fail, 4 ignored** (was 134/16/4)
+**125 pass, 16 fail, 30 ignored** (was 136/15/4 — test suites reorganized)
 
-## Recent Fixes (2026-03-13)
+## Recent Session (2026-03-13 evening)
 
-### Base_XMath constructors implemented
-- `xmath_copy_keyvals()` helper — copies OptionalKeyVals:XMath key-value pairs to whatsit properties
-  - Uses `get_hash_digested()` (not `get_pairs()`) since values are digested post-absorption
-  - 14 DefKeyVal declarations for XMath keys (role, name, meaning, omcd, width, height, etc.)
-- `\lx@apply OptionalKeyVals:XMath {}{}` — semantic function application (`<ltx:XMApp>`)
-- `\lx@symbol OptionalKeyVals:XMath {}` — math symbol with attributes (`<ltx:XMTok>`, copies font)
-- `\lx@wrap OptionalKeyVals:XMath {}` — semantic wrapping (`<ltx:XMWrap>`)
-- `\lx@superscript OptionalKeyVals:XMath {} InScriptStyle` — semantic superscript with scriptpos, reversion
-- `\lx@subscript OptionalKeyVals:XMath {} InScriptStyle` — semantic subscript with scriptpos, reversion
-- **Fixed compact_dual_test** — `meaning="power"` now flows through from `\lx@power` via keyvals
+### Implemented `\DeclareMathAccent` and `\DeclareMathSymbol`
+- `\DeclareMathAccent DefToken {}{} {Number}` — runtime primitive in latex_ch8_defining_commands.rs
+  - Looks up font encoding via `fontdeclaration@{class}`, calls `font_decode()`, then `def_math()` with OVERACCENT role
+  - Creates Parameters with "Digested" param type via `parse_parameters("Digested", &cs, true)`
+- `\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}` — runtime primitive
+  - Resolves encoding from fontdeclaration, calls `font_decode()`, maps `\mathord`→ID, `\mathop`→BIGOP, etc.
+  - Calls `def_math(cs, None, glyph, opts)` — no parameters (unlike accents)
 
-### Font element fix (get_node_font for text nodes)
-- `Document::get_node_font()` now uses `closest_element()` for all node types
-  - Was only checking `NodeType::ElementNode`, returning default font for text nodes
-  - This caused FLAG_EMPH to be invisible on text nodes inside `<emph>`, producing wrong element names
-- **Fixed emph_test** — `\textup` inside `\emph` now correctly produces `<text>` not `<emph>`
+### Fixed OML font map position 127
+- Changed from U+0311 (COMBINING INVERTED BREVE) to U+0361 (COMBINING DOUBLE INVERTED BREVE)
+- Perl stores two-char string (NBSP + U+0361); Rust uses single char U+0361
+- **Fixed omencodings_test** — was 1 diff, now passes
 
-### lastkern panic fix
-- `\lastkern` register getter now handles `Stored::Digested(RegisterValue::Dimension(...))` variant
-  - Was panicking on non-Stored::Dimension types in the width property
+### New test suites added
+- **22_fonts** expanded: 21→23 tests (was 2 tests). 3 pass, 11 fail (diffs), 9 ignored (crashes/packages)
+- **32_keyval** added: 7 tests. 1 pass (keyvalinline), 1 fail (keyvalstyle), 5 ignored (xkeyval infinite loop)
+- **33_keyval_options** added: 11 tests. All ignored (xkeyval infinite loop)
+- **50_structure** expanded: 18 new test files copied from Perl (all .todo — need packages/features)
 
-### Font test discovery
-- Font tests do NOT have infinite loops in the test harness — only the binary hangs
-- All 23 font tests complete in <0.5s via `latexml_test_single()`
-- 8 tests have 0 diffs but crash (need `\DeclareMathAccent`, `\DeclareMathSymbol`, `\ExplSyntaxOn`)
-- 1 test (omencodings) has 1 diff from known OML font map char limitation
+### xkeyval infinite loop root cause
+- xkeyval.sty has **no Rust binding** in the dispatch table
+- When loaded, falls back to raw TeX: `xkeyval.sty` → `\input xkeyval` → `xkeyval.tex` → `\input xkvutils` → loop
+- File guard doesn't catch re-requests under different name variants
+- Fix: port `xkeyval.sty.ltxml` to Rust (substantial work)
 
 ### Test status breakdown
-| Suite | Pass | Fail | Ignored |
-|-------|------|------|---------|
-| hello | 1 | 0 | 0 |
-| contrib | 1 | 0 | 0 |
-| unit_state | 9 | 0 | 0 |
-| unit_tokens | 1 | 0 | 0 |
-| tokenize | 14 | 0 | 0 |
-| expansion | 36 | 0 | 0 |
-| grouping | 2 | 0 | 0 |
-| digestion | 10 | 0 | 0 |
-| fonts | 2 | 0 | 0 |
-| encoding | 26 | 0 | 0 |
-| math | 3 | 11 | 0 |
-| structure | 24 | 0 | 0 |
-| namespace | 0 | 0 | 1 |
-| alignment | 0 | 2 | 0 |
-| theorem | 4 | 0 | 0 |
-| ams | 0 | 0 | 1 |
-| graphics | 0 | 1 | 0 |
-| unit_parse | 3 | 0 | 0 |
-| parse | 0 | 0 | 1 |
-| complex | 0 | 1 | 0 |
-| babel | 0 | 0 | 1 |
-
-### Pre-existing failures (not caused by recent changes)
-- **11 math tests**: math parser role/structure issues, missing delimiters/constructs
-- **2 alignment tests**: nested tabular layout (tabtab, halign)
-- **1 graphics test**: infinite recursion in `\usepackage{color}`
-- **1 complex test**: aastex631 class attribute/resource issues
+| Suite | Pass | Fail | Ignored | Notes |
+|-------|------|------|---------|-------|
+| hello | 1 | 0 | 0 | |
+| contrib | 1 | 0 | 0 | |
+| tokenize | 14 | 0 | 0 | |
+| expansion | 36 | 0 | 0 | |
+| grouping | 2 | 0 | 0 | |
+| digestion | 10 | 0 | 0 | |
+| fonts | 3 | 11 | 9 | +1 omencodings fix, 11 diffs, 9 crash/pkg |
+| encoding | 26 | 0 | 0 | |
+| keyval | 1 | 1 | 5 | NEW: xkeyval loops |
+| keyval_options | 0 | 0 | 11 | NEW: all need xkeyval |
+| math | 0 | 0 | 1 | |
+| structure | 24 | 0 | 0 | +18 tests as .todo |
+| namespace | 0 | 0 | 1 | |
+| alignment | 0 | 2 | 0 | |
+| theorem | 4 | 0 | 0 | |
+| ams | 0 | 0 | 1 | |
+| graphics | 0 | 1 | 0 | |
+| unit_parse | 3 | 0 | 0 | |
+| parse | 0 | 0 | 1 | |
+| complex | 0 | 1 | 0 | |
+| babel | 0 | 0 | 1 | |
 
 ### Remaining work — Next priorities
 
-#### Font tests — 8 blocked on missing infrastructure
-Need implementation to unblock 0-diff font tests:
-- `\DeclareMathAccent` (latex_ch8_defining_commands.rs — commented out)
-- `\DeclareMathSymbol` (latex_ch8_defining_commands.rs — commented out)
-- `\ExplSyntaxOn` / LaTeX3 expl3 basics (needed by cancels, mathcolor, wasysym)
-- `\newfont` primitive (needed by soul)
+#### Font tests — failing with diffs (11 tests)
+Most font test failures are from: table alignment issues, missing packages (ulem, bbold, pifont, esint, marvosym, mathbbol), or math parsing (XMDual/XMApp).
+- `accents`, `fonts`, `mixed`, `plainfonts` — article-only, table/math structure diffs
+- `textcomp` — has package, table structure diffs
+- `ulem`, `bbold`, `ding`, `esint`, `marvosym`, `mathbbol` — need package bindings
+
+#### Font tests — ignored (9 tests)
+- `acc` — crash in alignment.rs, needs `\mathgroup`
+- `mathaccents` — math parser crash
+- `stmaryrd` — needs stmaryrd package symbols via `\DeclareMathSymbol`
+- `mathcolor`, `wasysym`, `cancels`, `soul` — need `\ExplSyntaxOn` (LaTeX3 expl3)
+- `abxtest` — needs font allocation macros (`\hexnumber@`, `\mathxfam`)
+- `sizes` — many diffs after lastkern fix
+
+#### xkeyval package — blocks 16 tests
+Port `xkeyval.sty.ltxml` from Perl to Rust to unblock 5 keyval + 11 keyval_options tests.
+
+#### Structure tests — 18 new .todo files
+Copied from Perl, need various packages/features:
+acro, amsarticle, bibsect, crazybib, csquotes, enum, eqnums, figure_grids, figures, filelist, floatnames, glossary, IEEE, natbib, options, paralists, subcaption, svabstract
 
 #### compact_xmdual — stub needs full implementation
 - `document.rs:2323` — `compact_xmdual()` is a no-op stub
@@ -212,7 +218,8 @@ File `latex_ch7_math_common_delimiters.rs` is **empty** — all sized delimiters
 - ~~`\makeindex`~~ DONE
 - Picture environment (`\line{}`, `\vector{}`, `\circle`, `\oval`, `\@bezier`) — NOT FOUND
 - `\@xargdef`/`\@yargdef`/`\@reargdef` — NOT FOUND
-- `\DeclareMathAccent` — commented out in latex_ch8_defining_commands.rs
+- ~~`\DeclareMathAccent`~~ DONE (runtime DefPrimitive with font_decode + def_math)
+- ~~`\DeclareMathSymbol`~~ DONE (runtime DefPrimitive with symboltype_roles map)
 
 #### 7. TeX_Math (tex_math.rs) — verified after cross-check
 Most items are in other files. Genuinely missing:
