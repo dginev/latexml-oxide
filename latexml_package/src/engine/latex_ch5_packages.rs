@@ -63,13 +63,17 @@ LoadDefinitions!({
   DefConstructor!("\\LoadClass OptionalSemiverbatim Semiverbatim []",
     "<?latexml class='#2' ?#1(options='#1')?>",
     before_digest => { only_preamble("\\LoadClass") }
-    // afterDigest  => sub { my ($stomach, $whatsit) = @_;
-    //   my $options = $whatsit->getArg(1);
-    //   my $class   = ToString($whatsit->getArg(2));
-    //   $class =~ s/\s+//g;
-    //   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
-    //   LoadClass($class, options => $options);
-    //   return; }
+    after_digest => sub[whatsit] {
+      let options_arg: Option<&Digested> = whatsit.get_arg(1);
+      let class_arg: Option<&Digested> = whatsit.get_arg(2);
+      let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+      let options: Vec<String> = match options_arg {
+        Some(opts) => OPTS_REGEX.split(&opts.to_string())
+          .map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect(),
+        None => Vec::new(),
+      };
+      load_class(&class, options, Tokens!())?;
+    }
   );
 
   // Related internal macros for package definition

@@ -119,11 +119,29 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       .unwrap_or(Cow::Borrowed(""))
   };
 
+  // If loading a class, store class options (Perl Package.pm lines 2561-2564)
+  if as_type == "cls" && !options.options.is_empty() {
+    for opt in &options.options {
+      push_value("class_options", arena::pin(opt))?;
+    }
+    let class_opts_str = options.options.join(",");
+    def_macro(
+      T_CS!("\\@classoptionslist"),
+      None,
+      Tokens!(Explode!(class_opts_str)),
+      None,
+    )?;
+  }
+
   // Compute the exact name based on the type
   let filename = match &options.extension {
     None => name.to_string(),
     Some(ext) => s!("{}.{}", name, ext),
   };
+  // Store the document class filename for xkeyval's isInClassFile check
+  if as_type == "cls" && options.handleoptions {
+    assign_value("document_class_filename", filename.clone(), Some(Scope::Global));
+  }
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
     if let Some(Stored::String(prevoptions)) = lookup_value(&s!("{filename}_loaded_with_options")) {
@@ -574,7 +592,11 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
 /// Pass the sequence of @options to the package $name (if $ext is 'sty'),
 /// or class $name (if $ext is 'cls').
 fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
-  push_value(&s!("opt@{}.{}", name, ext), options)
+  let key = s!("opt@{}.{}", name, ext);
+  for opt in options {
+    push_value(&key, arena::pin(&opt))?;
+  }
+  Ok(())
 }
 
 pub fn process_options() -> Result<()> {
@@ -594,9 +616,6 @@ pub fn process_options() -> Result<()> {
   let opt_key = s!("opt@{}.{}", name, ext);
   let current_options = lookup_vecdeque(&opt_key).unwrap_or_default();
   let class_options = lookup_vecdeque("class_options").unwrap_or_default();
-  if !declared_options.is_empty() || !current_options.is_empty() {
-    eprintln!("DEBUG process_options: name={name:?} ext={ext:?} declared={declared_options:?} current={current_options:?}");
-  }
   // Execute options in declared order (unless \ProcessOptions*)
 
   // TODO: processing options, not yet supported
@@ -842,9 +861,10 @@ pub fn require_resource(mut resource: Resource) {
   // }
 }
 
-pub fn load_class(name: &str, _options: Vec<String>, after: Tokens) -> Result<()> {
+pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
   input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
+    options,
     after,
     notex: true,
     handleoptions: true,

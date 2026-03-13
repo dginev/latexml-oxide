@@ -3,6 +3,7 @@
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
+use crate::engine::tex_character;
 
 /// Perl's mergeLimits (TeX_Math.pool.ltxml): walks backward through the
 /// digest list, extracts any existing script level from the previous
@@ -308,18 +309,31 @@ LoadDefinitions!({
     state::after_assignment();
   });
 
+  // Perl: DefConstructor('\mathaccent Number Digested', ..., afterDigest => sub { ... })
   DefConstructor!("\\mathaccent Number Digested",
-  "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
-  sizer => "#1",    // Close enough?
+  "<ltx:XMApp><ltx:XMTok role='#accrole' name='#name' stretchy='#stretchy'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
+  sizer => "#2",    // Close enough?
   after_digest => sub[whatsit] {
     let n = whatsit.get_arg(1).unwrap().value_of();
     let props = decode_math_char(n as u16)?;
     if let Some(glyph) = props.glyph {
-      whatsit.set_property("glyph", glyph);
-
-      let mut glyph_buf: [u8; 4] = [0; 4];
-      let glyph_str: &str = glyph.encode_utf8(&mut glyph_buf);
-      whatsit.set_property("font", lookup_font().unwrap().specialize(glyph_str));
+      let glyph_string = glyph.to_string();
+      let acc_props = tex_character::unicode_accent(&glyph_string);
+      // Perl: $glyph = $acc_props{unwrapped} if $acc_props{unwrapped};
+      let display_glyph = if let Some(ap) = acc_props {
+        if !ap.unwrapped.is_empty() { ap.unwrapped.to_string() } else { glyph_string.clone() }
+      } else { glyph_string.clone() };
+      let accrole = acc_props.map(|ap| ap.role).unwrap_or("OVERACCENT");
+      let name = acc_props.map(|ap| ap.name);
+      // Perl: $$acc_props{stretchy} || 'false'
+      let stretchy = "false";
+      whatsit.set_property("glyph", arena::pin(&display_glyph));
+      whatsit.set_property("font", lookup_font().unwrap().specialize(&display_glyph));
+      whatsit.set_property("accrole", accrole);
+      if let Some(n) = name {
+        whatsit.set_property("name", n);
+      }
+      whatsit.set_property("stretchy", stretchy);
     }
   });
 

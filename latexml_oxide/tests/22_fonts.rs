@@ -91,7 +91,7 @@ fn acc_test() {
 }
 
 #[test]
-#[ignore] // crash in math parser — needs \DeclareMathAccent chain working
+#[ignore] // diffs — tabular border="r", \underbrace section structure
 fn mathaccents_test() {
   latexml_test_single("tests/fonts/mathaccents.tex", "mathaccents", DIR, None, None);
 }
@@ -115,7 +115,6 @@ fn wasysym_test() {
 }
 
 #[test]
-#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
 fn cancels_test() {
   latexml_test_single("tests/fonts/cancels.tex", "cancels", DIR, None, None);
 }

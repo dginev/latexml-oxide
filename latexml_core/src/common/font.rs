@@ -1040,6 +1040,30 @@ impl Font {
   }
 
   /// This method compares 2 fonts, returning the differences between them.
+  /// Returns the font attribute string (family/series/shape components that differ
+  /// from text defaults), joined by spaces. E.g., "italic" for a math font.
+  /// Used by cancel.sty to capture font state for XML attributes.
+  pub fn font_attribute_string(&self) -> String {
+    let mut parts = Vec::new();
+    if let Some(ref fam) = self.family {
+      let f = if fam == "math" { "serif" } else { fam.as_ref() };
+      if f != DEFFAMILY {
+        parts.push(f.to_string());
+      }
+    }
+    if let Some(ref ser) = self.series {
+      if ser.as_ref() != DEFSERIES {
+        parts.push(ser.to_string());
+      }
+    }
+    if let Some(ref shp) = self.shape {
+      if shp.as_ref() != DEFSHAPE {
+        parts.push(shp.to_string());
+      }
+    }
+    parts.join(" ")
+  }
+
   /// Noting that the font-related attributes in the schema distill the
   /// font properties into fewer attributes (font,fontsize,color,background,opacity),
   /// the return value encodes both the attribute changes that would be needed to effect

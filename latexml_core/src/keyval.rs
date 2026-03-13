@@ -360,8 +360,8 @@ fn define_choice(
             None,
           )?;
         }
-        index += 1;
       }
+      index += 1;
     }
     // find a name for the original macro to store in
     let mut tokens = Vec::new();
@@ -411,15 +411,16 @@ fn define_boolean(
   let macroname_true = T_CS!(s!("\\{macroname}true"));
   let macroname_false = T_CS!(s!("\\{macroname}false"));
   let closure: ExpansionClosure = Rc::new(move |mut values: Vec<ArgWrap>| {
-    // set the value to true (if needed)
+    // set the conditional to true/false
     let value = values.remove(0).owned_tokens().unwrap_or_default();
     let value_str = value.to_string().to_lowercase();
-    if value_str == "true" {
-      macroname_true
-    } else {
-      macroname_false
-    };
     let mut tokens = vec![];
+    // Toggle the conditional by invoking \XXXtrue or \XXXfalse
+    if value_str == "true" {
+      tokens.push(macroname_true);
+    } else {
+      tokens.push(macroname_false);
+    }
     // Store and invoke the original macro if needed
     if let Some(ref code) = code_opt {
       def_macro(orig_cs, plain_params.clone(), code.clone(), None)?;

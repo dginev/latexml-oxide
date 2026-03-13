@@ -812,8 +812,7 @@ fn textrec(
   } else if tag == arena::pin_static("ltx:XMArg") {
     let args = element_nodes(&node);
     if args.is_empty() {
-      // Error!("expected","arguments" ...);
-      todo!();
+      return String::new();
     }
     args
       .iter()
