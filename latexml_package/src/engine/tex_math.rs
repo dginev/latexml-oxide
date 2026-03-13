@@ -416,9 +416,9 @@ LoadDefinitions!({
   // [The \@hidden@bgroup/egroup keep from putting a {} into the UnTeX]
   // HOWEVER, an additional complication is that it is a common mistake to omit the balancing
   // \right! Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
-  DefMacro!("\\left XToken", r"\@left #1\@hidden@bgroup");
-  // Like \@hidden@egroup, but softer about missing \left
-  DefConstructor!("\\right@hidden@egroup", "",
+  DefMacro!("\\left XToken", r"\@left #1\lx@hidden@bgroup");
+  // \lx@hidden@egroup@right: like \lx@hidden@egroup, but softer about missing \left
+  DefConstructor!("\\lx@hidden@egroup@right", "",
     after_digest => {
       if is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
         || lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
@@ -430,10 +430,10 @@ LoadDefinitions!({
     reversion => None);
 
   // \right is a constructor (non-expandable), so that LaTeX3 kernel can use it as a separator
-  // in \numexpr contexts. It unreads \right@hidden@egroup and \@right into the input stream.
+  // in \numexpr contexts. It unreads \lx@hidden@egroup@right and \lx@right into the input stream.
   DefConstructor!("\\right", "",
     before_digest => {
-      gullet::unread(Tokens::new(vec![T_CS!("\\right@hidden@egroup"), T_CS!("\\@right")]));
+      gullet::unread(Tokens::new(vec![T_CS!("\\lx@hidden@egroup@right"), T_CS!("\\lx@right")]));
     },
     reversion => None);
 

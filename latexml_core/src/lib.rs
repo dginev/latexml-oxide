@@ -259,20 +259,40 @@ pub trait BoxOps: Object {
   }
   /// sets a "height" property value, for sizing
   fn set_height<T: Into<Stored>>(&mut self, width: T) { self.set_property("height", width); }
-  /// gets the "height" property value, if any
+  /// gets the "height" property value, if any.
+  /// Checks "height", then "cached_height", then computes from font if needed.
   fn get_height(&self) -> Option<RegisterValue> {
     match self.get_property("height") {
       Some(val) => (&*val).into(),
-      None => Some(RegisterValue::Dimension(Dimension::default())),
+      None => match self.get_property("cached_height") {
+        Some(val) => (&*val).into(),
+        None => {
+          if let Ok((_, h, _)) = self.compute_size(HashMap::default()) {
+            Some(RegisterValue::Dimension(h))
+          } else {
+            Some(RegisterValue::Dimension(Dimension::default()))
+          }
+        },
+      },
     }
   }
   /// sets a "depth" property value, for sizing
   fn set_depth<T: Into<Stored>>(&mut self, width: T) { self.set_property("depth", width); }
-  /// gets the "depth" property value, if any
+  /// gets the "depth" property value, if any.
+  /// Checks "depth", then "cached_depth", then computes from font if needed.
   fn get_depth(&self) -> Option<RegisterValue> {
     match self.get_property("depth") {
       Some(val) => (&*val).into(),
-      None => Some(RegisterValue::Dimension(Dimension::default())),
+      None => match self.get_property("cached_depth") {
+        Some(val) => (&*val).into(),
+        None => {
+          if let Ok((_, _, d)) = self.compute_size(HashMap::default()) {
+            Some(RegisterValue::Dimension(d))
+          } else {
+            Some(RegisterValue::Dimension(Dimension::default()))
+          }
+        },
+      },
     }
   }
   /// gets the box size as a triple of (width, height, depth)

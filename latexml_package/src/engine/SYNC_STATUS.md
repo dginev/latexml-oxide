@@ -23,7 +23,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, math ligatures. `\mathchoice` ported. Done: `\lx@math@overline/underline/overbrace/underbrace`, `\lx@text@overline/underline`, `\lx@math@over/underleft/rightarrow`, `operator_stretchy` on all. |
+| tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, math ligatures. `\mathchoice` ported. CS names synced: `\lx@hidden@egroup@right`, `\lx@right` (was `\right@hidden@egroup`, `\@right`). `\left` now unreads `\lx@hidden@bgroup` (was `\@hidden@bgroup`). |
 | tex_box.rs | GAPS | Missing: `\leaders/cleaders/xleaders`, SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
 | tex_file_io.rs | MINOR | `\lx@special@graphics` constructor + `Tag('ltx:graphics')` commented out |
 | tex_fonts.rs | GAPS | Missing: `getFontDimen()`, 7 ligature defs. `\fontname` always returns placeholder. `\fontdimen` only handles 3 hardcoded params |
@@ -210,9 +210,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-12)
+## Test Suite Status (2026-03-13)
 
-**Current totals: 103 pass, 0 fail, 9 ignored test functions**
+**Current totals: 137 pass, 0 fail, 44 ignored test functions**
 
 | Suite | Pass/Total | Notes |
 |-------|-----------|-------|
@@ -221,22 +221,22 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 00_contrib | 1/1 | All pass |
 | 01_unit_tokens | 1/1 | |
 | 01_unit_state | 9/9 | |
-| 10_expansion | 36/36 | All pass (whichcache/whichinput now pass) |
+| 10_expansion | 36/36 | All pass |
 | 12_grouping | 2/2 | All pass |
 | 20_digestion | 10/10 | All pass |
-| 22_fonts | 0/0 | **Disabled** (commented out) — 22 .tex/.xml pairs ready |
-| 30_encoding | 0/26 | **Ignored** — 26 pairs ready, needs encoding `.def` loading |
-| 40_math | 0/14 | **Ignored** — 14 pairs ready, math parser divergence |
-| 50_structure | 21/42 | 21 pass; 21 disabled (.todo) — regressed from pathname cwd change |
+| 22_fonts | 5/23 | 5 pass; 18 ignored (table padding, math parser, missing packages) |
+| 32_keyval | 1/7 | 1 pass; 6 ignored (xkeyval loop, keyval style) |
+| 33_keyval_options | 0/11 | **Ignored** — xkeyval loop |
+| 50_structure | 26/44 | 26 pass; 18 disabled (.todo) |
 | 52_namespace | 0/5 | **Ignored** — needs `.latexml` document-level bindings |
-| 53_alignment | 0/22 | **Ignored** — needs alignment system, longtable, listings |
-| 55_theorem | 4/5 | 4 pass; ntheorem ignored (897 math parser diffs) |
-| 56_ams | 0/7 | **Ignored** — needs amsmath environments, CD diagrams |
-| 65_graphics | 0/8 | **Ignored** — needs color/graphicx/picture, keyval |
+| 53_alignment | 0/2 | **Ignored** — alignment engine issues |
+| 55_theorem | 4/5 | 4 pass; ntheorem ignored |
+| 65_graphics | 0/1 | **Ignored** — color.sty recursion |
 | 70_parse | 0/28 | **Ignored** — math parser regression tests |
 | 700_unit_parse | 3/3 | |
-| 80_complex | 1/1 | xii passes; 11 disabled (.todo), 4 Perl-only (no .tex/.xml yet) |
+| 80_complex | 0/1 | **Ignored** — complex test failures |
 | 81_babel | 0/6 | **Ignored** — needs babel language `.ldf` files |
+| 24_encoding | 24/24 | All pass |
 
 ### Perl-only tests (not yet copied to Rust)
 

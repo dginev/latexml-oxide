@@ -1,6 +1,20 @@
 use crate::prelude::*;
 use latexml_core::common::glue::FillCode;
 
+/// Resolve a FontDef token to an Rc<Font>: look up fontinfo via definition CS name, fall back to
+/// current font. Perl: $font = $STATE->lookupValue('font')->merge(%$fontinfo);
+fn fontchar_lookup_font(font_tok: &Token) -> Option<Rc<Font>> {
+  // Resolve through definition to get actual CS name (e.g. \font -> \tenrm)
+  let key = if let Ok(Some(defn)) = lookup_definition(font_tok) {
+    s!("fontinfo_{}", defn.get_cs_name())
+  } else {
+    s!("fontinfo_{}", font_tok)
+  };
+  with_value(&key, |v| {
+    if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
+  }).or_else(lookup_font)
+}
+
 LoadDefinitions!({
   // See http://tex.loria.fr/moteurs/etex_ref.html
   // Or better yet, see the full manual
@@ -105,10 +119,7 @@ LoadDefinitions!({
     getter => sub[args] {
       let font_tok = args.remove(0).expected_token();
       let code = args.remove(0).expect_number().value_of();
-      let key = s!("fontinfo_{}", font_tok.to_string());
-      let font_rc = with_value(&key, |v| {
-        if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
-      }).or_else(lookup_font);
+      let font_rc = fontchar_lookup_font(&font_tok);
       if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
           let (_, h, _) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
@@ -123,10 +134,7 @@ LoadDefinitions!({
     getter => sub[args] {
       let font_tok = args.remove(0).expected_token();
       let code = args.remove(0).expect_number().value_of();
-      let key = s!("fontinfo_{}", font_tok.to_string());
-      let font_rc = with_value(&key, |v| {
-        if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
-      }).or_else(lookup_font);
+      let font_rc = fontchar_lookup_font(&font_tok);
       if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
           let (w, _, _) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
@@ -141,10 +149,7 @@ LoadDefinitions!({
     getter => sub[args] {
       let font_tok = args.remove(0).expected_token();
       let code = args.remove(0).expect_number().value_of();
-      let key = s!("fontinfo_{}", font_tok.to_string());
-      let font_rc = with_value(&key, |v| {
-        if let Some(Stored::Font(f)) = v { Some(Rc::clone(f)) } else { None }
-      }).or_else(lookup_font);
+      let font_rc = fontchar_lookup_font(&font_tok);
       if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
           let (_, _, d) = font.compute_string_size(&ch.to_string(), SymHashMap::default());

@@ -24,10 +24,16 @@ LoadDefinitions!({
   // Hidden bgroup/egroup: scoping without visible { } in reversion
   DefConstructor!("\\lx@hidden@bgroup", "#body",
     before_digest => { bgroup(); },
-    capture_body => true
+    capture_body => true,
+    reversion => sub[whatsit, _args] {
+      if let Some(body) = whatsit.get_body()? {
+        body.revert()
+      } else { Ok(Tokens!()) }
+    }
   );
   DefConstructor!("\\lx@hidden@egroup", "",
-    after_digest => sub[_whatsit] { egroup()?; }
+    after_digest => sub[_whatsit] { egroup()?; },
+    reversion => ""
   );
 
   //======================================================================

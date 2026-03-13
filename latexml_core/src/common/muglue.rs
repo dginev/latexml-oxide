@@ -47,6 +47,16 @@ impl NumericOps for MuGlue {
       mfill,
     }
   }
+  // Negate all components (skip, plus, minus)
+  fn negate(self) -> Self {
+    MuGlue {
+      skip:  -self.skip,
+      plus:  self.plus.map(|p| -p),
+      pfill: self.pfill,
+      minus: self.minus.map(|m| -m),
+      mfill: self.mfill,
+    }
+  }
 }
 impl Object for MuGlue {
   fn revert(&self) -> crate::Result<Tokens> {

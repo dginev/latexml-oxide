@@ -197,6 +197,16 @@ impl NumericOps for Glue {
       })
     }
   }
+  // Negate all components (skip, plus, minus)
+  fn negate(self) -> Self {
+    Glue {
+      skip:  -self.skip,
+      plus:  self.plus.map(|p| -p),
+      pfill: self.pfill,
+      minus: self.minus.map(|m| -m),
+      mfill: self.mfill,
+    }
+  }
   fn smaller<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
     let other_val = other.value_of();

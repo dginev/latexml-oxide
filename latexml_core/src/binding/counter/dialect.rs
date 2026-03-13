@@ -62,15 +62,41 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   let clctr = s!("\\cl@{ctr}");
   let cunctr = s!("\\c@{unctr}");
   let clunctr = s!("\\cl@{unctr}");
-  def_register(
-    T_CS!(&cctr),
-    None,
-    Number::new(0),
-    Some(RegisterOptions {
-      allocate: Some(String::from("\\count")),
-      ..RegisterOptions::default()
-    }),
-  )?;
+  // Perl Package.pm L660-672: Check if counter already defined. Skip register if already a Register.
+  // Warn if previously defined as something other than \relax.
+  let cs_cctr = T_CS!(&cctr);
+  let prev_defn = lookup_definition(&cs_cctr)?;
+  if let Some(ref defn) = prev_defn {
+    if defn.is_register() {
+      // Counter already exists as a register — fine, just continue (may change within/nesting)
+    } else {
+      // Warn unless the previous definition was \relax
+      let relax_meaning = state::lookup_meaning(&T_RELAX!());
+      let prev_meaning = state::lookup_meaning(&cs_cctr);
+      if prev_meaning != relax_meaning {
+        Warn!("unexpected", &cctr, s!("Counter {} was already defined; redefining", cctr));
+      }
+      def_register(
+        cs_cctr,
+        None,
+        Number::new(0),
+        Some(RegisterOptions {
+          allocate: Some(String::from("\\count")),
+          ..RegisterOptions::default()
+        }),
+      )?;
+    }
+  } else {
+    def_register(
+      cs_cctr,
+      None,
+      Number::new(0),
+      Some(RegisterOptions {
+        allocate: Some(String::from("\\count")),
+        ..RegisterOptions::default()
+      }),
+    )?;
+  }
   after_assignment();
   if !has_value(&clctr) {
     state::assign_value(&clctr, Tokens!(), Some(Scope::Global));

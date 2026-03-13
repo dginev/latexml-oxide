@@ -33,8 +33,8 @@ LoadDefinitions!({
       Some(t) => t,
       None => {
         Error!("expected", "ExpandedIfToken",
-          "conditional expected a token argument, came back empty. Falling back to \\@empty");
-        T_CS!("\\@empty")
+          "conditional expected a token argument, came back empty. Falling back to \\lx@empty");
+        T_CS!("\\lx@empty")
       }}
   });
 

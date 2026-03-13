@@ -233,7 +233,7 @@ LoadDefinitions!({
         // the DigestedData::Postponed variant isn't ideal?
         // should we be draining it? Or is there a better conceptual organization?
         stomach::digest(
-          Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?
+          Tokens!(T_CS!("\\lx@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?
       } else {
         title.clone()
       };
@@ -243,8 +243,8 @@ LoadDefinitions!({
         if let Postponed(toctokens) = toctitle.data() {
           if !toctokens.is_empty() {
             let toctitle_digested = stomach::digest(
-              Tokens!(T_CS!("\\@hidden@bgroup"),
-                toctokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?;
+              Tokens!(T_CS!("\\lx@hidden@bgroup"),
+                toctokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?;
             props.insert("toctitle", toctitle_digested.into());
           }
         }

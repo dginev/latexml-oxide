@@ -89,7 +89,7 @@ LoadDefinitions!({
       let body = gullet::read_until(&delim)?;
       end_semiverbatim()?;
 
-      let mut result = vec![T_CS!("\\@hidden@bgroup")];
+      let mut result = vec![T_CS!("\\lx@hidden@bgroup")];
       if starred {
         result.push(T_CS!("\\lx@use@visiblespace"));
       }
@@ -98,7 +98,7 @@ LoadDefinitions!({
         Tokens!(init_token),
         body
       ]).unlist());
-      result.push(T_CS!("\\@hidden@egroup"));
+      result.push(T_CS!("\\lx@hidden@egroup"));
       Ok(Tokens::new(result))
     } else { // typically something read too far got \verb and the content is somewhere else..?
       Error!("expected", "delimiter",
