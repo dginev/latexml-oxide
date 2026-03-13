@@ -32,9 +32,11 @@ Three key documents track porting progress and known issues:
 - **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — Master tracking document: file-by-file Perl→Rust sync status, test suite counts, Rust error fixes, infrastructure gaps, package bindings status, and the 9-phase roadmap to full parity. **Start here** when resuming work.
 - **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_package/src/engine/*.rs`). Shows loading hierarchy and LaTeX chapter structure.
 - **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Documents upstream Perl LaTeXML issues: `packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders` heuristic. When investigating test failures, check here first to see if the issue is inherited from Perl.
+- **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals, discovered through specialized debugging. Covers: compile-time vs runtime token packing, Font::merge/specialize interaction, catcode CS vs ESCAPE, RegisterType PartialEq trap, at_letter restore. Check here to avoid re-introducing known bugs.
 
 **Rules for these docs:**
 - `KNOWN_PERL_ERRORS.md` is for Perl-origin issues only. Include minimal trigger examples.
+- `WISDOM.md` is for tactical system insights — record when specialized analysis leads to a correct patch.
 - Rust-specific error fixes go in `SYNC_STATUS.md` under "Rust Error Fixes", referencing the KNOWN_PERL_ERRORS entry when applicable.
 - When an upstream Perl error is identified, record it. Fix in Rust if simple; otherwise keep as-is.
 
