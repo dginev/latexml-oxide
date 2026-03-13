@@ -431,16 +431,33 @@ LoadDefinitions!({
   //       Number($alignment->currentColumnNumber); }
   //     else { Number(0); } });
 
-  // DefMacro('\@multicolumn {Number}  AlignmentTemplate {}', sub {
-  //     my ($gullet, $span, $template, $tokens) = @_;
-  //     my $column = $template->column(1);
-  //     $span = $span->valueOf;
-  //     # First part, like \multispan
-  //     (T_CS('\omit'), (map { (T_CS('\span'), T_CS('\omit')) } 1 .. $span - 1),
-  //       # Next part, just put the template in-line, since it's only used once.
-  //       ($column ? beforeCellUnlist($$column{before}) : ()),
-  //       $tokens->unlist,
-  //       ($column ? afterCellUnlist($$column{after}) : ())); });
+  // Perl: DefMacro('\lx@alignment@multicolumn {Number} AlignmentTemplate {}', sub { ... })
+  // Expands to \omit + (span-1) × (\span \omit) + before_cell_tokens + body + after_cell_tokens
+  DefMacro!("\\lx@alignment@multicolumn {Number} AlignmentTemplate {}", sub[(span, template, body)] {
+    let n = span.value_of();
+    let column = template.get_columns().first();
+    // First part, like \multispan
+    let mut tks = vec![T_CS!("\\omit")];
+    for _ in 1..n {
+      tks.push(T_CS!("\\span"));
+      tks.push(T_CS!("\\omit"));
+    }
+    // Next part: put the template in-line, since it's only used once.
+    // beforeCellUnlist: reorder $ and \hfil (move \hfil before $)
+    if let Some(col) = column {
+      if let Some(before) = &col.before {
+        tks.extend(before_cell_unlist(before.unlist_ref().to_vec()));
+      }
+    }
+    tks.extend(body.unlist_ref().iter().copied());
+    // afterCellUnlist: reorder $ and \hfil (move \hfil after $)
+    if let Some(col) = column {
+      if let Some(after) = &col.after {
+        tks.extend(after_cell_unlist(after.unlist_ref().to_vec()));
+      }
+    }
+    Ok(Tokens::new(tks))
+  });
 
   DefConditional!("\\if@in@lx@alignment", { lookup_alignment().is_some() });
 

@@ -86,7 +86,8 @@ LoadDefinitions!({
   DefPrimitive!("\\@end@tabular@", {
     egroup()?;
   });
-  Let!("\\multicolumn", "\\@multicolumn");
+  // Perl: Let('\multicolumn', '\lx@alignment@multicolumn');
+  Let!("\\multicolumn", "\\lx@alignment@multicolumn");
 
   // A weird bit that sometimes gets invoked by Cargo Cult programmers...
   // to \noalign in the defn of \hline! Bizarre! (see latex.ltx)

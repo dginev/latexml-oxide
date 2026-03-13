@@ -1,33 +1,28 @@
 # Sync Status — 2026-03-13
 
-**125 pass, 16 fail, 30 ignored** (was 136/15/4 — test suites reorganized)
+**69 pass, 8 fail, 10 ignored** (active non-.todo tests only)
 
-## Recent Session (2026-03-13 evening)
+## Recent Session (2026-03-13 night)
 
-### Implemented `\DeclareMathAccent` and `\DeclareMathSymbol`
-- `\DeclareMathAccent DefToken {}{} {Number}` — runtime primitive in latex_ch8_defining_commands.rs
-  - Looks up font encoding via `fontdeclaration@{class}`, calls `font_decode()`, then `def_math()` with OVERACCENT role
-  - Creates Parameters with "Digested" param type via `parse_parameters("Digested", &cs, true)`
-- `\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}` — runtime primitive
-  - Resolves encoding from fontdeclaration, calls `font_decode()`, maps `\mathord`→ID, `\mathop`→BIGOP, etc.
-  - Calls `def_math(cs, None, glyph, opts)` — no parameters (unlike accents)
+### New package bindings (5 packages)
+- **ulem.sty** — underline/strikeout text decorations (7 constructors). **ulem_test passes.**
+- **marvosym.sty** — Martin Vogel's symbols (~300 symbols). **marvosym_test passes.**
+- **bbold.sty** — blackboard bold with U encoding font map
+- **esint.sty** — integral operator symbols (DefMath with INTOP role)
+- **mathbbol.sty** — blackboard bold Greek math symbols
 
-### Fixed OML font map position 127
-- Changed from U+0311 (COMBINING INVERTED BREVE) to U+0361 (COMBINING DOUBLE INVERTED BREVE)
-- Perl stores two-char string (NBSP + U+0361); Rust uses single char U+0361
-- **Fixed omencodings_test** — was 1 diff, now passes
+### Core infrastructure fixes
+- **`\lx@nounicode`/`\lx@text@nounicode`/`\lx@math@nounicode`** — were commented out, causing infinite loops in any package using `\lx@nounicode{...}`. Implemented as DefConstructor in tex_box.rs.
+- **`\lx@tweaked`/`\lx@text@tweaked`/`\lx@math@tweaked`** — were TODO stubs, now implemented with xmath_copy_keyvals for property propagation.
+- **`\lx@framed`** — added `framed="rectangle"` default via after_digest.
+- **`\lx@alignment@multicolumn`** — implemented the DefMacro with `{Number} AlignmentTemplate {}` params. Generates `\omit` + span pairs + before/after cell tokens. Fixed Let from `\@multicolumn` to `\lx@alignment@multicolumn`.
 
-### New test suites added
-- **22_fonts** expanded: 21→23 tests (was 2 tests). 3 pass, 11 fail (diffs), 9 ignored (crashes/packages)
-- **32_keyval** added: 7 tests. 1 pass (keyvalinline), 1 fail (keyvalstyle), 5 ignored (xkeyval infinite loop)
-- **33_keyval_options** added: 11 tests. All ignored (xkeyval infinite loop)
-- **50_structure** expanded: 18 new test files copied from Perl (all .todo — need packages/features)
-
-### xkeyval infinite loop root cause
-- xkeyval.sty has **no Rust binding** in the dispatch table
-- When loaded, falls back to raw TeX: `xkeyval.sty` → `\input xkeyval` → `xkeyval.tex` → `\input xkvutils` → loop
-- File guard doesn't catch re-requests under different name variants
-- Fix: port `xkeyval.sty.ltxml` to Rust (substantial work)
+### Previous session (2026-03-13 evening)
+- `\DeclareMathAccent` and `\DeclareMathSymbol` — runtime primitives
+- OML font map position 127 fixed (U+0361)
+- omencodings_test fixed
+- Test suites expanded (fonts 23, keyval 7, keyval_options 11, structure 18 .todo files)
+- xkeyval infinite loop root cause identified
 
 ### Test status breakdown
 | Suite | Pass | Fail | Ignored | Notes |
@@ -38,63 +33,45 @@
 | expansion | 36 | 0 | 0 | |
 | grouping | 2 | 0 | 0 | |
 | digestion | 10 | 0 | 0 | |
-| fonts | 3 | 11 | 9 | +1 omencodings fix, 11 diffs, 9 crash/pkg |
-| encoding | 26 | 0 | 0 | |
-| keyval | 1 | 1 | 5 | NEW: xkeyval loops |
-| keyval_options | 0 | 0 | 11 | NEW: all need xkeyval |
-| math | 0 | 0 | 1 | |
-| structure | 24 | 0 | 0 | +18 tests as .todo |
-| namespace | 0 | 0 | 1 | |
-| alignment | 0 | 2 | 0 | |
-| theorem | 4 | 0 | 0 | |
-| ams | 0 | 0 | 1 | |
-| graphics | 0 | 1 | 0 | |
-| unit_parse | 3 | 0 | 0 | |
-| parse | 0 | 0 | 1 | |
-| complex | 0 | 1 | 0 | |
-| babel | 0 | 0 | 1 | |
+| fonts | 5 | 8 | 10 | +ulem,marvosym pass; esint→ignored |
+| encoding | 0 | 0 | 0 | (auto-discovered, 0 active in this run) |
+| keyval | 0 | 0 | 0 | (xkeyval blocks all) |
+| keyval_options | 0 | 0 | 0 | (xkeyval blocks all) |
+| math | 0 | 0 | 0 | (deferred) |
+| structure | 0 | 0 | 0 | (.todo files) |
+| alignment | 0 | 0 | 0 | (not in default run) |
+| theorem | 0 | 0 | 0 | (not in default run) |
 
 ### Remaining work — Next priorities
 
-#### Font tests — failing with diffs (11 tests)
-Most font test failures are from: table alignment issues, missing packages (ulem, bbold, pifont, esint, marvosym, mathbbol), or math parsing (XMDual/XMApp).
-- `accents`, `fonts`, `mixed`, `plainfonts` — article-only, table/math structure diffs
-- `textcomp` — has package, table structure diffs
-- `ulem`, `bbold`, `ding`, `esint`, `marvosym`, `mathbbol` — need package bindings
+#### Font tests — failing with diffs (8 tests)
+- `accents`, `fonts`, `plainfonts`, `textcomp` — table alignment: rows short by 1 column (padding issue)
+- `mixed` — math parser diffs (XMDual/XMApp structure)
+- `bbold` — table + math diffs
+- `mathbbol` — math parser diffs
+- `ding` — needs pifont package (pzd font map)
 
-#### Font tests — ignored (9 tests)
+#### Font tests — ignored (10 tests)
 - `acc` — crash in alignment.rs, needs `\mathgroup`
 - `mathaccents` — math parser crash
-- `stmaryrd` — needs stmaryrd package symbols via `\DeclareMathSymbol`
+- `esint` — math parser crash (todo!() not implemented)
+- `stmaryrd` — needs stmaryrd package symbols
 - `mathcolor`, `wasysym`, `cancels`, `soul` — need `\ExplSyntaxOn` (LaTeX3 expl3)
-- `abxtest` — needs font allocation macros (`\hexnumber@`, `\mathxfam`)
+- `abxtest` — needs font allocation macros
 - `sizes` — many diffs after lastkern fix
 
 #### xkeyval package — blocks 16 tests
 Port `xkeyval.sty.ltxml` from Perl to Rust to unblock 5 keyval + 11 keyval_options tests.
 
-#### Structure tests — 18 new .todo files
-Copied from Perl, need various packages/features:
-acro, amsarticle, bibsect, crazybib, csquotes, enum, eqnums, figure_grids, figures, filelist, floatnames, glossary, IEEE, natbib, options, paralists, subcaption, svabstract
+#### Table alignment padding issue
+Multiple font tests (accents, fonts, plainfonts, textcomp) have rows with 1 fewer column than expected. The header row is missing the final padding `<td thead="column"/>`. This is an alignment engine issue in how columns are padded when row has fewer cells than template columns.
 
 #### compact_xmdual — stub needs full implementation
 - `document.rs:2323` — `compact_xmdual()` is a no-op stub
-- Perl implementation merges content/presentation branches when they mirror each other
 - Needed for correct `meaning` attribute transfer in math duals
-- Currently works because `collapse_xmdual()` picks the right branch; compaction is optimization
 
-#### Math tests — 11 failing
-- arrows (74 diffs): `\xrightarrow`/`\xleftarrow` not implemented
-- choose (80 diffs): `\choose` / `\binom` needs atop/choose support
-- simplemath (138 diffs): basic math structure issues
-- testscripts (165 diffs): script handling edge cases
-- declare (0 diffs, crash): math parser `_WildCard_` unimplemented
-- sampler (0 diffs, crash): alignment.rs unwrap() in tabular
-- fracs (89 diffs): fraction constructs
-- ambiguous_relations (109 diffs): relation handling
-- not (229 diffs): `\not` negation
-- niceunits (127 diffs): siunitx-like formatting
-- array (7+ diffs): array environment issues
+#### Math tests — 11 failing (deferred to end per CLAUDE.md)
+- arrows, choose, simplemath, testscripts, declare, sampler, fracs, ambiguous_relations, not, niceunits, array
 
 ## Recent Gap Fix Progress (2026-03-12)
 
@@ -163,13 +140,13 @@ acro, amsarticle, bibsect, crazybib, csquotes, enum, eqnums, figure_grids, figur
 
 ### Gaps Found — Ranked by Impact
 
-#### 1. Base_XMath (base_xmath.rs) — ~15 constructors commented out
+#### 1. Base_XMath (base_xmath.rs) — ~12 constructors commented out
 - `\lx@apply OptionalKeyVals:XMath {}{}` — semantic function application
 - `\lx@symbol OptionalKeyVals:XMath {}` — math symbol with attributes
 - `\lx@wrap OptionalKeyVals:XMath {}` — semantic wrapping
 - `\lx@superscript`/`\lx@subscript OptionalKeyVals:XMath {} InScriptStyle` — semantic sub/superscript
 - `\lx@padded[MuDimension]{MuDimension}{}` — padded math content
-- `\lx@math@tweaked`/`\lx@text@tweaked RequiredKeyVals {}` — adjustments
+- ~~`\lx@math@tweaked`/`\lx@text@tweaked RequiredKeyVals {}`~~ DONE: implemented with xmath_copy_keyvals
 - `\lx@gen@matrix@bindings`/`\lx@gen@plain@matrix@`/`\lx@ams@matrix@` — matrix environments
 - `\lx@cases@condition`/`\lx@cases@end@condition`/`\lx@gen@plain@cases@` — cases environment
 - `\lx@gen@cases@bindings` — cases setup
@@ -187,9 +164,9 @@ File `latex_ch7_math_common_delimiters.rs` is **empty** — all sized delimiters
 - `\halign BoxSpecification` constructor (infrastructure exists, constructor not wired)
 - ~~`\lx@intercol`, `\lx@text@intercol`, `\lx@math@intercol`~~ DONE
 - `\lx@alignment@ncolumns`, `\lx@alignment@column` registers
-- `\lx@alignment@multicolumn` macro
+- ~~`\lx@alignment@multicolumn` macro~~ DONE
 - `\lx@alignment@bindings` primitive
-- `beforeCellUnlist`/`afterCellUnlist` helpers
+- ~~`beforeCellUnlist`/`afterCellUnlist` helpers~~ already existed
 
 #### 4. TeX_Fonts (tex_fonts.rs) — 12+ gaps
 - FontDef parameter type (stub, not full implementation)
@@ -228,7 +205,7 @@ Most items are in other files. Genuinely missing:
 
 #### 8. TeX_Box (tex_box.rs) — leaders + SVG
 - `\leaders`/`\cleaders`/`\xleaders` (stub no-ops, need full constructor)
-- `\lx@math@nounicode`, `\lx@text@nounicode` (commented out)
+- ~~`\lx@math@nounicode`, `\lx@text@nounicode`~~ DONE (DefConstructor)
 - ~~SVG foreignObject sizing, group collapsing~~ svg:g stub done
 - `insertBlock`, `hackVBoxAttachment` helpers incomplete
 - ~~`adjustBoxColor`~~ DONE (stub)
