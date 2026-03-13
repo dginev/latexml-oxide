@@ -41,12 +41,44 @@ LoadDefinitions!({
   );
 
   // The graphicx-style \includegraphics with keyval options.
-  // In Perl this has complex `properties` and `afterConstruct` subroutine callbacks
-  // for image candidate resolution and alt-text handling — stubbed here.
-  // The `sizer` callback (\&image_graphicx_sizer) is also a Perl sub ref; omitted.
+  // Perl: properties callback computes path, candidates, options from keyval args.
   DefConstructor!(
     "\\@includegraphicx OptionalMatch:* OptionalKeyVals:Gin Semiverbatim",
-    "<ltx:graphics graphic='#3' options='#options'/>",
-    enter_horizontal => true
+    "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      // arg 0: starred, arg 1: keyvals, arg 2: graphic path
+      let path = args[2].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
+      let path = path.trim().to_string();
+      // Candidates: just the path itself (filesystem search deferred to post-processing)
+      let candidates = path.clone();
+      // Build options string from keyval pairs, matching Perl's graphicX_options
+      let starred = args[0].is_some();
+      let mut options_vec: Vec<String> = Vec::new();
+      if starred {
+        options_vec.push(s!("clip=true"));
+      }
+      let mut saw_w = false;
+      let mut saw_h = false;
+      let mut has_keepaspectratio = false;
+      if let Some(ref kv_digested) = args[1] {
+        if let DigestedData::KeyVals(ref kv) = kv_digested.data() {
+          for (key, value) in kv.get_pairs() {
+            if key.ends_with("width") { saw_w = true; }
+            if key.ends_with("height") { saw_h = true; }
+            if key == "keepaspectratio" { has_keepaspectratio = true; }
+            let val_str = value.to_string();
+            let val_str = val_str.replace(',', "\\,");
+            options_vec.push(format!("{key}={val_str}"));
+          }
+        }
+      }
+      // Auto-add keepaspectratio if only width or height (not both) specified
+      if (saw_w ^ saw_h) && !has_keepaspectratio {
+        options_vec.push(s!("keepaspectratio=true"));
+      }
+      let options = options_vec.join(",");
+      Ok(stored_map!("path" => path, "candidates" => candidates, "options" => options))
+    }
   );
 });

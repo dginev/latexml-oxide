@@ -485,7 +485,7 @@
   <para xml:id="p6">
     <p>Fractions in exponents in nested fractions</p>
     <equation xml:id="S0.Ex18">
-      <Math mode="display" tex="\frac{\frac{a^{\frac{1}{2}}}{b^{\frac{2}{3}}}}{\frac{c^{\frac{1}{2}}}{d^{\frac%&#10;{2}{3}}}}" text="a ^ (1 / 2) / b ^ (2 / 3) / c ^ (1 / 2) / d ^ (2 / 3)" xml:id="S0.Ex18.m1">
+      <Math mode="display" tex="\frac{\frac{a^{\frac{1}{2}}}{b^{\frac{2}{3}}}}{\frac{c^{\frac{1}{2}}}{d^{\frac{2}{3}}}}" text="a ^ (1 / 2) / b ^ (2 / 3) / c ^ (1 / 2) / d ^ (2 / 3)" xml:id="S0.Ex18.m1">
         <XMath>
           <XMApp>
             <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
@@ -536,7 +536,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex19">
-      <Math mode="display" tex="\frac{a^{\frac{1}{2}}}{b^{\frac{2}{3}}}\over\frac{c^{\frac{1}{2}}}{d^{\frac{2}%&#10;{3}}}" text="a ^ (1 / 2) / b ^ (2 / 3) / c ^ (1 / 2) / d ^ (2 / 3)" xml:id="S0.Ex19.m1">
+      <Math mode="display" tex="\frac{a^{\frac{1}{2}}}{b^{\frac{2}{3}}}\over\frac{c^{\frac{1}{2}}}{d^{\frac{2}{3}}}" text="a ^ (1 / 2) / b ^ (2 / 3) / c ^ (1 / 2) / d ^ (2 / 3)" xml:id="S0.Ex19.m1">
         <XMath>
           <XMApp>
             <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
@@ -587,7 +587,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex20">
-      <Math mode="display" tex="{a^{\frac{1}{2}}\over b^{\frac{2}{3}}}\over{c^{\frac{1}{2}}\over d^{\frac{2}{3%&#10;}}}" text="a ^ (1 / 2) / b ^ (2 / 3) / c ^ (1 / 2) / d ^ (2 / 3)" xml:id="S0.Ex20.m1">
+      <Math mode="display" tex="{a^{\frac{1}{2}}\over b^{\frac{2}{3}}}\over{c^{\frac{1}{2}}\over d^{\frac{2}{3}}}" text="a ^ (1 / 2) / b ^ (2 / 3) / c ^ (1 / 2) / d ^ (2 / 3)" xml:id="S0.Ex20.m1">
         <XMath>
           <XMApp>
             <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>

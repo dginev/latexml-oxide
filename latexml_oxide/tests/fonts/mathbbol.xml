@@ -33,7 +33,7 @@
   </para>
   <para xml:id="p2">
     <equation xml:id="S0.Ex2">
-      <Math mode="display" tex="\bbalpha,\bbbeta,\bbeta\bbchi,\bbdelta,\bbespilon,\bbgamma,\bbiota,\bbkappa,%&#10;\bblambda,\bbmu,\bbnu,\bbomega,\bbphi,\bbpi,\bbpsi,\bbrho,\bbsigma,\bbtau,%&#10;\bbtheta,\bbupsilon,\bbxi,\bbzeta" text="list@(bbalpha, bbbeta, bbeta * bbchi, bbdelta, bbespilon, bbgamma, bbiota, bbkappa, bblambda, bbmu, bbnu, bbomega, bbphi, bbpi, bbpsi, bbrho, bbsigma, bbtau, bbtheta, bbupsilon, bbxi, bbzeta)" xml:id="S0.Ex2.m1">
+      <Math mode="display" tex="\bbalpha,\bbbeta,\bbeta\bbchi,\bbdelta,\bbespilon,\bbgamma,\bbiota,\bbkappa,\bblambda,\bbmu,\bbnu,\bbomega,\bbphi,\bbpi,\bbpsi,\bbrho,\bbsigma,\bbtau,\bbtheta,\bbupsilon,\bbxi,\bbzeta" text="list@(bbalpha, bbbeta, bbeta * bbchi, bbdelta, bbespilon, bbgamma, bbiota, bbkappa, bblambda, bbmu, bbnu, bbomega, bbphi, bbpi, bbpsi, bbrho, bbsigma, bbtau, bbtheta, bbupsilon, bbxi, bbzeta)" xml:id="S0.Ex2.m1">
         <XMath>
           <XMDual>
             <XMApp>

@@ -59,7 +59,7 @@
   </para>
   <para xml:id="p3">
     <equation xml:id="S0.Ex2">
-      <Math mode="display" tex="\mathop{A}\limits_{B}\limits^{C}\qquad\mathop{A}\limits^{C}\limits_{B}\qquad%&#10;\mathop{A}\nolimits_{B}\limits^{C}\qquad\mathop{A}\nolimits^{C}\limits_{B}" text="list@((A _ B) ^ C, (A ^ C) _ B, (A _ B) ^ C, (A ^ C) _ B)" xml:id="S0.Ex2.m1">
+      <Math mode="display" tex="\mathop{A}\limits_{B}\limits^{C}\qquad\mathop{A}\limits^{C}\limits_{B}\qquad\mathop{A}\nolimits_{B}\limits^{C}\qquad\mathop{A}\nolimits^{C}\limits_{B}" text="list@((A _ B) ^ C, (A ^ C) _ B, (A _ B) ^ C, (A ^ C) _ B)" xml:id="S0.Ex2.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -115,7 +115,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex3">
-      <Math mode="display" tex="\mathop{A}\limits_{B}\nolimits^{C}\qquad\mathop{A}\limits^{C}\nolimits_{B}%&#10;\qquad\mathop{A}\nolimits_{B}\nolimits^{C}\qquad\mathop{A}\nolimits^{C}%&#10;\nolimits_{B}" text="list@((A _ B) ^ C, (A ^ C) _ B, (A _ B) ^ C, (A ^ C) _ B)" xml:id="S0.Ex3.m1">
+      <Math mode="display" tex="\mathop{A}\limits_{B}\nolimits^{C}\qquad\mathop{A}\limits^{C}\nolimits_{B}\qquad\mathop{A}\nolimits_{B}\nolimits^{C}\qquad\mathop{A}\nolimits^{C}\nolimits_{B}" text="list@((A _ B) ^ C, (A ^ C) _ B, (A _ B) ^ C, (A ^ C) _ B)" xml:id="S0.Ex3.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -173,7 +173,7 @@
   </para>
   <para xml:id="p4">
     <equation xml:id="S0.Ex4">
-      <Math mode="display" tex="\mathop{\mathop{A}\limits_{B}}\limits^{C}\qquad\mathop{\mathop{A}\nolimits_{B}%&#10;}\limits^{C}\qquad\mathop{\mathop{A}\limits_{B}}\nolimits^{C}\qquad\mathop{%&#10;\mathop{A}\nolimits_{B}}\nolimits^{C}" text="list@((A _ B) ^ C, (A _ B) ^ C, (A _ B) ^ C, (A _ B) ^ C)" xml:id="S0.Ex4.m1">
+      <Math mode="display" tex="\mathop{\mathop{A}\limits_{B}}\limits^{C}\qquad\mathop{\mathop{A}\nolimits_{B}}\limits^{C}\qquad\mathop{\mathop{A}\limits_{B}}\nolimits^{C}\qquad\mathop{\mathop{A}\nolimits_{B}}\nolimits^{C}" text="list@((A _ B) ^ C, (A _ B) ^ C, (A _ B) ^ C, (A _ B) ^ C)" xml:id="S0.Ex4.m1">
         <XMath>
           <XMDual>
             <XMApp>

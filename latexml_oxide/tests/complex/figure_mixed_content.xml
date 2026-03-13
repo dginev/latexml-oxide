@@ -59,7 +59,7 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}{433.62pt}\includegraphics[width=85.35826%&#10;pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{%&#10;\lx@tag[ ]{{\small(a)}}{\small}}}\lx@subcaption@addinlist{}\end{subfigure}&amp;%&#10;\begin{subfigure}{433.62pt}\includegraphics[width=85.35826pt]{../graphics/none%&#10;.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{%&#10;\small}}}\lx@subcaption@addinlist{}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
+    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}{433.62pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{\lx@tag[ ]{{\small(a)}}{\small}}}\lx@subcaption@addinlist{}\end{subfigure}&amp;\begin{subfigure}{433.62pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{\small}}}\lx@subcaption@addinlist{}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
         <XMath>
           <XMArray role="ARRAY" vattach="middle">
             <XMRow>

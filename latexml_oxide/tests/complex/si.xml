@@ -5824,7 +5824,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tags>
         <title><tag close=" ">2.1.6</tag>qualifier-mode, qualifier-phrase</title>
         <para xml:id="S2.SS1.SSS6.p1">
-          <p><Math mode="inline" tex="{\mathrm{kg}_{\mathrm{pol}}}^{2}\text{\,}{\mathrm{mol}_{\mathrm{cat}}}^{-1}%&#10;\text{\,}{\mathrm{h}}^{-1}" text="power@(kilogram-polymer, 2) * power@(mole-catalyst, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p1.m1">
+          <p><Math mode="inline" tex="{\mathrm{kg}_{\mathrm{pol}}}^{2}\text{\,}{\mathrm{mol}_{\mathrm{cat}}}^{-1}\text{\,}{\mathrm{h}}^{-1}" text="power@(kilogram-polymer, 2) * power@(mole-catalyst, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p1.m1">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS6.p1.m1.4"> </XMText>
@@ -5859,7 +5859,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="{\mathrm{kg}(\mathrm{pol})}^{2}\text{\,}{\mathrm{mol}(\mathrm{cat})}^{-1}\text%&#10;{\,}{\mathrm{h}}^{-1}" text="power@(kilogram-polymer, 2) * power@(mole-catalyst, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p1.m2">
+            </Math> <break/><Math mode="inline" tex="{\mathrm{kg}(\mathrm{pol})}^{2}\text{\,}{\mathrm{mol}(\mathrm{cat})}^{-1}\text{\,}{\mathrm{h}}^{-1}" text="power@(kilogram-polymer, 2) * power@(mole-catalyst, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p1.m2">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS6.p1.m2.4"> </XMText>
@@ -5908,7 +5908,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="{\mathrm{kg}_{\mathrm{pol}}}^{2}\text{\,}{\mathrm{mol}_{\mathrm{cat}}}^{-1}%&#10;\text{\,}{\mathrm{h}}^{-1}" text="power@(kilogram-polymer, 2) * power@(mole-catalyst, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p1.m3">
+            </Math> <break/><Math mode="inline" tex="{\mathrm{kg}_{\mathrm{pol}}}^{2}\text{\,}{\mathrm{mol}_{\mathrm{cat}}}^{-1}\text{\,}{\mathrm{h}}^{-1}" text="power@(kilogram-polymer, 2) * power@(mole-catalyst, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p1.m3">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS6.p1.m3.4"> </XMText>
@@ -5943,7 +5943,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="{\mathrm{(kg\;pol)}}^{2}\text{\,}{\mathrm{(mol\;cat)}}^{-1}\text{\,}{\mathrm{h%&#10;}}^{-1}" text="power@(gram, 2) * power@(mole, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p1.m4">
+            </Math> <break/><Math mode="inline" tex="{\mathrm{(kg\;pol)}}^{2}\text{\,}{\mathrm{(mol\;cat)}}^{-1}\text{\,}{\mathrm{h}}^{-1}" text="power@(gram, 2) * power@(mole, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p1.m4">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS6.p1.m4.4"> </XMText>
@@ -5999,7 +5999,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             </Math><break/></p>
         </para>
         <para xml:id="S2.SS1.SSS6.p2">
-          <p><Math mode="inline" tex="{\mathrm{(kg~of~pol)}}^{2}\text{\,}{\mathrm{(mol~of~cat)}}^{-1}\text{\,}{%&#10;\mathrm{h}}^{-1}" text="power@(gram, 2) * power@(mole, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p2.m1">
+          <p><Math mode="inline" tex="{\mathrm{(kg~of~pol)}}^{2}\text{\,}{\mathrm{(mol~of~cat)}}^{-1}\text{\,}{\mathrm{h}}^{-1}" text="power@(gram, 2) * power@(mole, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p2.m1">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS6.p2.m1.4"> </XMText>
@@ -6050,7 +6050,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMApp>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="{\mathrm{(kgbypol)}}^{2}\text{\,}{\mathrm{(molbycat)}}^{-1}\text{\,}{\mathrm{h%&#10;}}^{-1}" text="power@(gram, 2) * power@(mole, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p2.m2">
+            </Math> <break/><Math mode="inline" tex="{\mathrm{(kgbypol)}}^{2}\text{\,}{\mathrm{(molbycat)}}^{-1}\text{\,}{\mathrm{h}}^{-1}" text="power@(gram, 2) * power@(mole, - 1) * power@(hour, - 1)" xml:id="S2.SS1.SSS6.p2.m2">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS6.p2.m2.4"> </XMText>

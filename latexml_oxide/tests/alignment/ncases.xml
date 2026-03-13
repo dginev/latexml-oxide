@@ -450,7 +450,7 @@
           <tag role="refnum">3c</tag>
         </tags>
         <MathFork>
-          <Math tex="\displaystyle w\equiv\sqrt{|d|}\,\sqrt{\frac{|c/d|+\sqrt{1+(c/d)^{2}}}{2}}|c|&lt;%&#10;|d|" text="w equivalent-to square-root@(absolute-value@(d)) * square-root@((absolute-value@(c / d) + square-root@(1 + (c / d) ^ 2)) / 2) * absolute-value@(c) &lt; absolute-value@(d)" xml:id="S0.E3.3.m4">
+          <Math tex="\displaystyle w\equiv\sqrt{|d|}\,\sqrt{\frac{|c/d|+\sqrt{1+(c/d)^{2}}}{2}}|c|&lt;|d|" text="w equivalent-to square-root@(absolute-value@(d)) * square-root@((absolute-value@(c / d) + square-root@(1 + (c / d) ^ 2)) / 2) * absolute-value@(c) &lt; absolute-value@(d)" xml:id="S0.E3.3.m4">
             <XMath>
               <XMApp>
                 <XMTok meaning="multirelation"/>

@@ -1,11 +1,18 @@
 use crate::prelude::*;
 
+/// Convert a color component float (0.0-1.0) to u8 (0-255).
+/// Matches Perl's `roundto($n * 255, 0)` which adds a small epsilon factor
+/// to handle floating-point boundary cases (e.g., 1.0 - 0.90 = 0.0999... not 0.10).
+fn color_component_to_u8(v: f64) -> u8 {
+  // Perl: int($n * scale * (1 + 100*epsilon) + 0.5)
+  // We use a small epsilon to nudge values that are very close to .5 boundaries
+  let scaled = v.clamp(0.0, 1.0) * 255.0 * (1.0 + 100.0 * f64::EPSILON);
+  scaled.round() as u8
+}
+
 /// Convert RGB float components (0.0-1.0) to hex color string like "#FF0000"
 fn rgb_to_hex(r: f64, g: f64, b: f64) -> String {
-  let ri = (r.clamp(0.0, 1.0) * 255.0).round() as u8;
-  let gi = (g.clamp(0.0, 1.0) * 255.0).round() as u8;
-  let bi = (b.clamp(0.0, 1.0) * 255.0).round() as u8;
-  format!("#{:02X}{:02X}{:02X}", ri, gi, bi)
+  format!("#{:02X}{:02X}{:02X}", color_component_to_u8(r), color_component_to_u8(g), color_component_to_u8(b))
 }
 
 /// Convert CMYK float components (0.0-1.0) to hex via CMY→RGB
@@ -118,23 +125,23 @@ pub fn lookup_color(name: &str) -> String {
   let key = s!("color_{name}");
   match state::lookup_value(&key) {
     Some(Stored::String(sym)) => {
-      // The stored value is "model c1 c2 ..." — we need to convert it to hex
-      arena::with(sym, |s| {
-        let parts: Vec<&str> = s.split_whitespace().collect();
-        if parts.is_empty() {
-          return "#000000".to_string();
-        }
-        let model = parts[0];
-        let comps: Vec<f64> = parts[1..].iter()
-          .filter_map(|p| p.parse::<f64>().ok()).collect();
-        match model {
-          "rgb" if comps.len() >= 3 => rgb_to_hex(comps[0], comps[1], comps[2]),
-          "cmyk" if comps.len() >= 4 => cmyk_to_hex(comps[0], comps[1], comps[2], comps[3]),
-          "cmy" if comps.len() >= 3 => rgb_to_hex(1.0 - comps[0], 1.0 - comps[1], 1.0 - comps[2]),
-          "gray" if !comps.is_empty() => gray_to_hex(comps[0]),
-          _ => "#000000".to_string(),
-        }
-      })
+      // Copy the string out of the arena to avoid re-entrant borrow issues
+      let stored_str = arena::with(sym, |s| s.to_string());
+      let parts: Vec<&str> = stored_str.split_whitespace().collect();
+      if parts.is_empty() {
+        return "#000000".to_string();
+      }
+      let model = parts[0];
+      let comps: Vec<f64> = parts[1..].iter()
+        .filter_map(|p| p.parse::<f64>().ok()).collect();
+      match model {
+        "rgb" if comps.len() >= 3 => rgb_to_hex(comps[0], comps[1], comps[2]),
+        "cmyk" if comps.len() >= 4 => cmyk_to_hex(comps[0], comps[1], comps[2], comps[3]),
+        "cmy" if comps.len() >= 3 => rgb_to_hex(1.0 - comps[0], 1.0 - comps[1], 1.0 - comps[2]),
+        "gray" if !comps.is_empty() => gray_to_hex(comps[0]),
+        "named" if parts.len() >= 2 => lookup_color(&format!("named_{}", parts[1])),
+        _ => "#000000".to_string(),
+      }
     },
     _ => {
       // Color not found — default to black
@@ -156,8 +163,9 @@ LoadDefinitions!({
   }
   // Options that want the dvipsnam definitions
   for option in &["dvips", "xdvi", "oztex", "dvipsnames"] {
-    DeclareOption!(option, None);
-    // TODO: InputDefinitions('dvipsnam', type => 'def')
+    DeclareOption!(*option, {
+      InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+    });
   }
 
   //======================================================================

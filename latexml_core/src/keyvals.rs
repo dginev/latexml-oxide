@@ -708,6 +708,13 @@ impl KeyVals {
         // we always use Vec<ArgWrap> storage, just push the new value in
         let entry = hash.entry(key.to_string()).or_default();
         entry.push(v.clone());
+      } else if let Some(ref dv) = digested_value {
+        // After digestion, value is taken but digested_value is set.
+        // Populate cached_pairs from the digested value (matching Perl's rebuild behavior).
+        let fallback = ArgWrap::Tokens(dv.revert().unwrap_or_default());
+        pairs.push((key.to_string(), fallback.clone()));
+        let entry = hash.entry(key.to_string()).or_default();
+        entry.push(fallback);
       }
       // if we have a digested value, push that in the Vec<Digested> hash storage
       if let Some(ref dvalue) = digested_value {

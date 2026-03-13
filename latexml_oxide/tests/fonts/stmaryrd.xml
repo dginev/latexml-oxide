@@ -119,7 +119,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex3">
-      <Math mode="display" tex="a\boxast b\quad a\boxbar b\quad a\boxbox b\quad a\boxbslash b\quad a\boxcircle&#10;b%&#10;\quad a\boxdot b\quad a\boxempty b\quad a\boxslash b" text="formulae@(list@(boxast@(a, b), a) boxbar b, list@(boxbox@(a, b), boxbslash@(a, b), boxcircle@(a, b), a boxdot b, a) boxempty b, boxslash@(a, b))" xml:id="S0.Ex3.m1">
+      <Math mode="display" tex="a\boxast b\quad a\boxbar b\quad a\boxbox b\quad a\boxbslash b\quad a\boxcircle&#10;b\quad a\boxdot b\quad a\boxempty b\quad a\boxslash b" text="formulae@(list@(boxast@(a, b), a) boxbar b, list@(boxbox@(a, b), boxbslash@(a, b), boxcircle@(a, b), a boxdot b, a) boxempty b, boxslash@(a, b))" xml:id="S0.Ex3.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -203,7 +203,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex4">
-      <Math mode="display" tex="a\curlyveedownarrow b\quad a\curlyveeuparrow b\quad a\curlywedgedownarrow b%&#10;\quad a\curlywedgeuparrow b" text="formulae@(a curlyveedownarrow b, formulae@(a curlyveeuparrow b, formulae@(a curlywedgedownarrow b, a curlywedgeuparrow b)))" xml:id="S0.Ex4.m1">
+      <Math mode="display" tex="a\curlyveedownarrow b\quad a\curlyveeuparrow b\quad a\curlywedgedownarrow b\quad a\curlywedgeuparrow b" text="formulae@(a curlyveedownarrow b, formulae@(a curlyveeuparrow b, formulae@(a curlywedgedownarrow b, a curlywedgeuparrow b)))" xml:id="S0.Ex4.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -385,7 +385,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex7">
-      <Math mode="display" tex="a\obar b\quad a\oblong b\quad a\obslash b\quad a\ogreaterthan b\quad a%&#10;\olessthan b\quad a\ovee b\quad a\owedge b" text="formulae@(a obar b, formulae@(a oblong b, formulae@(a obslash b, formulae@(a ogreaterthan b, formulae@(a olessthan b, formulae@(a ovee b, a owedge b))))))" xml:id="S0.Ex7.m1">
+      <Math mode="display" tex="a\obar b\quad a\oblong b\quad a\obslash b\quad a\ogreaterthan b\quad a\olessthan b\quad a\ovee b\quad a\owedge b" text="formulae@(a obar b, formulae@(a oblong b, formulae@(a obslash b, formulae@(a ogreaterthan b, formulae@(a olessthan b, formulae@(a ovee b, a owedge b))))))" xml:id="S0.Ex7.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -486,7 +486,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex8">
-      <Math mode="display" tex="a\rightslice b\quad a\sslash b\quad a\talloblong b\quad a\varbigcirc b\quad a%&#10;\varcurlyvee b\quad a\varcurlywedge b" text="formulae@(a rightslice b, formulae@(a sslash b, formulae@(a talloblong list@(b, a varbigcirc b), formulae@(a varcurlyvee b, a varcurlywedge b))))" xml:id="S0.Ex8.m1">
+      <Math mode="display" tex="a\rightslice b\quad a\sslash b\quad a\talloblong b\quad a\varbigcirc b\quad a\varcurlyvee b\quad a\varcurlywedge b" text="formulae@(a rightslice b, formulae@(a sslash b, formulae@(a talloblong list@(b, a varbigcirc b), formulae@(a varcurlyvee b, a varcurlywedge b))))" xml:id="S0.Ex8.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -572,7 +572,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex9">
-      <Math mode="display" tex="a\varoast b\quad a\varobar b\quad a\varobslash b\quad a\varocircle b\quad a%&#10;\varodot b\quad a\varogreaterthan b\quad a\varolessthan b" text="formulae@(list@(a varoast b, a) varobar b, list@(a varobslash b, a varocircle b, a varodot b, a) varogreaterthan b, a varolessthan b)" xml:id="S0.Ex9.m1">
+      <Math mode="display" tex="a\varoast b\quad a\varobar b\quad a\varobslash b\quad a\varocircle b\quad a\varodot b\quad a\varogreaterthan b\quad a\varolessthan b" text="formulae@(list@(a varoast b, a) varobar b, list@(a varobslash b, a varocircle b, a varodot b, a) varogreaterthan b, a varolessthan b)" xml:id="S0.Ex9.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -649,7 +649,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex10">
-      <Math mode="display" tex="a\varominus b\quad a\varoplus b\quad a\varoslash b\quad a\varotimes b\quad a%&#10;\varovee b\quad a\varowedge b\quad a\vartimes b" text="formulae@(list@(a varominus b, a additive-disjunction b, a) varoslash b, list@(a multiplicative-conjunction b, a) varovee b, a varowedge list@(b, a vartimes b))" xml:id="S0.Ex10.m1">
+      <Math mode="display" tex="a\varominus b\quad a\varoplus b\quad a\varoslash b\quad a\varotimes b\quad a\varovee b\quad a\varowedge b\quad a\vartimes b" text="formulae@(list@(a varominus b, a additive-disjunction b, a) varoslash b, list@(a multiplicative-conjunction b, a) varovee b, a varowedge list@(b, a vartimes b))" xml:id="S0.Ex10.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -734,7 +734,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex11">
-      <Math mode="display" tex="\bigbox\quad\bigcurlywedge\quad\bigcurlyvee\quad\biginterleave\quad\bignplus%&#10;\quad\bigparallel\quad\bigsqcap\quad\bigtriangledown\quad\bigtriangleup" text="list@(bigbox, bigcurlywedge, bigcurlyvee, biginterleave, intersection-plus, bigparallel, bigsqcap, bigtriangledown, bigtriangleup)" xml:id="S0.Ex11.m1">
+      <Math mode="display" tex="\bigbox\quad\bigcurlywedge\quad\bigcurlyvee\quad\biginterleave\quad\bignplus\quad\bigparallel\quad\bigsqcap\quad\bigtriangledown\quad\bigtriangleup" text="list@(bigbox, bigcurlywedge, bigcurlyvee, biginterleave, intersection-plus, bigparallel, bigsqcap, bigtriangledown, bigtriangleup)" xml:id="S0.Ex11.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -781,7 +781,7 @@
   </para>
   <para xml:id="p2">
     <equation xml:id="S0.Ex12">
-      <Math mode="display" tex="\textstyle\bigbox\quad\bigcurlywedge\quad\bigcurlyvee\quad\biginterleave\quad%&#10;\bignplus\quad\bigparallel\quad\bigsqcap\quad\bigtriangledown\quad\bigtriangleup" text="list@(bigbox, bigcurlywedge, bigcurlyvee, biginterleave, intersection-plus, bigparallel, bigsqcap, bigtriangledown, bigtriangleup)" xml:id="S0.Ex12.m1">
+      <Math mode="display" tex="\textstyle\bigbox\quad\bigcurlywedge\quad\bigcurlyvee\quad\biginterleave\quad\bignplus\quad\bigparallel\quad\bigsqcap\quad\bigtriangledown\quad\bigtriangleup" text="list@(bigbox, bigcurlywedge, bigcurlyvee, biginterleave, intersection-plus, bigparallel, bigsqcap, bigtriangledown, bigtriangleup)" xml:id="S0.Ex12.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -828,7 +828,7 @@
   </para>
   <para xml:id="p3">
     <equation xml:id="S0.Ex13">
-      <Math mode="display" tex="{\displaystyle\bignplus}\qquad{\textstyle\bignplus}\qquad{\scriptstyle%&#10;\bignplus}\qquad{\scriptscriptstyle\bignplus}" text="list@(intersection-plus, intersection-plus, intersection-plus, intersection-plus)" xml:id="S0.Ex13.m1">
+      <Math mode="display" tex="{\displaystyle\bignplus}\qquad{\textstyle\bignplus}\qquad{\scriptstyle\bignplus}\qquad{\scriptscriptstyle\bignplus}" text="list@(intersection-plus, intersection-plus, intersection-plus, intersection-plus)" xml:id="S0.Ex13.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -878,7 +878,7 @@
   </para>
   <para xml:id="p4">
     <equation xml:id="S0.Ex14">
-      <Math mode="display" tex="\inplus\quad\niplus\quad\ntrianglelefteqslant\quad\ntrianglerighteqslant\quad%&#10;\trianglelefteqslant\quad\trianglerighteqslant" text="list@(inplus, niplus, ntrianglelefteqslant, ntrianglerighteqslant, trianglelefteqslant, trianglerighteqslant)" xml:id="S0.Ex14.m1">
+      <Math mode="display" tex="\inplus\quad\niplus\quad\ntrianglelefteqslant\quad\ntrianglerighteqslant\quad\trianglelefteqslant\quad\trianglerighteqslant" text="list@(inplus, niplus, ntrianglelefteqslant, ntrianglerighteqslant, trianglelefteqslant, trianglerighteqslant)" xml:id="S0.Ex14.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -988,7 +988,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex16">
-      <Math mode="display" tex="a\mapsfromchar b\quad a\mapsfrom b\quad a\Mapsfromchar b\quad a\Mapsfrom b%&#10;\quad a\longmapsfrom b\quad a\Longmapsfrom b\quad" text="formulae@(a mapsfromchar b, formulae@(a mapsfrom b, formulae@(a Mapsfromchar b, formulae@(a Mapsfrom b, formulae@(a longmapsfrom b, a Longmapsfrom b)))))" xml:id="S0.Ex16.m1">
+      <Math mode="display" tex="a\mapsfromchar b\quad a\mapsfrom b\quad a\Mapsfromchar b\quad a\Mapsfrom b\quad a\longmapsfrom b\quad a\Longmapsfrom b\quad" text="formulae@(a mapsfromchar b, formulae@(a mapsfrom b, formulae@(a Mapsfromchar b, formulae@(a Mapsfrom b, formulae@(a longmapsfrom b, a Longmapsfrom b)))))" xml:id="S0.Ex16.m1">
         <XMath>
           <XMDual>
             <XMRef idref="S0.Ex16.m1.1"/>
@@ -1187,7 +1187,7 @@
   </para>
   <para xml:id="p6">
     <equation xml:id="S0.Ex19">
-      <Math mode="display" tex="a\leftarrowtriangle b\quad a\rightarrowtriangle b\quad a%&#10;\leftrightarrowtriangle b\quad a\leftrightarroweq b\quad a\lightning b" text="formulae@(a leftarrowtriangle b, formulae@(a rightarrowtriangle b, formulae@(a leftrightarrowtriangle b, formulae@(a leftrightarroweq b, a lightning b))))" xml:id="S0.Ex19.m1">
+      <Math mode="display" tex="a\leftarrowtriangle b\quad a\rightarrowtriangle b\quad a\leftrightarrowtriangle b\quad a\leftrightarroweq b\quad a\lightning b" text="formulae@(a leftarrowtriangle b, formulae@(a rightarrowtriangle b, formulae@(a leftrightarrowtriangle b, formulae@(a leftrightarroweq b, a lightning b))))" xml:id="S0.Ex19.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -1399,7 +1399,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex23">
-      <Math class="ltx_math_unparsed" mode="display" tex="\llbracket 42\rrbracket\quad\llfloor 42\rrfloor\quad\llceil 42\rrceil\quad%&#10;\llparenthesis 42\rrparenthesis" xml:id="S0.Ex23.m1">
+      <Math class="ltx_math_unparsed" mode="display" tex="\llbracket 42\rrbracket\quad\llfloor 42\rrfloor\quad\llceil 42\rrceil\quad\llparenthesis 42\rrparenthesis" xml:id="S0.Ex23.m1">
         <XMath>
           <XMWrap>
             <XMTok name="llbracket" role="OPEN">⟦</XMTok>

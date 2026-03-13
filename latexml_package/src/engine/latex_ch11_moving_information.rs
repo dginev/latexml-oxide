@@ -25,8 +25,9 @@ LoadDefinitions!({
       for label in document.node_get_attribute("labels").unwrap_or_default().split_whitespace() {
         labels.insert(label.to_string(), true);
       }
-      document.node_set_attribute("labels",
-         &labels.keys().map(ToString::to_string).collect::<Vec<_>>().join(" "))?;
+      let mut sorted_labels: Vec<String> = labels.into_keys().collect();
+      sorted_labels.sort();
+      document.node_set_attribute("labels", &sorted_labels.join(" "))?;
       document.set_node(&savenode);
     }
   },

@@ -71,7 +71,7 @@
   </para>
   <para xml:id="p4">
     <equation xml:id="S0.Ex4">
-      <Math mode="display" tex="a\xrightarrow[\mathrm{under}]{\mathrm{over}}b\xleftarrow[\mathrm{under}]{%&#10;\mathrm{over}}c" text="a under@(over@(rightarrow)) b under@(over@(leftarrow)) c" xml:id="S0.Ex4.m1">
+      <Math mode="display" tex="a\xrightarrow[\mathrm{under}]{\mathrm{over}}b\xleftarrow[\mathrm{under}]{\mathrm{over}}c" text="a under@(over@(rightarrow)) b under@(over@(leftarrow)) c" xml:id="S0.Ex4.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="multirelation"/>

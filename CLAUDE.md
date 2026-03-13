@@ -94,6 +94,11 @@ git config --local core.hooksPath .githooks/
 - most tests are regression-oriented. They contain a complete TeX input, and can experience failures in many different intermediate stages.
 - we are interested in finding meaningful Rust types for the previously untyped Perl.
 
+## Intentional divergences from Perl
+
+- **`%\n` not emitted**: Rust does not emit `%\n` (TeX comment-newline line-break separator) in `tex` attributes. When copying test XMLs from Perl, strip all `%&#10;` occurrences. This is a no-semantic-content formatting artifact.
+- **`\cdots` role**: Uses `role="ELIDEOP"` (Perl uses `role="ID"`) for math parser grammar rules.
+
 ## Practical guidance
 
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
