@@ -2466,12 +2466,11 @@ impl Document {
   }
 
   pub fn get_node_font(&self, node: &Node) -> &Font {
-    if let Some(_element) = xml::closest_element(node) {
-      if node.get_type() == Some(NodeType::ElementNode) {
-        if let Some(fontid) = node.get_attribute("_font") {
-          if let Some(fnt) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
-            return fnt;
-          }
+    if let Some(element) = xml::closest_element(node) {
+      // Use the closest element (for text nodes, this is the parent element)
+      if let Some(fontid) = element.get_attribute("_font") {
+        if let Some(fnt) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
+          return fnt;
         }
       }
     }

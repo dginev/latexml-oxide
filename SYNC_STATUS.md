@@ -1,27 +1,35 @@
-# Sync Status — 2026-03-12
+# Sync Status — 2026-03-13
 
-**134 pass, 16 fail, 4 ignored** (was 107/40/6 before encoding & math fixes)
+**136 pass, 15 fail, 4 ignored** (was 134/16/4)
 
-## Recent Fixes (2026-03-12, session 2)
+## Recent Fixes (2026-03-13)
 
-### Dynamic mathstyle/scriptpos for variable-size operators
-- Added `dynamic_mathstyle` and `dynamic_scriptpos` bool flags to `MathPrimitiveOptions`
-- `def_math_primitive` now computes mathstyle/scriptpos at invocation time from current font
-- Perl `doVariablesizeOp`: "display" in display mode, "text" in inline → `dynamic_mathstyle`
-- Perl `doScriptpos`: "mid" in display mode, "post" in inline → `dynamic_scriptpos`
-- Key finding: `\int`/`\oint` have only `mathstyle` (no scriptpos); `\sum`/`\prod`/etc have both
-- `\smallint` has dynamic scriptpos but STATIC `mathstyle => "text"`
-- Added `mathstyle` handler to `defi_opts!` macro for `Option<String>` literal values
-- Files: `math_primitive.rs`, `dialect.rs`, `plain.rs`, `setup_binding_language.rs`
-- **Fixed applemac_test** (was the last encoding failure, all 26 encoding tests now pass)
+### Base_XMath constructors implemented
+- `xmath_copy_keyvals()` helper — copies OptionalKeyVals:XMath key-value pairs to whatsit properties
+  - Uses `get_hash_digested()` (not `get_pairs()`) since values are digested post-absorption
+  - 14 DefKeyVal declarations for XMath keys (role, name, meaning, omcd, width, height, etc.)
+- `\lx@apply OptionalKeyVals:XMath {}{}` — semantic function application (`<ltx:XMApp>`)
+- `\lx@symbol OptionalKeyVals:XMath {}` — math symbol with attributes (`<ltx:XMTok>`, copies font)
+- `\lx@wrap OptionalKeyVals:XMath {}` — semantic wrapping (`<ltx:XMWrap>`)
+- `\lx@superscript OptionalKeyVals:XMath {} InScriptStyle` — semantic superscript with scriptpos, reversion
+- `\lx@subscript OptionalKeyVals:XMath {} InScriptStyle` — semantic subscript with scriptpos, reversion
+- **Fixed compact_dual_test** — `meaning="power"` now flows through from `\lx@power` via keyvals
 
-### Encoding test fixes (session 1, carried over)
-- vrule/hrule whatsit sizing with cached_width/cached_height/cached_depth
-- Dimension `to_attribute()` for 1-decimal-place formatting
-- isVerticalRule logic corrected (only set when height dominates)
-- Float superscript italic font preservation via `document.set_attribute`
-- `\dots` sizer added for non-zero computed width in tabulars
-- Fixed 6 cp* encoding tests, 3 ansi/cp12* tests, 1 applemac test
+### Font element fix (get_node_font for text nodes)
+- `Document::get_node_font()` now uses `closest_element()` for all node types
+  - Was only checking `NodeType::ElementNode`, returning default font for text nodes
+  - This caused FLAG_EMPH to be invisible on text nodes inside `<emph>`, producing wrong element names
+- **Fixed emph_test** — `\textup` inside `\emph` now correctly produces `<text>` not `<emph>`
+
+### lastkern panic fix
+- `\lastkern` register getter now handles `Stored::Digested(RegisterValue::Dimension(...))` variant
+  - Was panicking on non-Stored::Dimension types in the width property
+
+### Font test discovery
+- Font tests do NOT have infinite loops in the test harness — only the binary hangs
+- All 23 font tests complete in <0.5s via `latexml_test_single()`
+- 8 tests have 0 diffs but crash (need `\DeclareMathAccent`, `\DeclareMathSymbol`, `\ExplSyntaxOn`)
+- 1 test (omencodings) has 1 diff from known OML font map char limitation
 
 ### Test status breakdown
 | Suite | Pass | Fail | Ignored |
@@ -34,9 +42,9 @@
 | expansion | 36 | 0 | 0 |
 | grouping | 2 | 0 | 0 |
 | digestion | 10 | 0 | 0 |
-| fonts | 1 | 0 | 0 |
+| fonts | 2 | 0 | 0 |
 | encoding | 26 | 0 | 0 |
-| math | 2 | 12 | 0 |
+| math | 3 | 11 | 0 |
 | structure | 24 | 0 | 0 |
 | namespace | 0 | 0 | 1 |
 | alignment | 0 | 2 | 0 |
@@ -49,10 +57,38 @@
 | babel | 0 | 0 | 1 |
 
 ### Pre-existing failures (not caused by recent changes)
-- **12 math tests**: math parser role/structure issues (UNKNOWN vs ID, function application)
+- **11 math tests**: math parser role/structure issues, missing delimiters/constructs
 - **2 alignment tests**: nested tabular layout (tabtab, halign)
 - **1 graphics test**: infinite recursion in `\usepackage{color}`
 - **1 complex test**: aastex631 class attribute/resource issues
+
+### Remaining work — Next priorities
+
+#### Font tests — 8 blocked on missing infrastructure
+Need implementation to unblock 0-diff font tests:
+- `\DeclareMathAccent` (latex_ch8_defining_commands.rs — commented out)
+- `\DeclareMathSymbol` (latex_ch8_defining_commands.rs — commented out)
+- `\ExplSyntaxOn` / LaTeX3 expl3 basics (needed by cancels, mathcolor, wasysym)
+- `\newfont` primitive (needed by soul)
+
+#### compact_xmdual — stub needs full implementation
+- `document.rs:2323` — `compact_xmdual()` is a no-op stub
+- Perl implementation merges content/presentation branches when they mirror each other
+- Needed for correct `meaning` attribute transfer in math duals
+- Currently works because `collapse_xmdual()` picks the right branch; compaction is optimization
+
+#### Math tests — 11 failing
+- arrows (74 diffs): `\xrightarrow`/`\xleftarrow` not implemented
+- choose (80 diffs): `\choose` / `\binom` needs atop/choose support
+- simplemath (138 diffs): basic math structure issues
+- testscripts (165 diffs): script handling edge cases
+- declare (0 diffs, crash): math parser `_WildCard_` unimplemented
+- sampler (0 diffs, crash): alignment.rs unwrap() in tabular
+- fracs (89 diffs): fraction constructs
+- ambiguous_relations (109 diffs): relation handling
+- not (229 diffs): `\not` negation
+- niceunits (127 diffs): siunitx-like formatting
+- array (7+ diffs): array environment issues
 
 ## Recent Gap Fix Progress (2026-03-12)
 

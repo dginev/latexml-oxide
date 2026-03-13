@@ -12,5 +12,5 @@ static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
 "page545" => "germanb.ldf"};
 
 #[test]
-#[ignore]
+#[ignore] // Note: when last tested had an unbounded memory leak loop
 fn can_babel() { latexml_tests("tests/babel", Some(&REQUIRES), None); }

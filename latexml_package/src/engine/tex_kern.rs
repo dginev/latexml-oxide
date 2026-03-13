@@ -84,10 +84,15 @@ LoadDefinitions!({
         if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
           if box_in_list.get_property_bool("isKern") {
             let width_stored = box_in_list.get_property("width").unwrap();
-            if let Stored::Dimension(ref width_d) = *width_stored {
-              return *width_d;
-            } else {
-              panic!("Unexpected type of \"width\" value in State: {width_stored:?}");
+            match &*width_stored {
+              Stored::Dimension(ref width_d) => return *width_d,
+              Stored::Digested(ref d) => {
+                if let DigestedData::RegisterValue(RegisterValue::Dimension(dim)) = d.data() {
+                  return *dim;
+                }
+                return Dimension::new(0);
+              }
+              _ => return Dimension::new(0),
             }
           } else {
             break;
