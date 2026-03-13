@@ -5,7 +5,7 @@ Updated 2026-03-13. Only lists open gaps & TODOs; completed items live in git hi
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
 
-**See also:** [`KNOWN_PERL_ERRORS.md`](../../../../KNOWN_PERL_ERRORS.md) — upstream Perl issues (not Rust bugs)
+**See also:** [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) — upstream Perl issues (not Rust bugs)
 
 ---
 

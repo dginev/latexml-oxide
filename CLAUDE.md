@@ -23,6 +23,20 @@ Supporting directories:
 - `resources/` — CSS, DTD, JavaScript, RelaxNG schemas, XSLT, Profiles
 - `tools/` — Utility scripts (e.g. `compile_metrics.pl`)
 - `.githooks/` — Pre-push hook for quality checks
+- `docs/` — Internal project documentation (see below)
+
+## Internal Documentation
+
+Three key documents track porting progress and known issues:
+
+- **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — Master tracking document: file-by-file Perl→Rust sync status, test suite counts, Rust error fixes, infrastructure gaps, package bindings status, and the 9-phase roadmap to full parity. **Start here** when resuming work.
+- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_package/src/engine/*.rs`). Shows loading hierarchy and LaTeX chapter structure.
+- **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Documents upstream Perl LaTeXML issues: `packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders` heuristic. When investigating test failures, check here first to see if the issue is inherited from Perl.
+
+**Rules for these docs:**
+- `KNOWN_PERL_ERRORS.md` is for Perl-origin issues only. Include minimal trigger examples.
+- Rust-specific error fixes go in `SYNC_STATUS.md` under "Rust Error Fixes", referencing the KNOWN_PERL_ERRORS entry when applicable.
+- When an upstream Perl error is identified, record it. Fix in Rust if simple; otherwise keep as-is.
 
 ## Build & Test
 
@@ -65,7 +79,7 @@ git config --local core.hooksPath .githooks/
 ## Architecture Notes
 
 **Important:** The one novelty in the Rust rewrite is the math parser engine, which now uses a highly ambiguous Marpa grammar.
-  - the new goal is to be highly ambiguous in parsing, 
+  - the new goal is to be highly ambiguous in parsing,
   - but aggressively prune in the semantics rules, so as to minimize the final parses
   - this is active ongoing research. So be very cautious when porting math tests, ideally do them after everything else is solid.
 
@@ -82,6 +96,8 @@ git config --local core.hooksPath .githooks/
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - The Perl LaTeXML directory gets updated at times, as the original project is still active. Before doing new work, always revise the current Rust against the current Perl, and update the Rust when outdated.
+- Before starting work, check `docs/SYNC_STATUS.md` for current test status, known issues, and the roadmap.
+- When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 
 ## Key Concepts Mapping (Perl → Rust)
 
