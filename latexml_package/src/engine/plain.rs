@@ -1081,33 +1081,29 @@ LoadDefinitions!({
     r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi"
   );
 
-  //   DefConstructor('\@math@daccent {}',
-  //   "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\x{22c5}</ltx:XMTok>"
-  //     . "?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)"
-  //     . "</ltx:XMApp>",
-  //   mode        => 'text', alias => '\d',
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $arg = $whatsit->getArg(1);
-  //     if ($arg->isMath) {
-  //       $whatsit->setProperty(matharg => $arg->getBody); }
-  //     else {
-  //       $whatsit->setProperty(textarg => $arg); }
-  //     return; });
-
-  // DefConstructor('\@math@baccent {}',
-  //   "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>" . UTF(0xAF) . "</ltx:XMTok>"
-  //     . "?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)"
-  //     . "</ltx:XMApp>",
-  //   mode        => 'text', alias => '\b',
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $arg = $whatsit->getArg(1);
-  //     if ($arg->isMath) {
-  //       $whatsit->setProperty(matharg => $arg->getBody); }
-  //     else {
-  //       $whatsit->setProperty(textarg => $arg); }
-  //     return; });
+  // Perl: DefConstructor('\@math@daccent {}', "...", mode => 'text', alias => '\d', ...)
+  // Since mode => "text", the arg is always text, so textarg is always set.
+  DefConstructor!("\\@math@daccent {}",
+    "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\u{22c5}</ltx:XMTok>\
+     ?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)\
+     </ltx:XMApp>",
+    mode => "text", alias => "\\d",
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1).cloned() {
+        whatsit.set_property("textarg", arg);
+      }
+    });
+  // Perl: DefConstructor('\@math@baccent {}', "...", mode => 'text', alias => '\b', ...)
+  DefConstructor!("\\@math@baccent {}",
+    "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\u{00AF}</ltx:XMTok>\
+     ?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)\
+     </ltx:XMApp>",
+    mode => "text", alias => "\\b",
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1).cloned() {
+        whatsit.set_property("textarg", arg);
+      }
+    });
 
   //======================================================================
   // TeX Book, Appendix B. p. 357

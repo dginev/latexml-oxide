@@ -918,13 +918,11 @@ impl Font {
       forcebold: None,
       scale: None,
     };
-    // Optional specialize pass (Perl: if my $specialize = $options{specialize})
-    if let Some(ref specialize_text) = newfont.name {
-      let text = specialize_text.to_string();
-      if !text.is_empty() {
-        newfont = newfont.specialize(&text);
-      }
-    }
+    // Note: Perl's merge() has an optional `specialize` option that is passed
+    // explicitly (e.g. merge(specialize => $text)). It's NOT keyed on the font name.
+    // Specialize is called at TBox creation time (tbox.rs) with the actual text content.
+    // Do NOT call specialize here with the font name — it corrupts font properties
+    // (e.g. resetting series "bold" to "medium" for font names like "cmb10").
     newfont
   }
 

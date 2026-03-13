@@ -16,7 +16,6 @@ fn emph_test() {
 // -- Tests with diffs (need targeted fixes) --
 
 #[test]
-#[ignore] // diffs — 1 remaining: \font-defined bold not producing <text font="bold"> wrapping
 fn accents_test() {
   latexml_test_single("tests/fonts/accents.tex", "accents", DIR, None, None);
 }

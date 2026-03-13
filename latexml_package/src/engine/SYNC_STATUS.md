@@ -33,7 +33,7 @@ Updated 2026-03-12. Only lists open gaps & TODOs; completed items live in git hi
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| tex_character.rs | MINOR | `\accent Number {}` not ported |
+| tex_character.rs | OK | `\accent Number` fully ported with assignment loop, `unicode_accent()` table |
 | tex_paragraph.rs | MINOR | Missing: `alignLine()`, `trimNodeLeftWhitespace()`, `trimNodeRightWhitespace()` |
 | tex_macro.rs | MINOR | FontDef case still commented out |
 | tex_logic.rs | OK | — |
@@ -212,7 +212,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-13)
 
-**Current totals: 137 pass, 0 fail, 44 ignored test functions**
+**Current totals: 138 pass, 0 fail, 43 ignored test functions**
 
 | Suite | Pass/Total | Notes |
 |-------|-----------|-------|
@@ -224,7 +224,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 10_expansion | 36/36 | All pass |
 | 12_grouping | 2/2 | All pass |
 | 20_digestion | 10/10 | All pass |
-| 22_fonts | 5/23 | 5 pass; 18 ignored (table padding, math parser, missing packages) |
+| 22_fonts | 6/23 | 6 pass; 17 ignored (accent font tracking, fontname, math parser, missing packages) |
 | 32_keyval | 1/7 | 1 pass; 6 ignored (xkeyval loop, keyval style) |
 | 33_keyval_options | 0/11 | **Ignored** — xkeyval loop |
 | 50_structure | 26/44 | 26 pass; 18 disabled (.todo) |
