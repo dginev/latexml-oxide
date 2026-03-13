@@ -1105,7 +1105,8 @@ macro_rules! DefMacro {
   };
   // String; implicit state
   ($proto:literal, $expansion:literal $($input:tt)*) => {
-    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    options.nopack_parameters = true; // compile_expansion! already packs parameters at compile time
     let (cs, params) = parse_prototype!($proto);
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
@@ -1123,10 +1124,13 @@ macro_rules! DefMacro {
   ($cs:literal, None, $expansion:literal) => {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
-    def_macro(T_CS!($cs), None, compiled_expansion, None)?;
+    def_macro(T_CS!($cs), None, compiled_expansion, Some(ExpandableOptions {
+      nopack_parameters: true, ..ExpandableOptions::default()
+    }))?;
   };
   ($cs:literal, None, $expansion:literal, $($input:tt)*) => {
-    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    options.nopack_parameters = true; // compile_expansion! already packs parameters
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     def_macro(T_CS!($cs), None, compiled_expansion, Some(options))?;
@@ -1137,7 +1141,9 @@ macro_rules! DefMacro {
   ($cs:expr, None, $expansion:literal) => {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
-    def_macro($cs, None, compiled_expansion, None)?;
+    def_macro($cs, None, compiled_expansion, Some(ExpandableOptions {
+      nopack_parameters: true, ..ExpandableOptions::default()
+    }))?;
   };
   ($cs:expr, None, $body:block) => {
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
@@ -1151,7 +1157,8 @@ macro_rules! DefMacro {
   ($cs:expr, None, $expansion:literal, $($input:tt)+) => {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
-    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    options.nopack_parameters = true; // compile_expansion! already packs parameters
     def_macro($cs, None, compiled_expansion, Some(options))?;
   };
   ($cs:expr, None, $expansion:expr, $($input:tt)+) => {
