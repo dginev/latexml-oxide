@@ -280,4 +280,7 @@ LoadDefinitions!({
       '\u{2191}', '\u{2193}', None, None, None, None, '\u{21D1}', '\u{21D3}'
     ]
   );
+
+  // Perl: Digest('\font\lx@default@font=cmr10');
+  Digest!("\\font\\lx@default@font=cmr10")?;
 });
