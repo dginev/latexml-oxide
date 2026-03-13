@@ -29,10 +29,10 @@ static DEFFAMILY: &str = "serif";
 static DEFSERIES: &str = "medium";
 static DEFSHAPE: &str = "upright";
 static DEFCOLOR: &str = "black";
-static DEFBACKGROUND: &str = "white";
+// Perl: $DEFBACKGROUND = undef (transparent), $DEFLANGUAGE = undef
+// These are intentionally None in text_default/math_default.
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
-static DEFLANGUAGE: &str = "en";
 // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 static DEFSIZE: f64 = 10.0;
 
@@ -501,10 +501,10 @@ impl Font {
       shape:         Some(Cow::Borrowed(DEFSHAPE)),
       size:          Some(DEFSIZE),
       color:         Some(Cow::Borrowed(DEFCOLOR)),
-      bg:            Some(Cow::Borrowed(DEFBACKGROUND)),
+      bg:            None, // Perl: $DEFBACKGROUND = undef (transparent)
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
       encoding:      Some(Cow::Borrowed(DEFENCODING)),
-      language:      Some(Cow::Borrowed(DEFLANGUAGE)),
+      language:      None, // Perl: $DEFLANGUAGE = undef
       mathstyle:     None,
       mathstylestep: None,
       emph:          None,
@@ -526,10 +526,10 @@ impl Font {
       shape:         Some(Cow::Borrowed("italic")),
       size:          Some(DEFSIZE),
       color:         Some(Cow::Borrowed(DEFCOLOR)),
-      bg:            Some(Cow::Borrowed(DEFBACKGROUND)),
+      bg:            None, // Perl: $DEFBACKGROUND = undef
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
-      encoding:      None,
-      language:      Some(Cow::Borrowed(DEFLANGUAGE)),
+      encoding:      None, // Perl has 'OT1' but Rust char decoding uses encoding differently
+      language:      None, // Perl: $DEFLANGUAGE = undef
       mathstyle:     Some(Cow::Borrowed("text")),
       mathstylestep: None,
       emph:          None,
@@ -586,9 +586,8 @@ impl Font {
       }
     }
     if let Some(ref bkg) = self.bg {
-      if bkg.as_ref() != DEFBACKGROUND {
-        parts.push(bkg);
-      }
+      // Perl: $DEFBACKGROUND = undef, so any set bg is non-default
+      parts.push(bkg);
     }
     if let Some(ref opa) = self.opacity {
       if opa.as_ref() != DEFOPACITY {
@@ -1781,7 +1780,8 @@ pub fn rationalize_font_size(size: &str) -> f64 {
   if let Some(symbolic) = FONT_SIZE.get(size) {
     *symbolic * DEFSIZE
   } else {
-    DEFSIZE
+    // Perl: return $size — if not a symbolic name, return the numeric value as-is
+    size.parse::<f64>().unwrap_or(DEFSIZE)
   }
 }
 
