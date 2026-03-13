@@ -1,3 +1,8 @@
+pub mod ns1_tex;
+pub mod ns2_tex;
+pub mod ns3_tex;
+pub mod ns4_tex;
+pub mod ns5_tex;
 pub mod rebox_tex;
 pub mod whichcache_tex;
 pub mod whichinput_tex;
