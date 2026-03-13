@@ -1,12 +1,16 @@
-# Sync Status — 2026-03-13
+# Sync Status — 2026-03-13 (evening)
 
-**153 pass, 0 fail, 28 ignored**
+**144 pass, 0 fail, 27 ignored**
 
-## Recent Changes
-- **color.sty PORTED** — `\definecolor`, `\color`, `\textcolor`, `\colorbox`, `\fcolorbox`, `\pagecolor`, `\normalcolor`, color group macros, default colors (black/white/red/green/blue/cyan/magenta/yellow). Supports rgb/cmyk/cmy/gray/hsb models with hex conversion.
-- **cancel.sty PORTED** — `\cancel`, `\bcancel`, `\xcancel`, `\cancelto` with math/text dispatch and `cancelColorProperties` font capture. 14 diffs remain due to `_force_font`/`_font` property handling (text wrapper not created when font unchanged).
-- Keyval options tests — all 11 enabled and passing
-- `\LoadClass` afterDigest implemented (was commented out)
+## Recent Changes (this session)
+- **cancel.sty FULLY WORKING** — All 14 diffs eliminated. Key insight: Perl's `Digest()` always returns truthy object, so `forcefont`/`cancelfont` are always set. Uses `_force_font='#forcefont'` on math XMTok for font computation via `finalize_rec`, `color_to_hex()` for named→hex color conversion.
+- **Font defaults fixed** — `DEFBACKGROUND` → None (was "white"), `DEFLANGUAGE` → None (was "en"), matching Perl's `undef`. `rationalize_font_size` bug fixed (now parses numeric strings).
+- **color.sty `lookup_color` made pub** — for cross-package color normalization (cancel.sty uses it).
+- **soul.sty, stmaryrd.sty, wasysym.sty, accents.sty, xkeyval.sty** — Package bindings created and registered.
+- **marvosym.sty, mathbbol.sty, bbold.sty, esint.sty, ulem.sty** — Package bindings created and registered.
+- **`\DeclareMathAccent` + `\DeclareMathSymbol`** — Runtime primitives implemented with font_decode + def_math.
+- **OML font map position 127** — Fixed to U+0361 (was U+0311). omencodings_test passes.
+- **Theorem tests expanded** — 4 tests (3 pass, 1 ignored for math parser diffs).
 
 ## Test Status Breakdown
 
@@ -18,21 +22,73 @@
 | expansion | 36 | 0 | 0 | |
 | grouping | 2 | 0 | 0 | |
 | digestion | 10 | 0 | 0 | |
-| fonts | 7 | 0 | 16 | 16 ignored need packages |
+| fonts | 8 | 0 | 15 | cancels/marvosym now pass |
 | encoding | 26 | 0 | 0 | |
-| keyval | 4 | 0 | 3 | 3 ignored (xkeyvalstyle/view) |
-| keyval_options | 11 | 0 | 0 | **ALL PASS** |
-| math | 0 | 0 | 1 | deferred per CLAUDE.md |
+| keyval | 4 | 0 | 3 | xkeyvalstyle/view need xkeyval features |
+| keyval_options | 11 | 0 | 0 | |
+| math | 0 | 0 | 1 | math parser research |
 | structure | 24 | 0 | 0 | 18 more as .todo files |
-| namespace | 0 | 0 | 1 | needs .latexml bindings |
-| alignment | 4 | 0 | 2 | halign/tabtab need fixes |
-| theorem | 3 | 0 | 0 | |
+| namespace | 0 | 0 | 1 | needs .latexml doc-level bindings |
+| alignment | 0 | 0 | 2 | halign/tabtab need fixes |
+| theorem | 4 | 0 | 1 | ntheorem: 897 math parser diffs |
 | ams | 0 | 0 | 1 | math parser diffs |
-| graphics | 0 | 0 | 1 | |
+| graphics | 0 | 0 | 1 | dvipsnam.def colors missing |
 | parse | 0 | 0 | 1 | math parser |
-| complex | 0 | 0 | 1 | |
-| babel | 0 | 0 | 1 | |
-| unit_parse | 4 | 0 | 0 | |
+| complex | 0 | 0 | 1 | needs aastex631.cls |
+| babel | 0 | 0 | 1 | hangs (infinite loop, no Rust binding) |
+| unit_parse | 3 | 0 | 0 | |
+
+---
+
+## Ignored Tests — Root Causes (27 total)
+
+### Math parser issues (7 tests — deferred per CLAUDE.md)
+| Test | Diffs | Root Cause |
+|------|-------|------------|
+| mixed_test | 37 | XMDual/XMApp parse tree structure |
+| mathbbol_test | 110 | Math parse tree differences |
+| mathaccents_test | 404 | Math structure diffs |
+| ntheorem_test | 897 | Marpa grammar divergence |
+| ams_test | 178 | equationgroup/subequations structure |
+| parse_test | 118 | Algebraic term grouping |
+| math_test | 109 | Relation chains, `<<`/`>>` operators |
+
+### Missing packages/features (9 tests)
+| Test | Diffs | Root Cause |
+|------|-------|------------|
+| stmaryrd_test | crash | `parse_kludge` todo!() in math parser |
+| esint_test | crash | `parse_kludge` todo!() in math parser |
+| acc_test | 163 | `\mathgroup` undefined, alignment crash |
+| ding_test | - | Needs pifont.sty (pzd font map) |
+| abxtest_test | - | Needs `\hexnumber@`, `\mathxfam` (font alloc) |
+| soul_test | - | Needs `\ExplSyntaxOn` (LaTeX3/expl3) |
+| wasysym_test | - | Needs `\Gin` (graphics), `\ExplSyntaxOn` |
+| mathcolor_test | - | Needs `\Gin`, `\ExplSyntaxOn` |
+| babel_test | hang | Infinite loop — no Rust babel binding |
+
+### Large diff counts (6 tests)
+| Test | Diffs | Root Cause |
+|------|-------|------------|
+| fonts_test | 1001 | `\fontname` not implemented |
+| plainfonts_test | - | `\fontname` not implemented |
+| sizes_test | 377 | Many sizing/layout diffs |
+| bbold_test | 677 | Table + math structure |
+| complex_test | 19 | Needs aastex631.cls binding |
+| namespace_test | 13 | Custom .latexml doc-level bindings |
+
+### xkeyval feature tests (3 tests)
+| Test | Diffs | Root Cause |
+|------|-------|------------|
+| keyvalstyle_test | 26 | xkeyval style environments |
+| xkeyvalstyle_test | 13 | xkeyval style handling |
+| xkeyvalview_test | 9 | xkeyval view + tabular |
+
+### Alignment (2 tests)
+| Test | Diffs | Root Cause |
+|------|-------|------------|
+| halign_test | 51 | Missing `class="ltx_nopad_r"`, bracket in cell |
+| tabtab_test | 11 | Nested tabular not processed |
+| graphicx_test | 144 | dvipsnam.def colors all #000000 |
 
 ---
 
@@ -58,262 +114,71 @@
 | TeX_FileIO | tex_file_io.rs | **98%** | Missing: `\lx@special@graphics` |
 | TeX_Box | tex_box.rs | **95%** | Missing: `\leaders` body, SVG collapse ops |
 | TeX_Fonts | tex_fonts.rs | **90%** | Ligatures compiled to static data (architectural diff) |
-| TeX_Math | tex_math.rs | **80%** | Missing: math atom adjusters (see below) |
+| TeX_Math | tex_math.rs | **80%** | Missing: math atom adjusters |
 | TeX_Tables | tex_tables.rs | **95%** | Missing: advanced alignment templates |
 | eTeX | etex.rs | **98%** | Missing: `\directlua` (LuaTeX only) |
 | pdfTeX | pdftex.rs | **60%** | Many PDF-specific primitives stubbed |
 | Base_Schema | base_schema.rs | **100%** | All 15 definitions |
-| Base_XMath | base_xmath.rs | **90%** | Missing: matrix/cases bindings (see below) |
+| Base_XMath | base_xmath.rs | **90%** | Missing: matrix/cases bindings |
 | Base_Functions | base_functions.rs | **95%** | Core constructor logic |
-| plain.tex | plain.rs | **95%** | Missing: `\beginsection`, `\lx@centerline/leftline/rightline` |
+| plain.tex | plain.rs | **95%** | Missing: `\beginsection` |
 | LaTeX bootstrap | latex.rs | **100%** | All 10 definitions |
 
-### TeX_Math — Missing Definitions (HIGH PRIORITY)
+### Package Binding Coverage
 
-**Math atom adjusters (8 definitions — needed for semantic math markup):**
-- `\mathrel`, `\mathbin`, `\mathord`, `\mathop`, `\mathopen`, `\mathclose`, `\mathpunct`, `\mathinner`
-- These wrap content and set `role` attribute for math parsing
-
-**Floating scripts (4 definitions):**
-- `\lx@floating@superscript`, `\lx@floating@subscript`
-- `\lx@post@superscript`, `\lx@post@subscript`
-
-**Delimiter handling (3 definitions):**
-- `\left TeXDelimiter`, `\lx@left`, `\lx@right`
-- `\lx@delimiterdot`
-
-### Base_XMath — Missing/Deferred Definitions
-
-**Commented out in base_xmath.rs:**
-- `\lx@cases@condition`, `\lx@cases@end@condition` — cases environment conditions
-- `\lx@gen@cases@bindings`, `\lx@gen@matrix@bindings` — complex binding machinery
-- `\lx@ams@matrix@` — AMS matrix variant constructor
-- `compact_xmdual()` — document.rs no-op stub
-- DefRewrite for mixed fractions — completely missing
-
-**Sized delimiters (`latex_ch7_math_common_delimiters.rs` is EMPTY):**
-- `\big`, `\Big`, `\bigg`, `\Bigg` + l/m/r variants (19 total)
+| Package | Coverage | Status |
+|---------|----------|--------|
+| xkeyval.sty | **100%+** | Complete |
+| article.cls | **98%** | Near-complete |
+| color.sty | **~90%** | Ported — missing dvipsnam.def |
+| cancel.sty | **100%** | Fully working |
+| amsthm.sty | **~90%** | Good |
+| hyperref.sty | **~65%** | Key features missing |
+| graphicx.sty | **~70%** | Sizer/properties stubs |
+| amsmath.sty | **~10%** | CRITICAL gap |
+| natbib.sty | **~8%** | CRITICAL gap |
+| marvosym.sty | **new** | Basic binding |
+| mathbbol.sty | **new** | Basic binding |
+| bbold.sty | **new** | Basic binding |
+| esint.sty | **new** | Basic binding |
+| ulem.sty | **new** | Working |
+| soul.sty | **new** | Basic binding |
+| stmaryrd.sty | **new** | Basic binding |
+| wasysym.sty | **new** | Basic binding |
+| accents.sty | **new** | Basic binding |
 
 ---
 
-## latex_constructs.pool.ltxml — Missing Definitions (~101 unported of ~957)
+## Recommended Work Order
 
-### Bibliography/Citations (HIGH IMPACT — blocks 3+ structure .todo tests)
-| CS Name | Type | Perl Line | Notes |
-|---------|------|-----------|-------|
-| `\@cite` | DefConstructor | ~4237 | Core citation rendering |
-| `\@@cite` | DefConstructor | ~4245 | Internal cite variant |
-| `\nocite` | DefPrimitive | ~4260 | No-cite marker |
-| `\bibcite` | DefPrimitive | ~4270 | BibTeX cite entry |
-| `\citation` | DefMacro | ~4250 | Citation macro |
-| `\bibdata` | DefMacro | ~4275 | BibTeX data |
-| `\lx@bibliography` | DefConstructor | ~4280 | Bibliography environment |
-| `\lx@mark@nocite` | DefPrimitive | ~4265 | No-cite tracking |
-| `\restoring@bibitem` | DefConstructor | ~4290 | Bib item restoration |
+### Phase 1 — Most accessible improvements
+1. Fix alignment engine — `halign_test` (51 diffs), `tabtab_test` (11 diffs)
+2. Port `dvipsnam.def` color definitions — unblocks graphicx_test colors
+3. Fix `namespace_test` (13 diffs) — custom .latexml loading
+4. Fix `complex_test` (19 diffs) — needs aastex631.cls or ERROR tolerance
 
-### Equations/Alignment (MEDIUM IMPACT)
-| CS Name | Type | Perl Line | Notes |
-|---------|------|-----------|-------|
-| `\@eqnarray@bindings` | DefPrimitive | ~2250 | Eqnarray alignment setup |
-| `\@@eqnarray` | DefConstructor | ~2260 | Core eqnarray env |
-| `\eqnarray*` | DefConstructor | ~2280 | Starred variant |
-| `\@eqnarray@label` | DefMacro | ~2300 | Label in eqnarray |
-| `\lx@eqnarray@save@label` | DefPrimitive | ~2310 | Label saving |
-| `\eqnarray@row@before` | DefPrimitive | ~2270 | Row hooks |
-| `\eqnarray@row@after` | DefPrimitive | ~2275 | Row hooks |
+### Phase 2 — Enable structure .todo tests (highest ROI)
+1. Implement `\eqnarray` environment (latex_constructs ~L2250)
+2. Implement `\addcontentsline`/`\tableofcontents` (~L3800)
+3. Complete `\caption` chain (~L1010)
+4. Port bibliography basics (`\bibcite`, `\@cite`, `\nocite`)
+5. Implement `\bfseries`/`\mdseries` font series commands
 
-### Caption/Float (MEDIUM-HIGH IMPACT — blocks figure/table .todo tests)
-| CS Name | Type | Perl Line | Notes |
-|---------|------|-----------|-------|
-| `\@caption` | DefMacro | ~1015 | Caption chain entry |
-| `\@caption@` | DefConstructor | ~1020 | Caption constructor |
-| `\@caption@@@` | DefPrimitive | ~1025 | Caption finalization |
-| `\caption` | DefMacro | ~1010 | User-facing caption |
-| `\@caption@postlabel` | DefMacro | ~1030 | Post-label hook |
-| `\@@toccaption` | DefConstructor | ~1035 | TOC caption entry |
-| `\format@title@figure` | DefMacro | ~1040 | Figure title format |
-| `\format@title@table` | DefMacro | ~1045 | Table title format |
+### Phase 3 — Complete amsmath for AMS tests
+1. Port remaining ~90% of amsmath.sty.ltxml
+2. Implement `\big`/`\Big`/`\bigg`/`\Bigg` delimiters (19 definitions)
+3. Port math atom adjusters: `\mathrel`, `\mathbin`, `\mathord`, `\mathop`, etc.
+4. Complete `compact_xmdual()`
 
-### Float Placement System (MEDIUM IMPACT)
-| CS Name | Type | Perl Line | Notes |
-|---------|------|-----------|-------|
-| `\@topnewpage` | DefMacro | ~1050 | Float at top of page |
-| `\@freelist` | DefMacro | ~1055 | Free float list |
-| `\@toplist` | DefMacro | ~1060 | Top float list |
-| `\@botlist` | DefMacro | ~1065 | Bottom float list |
-| `\@midlist` | DefMacro | ~1070 | Mid-page float list |
-
-### Sectioning/TOC (HIGH IMPACT — blocks structure .todo tests)
-| CS Name | Type | Perl Line | Notes |
-|---------|------|-----------|-------|
-| `\addcontentsline` | DefPrimitive | ~3800 | Add TOC entry |
-| `\contentsline` | DefPrimitive | ~3810 | TOC line rendering |
-| `\tableofcontents` | DefConstructor | ~3820 | TOC generation |
-| `\listoffigures` | DefConstructor | ~3830 | LOF generation |
-| `\listoftables` | DefConstructor | ~3840 | LOT generation |
-
-### Font Declarations (MEDIUM IMPACT)
-| CS Name | Type | Notes |
-|---------|------|-------|
-| `\DeclareSymbolFont` | DefPrimitive | Symbol font registration |
-| `\DeclareSymbolFontAlphabet` | DefPrimitive | Symbol font alphabet |
-| `\DeclareTextFontCommand` | DefPrimitive | Text font command factory |
-| `\DeclareOldFontCommand` | DefPrimitive | Old NFSS compatibility |
-| `\bfseries` | DefPrimitive | Bold series switch |
-| `\mdseries` | DefPrimitive | Medium series switch |
-
-### Input/File Handling (LOW-MEDIUM IMPACT)
-| CS Name | Type | Notes |
-|---------|------|-------|
-| `\@input` | DefPrimitive | Internal file input |
-| `\@input@` | DefPrimitive | File input variant |
-| `\InputIfFileExists` | DefPrimitive | Conditional file input |
-
-### Picture Environment (~25 defs — LOW IMPACT)
-- `\circle`, `\oval`, `\line`, `\vector`, `\put`, `\multiput`, `\qbezier`, `\bezier`
-- `\dashbox`, `\thicklines`, `\thinlines`, `\arrowlength`, `\linethickness`
-- Various `\pic@*` box variants
-
-### Index/Glossary (~11 defs — LOW IMPACT)
-- `\glossary`, `\@index`, `\@indexphrase`, `\@indexsee`, `\@indexseealso`
-- `\index@done`, `\index@item`, `\index@subitem`, `\index@subsubitem`
+### Phase 4 — Package gaps
+1. Port `pifont.sty` (140 lines) — unblocks ding_test
+2. Port `babel.sty` basics — stops infinite loop
+3. Port `array.sty` (650 lines) — enhanced tables
+4. Complete natbib.sty citation logic
 
 ---
 
-## Package Binding Coverage
-
-### Summary Table
-
-| Package | Perl Defs | Rust Defs | Coverage | Test Impact |
-|---------|-----------|-----------|----------|-------------|
-| color.sty | 148 | ~130 | **~90%** | **JUST PORTED** |
-| xkeyval.sty | 674 | 930 | **100%+** | Best coverage |
-| article.cls | 120 | 118 | **98%** | Near-complete |
-| amsthm.sty | 197 | 230 | **~90%** | Good |
-| hyperref.sty | 90 | 92 | **~65%** | Key features missing |
-| graphicx.sty | 75 | 52 | **~70%** | Sizer/properties stubs |
-| amsmath.sty | 162 | 17 | **~10%** | CRITICAL gap |
-| natbib.sty | 674 | 57 | **~8%** | CRITICAL gap |
-
-### Tier 1 — Critical Missing (high-frequency packages)
-| Package | Perl Lines | Status | Test Impact |
-|---------|-----------|--------|-------------|
-| xcolor.sty | 1200 | **NOT PORTED** | Blocks abxtest |
-| array.sty | 650 | **NOT PORTED** | Enhanced tables |
-| geometry.sty | 300 | **NOT PORTED** | Page layout |
-| babel.sty | 400 | **NOT PORTED** | Blocks babel test |
-| keyval.sty | 120 | **NOT PORTED** | Upstream of graphicx |
-
-### Tier 2 — Important Missing
-| Package | Perl Lines | Status |
-|---------|-----------|--------|
-| soul.sty | 180 | NOT PORTED |
-| stmaryrd.sty | 290 | NOT PORTED |
-| wasysym.sty | 200 | NOT PORTED |
-| pifont.sty | 140 | NOT PORTED |
-| accents.sty | 50 | NOT PORTED |
-| mathabx.sty | 600 | NOT PORTED |
-| amscd.sty | 130 | NOT PORTED |
-
-### Tier 3 — Ported but Critically Incomplete
-
-**amsmath.sty (10% coverage — 145 definitions missing)**
-Missing major features:
-- ALL alignment environments: `\align`, `\align*`, `\alignat`, `\flalign`, `\xalignat`, `\xxalignat`
-- ALL gather environments: `\gather`, `\gather*`, `\gathered`
-- `\split`, `\multline`, `\multline*`
-- `\aligned`, `\alignedat`
-- `\cases`, `\boxed`
-- Matrix environments: `\matrix`, `\pmatrix`, `\bmatrix`, `\Bmatrix`, `\vmatrix`, `\Vmatrix`
-- `\subequations`, `\intertext`, `\eqref`
-- `\smash`, `\cfrac`, `\genfrac`
-- ALL alignment binding primitives: `\lx@ams@align@bindings`, `\lx@ams@gather@bindings`, etc.
-- DeclareOption: `reqno`, `leqno`, `fleqn`
-
-**natbib.sty (8% coverage — ~600 definitions missing)**
-Missing major features:
-- Complex `\cite` macro with style-dependent logic
-- `\citet`, `\citep`, `\citealt`, `\citealp` with multiple arguments
-- `\citeauthor`, `\citeyear` with complex Perl logic
-- `setCitationStyle()` function calls (all stubbed)
-- Options with `setCitationStyle()` callbacks
-
-**hyperref.sty (65% coverage — key features missing)**
-Missing:
-- `\hypersetup` — incomplete (KeyVals handling stubbed)
-- `\hyperref@@ii`, `\hyperref@@iv` — constructor variants
-- `\hyperlink{}{}`, `\hypertarget{}{}`
-- PDF form fields: `\TextField`, `\CheckBox`, `\ChoiceMenu`, `\PushButton`
-- Metadata RDFa support
-
-**graphicx.sty (70% coverage — sizer callbacks stubbed)**
-Missing:
-- `\includegraphics` actual multi-phase logic
-- `image_candidates()` function
-- `graphicX_options()` function
-- Complex `sizer` and `properties` callbacks
-
----
-
-## Ignored Tests — Root Causes
-
-### Font tests (16 ignored)
-| Test | Packages Needed | Root Cause |
-|------|----------------|------------|
-| abxtest | mathabx, xcolor | Missing packages |
-| acc | accents | `\mathgroup` undefined, alignment crash |
-| bbold | bbold (have binding) | 676 diffs — table + math structure |
-| cancels | ~~color~~, ~~cancel~~ | **Both ported** — 14 diffs: `_force_font`/`_font` property eliding `<text>` wrapper |
-| ding | pifont | Missing pifont (pzd font map) |
-| esint | esint (have binding) | Math parser `todo!()` panic |
-| fonts | (article only) | 999 diffs — massive font table |
-| mathaccents | (article only) | 403 diffs — math structure |
-| mathbbol | mathbbol (have binding) | 109 diffs — math structure |
-| mathcolor | ~~color~~, amsmath | **color.sty NOW PORTED** — needs `\ExplSyntaxOn` (LaTeX3) |
-| mixed | (article only) | 36 diffs — math parser XMDual |
-| plainfonts | (plain TeX) | 73 diffs — font tables |
-| sizes | (article only) | 376 diffs — many sizing |
-| soul | soul, ~~color~~ | **color.sty NOW PORTED** — needs soul.sty |
-| stmaryrd | stmaryrd | Missing stmaryrd package |
-| wasysym | ~~color~~, wasysym | **color.sty NOW PORTED** — needs wasysym.sty |
-
-### Keyval tests (3 ignored)
-| Test | Root Cause |
-|------|------------|
-| keyvalstyle | xkeyval style environments |
-| xkeyvalstyle | xkeyval view/style system |
-| xkeyvalview | xkeyval view handling |
-
-### Other ignored (9)
-| Test | Root Cause |
-|------|------------|
-| can_mathl | Math parser |
-| can_namespace | Needs .latexml document-level bindings |
-| halign_test | Missing `ltx_nopad_r`, nested tabular bracket |
-| tabtab_test | Nested tabular missing, column misalignment |
-| can_theorem (ams) | Math parser diffs in amsmath environments |
-| can_graphics | Missing graphics features |
-| can_parse | Math parser |
-| can_complex | Complex document features |
-| can_babel | Missing babel package |
-
----
-
-## Core Infrastructure Gaps
-
-### todo!() Inventory (latexml_core: 67)
-- `register.rs` (16): Token/Tokens RegisterValue arithmetic
-- `lib.rs` (7): BoxOps trait defaults
-- `argument.rs` (7): AlignmentTemplate/RegisterDefinition edge cases
-- `digested.rs` (6): Unhandled DigestedData variants
-- `expandable.rs` (5): Profiling hooks
-- `definition.rs` (4): Register trait stubs
-- `alignment.rs` (4): compute_size, get_font, get_string, be_absorbed
-- `rewrite.rs` (3): Pattern matching edge cases
-- `keyvals.rs` (3): set_property, compute_size, set_keys_expansion variant
-- Other (12): scattered across tokens, stomach, state, etc.
-
-### Deferred Items
+## Deferred Items
 - `compact_xmdual()` body — document.rs
 - `mergeAttributes()` — document.rs
 - `\fontname` full format ("select font X at Ypt")
@@ -322,58 +187,4 @@ Missing:
 - `\leaders`/`\cleaders`/`\xleaders` (stub no-ops)
 - `\lx@special@graphics` constructor
 - BibTeX entry processing
-
----
-
-## Perl Commit Sync Status
-
-| Commit | Description | Synced? |
-|--------|-------------|---------|
-| 7119a535 | do not double-escape spec for dumped parameters | N/A (Dumper.pm) |
-| acaab773 | Correct Grouplevel | YES |
-| 5082b034 | kernel upgrades for CI in texlive 2025 | YES |
-| 3a89a24d | Lrgroup | YES |
-| d81e955b | add \overunderset to amsmath.sty | YES |
-| e577cbd3 | marvosym binding typo | YES |
-| 3875cd64 | bibconfig option for latexml.sty | YES |
-| e6db0871 | add missing refactor for textunderscore | N/A (underscore.sty not ported) |
-
----
-
-## Recommended Work Order
-
-### Phase 1 — Enable structure .todo tests (highest ROI)
-1. ~~Port `color.sty` binding~~ **DONE**
-2. Implement `\eqnarray` environment (latex_constructs ~L2250)
-3. Implement `\addcontentsline`/`\tableofcontents` (latex_constructs ~L3800)
-4. Complete `\caption` chain (latex_constructs ~L1010)
-5. Port bibliography basics (`\bibcite`, `\@cite`, `\nocite`)
-6. Implement `\bfseries`/`\mdseries` font series commands
-
-### Phase 2 — Complete amsmath for AMS tests
-1. Port remaining ~90% of amsmath.sty.ltxml (alignment envs, matrices, cases)
-2. Implement `\big`/`\Big`/`\bigg`/`\Bigg` delimiters (19 definitions)
-3. Implement Base_XMath commented constructors (matrix/cases bindings)
-4. Port math atom adjusters: `\mathrel`, `\mathbin`, `\mathord`, `\mathop`, etc.
-5. Complete `compact_xmdual()`
-
-### Phase 3 — Enable more font tests
-1. Port `cancel.sty` (80 lines — unblocks cancels test with color.sty done)
-2. Port `soul.sty` (180 lines — unblocks soul test with color.sty done)
-3. Port `pifont.sty` (140 lines)
-4. Port `stmaryrd.sty`, `wasysym.sty`, `accents.sty`
-5. Fix alignment padding for font table tests
-
-### Phase 4 — Broader coverage
-1. Port `array.sty` (650 lines), `geometry.sty` (300 lines)
-2. Port `babel.sty` basics (400 lines)
-3. Implement picture environment (~25 defs)
-4. Port `keyval.sty` (120 lines)
-5. Complete natbib.sty citation logic
-
-### Phase 5 — Polish
-1. Eliminate todo!() in latexml_core (67 items)
-2. Complete `\font` primitive
-3. Port BibTeX.pool basics
-4. Address remaining alignment issues
-5. Complete hyperref.sty (forms, metadata, hypersetup)
+- `parse_kludge` in math parser (blocks stmaryrd/esint)
