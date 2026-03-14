@@ -74,7 +74,6 @@ fn min_listing_display_test() {
 }
 
 #[test]
-#[ignore] // diffs — mathescape produces different math parse
 fn min_listing2_test() {
   latexml_test_single("tests/alignment/min_listing2.tex", "min_listing2", DIR, None, None);
 }

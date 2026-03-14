@@ -27,7 +27,6 @@ fn fonts_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual/XMApp structure)
 fn mixed_test() {
   latexml_test_single("tests/fonts/mixed.tex", "mixed", DIR, None, None);
 }
@@ -90,7 +89,6 @@ fn acc_test() {
 }
 
 #[test]
-#[ignore] // diffs — tabular border="r", \underbrace section structure
 fn mathaccents_test() {
   latexml_test_single("tests/fonts/mathaccents.tex", "mathaccents", DIR, None, None);
 }
