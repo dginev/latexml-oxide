@@ -487,17 +487,30 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     load_tex_content(&path, options)
   //   }
   } else {
+    // Perl heuristic: if the file has no directory, and is a .tex or no extension,
+    // try loading it as definitions (which checks for binding dispatchers).
+    // This handles cases like \input tcilatex where tcilatex.tex.ltxml exists.
+    let has_dir = clean_req.contains('/') || clean_req.contains('\\');
+    let ext = clean_req.rsplit('.').next().unwrap_or("");
+    let is_tex_like = ext == clean_req.as_ref() || ext == "tex"; // no extension or .tex
+    if !has_dir && is_tex_like {
+      // Try loading as a .tex binding (e.g. tcilatex → tcilatex.tex)
+      let tex_name = if ext == "tex" {
+        clean_req.to_string()
+      } else {
+        s!("{}.tex", clean_req)
+      };
+      if load_binding(&tex_name)? {
+        return Ok(());
+      }
+    }
     // Couldn't find anything?
     note_status(LogStatus::Missing, Some(request));
-
-    // We presumably are trying to input Content; an error if we can't find it (contrast to
-    // Definitions)
     Error!(
       "missing_file",
       request,
       s!("Can't find TeX file {}", request)
     );
-    //  maybeReportSearchPaths());
     Ok(())
   }
 }

@@ -66,6 +66,7 @@ pub mod t2c_fontmap;
 pub mod t1enc_def;
 pub mod t1enc_sty;
 pub mod ts1_fontmap;
+pub mod tcilatex_tex;
 pub mod textcase_sty;
 pub mod textcomp_sty;
 pub mod theorem_sty;

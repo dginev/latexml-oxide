@@ -1345,7 +1345,7 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         if s.starts_with('\\') {
           s.remove(0);
         }
-        let s_char = s.chars().next().unwrap();
+        let s_char = s.chars().next().unwrap_or('\0');
         // Perl: skip1Space($self, 1); — consume one optional space after charcode
         skip_one_space()?;
         Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!

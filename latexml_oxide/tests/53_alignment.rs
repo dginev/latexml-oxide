@@ -68,7 +68,6 @@ fn tabular_test() {
 }
 
 #[test]
-#[ignore] // diffs — morse code alignment
 fn morse_test() {
   latexml_test_single("tests/alignment/morse.tex", "morse", DIR, None, None);
 }

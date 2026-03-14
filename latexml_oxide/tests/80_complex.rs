@@ -84,5 +84,4 @@ fn physics_test() { complex("physics"); }
 fn si_test() { complex("si"); }
 
 #[test]
-#[ignore] // needs tcilatex package
 fn tcilatex_minimal_test() { complex("tcilatex_minimal"); }

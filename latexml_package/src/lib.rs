@@ -86,6 +86,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "t2c.fontmap" => package::t2c_fontmap::load_definitions(),
     "ts1.fontmap" => package::ts1_fontmap::load_definitions(),
     "utf8.def" => package::utf8_def::load_definitions(),
+    "tcilatex.tex" => package::tcilatex_tex::load_definitions(),
     "textcase.sty" => package::textcase_sty::load_definitions(),
     "cite.sty" => package::cite_sty::load_definitions(),
     "color.sty" => package::color_sty::load_definitions(),
