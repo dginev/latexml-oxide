@@ -255,3 +255,102 @@ spec, not literal braces.
 **Key insight:** If a macro argument isn't being read correctly, check whether
 the prototype has `{}` (Plain reader) when it should have a named type, or
 vice versa. The `{}` braces in prototypes always mean "read a balanced group".
+
+---
+
+## 12. normalize_sum_sizes: per-column-index arrays, not flat lists
+
+**Discovery:** Alignment column widths were computed incorrectly — nested
+tabulars and multi-row tables had wrong column dimensions, causing incorrect
+CSS width/height attributes.
+
+**Analysis:** Perl's `normalize_sum_sizes` (Alignment.pm L500-664) uses
+per-column-index arrays: `$colwidths[$j]` collects all width values for
+column j across all rows, then computes `max(@{$colwidths[$j]})`. The Rust
+implementation was using a flat list — one entry per cell across all rows —
+which broke when rows had different column counts or when colspan>1 cells
+needed width distributed across multiple columns.
+
+Additional Perl semantics that were missing in Rust:
+- **vattach height/depth split:** Perl computes per-alignment height/depth
+  based on `vattach` property (top = all depth, bottom = all height,
+  middle = split with math axis approximation). Rust set `cached_depth = 0`.
+- **lspaces/rspaces:** Perl adds left/right space dimensions to cell width
+  and sets `lpadding`/`rpadding` properties. Rust ignored these entirely.
+- **Border padding:** Perl adds `0.4*UNITY` (0.4 * 65536 scaled points) for
+  each border. Rust was missing this.
+- **First/last row strut:** Perl conditionally applies strut height to first
+  row and strut depth to last row only for non-LaTeX alignments. Rust applied
+  strut to all rows.
+- **colspan>1 distribution:** Perl distributes wide cells' excess width
+  equally across spanned columns. Rust didn't handle this.
+
+**Fix:** Complete rewrite of normalize.rs to match Perl Alignment.pm semantics:
+per-column-index arrays, separate rowdepths, vattach split, border padding,
+strut special-casing, colspan distribution, lspaces/rspaces propagation.
+
+**Key insight:** When porting array-accumulation patterns from Perl, verify
+the indexing structure. `$foo[$j]` in a nested loop is per-index accumulation,
+not flat append. A flat `Vec::push` is fundamentally different from
+`Vec<Vec>::push_at_index`.
+
+---
+
+## 13. close_node_with_strictness: walker tracks walker node, not target
+
+**Discovery:** `close_node_with_strictness` (document.rs) was using
+`node.get_type()` for the loop variable `t`, where `node` is the *target*
+node being closed. This should be `n.get_type()` where `n` is the *walker*
+node traversing up the tree.
+
+**Analysis:** The function walks up the DOM tree from `self.node` toward
+`node`, auto-closing intermediate elements. The loop condition
+`t != Some(NodeType::DocumentNode) && &n != node` should track whether the
+*walker* has reached the document root, not whether the *target* is the
+document root (which is invariant across iterations).
+
+Perl (Document.pm L952-970):
+```perl
+my $t;
+while (($t = $n->nodeType) != XML_DOCUMENT_NODE && !$n->isSameNode($node)) {
+  ...
+  $n = $n->parentNode; }
+```
+
+The bug was in both the initialization (`let mut t = node.get_type()`) and
+the loop body update (`t = node.get_type()` instead of `t = n.get_type()`).
+
+**Fix:** Changed both to `n.get_type()`.
+
+**Key insight:** When porting Perl loops with multiple node references
+(`$node` = target, `$n` = walker), be very careful about which variable
+is used in loop conditions. A single-character difference (`node` vs `n`)
+can cause completely wrong loop termination.
+
+---
+
+## 14. close_to_node ifopen parameter: suppress error when true
+
+**Discovery:** `close_to_node` in document.rs declared `_ifopen: bool`
+(prefixed with underscore = unused). The Perl version uses `$ifopen` to
+suppress the "not open" error when closing a node that isn't actually in
+the current open-element path.
+
+**Analysis:** Perl (Document.pm L910-925):
+```perl
+if (!$ifopen) {
+  Error('malformed', $qname, $self, "Attempt to close $qname, which isn't open"); }
+```
+
+When `$ifopen` is true (the caller says "close this *if* it's open"), reaching
+the document root without finding the node is not an error — it just means
+the node wasn't open. Without this guard, every "close if open" call to a
+non-open node would emit a spurious error.
+
+**Fix:** Renamed `_ifopen` to `ifopen` and added the `if !ifopen` guard
+before the error emission.
+
+**Key insight:** Underscore-prefixed parameters (`_foo`) in Rust suppress
+unused-variable warnings. When porting from Perl, check whether each
+"unused" parameter is *intentionally* unused or *accidentally* not yet
+implemented. The `_` prefix can mask missing functionality.

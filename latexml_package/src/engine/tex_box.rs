@@ -6,12 +6,64 @@ use crate::prelude::*;
 
 /// Perl: hackVBoxAttachment($box, $valign)
 /// Sets vattach on the box, with special handling for \halign alignment objects.
+///
+/// For \halign inside \vbox/\vtop, vattach must be set on the alignment's XML
+/// attributes (so it becomes an attribute on `<tabular>`), NOT on the box property
+/// (which would end up on `<para>` via insertBlock).
+///
+/// Perl's List() simplification returns single-item vertical lists unwrapped,
+/// so $box->getProperty('alignment') finds the alignment directly. In Rust,
+/// Lists are not simplified, so we must walk into children to find it.
 fn hack_vbox_attachment(whatsit: &mut Whatsit, valign: &'static str) {
   if let Some(content_box) = whatsit.get_arg_mut(2) {
-    // Perl: if alignment property exists AND definition is \halign,
-    // copy vattach to alignment's attributes hash. Otherwise set on box.
-    // TODO: Full \halign alignment attribute propagation
-    content_box.set_property("vattach", valign);
+    if !set_halign_vattach(content_box, valign) {
+      // No \halign alignment found — set vattach as property on the box
+      content_box.set_property("vattach", valign);
+    }
+  }
+}
+
+/// Walk into a Digested tree to find a \halign Whatsit with an 'alignment' property.
+/// If found, set vattach on the alignment's XML attributes and return true.
+/// Returns false if no \halign alignment was found.
+fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
+  match digested.data() {
+    DigestedData::Whatsit(ref w) => {
+      let w_ref = w.borrow();
+      if w_ref.get_property("alignment").is_some() {
+        // Check if this whatsit's definition is \halign
+        let def = w_ref.get_definition();
+        let is_halign = *def.get_cs_name() == *"\\halign";
+        if is_halign {
+          // Get the alignment property value and set vattach on it
+          if let Some(Cow::Borrowed(Stored::Digested(ref alignment_dig))) =
+            w_ref.get_property("alignment")
+          {
+            if let DigestedData::Alignment(ref alignment_cell) = *alignment_dig.data() {
+              alignment_cell
+                .borrow_mut()
+                .get_xml_attributes_mut()
+                .insert(String::from("vattach"), String::from(valign));
+              return true;
+            }
+          }
+        }
+        // Has alignment but not \halign (e.g. tabular) — don't set vattach
+        return false;
+      }
+      false
+    },
+    DigestedData::List(ref list_cell) => {
+      // Walk children to find a \halign
+      let children = list_cell.borrow().unlist();
+      for child in children.iter() {
+        if set_halign_vattach(child, valign) {
+          return true;
+        }
+      }
+      false
+    },
+    _ => false,
   }
 }
 

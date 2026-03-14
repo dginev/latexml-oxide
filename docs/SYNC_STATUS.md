@@ -1,6 +1,6 @@
 # Engine Sync Status: Perl vs Rust
 
-Updated 2026-03-13. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-14. Only lists open gaps & TODOs; completed items live in git history.
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
@@ -169,10 +169,10 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | gullet.rs | MINOR | `readArg` isolation via `readingFromMouth`; `read_register_value` coercions |
 | stomach.rs | MINOR | Mathcode char decoding (ADDOP vs BINOP). `execute_before_after_group` extracted. `begin_mode_opt`/`end_mode_opt` with `noframe` parameter synced with Perl Grouplevel commit (acaab773). `everymath/everydisplay` injection now centralized in `begin_mode_opt`. |
 | state.rs | OK | — |
-| document.rs | MINOR | `compact_xmdual()`, `mergeAttributes()`, `insertElementBefore()`, comment creation (needs libxml) |
+| document.rs | MINOR | `compact_xmdual()`, `mergeAttributes()`, `insertElementBefore()`, comment creation (needs libxml). Fixed: `close_to_node` ifopen parameter now suppresses error (was ignored). `close_node_with_strictness` walker now tracks `n.get_type()` (was `node.get_type()`). Audit in progress (10-part Document.pm sub-audit). |
 | register.rs | MINOR | — |
 | pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_is_contained`, `pathname_findall`, `pathname_timestamp/copy/mkdir`. `canonical` now handles `./`, `/../`. Dir-listing approach in `candidate_pathnames` not ported (uses `Path::exists` instead). |
-| alignment.rs | MINOR | Padding CSS classes, ABSORB_LIMIT guard, sizing info |
+| alignment.rs | MINOR | normalize.rs deep refactored (2026-03-14): per-column-index arrays, vattach height/depth split, lspaces/rspaces padding, border padding (0.4*UNITY), first/last row strut, rowspan redirect. Remaining: padding CSS classes, ABSORB_LIMIT guard |
 | rewrite.rs | GAPS | ~20% ported (Select/Replace only) |
 | token.rs | OK | — |
 | tokens.rs | OK | — |
@@ -223,7 +223,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 175 pass, 0 fail, 60 ignored test functions**
+**Current totals: 177 pass, 0 fail, 58 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 56% of Perl test cases passing**
 
@@ -237,19 +237,19 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 10_expansion | 36/36 | All pass (Rust 48 .tex, Perl 47) |
 | 12_grouping | 2/2 | All pass |
 | 20_digestion | 10/10 | All pass |
-| 22_fonts | 8/23 | 8 pass; 15 ignored |
+| 22_fonts | 10/23 | 10 pass; 13 ignored (cancels, soul, mathcolor un-ignored) |
 | 30_encoding | 26/26 | All pass |
-| 32_keyval | 5/8 | 5 pass; 3 ignored (xkeyval style/view, keyvalstyle) |
+| 32_keyval | 7/8 | 7 pass; 1 ignored (xkeyvalview) |
 | 33_keyval_options | 11/11 | All pass |
 | 50_structure | 24/24 | All pass (18 .todo disabled at build level) |
 | 52_namespace | 0/5 | **All ignored** — DTD not supported in Rust port |
-| 53_alignment | 3/22 | halign, tabtab, tabularstar pass; 19 ignored |
+| 53_alignment | 6/22 | halign, tabtab, tabularstar, morse, mathmix, halignatt pass; 16 ignored |
 | 55_theorem | 4/4 | All pass (ntheorem disabled) |
 | 56_ams | 0/7 | **All ignored** — needs amsmath environments |
-| 65_graphics | 4/9 | 4 pass; 5 ignored |
+| 65_graphics | 5/9 | 5 pass; 4 ignored |
 | 70_parse | 0/1 | **All ignored** — math parser regression tests |
 | 700_unit_parse | 3/3 | |
-| 80_complex | 5/16 | xii, figure_dual_caption, hyperchars, versioned_fallback, equationnest pass |
+| 80_complex | 7/16 | xii, figure_dual_caption, hyperchars, hypertest, versioned_fallback, equationnest, tcilatex_minimal pass; 9 ignored |
 | 81_babel | 0/1 | **All ignored** — needs babel language `.ldf` files |
 
 ### Perl-only tests (not yet copied to Rust)
@@ -460,7 +460,7 @@ Namespace tests (ns1–ns5) permanently ignored. xii.tex converted to use standa
 
 | Phase | Cumulative Tests | Delta | Key Infrastructure |
 |-------|-----------------|-------|--------------------|
-| Current | 167 | — | — |
+| Current | 176 | — | — |
 | Phase 1 (infrastructure) | ~190 | +35 | local .ltxml, structure packages |
 | Phase 2 (fonts) | ~205 | +15 | per-font hyphenchar, fontname format, font sizes |
 | Phase 3 (alignment) | ~225 | +20 | nested tabular, alignment packages |
@@ -505,17 +505,18 @@ local .ltxml loading ──→ keyvalstyle, structure .todo tests
 | 18 | physics | 5417 | Massive diffs (was crash, now runs) |
 
 **Crashes (need code fixes):**
-- halignatt + mathtools: `alignment.rs:317` unwrap on None (shared root cause)
-- colortbls: `normalize.rs:403` removal index out of bounds
+- ~~halignatt~~: FIXED — hackVBoxAttachment now walks Lists to find \halign alignment
+- colortbls: normalize.rs crash fixed; now hits TooManyErrors (colortbl.sty not ported)
 - cells + listing + graphrot + xytest: TooManyErrors (>100 undefined errors)
 - figure_mixed_content: `\lstKV@SetIf@` param spec error (listings.sty)
 - cd_test: math parser `replacing tree should always work`
 - babel: infinite loop (timeout)
 
 ### Immediate Next Actions (prioritized)
-1. Fix alignment.rs:317 crash (unlocks halignatt + mathtools)
-2. Fix colortbls normalize.rs:403 crash
-3. Port tcilatex binding (7 diffs → pass)
-4. Fix hypertest namespace/color issues (16 diffs)
-5. Implement local .sty.ltxml loading from test directories
-6. Port color.sty.ltxml (unlocks graphics + downstream)
+1. ~~Fix alignment.rs:317 crash~~ DONE — halignatt now shows 2 vattach diffs (needs insert_block refactor)
+2. ~~Fix colortbls normalize.rs:403 crash~~ normalize.rs rewritten — retest needed
+3. Complete Document.pm audit (10-part sub-audit in progress)
+4. Port tcilatex binding (7 diffs → pass)
+5. Fix hypertest namespace/color issues (16 diffs)
+6. Implement local .sty.ltxml loading from test directories
+7. Port color.sty.ltxml (unlocks graphics + downstream)
