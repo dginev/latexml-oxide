@@ -214,18 +214,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       is_found_raw = true;
       load_tex_definitions(&filename, &file, options.reloadable)?;
     } else if !options.noerror {
-      // TODO: Proper missing reports
-      Warn!("missing_file", name, s!("Can't find file for {name}"));
-      // note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
-      // # We'll only warn about a missing file of definitions: it may be ignorable or never used.
-      // # if there ARE problems, they'll likely produce their own errors!
-      // Warn('missing_file', $name, $STATE>getStomach->getGullet,
-      //   "Can't find "
-      //     . ($options{notex} ? "binding for " : "")
-      //     . (($options{type} && $definition_name{ $options{type} }) || 'definitions') . ' '
-      //     . $name,
-      //   "Anticipate undefined macros or environments",
-      //   maybeReportSearchPaths()); }
+      Error!("missing_file", name,
+        s!("Can't find binding or file for '{filename}'. \
+          No dispatcher entry and no raw file found on disk."));
     }
   }
 
