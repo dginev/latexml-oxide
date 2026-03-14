@@ -27,7 +27,7 @@ fn framed_test() {
 }
 
 #[test]
-#[ignore] // needs rotating.sty, multirow.sty
+#[ignore] // crashes — \begingroup in \csname..\endcsname, too many errors
 fn graphrot_test() {
   latexml_test_single("tests/graphics/graphrot.tex", "graphrot", DIR, None, None);
 }

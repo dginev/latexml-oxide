@@ -1,5 +1,6 @@
 // Keyval tests
 use latexml::util::test::*;
+use std::rc::Rc;
 const DIR: &str = "tests/keyval";
 
 #[test]
@@ -8,9 +9,9 @@ fn keyvalinline_test() {
 }
 
 #[test]
-#[ignore] // diffs — keyval style handling (graphics package)
 fn keyvalstyle_test() {
-  latexml_test_single("tests/keyval/keyvalstyle.tex", "keyvalstyle", DIR, None, None);
+  latexml_test_single("tests/keyval/keyvalstyle.tex", "keyvalstyle", DIR, None,
+    Some(Rc::new(latexml_contrib::dispatch)));
 }
 
 #[test]
@@ -34,13 +35,13 @@ fn xkeyvalkvcompat_test() {
 }
 
 #[test]
-#[ignore] // diffs — xkeyval style environment
+#[ignore] // needs myxkeyval.sty Rust binding (xkeyval kind/choices/prefix features)
 fn xkeyvalstyle_test() {
   latexml_test_single("tests/keyval/xkeyvalstyle.tex", "xkeyvalstyle", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — xkeyval view handling
+#[ignore] // needs myxkeyval.sty Rust binding (xkeyval view handling)
 fn xkeyvalview_test() {
   latexml_test_single("tests/keyval/xkeyvalview.tex", "xkeyvalview", DIR, None, None);
 }
