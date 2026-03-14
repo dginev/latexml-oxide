@@ -1,5 +1,8 @@
 // Supported package bindings
 pub mod accents_sty;
+pub mod algorithm_sty;
+pub mod algorithmicx_sty;
+pub mod algpseudocode_sty;
 pub mod alltt_sty;
 pub mod array_sty;
 pub mod appendix_sty;
