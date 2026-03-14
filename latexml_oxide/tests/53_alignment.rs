@@ -90,7 +90,6 @@ fn longtable_test() {
 }
 
 #[test]
-#[ignore] // diffs — tabbing environment issues
 fn tabbing_test() {
   latexml_test_single("tests/alignment/tabbing.tex", "tabbing", DIR, None, None);
 }

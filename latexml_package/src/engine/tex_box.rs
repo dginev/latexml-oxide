@@ -776,10 +776,64 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  // Various leaders, ignored for now...
-  DefPrimitive!("\\leaders", None);
-  DefPrimitive!("\\cleaders", None);
-  DefPrimitive!("\\xleaders", None);
+  // Various leaders — fill space with box or rule
+  // Perl: DefConstructor('\leaders Digested Digested', sub { ... },
+  //   bounded => 1, beforeDigest => sub { $STATE->assignValue(Alignment => undef); });
+  DefConstructor!("\\leaders Digested Digested", sub [document, args] {
+    let filler = &args[0];
+    let _glue = &args[1];
+
+    // Get the context element's box to check for explicit width
+    let context = document.get_element();
+    let cbox = context.as_ref().and_then(|n| document.get_node_box(n));
+    let req_width: Option<Dimension> = cbox.as_ref().and_then(|b| {
+      b.get_property("width").and_then(|s| {
+        let dim_opt: Option<Dimension> = (&*s).into();
+        dim_opt
+      })
+    });
+
+    let mut noautoclose_attrs = HashMap::default();
+    noautoclose_attrs.insert(String::from("_noautoclose"), String::from("1"));
+    let mut container = document.open_element("ltx:text", Some(noautoclose_attrs), None)?;
+
+    if let Some(ref filler_d) = filler {
+      document.absorb(filler_d, None)?;
+    }
+
+    // Check if we should extend a rule to fill the requested width
+    let mut unwrap = false;
+    if let (Some(_), Some(ref rw)) = (&cbox, &req_width) {
+      // Find the last child of the container — should be the absorbed rule
+      if let Some(mut fnode) = container.get_last_child() {
+        let qname = fnode.get_name();
+        if qname == "rule" {
+          // Extend the rule to fill the width
+          document.set_attribute(&mut fnode, "width", &rw.to_attribute())?;
+          document.add_class(&mut fnode, "ltx_filled_leader")?;
+          unwrap = true;
+        }
+      }
+    }
+    if !unwrap {
+      document.add_class(&mut container, "ltx_leader")?;
+    }
+
+    document.close_element("ltx:text")?;
+    if unwrap {
+      document.unwrap_nodes(container)?;
+    }
+  },
+    bounded => true,
+    before_digest => sub {
+      // Hide alignment so that \hrule inside \leaders doesn't add border="t"
+      // Perl: $STATE->assignValue(Alignment => undef);
+      state::assign_value("Alignment", Stored::None, None);
+    }
+  );
+
+  state::let_i(&T_CS!("\\cleaders"), &T_CS!("\\leaders"), None);
+  state::let_i(&T_CS!("\\xleaders"), &T_CS!("\\leaders"), None);
 
   // Overlay one glyph on another (used by \accent fallback)
   // Perl: enterHorizontal => 1
