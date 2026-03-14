@@ -251,6 +251,46 @@ fn lst_regexp(chars: &str) -> String {
   regex::escape(&lst_deslash(chars))
 }
 
+/// Perl: lst_splitDelimiters — split a delimiter token list into (open, close) parts.
+/// The format is `{open}{close}` where the two TeX groups contain the delimiters.
+/// First group = open delimiter, second group = close delimiter.
+fn lst_split_delimiters(delims: &Tokens) -> (String, String) {
+  let mut groups: Vec<Vec<Token>> = Vec::new();
+  let mut level: i32 = 0;
+  let mut current_group: Vec<Token> = Vec::new();
+  for tok in delims.unlist_ref() {
+    if *tok == T_BEGIN!() {
+      if level > 0 {
+        current_group.push(tok.clone());
+      }
+      level += 1;
+    } else if *tok == T_END!() {
+      level -= 1;
+      if level == 0 {
+        groups.push(std::mem::take(&mut current_group));
+      } else if level > 0 {
+        current_group.push(tok.clone());
+      }
+    } else if level > 0 {
+      current_group.push(tok.clone());
+    } else {
+      // Tokens outside groups go to a trailing group
+      current_group.push(tok.clone());
+    }
+  }
+  // If there are ungrouped tokens, add them as a final group
+  if !current_group.is_empty() {
+    groups.push(current_group);
+  }
+  let open_str = groups.first()
+    .map(|toks| lst_deslash(&Tokens::new(toks.clone()).to_string()))
+    .unwrap_or_default();
+  let close_str = groups.get(1)
+    .map(|toks| lst_deslash(&Tokens::new(toks.clone()).to_string()))
+    .unwrap_or_default();
+  (open_str, close_str)
+}
+
 /// Perl: lstGetLiteral — get string value from LST@key state.
 fn lst_get_literal(value: &str) -> String {
   let key = s!("LST@{value}");
@@ -376,6 +416,14 @@ fn lst_add_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&str>
     // Only set if not already in a class
     if state::lookup_value(&key).is_none() {
       state::assign_value(&key, Stored::String(arena::pin(class)), None);
+      // Track the word in the word list for case-insensitive duplication
+      let list_key = "LST_WORD_LIST";
+      let mut list = match state::lookup_value(list_key) {
+        Some(Stored::Strings(v)) => v.to_vec(),
+        _ => Vec::new(),
+      };
+      list.push(arena::pin(&word));
+      state::assign_value(list_key, Stored::Strings(list.into()), None);
     }
   }
 }
@@ -452,10 +500,9 @@ fn lst_add_delimiter(
     }
     "s" | "n" => {
       // String/Nested: different open & close delimiters
-      let parts: Vec<&str> = delim_str.splitn(2, "}{").collect();
-      if parts.len() == 2 {
-        let open = lst_deslash(parts[0].trim_start_matches('{'));
-        let close = lst_deslash(parts[1].trim_end_matches('}'));
+      // Use Perl-like token-level splitting for proper brace handling
+      if let Some(delim_toks) = &delims {
+        let (open, close) = lst_split_delimiters(delim_toks);
         let close_re = regex::escape(&close);
         (open, close, close_re, String::new())
       } else {
@@ -477,12 +524,12 @@ fn lst_add_delimiter(
     "d" => {
       // Doubled: same delim; not when doubled
       // Perl: $closere = "(?<!$openre)$openre(?!$openre)"; $quoted = $openre.$openre
-      // Rust: no lookbehind; use lookahead only; quoted consumes doubled delimiters
+      // Rust: no lookahead/lookbehind; use simple close_re. Doubled delims are consumed
+      // by the quoted_re before close_re can match, so simple match is correct.
       let open = lst_deslash(&delim_str);
       let open_re = lst_regexp(&delim_str);
-      let close_re = format!("{open_re}(?!{open_re})");
       let quoted = format!("{open_re}{open_re}");
-      (open.clone(), open, close_re, quoted)
+      (open.clone(), open, open_re, quoted)
     }
     "directive" => {
       // Perl: $kind = $type . 's' = "directives"
@@ -504,6 +551,7 @@ fn lst_add_delimiter(
     let kind = kind_override.as_deref().unwrap_or(kind);
     // Perl: $class = $class . ToString($open) . ToString($close)
     let class = format!("{kind}{open_str}{close_str}");
+    // eprintln!("lst_add_delimiter: kind={kind:?} type={type_clean:?} open={open_str:?} close={close_str:?} close_re={close_re:?} class={class:?}");
     // Store delimiter info in state
     let key_open = s!("LST_DELIM@{open_str}@open");
     let key_close = s!("LST_DELIM@{open_str}@close");
@@ -679,6 +727,13 @@ struct LstContext {
   case_sensitive: bool,
   literate: Vec<(String, Tokens, bool)>,
   literate_re: Option<Regex>,
+  firstline: i64,
+  lastline: i64,
+}
+
+/// Perl: linetest closure — checks if a line number should be included based on firstline/lastline.
+fn lst_linetest(ctx: &LstContext) -> bool {
+  ctx.firstline <= ctx.linenum && ctx.linenum <= ctx.lastline
 }
 
 /// Perl: lstProcess — main entry point for processing listing text.
@@ -729,8 +784,9 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   if dollar_is_letter {
     letter_chars.push('$');
   }
-  let texcs = lst_get_boolean("texcs");
-  let id_pattern = if texcs {
+  // Perl: LookupValue('LST@TEXCS') — set when texcs or moretexcs has been used
+  let has_texcs = matches!(state::lookup_value("LST@TEXCS"), Some(Stored::Bool(true)));
+  let id_pattern = if has_texcs {
     format!("\\\\?[{letter_chars}][{letter_chars}{digit_chars}]*")
   } else {
     format!("[{letter_chars}][{letter_chars}{digit_chars}]*")
@@ -782,6 +838,28 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
 
   let case_sensitive = lst_get_boolean("sensitive");
 
+  // Perl: if (!$CASE_SENSITIVE) { foreach word (keys %$words) { $$words{uc($word)} = $$words{$word}; } }
+  if !case_sensitive {
+    if let Some(Stored::Strings(word_list)) = state::lookup_value("LST_WORD_LIST") {
+      for word_sym in word_list.iter() {
+        let word = arena::to_string(*word_sym);
+        let upper = word.to_uppercase();
+        if upper != word {
+          let src_class_key = s!("LST_WORDS@{word}@class");
+          let dst_class_key = s!("LST_WORDS@{upper}@class");
+          if let Some(class_val) = state::lookup_value(&src_class_key) {
+            state::assign_value(&dst_class_key, class_val, None);
+          }
+          let src_index_key = s!("LST_WORDS@{word}@index");
+          let dst_index_key = s!("LST_WORDS@{upper}@index");
+          if let Some(index_val) = state::lookup_value(&src_index_key) {
+            state::assign_value(&dst_index_key, index_val, None);
+          }
+        }
+      }
+    }
+  }
+
   let mut ctx = LstContext {
     listing: text,
     linenum: line0,
@@ -798,6 +876,8 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     case_sensitive,
     literate: Vec::new(),
     literate_re: None,
+    firstline: lst_get_number("firstline"),
+    lastline: lst_get_number("lastline"),
   };
 
   // Add preamble tokens
@@ -809,8 +889,15 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     ctx.lsttokens.extend(basicstyle.unlist().to_vec());
   }
 
-  // Skip lines before firstline
-  // (simplified linetest: assume all lines pass unless firstline/lastline set)
+  // Perl: while ($listing && !&$linetest($linenum)) { skip lines before firstline }
+  while !ctx.listing.is_empty() && !lst_linetest(&ctx) {
+    if let Some(pos) = ctx.listing.find('\n') {
+      ctx.listing = ctx.listing[pos + 1..].to_string();
+    } else {
+      ctx.listing = String::new();
+    }
+    ctx.linenum += 1;
+  }
 
   if mode != "inline" {
     ctx.lsttokens.extend(invoke(T_CS!("\\setcounter"), vec![Tokens!(T_OTHER!("lstnumber")), Tokens::new(ExplodeText!(&ctx.linenum.to_string()))]));
@@ -912,18 +999,18 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
     prev_listing = ctx.listing.clone();
 
     // 1. Check end regex (close delimiter)
+    // But first: if the end_re would match, check if quoted_re also matches at the same position.
+    // If quoted_re matches, the end_re match is spurious (e.g. '' in doubled delimiters).
+    // This replaces Perl's lookahead (?!...) in close_re which Rust regex doesn't support.
     if let Some(re) = end_re {
-      // Special handling for zero-width assertions that regex crate can't handle:
       let re_str = re.as_str();
       if re_str.contains("__NONWORD__") {
-        // Perl: (?=\W) — close at non-word char or end of string (zero-width, don't consume)
         let close = ctx.listing.is_empty()
           || ctx.listing.chars().next().map_or(true, |c| !c.is_alphanumeric() && c != '_');
         if close {
           break;
         }
       } else if re_str.contains("__NEWLINE__") {
-        // Perl: (?=\n) — close at newline or end of string (zero-width, don't consume)
         let close =
           ctx.listing.is_empty() || ctx.listing.starts_with('\n');
         if close {
@@ -931,9 +1018,13 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
         }
       } else if let Some(m) = re.find(&ctx.listing) {
         if m.start() == 0 {
-          ctx.colnum += m.len() as i64;
-          ctx.listing = ctx.listing[m.end()..].to_string();
-          break;
+          // Before closing, check if quoted_re matches (takes priority)
+          let is_quoted = ctx.quoted_re.find(&ctx.listing).is_some();
+          if !is_quoted {
+            ctx.colnum += m.len() as i64;
+            ctx.listing = ctx.listing[m.end()..].to_string();
+            break;
+          }
         }
       }
     }
@@ -1079,8 +1170,24 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
             // Index generation (simplified)
           }
 
+          // Perl: if excludeslash, move the "\" outside of the styling
+          let mut pre_tokens: Vec<Token> = Vec::new();
+          let mut styled_tokens = word_tokens;
+          let excludeslash_key = s!("LST_CLASSES@{classname}@excludeslash");
+          let has_excludeslash = match state::lookup_value(&excludeslash_key) {
+            Some(Stored::Bool(true)) => true,
+            Some(Stored::String(s)) => arena::to_string(s) == "true",
+            _ => false,
+          };
+          if has_excludeslash {
+            if !styled_tokens.is_empty() {
+              pre_tokens.push(styled_tokens.remove(0));
+            }
+          }
+
+          ctx.lsttokens.extend(pre_tokens);
           ctx.lsttokens.extend(lst_class_begin(&classname));
-          ctx.lsttokens.extend(word_tokens);
+          ctx.lsttokens.extend(styled_tokens);
           ctx.lsttokens.extend(lst_class_end(&classname));
           continue;
         }
@@ -1097,6 +1204,19 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
         }
         ctx.linenum += 1;
         ctx.colnum = 0;
+        // Perl: while ($listing ne '' && !&$linetest($linenum)) { skip lines }
+        while !ctx.listing.is_empty() && !lst_linetest(ctx) {
+          // Skip this line
+          if let Some(pos) = ctx.listing.find('\n') {
+            ctx.listing = ctx.listing[pos + 1..].to_string();
+          } else {
+            ctx.listing = String::new();
+          }
+          if let Ok(inv) = (|| -> Result<Tokens> { Ok(Invocation!(T_CS!("\\stepcounter"), vec![T_OTHER!("lstnumber")])) })() {
+            ctx.lsttokens.extend(inv.unlist());
+          }
+          ctx.linenum += 1;
+        }
         // Handle gobble
         let gobble = lst_get_number("gobble");
         for _ in 0..gobble {
@@ -1146,12 +1266,11 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
       if let Some(m) = quoted_re.find(&ctx.listing) {
         let matched = m.as_str().to_string();
         ctx.listing = ctx.listing[m.end()..].to_string();
+        // Perl: lstProcessPush(split(//,$quoted)) — each char goes through rescan
         for c in matched.chars() {
-          if c == '\\' {
-            ctx.lsttokens.push(T_CS!("\\textbackslash"));
-          } else {
-            let ch_str = c.to_string();
-            ctx.lsttokens.push(T_OTHER!(&ch_str));
+          let ch_str = c.to_string();
+          if let Some(rescanned) = lst_rescan(Some(Tokens::new(vec![T_OTHER!(&ch_str)]))) {
+            ctx.lsttokens.extend(rescanned.unlist().to_vec());
           }
         }
         ctx.colnum += matched.len() as i64;
@@ -1884,7 +2003,11 @@ LoadDefinitions!({
     Tokens!()
   });
   DefMacro!("\\lst@@texcsstyle OptionalMatch:* [Number] Until:\\end", sub [args] {
-    lst_set_class_style("texcss", args[2].clone().owned_tokens(), vec![]);
+    // Perl: excludeslash => !$_[1] — when * is NOT present, excludeslash is true
+    let star_present = !args[0].is_empty();
+    let class = lst_class_name("texcss", args[1].to_string().parse().ok());
+    let exclude = if star_present { "false" } else { "true" };
+    lst_set_class_style(&class, args[2].clone().owned_tokens(), vec![("excludeslash", exclude)]);
     Tokens!()
   });
   DefMacro!("\\lst@@directivestyle Until:\\end", sub [args] {
