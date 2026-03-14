@@ -38,7 +38,6 @@ fn supertabular_test() {
 }
 
 #[test]
-#[ignore] // diffs — listings.sty inline/display output differences
 fn listing_test() {
   latexml_test_single("tests/alignment/listing.tex", "listing", DIR, None, None);
 }
@@ -134,7 +133,6 @@ fn badeqnarray_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (array/eqnarray)
 fn array_test() {
   latexml_test_single("tests/alignment/array.tex", "array", DIR, None, None);
 }
