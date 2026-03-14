@@ -170,6 +170,7 @@ macro_rules! parameter_rust_type {
   // For now return the raw Tokens for KeyVals, until we figure out how to
   // do TryInto with access to the current "state" object.
   (OptionalKeyVals) => {Option<KeyVals>};
+  (RequiredKeyVals) => {KeyVals};
   (KeyVals) => {KeyVals};
   ($other:ident) => {$other};
 }

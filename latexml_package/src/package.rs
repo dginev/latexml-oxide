@@ -35,6 +35,7 @@ pub mod fullpage_sty;
 pub mod glossaries_sty;
 pub mod graphicx_sty;
 pub mod hyperref_sty;
+pub mod hyperxmp_sty;
 pub mod ieeetran_cls;
 pub mod inputenc_sty;
 pub mod latexml_sty;

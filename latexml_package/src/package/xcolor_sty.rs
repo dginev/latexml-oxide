@@ -409,14 +409,14 @@ fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Col
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Conditionals
-  DefConditional!("\\ifglobalcolors",   { false });
-  DefConditional!("\\ifdefinecolors",   { false });
-  DefConditional!("\\ifconvertcolorsD", { false });
-  DefConditional!("\\ifconvertcolorsU", { false });
-  DefConditional!("\\ifblendcolors",    { false });
-  DefConditional!("\\ifmaskcolors",     { false });
-  DefConditional!("\\ifxglobal@",       { false });
+  // Conditionals — Perl uses undef (newif-style), creating \...true/\...false macros
+  DefConditional!("\\ifglobalcolors");
+  DefConditional!("\\ifdefinecolors");
+  DefConditional!("\\ifconvertcolorsD");
+  DefConditional!("\\ifconvertcolorsU");
+  DefConditional!("\\ifblendcolors");
+  DefConditional!("\\ifmaskcolors");
+  DefConditional!("\\ifxglobal@");
   RawTeX!("\\globalcolorsfalse\\definecolorstrue");
 
   RequirePackage!("color");
@@ -1020,7 +1020,7 @@ LoadDefinitions!({
   });
 
   // Row colors
-  DefConditional!("\\if@rowcolors", { false });
+  DefConditional!("\\if@rowcolors");
   RawTeX!("\\@rowcolorstrue");
 
   DefPrimitive!("\\rowcolors OptionalMatch:* []{Number}{}{}", sub[(_star, _commands, first, oddcolor, evencolor)] {

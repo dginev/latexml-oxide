@@ -563,10 +563,10 @@ impl TryFrom<ArgWrap> for Token {
   fn try_from(aw: ArgWrap) -> Result<Token> { aw.try_to_token() }
 }
 
-// impl TryFrom<ArgWrap> for KeyVals {
-//   type Error = crate::common::error::Error;
-//   fn try_from(aw: ArgWrap) -> Result<KeyVals> { aw.try_to_keyvals() }
-// }
+impl TryFrom<ArgWrap> for KeyVals {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<KeyVals> { aw.try_to_keyvals() }
+}
 
 impl From<ArgWrap> for Option<KeyVals> {
   fn from(aw: ArgWrap) -> Option<KeyVals> {

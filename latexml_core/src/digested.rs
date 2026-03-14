@@ -415,7 +415,7 @@ impl BoxOps for Digested {
       List(ref l) => Ok(l.borrow().get_font()?.map(|v| Cow::Owned(v.into_owned()))),
       Whatsit(ref w) => Ok(w.borrow().get_font()?.map(|t| Cow::Owned(t.into_owned()))),
       Postponed(ref _tks) => Ok(None),
-      _ => todo!(),
+      _ => Ok(None),
     }
   }
 

@@ -166,67 +166,78 @@ LoadDefinitions!({
 
   // \hypersetup{keyvals} configures various parameters,
   // for each pdf keyword, provide [property,(content|resource),datatype]
-  // our %pdfkey_property = (
-  //   baseurl     => '',                                 # xmp:BaseURL ??
-  //   pdfauthor   => ['dcterms:creator',  'content'],
-  //   pdfkeywords => ['dcterms:subject',  'content'],    # & pdf:Keywords
-  //   pdflang     => ['dcterms:language', 'content'],
-  //   pdfproducer => '',                                 # pdf:Producer & xmp:CreatorTool
-  //   pdfsubject  => ['dcterms:subject', 'content'],
-  //   pdftitle    => ['dcterms:title',   'content'],
-  //   # Include hyperxmp's keywords, as well.
-  //   pdfauthortitle   => '',                                # photoshop:AuthorsPosition
-  //   pdfcaptionwriter => '',                                # photoshop:CaptionWriter !?!?!?
-  //   pdfcopyright     => ['dcterms:rights', 'content'],     # & xmpRights:Marked
-  //   pdflicenseurl    => ['cc:licence',     'resource'],    # xmpRights:Webstate::ent
-  //   pdfmetalang      => '',                                # dcterms:language ??
-  // );
-  // date=>dcterms:date xmp:CreateDate xmp:ModifyDate xmp:MetadataDate ?
-  // document identifier => xmlMM:DocumentID
-  // file format => dcterms:format
-  // LaTeX file name => dcterms:source
+  DefKeyVal!("Hyp", "baseurl", "Semiverbatim");
 
-  //DefKeyVal('Hyp', 'baseurl', 'Semiverbatim');
+  // Digest & store the options
+  // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
+  //   hyperref_setoption($key, Digest($value)); });
+  DefPrimitive!("\\hypersetup RequiredKeyVals:Hyp", sub[(kv)] {
+    for (key, value) in kv.get_pairs() {
+      let value_str = value.to_string();
+      if key == "colorlinks" && value_str == "true" {
+        RequirePackage!("color");
+      }
+      // Perl digests the value tokens to apply font conversions (e.g. ' → ')
+      let digested = stomach::digest(value.revert()?)?;
+      let digested_str = digested.to_string();
+      state::assign_mapping("Hyperref_options", key, Some(digested_str));
+      if key == "baseurl" {
+        AssignValue!("BASE_URL" => value_str);
+      }
+    }
+  });
 
-  // sub hyperref_setoption {
-  //   my ($key, $value) = @_;
-  //   AssignMapping('Hyperref_options', $key, $value);
-  //   if ($key eq 'baseurl') {
-  //     AssignValue(BASE_URL => ToString($value)); }
-  //   return; }
+  state::push_value("@at@end@document", T_CS!("\\@add@PDF@RDFa@triples"))?;
 
-  // # Digest & store the options;
-  // # Some are useful properties for generating RDFa
-  // # This can appear anywhere in the doc, including preamble.
-  // # Note also that the last value for any given key replaces previous ones! (eg.ONE author entry)
-  // DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
-  //     my ($stomach, $kv) = @_;
-  //     my @pairs = $kv->getPairs;
-  //     while (@pairs) {
-  //       my ($key, $value) = (shift(@pairs), shift(@pairs));
-  //       hyperref_setoption($key, Digest($value)); }
-  //     return; });
+  // \@add@PDF@RDFa@triples — emit <ltx:rdf> elements for PDF metadata
+  {
+    let replacement: ReplacementClosure = Rc::new(
+      |document: &mut Document,
+       _args: &Vec<Option<Digested>>,
+       _props: &arena::SymHashMap<Stored>| {
+        // pdfkey -> (property, object_attr)
+        let pdfkey_property: &[(&str, &str, &str)] = &[
+          ("pdfauthor",      "dcterms:creator",  "content"),
+          ("pdfkeywords",    "dcterms:subject",  "content"),
+          ("pdflang",        "dcterms:language",  "content"),
+          ("pdfsubject",     "dcterms:subject",  "content"),
+          ("pdftitle",       "dcterms:title",    "content"),
+          ("pdfcopyright",   "dcterms:rights",   "content"),
+          ("pdflicenseurl",  "cc:licence",       "resource"),
+        ];
 
-  // PushValue('@at@end@document', T_CS('\@add@PDF@RDFa@triples'));
+        let mut root = match document.document.get_root_element() {
+          Some(r) => r,
+          None => return Ok(()),
+        };
 
-  // DefConstructor('\@add@PDF@RDFa@triples', sub {
-  //     my ($document, $xproperty, $content) = @_;
-  //     if (my $root = $document->getDocument->documentElement) {
-  //       foreach my $key (LookupMappingKeys('Hyperref_options')) {
-  //         if (my $entry = ($pdfkey_property{$key})) {
-  //           my ($property, $object, $datatype) = @$entry;
-  //           my $value = LookupMapping('Hyperref_options', $key);
-  //           my $node  = $document->openElementAt($root, 'ltx:rdf',
-  //             property => $property, $object => $value,
-  //             ($datatype ? (datatype => $datatype) : ()));
-  //           # Must do directly; $document->setAttribute omits empty attributes
-  //           $node->setAttribute(about => '');
-  //           $document->closeElementAt($node); } } } });
-
-  // \hypersetup{keyvals} — consume and store options silently
-  // In Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub { ... });
-  // Simplified: just consume the braced argument
-  DefMacro!("\\hypersetup{}", None);
+        let mut keys = state::with_mapping_keys("Hyperref_options", |keys| {
+          keys.into_iter().map(|k| arena::to_string(k)).collect::<Vec<_>>()
+        });
+        keys.sort();
+        for key_str in &keys {
+          if let Some((_, property, object_attr)) =
+            pdfkey_property.iter().find(|(k, _, _)| k == key_str)
+          {
+            if let Some(value) = state::lookup_mapping("Hyperref_options", key_str) {
+              let value_str = value.to_string();
+              let mut attrs = HashMap::default();
+              attrs.insert("property".to_string(), property.to_string());
+              attrs.insert(object_attr.to_string(), value_str);
+              let mut node =
+                document.open_element_at(&mut root, "ltx:rdf", Some(attrs), None)?;
+              // Must set about="" directly — setAttribute omits empty attributes
+              node.set_attribute("about", "")?;
+              document.close_element_at(&mut node)?;
+            }
+          }
+        }
+        Ok(())
+      },
+    );
+    let cs = T_CS!("\\@add@PDF@RDFa@triples");
+    def_constructor(cs, None, Some(replacement), ConstructorOptions::default());
+  }
 
   // Need some work here!?!?
   DefMacro!("\\pdfcatalog{}", None);
@@ -652,14 +663,31 @@ LoadDefinitions!({
   // hyperref uses KeyVals for options!
   // until we come up with a nice, clean formal scheme, just hack through...
 
-  // #### ProcessOptions();
-  // # Note that hyperref uses keyval + kvoptions
-  // if (my $options = LookupValue('opt@hyperref.sty')) {
-  //   foreach my $option (@$options) {
-  //     if ($option eq 'colorlinks') {
-  //       RequirePackage('color'); }
-  //     elsif (my ($key, $value) = $option =~ /^(.*?)\s*=\s*(.*?)$/) {
-  //       hyperref_setoption($key, $value); } } }
+  // Process hyperref package options (keyval-style)
+  if let Some(stored) = state::lookup_value("opt@hyperref.sty") {
+    if let Stored::VecDequeStored(vdq) = stored {
+      for entry in vdq {
+        // Each entry is Stored::Strings from PassOptionsToPackage/\usepackage
+        let opt_strs: Vec<String> = match entry {
+          Stored::Strings(syms) => syms.iter().map(|s| arena::to_string(*s)).collect(),
+          Stored::String(sym) => vec![arena::to_string(sym)],
+          other => vec![other.to_string()],
+        };
+        for option in &opt_strs {
+          if option == "colorlinks" {
+            RequirePackage!("color");
+          } else if let Some(eq_pos) = option.find('=') {
+            let key = option[..eq_pos].trim();
+            let value = option[eq_pos + 1..].trim();
+            state::assign_mapping("Hyperref_options", key, Some(value.to_string()));
+            if key == "baseurl" {
+              AssignValue!("BASE_URL" => value.to_string());
+            }
+          }
+        }
+      }
+    }
+  }
 
   TeX!(
     r#"

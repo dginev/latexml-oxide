@@ -40,7 +40,6 @@ fn hyperchars_test() { complex("hyperchars"); }
 fn figure_mixed_content_test() { complex("figure_mixed_content"); }
 
 #[test]
-#[ignore] // diffs — hypersetup metadata, colorlinks color wrapping
 fn hypertest_test() { complex("hypertest"); }
 
 #[test]

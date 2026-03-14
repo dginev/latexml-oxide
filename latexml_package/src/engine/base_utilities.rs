@@ -300,15 +300,15 @@ LoadDefinitions!({
   // \lx@tag[open][close]{stuff}
   let remove_empty_element_1 = remove_empty_element.clone();
   DefConstructor!("\\lx@tag[][][]{}", "<ltx:tag open='#1' close='#2'>#4</ltx:tag>",
-    bounded => true,
-    mode => "text",
+    mode => "restricted_horizontal",
     after_construct => remove_empty_element_1
   );
 
   // \lx@tag@intags{role}{stuff}
   let remove_empty_element_2 = remove_empty_element.clone();
   DefConstructor!("\\lx@tag@intags[]{}", "<ltx:tag role='#1'>#2</ltx:tag>",
-    bounded => true, mode => "text",
+    mode => "restricted_horizontal",
+    before_digest => sub { neutralize_font(); },
     after_construct => remove_empty_element_2
   );
   DefConstructor!("\\lx@tags{}","<ltx:tags>#1</ltx:tags>",
