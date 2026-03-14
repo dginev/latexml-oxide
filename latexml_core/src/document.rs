@@ -121,7 +121,7 @@ impl Object for Document {
 }
 impl Document {
   pub fn new() -> Self {
-    set_node_rc_guard(10); // We will need a high treshold for Node mutability
+    set_node_rc_guard(50); // We will need a high threshold for Node mutability
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
@@ -452,8 +452,22 @@ impl Document {
             self.record_constructed_node(&new_text);
           }
         },
-        KeyVals(_) => {
-          // KeyVals should not normally appear in the absorption pipeline.
+        KeyVals(ref kv) => {
+          // When KeyVals appear in body absorption (e.g. #1 for RequiredKeyVals),
+          // convert them to text representation matching Perl's stringify behavior.
+          let text = kv.to_string();
+          if !text.is_empty() {
+            let text_font = match self.box_to_absorb {
+              Some(ref thisbox) => thisbox
+                .get_font()?
+                .map(|f| Rc::new(f.into_owned()))
+                .unwrap_or_default(),
+              None => Rc::default(),
+            };
+            if let Some(new_text) = self.open_text(&text, &text_font)? {
+              self.record_constructed_node(&new_text);
+            }
+          }
         },
         RegisterValue(_) => {
           // RegisterValue should not normally appear in the absorption pipeline.

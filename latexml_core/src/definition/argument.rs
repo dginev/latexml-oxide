@@ -156,6 +156,9 @@ impl ArgWrap {
     }
   }
 
+  /// Convert to an attribute string value (for constructor templates)
+  pub fn to_attribute(&self) -> String { self.to_string() }
+
   pub fn as_tokens(&self) -> Result<Option<Cow<'_, Tokens>>> {
     use ArgWrap::*;
     let result = match self {

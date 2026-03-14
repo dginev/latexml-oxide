@@ -3,6 +3,7 @@
 ///**********************************************************************
 use latexml::util::test::*;
 use phf::phf_map;
+use std::rc::Rc;
 
 const DIR: &str = "tests/graphics";
 static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
@@ -32,9 +33,9 @@ fn graphrot_test() {
 }
 
 #[test]
-#[ignore] // needs local .sty.ltxml loading (mykeyval.sty.ltxml)
 fn keyval_test() {
-  latexml_test_single("tests/graphics/keyval.tex", "keyval", DIR, None, None);
+  latexml_test_single("tests/graphics/keyval.tex", "keyval", DIR, None,
+    Some(Rc::new(latexml_contrib::dispatch)));
 }
 
 #[test]

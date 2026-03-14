@@ -79,7 +79,7 @@ impl fmt::Display for KeyVals {
     let mut first = true;
     for (key, value) in &self.cached_pairs {
       if !first {
-        write!(f, ",")?;
+        write!(f, ", ")?;
       }
       write!(f, "{}={}", key, value)?;
       first = false;
