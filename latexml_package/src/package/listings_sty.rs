@@ -417,7 +417,7 @@ fn lst_add_delimiter(
   recursive: bool,
 ) {
   let type_str = type_str.to_string();
-  let _invisible = type_str.contains('i');
+  let invisible = type_str.contains('i');
   let type_clean = type_str.replace('i', "");
 
   let delim_str = delims
@@ -425,60 +425,104 @@ fn lst_add_delimiter(
     .map(|d| lst_un_group(Some(d.clone())).unwrap().to_string())
     .unwrap_or_default();
 
-  let (open_str, close_re) = match type_clean.as_str() {
+  // Compute open, close, close_re, and quoted pattern.
+  // NOTE: Rust's `regex` crate does NOT support lookbehinds (?<!...).
+  // Instead we use `quoted` patterns (matching Perl's approach) to consume escaped
+  // delimiters before the close_re can match them.
+  let (open_str, close_str, close_re, quoted) = match type_clean.as_str() {
     "l" => {
       // Line: close is till end of line
       let open = lst_deslash(&delim_str);
-      let open_re = lst_regexp(&delim_str);
-      (open, format!("(?=\n)|$"))
+      (open, String::new(), "(?=\n)|$".to_string(), String::new())
     }
     "s" | "n" => {
       // String/Nested: different open & close delimiters
-      // Simplified: split on }{
       let parts: Vec<&str> = delim_str.splitn(2, "}{").collect();
       if parts.len() == 2 {
         let open = lst_deslash(parts[0].trim_start_matches('{'));
         let close = lst_deslash(parts[1].trim_end_matches('}'));
-        (open, regex::escape(&close))
+        let close_re = regex::escape(&close);
+        (open, close, close_re, String::new())
       } else {
         let open = lst_deslash(&delim_str);
-        (open.clone(), regex::escape(&open))
+        let close_re = regex::escape(&open);
+        (open.clone(), open.clone(), close_re, String::new())
       }
     }
-    _ => {
-      // Default: same delim open & close (balanced 'b', doubled 'd', etc.)
+    "b" => {
+      // Balanced: same delim open & close; but not when slashed
+      // Perl: $closere = "(?<!\\)$openre"; $quoted = "\\$openre"
+      // Rust: no lookbehind; close_re is just the open regex;
+      //       quoted handles \<delim> so it's consumed before end_re
       let open = lst_deslash(&delim_str);
       let open_re = lst_regexp(&delim_str);
-      (open.clone(), open_re)
+      let quoted = format!("\\\\{open_re}");
+      (open.clone(), open, open_re, quoted)
+    }
+    "d" => {
+      // Doubled: same delim; not when doubled
+      // Perl: $closere = "(?<!$openre)$openre(?!$openre)"; $quoted = $openre.$openre
+      // Rust: no lookbehind; use lookahead only; quoted consumes doubled delimiters
+      let open = lst_deslash(&delim_str);
+      let open_re = lst_regexp(&delim_str);
+      let close_re = format!("{open_re}(?!{open_re})");
+      let quoted = format!("{open_re}{open_re}");
+      (open.clone(), open, close_re, quoted)
+    }
+    "directive" => {
+      let open = lst_deslash(&delim_str);
+      (open, String::new(), "(?=\\W)".to_string(), String::new())
+    }
+    _ => {
+      let open = lst_deslash(&delim_str);
+      let open_re = lst_regexp(&delim_str);
+      (open.clone(), open, open_re, String::new())
     }
   };
 
   if !open_str.is_empty() {
-    let class = format!("{kind}{open_str}");
+    // Perl: $class = $class . ToString($open) . ToString($close)
+    let class = format!("{kind}{open_str}{close_str}");
     // Store delimiter info in state
     let key_open = s!("LST_DELIM@{open_str}@open");
     let key_close = s!("LST_DELIM@{open_str}@close");
     let key_class = s!("LST_DELIM@{open_str}@class");
     let key_recursive = s!("LST_DELIM@{open_str}@recursive");
+    let key_invisible = s!("LST_DELIM@{open_str}@invisible");
     state::assign_value(&key_open, Stored::String(arena::pin(&regex::escape(&open_str))), None);
     state::assign_value(&key_close, Stored::String(arena::pin(&close_re)), None);
     state::assign_value(&key_class, Stored::String(arena::pin(&class)), None);
-    state::assign_value(
-      &key_recursive,
-      Stored::Bool(recursive),
-      None,
-    );
+    state::assign_value(&key_recursive, Stored::Bool(recursive), None);
+    if invisible {
+      state::assign_value(&key_invisible, Stored::Bool(true), None);
+    }
+    if !quoted.is_empty() {
+      let key_quoted = s!("LST_DELIM@{open_str}@quoted");
+      state::assign_value(&key_quoted, Stored::String(arena::pin(&quoted)), None);
+    }
     // Register this delimiter in the delimiter list
-    lst_push_value_locally(
-      "LST_DELIM_KEYS",
-      vec![T_OTHER!(&open_str)],
-    );
-    // Set up the class styling
+    lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&open_str)]);
+
+    // Perl: lstSetClassStyle($class, undef, begin => $openTeX, end => $closeTeX, ...)
+    // The begin/end tokens INCLUDE the delimiter characters (unless invisible)
     let css = kind.strip_suffix('s').unwrap_or(kind);
+    let open_tex = if invisible { Tokens!() }
+      else { Tokens::new(vec![T_OTHER!(&open_str)]) };
+    let close_tex = if invisible || close_str.is_empty() { Tokens!() }
+      else { Tokens::new(vec![T_OTHER!(&close_str)]) };
+
+    let class_key = s!("LST_CLASSES@{class}@class");
+    state::assign_value(&class_key, Stored::String(arena::pin(kind)), None);
     let css_key = s!("LST_CLASSES@{class}@cssclass");
     state::assign_value(&css_key, Stored::String(arena::pin(css)), None);
-    let parent_key = s!("LST_CLASSES@{class}@class");
-    state::assign_value(&parent_key, Stored::String(arena::pin(kind)), None);
+    if !open_tex.is_empty() {
+      let begin_key = s!("LST_CLASSES@{class}@begin");
+      state::assign_value(&begin_key, Stored::Tokens(open_tex), None);
+    }
+    if !close_tex.is_empty() {
+      let end_key = s!("LST_CLASSES@{class}@end");
+      state::assign_value(&end_key, Stored::Tokens(close_tex), None);
+    }
   }
 }
 
@@ -866,50 +910,80 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
         // Look up delimiter info
         let class_key = s!("LST_DELIM@{open}@class");
         let close_key = s!("LST_DELIM@{open}@close");
+        let invisible_key = s!("LST_DELIM@{open}@invisible");
         let classname = state::lookup_value(&class_key)
           .map(|v| v.to_string())
           .unwrap_or_default();
         let close_re_str = state::lookup_value(&close_key)
           .map(|v| v.to_string())
           .unwrap_or_default();
+        let invisible = matches!(state::lookup_value(&invisible_key), Some(Stored::Bool(true)));
 
+        // Perl: lstProcessPush(lstClassBegin($classname))
+        // Note: delimiter chars come from begin/end tokens in lstClassBegin/lstClassEnd
         ctx.lsttokens.extend(lst_class_begin(&classname));
 
         // Check if this is an 'eval' class (mathescape, texcl, escapechar)
-        let eval_key = s!("LST_CLASSES@{classname}@eval");
-        let is_eval = matches!(state::lookup_value(&eval_key), Some(Stored::Bool(true)));
+        let is_eval = lst_class_property(&classname, "eval")
+          .map_or(false, |v| v == "true" || v == "1");
 
         if is_eval {
           // For eval classes: match until close, then tokenize the content as TeX
           if let Ok(close_re) = Regex::new(&close_re_str) {
             if let Some(cm) = close_re.find(&ctx.listing) {
               let content = ctx.listing[..cm.start()].to_string();
+              let close_str = cm.as_str().to_string();
               ctx.listing = ctx.listing[cm.end()..].to_string();
               // Tokenize the content as real TeX (not raw listing)
               let content_tokens = tokenize_balanced(&content);
               ctx.lsttokens.extend(content_tokens);
+              // Push closing delimiter (invisible check)
+              if !invisible {
+                for ch in close_str.chars() {
+                  let ch_str = ch.to_string();
+                  if let Some(rescanned) = lst_rescan(Some(Tokens::new(vec![T_OTHER!(&ch_str)]))) {
+                    ctx.lsttokens.extend(rescanned.unlist().to_vec());
+                  }
+                }
+              }
             }
           }
         } else {
           // For non-eval classes (strings, comments): recurse with limited delimiters
           let recursive_key = s!("LST_DELIM@{open}@recursive");
-          let is_recursive = matches!(state::lookup_value(&recursive_key), Some(Stored::Bool(true)));
+          let is_recursive =
+            matches!(state::lookup_value(&recursive_key), Some(Stored::Bool(true)));
           if !close_re_str.is_empty() {
             if let Ok(close_re) = Regex::new(&format!("^({close_re_str})")) {
               // Recurse with appropriate delimiter set
               let saved_delim = ctx.delim_re.clone();
               let saved_id = ctx.id_re.clone();
+              let saved_quoted = ctx.quoted_re.clone();
               if !is_recursive {
-                // Non-recursive: only allow escape delimiters inside
                 ctx.delim_re = ctx.escape_re.clone();
                 ctx.id_re = None;
+              }
+              // Perl: local $QUOTED_RE = join('|', grep { $_ } $QUOTED_RE, $$delim{quoted});
+              let quoted_key = s!("LST_DELIM@{open}@quoted");
+              if let Some(delim_quoted) = state::lookup_value(&quoted_key) {
+                let dq = delim_quoted.to_string();
+                if !dq.is_empty() {
+                  let new_quoted =
+                    format!("^({}|{})", ctx.quoted_re.as_str().trim_start_matches("^(").trim_end_matches(')'), dq);
+                  if let Ok(re) = Regex::new(&new_quoted) {
+                    ctx.quoted_re = re;
+                  }
+                }
               }
               lst_process_internal(ctx, Some(&close_re));
               ctx.delim_re = saved_delim;
               ctx.id_re = saved_id;
+              ctx.quoted_re = saved_quoted;
             }
           }
         }
+        // Perl: lstProcessPush(invisible ? () : split(//, $close), lstClassEnd($classname))
+        // For non-eval: close was consumed by end_re in recursive call; delimiter chars already handled
         ctx.lsttokens.extend(lst_class_end(&classname));
         continue;
       }
@@ -1296,10 +1370,12 @@ LoadDefinitions!({
     let params = parse_parameters("OptionalKeyVals:LST", &cs, true)?;
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
-        let _kv = args.into_iter().next().unwrap_or_default();
+        let kv: Option<KeyVals> = args.into_iter().next().unwrap_or_default().into();
         bgroup();
         state::assign_value("current_environment", Stored::String(arena::pin("lstlisting")), None);
         def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
+        // Activate key-value options (language, style, etc.)
+        lst_activate(kv.as_ref());
         let text = listings_read_raw_lines("lstlisting");
         let name = lst_get_tokens("name");
         let name_opt = if name.is_empty() { None } else { Some(name) };
@@ -1413,19 +1489,27 @@ LoadDefinitions!({
 
   // Block listing constructor — holds the actual content + base64 data
   DefConstructor!("\\@@listings@block {} {} {}",
-    "<ltx:listing class='ltx_lstlisting' data='#data' datamimetype='#datamimetype' \
-     dataencoding='#dataencoding' dataname='#3'>#2</ltx:listing>",
+    "<ltx:listing class='ltx_lstlisting' data='#lstdata' datamimetype='#lstmime' \
+     dataencoding='#lstenc' dataname='#3'>#2</ltx:listing>",
     mode => "internal_vertical",
-    after_digest => sub[whatsit] {
-      let c = whatsit.get_arg(0).map(|a| a.to_string()).unwrap_or_default();
+    properties => sub[args] {
+      // Try multiple indices to find the counter
+      let c = args.iter()
+        .find_map(|a| {
+          a.as_ref().and_then(|d| {
+            let s = d.to_string();
+            if s.parse::<i64>().is_ok() && !s.is_empty() { Some(s) } else { None }
+          })
+        })
+        .unwrap_or_default();
       let data_key = s!("LISTINGS_DATA_{c}");
       let text = state::lookup_value(&data_key)
         .map(|v| v.to_string())
         .unwrap_or_default();
       let encoded = base64::engine::general_purpose::STANDARD.encode(text.as_bytes());
-      whatsit.set_property("data", Stored::String(arena::pin(&encoded)));
-      whatsit.set_property("datamimetype", Stored::String(arena::pin("text/plain")));
-      whatsit.set_property("dataencoding", Stored::String(arena::pin("base64")));
+      Ok(stored_map!("lstdata" => Stored::String(arena::pin(&encoded)),
+        "lstmime" => Stored::String(arena::pin("text/plain")),
+        "lstenc" => Stored::String(arena::pin("base64"))))
     });
 
   // List of listings
@@ -1687,17 +1771,33 @@ LoadDefinitions!({
   DefMacro!("\\lst@@language [] Until:\\end", sub [args] {
     let lang = args[1].to_string().to_uppercase().replace(char::is_whitespace, "");
     state::assign_value("LST@language", Stored::String(arena::pin(&lang)), None);
-    lst_activate_language(&lang, None);
+    let dialect = args[0].clone().owned_tokens()
+      .map(|t| t.to_string().trim().to_string())
+      .filter(|s| !s.is_empty());
+    lst_activate_language(&lang, dialect.as_deref());
     lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@language")]);
     Tokens!()
   });
 
-  DefConstructor!("\\lst@@@set@language", sub[document] {
-    let lang = lst_get_literal("language");
-    if !lang.is_empty() {
-      document.add_class(&mut document.get_element().unwrap(), &s!("ltx_lst_language_{lang}"))?;
-    }
-  });
+  DefConstructor!("\\lst@@@set@language",
+    sub[document, _args, props] {
+      let lang = props.get("language").map(|v| v.to_string()).unwrap_or_default();
+      if !lang.is_empty() {
+        // Perl: $lang = "$2_$1" if $lang =~ /^\[([^\]]*)\](.*)$/;
+        let lang = if lang.starts_with('[') {
+          if let Some(close) = lang.find(']') {
+            let dialect = &lang[1..close];
+            let base = &lang[close + 1..];
+            format!("{base}_{dialect}")
+          } else { lang }
+        } else { lang };
+        document.add_class(&mut document.get_element().unwrap(), &s!("ltx_lst_language_{lang}"))?;
+      }
+    },
+    properties => {
+      let lang = lst_get_literal("language");
+      stored_map!("language" => Stored::String(arena::pin(&lang)))
+    });
 
   DefMacro!("\\lst@@alsolanguage [] Until:\\end", sub [args] {
     let lang = args[1].to_string().to_uppercase().replace(char::is_whitespace, "");
@@ -1897,12 +1997,17 @@ LoadDefinitions!({
   DefPrimitive!("\\lst@@numbers Until:\\end", sub [args] { let _val = &args[0];
     lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@numbers")]);
   });
-  DefConstructor!("\\lst@@@set@numbers", sub[document] {
-    let position = lst_get_literal("numbers");
-    if position != "none" && !position.is_empty() {
-      document.add_class(&mut document.get_element().unwrap(), &s!("ltx_lst_numbers_{position}"))?;
-    }
-  });
+  DefConstructor!("\\lst@@@set@numbers",
+    sub[document, _args, props] {
+      let position = props.get("position").map(|v| v.to_string()).unwrap_or_default();
+      if position != "none" && !position.is_empty() {
+        document.add_class(&mut document.get_element().unwrap(), &s!("ltx_lst_numbers_{position}"))?;
+      }
+    },
+    properties => {
+      let position = lst_get_literal("numbers");
+      stored_map!("position" => Stored::String(arena::pin(&position)))
+    });
 
   // Frame handler
   DefPrimitive!("\\lst@@frame Until:\\end", sub [args] {
@@ -1924,12 +2029,17 @@ LoadDefinitions!({
     }
     lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@frame")]);
   });
-  DefConstructor!("\\lst@@@set@frame", sub[document] {
-    let frame = state::lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default();
-    if !frame.is_empty() {
-      document.set_attribute(&mut document.get_element().unwrap(), "framed", &frame)?;
-    }
-  });
+  DefConstructor!("\\lst@@@set@frame",
+    sub[document, _args, props] {
+      let frame = props.get("frame").map(|v| v.to_string()).unwrap_or_default();
+      if !frame.is_empty() {
+        document.set_attribute(&mut document.get_element().unwrap(), "framed", &frame)?;
+      }
+    },
+    properties => {
+      let frame = state::lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default();
+      stored_map!("frame" => Stored::String(arena::pin(&frame)))
+    });
 
   // Background color handler
   DefPrimitive!("\\lst@@backgroundcolor Until:\\end", sub [args] {
@@ -1956,12 +2066,17 @@ LoadDefinitions!({
     }
     lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@rulecolor")]);
   });
-  DefConstructor!("\\lst@@@set@rulecolor", sub[document] {
-    let color = state::lookup_value("LISTINGS_RULECOLOR").map(|v| v.to_string()).unwrap_or_default();
-    if !color.is_empty() {
-      document.set_attribute(&mut document.get_element().unwrap(), "framecolor", &color)?;
-    }
-  });
+  DefConstructor!("\\lst@@@set@rulecolor",
+    sub[document, _args, props] {
+      let color = props.get("color").map(|v| v.to_string()).unwrap_or_default();
+      if !color.is_empty() {
+        document.set_attribute(&mut document.get_element().unwrap(), "framecolor", &color)?;
+      }
+    },
+    properties => {
+      let color = state::lookup_value("LISTINGS_RULECOLOR").map(|v| v.to_string()).unwrap_or_default();
+      stored_map!("color" => Stored::String(arena::pin(&color)))
+    });
 
   // Extended chars handler
   DefMacro!("\\lst@@extendedchars Until:\\end", sub [args] {
@@ -2179,20 +2294,55 @@ fn lst_activate(kv: Option<&KeyVals>) {
 }
 
 /// Perl: lstActivateLanguage — load and activate a language definition.
-fn lst_activate_language(language: &str, _dialect: Option<&str>) {
+/// Handles dialect lookup: first checks LSTDD@LANG for default dialect,
+/// then looks up LST@LANGUAGE@LANG$DIALECT.
+fn lst_activate_language(language: &str, dialect: Option<&str>) {
   let lang = language.to_uppercase().replace(char::is_whitespace, "");
-  let name = s!("LST@LANGUAGE@{lang}");
-  if let Some(stored) = state::lookup_value(&name) {
-    // Language found — activate it by processing the stored keyvals
-    if let Stored::Tokens(kv_tokens) = stored {
-      let _ = stomach::digest(Tokens::new(
-        vec![T_CS!("\\lstset")]
-          .into_iter()
-          .chain(std::iter::once(T_BEGIN!()))
-          .chain(kv_tokens.unlist().iter().cloned())
-          .chain(std::iter::once(T_END!()))
-          .collect(),
-      ));
+  if lang.is_empty() {
+    return;
+  }
+  // Determine dialect: explicit, or from default dialect state
+  let dialect_str = match dialect {
+    Some(d) if !d.is_empty() => d.to_uppercase().replace(char::is_whitespace, ""),
+    _ => {
+      let dd_key = s!("LSTDD@{lang}");
+      state::lookup_value(&dd_key)
+        .map(|v| v.to_string().to_uppercase().replace(char::is_whitespace, ""))
+        .unwrap_or_default()
+    }
+  };
+  // Build the lookup key
+  let name = if dialect_str.is_empty() {
+    s!("LST@LANGUAGE@{lang}")
+  } else {
+    s!("LST@LANGUAGE@{lang}${dialect_str}")
+  };
+  // Try to find the language definition, also try without dialect
+  let stored = state::lookup_value(&name).or_else(|| {
+    if !dialect_str.is_empty() {
+      state::lookup_value(&s!("LST@LANGUAGE@{lang}"))
+    } else {
+      None
+    }
+  });
+  if let Some(stored) = stored {
+    match stored {
+      Stored::KeyVals(kv) => {
+        // Stored as KeyVals — call lst_activate directly (matches Perl: lstActivate($values))
+        lst_activate(Some(&kv));
+      }
+      Stored::Tokens(kv_tokens) => {
+        // Stored as tokens — wrap in \lstset{...} and digest
+        let _ = stomach::digest(Tokens::new(
+          vec![T_CS!("\\lstset")]
+            .into_iter()
+            .chain(std::iter::once(T_BEGIN!()))
+            .chain(kv_tokens.unlist().iter().cloned())
+            .chain(std::iter::once(T_END!()))
+            .collect(),
+        ));
+      }
+      _ => {}
     }
   }
 }
