@@ -45,7 +45,6 @@ fn acm_aria_test() {
 }
 
 #[test]
-#[ignore] // needs figure/caption subsystem
 fn figure_dual_caption_test() {
   latexml_test_single(
     "tests/complex/figure_dual_caption.tex", "figure_dual_caption", DIR, None,

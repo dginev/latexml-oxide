@@ -1,4 +1,26 @@
 use crate::prelude::*;
+use latexml_core::document::Document;
+
+/// Simplified version of Perl's arrange_panels_and_breaks().
+/// When a figure/table/float has 2+ child figure elements (panels),
+/// add the ltx_figure_panel class to each panel.
+fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Result<()> {
+  let figure_qname = arena::pin_static("ltx:figure");
+  let mut panels: Vec<libxml::tree::Node> = Vec::new();
+  for child in node.get_child_elements() {
+    let qname = latexml_core::document::get_node_qname(&child);
+    if qname == figure_qname {
+      panels.push(child);
+    }
+  }
+  if panels.len() >= 2 {
+    for mut panel in panels {
+      document.add_class(&mut panel, "ltx_figure_panel")?;
+    }
+  }
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   //======================================================================
@@ -94,9 +116,19 @@ LoadDefinitions!({
     Error!("unexpected", "\\caption", "Use of \\caption outside any known float"); });
 
   // Note that even without \caption, we'd probably like to have xml:id.
-  Tag!("ltx:figure", after_close => sub[document, node] { document.generate_id(node, "fig")?; });
-  Tag!("ltx:table",  after_close => sub[document, node] { document.generate_id(node, "tab")?; });
-  Tag!("ltx:float",  after_close => sub[document, node] { document.generate_id(node, "tab")?; });
+  // Perl: arrange_panels_and_breaks() — adds ltx_figure_panel class when 2+ panels detected
+  Tag!("ltx:figure", after_close => sub[document, node] {
+    document.generate_id(node, "fig")?;
+    arrange_panels(document, node)?;
+  });
+  Tag!("ltx:table",  after_close => sub[document, node] {
+    document.generate_id(node, "tab")?;
+    arrange_panels(document, node)?;
+  });
+  Tag!("ltx:float",  after_close => sub[document, node] {
+    document.generate_id(node, "tab")?;
+    arrange_panels(document, node)?;
+  });
 
   // # These may need to float up to where they're allowed,
   // # or they may need to close <p> or similar.
