@@ -27,7 +27,7 @@ fn colortbls_test() {
 }
 
 #[test]
-#[ignore] // crash — unwrap on None in alignment.rs:311
+#[ignore] // 2 diffs: vattach on <para> instead of <tabular> — needs insert_block refactor
 fn halignatt_test() {
   latexml_test_single("tests/alignment/halignatt.tex", "halignatt", DIR, None, None);
 }

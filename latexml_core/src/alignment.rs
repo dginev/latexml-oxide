@@ -103,6 +103,7 @@ pub struct Alignment {
   cached_depth:      Option<Dimension>,
   column_widths:     Vec<Dimension>,
   row_heights:       Vec<Dimension>,
+  row_depths:        Vec<Dimension>,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -149,6 +150,7 @@ impl Alignment {
       rows: VecDeque::new(),
       column_widths: Vec::new(),
       row_heights: Vec::new(),
+      row_depths: Vec::new(),
     }
   }
 
