@@ -223,9 +223,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 167 pass, 0 fail, 68 ignored test functions**
+**Current totals: 175 pass, 0 fail, 60 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 53% of Perl test cases passing**
+**Coverage: 56% of Perl test cases passing**
 
 | Suite | Pass/Total | Notes |
 |-------|-----------|-------|
