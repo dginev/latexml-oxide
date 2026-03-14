@@ -60,7 +60,6 @@ fn mathbbol_test() {
 }
 
 #[test]
-#[ignore] // diffs — table + math
 fn bbold_test() {
   latexml_test_single("tests/fonts/bbold.tex", "bbold", DIR, None, None);
 }
