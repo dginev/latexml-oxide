@@ -72,8 +72,7 @@ ending sharply at the margin.</p>
       <p>This is with a left bar, like a changebar?</p>
     </para>
     <para cssstyle="padding:8pt;border-width:2pt" framecolor="#8080BF" framed="rectangle" xml:id="S2.p7">
-      <p><text backgroundcolor="#8080BF" color="#FFFFFF" cssstyle="display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt">A Titled Frame</text>
-This is a titled frame.</p>
+      <p>This is a titled frame.</p>
     </para>
     <logical-block cssstyle="padding:9pt;border-width:0.4pt" framecolor="#000000" framed="rectangle">
       <para xml:id="S2.p8">
