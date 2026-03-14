@@ -35,9 +35,9 @@ fn xkeyvalkvcompat_test() {
 }
 
 #[test]
-#[ignore] // needs myxkeyval.sty Rust binding (xkeyval kind/choices/prefix features)
 fn xkeyvalstyle_test() {
-  latexml_test_single("tests/keyval/xkeyvalstyle.tex", "xkeyvalstyle", DIR, None, None);
+  latexml_test_single("tests/keyval/xkeyvalstyle.tex", "xkeyvalstyle", DIR, None,
+    Some(Rc::new(latexml_contrib::dispatch)));
 }
 
 #[test]

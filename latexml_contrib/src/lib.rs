@@ -11,6 +11,7 @@ use latexml_core::common::error::*;
 // I. Add your custom binding definition as a module delcaration here
 pub mod mykeyval_sty;
 pub mod mytemplate_sty;
+pub mod myxkeyval_sty;
 pub mod scopemacro_tex;
 pub mod xkvdop1_sty;
 pub mod xkvdop2_sty;
@@ -24,6 +25,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
     "mykeyval.sty" => Some(mykeyval_sty::load_definitions()),
     "mytemplate.sty" => Some(mytemplate_sty::load_definitions()),
+    "myxkeyval.sty" => Some(myxkeyval_sty::load_definitions()),
     // Document-level binding: loaded by load_external_binding("scopemacro")
     // when processing scopemacro.tex — mirrors scopemacro.latexml in Perl
     "scopemacro" => Some(scopemacro_tex::load_definitions()),
