@@ -93,7 +93,6 @@ fn tabbing_test() {
 }
 
 #[test]
-#[ignore] // diffs — tabular issues
 fn tabular_test() {
   latexml_test_single("tests/alignment/tabular.tex", "tabular", DIR, None, None);
 }
