@@ -53,7 +53,6 @@ fn figure_dual_caption_test() {
 }
 
 #[test]
-#[ignore] // diffs — complex hyperchar handling
 fn hyperchars_test() {
   latexml_test_single(
     "tests/complex/hyperchars.tex", "hyperchars", DIR, None,

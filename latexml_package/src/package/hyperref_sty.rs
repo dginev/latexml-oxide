@@ -223,6 +223,11 @@ LoadDefinitions!({
   //           $node->setAttribute(about => '');
   //           $document->closeElementAt($node); } } } });
 
+  // \hypersetup{keyvals} — consume and store options silently
+  // In Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub { ... });
+  // Simplified: just consume the braced argument
+  DefMacro!("\\hypersetup{}", None);
+
   // Need some work here!?!?
   DefMacro!("\\pdfcatalog{}", None);
   DefRegister!("\\pdfcompresslevel", Number::new(0));
