@@ -72,7 +72,7 @@ Updated 2026-03-14. Only lists open gaps & TODOs; completed items live in git hi
 | latex_ch3_sentences_and_paragraphs.rs | OK | `enterHorizontal` now auto via `mode => "text"` |
 | latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag`. `backmatterelement` property for appendix sections implemented (matches Perl `find_insertion_point` behavior). |
 | latex_ch5_packages.rs | MINOR | Done: `\PassOptionsToPackage/Class`, `\OptionNotUsed`, `\@unknownoptionerror`. Missing: `\@onefilewithoptions`, `ProcessOptions` inorder flag |
-| latex_ch7_math_mode_environments.rs | GAPS | Done: `retract_equation()`, `\nonumber`, `\lx@equation@nonumber`, `\lx@equation@retract`, `\lx@equation@settag`/`@`, `{equation*}`, `after_equation` postset branch, simplified `{eqnarray}`/`{eqnarray*}` (single-equation per group, no alignment). Missing: `\lefteqn`, `\intertext`, full alignment-based eqnarray (MathFork/MathBranch/rearrangeEqnarray), `{align}`/`{gather}`/`{multline}` |
+| latex_ch7_math_mode_environments.rs | GAPS | Done: `retract_equation()`, `\nonumber`, `\lx@equation@nonumber`, `\lx@equation@retract`, `\lx@equation@settag`/`@`, `{equation*}`, `after_equation` postset branch, alignment-based `{eqnarray}`/`{eqnarray*}` with `eqnarray_bindings()` (3-column template, equationgroup/equation/_Capture_ hooks, row before/after hooks for equation numbering), `\@equationgroup@numbering{}` primitive (parses `{key=val,...}` and calls `prepare_equation_counter()`), `\if@in@firstcolumn` conditional, `\lefteqn{}` macro. Missing: `\intertext`, afterConstruct DOM rearrangement (`rearrangeEqnarray`/`openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols` — transforms `_Capture_` into `MathFork`/`MathBranch`/`tr`/`td` structure) |
 | latex_ch7_math_common_structures.rs | GAPS | Missing: `\frac` sizer, mathstyle property calc |
 | latex_ch7_math_common_delimiters.rs | EMPTY | 0% ported |
 | latex_ch8_defining_commands.rs | GAPS | Missing: `\DeclareMathAccent`, `\DeclareFontShape/Family`, many font declaration primitives |
@@ -152,7 +152,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 |------|------|----------|-------|
 | `latex_bootstrap.pool.ltxml` | 10 | — | **Complete** (audit 2026-03-12: 10/10 defs present) |
 | `latex_base.pool.ltxml` | ~160 | — | **Complete** (audit 2026-03-12: ~100% across 36 ch files + appendices) |
-| `latex_constructs.pool.ltxml` | ~843 | Low | ~90% ported. Missing: `\eqnarray` (no alignment), `\@xargdef/yargdef/reargdef`, picture env. |
+| `latex_constructs.pool.ltxml` | ~843 | Low | ~92% ported. Done: alignment-based `\eqnarray`/`\eqnarray*`, `\lefteqn`, `\if@in@firstcolumn`, `\@equationgroup@numbering`, `eqnarray@row@before/after`. Missing: afterConstruct rearrangement (`rearrangeEqnarray`), `\@xargdef/yargdef/reargdef`, picture env. |
 | `math_common.pool.ltxml` | 312 | Medium | ~87% ported. Missing: 19 sized delimiters (\big/\Big etc.), `\vert` Let. |
 | `Base_Deprecated.pool.ltxml` | 77 | Low | ~16% — deprecated compat shims, port on-demand |
 | `AmSTeX.pool.ltxml` | 112 | Low | ~30% — port on-demand |
@@ -167,7 +167,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | mouth.rs | OK | Full encoding support (only latin-1+UTF-8) |
 | parameter.rs | OK | `Parameter::digest` MODE capture + `leaveHorizontal_internal` matches Perl Parameter.pm lines 122,139-141 |
 | gullet.rs | MINOR | `readArg` isolation via `readingFromMouth`; `read_register_value` coercions |
-| stomach.rs | MINOR | Mathcode char decoding (ADDOP vs BINOP). `execute_before_after_group` extracted. `begin_mode_opt`/`end_mode_opt` with `noframe` parameter synced with Perl Grouplevel commit (acaab773). `everymath/everydisplay` injection now centralized in `begin_mode_opt`. |
+| stomach.rs | MINOR | Mathcode char decoding (ADDOP vs BINOP). `execute_before_after_group` extracted. `begin_mode_opt`/`end_mode_opt` with `noframe` parameter synced with Perl Grouplevel commit (acaab773). `everymath/everydisplay` injection now centralized in `begin_mode_opt`. `push_stack_frame` now tolerates missing current_token (uses `\relax` fallback) for absorption-phase group operations. |
 | state.rs | OK | `Stored::KeyVals` now wraps `Rc<KeyVals>` for pointer-based equality (`Rc::ptr_eq`) |
 | document.rs | MINOR | `compact_xmdual()`, `insertElementBefore()`, comment creation (needs libxml). Fixed: `close_to_node` ifopen parameter now suppresses error (was ignored). `close_node_with_strictness` walker now tracks `n.get_type()` (was `node.get_type()`). `mergeAttributes` now uses `add_ss_values` for space-joined attrs (class/lists/inlist/labels), matching Perl's sort+dedup. `finalize_rec` class merge also sorts. |
 | register.rs | MINOR | — |
@@ -210,7 +210,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 |---------|--------|-------|
 | calc.sty | OK | Full expression parser: +,-,*,/, \real, \ratio, \minof, \maxof, \widthof/heightof/depthof/totalheightof. RegisterValue smaller/larger preserve type variant. |
 | report.cls | OK | Faithful port of Perl report.cls.ltxml (identical to book.cls except CSS resource). |
-| amsmath.sty | GAPS | ~25% ported: spacing, \overunderset, \lvert/rvert/lVert/rVert, \notag, \tag, \tfrac/\dfrac, \xrightarrow/\xleftarrow, over/under arrows. Missing: equation environments ({align},{gather},{multline},{split}), \text, \intertext, operators. |
+| amsmath.sty | GAPS | ~55% ported: spacing, \overunderset, \lvert/rvert/lVert/rVert, \notag, \tag, \tfrac/\dfrac, \xrightarrow/\xleftarrow, over/under arrows, alignment infrastructure (`ams_rearrangeable_bindings`, `ams_gather_bindings`, `ams_align_bindings`, `ams_aligned_bindings`), environment macros for {gather}/{gather*}/{align}/{align*}/{flalign}/{flalign*}/{alignat}/{alignat*}/{multline}/{multline*}/{split}/{gathered}/{aligned}/{alignedat}, `\@ams@intertext{}` constructor, `\lx@ams@cr@binding` primitive. Missing: afterConstruct DOM rearrangement (`rearrangeAMSAlign`/`rearrangeAMSGather`), `\text{}`, operators, `{subequations}`. |
 | appendix.sty | OK | Core environments: appendices, subappendices, conditional switches. |
 | multicol.sty | OK | Full port: multicols/multicols* environments, registers, stubs. |
 | booktabs.sty | OK | Full port: toprule/midrule/bottomrule/cmidrule/specialrule, registers. |
@@ -224,9 +224,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 177 pass, 0 fail, 58 ignored test functions**
+**Current totals: 185 pass, 0 fail, 56 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 56% of Perl test cases passing**
+**Coverage: 59% of Perl test cases passing**
 
 | Suite | Pass/Total | Notes |
 |-------|-----------|-------|
@@ -244,13 +244,13 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 33_keyval_options | 11/11 | All pass |
 | 50_structure | 24/24 | All pass (18 .todo disabled at build level) |
 | 52_namespace | 0/5 | **All ignored** — DTD not supported in Rust port |
-| 53_alignment | 6/22 | halign, tabtab, tabularstar, morse, mathmix, halignatt pass; 16 ignored (listing has diffs) |
+| 53_alignment | 12/28 | halign, tabtab, tabularstar, morse, mathmix, halignatt, longtable, min_listing, min_listing_data, min_listing_lang, min_listing_short, min_listing_string pass; 16 ignored |
 | 55_theorem | 4/4 | All pass (ntheorem disabled) |
-| 56_ams | 0/7 | **All ignored** — needs amsmath environments |
+| 56_ams | 1/7 | genfracs pass; 6 ignored (need afterConstruct DOM rearrangement for MathFork/MathBranch) |
 | 65_graphics | 5/9 | 5 pass; 4 ignored |
 | 70_parse | 0/1 | **All ignored** — math parser regression tests |
 | 700_unit_parse | 3/3 | |
-| 80_complex | 7/16 | xii, figure_dual_caption, hyperchars, hypertest, versioned_fallback, equationnest, tcilatex_minimal pass; 9 ignored |
+| 80_complex | 8/16 | xii, figure_dual_caption, hyperchars, hypertest, versioned_fallback, equationnest, tcilatex_minimal, labelled pass; 8 ignored |
 | 81_babel | 0/1 | **All ignored** — needs babel language `.ldf` files |
 
 ### Perl-only tests (not yet copied to Rust)
@@ -280,7 +280,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 ### ntheorem test gap analysis
 - **Math parser tree structure** (873/896 diffs): XMApp/XMTok nesting differs due to Marpa-based parser architecture. Not fixable without parser changes (active research).
-- **eqnarray** (23/896 diffs): Simplified `DefEnvironment` produces single equation per group instead of full alignment with MathFork/MathBranch/tr/td restructuring. Full impl needs: `eqnarray_bindings`, 3-column `$\displaystyle` template, `rearrangeEqnarray` post-processing (~200 lines in Perl).
+- **eqnarray** (23/896 diffs): Now uses alignment-based `eqnarray_bindings()` with 3-column `$\displaystyle` template and equationgroup/equation/_Capture_ hooks. Still missing: afterConstruct `rearrangeEqnarray` post-processing (~200 lines Perl) that transforms `_Capture_` into `MathFork`/`MathBranch`/`tr`/`td` structure.
 - **Equation numbering**: Offset by ~1 due to simplified eqnarray not splitting rows.
 - **Shaded theorems**: `backgroundcolor` attribute missing (needs `\colorbox` from xcolor.sty).
 
@@ -461,7 +461,7 @@ Namespace tests (ns1–ns5) permanently ignored. xii.tex converted to use standa
 
 | Phase | Cumulative Tests | Delta | Key Infrastructure |
 |-------|-----------------|-------|--------------------|
-| Current | 176 | — | — |
+| Current | 185 | — | — |
 | Phase 1 (infrastructure) | ~190 | +35 | local .ltxml, structure packages |
 | Phase 2 (fonts) | ~205 | +15 | per-font hyphenchar, fontname format, font sizes |
 | Phase 3 (alignment) | ~225 | +20 | nested tabular, alignment packages |

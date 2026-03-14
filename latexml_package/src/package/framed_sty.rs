@@ -8,7 +8,8 @@ fn current_background_hex() -> String {
     .unwrap_or_default()
 }
 
-/// Look up a color from state and merge into font background.
+/// Perl: framed.sty.ltxml — MergeFont(background => LookupValue('color_shadecolor'))
+#[allow(dead_code)]
 fn merge_shade_background() {
   let key = "color_shadecolor";
   if let Some(Stored::String(sym)) = state::lookup_value(key) {

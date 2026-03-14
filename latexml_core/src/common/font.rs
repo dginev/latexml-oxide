@@ -181,6 +181,8 @@ static STYLE_SIZE: Lazy<HashMap<&'static str, usize>> = Lazy::new(|| {
   "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5)
 });
 
+// Perl: Font.pm %mathstylesize — used in specialize() font size scaling (commented out in Perl too)
+#[allow(dead_code)]
 static MATH_STYLE_SIZE: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
   raw_map!(
   "display" => 1.0, "text" => 1.0, "script" => 0.7, "scriptscript" => 0.5)
@@ -264,7 +266,8 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
   [-1,  1, -2, -3, -1,  0, -1, -1],
 ];
 
-// Nominal baseline size for a given font size
+// Perl: Font.pm %baseline_map — used in computeStringSize() for baseline calculation
+#[allow(dead_code)]
 static BASELINE_MAP: Lazy<HashMap<i64, f64>> = Lazy::new(|| {
   raw_map!(
     5 => 6.0, 6 => 7.0, 7 => 8.0, 8 => 9.5, 9 => 10.0, 10 => 12.0,
@@ -907,7 +910,7 @@ impl Font {
       flags &= !FLAG_EMPH;
     }
 
-    let mut newfont = Font {
+    let newfont = Font {
       family,
       series,
       shape,

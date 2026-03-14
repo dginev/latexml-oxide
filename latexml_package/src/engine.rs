@@ -22,7 +22,7 @@ mod tex_page;
 mod tex_paragraph;
 mod tex_penalties;
 mod tex_registers;
-mod tex_tables;
+pub mod tex_tables;
 
 pub mod base_functions; // auxiliary functions
 mod tex_scripts;

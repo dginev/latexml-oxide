@@ -75,12 +75,15 @@ LoadDefinitions!({
   // TODO: load_latex
 });
 
+// Perl: TeX_Job.pool.ltxml — \today macro
+#[allow(dead_code)]
 const MONTH_NAMES: [&str; 12] = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
 
 /// Return a string for today's date, e.g. "March 11, 2026"
+#[allow(dead_code)]
 pub fn today() -> String {
   let month = state::lookup_number("\\month").map(|n| n.value_of()).unwrap_or(1);
   let day = state::lookup_number("\\day").map(|n| n.value_of()).unwrap_or(1);

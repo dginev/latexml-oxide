@@ -675,7 +675,7 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
   let mut seen = std::collections::HashSet::new();
   let css_string = css_classes
     .iter()
-    .filter(|c| seen.insert(c.clone()))
+    .filter(|c| seen.insert((*c).clone()))
     .map(|c| format!("ltx_lst_{c}"))
     .collect::<Vec<_>>()
     .join(" ");
@@ -744,7 +744,10 @@ struct LstContext {
   quoted_re: Regex,
   space_token: Token,
   case_sensitive: bool,
+  // Perl: lsthk@SelectCharTable — literate substitution patterns (TODO: implement processing)
+  #[allow(dead_code)]
   literate: Vec<(String, Tokens, bool)>,
+  #[allow(dead_code)]
   literate_re: Option<Regex>,
   firstline: i64,
   lastline: i64,
@@ -788,7 +791,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   };
 
   let stepnumber = lst_get_number("stepnumber");
-  let numpos = if stepnumber == 0 {
+  let _numpos = if stepnumber == 0 {
     "none".to_string()
   } else {
     lst_get_literal("numbers")
@@ -796,7 +799,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
 
   // Build ID regex from character classes (Perl: join('', sort keys %{$$characters{letter}}))
   let mut letter_chars = String::from("a-zA-Z@_");
-  let mut digit_chars = String::from("0-9");
+  let digit_chars = String::from("0-9");
   // Check if $ is still a letter character (mathescape removes it)
   let dollar_key = "LST_CHAR@letter@\\$";
   let dollar_is_letter = !matches!(state::lookup_value(dollar_key), Some(Stored::None));
@@ -1067,7 +1070,8 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
         let close_re_str = state::lookup_value(&close_key)
           .map(|v| v.to_string())
           .unwrap_or_default();
-        let invisible = matches!(state::lookup_value(&invisible_key), Some(Stored::Bool(true)));
+        // Perl: invisible flag controls whether delimiters are shown (TODO: use in output)
+        let _invisible = matches!(state::lookup_value(&invisible_key), Some(Stored::Bool(true)));
 
         // Perl: lstProcessPush(lstClassBegin($classname))
         // Note: delimiter chars come from begin/end tokens in lstClassBegin/lstClassEnd
@@ -2260,7 +2264,9 @@ LoadDefinitions!({
   DefPrimitive!("\\lst@@@set@background", {
     if let Some(Stored::String(bg)) = state::lookup_value("LISTINGS_BACKGROUND") {
       let bg_color = arena::to_string(bg);
-      merge_font(Font { bg: Some(latexml_core::common::color::Color::Rgb(0.0, 0.0, 0.0)), ..Font::default() });
+      if let Some(c) = latexml_core::common::color::Color::from_stored(&bg_color) {
+        merge_font(Font { bg: Some(c), ..Font::default() });
+      }
     }
   });
 

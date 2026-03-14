@@ -101,7 +101,7 @@ pub fn regurgitate() -> Vec<Digested> { stomach_mut!().box_list.drain(..).collec
 
 /// Adds a new stack frame for a TeX group.
 pub fn push_stack_frame(nobox: bool) {
-  let current_token = get_current_token().unwrap();
+  let current_token = get_current_token().unwrap_or_else(|| T_CS!("\\relax"));
   push_frame();
   assign_value(
     "beforeAfterGroup",

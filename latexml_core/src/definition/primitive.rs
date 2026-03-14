@@ -2,7 +2,7 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 
 use crate::Digested;
-use crate::common::arena::{EMPTY_SYM, SymHashMap};
+use crate::common::arena::SymHashMap;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::definition::{

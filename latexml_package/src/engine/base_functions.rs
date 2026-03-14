@@ -692,7 +692,7 @@ pub fn insert_block(
       tag == "ltx:XMText",
     )
   });
-  let mut ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
+  let ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
   if is_xmath && !is_xmtext {
     // but math always needs this
     context = document.open_element("ltx:XMText", None, None)?;
