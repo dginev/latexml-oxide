@@ -34,8 +34,35 @@ LoadDefinitions!({
           whatsit.set_property(&key, v.clone());
         }
       }
-      // TODO: Insert caption and toccaption from LONGTABLE_*_CAPTIONS
-      // TODO: Reinsert head/foot into alignment (needs alignment row storage API)
+      // Insert head captions (from \endfirsthead or \endhead)
+      let head_captions = lookup_value("LONGTABLE_HEAD_CAPTIONS")
+        .or_else(|| lookup_value("LONGTABLE_CAPTIONS"));
+      if let Some(Stored::VecDigested(ref captions)) = head_captions {
+        if captions.len() >= 2 {
+          if !captions[1].to_string().is_empty() {
+            whatsit.set_property("headcaption", captions[1].clone());
+          }
+          if !captions[0].to_string().is_empty() {
+            whatsit.set_property("headtoccaption", captions[0].clone());
+          }
+        }
+      }
+      // Insert foot captions
+      if let Some(Stored::VecDigested(ref captions)) = lookup_value("LONGTABLE_FOOT_CAPTIONS") {
+        if captions.len() >= 2 {
+          if !captions[1].to_string().is_empty() {
+            whatsit.set_property("footcaption", captions[1].clone());
+          }
+          if !captions[0].to_string().is_empty() {
+            whatsit.set_property("foottoccaption", captions[0].clone());
+          }
+        }
+      }
+      // Insert label
+      if let Some(Stored::String(label)) = lookup_value("LONGTABLE_LABEL") {
+        whatsit.set_property("label", arena::to_string(label));
+      }
+      // TODO: Reinsert head/foot rows into alignment
       Ok(Vec::new())
     },
     mode => "restricted_horizontal");
@@ -96,12 +123,18 @@ LoadDefinitions!({
   // Caption gets redefined.
   DefMacro!("\\lx@longtable@caption[]{}",
     r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\ifx.#1.#2\else#1\fi}}{\lx@format@title@@{table}{#2}}");
-  DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(_toccap, _cap)] {
-    // TODO: properly digest and store captions
+  DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(toccap, cap)] {
+    // Perl: AssignValue(LONGTABLE_CAPTIONS => [DigestText($toccap), DigestText($cap)], 'global')
+    let toccap_digested = digest_text(toccap)?;
+    let cap_digested = digest_text(cap)?;
+    let captions = Stored::VecDigested(vec![toccap_digested, cap_digested]);
+    assign_value("LONGTABLE_CAPTIONS", captions, Some(Scope::Global));
     Ok(())
   });
-  DefPrimitive!("\\lx@longtable@label Semiverbatim", sub[(_label)] {
-    // TODO: properly store label
+  DefPrimitive!("\\lx@longtable@label Semiverbatim", sub[(label)] {
+    // Perl: AssignValue(LONGTABLE_LABEL => CleanLabel(ToString($label)), 'global')
+    let label = clean_label(&label.to_string(), None).into_owned();
+    assign_value("LONGTABLE_LABEL", Stored::String(arena::pin(label)), Some(Scope::Global));
     Ok(())
   });
 

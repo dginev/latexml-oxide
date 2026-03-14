@@ -1079,23 +1079,16 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
 
         if is_eval {
           // For eval classes: match until close, then tokenize the content as TeX
+          // Perl: TokenizeBalanced($string) — close delimiter is NOT separately emitted,
+          // because lstClassEnd already provides the closing tokens (e.g. $ for mathescape)
           if let Ok(close_re) = Regex::new(&close_re_str) {
             if let Some(cm) = close_re.find(&ctx.listing) {
               let content = ctx.listing[..cm.start()].to_string();
-              let close_str = cm.as_str().to_string();
               ctx.listing = ctx.listing[cm.end()..].to_string();
               // Tokenize the content as real TeX (not raw listing)
               let content_tokens = tokenize_balanced(&content);
               ctx.lsttokens.extend(content_tokens);
-              // Push closing delimiter (invisible check)
-              if !invisible {
-                for ch in close_str.chars() {
-                  let ch_str = ch.to_string();
-                  if let Some(rescanned) = lst_rescan(Some(Tokens::new(vec![T_OTHER!(&ch_str)]))) {
-                    ctx.lsttokens.extend(rescanned.unlist().to_vec());
-                  }
-                }
-              }
+              // Note: close delimiter is NOT pushed — lstClassEnd handles it
             }
           }
         } else {
