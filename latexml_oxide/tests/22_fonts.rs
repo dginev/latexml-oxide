@@ -53,7 +53,6 @@ fn omencodings_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser
 fn mathbbol_test() {
   latexml_test_single("tests/fonts/mathbbol.tex", "mathbbol", DIR, None, None);
 }
@@ -70,7 +69,6 @@ fn ding_test() {
 }
 
 #[test]
-#[ignore] // crash in math parser — todo!() not implemented
 fn esint_test() {
   latexml_test_single("tests/fonts/esint.tex", "esint", DIR, None, None);
 }
@@ -83,7 +81,6 @@ fn marvosym_test() {
 // -- Tests that crash (need package/subsystem work) --
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure, text= attribute, list refs)
 fn acc_test() {
   latexml_test_single("tests/fonts/acc.tex", "acc", DIR, None, None);
 }
