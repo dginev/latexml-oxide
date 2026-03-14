@@ -44,7 +44,6 @@ fn picture_test() {
 }
 
 #[test]
-#[ignore] // keyval output differences (Foo/Bar split across lines)
 fn simplekv_test() {
   latexml_test_single("tests/graphics/simplekv.tex", "simplekv", DIR, None, None);
 }

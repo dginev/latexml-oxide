@@ -6,9 +6,9 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <p>Testing keyvals: Foo is 3</p>
-  </para>
-  <para xml:id="p2">
-    <p>Bar is 99</p>
+    <p>1 
+2 
+3 –˝
+4 –˝</p>
   </para>
 </document>

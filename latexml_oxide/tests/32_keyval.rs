@@ -24,6 +24,11 @@ fn xkeyvalbasic_test() {
 }
 
 #[test]
+fn keyvalemptyvalue_test() {
+  latexml_test_single("tests/keyval/keyvalemptyvalue.tex", "keyvalemptyvalue", DIR, None, None);
+}
+
+#[test]
 fn xkeyvalkvcompat_test() {
   latexml_test_single("tests/keyval/xkeyvalkvcompat.tex", "xkeyvalkvcompat", DIR, None, None);
 }
