@@ -80,7 +80,6 @@ fn tabularstar_test() {
 }
 
 #[test]
-#[ignore] // diffs — longtable.sty incomplete
 fn longtable_test() {
   latexml_test_single("tests/alignment/longtable.tex", "longtable", DIR, None, None);
 }

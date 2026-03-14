@@ -104,6 +104,9 @@ pub struct Alignment {
   column_widths:     Vec<Dimension>,
   row_heights:       Vec<Dimension>,
   row_depths:        Vec<Dimension>,
+  // Longtable: stored head/foot rows for reinsertion
+  pub head_rows:     Vec<Row>,
+  pub foot_rows:     Vec<Row>,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -151,6 +154,8 @@ impl Alignment {
       column_widths: Vec::new(),
       row_heights: Vec::new(),
       row_depths: Vec::new(),
+      head_rows: Vec::new(),
+      foot_rows: Vec::new(),
     }
   }
 

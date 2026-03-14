@@ -55,6 +55,21 @@ LoadDefinitions!({
   // DefConstructor('\mspace{MuDimension}', "<ltx:XMHint name='mspace' width='#1'/>");
 
   //======================================================================
+  // Section 4.3 Dots
+  DefMath!("\\dotsc", "\u{2026}", role => "ID", alias => "\\dotsc");
+  DefMath!("\\dotsb", "\u{22EF}", role => "ID", alias => "\\dotsb");
+  DefMath!("\\dotsm", "\u{22EF}", role => "ID", alias => "\\dotsm");
+  DefMath!("\\dotsi", "\u{22EF}", role => "ID", alias => "\\dotsi");
+  DefMath!("\\dotso", "\u{2026}", role => "ID", alias => "\\dotso");
+
+  DefMacro!("\\DOTSB", None);
+  DefMacro!("\\DOTSI", None);
+  DefMacro!("\\DOTSX", None);
+  Let!("\\hdots", "\\lx@ldots");
+
+  DefMacro!("\\hdotsfor Number", r"\hdots");
+
+  //======================================================================
   // Section 4.9 Extensible arrows
   // Perl: amsmath.sty.ltxml lines 921-950
   DefConstructor!(

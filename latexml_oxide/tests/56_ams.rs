@@ -18,7 +18,7 @@ fn cd_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
+#[ignore] // diffs — math parser (XMDual structure for comma lists, integrals)
 fn dots_test() {
   latexml_test_single("tests/ams/dots.tex", "dots", DIR, None, None);
 }

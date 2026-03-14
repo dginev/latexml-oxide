@@ -62,7 +62,20 @@ LoadDefinitions!({
       if let Some(Stored::String(label)) = lookup_value("LONGTABLE_LABEL") {
         whatsit.set_property("label", arena::to_string(label));
       }
-      // TODO: Reinsert head/foot rows into alignment
+      // Reinsert head/foot rows into alignment
+      if let Some(alignment) = lookup_alignment() {
+        if let Some(data) = alignment.alignment_cell() {
+          let mut al = data.borrow_mut();
+          let head = std::mem::take(&mut al.head_rows);
+          let foot = std::mem::take(&mut al.foot_rows);
+          if !head.is_empty() {
+            al.prepend_rows(head);
+          }
+          if !foot.is_empty() {
+            al.append_rows(foot);
+          }
+        }
+      }
       Ok(Vec::new())
     },
     mode => "restricted_horizontal");
@@ -86,20 +99,22 @@ LoadDefinitions!({
       if let Some(data) = alignment.alignment_cell() {
         let mut al = data.borrow_mut();
         // Remove all preceding rows and mark columns as thead.
+        let mut rows = Vec::new();
         while let Some(mut row) = al.remove_row() {
           for col in row.get_columns_mut() {
             col.thead_in_column = true;
           }
-          // Drop removed rows (Perl stores them but we skip that for now)
+          rows.push(row);
         }
-        if name == "FIRSTHEAD" || (name == "HEAD" && lookup_value("LONGTABLE_HEAD").is_none()) {
-          // TODO: store removed rows for reinsertion
+        rows.reverse(); // restore original order (remove_row pops from back)
+        if name == "FIRSTHEAD" || (name == "HEAD" && al.head_rows.is_empty()) {
+          al.head_rows = rows;
           if let Some(caption) = lookup_value("LONGTABLE_CAPTIONS") {
             assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));
             assign_value("LONGTABLE_HEAD_CAPTIONS", caption, Some(Scope::Global));
           }
-        } else if name == "LASTFOOT" || (name == "FOOT" && lookup_value("LONGTABLE_FOOT").is_none()) {
-          // TODO: store removed rows for reinsertion
+        } else if name == "LASTFOOT" || (name == "FOOT" && al.foot_rows.is_empty()) {
+          al.foot_rows = rows;
           if let Some(caption) = lookup_value("LONGTABLE_CAPTIONS") {
             assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));
             assign_value("LONGTABLE_FOOT_CAPTIONS", caption, Some(Scope::Global));
