@@ -42,6 +42,9 @@ LoadDefinitions!({
   Let!("\\color@vbox", "\\relax");
   Let!("\\color@endbox", "\\relax");
 
+  // Perl: latex_constructs.pool.ltxml line 5802
+  DefMacro!("\\ignorespacesafterend", None);
+
   // Perl: latex_constructs.pool.ltxml line 5027
   // Pre-define \Gin@driver so graphics.sty doesn't error when loaded from disk
   DefMacro!("\\Gin@driver", "");

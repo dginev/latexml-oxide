@@ -174,4 +174,23 @@ LoadDefinitions!({
   DefMacro!("\\textsl{}",     "\\ifmmode\\textsl@math{#1}\\else{\\slshape #1}\\fi",        protected => true);
   DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else{\\scshape #1}\\fi",        protected => true);
   DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi", protected => true);
+
+  // Perl: latex_constructs.pool.ltxml line 5365
+  // \DeclareOldFontCommand{\cmd}{text-font-switch}{math-font-cmd}
+  // Defines \cmd to use text-font-switch in text mode, math-font-cmd in math mode.
+  DefPrimitive!("\\DeclareOldFontCommand{}{}{}", sub[(cmd, font, mathcmd)] {
+    // cmd contains a CS token like \bf; get the first token
+    let cmd_cs = cmd.unlist_ref().first()
+      .ok_or("DeclareOldFontCommand: expected a CS token")?.clone();
+    let font_toks = font.clone();
+    let math_toks = mathcmd.clone();
+    DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
+      if lookup_bool("IN_MATH") {
+        Ok(math_toks.clone())
+      } else {
+        Ok(font_toks.clone())
+      }
+    })));
+    Ok(Vec::new())
+  });
 });

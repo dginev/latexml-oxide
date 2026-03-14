@@ -224,9 +224,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 187 pass, 0 fail, 55 ignored test functions**
+**Current totals: 188 pass, 0 fail, 54 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 59% of Perl test cases passing**
+**Coverage: 60% of Perl test cases passing**
 
 | Suite | Pass/Total | Notes |
 |-------|-----------|-------|
@@ -238,7 +238,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 10_expansion | 36/36 | All pass (Rust 48 .tex, Perl 47) |
 | 12_grouping | 2/2 | All pass |
 | 20_digestion | 10/10 | All pass |
-| 22_fonts | 10/23 | 10 pass; 13 ignored (cancels, soul, mathcolor un-ignored) |
+| 22_fonts | 11/23 | 11 pass (bbold un-ignored); 12 ignored |
 | 30_encoding | 26/26 | All pass |
 | 32_keyval | 7/8 | 7 pass; 1 ignored (xkeyvalview) |
 | 33_keyval_options | 11/11 | All pass |
