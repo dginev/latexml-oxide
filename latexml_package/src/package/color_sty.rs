@@ -1,154 +1,46 @@
 use crate::prelude::*;
+use latexml_core::common::color::{self, Color, color_from_model_spec};
 
-/// Convert a color component float (0.0-1.0) to u8 (0-255).
-/// Matches Perl's `roundto($n * 255, 0)` which adds a small epsilon factor
-/// to handle floating-point boundary cases (e.g., 1.0 - 0.90 = 0.0999... not 0.10).
-fn color_component_to_u8(v: f64) -> u8 {
-  // Perl: int($n * scale * (1 + 100*epsilon) + 0.5)
-  // We use a small epsilon to nudge values that are very close to .5 boundaries
-  let scaled = v.clamp(0.0, 1.0) * 255.0 * (1.0 + 100.0 * f64::EPSILON);
-  scaled.round() as u8
-}
-
-/// Convert RGB float components (0.0-1.0) to hex color string like "#FF0000"
-fn rgb_to_hex(r: f64, g: f64, b: f64) -> String {
-  format!("#{:02X}{:02X}{:02X}", color_component_to_u8(r), color_component_to_u8(g), color_component_to_u8(b))
-}
-
-/// Convert CMYK float components (0.0-1.0) to hex via CMY→RGB
-fn cmyk_to_hex(c: f64, m: f64, y: f64, k: f64) -> String {
-  // cmyk → cmy: cmy_i = min(1, cmyk_i + k)
-  let cc = (c + k).min(1.0);
-  let cm = (m + k).min(1.0);
-  let cy = (y + k).min(1.0);
-  // cmy → rgb: rgb_i = 1 - cmy_i
-  rgb_to_hex(1.0 - cc, 1.0 - cm, 1.0 - cy)
-}
-
-/// Convert gray float (0.0-1.0) to hex
-fn gray_to_hex(g: f64) -> String {
-  rgb_to_hex(g, g, g)
-}
-
-/// Parse a color specification, returning a hex color string.
+/// Parse a color from an optional model name and a spec string.
+/// If model is given, constructs the Color directly.
+/// If no model, looks up the named color from state.
 /// Perl: ParseColor($model, $spec) in color.sty.ltxml
-fn parse_color(model: Option<&str>, spec: &str) -> String {
+fn parse_color(model: Option<&str>, spec: &str) -> Color {
   let spec = spec.trim().trim_matches(|c| c == '{' || c == '}').trim();
-
   if let Some(model) = model {
     let model_lc = model.to_lowercase();
     if model_lc == "named" {
-      // Named color: look up "named_<spec>"
-      return lookup_color(&format!("named_{spec}"));
+      return lookup_color_obj(&format!("named_{spec}"));
     }
-    // Parse components from spec
-    let components: Vec<f64> = if spec.contains(',') {
-      spec.split(',').filter_map(|s| s.trim().parse::<f64>().ok()).collect()
-    } else {
-      spec.split_whitespace().filter_map(|s| s.parse::<f64>().ok()).collect()
-    };
-
-    match model_lc.as_str() {
-      "rgb" => {
-        if components.len() >= 3 {
-          rgb_to_hex(components[0], components[1], components[2])
-        } else {
-          "#000000".to_string()
-        }
-      },
-      "cmyk" => {
-        if components.len() >= 4 {
-          cmyk_to_hex(components[0], components[1], components[2], components[3])
-        } else {
-          "#000000".to_string()
-        }
-      },
-      "cmy" => {
-        if components.len() >= 3 {
-          rgb_to_hex(1.0 - components[0], 1.0 - components[1], 1.0 - components[2])
-        } else {
-          "#000000".to_string()
-        }
-      },
-      "gray" => {
-        if !components.is_empty() {
-          gray_to_hex(components[0])
-        } else {
-          "#000000".to_string()
-        }
-      },
-      "hsb" => {
-        // HSB (HSV): h,s,b in [0,1]
-        if components.len() >= 3 {
-          let (h, s, b) = (components[0], components[1], components[2]);
-          let (r, g, bl) = hsb_to_rgb(h, s, b);
-          rgb_to_hex(r, g, bl)
-        } else {
-          "#000000".to_string()
-        }
-      },
-      _ => {
-        // Unknown model, try as named
-        lookup_color(spec)
-      },
-    }
+    color_from_model_spec(&model_lc, spec)
   } else {
-    // No model — look up by name
-    lookup_color(spec)
+    lookup_color_obj(spec)
   }
 }
 
-/// HSB/HSV to RGB conversion. H,S,B all in [0,1]
-fn hsb_to_rgb(h: f64, s: f64, b: f64) -> (f64, f64, f64) {
-  if s == 0.0 {
-    return (b, b, b);
-  }
-  let h6 = h * 6.0;
-  let i = h6.floor() as i32;
-  let f = h6 - i as f64;
-  let p = b * (1.0 - s);
-  let q = b * (1.0 - s * f);
-  let t = b * (1.0 - s * (1.0 - f));
-  match i % 6 {
-    0 => (b, t, p),
-    1 => (q, b, p),
-    2 => (p, b, t),
-    3 => (p, q, b),
-    4 => (t, p, b),
-    _ => (b, p, q),
+/// Look up a named color from state, returning a Color object.
+/// Perl: LookupColor($name) in Package.pm
+fn lookup_color_obj(name: &str) -> Color {
+  let key = s!("color_{name}");
+  match state::lookup_value(&key) {
+    Some(Stored::String(sym)) => {
+      let stored_str = arena::with(sym, |s| s.to_string());
+      Color::from_stored(&stored_str).unwrap_or_else(|| {
+        Info!("undefined", name, &s!("color '{}' is undefined...", name));
+        color::BLACK
+      })
+    },
+    _ => {
+      Info!("undefined", name, &s!("color '{}' is undefined...", name));
+      color::BLACK
+    },
   }
 }
 
 /// Look up a named color from state. Returns hex string.
 /// Perl: LookupColor($name) in Package.pm
 pub fn lookup_color(name: &str) -> String {
-  let key = s!("color_{name}");
-  match state::lookup_value(&key) {
-    Some(Stored::String(sym)) => {
-      // Copy the string out of the arena to avoid re-entrant borrow issues
-      let stored_str = arena::with(sym, |s| s.to_string());
-      let parts: Vec<&str> = stored_str.split_whitespace().collect();
-      if parts.is_empty() {
-        return "#000000".to_string();
-      }
-      let model = parts[0];
-      let comps: Vec<f64> = parts[1..].iter()
-        .filter_map(|p| p.parse::<f64>().ok()).collect();
-      match model {
-        "rgb" if comps.len() >= 3 => rgb_to_hex(comps[0], comps[1], comps[2]),
-        "cmyk" if comps.len() >= 4 => cmyk_to_hex(comps[0], comps[1], comps[2], comps[3]),
-        "cmy" if comps.len() >= 3 => rgb_to_hex(1.0 - comps[0], 1.0 - comps[1], 1.0 - comps[2]),
-        "gray" if !comps.is_empty() => gray_to_hex(comps[0]),
-        "named" if parts.len() >= 2 => lookup_color(&format!("named_{}", parts[1])),
-        _ => "#000000".to_string(),
-      }
-    },
-    _ => {
-      // Color not found — default to black
-      Info!("undefined", name, &s!("color '{}' is undefined...", name));
-      "#000000".to_string()
-    },
-  }
+  lookup_color_obj(name).to_attribute()
 }
 
 LoadDefinitions!({
@@ -170,93 +62,70 @@ LoadDefinitions!({
 
   //======================================================================
   // \definecolor{name}{model}{spec}
+  // Perl: DefColor(ToString($name), ParseColor($model, $spec))
   DefPrimitive!("\\definecolor{}{}{}", sub[(name, model, spec)] {
     let name_str = do_expand(name)?.to_string();
     let model_str = do_expand(model)?.to_string();
     let spec_str = do_expand(spec)?.to_string();
-    // Store as color_<name> with "model components..." format for later lookup
-    let spec_parts: Vec<&str> = if spec_str.contains(',') {
-      spec_str.split(',').map(|s| s.trim()).collect()
-    } else {
-      spec_str.split_whitespace().collect()
-    };
-    let stored = format!("{} {}", model_str, spec_parts.join(" "));
-    assign_value(&s!("color_{}", name_str), Stored::String(arena::pin(stored)), None);
-
-    // Also define \color@<name> macro (Perl: DefColor)
-    let macro_body = format!(
-      "\\relax\\relax{{{} {}}}{{{}}}{{{}}}", model_str, spec_parts.join(" "),
-      model_str, spec_parts.join(",")
-    );
-    def_macro(
-      T_CS!(s!("\\\\color@{}", name_str)),
-      None,
-      Some(ExpansionBody::Tokens(Tokens::new(Explode!(macro_body)))),
-      None,
-    )?;
-
-    // Return Box with revert
+    // Use parse_color to handle all models including "named" lookups
+    let color = parse_color(Some(&model_str), &spec_str);
+    def_color(&name_str, &color, None)?;
     Ok(Vec::new())
   });
 
   // \DefineNamedColor{dmodel}{name}{model}{spec}
+  // Perl: DefColor('named_'.$name, ParseColor($model, $spec))
   DefPrimitive!("\\DefineNamedColor{}{}{}{}", sub[(dmodel, name, model, spec)] {
     let name_str = do_expand(name)?.to_string();
     let model_str = do_expand(model)?.to_string();
     let spec_str = do_expand(spec)?.to_string();
-
-    let spec_parts: Vec<&str> = if spec_str.contains(',') {
-      spec_str.split(',').map(|s| s.trim()).collect()
-    } else {
-      spec_str.split_whitespace().collect()
-    };
-    let stored = format!("{} {}", model_str, spec_parts.join(" "));
+    let color = parse_color(Some(&model_str), &spec_str);
     let named_key = format!("named_{}", name_str);
-    assign_value(&s!("color_{}", named_key), Stored::String(arena::pin(stored)), None);
-
-    let macro_body = format!(
-      "\\relax\\relax{{{} {}}}{{{}}}{{{}}}", model_str, spec_parts.join(" "),
-      model_str, spec_parts.join(",")
-    );
-    def_macro(
-      T_CS!(s!("\\\\color@{}", named_key)),
-      None,
-      Some(ExpansionBody::Tokens(Tokens::new(Explode!(macro_body)))),
-      None,
-    )?;
+    def_color(&named_key, &color, None)?;
     Ok(Vec::new())
   });
 
   // \color[model]{spec} or \color{name}
+  // Perl: returns Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(components)))
   DefPrimitive!("\\color[]{}", sub[(model_opt, spec)] {
     let model_str = model_opt.map(|m| do_expand(m).ok()).flatten().map(|t| t.to_string());
     let spec_str = do_expand(spec)?.to_string();
-    let hex = parse_color(model_str.as_deref(), &spec_str);
+    let color = parse_color(model_str.as_deref(), &spec_str);
 
     // If in preamble, store for \normalcolor
     if lookup_bool("inPreamble") {
-      assign_value("preambleTextcolor", Stored::String(arena::pin(hex.clone())), None);
+      assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
-    merge_font(fontmap!(color => hex));
+    merge_font(fontmap!(color => color));
+
+    // TODO: Perl returns Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
+    // Returning a Tbox here breaks framed.xml — needs investigation into Tbox absorption path.
     Ok(Vec::new())
   });
 
   // \pagecolor[model]{spec}
+  // Perl: returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
   DefPrimitive!("\\pagecolor[]{}", sub[(model_opt, spec)] {
     let model_str = model_opt.map(|m| do_expand(m).ok()).flatten().map(|t| t.to_string());
     let spec_str = do_expand(spec)?.to_string();
-    let hex = parse_color(model_str.as_deref(), &spec_str);
-    merge_font(fontmap!(bg => hex));
+    let color = parse_color(model_str.as_deref(), &spec_str);
+    merge_font(fontmap!(bg => color));
+
+    // TODO: Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
+    // Returning a Tbox here breaks framed.xml — needs investigation into Tbox absorption path.
     Ok(Vec::new())
   });
 
   // \normalcolor — restores color from preamble
   DefPrimitive!("\\normalcolor", {
-    let hex = match state::lookup_value("preambleTextcolor") {
-      Some(Stored::String(sym)) => arena::with(sym, |s| s.to_string()),
-      _ => "#000000".to_string(), // Black default
+    let color = match state::lookup_value("preambleTextcolor") {
+      Some(Stored::String(sym)) => {
+        let stored_str = arena::with(sym, |s| s.to_string());
+        Color::from_stored(&stored_str).unwrap_or(color::BLACK)
+      },
+      _ => color::BLACK,
     };
-    merge_font(fontmap!(color => hex));
+    merge_font(fontmap!(color => color));
   });
 
   // \textcolor[model]{spec}{text}
@@ -268,16 +137,15 @@ LoadDefinitions!({
   // \fcolorbox[model]{framespec}{bgspec}{text}
   DefConstructor!("\\fcolorbox[]{}{} Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
-    mode => "text",
+    mode => "internal_vertical",
     after_digest => sub[whatsit] {
-      // Extract all values before mutating whatsit
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
       let fspec_str = whatsit.get_arg(2).map(|f| f.to_string()).unwrap_or_default();
       let bspec_str = whatsit.get_arg(3).map(|b| b.to_string()).unwrap_or_default();
       let text_tokens = whatsit.get_arg(4).map(|t| t.revert()).transpose()?;
 
       let framecolor = parse_color(model_str.as_deref(), &fspec_str);
-      whatsit.set_property("framecolor", Stored::String(arena::pin(framecolor)));
+      whatsit.set_property("framecolor", Stored::String(arena::pin(framecolor.to_attribute())));
 
       let bgcolor = parse_color(model_str.as_deref(), &bspec_str);
       merge_font(fontmap!(bg => bgcolor));

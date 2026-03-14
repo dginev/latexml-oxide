@@ -8,5 +8,4 @@ static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
 "xcolors" => "dvipsnam.def" };
 
 #[test]
-#[ignore] // diffs — color.sty recursion
 fn can_graphics() { latexml_tests("tests/graphics", Some(&REQUIRES), None); }

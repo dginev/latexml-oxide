@@ -1047,25 +1047,30 @@ pub fn merge_font(font: Font) {
 
 /// Define a named color (Perl: DefColor).
 /// Stores as color_{name} and also defines \\color@{name} macro.
-pub fn def_color(name: &str, color: &[&str], scope: Option<Scope>) -> Result<()> {
-  if color.is_empty() {
-    return Ok(());
-  }
-  let model = color[0];
-  let spec = &color[1..];
+pub fn def_color(name: &str, color: &crate::common::color::Color, scope: Option<Scope>) -> Result<()> {
+  use crate::common::color;
   // Check ifglobalcolors
   let effective_scope = if if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true) {
     Some(Scope::Global)
   } else {
     scope
   };
+  // Store in state as "model c1 c2 ..."
+  let stored = color.to_stored();
   assign_value(
     &s!("color_{name}"),
-    Stored::String(arena::pin(color.join(" "))),
+    Stored::String(arena::pin(stored)),
     effective_scope,
   );
-  // Define \\color@{name} macro
-  let model_spec = s!("\\relax\\relax{{{} {}}}{{{model}}}{{{}}}", model, spec.join(" "), spec.join(","));
+  // Define \\color@{name} macro for reversion
+  // Perl: DefMacroI('\\color@'.$name, undef,
+  //   '\relax\relax{model spec}{model}{spec_commas}')
+  let model = color.model();
+  let comps = color.components();
+  let spec_parts: Vec<String> = comps.iter().map(|c| color::format_component(*c)).collect();
+  let spec_space = spec_parts.join(" ");
+  let spec_comma = spec_parts.join(",");
+  let model_spec = s!("\\relax\\relax{{{model} {spec_space}}}{{{model}}}{{{spec_comma}}}");
   def_macro(
     T_CS!(s!("\\\\color@{name}")),
     None,

@@ -1,5 +1,6 @@
 use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::arena::{self, EMPTY_SYM, SymHashMap, SymStr};
+use crate::common::color::{self, Color};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::state::*;
@@ -28,7 +29,8 @@ pub type Fontmap = Rc<[Option<char>]>;
 static DEFFAMILY: &str = "serif";
 static DEFSERIES: &str = "medium";
 static DEFSHAPE: &str = "upright";
-static DEFCOLOR: &str = "black";
+/// Perl: $DEFCOLOR = Black = Color::rgb(0,0,0)
+static DEFCOLOR: Color = color::BLACK;
 // Perl: $DEFBACKGROUND = undef (transparent), $DEFLANGUAGE = undef
 // These are intentionally None in text_default/math_default.
 static DEFOPACITY: &str = "1";
@@ -380,8 +382,8 @@ pub struct Font {
   pub series:        Option<Cow<'static, str>>,
   pub shape:         Option<Cow<'static, str>>,
   pub size:          Option<f64>,
-  pub color:         Option<Cow<'static, str>>,
-  pub bg:            Option<Cow<'static, str>>,
+  pub color:         Option<Color>,
+  pub bg:            Option<Color>,
   pub opacity:       Option<Cow<'static, str>>,
   pub encoding:      Option<Cow<'static, str>>,
   pub language:      Option<Cow<'static, str>>,
@@ -453,9 +455,17 @@ impl fmt::Debug for Font {
       .unwrap_or_else(|| String::from('*'));
     write!(f, "{}", size_str)?;
     write!(f, ",")?;
-    write!(f, "{}", self.color.as_ref().unwrap_or(&star))?;
+    if let Some(ref c) = self.color {
+      write!(f, "{c}")?;
+    } else {
+      write!(f, "*")?;
+    }
     write!(f, ",")?;
-    write!(f, "{}", self.bg.as_ref().unwrap_or(&star))?;
+    if let Some(ref b) = self.bg {
+      write!(f, "{b}")?;
+    } else {
+      write!(f, "*")?;
+    }
     write!(f, ",")?;
     write!(f, "{}", self.opacity.as_ref().unwrap_or(&star))?;
     write!(f, ",")?;
@@ -500,7 +510,7 @@ impl Font {
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed(DEFSHAPE)),
       size:          Some(DEFSIZE),
-      color:         Some(Cow::Borrowed(DEFCOLOR)),
+      color:         Some(DEFCOLOR),
       bg:            None, // Perl: $DEFBACKGROUND = undef (transparent)
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
       encoding:      Some(Cow::Borrowed(DEFENCODING)),
@@ -525,7 +535,7 @@ impl Font {
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed("italic")),
       size:          Some(DEFSIZE),
-      color:         Some(Cow::Borrowed(DEFCOLOR)),
+      color:         Some(DEFCOLOR),
       bg:            None, // Perl: $DEFBACKGROUND = undef
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
       encoding:      None, // Perl has 'OT1' but Rust char decoding uses encoding differently
@@ -580,14 +590,18 @@ impl Font {
         parts.push(&size_str);
       }
     }
+    let color_str;
     if let Some(ref col) = self.color {
-      if col.as_ref() != DEFCOLOR {
-        parts.push(col);
+      if *col != DEFCOLOR {
+        color_str = col.to_attribute();
+        parts.push(&color_str);
       }
     }
+    let bg_str;
     if let Some(ref bkg) = self.bg {
       // Perl: $DEFBACKGROUND = undef, so any set bg is non-default
-      parts.push(bkg);
+      bg_str = bkg.to_attribute();
+      parts.push(&bg_str);
     }
     if let Some(ref opa) = self.opacity {
       if opa.as_ref() != DEFOPACITY {
@@ -624,10 +638,10 @@ impl Font {
       info.insert("size".to_string(), v.to_string());
     }
     if let Some(ref v) = self.color {
-      info.insert("color".to_string(), v.to_string());
+      info.insert("color".to_string(), v.to_attribute());
     }
     if let Some(ref v) = self.bg {
-      info.insert("background".to_string(), v.to_string());
+      info.insert("background".to_string(), v.to_attribute());
     }
     if let Some(ref v) = self.opacity {
       info.insert("opacity".to_string(), v.to_string());
@@ -783,8 +797,8 @@ impl Font {
   pub fn get_series(&self) -> Option<&Cow<'_, str>> { self.series.as_ref() }
   pub fn get_shape(&self) -> Option<&Cow<'_, str>> { self.shape.as_ref() }
   pub fn get_size(&self) -> Option<f64> { self.size }
-  pub fn get_color(&self) -> Option<&Cow<'_, str>> { self.color.as_ref() }
-  pub fn get_background(&self) -> Option<&Cow<'_, str>> { self.bg.as_ref() }
+  pub fn get_color(&self) -> Option<&Color> { self.color.as_ref() }
+  pub fn get_background(&self) -> Option<&Color> { self.bg.as_ref() }
   pub fn get_opacity(&self) -> Option<&Cow<'_, str>> { self.opacity.as_ref() }
   pub fn get_encoding(&self) -> Option<&Cow<'_, str>> { self.encoding.as_ref() }
   pub fn get_language(&self) -> Option<&Cow<'_, str>> { self.language.as_ref() }
@@ -1015,10 +1029,10 @@ impl Font {
     if is_diff_f64(self.size, other.size) {
       distance += 1;
     }
-    if is_diff_opt_str(self.color.as_deref(), other.color.as_deref()) {
+    if is_diff_color(self.color.as_ref(), other.color.as_ref()) {
       distance += 1;
     }
-    if is_diff_opt_str(self.bg.as_deref(), other.bg.as_deref()) {
+    if is_diff_color(self.bg.as_ref(), other.bg.as_ref()) {
       distance += 1;
     }
     if is_diff_opt_str(self.opacity.as_deref(), other.opacity.as_deref()) {
@@ -1127,20 +1141,20 @@ impl Font {
         ),
       );
     }
-    if is_diff(self.color.as_ref(), other.color.as_ref()) {
+    if is_diff_color(self.color.as_ref(), other.color.as_ref()) {
       result.insert(
         "color".to_string(),
         (
-          self.color.as_ref().unwrap().to_string(),
+          self.color.as_ref().unwrap().to_attribute(),
           Font { color: self.color.clone(), ..Font::default() },
         ),
       );
     }
-    if is_diff(self.bg.as_ref(), other.bg.as_ref()) {
+    if is_diff_color(self.bg.as_ref(), other.bg.as_ref()) {
       result.insert(
         "backgroundcolor".to_string(),
         (
-          self.bg.as_ref().unwrap().to_string(),
+          self.bg.as_ref().unwrap().to_attribute(),
           Font { bg: self.bg.clone(), ..Font::default() },
         ),
       );
@@ -1199,7 +1213,7 @@ impl Font {
       opacity: other.opacity.clone(), // should multiply or replace?
       ..Font::default()
     };
-    if is_diff(othercolor, Some(&Cow::Borrowed(DEFCOLOR))) {
+    if is_diff_color(othercolor, Some(&DEFCOLOR)) {
       changes.color.clone_from(&other.color);
     }
 
@@ -1493,6 +1507,10 @@ fn is_diff_opt_str(x: Option<&str>, y: Option<&str>) -> bool {
 }
 
 fn is_diff_f64(x: Option<f64>, y: Option<f64>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
+
+fn is_diff_color(x: Option<&Color>, y: Option<&Color>) -> bool {
+  x.is_some() && (y.is_none() || (x != y))
+}
 
 /// Matches fonts when both are converted to toString strings.
 /// Uses regex caching for repeated lookups.

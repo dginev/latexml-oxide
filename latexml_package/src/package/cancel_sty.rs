@@ -1,15 +1,5 @@
 use crate::prelude::*;
 
-/// Normalize a font color string to hex format.
-/// Named colors (e.g., "black") are looked up via color.sty definitions.
-fn color_to_hex(color: &str) -> String {
-  if color.starts_with('#') {
-    color.to_string()
-  } else {
-    super::color_sty::lookup_color(color)
-  }
-}
-
 /// Perl: cancelColorProperties — captures font state for cancel color styling.
 /// Note: In Perl, Digest(T_CS('\CancelColor')) always returns a truthy object
 /// (even for empty macros), so forcefont/cancelfont are ALWAYS set.
@@ -26,11 +16,11 @@ fn cancel_color_properties(whatsit: &mut Whatsit) -> Result<()> {
   // Set cancel color if CancelColor changed the color
   if cancel_font.color != inner_font.color {
     if let Some(ref cancel_color) = cancel_font.color {
-      whatsit.set_property("cancelcolor", Stored::String(arena::pin(color_to_hex(cancel_color))));
+      whatsit.set_property("cancelcolor", Stored::String(arena::pin(cancel_color.to_attribute())));
     }
     // Set inner color for text mode (so content stays in original color)
     if let Some(ref inner_color) = inner_font.color {
-      whatsit.set_property("innercolor", Stored::String(arena::pin(color_to_hex(inner_color))));
+      whatsit.set_property("innercolor", Stored::String(arena::pin(inner_color.to_attribute())));
     }
   }
   egroup()?;

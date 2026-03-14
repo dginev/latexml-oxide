@@ -1344,10 +1344,12 @@ pub fn in_svg(document: &Document) -> bool {
 }
 
 pub fn adjust_box_color(tbox: &Digested) -> Result<()> {
-  let color_opt = lookup_font().and_then(|f| f.get_color().map(|c| c.clone().into_owned()));
+  use latexml_core::common::color;
+  let color_opt = lookup_font().and_then(|f| f.get_color().cloned());
   if let Some(color) = color_opt {
-    if color != "black" {
-      adjust_box_color_rec(&color, HashMap::default(), tbox);
+    if color != color::BLACK {
+      let hex = color.to_attribute();
+      adjust_box_color_rec(&hex, HashMap::default(), tbox);
     }
   }
   Ok(())
