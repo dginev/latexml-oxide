@@ -91,3 +91,37 @@ LaTeXML applies a heuristic to guess header rows in tabulars, adding
 This is an accessibility enhancement, not LaTeX semantics. The heuristic
 can produce different results than manual markup and may fire on tables
 where no header was intended.
+
+---
+
+## 7. `alignment_skip_data` continuation-line logic is dead code
+
+**Perl source:** `LaTeXML/Core/Alignment.pm` line 1339
+
+**Symptom:** The heuristic that allows "continuation lines" (mostly-empty
+data rows) to be accepted despite exceeding the threshold never actually
+fires.
+
+**Root cause:** The continuation check compares:
+```perl
+scalar(grep { $$_{content_class} eq '_' } @{ $::TABLINES[$i + $n] })
+  <= 0.4 * scalar($::TABLINES[0])
+```
+`$::TABLINES[0]` is an array reference. `scalar($::TABLINES[0])` returns
+the reference itself, which in numeric context evaluates to its memory
+address (a huge number like ~140 trillion on 64-bit). So `0.4 * scalar(...)`
+is always enormous, and the `<=` comparison is always TRUE.
+
+The intended code was almost certainly:
+```perl
+0.4 * scalar(@{$::TABLINES[0]})  # count of cells in first line
+```
+
+**Effect:** `alignment_skip_data` effectively breaks on ANY comparison that
+exceeds the threshold — no continuation lines are ever accepted. This makes
+the data-block scan more conservative (shorter blocks), which in turn makes
+the header heuristic less likely to succeed on borderline cases.
+
+**Rust fix:** Match the Perl behavior — break immediately when diff >=
+threshold. The continuation-line logic is commented out with a reference
+to this entry.
