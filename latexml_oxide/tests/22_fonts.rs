@@ -85,7 +85,7 @@ fn marvosym_test() {
 // -- Tests that crash (need package/subsystem work) --
 
 #[test]
-#[ignore] // crash in alignment.rs — needs \mathgroup, \color@setgroup
+#[ignore] // diffs — math parser (XMDual structure, text= attribute, list refs)
 fn acc_test() {
   latexml_test_single("tests/fonts/acc.tex", "acc", DIR, None, None);
 }

@@ -162,12 +162,17 @@ this correctly, rather than sentinel strings.
 which caused spurious font diffs when compared against elements that had no explicit
 background/language.
 
-### 7. SVG Support Removed
+### 7. SVG Support Deferred
 
 **Decision:** SVG-related code paths removed from glue, kern, and box modules.
 
 **Rationale:** latexml-oxide targets XML/HTML output. SVG generation is not critical
-for the core TeX→XML pipeline and adds significant complexity. Can be re-added if needed.
+for the core TeX→XML pipeline and adds significant complexity.
+
+**Planning condition:** When we advance to translating `pgf.sty` and `tikz.sty` support,
+we will add the full breadth of SVG infrastructure from Perl, including all other
+SVG-producing bindings (e.g. `collapseSVGGroup`, `svg:foreignObject`, `svg:g` tags).
+This is deferred, not permanently removed.
 
 ### 8. OML Font Map Position 127
 

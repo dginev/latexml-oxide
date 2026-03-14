@@ -79,6 +79,27 @@ LoadDefinitions!({
     } {
       // First, if this definition is a primitive|conditional|constructor,
       // check to see if it has an alias, which would allow us to work with a token
+      // Check for font-defined primitives: \meaning\fiverm => "select font cmr5"
+      if let Stored::Primitive(_) = &definition {
+        let cs_str = token.to_string();
+        let key = s!("fontinfo_{}", cs_str);
+        if let Some(Stored::Font(f)) = state::lookup_value(&key) {
+          if let Some(name) = f.name.as_ref() {
+            let at_info = if let Some(sz) = f.size {
+              // Only show "at" clause when size differs from default (10pt)
+              if (sz - 10.0).abs() > 0.001 {
+                format!(" at {:.1}pt", sz)
+              } else {
+                String::new()
+              }
+            } else {
+              String::new()
+            };
+            meaning = format!("select font {}{}", name, at_info);
+            return Ok(Tokens::new(Explode!(meaning)));
+          }
+        }
+      }
       let definition : Stored = match definition {
         Stored::Primitive(primitive) =>
           Stored::Token(primitive.get_cs_or_alias().into_owned()),
@@ -88,7 +109,6 @@ LoadDefinitions!({
           Stored::Token(cond.get_cs_or_alias().into_owned()),
         other => other
       };
-      // TODO: Also check for fontinfo_ when implemented
 
       // Now that we've tried to obtain an expandable definition, do the TeX dance:
       match definition {

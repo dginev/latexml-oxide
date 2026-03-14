@@ -51,28 +51,40 @@ LoadDefinitions!({
     if let Some(ref props) = props_opt {
       AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
     }
-    DefPrimitive!(cs, None, None, font => props_opt);
+    // Perl: installDefinition(FontDef->new($cs, $key))
+    // When the font switch CS is invoked, set current_FontDef so \fontname\font works
+    let cs_for_fontdef = cs.clone();
+    DefPrimitive!(cs, None, None, font => props_opt,
+      before_digest => sub {
+        AssignValue!("current_FontDef", cs_for_fontdef.clone(), None);
+      }
+    );
   });
 
   // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}
   //       || "fontname not available") })
+  // Perl's FontDef param type: for \font, looks up current_FontDef, falls back to \lx@default@font
   DefMacro!("\\fontname FontToken", sub[args] {
     let token = args.into_iter().next().unwrap().expected_token();
     let cs_str = token.to_string();
-    // Check if token is \font (current font)
-    let name = if cs_str == "\\font" {
-      state::lookup_font().and_then(|f| f.name.as_ref().map(|n| n.to_string()))
+    // Determine which font CS to look up
+    let lookup_cs = if cs_str == "\\font" {
+      // Current font — look up current_FontDef, fallback to \lx@default@font
+      match state::lookup_value("current_FontDef") {
+        Some(Stored::Token(t)) => t.to_string(),
+        _ => s!("\\lx@default@font"),
+      }
     } else {
-      // Look up fontinfo_<cs>
-      let key = s!("fontinfo_{}", cs_str);
-      state::lookup_value(&key).and_then(|stored| {
-        if let Stored::Font(f) = stored {
-          f.name.as_ref().map(|n| n.to_string())
-        } else {
-          None
-        }
-      })
+      cs_str
     };
+    let key = s!("fontinfo_{}", lookup_cs);
+    let name = state::lookup_value(&key).and_then(|stored| {
+      if let Stored::Font(f) = stored {
+        f.name.as_ref().map(|n| n.to_string())
+      } else {
+        None
+      }
+    });
     Tokens::new(Explode!(name.unwrap_or_else(|| s!("fontname not available"))))
   });
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
