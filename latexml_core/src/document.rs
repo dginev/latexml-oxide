@@ -784,7 +784,7 @@ impl Document {
   }
 
   /// Closes all nodes until $node becomes the current point.
-  pub fn close_to_node(&mut self, node: &Node, _ifopen: bool) -> Result<()> {
+  pub fn close_to_node(&mut self, node: &Node, ifopen: bool) -> Result<()> {
     let mut cant_close = Vec::new();
     let mut lastopen: Option<Node> = None;
     let mut n = self.node.clone();
@@ -804,14 +804,16 @@ impl Document {
     }
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
-      let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
-      arena::with(get_node_qname(node), |qname_str| {
-        {
-          Error!("malformed", qname_str, message)
-        };
-        Ok(())
-      })?;
-    //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
+      // Perl: suppress error when $ifopen is true
+      if !ifopen {
+        let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
+        arena::with(get_node_qname(node), |qname_str| {
+          {
+            Error!("malformed", qname_str, message)
+          };
+          Ok(())
+        })?;
+      }
     } else {
       // Found node.
       if !cant_close.is_empty() {
@@ -850,16 +852,16 @@ impl Document {
   }
 
   pub fn close_node_with_strictness(&mut self, strict: bool, node: &Node) -> Result<()> {
-    // my ($t, @cant_close) = ();
+    // Perl: my ($t, @cant_close) = (); ... while ((($t = $n->getType) != XML_DOCUMENT_NODE) ...
     let mut cant_close: Vec<Node> = Vec::new();
     let mut n = self.node.clone();
-    let mut t = node.get_type();
+    let mut t = n.get_type(); // track walker node type, not target
     while t.is_some() && t != Some(NodeType::DocumentNode) && &n != node {
       if !can_auto_close(&n) {
         cant_close.push(n.clone());
       }
       n = n.get_parent().unwrap();
-      t = node.get_type();
+      t = n.get_type(); // update to walker's type
     }
 
     if t == Some(NodeType::DocumentNode) {
