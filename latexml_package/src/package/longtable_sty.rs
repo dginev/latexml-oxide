@@ -30,7 +30,8 @@ LoadDefinitions!({
       // Insert properties from LONGTABLE_PROPERTIES
       if let Some(Stored::HashStored(ref map)) = lookup_value("LONGTABLE_PROPERTIES") {
         for (k, v) in map.iter() {
-          whatsit.set_property(&arena::to_string(*k), v.clone());
+          let key = arena::to_string(*k);
+          whatsit.set_property(&key, v.clone());
         }
       }
       // TODO: Insert caption and toccaption from LONGTABLE_*_CAPTIONS

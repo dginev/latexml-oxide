@@ -1,6 +1,7 @@
 // Supported package bindings
 pub mod accents_sty;
 pub mod alltt_sty;
+pub mod array_sty;
 pub mod appendix_sty;
 pub mod amsbsy_sty;
 pub mod bbold_sty;
@@ -55,6 +56,7 @@ pub mod subcaption_sty;
 pub mod subfigure_sty;
 pub mod subfiles_sty;
 pub mod report_cls;
+pub mod rotating_sty;
 pub mod latin10_def;
 pub mod ly1_fontmap;
 pub mod t1_fontmap;

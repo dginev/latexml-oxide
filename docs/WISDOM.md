@@ -189,7 +189,31 @@ type, fall back to imperative `Vec<Token>` construction. Don't fight the macro.
 
 ---
 
-## 9. Porting RawTeX() blocks: copy bravely and exactly
+## 9. arena::with pattern for zero-allocation string access
+
+**Principle:** Prefer `arena::with(sym, |s| ...)` over `arena::to_string(sym)`
+when you only need a `&str` reference temporarily.
+
+**Analysis:** The string interner stores all interned strings (SymStr/SymbolU32)
+in a thread-local arena. `arena::to_string(sym)` resolves the symbol and
+allocates a new `String` on the heap. `arena::with(sym, |s| ...)` borrows
+the string directly from the arena with zero allocation — the `&str` lives
+only for the duration of the closure.
+
+**When to use each:**
+- `arena::with(sym, |s| ...)` — when the result depends on `&str` and can
+  be computed inline (e.g., comparisons, `set_property(key, val)`, formatting)
+- `arena::with2(s1, s2, |a, b| ...)` — when you need two symbols resolved
+- `arena::to_string(sym)` — only when you need an owned `String` that outlives
+  the current scope (e.g., storing in a `HashMap<String, ...>`)
+
+**Key insight:** Every `arena::to_string` is a heap allocation. In hot paths
+(per-token, per-column, per-row), this adds up. The `with` pattern is always
+preferable when the string use is short-lived.
+
+---
+
+## 10. Porting RawTeX() blocks: copy bravely and exactly
 
 **Principle:** Perl `RawTeX()` calls should be ported as `RawTeX!()` in Rust with
 the exact same TeX string content. Even very large blocks of raw TeX code should
