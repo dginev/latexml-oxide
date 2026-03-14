@@ -20,10 +20,10 @@ fn prepare_equation_counter(options: SymHashMap<Stored>) {
 fn before_equation() -> Result<()> {
   let mut has_preset = false;
   let mut is_numbered = false;
+  maybe_peek_label()?;
   let ctr = with_value_mut("EQUATION_NUMBERING", |val_opt| {
     if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
       numbering.insert("in_equation", true.into());
-      // MaybePeekLabel();
       is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
       has_preset = numbering.contains_key("preset");
       match numbering.get("counter") {

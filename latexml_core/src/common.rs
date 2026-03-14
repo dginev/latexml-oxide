@@ -78,6 +78,11 @@ impl DigestionMode {
 
 pub type BindingDispatcher = Rc<dyn Fn(&str) -> Option<Result<()>>>;
 
+/// Perl: LABEL_MAPPING_HOOK => sub { ($label, $ctr, $norefnum) => ($refnum, $id) }
+/// Returns (optional refnum string, optional id string)
+pub type LabelMappingHook =
+  Rc<dyn Fn(&str, &str, bool) -> (Option<String>, Option<String>)>;
+
 #[derive(Clone)]
 pub struct Config {
   pub verbosity:               i32,

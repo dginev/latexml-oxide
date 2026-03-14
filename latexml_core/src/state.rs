@@ -8,7 +8,7 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::BindingDispatcher;
+use crate::common::{BindingDispatcher, LabelMappingHook};
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -257,6 +257,8 @@ pub struct State {
   pub bindings_dispatch:       Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
+  /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
+  pub label_mapping_hook:      Option<LabelMappingHook>,
 }
 unsafe impl Send for State {}
 // State is NOT Sync!
@@ -301,6 +303,7 @@ impl Default for State {
       nomathparse:             false,
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
+      label_mapping_hook:      None,
     }
   }
 }
@@ -2181,6 +2184,14 @@ pub fn set_bindings_dispatch(dispatcher: BindingDispatcher) {
 pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   let mut state = state_mut!();
   state.extra_bindings_dispatch = Some(dispatcher);
+}
+
+pub fn get_label_mapping_hook() -> Option<LabelMappingHook> {
+  state!().label_mapping_hook.clone()
+}
+pub fn set_label_mapping_hook(hook: LabelMappingHook) {
+  let mut state = state_mut!();
+  state.label_mapping_hook = Some(hook);
 }
 
 pub fn get_search_paths() -> Vec<String> { state!().search_paths.iter().cloned().collect() }

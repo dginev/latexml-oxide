@@ -155,6 +155,7 @@ LoadDefinitions!({
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
 
+      maybe_peek_label()?;
       let stype_str = stype.to_string();
       let mut props = ref_step_counter(&stype_str, false)?;
       // For appendix, look up the backmatter element mapping
@@ -220,6 +221,7 @@ LoadDefinitions!({
       // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
+      maybe_peek_label()?;
       let stype_str = stype.to_string();
       let mut props = RefStepID!(&stype_str)?;
       // For appendix, look up the backmatter element mapping

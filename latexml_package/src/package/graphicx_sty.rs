@@ -1,5 +1,72 @@
 use crate::prelude::*;
 
+/// Perl: image_candidates($path) from LaTeXML::Util::Image
+/// Searches for files matching `path` (possibly with extensions) in graphics/search paths.
+/// Returns comma-separated list of candidate paths, relative to source directory.
+fn image_candidates(path: &str) -> String {
+  use std::path::{Path, PathBuf};
+  let path = path.trim().trim_matches('"');
+  if path.is_empty() {
+    return String::new();
+  }
+  let mut search_dirs: Vec<String> = state::get_graphics_paths();
+  search_dirs.extend(state::get_search_paths());
+  let source_dir = state::lookup_string("SOURCEDIRECTORY");
+  if !source_dir.is_empty() {
+    search_dirs.push(source_dir.clone());
+  }
+  if search_dirs.is_empty() {
+    search_dirs.push(".".to_string());
+  }
+
+  let mut candidates: Vec<String> = Vec::new();
+  let path_obj = Path::new(path);
+  let has_extension = path_obj.extension().is_some();
+  let source_path = if source_dir.is_empty() { None } else { Some(PathBuf::from(&source_dir)) };
+
+  for dir in &search_dirs {
+    let base = PathBuf::from(dir).join(path);
+    if has_extension {
+      if base.exists() {
+        let rel = match &source_path {
+          Some(sp) => base.strip_prefix(sp).unwrap_or(&base).to_string_lossy().to_string(),
+          None => base.to_string_lossy().to_string(),
+        };
+        candidates.push(rel);
+      }
+    } else {
+      // Search for path with any extension
+      let parent = base.parent().unwrap_or(Path::new("."));
+      let stem = base.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+      if let Ok(entries) = std::fs::read_dir(parent) {
+        for entry in entries.flatten() {
+          let fname = entry.file_name().to_string_lossy().to_string();
+          if let Some(dot_pos) = fname.find('.') {
+            if fname[..dot_pos] == stem {
+              let full = entry.path();
+              let rel = match &source_path {
+                Some(sp) => full.strip_prefix(sp).unwrap_or(&full).to_string_lossy().to_string(),
+                None => full.to_string_lossy().to_string(),
+              };
+              candidates.push(rel);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Deduplicate while preserving order
+  let mut seen = std::collections::HashSet::new();
+  candidates.retain(|c| seen.insert(c.clone()));
+
+  if candidates.is_empty() {
+    path.to_string()
+  } else {
+    candidates.join(",")
+  }
+}
+
 LoadDefinitions!({
   // graphicx.sty provides alternative argument syntax for graphics inclusion.
   // (See LaTeXML::Post::Graphics for suggested postprocessing)
@@ -50,8 +117,8 @@ LoadDefinitions!({
       // arg 0: starred, arg 1: keyvals, arg 2: graphic path
       let path = args[2].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
       let path = path.trim().to_string();
-      // Candidates: just the path itself (filesystem search deferred to post-processing)
-      let candidates = path.clone();
+      // Perl: image_candidates searches filesystem for files matching path with any extension
+      let candidates = image_candidates(&path);
       // Build options string from keyval pairs, matching Perl's graphicX_options
       let starred = args[0].is_some();
       let mut options_vec: Vec<String> = Vec::new();

@@ -34,6 +34,9 @@ LoadDefinitions!({
   reversion => "", // TODO: implement for DUAL_BRANCH
   properties => {stored_map!("alignmentSkippable" => true, "alignmentPreserve" => true)},
   after_digest => sub[whatsit] {
+    if let Some(arg1) = whatsit.get_arg(1) {
+      maybe_note_label(&arg1.to_string());
+    }
     let label = match whatsit.get_arg(1) {
       Some(labeld) => clean_label(&labeld.to_string(), None).into_owned(),
       None => String::new()

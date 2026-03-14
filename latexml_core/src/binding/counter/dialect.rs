@@ -411,7 +411,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
 /// Assign a sub to LABEL_MAPPING_HOOK: &sub($label,$counter,$norefnum)
 /// to return the desired refnum and id for a given object.
 fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
-  if has_value("LABEL_MAPPING_HOOK") {
+  if let Some(mapper) = state::get_label_mapping_hook() {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
@@ -421,32 +421,47 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     if lookup_meaning(&hj_id).is_some() {
       state::let_i(&T_CS!(s!("\\the{ctr}@ID")), &hj_id, Some(Scope::Global));
     }
-    // TODO: Continue once we know the type of "mapper"
-    // let _label = state!().lookup_value("PEEKED_LABEL");
-    todo!();
-    //   let (fixedrefnum, fixedid) = mapper(label, ctr, norefnum);
-    //   if !norefnum && fixedrefnum {
-    //     if !state!().lookup_neaning(hj_refnum) {    // Save for later
-    //       state::let_i(&hj_refnum, T_CS!(s!("\\the{}",ctr)), Some(Scope::Global));
-    //     }
-    //     def_macro(T_CS!(s!("\\the{}",ctr)), None, fixedrefnum, Some(ExpandableOptions { scope:
-    // Some(Scope::Global), ..ExpandableOptions::default()}));   }
-    //   if fixedid {
-    //     if lookup_meaning(&hj_id).is_none() {        // Save for later
-    //       state::let_i(&hj_id, T_CS!(s!("\\the{}@ID",ctr)), Some(Scope::Global));
-    //     }
-    //     def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, fixedid, Some(ExpandableOptions { scope:
-    // Some(Scope::Global), ..ExpandableOptions::default()}));   }
-    //   state::remove_value("PEEKED_LABEL"); // CONSUME the label
-    //   state::assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've
-    // consumed the label
+    let label = state::lookup_string("PEEKED_LABEL");
+    let (fixedrefnum, fixedid) = mapper(&label, ctr, norefnum);
+    if let Some(refnum) = fixedrefnum {
+      if !norefnum {
+        if lookup_meaning(&hj_refnum).is_none() {
+          // Save for later
+          state::let_i(&hj_refnum, &T_CS!(s!("\\the{ctr}")), Some(Scope::Global));
+        }
+        let _ = def_macro(
+          T_CS!(s!("\\the{ctr}")),
+          None,
+          ExpansionBody::Tokens(Tokens::new(Explode!(&refnum))),
+          Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+        );
+      }
+    }
+    if let Some(id) = fixedid {
+      if lookup_meaning(&hj_id).is_none() {
+        // Save for later
+        state::let_i(&hj_id, &T_CS!(s!("\\the{ctr}@ID")), Some(Scope::Global));
+      }
+      let _ = def_macro(
+        T_CS!(s!("\\the{ctr}@ID")),
+        None,
+        ExpansionBody::Tokens(Tokens::new(Explode!(&id))),
+        Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+      );
+    }
+    state::remove_value("PEEKED_LABEL"); // CONSUME the label
+    state::assign_value(
+      "PROCESSED_LABEL",
+      Stored::String(arena::pin(label)),
+      Some(Scope::Global),
+    );
   }
 }
 
 /// Use to peek for FOLLOWING \label{...} to support label-derived reference numbers
 /// (Perl: MaybePeekLabel)
 pub fn maybe_peek_label() -> Result<()> {
-  if has_value("LABEL_MAPPING_HOOK") {
+  if state::get_label_mapping_hook().is_some() {
     let peek = crate::gullet::read_non_space()?;
     if let Some(ref token) = peek {
       if x_equals(token, &T_CS!("\\label")) {
@@ -478,7 +493,7 @@ pub fn maybe_peek_label() -> Result<()> {
 /// Can by used by \label, among others. Note we only record the label
 /// if it hasn't already been peeked, and consumed.
 pub fn maybe_note_label(label: &str) {
-  if has_value("LABEL_MAPPING_HOOK") {
+  if state::get_label_mapping_hook().is_some() {
     let label = clean_label(label, Some(""));
     let processed = state::lookup_string("PROCESSED_LABEL");
     if processed.is_empty() || processed != label {

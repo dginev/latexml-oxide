@@ -14,6 +14,7 @@ const DIR: &str = "tests/complex";
 pub fn complex_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     "xii" => Some(helpers::xii_tex::load_definitions()),
+    "labelled" => Some(helpers::labelled_tex::load_definitions()),
     _ => None,
   }
 }
@@ -43,7 +44,6 @@ fn figure_mixed_content_test() { complex("figure_mixed_content"); }
 fn hypertest_test() { complex("hypertest"); }
 
 #[test]
-#[ignore] // diffs — label-based numbering
 fn labelled_test() { complex("labelled"); }
 
 #[test]

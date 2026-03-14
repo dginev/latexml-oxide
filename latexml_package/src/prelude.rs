@@ -14,6 +14,7 @@ pub use std::sync::Arc;
 pub use latexml_core::alignment::cell::Cell;
 pub use latexml_core::alignment::template::{Align, Template};
 pub use latexml_core::alignment::{Alignment, AlignmentConfig};
+pub use latexml_core::common::LabelMappingHook;
 pub use latexml_core::common::arena;
 pub use latexml_core::common::arena::*;
 pub use latexml_core::common::cleaners::*;
