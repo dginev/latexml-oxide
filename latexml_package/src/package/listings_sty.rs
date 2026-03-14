@@ -479,7 +479,7 @@ fn lst_clear_language() {
 fn lst_add_delimiter(
   kind: &str,
   type_str: &str,
-  _style: Option<Tokens>,
+  style: &str,
   delims: Option<Tokens>,
   recursive: bool,
 ) {
@@ -568,9 +568,19 @@ fn lst_add_delimiter(
   if !open_str.is_empty() {
     // Perl: $kind can be overridden by type (e.g. "directive" → "directives")
     let kind = kind_override.as_deref().unwrap_or(kind);
+
+    // Perl: process $style parameter to determine base class name
+    // "commentstyle" → "comments", "stringstyle" → "strings", etc.
+    let style_re = Regex::new(r"style(\d*)$").unwrap();
+    let base_class = if style_re.is_match(style) {
+      style_re.replace(style, "s$1").to_string()
+    } else {
+      kind.to_string()
+    };
+
     // Perl: $class = $class . ToString($open) . ToString($close)
-    let class = format!("{kind}{open_str}{close_str}");
-    // eprintln!("lst_add_delimiter: kind={kind:?} type={type_clean:?} open={open_str:?} close={close_str:?} close_re={close_re:?} class={class:?}");
+    let class = format!("{base_class}{open_str}{close_str}");
+    // eprintln!("lst_add_delimiter: kind={kind:?} type={type_clean:?} open={open_str:?} close={close_str:?} close_re={close_re:?} class={class:?} base_class={base_class:?}");
     // Store delimiter info in state
     let key_open = s!("LST_DELIM@{open_str}@open");
     let key_close = s!("LST_DELIM@{open_str}@close");
@@ -591,18 +601,19 @@ fn lst_add_delimiter(
     // Register this delimiter in the delimiter list
     lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&open_str)]);
 
-    // Perl: lstSetClassStyle($class, undef, begin => $openTeX, end => $closeTeX, ...)
+    // Perl: lstSetClassStyle($class, undef, begin => $openTeX, end => $closeTeX,
+    //   class => $oldclass, cssclass => $cssclass)
     // The begin/end tokens INCLUDE the delimiter characters (unless invisible)
-    let css = kind.strip_suffix('s').unwrap_or(kind);
     let open_tex = if invisible { Tokens!() }
       else { Tokens::new(vec![T_OTHER!(&open_str)]) };
     let close_tex = if invisible || close_str.is_empty() { Tokens!() }
       else { Tokens::new(vec![T_OTHER!(&close_str)]) };
 
+    // Set parent class (Perl: class => $oldclass)
     let class_key = s!("LST_CLASSES@{class}@class");
-    state::assign_value(&class_key, Stored::String(arena::pin(kind)), None);
-    let css_key = s!("LST_CLASSES@{class}@cssclass");
-    state::assign_value(&css_key, Stored::String(arena::pin(css)), None);
+    state::assign_value(&class_key, Stored::String(arena::pin(&base_class)), None);
+    // Don't set cssclass on artificial class — Perl's regex /^(\w+?)s?$/ won't match
+    // class names containing delimiter chars like "comments{}". Let parent chain provide it.
     if !open_tex.is_empty() {
       let begin_key = s!("LST_CLASSES@{class}@begin");
       state::assign_value(&begin_key, Stored::Tokens(open_tex), None);
@@ -636,8 +647,12 @@ fn lst_set_character_class(class: &str, chars: &Tokens) {
 //======================================================================
 
 /// Perl: lstClassBegin — generate opening tokens for a styled class.
+/// Collects delimiter chars and styling tokens separately. Delimiter chars
+/// come first (in default font), then styling is scoped in a group so
+/// it doesn't affect the close delimiter chars from lstClassEnd.
 fn lst_class_begin(classname: &str) -> Vec<Token> {
-  let mut open_tokens = Vec::new();
+  let mut delim_tokens = Vec::new();
+  let mut style_tokens = Vec::new();
   let mut css_classes = Vec::new();
 
   if classname == "spaces" {
@@ -645,6 +660,7 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
   }
 
   let mut current_class = Some(classname.to_string());
+  let mut is_leaf = true;
   while let Some(ref cname) = current_class {
     // Look up cssclass
     let css_key = s!("LST_CLASSES@{cname}@cssclass");
@@ -654,14 +670,17 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
         css_classes.push(css_str);
       }
     }
-    // Look up begin styling
+    // Look up begin tokens
     let begin_key = s!("LST_CLASSES@{cname}@begin");
     if let Some(Stored::Tokens(begin)) = state::lookup_value(&begin_key) {
       if let Some(rescanned) = lst_rescan(Some(begin)) {
-        // Prepend (not append)
-        let mut new_open = rescanned.unlist().to_vec();
-        new_open.extend(open_tokens.drain(..));
-        open_tokens = new_open;
+        if is_leaf {
+          // Leaf class tokens are delimiter chars — emit before styling
+          delim_tokens.extend(rescanned.unlist().to_vec());
+        } else {
+          // Parent class tokens are styling (e.g. \itshape) — scope in a group
+          style_tokens.extend(rescanned.unlist().to_vec());
+        }
       }
     }
     // Follow class chain
@@ -669,6 +688,7 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
     current_class = state::lookup_value(&class_key)
       .map(|v| v.to_string())
       .filter(|s| !s.is_empty());
+    is_leaf = false;
   }
 
   // Deduplicate CSS classes while preserving order
@@ -684,29 +704,57 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
   result.extend(ExplodeText!(&css_string));
   result.push(T_END!());
   result.push(T_BEGIN!());
-  result.extend(open_tokens);
+  // Delimiter chars first (in default font)
+  result.extend(delim_tokens);
+  if !style_tokens.is_empty() {
+    // Open a group for styling so it's scoped (doesn't affect close delimiters)
+    result.push(T_BEGIN!());
+    result.extend(style_tokens);
+  }
   result
 }
 
 /// Perl: lstClassEnd — generate closing tokens for a styled class.
+/// Mirrors lstClassBegin: close the style group first, then emit delimiter chars.
 fn lst_class_end(classname: &str) -> Vec<Token> {
-  let mut close_tokens = Vec::new();
+  let mut delim_tokens = Vec::new();
+  let mut has_style = false;
   let mut current_class = Some(classname.to_string());
+  let mut is_leaf = true;
   while let Some(ref cname) = current_class {
     let end_key = s!("LST_CLASSES@{cname}@end");
     if let Some(Stored::Tokens(end)) = state::lookup_value(&end_key) {
       if let Some(rescanned) = lst_rescan(Some(end)) {
-        close_tokens.extend(rescanned.unlist().to_vec());
+        if is_leaf {
+          delim_tokens.extend(rescanned.unlist().to_vec());
+        }
+        // Parent class end tokens (if any) go before delimiter tokens
+      }
+    }
+    // Check if parent class has begin styling (to know if we opened a style group)
+    if !is_leaf {
+      let begin_key = s!("LST_CLASSES@{cname}@begin");
+      if let Some(Stored::Tokens(begin)) = state::lookup_value(&begin_key) {
+        if !begin.is_empty() {
+          has_style = true;
+        }
       }
     }
     let class_key = s!("LST_CLASSES@{cname}@class");
     current_class = state::lookup_value(&class_key)
       .map(|v| v.to_string())
       .filter(|s| !s.is_empty());
+    is_leaf = false;
   }
-  close_tokens.push(T_END!());
-  close_tokens.push(T_END!());
-  close_tokens
+  let mut result = Vec::new();
+  if has_style {
+    // Close the style group opened by lstClassBegin
+    result.push(T_END!());
+  }
+  result.extend(delim_tokens);
+  result.push(T_END!());
+  result.push(T_END!());
+  result
 }
 
 /// Perl: lstClassProperty — recursive property lookup on class chain.
@@ -2173,34 +2221,37 @@ LoadDefinitions!({
   });
 
   // Comment/String/Delimiter handlers
+  // Perl: lstAddDelimiter('comment', $_[1], 'commentstyle', $_[3])
   DefMacro!("\\lst@@comment [] [] Until:\\end", sub [args] {
     let delims = args[2].clone().owned_tokens();
-    lst_add_delimiter("comment", &args[0].to_string(), None, delims, false);
+    lst_add_delimiter("comment", &args[0].to_string(), "commentstyle", delims, false);
     Tokens!()
   });
   DefMacro!("\\lst@@morecomment [] [] Until:\\end", sub [args] {
     let delims = args[2].clone().owned_tokens();
-    lst_add_delimiter("comment", &args[0].to_string(), None, delims, false);
+    lst_add_delimiter("comment", &args[0].to_string(), "commentstyle", delims, false);
     Tokens!()
   });
+  // Perl: lstAddDelimiter('string', $_[1], 'stringstyle', $_[2])
   DefMacro!("\\lst@@string [] Until:\\end", sub [args] {
     let delims = args[1].clone().owned_tokens();
-    lst_add_delimiter("string", &args[0].to_string(), None, delims, false);
+    lst_add_delimiter("string", &args[0].to_string(), "stringstyle", delims, false);
     Tokens!()
   });
   DefMacro!("\\lst@@morestring [] Until:\\end", sub [args] {
     let delims = args[1].clone().owned_tokens();
-    lst_add_delimiter("string", &args[0].to_string(), None, delims, false);
+    lst_add_delimiter("string", &args[0].to_string(), "stringstyle", delims, false);
     Tokens!()
   });
+  // Perl: lstAddDelimiter('delimiter', $_[3], $_[4], $_[5], ...)
   DefMacro!("\\lst@@delim OptionalMatch:* OptionalMatch:* [] [] Until:\\end", sub [args] {
     let delims = args[4].clone().owned_tokens();
-    lst_add_delimiter("delimiter", &args[2].to_string(), None, delims, false);
+    lst_add_delimiter("delimiter", &args[2].to_string(), &args[3].to_string(), delims, false);
     Tokens!()
   });
   DefMacro!("\\lst@@moredelim OptionalMatch:* OptionalMatch:* [] [] Until:\\end", sub [args] {
     let delims = args[4].clone().owned_tokens();
-    lst_add_delimiter("delimiter", &args[2].to_string(), None, delims, false);
+    lst_add_delimiter("delimiter", &args[2].to_string(), &args[3].to_string(), delims, false);
     Tokens!()
   });
 
@@ -2385,10 +2436,10 @@ LoadDefinitions!({
     Tokens!()
   });
 
-  // Tag handler
+  // Perl: lstAddDelimiter('delimiter', $_[3], 'tagstyle', $_[4], ...)
   DefMacro!("\\lst@@tag OptionalMatch:* OptionalMatch:* [] Until:\\end", sub [args] {
     let delims = args[3].clone().owned_tokens();
-    lst_add_delimiter("tags", &args[2].to_string(), None, delims, false);
+    lst_add_delimiter("delimiter", &args[2].to_string(), "tagstyle", delims, false);
     Tokens!()
   });
 
