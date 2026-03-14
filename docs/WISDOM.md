@@ -354,3 +354,45 @@ before the error emission.
 unused-variable warnings. When porting from Perl, check whether each
 "unused" parameter is *intentionally* unused or *accidentally* not yet
 implemented. The `_` prefix can mask missing functionality.
+
+---
+
+## 13. DefKeyVal machinery: default resolution and setKeysExpansion guard
+
+**Discovery:** Bare keys like `sensitive,` in listings language definitions
+weren't getting their default values applied, despite `DefKeyVal!("LST",
+"sensitive", "", "true")` being correctly called.
+
+**Analysis:** The default resolution happens in TWO places:
+
+1. **During KeyVals parsing** (`add_value` with `use_default=true`):
+   `keyval_get(keyval_qname(prefix, keyset, key), "default")` — uses key
+   `KEYVAL@default@KV@LST@sensitive`. This is the CORRECT path.
+
+2. **During `lstActivate`** (dead fallback, now removed):
+   `LookupValue("KEYVAL@LST@sensitive@default")` — WRONG key pattern
+   (doesn't include KV prefix). This never matched in Perl either but was
+   carried over as dead code.
+
+The actual root cause was `\@lstdefinelanguage` ignoring the base language
+parameters (`_base_dialect`, `_base_language`). In Perl, `$keyvals->setValue
+('language', Tokens(@base))` inserts a `language` key into the keyvals that
+triggers recursive language chain activation. Without this, `[LaTeX]{TeX}
+→ [common]{TeX} → [primitive]{TeX}` never fires, so `sensitive,` from
+`[primitive]{TeX}` never reaches the processing context.
+
+**Related discovery:** `lstClearLanguage` in Perl clears class `'textcs'`
+but texcs words use class `'texcss'` — a Perl typo/quirk that allows texcs
+words to survive the clear across the language chain.
+
+**setKeysExpansion guard:** Rust adds `state::has_meaning(...)` before
+emitting `\qname@default`. Perl unconditionally emits `\qname@default`
+which causes undefined-CS errors for bare keys without registered defaults
+(e.g., `a4paper` via `DeclareOptionX`). The Rust guard falls back to
+`\qname{}`, which is more robust.
+
+**Key insight:** When debugging default-value resolution in keyvals, check:
+(a) that `DefKeyVal`/`define()` stored the default under the correct
+`KEYVAL@default@{qname}` key, (b) that the KeyVals parser (`add_value`)
+successfully retrieves it, (c) that the calling code doesn't introduce a
+different key naming convention.
