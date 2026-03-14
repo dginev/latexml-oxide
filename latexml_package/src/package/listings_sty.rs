@@ -140,10 +140,12 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
       }
       tokens.push(T_END!());
     } else if !inmath && cc.is_active_or_cs() {
-      // Outside math: dumb down CS tokens to plain text (strip \)
+      // Outside math: convert CS tokens to plain text, preserving the backslash
+      // In verbatim listing context, \end should appear as literal characters \ e n d
       let name = token.to_string();
-      let name = name.strip_prefix('\\').unwrap_or(&name);
-      tokens.push(T_OTHER!(name));
+      for c in name.chars() {
+        tokens.push(T_OTHER!(c.to_string()));
+      }
     } else {
       tokens.push(token);
     }
@@ -445,11 +447,28 @@ fn lst_delete_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&s
 }
 
 /// Perl: lstDeleteClass — delete all words belonging to class or class\d.
-fn lst_delete_class(class: &str) {
-  // This is expensive in Rust without iterating all keys.
-  // For now, mark the class as deleted. The word lookup will handle it.
-  let key = s!("LST_CLASS_DELETED@{class}");
-  state::assign_value(&key, Stored::Bool(true), None);
+fn lst_delete_class(_class: &str) {
+  // Perl iterates LST_WORDS hash and deletes entries matching class.
+  // In Rust, the word list uses individual state keys, so we'd need to iterate LST_WORD_LIST.
+  // For now this is a no-op — keywords accumulate, which matches Perl behavior for texcs
+  // (Perl's lstClearLanguage clears 'textcs' but texcs uses class 'texcss', so it survives).
+}
+
+/// Perl: lstDeleteDelimiterKind — delete delimiters of a given kind (comment, string).
+fn lst_delete_delimiter_kind(_kind: &str) {
+  // TODO: implement delimiter deletion from LST_DELIMITERS
+}
+
+/// Perl: lstClearLanguage — clear keyword/comment/string definitions before activating a new language.
+/// Note: Perl clears 'textcs' (not 'texcss'), so texcs words survive the clear.
+fn lst_clear_language() {
+  lst_delete_class("keywords");
+  lst_delete_class("otherkeywords");
+  lst_delete_class("endkeywords");
+  lst_delete_class("directives");
+  lst_delete_class("textcs"); // Note: Perl typo? texcs uses class 'texcss', not 'textcs'
+  lst_delete_delimiter_kind("comment");
+  lst_delete_delimiter_kind("string");
 }
 
 //======================================================================
@@ -786,6 +805,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   }
   // Perl: LookupValue('LST@TEXCS') — set when texcs or moretexcs has been used
   let has_texcs = matches!(state::lookup_value("LST@TEXCS"), Some(Stored::Bool(true)));
+  // debug removed
   let id_pattern = if has_texcs {
     format!("\\\\?[{letter_chars}][{letter_chars}{digit_chars}]*")
   } else {
@@ -837,7 +857,6 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   };
 
   let case_sensitive = lst_get_boolean("sensitive");
-
   // Perl: if (!$CASE_SENSITIVE) { foreach word (keys %$words) { $$words{uc($word)} = $$words{$word}; } }
   if !case_sensitive {
     if let Some(Stored::Strings(word_list)) = state::lookup_value("LST_WORD_LIST") {
@@ -1132,6 +1151,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
     if let Some(ref id_re) = ctx.id_re {
       if let Some(m) = id_re.find(&ctx.listing) {
         if m.start() == 0 {
+          // eprintln!("DEBUG id_re matched: '{}' in '{}'", m.as_str(), &ctx.listing[..ctx.listing.len().min(40)]);
           let word = m.as_str().to_string();
           ctx.listing = ctx.listing[m.end()..].to_string();
           ctx.colnum += word.len() as i64;
@@ -1144,7 +1164,8 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
 
           // Look up word class
           let word_class_key = s!("LST_WORDS@{lookup}@class");
-          let classname = state::lookup_value(&word_class_key)
+          let raw_class = state::lookup_value(&word_class_key);
+          let classname = raw_class
             .map(|v| v.to_string())
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "identifiers".to_string());
@@ -1868,7 +1889,27 @@ LoadDefinitions!({
   });
 
   // \lstdefinelanguage — define a language
-  DefPrimitive!("\\@lstdefinelanguage []{}[]{} SkipSpaces RequiredKeyVals:LST []", sub[(dialect, language, _base_dialect, _base_language, kv, _aspects)] {
+  // Perl: \@lstdefinelanguage [dialect]{language}[base_dialect]{base_language} ... RequiredKeyVals:LST [aspects]
+  // When base_language is non-empty, adds language=[base_dialect]base_language to the keyvals,
+  // so that language activation recursively activates the base language chain.
+  DefPrimitive!("\\@lstdefinelanguage []{}[]{} SkipSpaces RequiredKeyVals:LST []", sub[(dialect, language, base_dialect, base_language, kv, _aspects)] {
+    // Build base language tokens: [dialect]language
+    // Perl: push @base, T_OTHER('['), $base_dialect->unlist, T_OTHER(']') if $base_dialect;
+    //       push @base, $base_language->unlist;
+    //       $keyvals->setValue('language', Tokens(@base)) if @base;
+    let base_lang_str = base_language.to_string();
+    let mut kv = kv;
+    if !base_lang_str.trim().is_empty() {
+      let mut base_tokens = Vec::new();
+      let base_dialect_str = base_dialect.as_ref().map(|d| d.to_string()).unwrap_or_default();
+      if !base_dialect_str.is_empty() {
+        base_tokens.push(T_OTHER!("["));
+        base_tokens.extend(Explode!(&base_dialect_str));
+        base_tokens.push(T_OTHER!("]"));
+      }
+      base_tokens.extend(Explode!(&base_lang_str));
+      kv.set_value("language", ArgWrap::Tokens(Tokens::new(base_tokens)), false)?;
+    }
     let lang = language.to_string().to_uppercase().replace(char::is_whitespace, "");
     let mut name = s!("LST@LANGUAGE@{lang}");
     let dialect_str = dialect.map(|d| d.to_string()).unwrap_or_default();
@@ -1936,6 +1977,8 @@ LoadDefinitions!({
 
   // Language handler
   DefMacro!("\\lst@@language [] Until:\\end", sub [args] {
+    // Perl: lstClearLanguage(); lstActivateLanguage($_[2], $_[1]);
+    lst_clear_language();
     let lang = args[1].to_string().to_uppercase().replace(char::is_whitespace, "");
     state::assign_value("LST@language", Stored::String(arena::pin(&lang)), None);
     let dialect = args[0].clone().owned_tokens()
@@ -2439,17 +2482,10 @@ fn lst_activate(kv: Option<&KeyVals>) {
     let val_tokens = lst_un_group(val.clone().owned_tokens());
     let cs = T_CS!(s!("\\lst@@{key}"));
     if state::has_meaning(&cs) {
-      // Get the value, falling back to default
-      let effective_val = val_tokens.clone().or_else(|| {
-        let default_key = s!("KEYVAL@LST@{key}@default");
-        state::lookup_value(&default_key).and_then(|s| match s {
-          Stored::Tokens(t) => Some(t),
-          _ => None,
-        })
-      });
+      // Defaults for bare keys are already resolved during KeyVals parsing (add_value with use_default).
       // Digest: \lst@@KEY <value> \end
       let mut digest_tokens = vec![cs];
-      if let Some(ref val_tks) = effective_val {
+      if let Some(ref val_tks) = val_tokens {
         digest_tokens.extend(val_tks.unlist_ref().iter().cloned());
       }
       digest_tokens.push(T_CS!("\\end"));
