@@ -417,14 +417,27 @@ fn lst_add_delimiter(
   recursive: bool,
 ) {
   let type_str = type_str.to_string();
-  let invisible = type_str.contains('i');
-  let type_clean = type_str.replace('i', "");
+  // Perl: $invisible = ($type =~ /^(?:bd|b|d|l|s|n)i$/) || ($type =~ /^i(?:bd|b|d|l|s|n)$/);
+  // Only strip 'i' from specific invisible marker patterns, not from type names like "directive"
+  let base_types = ["bd", "b", "d", "l", "s", "n"];
+  let invisible = base_types.iter().any(|bt| type_str == format!("{bt}i") || type_str == format!("i{bt}"));
+  let type_clean = if invisible {
+    // Remove first 'i' occurrence
+    let mut s = type_str.clone();
+    if let Some(pos) = s.find('i') {
+      s.remove(pos);
+    }
+    s
+  } else {
+    type_str.clone()
+  };
 
   let delim_str = delims
     .as_ref()
     .map(|d| lst_un_group(Some(d.clone())).unwrap().to_string())
     .unwrap_or_default();
 
+  let mut kind_override: Option<String> = None;
   // Compute open, close, close_re, and quoted pattern.
   // NOTE: Rust's `regex` crate does NOT support lookbehinds (?<!...).
   // Instead we use `quoted` patterns (matching Perl's approach) to consume escaped
@@ -432,8 +445,10 @@ fn lst_add_delimiter(
   let (open_str, close_str, close_re, quoted) = match type_clean.as_str() {
     "l" => {
       // Line: close is till end of line
+      // Perl: $closere = "(?=\n)" — lookahead not supported by regex crate.
+      // Use sentinel "__NEWLINE__" for special zero-width handling.
       let open = lst_deslash(&delim_str);
-      (open, String::new(), "(?=\n)|$".to_string(), String::new())
+      (open, String::new(), "__NEWLINE__".to_string(), String::new())
     }
     "s" | "n" => {
       // String/Nested: different open & close delimiters
@@ -470,8 +485,12 @@ fn lst_add_delimiter(
       (open.clone(), open, close_re, quoted)
     }
     "directive" => {
+      // Perl: $kind = $type . 's' = "directives"
+      kind_override = Some("directives".to_string());
       let open = lst_deslash(&delim_str);
-      (open, String::new(), "(?=\\W)".to_string(), String::new())
+      // Perl: $closere = "(?=\W)" — lookahead not supported by regex crate.
+      // Use sentinel "__NONWORD__" for special zero-width handling in lst_process_internal.
+      (open, String::new(), "__NONWORD__".to_string(), String::new())
     }
     _ => {
       let open = lst_deslash(&delim_str);
@@ -481,6 +500,8 @@ fn lst_add_delimiter(
   };
 
   if !open_str.is_empty() {
+    // Perl: $kind can be overridden by type (e.g. "directive" → "directives")
+    let kind = kind_override.as_deref().unwrap_or(kind);
     // Perl: $class = $class . ToString($open) . ToString($close)
     let class = format!("{kind}{open_str}{close_str}");
     // Store delimiter info in state
@@ -583,8 +604,11 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
       .filter(|s| !s.is_empty());
   }
 
+  // Deduplicate CSS classes while preserving order
+  let mut seen = std::collections::HashSet::new();
   let css_string = css_classes
     .iter()
+    .filter(|c| seen.insert(c.clone()))
     .map(|c| format!("ltx_lst_{c}"))
     .collect::<Vec<_>>()
     .join(" ");
@@ -889,7 +913,23 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
 
     // 1. Check end regex (close delimiter)
     if let Some(re) = end_re {
-      if let Some(m) = re.find(&ctx.listing) {
+      // Special handling for zero-width assertions that regex crate can't handle:
+      let re_str = re.as_str();
+      if re_str.contains("__NONWORD__") {
+        // Perl: (?=\W) — close at non-word char or end of string (zero-width, don't consume)
+        let close = ctx.listing.is_empty()
+          || ctx.listing.chars().next().map_or(true, |c| !c.is_alphanumeric() && c != '_');
+        if close {
+          break;
+        }
+      } else if re_str.contains("__NEWLINE__") {
+        // Perl: (?=\n) — close at newline or end of string (zero-width, don't consume)
+        let close =
+          ctx.listing.is_empty() || ctx.listing.starts_with('\n');
+        if close {
+          break;
+        }
+      } else if let Some(m) = re.find(&ctx.listing) {
         if m.start() == 0 {
           ctx.colnum += m.len() as i64;
           ctx.listing = ctx.listing[m.end()..].to_string();
@@ -954,7 +994,15 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
           let is_recursive =
             matches!(state::lookup_value(&recursive_key), Some(Stored::Bool(true)));
           if !close_re_str.is_empty() {
-            if let Ok(close_re) = Regex::new(&format!("^({close_re_str})")) {
+            // Sentinel close patterns (for zero-width assertions) use a dummy regex
+            // that contains the sentinel as a flag — the actual check happens in step 1.
+            let close_re_pattern = if close_re_str.starts_with("__") {
+              // Create a regex that will never match normal text but carries the sentinel
+              format!("^(__{}__SENTINEL)", close_re_str.trim_matches('_'))
+            } else {
+              format!("^({close_re_str})")
+            };
+            if let Ok(close_re) = Regex::new(&close_re_pattern) {
               // Recurse with appropriate delimiter set
               let saved_delim = ctx.delim_re.clone();
               let saved_id = ctx.id_re.clone();
