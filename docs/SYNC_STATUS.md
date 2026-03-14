@@ -1,6 +1,6 @@
 # Engine Sync Status: Perl vs Rust
 
-Updated 2026-03-14 (evening). Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-14 (night). Only lists open gaps & TODOs; completed items live in git history.
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
@@ -26,7 +26,7 @@ Updated 2026-03-14 (evening). Only lists open gaps & TODOs; completed items live
 | File | Status | Open Gaps |
 |------|--------|-----------|
 | tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, math ligatures. `\mathchoice` ported. CS names synced: `\lx@hidden@egroup@right`, `\lx@right` (was `\right@hidden@egroup`, `\@right`). `\left` now unreads `\lx@hidden@bgroup` (was `\@hidden@bgroup`). |
-| tex_box.rs | GAPS | Missing: `\leaders/cleaders/xleaders` (needed for tabbing), SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
+| tex_box.rs | GAPS | `\leaders/cleaders/xleaders` implemented (bounded + hide alignment + filled leader extension). Missing: SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
 | tex_file_io.rs | MINOR | `\lx@special@graphics` constructor + `Tag('ltx:graphics')` commented out |
 | tex_fonts.rs | GAPS | `\fontname` implemented (returns font filename). Missing: `\fontname` "select font X at Ypt" format for scaled fonts, per-font `\hyphenchar` tracking, `getFontDimen()`, 7 ligature defs. `\fontdimen` only handles 3 hardcoded params |
 | tex_tables.rs | GAPS | `\halign BoxSpecification` entirely commented out, many alignment helpers missing |
@@ -77,7 +77,7 @@ Updated 2026-03-14 (evening). Only lists open gaps & TODOs; completed items live
 | latex_ch7_math_common_delimiters.rs | EMPTY | 0% ported |
 | latex_ch8_defining_commands.rs | GAPS | Missing: `\DeclareMathAccent`, `\DeclareFontShape/Family`, many font declaration primitives |
 | latex_ch9_marginal_notes.rs | GAPS | 50% |
-| latex_ch10_tabbing_environment.rs | EMPTY | 0% |
+| latex_ch10_tabbing_environment.rs | OK | Full port: registers, macros, markers, tab tracking, bindings, alignment setup. tabbing_test passes. |
 | latex_ch14_pictures_and_color.rs | GAPS | 30% — picture environment not implemented |
 
 Files at OK/MINOR (95%+): latex_ch1_fragile_commands, latex_ch1_break_command, latex_ch5_page_styles (added `\columnsep`, `\columnseprule`, `\mathindent`, `\onecolumn` → `\par`), latex_ch5_title_page_and_abstract (frontmatter now working: \maketitle includes \lx@frontmatterhere, {abstract} after_construct calls insert_frontmatter, {titlepage} has before_digest/after_construct hooks), latex_ch6_* (all), latex_ch7_math_mode_changing_style, latex_ch8_defining_environments, latex_ch8_theoremlike_environments, latex_ch8_numbering (\@addtoreset ported), latex_ch9_figures_and_tables ({figure}[] now has placement arg), latex_ch10_array_and_tabular, latex_ch11_* (all), latex_ch12_line_and_page_breaking, latex_ch13_boxes, latex_ch15_* (both), latex_other_in_appendices (\hb@xt@, \TextOrMath, \eminnershape), latex_semi_undocumented (\protected@write ported).
@@ -224,7 +224,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 186 pass, 0 fail, 56 ignored test functions**
+**Current totals: 187 pass, 0 fail, 55 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 59% of Perl test cases passing**
 
@@ -492,8 +492,8 @@ Surveyed 2026-03-14 evening. Tests marked ~~struck~~ have been un-ignored and pa
 | ~~2~~ | ~~hypertest~~ | 0 | **PASSES** — un-ignored |
 | 3 | xkeyvalview | 9 | `\xkvview` command not ported (generates key metadata table) |
 | 4 | ns1–ns5 | N/A | DTD not supported (permanent ignore) |
-| 5 | tabbing | 86 | Tabbing environment unported (latex_ch10) |
-| 6 | algx | 105 | algorithmic package not ported |
+| 5 | tabbing | **PASS** | Tabbing environment ported + \leaders + \makebox properties |
+| 6 | algx | 100 | algorithm/algorithmicx/algpseudocode ported, but raw .sty has `\csname` expansion errors (nested `\ALG@bl@...` macros). Needs `\csname`/`\edef` fix in gullet.rs |
 | 7 | cleveref_minimal | 125 | cleveref.sty binding missing |
 | 8 | tabular | 261 | Deep tabular issues (`\@mkpreamarray` etc) |
 | 9 | badeqnarray | 306 | eqnarray afterConstruct rearrangement missing |
@@ -523,7 +523,7 @@ Surveyed 2026-03-14 evening. Tests marked ~~struck~~ have been un-ignored and pa
 4. ~~Fix hypertest~~ DONE — hypertest passes
 5. ~~Fix listings comment styling~~ DONE — lstAddDelimiter style parameter, min_listing_display passes
 6. Port xkeyvalview `\xkvview` command (9 diffs — needs key metadata table generation)
-7. Port tabbing environment (86 diffs — latex_ch10_tabbing_environment.rs is EMPTY)
+7. ~~Port tabbing environment~~ DONE — tabbing_test passes (0 diffs)
 8. Complete Document.pm audit (10-part sub-audit in progress)
 9. Implement local .sty.ltxml loading from test directories
 10. Port color.sty.ltxml (unlocks graphics + downstream)
