@@ -115,6 +115,84 @@ LoadDefinitions!({
   );
 
   //======================================================================
+  // Section 4.11.2 The \binom, \dbinom, and \tbinom commands
+  DefMath!("\\binom{}{}", r"{\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
+  DefMath!("\\tbinom{}{}", r"{\textstyle\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
+  DefMath!("\\dbinom{}{}", r"{\displaystyle\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
+
+  //======================================================================
+  // Section 4.11.3 The \genfrac command
+  // Perl: amsmath.sty.ltxml lines 1016-1094
+  // \genfrac{open}{close}{thickness}{style}{numerator}{denominator}
+  DefMacro!("\\genfrac{}{}{}{}{}{}",
+    r"\lx@genfrac{\if.#1.\else\lx@left#1\fi}{\if.#2.\else\lx@right#2\fi}{#3}{#4}{#5}{#6}");
+  DefMacro!("\\lx@genfrac{}{}{}{}{}{}",
+    r"\if @#3@\if.#4.\lx@@genfrac{#1}{#2}{#5}{#6}\else\lx@@genfrac{#1}{#2}[#4]{#5}{#6}\fi\else\if.#4.\lx@@genfrac{#1}[#3]{#2}{#5}{#6}\else\lx@@genfrac{#1}[#3]{#2}[#4]{#5}{#6}\fi\fi");
+
+  DefConstructor!(
+    "\\lx@@genfrac {} [Dimension] {} [Number] {} {}",
+    r###"?#needXMDual(<ltx:XMDual><ltx:XMApp><ltx:XMRef _xmkey='#xmkey0'/><ltx:XMRef _xmkey='#xmkey1'/><ltx:XMRef _xmkey='#xmkey2'/></ltx:XMApp><ltx:XMWrap>#open)()<ltx:XMApp><ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg _xmkey='#xmkey1'>#5</ltx:XMArg><ltx:XMArg _xmkey='#xmkey2'>#6</ltx:XMArg></ltx:XMApp>?#needXMDual(#close</ltx:XMWrap></ltx:XMDual>)(<ltx:XMApp><ltx:XMTok role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg>#5</ltx:XMArg><ltx:XMArg>#6</ltx:XMArg></ltx:XMApp>)"###,
+    alias => "\\genfrac",
+    reversion => r"\genfrac{#1}{#3}{#2}{#4}{#5}{#6}",
+    after_digest => sub[whatsit] {
+      // Clone args upfront to avoid borrow conflicts with set_property
+      let open = whatsit.get_arg(1).cloned();
+      let thickness = whatsit.get_arg(2).cloned();
+      let close = whatsit.get_arg(3).cloned();
+      let stylecode_str = whatsit.get_arg(4).map(|a| a.to_attribute());
+
+      let stylecode: Option<i64> = stylecode_str.as_ref().and_then(|s| s.parse::<i64>().ok());
+      let mathstyle = match stylecode {
+        None => {
+          // Perl: LookupValue('font')->getMathstyle
+          state::lookup_font()
+            .and_then(|f| f.mathstyle.as_ref().map(|ms| ms.to_string()))
+            .unwrap_or_default()
+        },
+        Some(0) => "display".to_string(),
+        Some(1) => "text".to_string(),
+        Some(2) => "script".to_string(),
+        _ => "scriptscript".to_string(),
+      };
+
+      // thickness=0pt means no rule line (like \atop), so meaning is empty
+      let thickness_str = thickness.as_ref().map(|t| t.to_attribute()).unwrap_or_default();
+      let meaning = if thickness_str == "0.0pt" || thickness_str == "0pt" {
+        String::new()
+      } else {
+        "divide".to_string()
+      };
+
+      let has_open = open.as_ref().map_or(false, |o| !o.to_string().trim().is_empty());
+      let has_close = close.as_ref().map_or(false, |c| !c.to_string().trim().is_empty());
+
+      if has_open || has_close {
+        whatsit.set_property("needXMDual", "1");
+        whatsit.set_property("xmkey0", get_xmarg_id()?);
+        whatsit.set_property("xmkey1", get_xmarg_id()?);
+        whatsit.set_property("xmkey2", get_xmarg_id()?);
+      }
+      if has_open {
+        if let Some(o) = open { whatsit.set_property("open", o); }
+      }
+      if has_close {
+        if let Some(c) = close { whatsit.set_property("close", c); }
+      }
+      whatsit.set_property("role", "FRACOP");
+      if !meaning.is_empty() {
+        whatsit.set_property("meaning", meaning);
+      }
+      if !mathstyle.is_empty() {
+        whatsit.set_property("mathstyle", mathstyle);
+      }
+      if !thickness_str.is_empty() {
+        whatsit.set_property("thickness", thickness_str);
+      }
+      Ok(Vec::new())
+    }
+  );
+
+  //======================================================================
   // Section 4.14.2 Vertical bar notations
   DefMath!("\\lvert", "|", role => "OPEN",  stretchy => false);
   DefMath!("\\lVert", "\u{2225}", role => "OPEN",  stretchy => false);
