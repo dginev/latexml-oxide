@@ -41,6 +41,7 @@ pub mod hyperxmp_sty;
 pub mod ieeetran_cls;
 pub mod inputenc_sty;
 pub mod latexml_sty;
+pub mod listings_sty;
 pub mod longtable_sty;
 pub mod marvosym_sty;
 pub mod mathbbol_sty;

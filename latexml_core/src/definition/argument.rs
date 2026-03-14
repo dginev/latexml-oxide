@@ -439,7 +439,9 @@ impl From<Stored> for Result<ArgWrap> {
       | Stored::Locator(_)
       | Stored::VecDequeStored(_)
       | Stored::VecDigested(_)
-      | Stored::Chars(_) => {
+      | Stored::Chars(_)
+      | Stored::KeyVal(_)
+      | Stored::KeyVals(_) => {
         Error!(
           "stored",
           "type",

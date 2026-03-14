@@ -1,6 +1,26 @@
 use crate::prelude::*;
 use latexml_core::document::Document;
 
+/// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
+/// Sets \@captype, adjusts \hsize for single/double column floats.
+pub fn before_float(float_type: &str) {
+  def_macro(
+    T_CS!("\\@captype"), None,
+    Tokens::new(ExplodeText!(float_type)),
+    None,
+  ).ok();
+}
+
+/// Perl: afterFloat (latex_constructs.pool.ltxml L3440-3448)
+/// Rescues caption counters into the whatsit properties.
+pub fn after_float(whatsit: &mut Whatsit) {
+  let captype = stomach::digest(T_CS!("\\@captype"))
+    .map(|d| d.to_string())
+    .unwrap_or_default();
+  rescue_caption_counters(&captype, whatsit);
+  state::assign_value("LAST_FLOATTYPE", Stored::String(arena::pin(&captype)), Some(Scope::Global));
+}
+
 /// Simplified version of Perl's arrange_panels_and_breaks().
 /// When a figure/table/float has 2+ child figure elements (panels),
 /// add the ltx_figure_panel class to each panel.
