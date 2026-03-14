@@ -18,44 +18,71 @@ pub fn complex_tests_dispatch(filename: &str) -> Option<Result<()>> {
   }
 }
 
-#[test]
-fn xii_test() {
+fn complex(name: &str) {
   latexml_test_single(
-    "tests/complex/xii.tex", "xii", DIR, None,
+    &format!("tests/complex/{name}.tex"),
+    name, DIR, None,
     Some(Rc::new(complex_tests_dispatch)),
   );
 }
+
+#[test]
+fn xii_test() { complex("xii"); }
+
+#[test]
+fn figure_dual_caption_test() { complex("figure_dual_caption"); }
+
+#[test]
+fn hyperchars_test() { complex("hyperchars"); }
+
+#[test]
+#[ignore] // crash — \lstKV@SetIf@ parameter spec error (listings.sty)
+fn figure_mixed_content_test() { complex("figure_mixed_content"); }
+
+#[test]
+#[ignore] // diffs — hypersetup metadata, colorlinks color wrapping
+fn hypertest_test() { complex("hypertest"); }
+
+#[test]
+#[ignore] // diffs — label-based numbering
+fn labelled_test() { complex("labelled"); }
+
+#[test]
+fn versioned_fallback_test() { complex("versioned_fallback"); }
+
+#[test]
+#[ignore] // diffs — cleveref references
+fn cleveref_minimal_test() { complex("cleveref_minimal"); }
+
+#[test]
+fn equationnest_test() { complex("equationnest"); }
+
+// Tests that need missing packages or have significant diffs
 
 #[test]
 #[ignore] // needs aastex631.cls binding
-fn aastex631_deluxetable_test() {
-  latexml_test_single(
-    "tests/complex/aastex631_deluxetable.tex", "aastex631_deluxetable", DIR, None,
-    Some(Rc::new(complex_tests_dispatch)),
-  );
-}
+fn aastex631_deluxetable_test() { complex("aastex631_deluxetable"); }
 
 #[test]
 #[ignore] // needs acmart.cls binding
-fn acm_aria_test() {
-  latexml_test_single(
-    "tests/complex/acm_aria.tex", "acm_aria", DIR, None,
-    Some(Rc::new(complex_tests_dispatch)),
-  );
-}
+fn acm_aria_test() { complex("acm_aria"); }
 
 #[test]
-fn figure_dual_caption_test() {
-  latexml_test_single(
-    "tests/complex/figure_dual_caption.tex", "figure_dual_caption", DIR, None,
-    Some(Rc::new(complex_tests_dispatch)),
-  );
-}
+#[ignore] // needs aastex.cls binding
+fn aastex_test_test() { complex("aastex_test"); }
 
 #[test]
-fn hyperchars_test() {
-  latexml_test_single(
-    "tests/complex/hyperchars.tex", "hyperchars", DIR, None,
-    Some(Rc::new(complex_tests_dispatch)),
-  );
-}
+#[ignore] // needs blog.cls binding
+fn aliceblog_test() { complex("aliceblog"); }
+
+#[test]
+#[ignore] // diffs — physics package
+fn physics_test() { complex("physics"); }
+
+#[test]
+#[ignore] // diffs — siunitx package
+fn si_test() { complex("si"); }
+
+#[test]
+#[ignore] // needs tcilatex package
+fn tcilatex_minimal_test() { complex("tcilatex_minimal"); }

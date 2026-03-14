@@ -800,7 +800,13 @@ pub fn extract_alignment_column(
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
   let n0 = lookup_int("alignmentStartColumn") as usize + 1;
   let n1 = alignment.current_column_number();
-  let colspec = alignment.get_column(n0).unwrap();
+  let colspec = match alignment.get_column(n0) {
+    Some(c) => c,
+    None => {
+      // Column doesn't exist — return the input unchanged
+      return Ok(Digested::default());
+    }
+  };
   // Perl: $align = $$colspec{align} || 'left' — default is left, fills override
   let mut align = colspec.align.unwrap_or(Align::Left);
   let mut border = String::new();
