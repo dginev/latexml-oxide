@@ -461,7 +461,9 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.left_role);
         whatsit.set_property("char", entry.char);
-        whatsit.set_property("name", entry.name);
+        if let Some(name) = entry.name {
+          whatsit.set_property("name", name);
+        }
         whatsit.set_property("stretchy", true);
         // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
@@ -487,7 +489,9 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.right_role);
         whatsit.set_property("char", entry.char);
-        whatsit.set_property("name", entry.name);
+        if let Some(name) = entry.name {
+          whatsit.set_property("name", name);
+        }
         whatsit.set_property("stretchy", true);
         // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
