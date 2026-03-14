@@ -83,28 +83,88 @@ fn listings_read_raw_lines(environment: &str) -> String {
   lines.join("\n")
 }
 
+/// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
+fn tokenize_balanced(text: &str) -> Vec<Token> {
+  let tokens = latexml_core::mouth::tokenize(text);
+  let mut toks: Vec<Token> = tokens.unlist().to_vec();
+  let mut level: i32 = 0;
+  for t in &toks {
+    match t.get_catcode() {
+      Catcode::BEGIN => level += 1,
+      Catcode::END => level -= 1,
+      _ => {}
+    }
+  }
+  while level > 0 {
+    toks.push(T_END!());
+    level -= 1;
+  }
+  while level < 0 {
+    toks.insert(0, T_BEGIN!());
+    level += 1;
+  }
+  toks
+}
+
 /// Perl: listingsReadRawString — read until closing delimiter token.
-/// Simplified: reads raw characters until matching delimiter.
+/// Handles mathescape: within $...$, content is read with normal catcodes
+/// and preserved as TeX (backslashes intact). Outside math, CS tokens have \ stripped.
+/// Returns UnTeX'd string representation.
 fn listings_read_raw_string(until: Option<&Token>) -> String {
-  let mut result = String::new();
-  // Read character-by-character with empty catcode table effect
+  let mathescape = lst_get_boolean("mathescape");
+  let mut inmath = false;
+  let mut tokens: Vec<Token> = Vec::new();
+
   while let Ok(Some(token)) = gullet::read_token() {
     if let Some(until_tok) = until {
       if token.to_string() == until_tok.to_string() {
         break;
       }
     }
+    // Check for mathescape $ toggle
+    if mathescape && token.to_string() == "$" {
+      if inmath {
+        inmath = false;
+      } else {
+        inmath = true;
+      }
+      tokens.push(T_OTHER!("$"));
+      continue;
+    }
     let cc = token.get_catcode();
-    if cc.is_active_or_cs() {
-      // Dumb down CS tokens to plain text
+    if inmath && cc == Catcode::BEGIN {
+      // In math mode with {, read balanced group and preserve
+      tokens.push(T_BEGIN!());
+      if let Ok(balanced) = gullet::read_balanced(ExpansionLevel::Off, false, false) {
+        tokens.extend(balanced.unlist().to_vec());
+      }
+      tokens.push(T_END!());
+    } else if !inmath && cc.is_active_or_cs() {
+      // Outside math: dumb down CS tokens to plain text (strip \)
       let name = token.to_string();
       let name = name.strip_prefix('\\').unwrap_or(&name);
-      result.push_str(name);
+      tokens.push(T_OTHER!(name));
     } else {
-      result.push_str(&token.to_string());
+      tokens.push(token);
     }
   }
   // Remove trailing spaces
+  while tokens.last().map_or(false, |t| t.get_catcode() == Catcode::SPACE) {
+    tokens.pop();
+  }
+  // UnTeX: convert tokens to string representation
+  let mut result = String::new();
+  for t in &tokens {
+    let cc = t.get_catcode();
+    if cc.is_active_or_cs() {
+      // Preserve CS with backslash
+      let s = t.to_string();
+      result.push_str(&s);
+      result.push(' '); // CS names need trailing space for re-tokenization
+    } else {
+      result.push_str(&t.to_string());
+    }
+  }
   result.truncate(result.trim_end().len());
   result
 }
@@ -592,14 +652,59 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     lst_get_literal("numbers")
   };
 
-  // Build ID regex from character classes
-  let mut letter_chars: Vec<String> = Vec::new();
-  let mut digit_chars: Vec<String> = Vec::new();
-  // Collect character classes from state (simplified — use the defaults)
-  // In practice, the big \lstset block will have populated LST_CHAR@letter@X etc.
-  // For now, use the default Latin letters + digits
-  let id_pattern = "[a-zA-Z@$_][a-zA-Z@$_0-9]*".to_string();
+  // Build ID regex from character classes (Perl: join('', sort keys %{$$characters{letter}}))
+  let mut letter_chars = String::from("a-zA-Z@_");
+  let mut digit_chars = String::from("0-9");
+  // Check if $ is still a letter character (mathescape removes it)
+  let dollar_key = "LST_CHAR@letter@\\$";
+  let dollar_is_letter = !matches!(state::lookup_value(dollar_key), Some(Stored::None));
+  if dollar_is_letter {
+    letter_chars.push('$');
+  }
+  let texcs = lst_get_boolean("texcs");
+  let id_pattern = if texcs {
+    format!("\\\\?[{letter_chars}][{letter_chars}{digit_chars}]*")
+  } else {
+    format!("[{letter_chars}][{letter_chars}{digit_chars}]*")
+  };
   let id_re = Regex::new(&id_pattern).ok();
+
+  // Build delimiter regexes from LST_DELIM_KEYS (Perl: $LaTeXML::DELIM_RE, $LaTeXML::ESCAPE_RE)
+  let delim_keys: Vec<String> = match state::lookup_value("LST_DELIM_KEYS") {
+    Some(Stored::Tokens(t)) => t.unlist_ref().iter().map(|tok| tok.to_string()).collect(),
+    _ => vec![],
+  };
+  // Also check mathescape delimiter ($)
+  let mut all_delim_keys = delim_keys;
+  if let Some(Stored::String(_)) = state::lookup_value("LST_DELIM@$@open") {
+    if !all_delim_keys.iter().any(|k| k == "$") {
+      all_delim_keys.push("$".to_string());
+    }
+  }
+
+  let mut delim_opens: Vec<String> = Vec::new();
+  let mut escape_opens: Vec<String> = Vec::new();
+  for key in &all_delim_keys {
+    let open_key = s!("LST_DELIM@{key}@open");
+    if let Some(Stored::String(open_sym)) = state::lookup_value(&open_key) {
+      let open_re = arena::with(open_sym, |s| s.to_string());
+      delim_opens.push(open_re.clone());
+      let escape_key = s!("LST_DELIM@{key}@escape");
+      if matches!(state::lookup_value(&escape_key), Some(Stored::Bool(true))) {
+        escape_opens.push(open_re);
+      }
+    }
+  }
+  let delim_re = if delim_opens.is_empty() {
+    None
+  } else {
+    Regex::new(&format!("^({})", delim_opens.join("|"))).ok()
+  };
+  let escape_re = if escape_opens.is_empty() {
+    None
+  } else {
+    Regex::new(&format!("^({})", escape_opens.join("|"))).ok()
+  };
 
   let space_token = if lst_get_boolean("showspaces") {
     T_CS!("\\@lst@visible@space")
@@ -618,8 +723,8 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     emptyfrom: None,
     lsttokens: vec![T_BEGIN!()],
     id_re,
-    delim_re: None,
-    escape_re: None,
+    delim_re,
+    escape_re,
     quoted_re: Regex::new(r"^\\\\").unwrap(),
     space_token,
     case_sensitive,
@@ -719,8 +824,12 @@ fn lst_do_number(ctx: &LstContext, is_empty: bool) -> Tokens {
 }
 
 /// Perl: lstProcess_internal — the recursive descent parser.
+/// Order matches Perl: end_re, literate, delimiters, identifiers, newline, formfeed, whitespace, quoted, default
 fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
   let mut prev_listing = String::new();
+  // Precompile static regexes
+  let newline_re = Regex::new(r"^\s*?\n").unwrap();
+  let space_re = Regex::new(r"^[\t ]+").unwrap();
 
   while !ctx.listing.is_empty() {
     // Loop guard — must make progress on every step
@@ -734,7 +843,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
     }
     prev_listing = ctx.listing.clone();
 
-    // Check end regex (close delimiter)
+    // 1. Check end regex (close delimiter)
     if let Some(re) = end_re {
       if let Some(m) = re.find(&ctx.listing) {
         if m.start() == 0 {
@@ -745,62 +854,68 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
       }
     }
 
-    // Newline handling
-    let newline_re = Regex::new(r"^\s*?\n").unwrap();
-    if let Some(m) = newline_re.find(&ctx.listing) {
-      ctx.listing = ctx.listing[m.end()..].to_string();
-      if ctx.mode != "inline" {
-        lst_process_end_line(ctx);
-        if let Ok(inv) = (|| -> Result<Tokens> { Ok(Invocation!(T_CS!("\\stepcounter"), vec![T_OTHER!("lstnumber")])) })() {
-          ctx.lsttokens.extend(inv.unlist());
-        }
-        ctx.linenum += 1;
-        ctx.colnum = 0;
-        // Handle gobble
-        let gobble = lst_get_number("gobble");
-        for _ in 0..gobble {
-          if !ctx.listing.is_empty() {
-            ctx.listing = ctx.listing[1..].to_string();
+    // 2. Literate expressions (TODO: implement when needed)
+
+    // 3. Delimiters — strings, comments, escapes, mathescape
+    if let Some(ref delim_re) = ctx.delim_re.clone() {
+      if let Some(m) = delim_re.find(&ctx.listing) {
+        let open = m.as_str().to_string();
+        ctx.listing = ctx.listing[m.end()..].to_string();
+        ctx.colnum += open.len() as i64;
+
+        // Look up delimiter info
+        let class_key = s!("LST_DELIM@{open}@class");
+        let close_key = s!("LST_DELIM@{open}@close");
+        let classname = state::lookup_value(&class_key)
+          .map(|v| v.to_string())
+          .unwrap_or_default();
+        let close_re_str = state::lookup_value(&close_key)
+          .map(|v| v.to_string())
+          .unwrap_or_default();
+
+        ctx.lsttokens.extend(lst_class_begin(&classname));
+
+        // Check if this is an 'eval' class (mathescape, texcl, escapechar)
+        let eval_key = s!("LST_CLASSES@{classname}@eval");
+        let is_eval = matches!(state::lookup_value(&eval_key), Some(Stored::Bool(true)));
+
+        if is_eval {
+          // For eval classes: match until close, then tokenize the content as TeX
+          if let Ok(close_re) = Regex::new(&close_re_str) {
+            if let Some(cm) = close_re.find(&ctx.listing) {
+              let content = ctx.listing[..cm.start()].to_string();
+              ctx.listing = ctx.listing[cm.end()..].to_string();
+              // Tokenize the content as real TeX (not raw listing)
+              let content_tokens = tokenize_balanced(&content);
+              ctx.lsttokens.extend(content_tokens);
+            }
+          }
+        } else {
+          // For non-eval classes (strings, comments): recurse with limited delimiters
+          let recursive_key = s!("LST_DELIM@{open}@recursive");
+          let is_recursive = matches!(state::lookup_value(&recursive_key), Some(Stored::Bool(true)));
+          if !close_re_str.is_empty() {
+            if let Ok(close_re) = Regex::new(&format!("^({close_re_str})")) {
+              // Recurse with appropriate delimiter set
+              let saved_delim = ctx.delim_re.clone();
+              let saved_id = ctx.id_re.clone();
+              if !is_recursive {
+                // Non-recursive: only allow escape delimiters inside
+                ctx.delim_re = ctx.escape_re.clone();
+                ctx.id_re = None;
+              }
+              lst_process_internal(ctx, Some(&close_re));
+              ctx.delim_re = saved_delim;
+              ctx.id_re = saved_id;
+            }
           }
         }
-        lst_process_start_line(ctx);
+        ctx.lsttokens.extend(lst_class_end(&classname));
+        continue;
       }
-      continue;
     }
 
-    // Formfeed
-    if ctx.listing.starts_with('\x0C') {
-      ctx.listing = ctx.listing[1..].to_string();
-      let ff = lst_get_tokens("formfeed");
-      ctx.lsttokens.extend(ff.unlist().to_vec());
-      ctx.colnum += 1;
-      continue;
-    }
-
-    // Whitespace / tab expansion
-    let space_re = Regex::new(r"^[\t ]+").unwrap();
-    if let Some(m) = space_re.find(&ctx.listing) {
-      let s = &ctx.listing[..m.end()];
-      let tabsize = lst_get_number("tabsize").max(1);
-      let mut n: i64 = 0;
-      for c in s.chars() {
-        n += if c == ' ' {
-          1
-        } else {
-          tabsize - ((ctx.colnum + n) % tabsize)
-        };
-      }
-      ctx.listing = ctx.listing[m.end()..].to_string();
-      ctx.lsttokens.extend(lst_class_begin("spaces"));
-      for _ in 0..n {
-        ctx.lsttokens.push(ctx.space_token.clone());
-      }
-      ctx.lsttokens.extend(lst_class_end("spaces"));
-      ctx.colnum += n;
-      continue;
-    }
-
-    // Identifier (word) matching
+    // 4. Identifier (word) matching
     if let Some(ref id_re) = ctx.id_re {
       if let Some(m) = id_re.find(&ctx.listing) {
         if m.start() == 0 {
@@ -850,7 +965,79 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
       }
     }
 
-    // Default: pass through single character
+    // 5. Newline handling
+    if let Some(m) = newline_re.find(&ctx.listing) {
+      ctx.listing = ctx.listing[m.end()..].to_string();
+      if ctx.mode != "inline" {
+        lst_process_end_line(ctx);
+        if let Ok(inv) = (|| -> Result<Tokens> { Ok(Invocation!(T_CS!("\\stepcounter"), vec![T_OTHER!("lstnumber")])) })() {
+          ctx.lsttokens.extend(inv.unlist());
+        }
+        ctx.linenum += 1;
+        ctx.colnum = 0;
+        // Handle gobble
+        let gobble = lst_get_number("gobble");
+        for _ in 0..gobble {
+          if !ctx.listing.is_empty() {
+            ctx.listing = ctx.listing[1..].to_string();
+          }
+        }
+        lst_process_start_line(ctx);
+      }
+      continue;
+    }
+
+    // 6. Formfeed
+    if ctx.listing.starts_with('\x0C') {
+      ctx.listing = ctx.listing[1..].to_string();
+      let ff = lst_get_tokens("formfeed");
+      ctx.lsttokens.extend(ff.unlist().to_vec());
+      ctx.colnum += 1;
+      continue;
+    }
+
+    // 7. Whitespace / tab expansion
+    if let Some(m) = space_re.find(&ctx.listing) {
+      let s = &ctx.listing[..m.end()];
+      let tabsize = lst_get_number("tabsize").max(1);
+      let mut n: i64 = 0;
+      for c in s.chars() {
+        n += if c == ' ' {
+          1
+        } else {
+          tabsize - ((ctx.colnum + n) % tabsize)
+        };
+      }
+      ctx.listing = ctx.listing[m.end()..].to_string();
+      ctx.lsttokens.extend(lst_class_begin("spaces"));
+      for _ in 0..n {
+        ctx.lsttokens.push(ctx.space_token.clone());
+      }
+      ctx.lsttokens.extend(lst_class_end("spaces"));
+      ctx.colnum += n;
+      continue;
+    }
+
+    // 8. Quoted expressions (e.g. \\)
+    {
+      let quoted_re = ctx.quoted_re.clone();
+      if let Some(m) = quoted_re.find(&ctx.listing) {
+        let matched = m.as_str().to_string();
+        ctx.listing = ctx.listing[m.end()..].to_string();
+        for c in matched.chars() {
+          if c == '\\' {
+            ctx.lsttokens.push(T_CS!("\\textbackslash"));
+          } else {
+            let ch_str = c.to_string();
+            ctx.lsttokens.push(T_OTHER!(&ch_str));
+          }
+        }
+        ctx.colnum += matched.len() as i64;
+        continue;
+      }
+    }
+
+    // 9. Default: pass through single character
     if let Some(ch) = ctx.listing.chars().next() {
       ctx.listing = ctx.listing[ch.len_utf8()..].to_string();
       let ch_str = ch.to_string();
