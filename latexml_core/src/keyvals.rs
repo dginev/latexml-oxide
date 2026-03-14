@@ -502,8 +502,13 @@ impl KeyVals {
             tokens.push(T_END!());
           }
 
+          // Perl: if ($useDefault) { push(@tokens, T_CS('\\' . $qname . '@default')); }
+          //       else { push(@tokens, T_CS('\\' . $qname), T_BEGIN, Revert($value), T_END); }
+          // Note: Perl unconditionally emits \qname@default for bare keys. In Rust, we guard
+          // with has_meaning to avoid undefined-CS errors when @default was never registered
+          // (e.g., xkeyval DeclareOptionX keys without default values).
           if *use_default && state::has_meaning(&T_CS!(s!("\\{qname}@default"))) {
-            // Call the @default macro (only if explicitly defined)
+            // Call the @default macro (bare key with registered default)
             tokens.push(T_CS!(s!("\\{qname}@default")));
           } else {
             // Call the macro with the value (or empty if bare key without default)
@@ -673,8 +678,19 @@ impl KeyVals {
   pub fn set_value(&mut self, key: &str, value: ArgWrap, use_default: bool) -> Result<()> {
     // delete the existing values by skipping key
     self.rebuild(Some(key));
-    // set normally
-    self.add_value(key, value, use_default, false)
+    // Perl: if (ref $value eq 'ARRAY') { foreach ... addValue(..., 1) } rebuild()
+    //       elsif (defined($value)) { addValue($key, $value, $useDefault) }
+    //       else { just delete (already done by rebuild above) }
+    match &value {
+      ArgWrap::None => {
+        // undef — just delete (already done by rebuild above)
+        Ok(())
+      },
+      _ => {
+        // single value — set normally
+        self.add_value(key, value, use_default, false)
+      },
+    }
   }
 
   fn rebuild(&mut self, skip_opt: Option<&str>) {
