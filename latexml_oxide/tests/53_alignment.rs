@@ -79,7 +79,6 @@ fn algx_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
 fn mathmix_test() {
   latexml_test_single("tests/alignment/mathmix.tex", "mathmix", DIR, None, None);
 }

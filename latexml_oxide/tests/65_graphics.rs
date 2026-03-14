@@ -49,7 +49,7 @@ fn simplekv_test() {
 }
 
 #[test]
-#[ignore] // needs full xcolor.sty port (color expressions, \definecolorseries, etc.)
+#[ignore] // xcolor port WIP: ~600 diffs remaining (color expressions, testbox, etc.)
 fn xcolors_test() {
   latexml_test_single("tests/graphics/xcolors.tex", "xcolors", DIR, Some(&REQUIRES), None);
 }

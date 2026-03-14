@@ -229,3 +229,29 @@ tokenizer/expander just as Perl does, so fidelity is essentially free.
 **Key insight:** Do not be intimidated by large `RawTeX()` blocks. The cost of
 porting them is just copy-paste; the cost of NOT porting them is missing
 definitions that later cause test failures in seemingly unrelated places.
+
+---
+
+## 11. Parameter prototype conventions: `{}` vs named parameter types
+
+**Principle:** In LaTeXML's Perl prototype strings, `{}` means "read a Plain
+balanced group". A named parameter type (like `Token`, `Number`, `Variable`)
+is identified by its bare name in the prototype, NOT wrapped in braces.
+
+**Example:** `DefMacro!("\\foo Token", ...)` reads one Token parameter.
+Writing `DefMacro!("\\foo {Token}", ...)` would read a Plain balanced group
+and the word "Token" would be literal body content, not a parameter type.
+
+**Analysis:** The prototype parser (`def_parser.rs`) distinguishes between:
+- `{}` → Plain parameter reader (reads balanced `{...}` group)
+- `[]` → Optional parameter reader (reads `[...]` if present)
+- `Token` → named parameter type (looked up in PARAMETER_TYPES table)
+- `[Number]` → Optional parameter with inner Number reparsing
+
+When porting from Perl, be careful: `DefMacro('\foo{}', ...)` in Perl is
+equivalent to `DefMacro!("\\foo {}", ...)` in Rust — the `{}` is a parameter
+spec, not literal braces.
+
+**Key insight:** If a macro argument isn't being read correctly, check whether
+the prototype has `{}` (Plain reader) when it should have a named type, or
+vice versa. The `{}` braces in prototypes always mean "read a balanced group".

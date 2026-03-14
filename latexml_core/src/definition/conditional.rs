@@ -202,9 +202,7 @@ impl Conditional {
     //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     if let Some(ref test) = self.test {
       if (test)(args)? {
-        if tracing {
-          Debug!("{{true}}\n");
-        }
+        // true branch: do nothing, tokens follow naturally
       } else {
         let to = self.skip_conditional_body(-1);
         if tracing {

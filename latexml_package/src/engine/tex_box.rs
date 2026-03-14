@@ -649,7 +649,14 @@ LoadDefinitions!({
     } else if w_pt == Some(0.0) {
       whatsit.set_property("invisible", true);
     }
-    // TODO: color handling
+    // Set color from current font (Perl: only if NOT black)
+    if let Some(font) = lookup_font() {
+      if let Some(color) = font.color {
+        if color != latexml_core::common::color::BLACK {
+          whatsit.set_property("color", color.to_attribute());
+        }
+      }
+    }
     Ok(Vec::new())
   });
 
@@ -706,7 +713,14 @@ LoadDefinitions!({
       }
     }
     // Outside alignment: isHorizontalRule is NOT set, so template outputs <ltx:rule>
-    // TODO: color handling
+    // Set color from current font (Perl: only if NOT black)
+    if let Some(font) = lookup_font() {
+      if let Some(color) = font.color {
+        if color != latexml_core::common::color::BLACK {
+          whatsit.set_property("color", color.to_attribute());
+        }
+      }
+    }
     Ok(Vec::new())
   });
 

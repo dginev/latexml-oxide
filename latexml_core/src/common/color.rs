@@ -319,7 +319,7 @@ fn parse_components(spec: &str) -> Vec<f64> {
 }
 
 /// Create a Color from model name and component values
-fn from_model_components(model: &str, comps: &[f64]) -> Color {
+pub fn from_model_components(model: &str, comps: &[f64]) -> Color {
   match model {
     "rgb" if comps.len() >= 3 => Color::Rgb(comps[0], comps[1], comps[2]),
     "cmy" if comps.len() >= 3 => Color::Cmy(comps[0], comps[1], comps[2]),
