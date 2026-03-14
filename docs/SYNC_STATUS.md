@@ -1,6 +1,6 @@
 # Engine Sync Status: Perl vs Rust
 
-Updated 2026-03-14. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-14 (evening). Only lists open gaps & TODOs; completed items live in git history.
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
@@ -217,14 +217,14 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | caption.sty | MINOR | Stub-level: captionsetup, Declare* macros, registers. Missing: KeyVals, CAPTION_ value storage. |
 | remreset.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
 | chngcntr.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
-| listings.sty | GAPS | Core infrastructure ported: `lstActivate`, `\@listings@inline`, `\lstdefinelanguage`, `\@listingGroup`, `\@listingKeyword`, `lstClassBegin/End`, language loading (lstlang0-3). Remaining: index generation (`lst@@index`), `literate` key, `extendedchars`, display listings have many diffs. |
+| listings.sty | GAPS | Core infrastructure ported: `lstActivate`, `\@listings@inline`, `\lstdefinelanguage`, `\@listingGroup`, `\@listingKeyword`, `lstClassBegin/End`, language loading (lstlang0-3). Fixed: `lstAddDelimiter` style parameter processing ("commentstyle"→"comments" class chain), delimiter font scoping (delim chars outside `\itshape` scope). Remaining: index generation (`lst@@index`), `literate` key, `extendedchars`, listing_test blocked by math parser (mathescape XMDual diffs, 2062 lines). |
 | ntheorem.sty | GAPS | Framing constructors (`\lx@addframing`, `\lx@@snapshot@framing`) ported. Missing: `\colorbox` (needs xcolor port) for shaded theorems, `backgroundcolor` attribute. |
 
 ---
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 185 pass, 0 fail, 56 ignored test functions**
+**Current totals: 186 pass, 0 fail, 56 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 59% of Perl test cases passing**
 
@@ -244,7 +244,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 33_keyval_options | 11/11 | All pass |
 | 50_structure | 24/24 | All pass (18 .todo disabled at build level) |
 | 52_namespace | 0/5 | **All ignored** — DTD not supported in Rust port |
-| 53_alignment | 12/28 | halign, tabtab, tabularstar, morse, mathmix, halignatt, longtable, min_listing, min_listing_data, min_listing_lang, min_listing_short, min_listing_string pass; 16 ignored |
+| 53_alignment | 13/29 | halign, tabtab, tabularstar, morse, mathmix, halignatt, longtable, min_listing, min_listing_data, min_listing_lang, min_listing_short, min_listing_string, min_listing_display pass; 16 ignored |
 | 55_theorem | 4/4 | All pass (ntheorem disabled) |
 | 56_ams | 1/7 | genfracs pass; 6 ignored (need afterConstruct DOM rearrangement for MathFork/MathBranch) |
 | 65_graphics | 5/9 | 5 pass; 4 ignored |
@@ -430,7 +430,7 @@ Namespace tests (ns1–ns5) permanently ignored. xii.tex converted to use standa
 ### Phase 8: Complex Integration + New Suites (target: ~290 → ~320+)
 
 #### 8A. Port complex tests incrementally
-**Easy tier:** tcilatex_minimal, versioned_fallback, hypertest — small, few dependencies.
+**Easy tier:** ~~tcilatex_minimal~~, ~~versioned_fallback~~, ~~hypertest~~ — all pass now.
 **Medium tier:** labelled, aastex_test, hyperurls — need cleveref, aastex631.cls.
 **Hard tier:** physics, si, figure_mixed_content — massive output, many packages (siunitx, physics, wrapfig, algorithm).
 **Yield:** +3–16 tests
@@ -461,7 +461,7 @@ Namespace tests (ns1–ns5) permanently ignored. xii.tex converted to use standa
 
 | Phase | Cumulative Tests | Delta | Key Infrastructure |
 |-------|-----------------|-------|--------------------|
-| Current | 185 | — | — |
+| Current | 186 | — | — |
 | Phase 1 (infrastructure) | ~190 | +35 | local .ltxml, structure packages |
 | Phase 2 (fonts) | ~205 | +15 | per-font hyphenchar, fontname format, font sizes |
 | Phase 3 (alignment) | ~225 | +20 | nested tabular, alignment packages |
@@ -484,40 +484,46 @@ local .ltxml loading ──→ keyvalstyle, structure .todo tests
 
 ### Ignored Tests — Ranked Priority (fewest diffs → most diffs)
 
+Surveyed 2026-03-14 evening. Tests marked ~~struck~~ have been un-ignored and pass.
+
 | Priority | Test | Diffs | Blocker |
 |----------|------|-------|---------|
-| 1 | tcilatex_minimal | 7 | `\TEXUX` undefined — needs tcilatex binding |
-| 2 | hypertest | 16 | prefix= namespace decls, color wrapping |
-| 3 | xkeyvalstyle | 16 | `\ProcessOptionsX` style handler |
-| 4 | aastex_test | 18 | Output truncates early (missing aastex.cls) |
-| 5 | ns1–ns5 | 19 each | DTD not supported (permanent ignore) |
-| 6 | keyvalstyle | 29 | Keyval style attributes mishandled |
-| 7 | aastex631_deluxetable | 31 | `\deluxetable*` undefined |
-| 8 | longtable | 59 | longtable.sty incomplete |
-| 9 | morse | 103 | Large diffs |
-| 10 | aliceblog | 144 | blog.cls missing, large diffs |
-| 11 | tabbing | 162 | Tabbing environment unported |
-| 12 | algx | 168 | algorithmic package |
-| 13 | xkeyvalview | 178 | Large diffs |
-| 14 | supertabular | 315 | `\@makecaption` undefined |
-| 15 | tabular | 369 | Deep tabular issues |
-| 16 | xcolors | 652 | color system diffs |
-| 17 | picture | 3124 | Picture environment unported |
-| 18 | physics | 5417 | Massive diffs (was crash, now runs) |
+| ~~1~~ | ~~tcilatex_minimal~~ | 0 | **PASSES** — un-ignored |
+| ~~2~~ | ~~hypertest~~ | 0 | **PASSES** — un-ignored |
+| 3 | xkeyvalview | 9 | `\xkvview` command not ported (generates key metadata table) |
+| 4 | ns1–ns5 | N/A | DTD not supported (permanent ignore) |
+| 5 | tabbing | 86 | Tabbing environment unported (latex_ch10) |
+| 6 | algx | 105 | algorithmic package not ported |
+| 7 | cleveref_minimal | 125 | cleveref.sty binding missing |
+| 8 | tabular | 261 | Deep tabular issues (`\@mkpreamarray` etc) |
+| 9 | badeqnarray | 306 | eqnarray afterConstruct rearrangement missing |
+| 10 | sizes | 377 | Font size + `\fontname` format issues |
+| 11 | mathaccents | 375 | tabular border + section structure diffs |
+| 12 | plainmath | 382 | math parser (XMDual structure) |
+| 13 | figure_mixed_content | 875 | Mixed content handling, listings, itemize diffs |
+| 14 | listing | 2062 | Math parser (mathescape XMDual, dominates all diffs) |
+| **Math parser blocked** | split, array, eqnarray, plainmath, min_listing2, mixed, mathbbol, bbold, acc, dots, amsdisplay, matrix, sideset, ntheorem | 100–900+ each | All blocked by Marpa parser tree differences |
+| **Missing packages** | aastex_test, aastex631_deluxetable, acm_aria, aliceblog, physics, si, wasysym, stmaryrd, abxtest, ding, esint, xcolors, picture, xytest | varies | Need class/package bindings or expl3 |
+| **Crashes** | cells (stack overflow), colortbls (TooManyErrors), supertabular (alignment not active), graphrot (TooManyErrors), mathtools (TooManyErrors), cd_test (math parser panic), split (TooManyErrors) | N/A | Infrastructure issues |
+| **Timeouts** | diagboxtest, ncases, vmode, babel | N/A | Infinite loops |
 
-**Crashes (need code fixes):**
-- ~~halignatt~~: FIXED — hackVBoxAttachment now walks Lists to find \halign alignment
-- colortbls: normalize.rs crash fixed; now hits TooManyErrors (colortbl.sty not ported)
-- cells + listing + graphrot + xytest: TooManyErrors (>100 undefined errors)
-- figure_mixed_content: `\lstKV@SetIf@` param spec error (listings.sty)
-- cd_test: math parser `replacing tree should always work`
-- babel: infinite loop (timeout)
+**Crash status updates (2026-03-14):**
+- ~~halignatt~~: FIXED — now passes
+- colortbls: normalize.rs crash fixed → now hits TooManyErrors (`\@mkpreamarray` undefined, colortbl.sty not ported)
+- cells: stack overflow in state.rs:870 (recursive state lookup?)
+- figure_mixed_content: no longer crashes (was `\lstKV@SetIf@` param spec), now produces output with 875 diffs
+- split: TooManyErrors cascade (100+ errors from missing amsmath split env support)
+- mathtools: TooManyErrors (100+ errors)
+- cd_test: math parser `replacing tree should always work` panic
 
 ### Immediate Next Actions (prioritized)
-1. ~~Fix alignment.rs:317 crash~~ DONE — halignatt now shows 2 vattach diffs (needs insert_block refactor)
-2. ~~Fix colortbls normalize.rs:403 crash~~ normalize.rs rewritten — retest needed
-3. Complete Document.pm audit (10-part sub-audit in progress)
-4. Port tcilatex binding (7 diffs → pass)
-5. Fix hypertest namespace/color issues (16 diffs)
-6. Implement local .sty.ltxml loading from test directories
-7. Port color.sty.ltxml (unlocks graphics + downstream)
+1. ~~Fix alignment.rs:317 crash~~ DONE — halignatt now passes
+2. ~~Fix colortbls normalize.rs:403 crash~~ normalize.rs rewritten; colortbls still fails (TooManyErrors from unported colortbl.sty)
+3. ~~Port tcilatex binding~~ DONE — tcilatex_minimal passes
+4. ~~Fix hypertest~~ DONE — hypertest passes
+5. ~~Fix listings comment styling~~ DONE — lstAddDelimiter style parameter, min_listing_display passes
+6. Port xkeyvalview `\xkvview` command (9 diffs — needs key metadata table generation)
+7. Port tabbing environment (86 diffs — latex_ch10_tabbing_environment.rs is EMPTY)
+8. Complete Document.pm audit (10-part sub-audit in progress)
+9. Implement local .sty.ltxml loading from test directories
+10. Port color.sty.ltxml (unlocks graphics + downstream)
