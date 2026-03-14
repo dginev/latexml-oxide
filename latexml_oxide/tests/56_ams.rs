@@ -24,7 +24,6 @@ fn dots_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
 fn genfracs_test() {
   latexml_test_single("tests/ams/genfracs.tex", "genfracs", DIR, None, None);
 }

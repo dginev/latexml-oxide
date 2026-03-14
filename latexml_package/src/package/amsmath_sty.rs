@@ -129,11 +129,13 @@ LoadDefinitions!({
   DefMacro!("\\lx@genfrac{}{}{}{}{}{}",
     r"\if @#3@\if.#4.\lx@@genfrac{#1}{#2}{#5}{#6}\else\lx@@genfrac{#1}{#2}[#4]{#5}{#6}\fi\else\if.#4.\lx@@genfrac{#1}[#3]{#2}{#5}{#6}\else\lx@@genfrac{#1}[#3]{#2}[#4]{#5}{#6}\fi\fi");
 
+  // Perl: DefConstructor('\lx@@genfrac{}[Dimension]{}[Number]', ...)
+  // NOTE: Perl reads numer/denom manually in afterDigest with MergeFont in scope.
+  // We take 4 formal args; numer/denom are read manually in afterDigest.
   DefConstructor!(
-    "\\lx@@genfrac {} [Dimension] {} [Number] {} {}",
-    r###"?#needXMDual(<ltx:XMDual><ltx:XMApp><ltx:XMRef _xmkey='#xmkey0'/><ltx:XMRef _xmkey='#xmkey1'/><ltx:XMRef _xmkey='#xmkey2'/></ltx:XMApp><ltx:XMWrap>#open)()<ltx:XMApp><ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg _xmkey='#xmkey1'>#5</ltx:XMArg><ltx:XMArg _xmkey='#xmkey2'>#6</ltx:XMArg></ltx:XMApp>?#needXMDual(#close</ltx:XMWrap></ltx:XMDual>)(<ltx:XMApp><ltx:XMTok role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg>#5</ltx:XMArg><ltx:XMArg>#6</ltx:XMArg></ltx:XMApp>)"###,
+    "\\lx@@genfrac {} [Dimension] {} [Number]",
+    r###"?#needXMDual(<ltx:XMDual><ltx:XMApp><ltx:XMRef _xmkey='#xmkey0'/><ltx:XMRef _xmkey='#xmkey1'/><ltx:XMRef _xmkey='#xmkey2'/></ltx:XMApp><ltx:XMWrap>#open)()<ltx:XMApp><ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg><ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg></ltx:XMApp>?#needXMDual(#close</ltx:XMWrap></ltx:XMDual>)(<ltx:XMApp><ltx:XMTok role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg>#top</ltx:XMArg><ltx:XMArg>#bottom</ltx:XMArg></ltx:XMApp>)"###,
     alias => "\\genfrac",
-    reversion => r"\genfrac{#1}{#3}{#2}{#4}{#5}{#6}",
     after_digest => sub[whatsit] {
       // Clone args upfront to avoid borrow conflicts with set_property
       let open = whatsit.get_arg(1).cloned();
@@ -155,6 +157,17 @@ LoadDefinitions!({
         _ => "scriptscript".to_string(),
       };
 
+      // Perl: $stomach->bgroup; MergeFont(mathstyle => $mathstyle); MergeFont(fraction => 1);
+      // Read and digest numer/denom with font changes in scope
+      bgroup();
+      merge_font(Font { mathstyle: Some(Cow::Owned(mathstyle.clone())), ..Font::default() });
+      merge_font(Font { fraction: Some(true), ..Font::default() });
+      let numer_tokens = read_arg(ExpansionLevel::Full)?;
+      let numer = digest(numer_tokens.clone())?;
+      let denom_tokens = read_arg(ExpansionLevel::Full)?;
+      let denom = digest(denom_tokens.clone())?;
+      egroup()?;
+
       // thickness=0pt means no rule line (like \atop), so meaning is empty
       let thickness_str = thickness.as_ref().map(|t| t.to_attribute()).unwrap_or_default();
       let meaning = if thickness_str == "0.0pt" || thickness_str == "0pt" {
@@ -173,10 +186,10 @@ LoadDefinitions!({
         whatsit.set_property("xmkey2", get_xmarg_id()?);
       }
       if has_open {
-        if let Some(o) = open { whatsit.set_property("open", o); }
+        if let Some(ref o) = open { whatsit.set_property("open", o.clone()); }
       }
       if has_close {
-        if let Some(c) = close { whatsit.set_property("close", c); }
+        if let Some(ref c) = close { whatsit.set_property("close", c.clone()); }
       }
       whatsit.set_property("role", "FRACOP");
       if !meaning.is_empty() {
@@ -188,6 +201,50 @@ LoadDefinitions!({
       if !thickness_str.is_empty() {
         whatsit.set_property("thickness", thickness_str);
       }
+      whatsit.set_property("top", numer);
+      whatsit.set_property("bottom", denom);
+
+      // Build custom reversion: \genfrac{open_char}{close_char}{thickness}{style}{numer}{denom}
+      // Perl: $open->getArg(1) to unwrap \lx@left whatsit, getting raw delimiter
+      let mut rev_tokens: Vec<Token> = vec![T_CS!("\\genfrac"), T_BEGIN!()];
+      // Extract raw delimiter from open arg (unwrap \lx@left whatsit)
+      // Perl: $open = $open->getArg(1) if ref $open eq 'Whatsit'
+      if let Some(ref o) = open {
+        let reverted = o.revert()?;
+        // Filter out CS tokens (\left, \lx@left) to keep just the delimiter char
+        for t in reverted.unlist() {
+          let cc = t.get_catcode();
+          if cc != Catcode::CS && cc != Catcode::ESCAPE { rev_tokens.push(t); }
+        }
+      }
+      rev_tokens.push(T_END!());
+      rev_tokens.push(T_BEGIN!());
+      if let Some(ref c) = close {
+        let reverted = c.revert()?;
+        for t in reverted.unlist() {
+          let cc = t.get_catcode();
+          if cc != Catcode::CS && cc != Catcode::ESCAPE { rev_tokens.push(t); }
+        }
+      }
+      rev_tokens.push(T_END!());
+      rev_tokens.push(T_BEGIN!());
+      if let Some(ref th) = thickness {
+        rev_tokens.extend(th.revert()?.unlist());
+      }
+      rev_tokens.push(T_END!());
+      rev_tokens.push(T_BEGIN!());
+      if let Some(sc) = whatsit.get_arg(4) {
+        rev_tokens.extend(sc.revert()?.unlist());
+      }
+      rev_tokens.push(T_END!());
+      rev_tokens.push(T_BEGIN!());
+      rev_tokens.extend(numer_tokens.unlist());
+      rev_tokens.push(T_END!());
+      rev_tokens.push(T_BEGIN!());
+      rev_tokens.extend(denom_tokens.unlist());
+      rev_tokens.push(T_END!());
+      whatsit.set_property("reversion", Stored::Tokens(Tokens::new(rev_tokens)));
+
       Ok(Vec::new())
     }
   );
