@@ -45,7 +45,6 @@ fn listing_test() {
 }
 
 #[test]
-#[ignore] // diffs — tabular* width spec not parsed
 fn tabularstar_test() {
   latexml_test_single("tests/alignment/tabularstar.tex", "tabularstar", DIR, None, None);
 }

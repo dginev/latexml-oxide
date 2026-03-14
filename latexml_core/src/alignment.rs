@@ -118,6 +118,12 @@ impl Alignment {
   ///   - xml_attributes = hashmap containing attributes for the main XML node
   pub fn new(config: AlignmentConfig) -> Self {
     let template = config.template.unwrap_or_default();
+    // Perl Alignment.pm: Copy width/height/depth from XML attributes to main properties,
+    // but REMOVE them from XML attributes so they don't appear on the element.
+    let mut xml_attributes = config.xml_attributes;
+    for key in ["width", "height", "depth"] {
+      xml_attributes.remove(key);
+    }
     Alignment {
       template,
       current_row: None,
@@ -139,7 +145,7 @@ impl Alignment {
       in_tabular_head: false,
       is_normalized: false,
       properties: config.properties,
-      xml_attributes: config.xml_attributes,
+      xml_attributes,
       rows: VecDeque::new(),
       column_widths: Vec::new(),
       row_heights: Vec::new(),
