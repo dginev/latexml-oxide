@@ -103,7 +103,6 @@ fn stmaryrd_test() {
 }
 
 #[test]
-#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
 fn mathcolor_test() {
   latexml_test_single("tests/fonts/mathcolor.tex", "mathcolor", DIR, None, None);
 }

@@ -96,11 +96,22 @@ LoadDefinitions!({
     if lookup_bool("inPreamble") {
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
-    merge_font(fontmap!(color => color));
+    merge_font(fontmap!(color => color.clone()));
 
-    // TODO: Perl returns Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
-    // Returning a Tbox here breaks framed.xml — needs investigation into Tbox absorption path.
-    Ok(Vec::new())
+    // Perl: Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
+    // Return an empty Tbox whose reversion produces \color[rgb]{r,g,b} for the tex attribute.
+    let rgb = color.to_rgb();
+    let comps = rgb.components().iter()
+      .map(|c| {
+        let v = (*c * 10000.0).round() / 10000.0;
+        if v == v.floor() { format!("{}", v as i64) } else { format!("{v}") }
+      })
+      .collect::<Vec<_>>().join(",");
+    let reversion_tokens = Invocation!("\\color",
+      vec![Some(Tokens::from(T_OTHER!(&*"rgb"))),
+           Some(Tokens::from(T_OTHER!(&*comps)))]);
+    Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
+      reversion_tokens, arena::SymHashMap::default()))])
   });
 
   // \pagecolor[model]{spec}

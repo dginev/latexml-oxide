@@ -14,7 +14,7 @@ LoadDefinitions!({
   Let!("\\@nx", "\\noexpand");
   // sub-packages:
   RequirePackage!("amsbsy");
-  // RequirePackage!("amstext");
+  RequirePackage!("amstext");
   // RequirePackage!("amsopn");
 
   //======================================================================

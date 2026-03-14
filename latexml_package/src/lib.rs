@@ -49,6 +49,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "paralist.sty" => package::paralist_sty::load_definitions(),
     "amsbsy.sty" => package::amsbsy_sty::load_definitions(),
     "amsgen.sty" => package::amsgen_sty::load_definitions(),
+    "amstext.sty" => package::amstext_sty::load_definitions(),
     "fancyhdr.sty" => package::fancyhdr_sty::load_definitions(),
     "fullpage.sty" => package::fullpage_sty::load_definitions(),
     "comment.sty" => package::comment_sty::load_definitions(),
