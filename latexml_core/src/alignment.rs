@@ -544,11 +544,8 @@ impl BoxOps for Alignment {
         // Based on lspaces/rspaces width relative to 0.2em threshold
         let mut classes: Vec<String> = Vec::new();
         let empty = cell.empty;
-        // Perl: $$cell{boxes} — truthy when boxes is defined and non-empty
-        let has_boxes = cell
-          .boxes
-          .as_ref()
-          .is_some_and(|b| !b.is_empty().unwrap_or(true));
+        // Perl: $$cell{boxes} — truthy when boxes field is defined (even if empty List)
+        let has_boxes = cell.boxes.is_some();
         let mut pre_absorb: Option<Digested> = None;
         let mut post_absorb: Option<Digested> = None;
         if !ismath {
