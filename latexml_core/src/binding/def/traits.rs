@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 
 use crate::common::arena;
 use crate::common::arena::SymHashMap as HashMap;
+use crate::common::color::Color;
 use crate::common::error::*;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
@@ -464,4 +465,7 @@ impl IntoFontField<Option<f64>> for f64 {
 }
 impl IntoFontField<Option<f64>> for i32 {
   fn into_font_field(self) -> Option<f64> { Some(self as f64) }
+}
+impl IntoFontField<Option<Color>> for Color {
+  fn into_font_field(self) -> Option<Color> { Some(self) }
 }

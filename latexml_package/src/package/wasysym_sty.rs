@@ -29,17 +29,17 @@ LoadDefinitions!({
   Let!("\\varint", "\\int");
   Let!("\\varoint", "\\oint");
   DefMath!("\\iintop", "\u{222C}", meaning => "double-integral",
-    operator_role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", dynamic_mathstyle => true);
   DefMath!("\\iiintop", "\u{222D}", meaning => "triple-integral",
-    operator_role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", dynamic_mathstyle => true);
   DefMath!("\\oiintop", "\u{222F}", meaning => "surface-integral",
-    operator_role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", dynamic_mathstyle => true);
   DefMath!("\\iint", "\u{222C}", meaning => "double-integral",
-    operator_role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", dynamic_mathstyle => true);
   DefMath!("\\iiint", "\u{222D}", meaning => "triple-integral",
-    operator_role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", dynamic_mathstyle => true);
   DefMath!("\\oiint", "\u{222F}", meaning => "surface-integral",
-    operator_role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", dynamic_mathstyle => true);
 
   // Gender / miscellaneous symbols
   DefPrimitive!("\\male", "\u{2642}");
@@ -66,7 +66,16 @@ LoadDefinitions!({
   DefPrimitive!("\\checked", "\u{2713}");
   DefPrimitive!("\\bell", "\u{237E}");
   // ataribox — special: colored text (White on Black background)
-  DefPrimitive!("\\ataribox", "\u{26CB}");
+  // Perl: font => { color => White, background => Black }, bounded => 1
+  DefPrimitive!("\\ataribox", "\u{26CB}",
+    bounded => true, font => sub[_f] {
+      use latexml_core::common::color;
+      Ok(Font {
+        color: Some(color::WHITE),
+        bg: Some(color::BLACK),
+        ..Font::default()
+      })
+    });
   DefPrimitive!("\\cent", "\u{00A2}");
   DefPrimitive!("\\permil", "\u{2030}");
   DefPrimitive!("\\brokenvert", "\u{00A6}");
