@@ -1024,18 +1024,18 @@ LoadDefinitions!({
 
   // \lstset — set various Listings keys
   DefPrimitive!("\\lstset RequiredKeyVals:LST", sub[(kv)] {
-    lst_activate(&kv);
+    lst_activate(Some(&kv));
   });
 
   // \lstinline — inline listing
   DefMacro!("\\lstinline", "\\leavevmode\\lx@lstinline");
   DefMacro!("\\lx@lstinline OptionalKeyVals:LST", sub[(kv)] {
     bgroup();
-    lst_activate(&kv);
+    lst_activate(kv.as_ref());
     // Read opening delimiter
     let init = gullet::read_token()?;
-    let until = init.as_ref().and_then(|t| {
-      if t.get_catcode() == Catcode::BEGIN { None } else { Some(t.clone()) }
+    let until = init.as_ref().map(|t| {
+      if t.get_catcode() == Catcode::BEGIN { T_END!() } else { t.clone() }
     });
     let body = listings_read_raw_string(until.as_ref());
     let mut result = Vec::new();
@@ -1128,7 +1128,7 @@ LoadDefinitions!({
     let filename = file.to_string();
     let text = listings_read_raw_file(&filename).unwrap_or_default();
     bgroup();
-    lst_activate(&kv);
+    lst_activate(kv.as_ref());
     let mut name = lst_get_tokens("name");
     if name.is_empty() {
       name = Tokens::new(ExplodeText!(&filename));
@@ -1430,7 +1430,7 @@ LoadDefinitions!({
   });
 
   // \lstdefinelanguage — define a language
-  DefPrimitive!("\\lstdefinelanguage []{}[]{} SkipSpaces RequiredKeyVals:LST []", sub[(dialect, language, _base_dialect, _base_language, kv, _aspects)] {
+  DefPrimitive!("\\@lstdefinelanguage []{}[]{} SkipSpaces RequiredKeyVals:LST []", sub[(dialect, language, _base_dialect, _base_language, kv, _aspects)] {
     let lang = language.to_string().to_uppercase().replace(char::is_whitespace, "");
     let mut name = s!("LST@LANGUAGE@{lang}");
     let dialect_str = dialect.map(|d| d.to_string()).unwrap_or_default();
@@ -1942,10 +1942,53 @@ LoadDefinitions!({
 //======================================================================
 
 /// Perl: lstActivate — process a set of keyvals, dispatching to \lst@@ handlers.
-fn lst_activate(kv: &dyn std::any::Any) {
-  // Try to extract keyvals — the argument could be Tokens or a KeyVals object
-  // For now, just digest the keyvals via \lstset if they're tokens
-  // The actual activation happens through the \lst@@* handlers defined above
+/// Iterates over pairs, looks up \lst@@KEY macros, digests them for effect,
+/// and stores LST@KEY => value in state.
+fn lst_activate(kv: Option<&KeyVals>) {
+  let kv = match kv {
+    Some(kv) => kv,
+    None => return,
+  };
+
+  // Copy previous LST_ tables into current scope (for grouping effect)
+  for table in &["LST_CHARACTERS", "LST_CLASSES", "LST_WORDS", "LST_DELIMITERS"] {
+    if let Some(stored) = state::lookup_value(table) {
+      state::assign_value(table, stored, None);
+    }
+  }
+  // Copy LST_LITERAL
+  if let Some(stored) = state::lookup_value("LST_LITERAL") {
+    state::assign_value("LST_LITERAL", stored, None);
+  }
+
+  // Iterate over key-value pairs, in order
+  for (key, val) in kv.get_pairs() {
+    let val_tokens = lst_un_group(val.clone().owned_tokens());
+    let cs = T_CS!(s!("\\lst@@{key}"));
+    if state::has_meaning(&cs) {
+      // Get the value, falling back to default
+      let effective_val = val_tokens.clone().or_else(|| {
+        let default_key = s!("KEYVAL@LST@{key}@default");
+        state::lookup_value(&default_key).and_then(|s| match s {
+          Stored::Tokens(t) => Some(t),
+          _ => None,
+        })
+      });
+      // Digest: \lst@@KEY <value> \end
+      let mut digest_tokens = vec![cs];
+      if let Some(ref val_tks) = effective_val {
+        digest_tokens.extend(val_tks.unlist_ref().iter().cloned());
+      }
+      digest_tokens.push(T_CS!("\\end"));
+      let _ = stomach::digest(Tokens::new(digest_tokens));
+    }
+    // Store LST@KEY => value
+    let state_key = s!("LST@{key}");
+    match val_tokens {
+      Some(tks) => state::assign_value(&state_key, Stored::Tokens(tks), None),
+      None => state::assign_value(&state_key, Stored::Tokens(Tokens!()), None),
+    }
+  }
 }
 
 /// Perl: lstActivateLanguage — load and activate a language definition.

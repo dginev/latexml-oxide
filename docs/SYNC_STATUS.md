@@ -26,7 +26,7 @@ Updated 2026-03-14. Only lists open gaps & TODOs; completed items live in git hi
 | File | Status | Open Gaps |
 |------|--------|-----------|
 | tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, math ligatures. `\mathchoice` ported. CS names synced: `\lx@hidden@egroup@right`, `\lx@right` (was `\right@hidden@egroup`, `\@right`). `\left` now unreads `\lx@hidden@bgroup` (was `\@hidden@bgroup`). |
-| tex_box.rs | GAPS | Missing: `\leaders/cleaders/xleaders`, SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
+| tex_box.rs | GAPS | Missing: `\leaders/cleaders/xleaders` (needed for tabbing), SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
 | tex_file_io.rs | MINOR | `\lx@special@graphics` constructor + `Tag('ltx:graphics')` commented out |
 | tex_fonts.rs | GAPS | `\fontname` implemented (returns font filename). Missing: `\fontname` "select font X at Ypt" format for scaled fonts, per-font `\hyphenchar` tracking, `getFontDimen()`, 7 ligature defs. `\fontdimen` only handles 3 hardcoded params |
 | tex_tables.rs | GAPS | `\halign BoxSpecification` entirely commented out, many alignment helpers missing |
@@ -168,8 +168,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | parameter.rs | OK | `Parameter::digest` MODE capture + `leaveHorizontal_internal` matches Perl Parameter.pm lines 122,139-141 |
 | gullet.rs | MINOR | `readArg` isolation via `readingFromMouth`; `read_register_value` coercions |
 | stomach.rs | MINOR | Mathcode char decoding (ADDOP vs BINOP). `execute_before_after_group` extracted. `begin_mode_opt`/`end_mode_opt` with `noframe` parameter synced with Perl Grouplevel commit (acaab773). `everymath/everydisplay` injection now centralized in `begin_mode_opt`. |
-| state.rs | OK | — |
-| document.rs | MINOR | `compact_xmdual()`, `mergeAttributes()`, `insertElementBefore()`, comment creation (needs libxml). Fixed: `close_to_node` ifopen parameter now suppresses error (was ignored). `close_node_with_strictness` walker now tracks `n.get_type()` (was `node.get_type()`). Audit in progress (10-part Document.pm sub-audit). |
+| state.rs | OK | `Stored::KeyVals` now wraps `Rc<KeyVals>` for pointer-based equality (`Rc::ptr_eq`) |
+| document.rs | MINOR | `compact_xmdual()`, `insertElementBefore()`, comment creation (needs libxml). Fixed: `close_to_node` ifopen parameter now suppresses error (was ignored). `close_node_with_strictness` walker now tracks `n.get_type()` (was `node.get_type()`). `mergeAttributes` now uses `add_ss_values` for space-joined attrs (class/lists/inlist/labels), matching Perl's sort+dedup. `finalize_rec` class merge also sorts. |
 | register.rs | MINOR | — |
 | pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_is_contained`, `pathname_findall`, `pathname_timestamp/copy/mkdir`. `canonical` now handles `./`, `/../`. Dir-listing approach in `candidate_pathnames` not ported (uses `Path::exists` instead). |
 | alignment.rs | MINOR | normalize.rs deep refactored (2026-03-14): per-column-index arrays, vattach height/depth split, lspaces/rspaces padding, border padding (0.4*UNITY), first/last row strut, rowspan redirect. Remaining: padding CSS classes, ABSORB_LIMIT guard |
@@ -217,6 +217,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | caption.sty | MINOR | Stub-level: captionsetup, Declare* macros, registers. Missing: KeyVals, CAPTION_ value storage. |
 | remreset.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
 | chngcntr.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
+| listings.sty | GAPS | Core infrastructure ported: `lstActivate`, `\@listings@inline`, `\lstdefinelanguage`, `\@listingGroup`, `\@listingKeyword`, `lstClassBegin/End`, language loading (lstlang0-3). Remaining: index generation (`lst@@index`), `literate` key, `extendedchars`, display listings have many diffs. |
 | ntheorem.sty | GAPS | Framing constructors (`\lx@addframing`, `\lx@@snapshot@framing`) ported. Missing: `\colorbox` (needs xcolor port) for shaded theorems, `backgroundcolor` attribute. |
 
 ---
@@ -243,7 +244,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 33_keyval_options | 11/11 | All pass |
 | 50_structure | 24/24 | All pass (18 .todo disabled at build level) |
 | 52_namespace | 0/5 | **All ignored** — DTD not supported in Rust port |
-| 53_alignment | 6/22 | halign, tabtab, tabularstar, morse, mathmix, halignatt pass; 16 ignored |
+| 53_alignment | 6/22 | halign, tabtab, tabularstar, morse, mathmix, halignatt pass; 16 ignored (listing has diffs) |
 | 55_theorem | 4/4 | All pass (ntheorem disabled) |
 | 56_ams | 0/7 | **All ignored** — needs amsmath environments |
 | 65_graphics | 5/9 | 5 pass; 4 ignored |

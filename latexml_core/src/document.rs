@@ -276,9 +276,14 @@ impl Document {
 
         for (key, mut value) in attrs_to_set {
           if key == arena::pin_static("class") {
-            // Generalize?
+            // Merge and sort class values alphabetically, matching Perl's behavior
             if let Some(ovalue) = node.get_attribute("class") {
-              value = arena::with(value, |value_str| arena::pin(s!("{value_str} {ovalue}")))
+              let new_s = arena::with(value, |s| s.to_string());
+              let mut classes: Vec<&str> =
+                new_s.split_whitespace().chain(ovalue.split_whitespace()).collect();
+              classes.sort();
+              classes.dedup();
+              value = arena::pin(classes.join(" "));
             }
           }
           // Resolve to owned Strings before calling set_attribute,
@@ -634,7 +639,6 @@ impl Document {
     //   self.with_node_qname(&self.node))
     // );
     let mut point = self.find_insertion_point(qname, None)?;
-
     let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned())?;
     self.set_node(&newnode);
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
@@ -1494,12 +1498,7 @@ impl Document {
           to.set_attribute(key, val)?;
         }
       } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
-        if let Some(existing) = to.get_attribute(key) {
-          let merged = format!("{existing} {val}");
-          to.set_attribute(key, &merged)?;
-        } else {
-          to.set_attribute(key, val)?;
-        }
+        self.add_ss_values(to, key, val)?;
       } else if MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str()) {
         if let Some(existing) = to.get_attribute(key) {
           let merged = format!("{existing}; {val}");

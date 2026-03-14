@@ -38,7 +38,7 @@ fn supertabular_test() {
 }
 
 #[test]
-#[ignore] // crash — too many errors (listing.sty not ported)
+#[ignore] // diffs — listings.sty inline/display output differences
 fn listing_test() {
   latexml_test_single("tests/alignment/listing.tex", "listing", DIR, None, None);
 }

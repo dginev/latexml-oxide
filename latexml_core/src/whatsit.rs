@@ -106,6 +106,9 @@ impl Whatsit {
   pub fn get_definition(&self) -> Rc<dyn Definition> { Rc::clone(&self.definition) }
   /// accessor for the argument at index `n` (starting from 1)
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
+    if n == 0 {
+      return None;
+    }
     match self.args.get(n - 1) {
       Some(Some(opt)) => Some(opt),
       _ => None,

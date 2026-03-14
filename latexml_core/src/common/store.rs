@@ -148,7 +148,7 @@ pub enum Stored {
   /// latexml keyval definition
   KeyVal(KeyVal),
   /// latexml keyvals collection
-  KeyVals(KeyVals),
+  KeyVals(Rc<KeyVals>),
 }
 
 impl fmt::Debug for Stored {
@@ -524,7 +524,13 @@ impl PartialEq for Stored {
           false
         }
       },
-      KeyVals(_) => false, // KeyVals are not structurally compared
+      KeyVals(ref kvs) => {
+        if let KeyVals(kvs2) = other {
+          Rc::ptr_eq(kvs, kvs2)
+        } else {
+          false
+        }
+      },
     }
   }
 }
@@ -865,7 +871,7 @@ impl From<KeyVal> for Stored {
 }
 
 impl From<KeyVals> for Stored {
-  fn from(kvs: KeyVals) -> Stored { Stored::KeyVals(kvs) }
+  fn from(kvs: KeyVals) -> Stored { Stored::KeyVals(Rc::new(kvs)) }
 }
 
 impl From<Option<&Stored>> for Stored {
