@@ -44,6 +44,37 @@ fn listing_test() {
 }
 
 #[test]
+fn min_listing_test() {
+  latexml_test_single("tests/alignment/min_listing.tex", "min_listing", DIR, None, None);
+}
+
+#[test]
+fn min_listing_data_test() {
+  latexml_test_single("tests/alignment/min_listing_data.tex", "min_listing_data", DIR, None, None);
+}
+
+#[test]
+fn min_listing_lang_test() {
+  latexml_test_single("tests/alignment/min_listing_lang.tex", "min_listing_lang", DIR, None, None);
+}
+
+#[test]
+fn min_listing_short_test() {
+  latexml_test_single("tests/alignment/min_listing_short.tex", "min_listing_short", DIR, None, None);
+}
+
+#[test]
+fn min_listing_string_test() {
+  latexml_test_single("tests/alignment/min_listing_string.tex", "min_listing_string", DIR, None, None);
+}
+
+#[test]
+#[ignore] // diffs — mathescape produces different math parse
+fn min_listing2_test() {
+  latexml_test_single("tests/alignment/min_listing2.tex", "min_listing2", DIR, None, None);
+}
+
+#[test]
 fn tabularstar_test() {
   latexml_test_single("tests/alignment/tabularstar.tex", "tabularstar", DIR, None, None);
 }

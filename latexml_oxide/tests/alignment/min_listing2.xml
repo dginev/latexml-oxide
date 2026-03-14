@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="listings"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <resource src="ltx-listings.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>Inline: <text class="ltx_lstlisting"><text class="ltx_lst_identifier">foo</text>(<Math mode="inline" tex="\langle X\rangle" text="delimited-⟨⟩@(X)" xml:id="p1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟨⟩"/>
+                <XMRef idref="p1.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">X</XMTok>
+                <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math>)</text></p>
+  </para>
+</document>
