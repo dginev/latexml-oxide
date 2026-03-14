@@ -15,7 +15,7 @@ LoadDefinitions!({
   // sub-packages:
   RequirePackage!("amsbsy");
   RequirePackage!("amstext");
-  // RequirePackage!("amsopn");
+  RequirePackage!("amsopn");
 
   //======================================================================
   // Section 4.2 Math spacing commands

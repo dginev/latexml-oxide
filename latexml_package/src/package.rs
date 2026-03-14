@@ -11,6 +11,7 @@ pub mod amsfonts_sty;
 pub mod amsgen_sty;
 pub mod amsmath_sty;
 pub mod amssymb_sty;
+pub mod amsopn_sty;
 pub mod amstext_sty;
 pub mod amsthm_sty;
 pub mod article_cls;

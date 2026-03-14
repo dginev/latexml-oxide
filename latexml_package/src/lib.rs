@@ -50,6 +50,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "amsbsy.sty" => package::amsbsy_sty::load_definitions(),
     "amsgen.sty" => package::amsgen_sty::load_definitions(),
     "amstext.sty" => package::amstext_sty::load_definitions(),
+    "amsopn.sty" => package::amsopn_sty::load_definitions(),
     "fancyhdr.sty" => package::fancyhdr_sty::load_definitions(),
     "fullpage.sty" => package::fullpage_sty::load_definitions(),
     "comment.sty" => package::comment_sty::load_definitions(),
