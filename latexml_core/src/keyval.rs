@@ -20,7 +20,7 @@ use crate::state;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyVal {
   // which KeyVals are we parsing and how do we behave?
   prefix: String,

@@ -524,13 +524,7 @@ impl PartialEq for Stored {
           false
         }
       },
-      KeyVals(ref kvs) => {
-        if let KeyVals(kvs2) = other {
-          *kvs == *kvs2
-        } else {
-          false
-        }
-      }
+      KeyVals(_) => false, // KeyVals are not structurally compared
     }
   }
 }
