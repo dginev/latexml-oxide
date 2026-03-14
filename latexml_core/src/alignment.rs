@@ -248,8 +248,7 @@ impl Alignment {
     self.current_row.and_then(|cw| {
       self
         .rows
-        .get_mut(cw)
-        .unwrap()
+        .get_mut(cw)?
         .get_column_mut(self.current_column)
     })
   }
@@ -262,21 +261,23 @@ impl Alignment {
   pub fn get_column_mut(&mut self, n: usize) -> Option<&mut Cell> {
     self
       .current_row
-      .and_then(|cw| self.rows.get_mut(cw).unwrap().get_column_mut(n))
+      .and_then(|cw| self.rows.get_mut(cw)?.get_column_mut(n))
   }
 
   // Ugh... these take boxes; adding before/after columns takes tokens!
   pub fn add_before_row(&mut self, boxes: Vec<Digested>) {
     if let Some(cw) = self.current_row {
-      let current_row = self.rows.get_mut(cw).unwrap();
-      current_row.before.extend(boxes);
+      if let Some(current_row) = self.rows.get_mut(cw) {
+        current_row.before.extend(boxes);
+      }
     }
   }
 
   pub fn add_after_row(&mut self, boxes: Vec<Digested>) {
     if let Some(cw) = self.current_row {
-      let current_row = self.rows.get_mut(cw).unwrap();
-      current_row.after.extend(boxes);
+      if let Some(current_row) = self.rows.get_mut(cw) {
+        current_row.after.extend(boxes);
+      }
     }
   }
 
@@ -288,8 +289,10 @@ impl Alignment {
 
   pub fn omit_next_column(&mut self) {
     if let Some(cw) = self.current_row {
-      if let Some(column) = self.rows.get_mut(cw).unwrap().get_column_mut(self.current_column + 1) {
-        column.omitted = true;
+      if let Some(row) = self.rows.get_mut(cw) {
+        if let Some(column) = row.get_column_mut(self.current_column + 1) {
+          column.omitted = true;
+        }
       }
     }
   }
@@ -314,7 +317,7 @@ impl Alignment {
       if !column.omitted {
         // Possible \lx@column@trimright ??? (if LaTeX style???)
         Tokens!(
-          column.after.clone().unwrap().unlist(),
+          column.after.clone().unwrap_or_default().unlist(),
           T_CS!("\\lx@alignment@column@after")
         )
       } else {

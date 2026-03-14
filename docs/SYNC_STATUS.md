@@ -221,11 +221,11 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-13 night)
+## Test Suite Status (2026-03-14)
 
-**Current totals: 157 pass, 0 fail, 32 ignored test functions**
+**Current totals: 167 pass, 0 fail, 68 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 49% of Perl test cases passing**
+**Coverage: 53% of Perl test cases passing**
 
 | Suite | Pass/Total | Notes |
 |-------|-----------|-------|
@@ -239,17 +239,17 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 20_digestion | 10/10 | All pass |
 | 22_fonts | 8/23 | 8 pass; 15 ignored |
 | 30_encoding | 26/26 | All pass |
-| 32_keyval | 4/7 | 4 pass; 3 ignored (keyval style, xkeyval style/view) |
+| 32_keyval | 5/8 | 5 pass; 3 ignored (xkeyval style/view, keyvalstyle) |
 | 33_keyval_options | 11/11 | All pass |
 | 50_structure | 24/24 | All pass (18 .todo disabled at build level) |
 | 52_namespace | 0/5 | **All ignored** — DTD not supported in Rust port |
-| 53_alignment | 2/2 | DONE — tabtab + halign both pass |
+| 53_alignment | 3/22 | halign, tabtab, tabularstar pass; 19 ignored |
 | 55_theorem | 4/4 | All pass (ntheorem disabled) |
-| 56_ams | 0/1 | **All ignored** — needs amsmath environments |
-| 65_graphics | 0/1 | **All ignored** — color.sty recursion |
+| 56_ams | 0/7 | **All ignored** — needs amsmath environments |
+| 65_graphics | 4/9 | 4 pass; 5 ignored |
 | 70_parse | 0/1 | **All ignored** — math parser regression tests |
 | 700_unit_parse | 3/3 | |
-| 80_complex | 1/5 | xii passes; 4 ignored (need class bindings) |
+| 80_complex | 5/16 | xii, figure_dual_caption, hyperchars, versioned_fallback, equationnest pass |
 | 81_babel | 0/1 | **All ignored** — needs babel language `.ldf` files |
 
 ### Perl-only tests (not yet copied to Rust)
@@ -460,7 +460,7 @@ Namespace tests (ns1–ns5) permanently ignored. xii.tex converted to use standa
 
 | Phase | Cumulative Tests | Delta | Key Infrastructure |
 |-------|-----------------|-------|--------------------|
-| Current | 155 | — | — |
+| Current | 167 | — | — |
 | Phase 1 (infrastructure) | ~190 | +35 | local .ltxml, structure packages |
 | Phase 2 (fonts) | ~205 | +15 | per-font hyphenchar, fontname format, font sizes |
 | Phase 3 (alignment) | ~225 | +20 | nested tabular, alignment packages |
@@ -481,10 +481,41 @@ alignment engine ──→ eqnarray ──→ ntheorem, amsmath {align}
 local .ltxml loading ──→ keyvalstyle, structure .todo tests
 ```
 
+### Ignored Tests — Ranked Priority (fewest diffs → most diffs)
+
+| Priority | Test | Diffs | Blocker |
+|----------|------|-------|---------|
+| 1 | tcilatex_minimal | 7 | `\TEXUX` undefined — needs tcilatex binding |
+| 2 | hypertest | 16 | prefix= namespace decls, color wrapping |
+| 3 | xkeyvalstyle | 16 | `\ProcessOptionsX` style handler |
+| 4 | aastex_test | 18 | Output truncates early (missing aastex.cls) |
+| 5 | ns1–ns5 | 19 each | DTD not supported (permanent ignore) |
+| 6 | keyvalstyle | 29 | Keyval style attributes mishandled |
+| 7 | aastex631_deluxetable | 31 | `\deluxetable*` undefined |
+| 8 | longtable | 59 | longtable.sty incomplete |
+| 9 | morse | 103 | Large diffs |
+| 10 | aliceblog | 144 | blog.cls missing, large diffs |
+| 11 | tabbing | 162 | Tabbing environment unported |
+| 12 | algx | 168 | algorithmic package |
+| 13 | xkeyvalview | 178 | Large diffs |
+| 14 | supertabular | 315 | `\@makecaption` undefined |
+| 15 | tabular | 369 | Deep tabular issues |
+| 16 | xcolors | 652 | color system diffs |
+| 17 | picture | 3124 | Picture environment unported |
+| 18 | physics | 5417 | Massive diffs (was crash, now runs) |
+
+**Crashes (need code fixes):**
+- halignatt + mathtools: `alignment.rs:317` unwrap on None (shared root cause)
+- colortbls: `normalize.rs:403` removal index out of bounds
+- cells + listing + graphrot + xytest: TooManyErrors (>100 undefined errors)
+- figure_mixed_content: `\lstKV@SetIf@` param spec error (listings.sty)
+- cd_test: math parser `replacing tree should always work`
+- babel: infinite loop (timeout)
+
 ### Immediate Next Actions (prioritized)
-1. Fix "misdefined expansion" warning (diagnostic)
-2. Implement local .sty.ltxml loading from test directories
-3. Enable structure .todo tests one by one
-4. Per-font `\hyphenchar` + `\fontname` format fixes
-5. Fix nested tabular in alignment engine
-6. Port color.sty.ltxml
+1. Fix alignment.rs:317 crash (unlocks halignatt + mathtools)
+2. Fix colortbls normalize.rs:403 crash
+3. Port tcilatex binding (7 diffs → pass)
+4. Fix hypertest namespace/color issues (16 diffs)
+5. Implement local .sty.ltxml loading from test directories
+6. Port color.sty.ltxml (unlocks graphics + downstream)

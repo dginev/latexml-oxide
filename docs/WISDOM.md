@@ -157,3 +157,51 @@ tracking from `bgroup()`/`egroup()`.
 incremented/decremented exactly once per `{`/`}` token as it passes through
 `readToken` or `readXToken`, and must be retracted when tokens are unread.
 The stomach's group machinery is a separate concern.
+
+---
+
+## 8. Rust macros cannot dispatch on type — Vec<Token> vs Token vs &[Token]
+
+**Discovery:** Attempting to create unified macros that accept both single tokens
+and token sequences leads to compilation errors because Rust's `macro_rules!`
+operates on syntax patterns, not types.
+
+**Analysis:** Unlike Perl where `Tokens()` can accept scalars, arrays, or objects
+and figure it out at runtime, Rust macros expand before type information is
+available. The `Tokens!()` macro works via `Into<Vec<Token>>` trait, which works
+for types that implement the conversion. But you can't write a single macro
+invocation that conditionally handles `Token`, `Vec<Token>`, `Tokens`, and
+`&[Token]` differently — the macro expander doesn't know the types.
+
+**Workaround:** When building token sequences from mixed sources (static tokens
+plus dynamic `Vec<Token>` from `.revert()` etc.), use explicit `Vec<Token>`
+construction with `extend()` instead of trying to stuff everything into
+`Tokens!()`:
+```rust
+let mut toks: Vec<Token> = vec![T_CS!("\\hbox"), T_BEGIN!()];
+toks.extend(content.revert());
+toks.push(T_END!());
+stomach::digest(Tokens::new(toks))?;
+```
+
+**Key insight:** When the `Tokens!()` macro doesn't cooperate with a particular
+type, fall back to imperative `Vec<Token>` construction. Don't fight the macro.
+
+---
+
+## 9. Porting RawTeX() blocks: copy bravely and exactly
+
+**Principle:** Perl `RawTeX()` calls should be ported as `RawTeX!()` in Rust with
+the exact same TeX string content. Even very large blocks of raw TeX code should
+be copied over directly — the TeX layer should always match the Perl exactly
+unless there is a specific technical problem (e.g. Rust string escaping).
+
+**Why:** The TeX code in `RawTeX()` blocks is already debugged and tested in Perl.
+It defines internal macros, counters, lengths, and environments at the TeX level.
+Attempting to "Rustify" these blocks or selectively port pieces introduces
+subtle divergences. The Rust `RawTeX!()` macro feeds the string through the
+tokenizer/expander just as Perl does, so fidelity is essentially free.
+
+**Key insight:** Do not be intimidated by large `RawTeX()` blocks. The cost of
+porting them is just copy-paste; the cost of NOT porting them is missing
+definitions that later cause test failures in seemingly unrelated places.

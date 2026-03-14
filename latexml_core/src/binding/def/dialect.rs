@@ -85,7 +85,9 @@ pub fn is_defined_token(cs: &Token) -> bool {
       Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",
       Stored::Constructor(ref m) => m.get_cs_name() != "\\relax",
       Stored::Register(ref m) => m.get_cs_name() != "\\relax",
-      other => panic!("TODO: unexpected case for is_defined_token, got: {other:?}"),
+      Stored::Conditional(ref m) => m.get_cs_name() != "\\relax",
+      Stored::MathPrimitive(ref m) => m.get_cs_name() != "\\relax",
+      _ => true, // other stored values are considered defined
     },
     _ => false,
   }
