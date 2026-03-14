@@ -38,6 +38,7 @@ pub mod fontenc_sty;
 pub mod framed_sty;
 pub mod fullpage_sty;
 pub mod glossaries_sty;
+pub mod graphics_sty;
 pub mod graphicx_sty;
 pub mod hyperref_sty;
 pub mod hyperxmp_sty;

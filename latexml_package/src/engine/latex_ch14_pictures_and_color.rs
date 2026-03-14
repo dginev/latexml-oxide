@@ -31,4 +31,8 @@ LoadDefinitions!({
     Ok(stored_map!("align" => align, "vattach" => "bottom"))
   },
   mode => "text");
+
+  // Perl: latex_constructs.pool.ltxml line 5027
+  // Pre-define \Gin@driver so graphics.sty doesn't error when loaded from disk
+  DefMacro!("\\Gin@driver", "");
 });

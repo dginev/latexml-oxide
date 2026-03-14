@@ -62,6 +62,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "epigraph.sty" => package::epigraph_sty::load_definitions(),
     "float.sty" => package::float_sty::load_definitions(),
     "glossaries.sty" => package::glossaries_sty::load_definitions(),
+    "graphics.sty" => package::graphics_sty::load_definitions(),
     "graphicx.sty" => package::graphicx_sty::load_definitions(),
     "IEEEtran.cls" => package::ieeetran_cls::load_definitions(),
     "ulem.sty" => package::ulem_sty::load_definitions(),
