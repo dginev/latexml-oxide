@@ -426,7 +426,12 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
         // the "prev" column from the same row.
         if !new_border.is_empty() {
           if j > 0 {
-            if let Some(prev) = row.get_columns_mut().get_mut(j - 1) {
+            // Perl L822-823: follow colspanned pointer to the spanning column
+            let mut prev_idx = j - 1;
+            if let Some(jj) = row.get_columns().get(prev_idx).and_then(|c| c.colspanned) {
+              prev_idx = jj;
+            }
+            if let Some(prev) = row.get_columns_mut().get_mut(prev_idx) {
               prev.border.push_str(&new_border);
             }
           } else {
