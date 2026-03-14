@@ -365,13 +365,20 @@ pub fn def_primitive(
     });
     before_digest_env.push(bgroup_closure);
   }
-  if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_simple!({
-      if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
-        merge_font((**chosen_font).clone());
-      }
-    });
-    before_digest_env.push(merge_font_closure);
+  match options.font {
+    Some(FontDirective::Asset(chosen_font)) => {
+      let merge_font_closure = before_digest_simple!({
+        merge_font((*chosen_font).clone());
+      });
+      before_digest_env.push(merge_font_closure);
+    },
+    Some(FontDirective::Closure(font_closure)) => {
+      let execute_font_closure = before_digest_simple!({
+        merge_font(font_closure(None)?);
+      });
+      before_digest_env.push(execute_font_closure);
+    },
+    None => {},
   }
   before_digest_env.extend(options.before_digest);
 
@@ -1063,13 +1070,20 @@ pub fn def_environment(
   });
   before_digest_env.push(current_environment_closure);
 
-  if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_simple!({
-      if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
-        merge_font((**chosen_font).clone());
-      }
-    });
-    before_digest_env.push(merge_font_closure);
+  match options.font {
+    Some(FontDirective::Asset(chosen_font)) => {
+      let merge_font_closure = before_digest_simple!({
+        merge_font((*chosen_font).clone());
+      });
+      before_digest_env.push(merge_font_closure);
+    },
+    Some(FontDirective::Closure(font_closure)) => {
+      let execute_font_closure = before_digest_simple!({
+        merge_font(font_closure(None)?);
+      });
+      before_digest_env.push(execute_font_closure);
+    },
+    None => {},
   }
   before_digest_env.extend(options.before_digest);
 

@@ -107,7 +107,6 @@ fn mathcolor_test() {
 }
 
 #[test]
-#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
 fn wasysym_test() {
   latexml_test_single("tests/fonts/wasysym.tex", "wasysym", DIR, None, None);
 }
