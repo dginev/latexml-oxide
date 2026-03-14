@@ -120,7 +120,6 @@ fn cancels_test() {
 }
 
 #[test]
-#[ignore] // needs \ExplSyntaxOn (graphics/expl3)
 fn soul_test() {
   latexml_test_single("tests/fonts/soul.tex", "soul", DIR, None, None);
 }

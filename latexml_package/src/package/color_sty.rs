@@ -20,7 +20,7 @@ fn parse_color(model: Option<&str>, spec: &str) -> Color {
 
 /// Look up a named color from state, returning a Color object.
 /// Perl: LookupColor($name) in Package.pm
-fn lookup_color_obj(name: &str) -> Color {
+pub fn lookup_color_obj(name: &str) -> Color {
   let key = s!("color_{name}");
   match state::lookup_value(&key) {
     Some(Stored::String(sym)) => {
@@ -157,6 +157,12 @@ LoadDefinitions!({
     }
   );
 
+  // Define \ifglobalcolors if not already defined (xcolor.sty defines it,
+  // but color.def may reference it). Default to false.
+  if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_none() {
+    DefConditional!("\\ifglobalcolors", { false });
+  }
+
   //========================
   // Low-level stuff; redefined from LaTeX stubs
   DefMacro!("\\set@color", None);
@@ -168,15 +174,20 @@ LoadDefinitions!({
   DefMacro!("\\color@endbox", "\\color@endgroup\\egroup");
 
   //========================
-  // Default defined colors
-  TeX!(r#"\definecolor{black}{rgb}{0,0,0}
-\definecolor{white}{rgb}{1,1,1}
-\definecolor{red}{rgb}{1,0,0}
-\definecolor{green}{rgb}{0,1,0}
-\definecolor{blue}{rgb}{0,0,1}
-\definecolor{cyan}{cmyk}{1,0,0,0}
-\definecolor{magenta}{cmyk}{0,1,0,0}
-\definecolor{yellow}{cmyk}{0,0,1,0}"#);
+  // Default defined colors (use global scope so they survive group boundaries)
+  for (name, model, spec) in &[
+    ("black", "rgb", "0,0,0"),
+    ("white", "rgb", "1,1,1"),
+    ("red", "rgb", "1,0,0"),
+    ("green", "rgb", "0,1,0"),
+    ("blue", "rgb", "0,0,1"),
+    ("cyan", "cmyk", "1,0,0,0"),
+    ("magenta", "cmyk", "0,1,0,0"),
+    ("yellow", "cmyk", "0,0,1,0"),
+  ] {
+    let c = color_from_model_spec(model, spec);
+    def_color(name, &c, Some(Scope::Global))?;
+  }
 
   //========================
   ProcessOptions!();
