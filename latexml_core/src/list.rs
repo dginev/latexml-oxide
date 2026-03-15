@@ -11,6 +11,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
 
+use crate::common::numeric_ops::NumericOps;
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, TexMode};
 
@@ -92,10 +93,17 @@ impl BoxOps for List {
 
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
   fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
-    Ok(match &self.font {
-      Some(f) => f.compute_boxes_size(&self.boxes, options)?,
-      _ => Font::text_default().compute_boxes_size(&self.boxes, options)?,
-    })
+    let font = self.font.as_ref().cloned().unwrap_or_else(Font::text_default);
+    // Perl: horizontal mode Lists use paragraph layout with wrapwidth = width property
+    let is_paragraph = matches!(self.mode, Some(TexMode::Text));
+    let (wd, ht, dp) = font.compute_boxes_size(&self.boxes, options)?;
+    if is_paragraph {
+      // Perl: for paragraph layout, line width = stored width property (\hsize)
+      if let Some(Stored::Dimension(d)) = self.properties.get("width") {
+        return Ok((Dimension::new(d.value_of()), ht, dp));
+      }
+    }
+    Ok((wd, ht, dp))
   }
 }
 

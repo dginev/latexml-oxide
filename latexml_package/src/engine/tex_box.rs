@@ -117,12 +117,19 @@ LoadDefinitions!({
         break;
       }
     }
+    let mut properties = SymHashMap::default();
+    // Perl: List() sets width => \hsize when mode eq 'horizontal' (NOT restricted_horizontal)
+    if matches!(mode, Some(TexMode::Text)) && state::lookup_string("MODE") == "horizontal" {
+      if let Some(hsize) = state::lookup_dimension("\\hsize") {
+        properties.insert("width", Stored::Dimension(hsize));
+      }
+    }
     List {
       boxes,
       mode,
       font,
       locator: Locator::default(),
-      properties: SymHashMap::default(),
+      properties,
     }
   });
 
