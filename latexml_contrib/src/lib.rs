@@ -19,6 +19,7 @@ pub mod xkvdop3_sty;
 pub mod xkvdop4_sty;
 pub mod xkvdop5_cls;
 pub mod xkvdop6_cls;
+pub mod xkvview_sty;
 
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
@@ -36,6 +37,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "xkvdop4.sty" => Some(xkvdop4_sty::load_definitions()),
     "xkvdop5.cls" => Some(xkvdop5_cls::load_definitions()),
     "xkvdop6.cls" => Some(xkvdop6_cls::load_definitions()),
+    "xkvview.sty" => Some(xkvview_sty::load_definitions()),
     _ => None,
   }
 }

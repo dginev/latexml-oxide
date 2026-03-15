@@ -41,7 +41,7 @@ fn xkeyvalstyle_test() {
 }
 
 #[test]
-#[ignore] // needs myxkeyval.sty Rust binding (xkeyval view handling)
 fn xkeyvalview_test() {
-  latexml_test_single("tests/keyval/xkeyvalview.tex", "xkeyvalview", DIR, None, None);
+  latexml_test_single("tests/keyval/xkeyvalview.tex", "xkeyvalview", DIR, None,
+    Some(Rc::new(latexml_contrib::dispatch)));
 }

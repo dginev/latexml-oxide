@@ -120,6 +120,63 @@ pub struct KeyvalConfig<'a> {
   pub choices:     Vec<&'static str>,
 }
 
+/// Register a keyval qname in the global registry for enumeration by \xkvview.
+fn register_keyval(qname: &str) {
+  use crate::common::arena;
+  let registry_key = "KEYVAL@registry";
+  let mut registry: Vec<crate::common::arena::SymStr> = match state::lookup_value(registry_key) {
+    Some(Stored::Strings(v)) => v.to_vec(),
+    _ => Vec::new(),
+  };
+  let sym = arena::pin(qname);
+  // avoid duplicates (re-definitions)
+  if !registry.contains(&sym) {
+    registry.push(sym);
+  }
+  state::assign_value(registry_key, Stored::Strings(registry.into()), None);
+}
+
+/// Metadata for a registered keyval, used by \xkvview.
+#[derive(Debug, Clone)]
+pub struct KeyvalMeta {
+  pub key:     String,
+  pub prefix:  String,
+  pub keyset:  String,
+  pub kind:    String,
+  pub default: String,
+}
+
+/// Enumerate all registered keyvals with their metadata (for \xkvview).
+pub fn enumerate_keyvals() -> Vec<KeyvalMeta> {
+  use crate::common::arena;
+  let registry_key = "KEYVAL@registry";
+  let registry = match state::lookup_value(registry_key) {
+    Some(Stored::Strings(v)) => v.to_vec(),
+    _ => return Vec::new(),
+  };
+  let mut result = Vec::new();
+  for sym in registry {
+    let qname = arena::to_string(sym);
+    let key = keyval_get(&qname, "key_name")
+      .map(|s| s.to_string())
+      .unwrap_or_default();
+    let prefix = keyval_get(&qname, "keyval_prefix")
+      .map(|s| s.to_string())
+      .unwrap_or_else(|| "KV".to_string());
+    let keyset = keyval_get(&qname, "keyset")
+      .map(|s| s.to_string())
+      .unwrap_or_default();
+    let kind = keyval_get(&qname, "kind")
+      .map(|s| s.to_string())
+      .unwrap_or_else(|| "ordinary".to_string());
+    let default = keyval_get(&qname, "default")
+      .map(|s| s.to_string())
+      .unwrap_or_else(|| "[none]".to_string());
+    result.push(KeyvalMeta { key, prefix, keyset, kind, default });
+  }
+  result
+}
+
 /// (Re-)defines this Key of kind 'kind'.
 ///
 ///Defines a keyword `key` used in keyval arguments for the set `keyset` and,
@@ -178,6 +235,15 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   // define that the key exists and is not disabled
   keyval_set(&qname, "exists", true.into());
   keyval_set(&qname, "disabled", false.into());
+  // store metadata for introspection (used by \xkvview)
+  // only register when xkvview tracking is enabled
+  if state::lookup_bool("XKVVIEW_TRACKING") {
+    keyval_set(&qname, "kind", Stored::Tokens(tokenize(kind.unwrap_or("ordinary"))));
+    keyval_set(&qname, "keyval_prefix", Stored::Tokens(tokenize(prefix)));
+    keyval_set(&qname, "keyset", Stored::Tokens(tokenize(keyset)));
+    keyval_set(&qname, "key_name", Stored::Tokens(tokenize(key)));
+    register_keyval(&qname);
+  }
   // set the type
   let vtype = if vtype.is_empty() { "{}" } else { vtype };
   let paramlist_opt = parse_parameters(
