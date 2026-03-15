@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["dispatch"],"mod":["mytemplate_sty","scopemacro_tex"]};
+window.SIDEBAR_ITEMS = {"fn":["dispatch"],"mod":["apackage_sty","filelistclass_cls","myclass_cls","mykeyval_sty","mytemplate_sty","myxkeyval_sty","scopemacro_tex","xkvdop1_sty","xkvdop2_sty","xkvdop3_sty","xkvdop4_sty","xkvdop5_cls","xkvdop6_cls","xkvview_sty"]};

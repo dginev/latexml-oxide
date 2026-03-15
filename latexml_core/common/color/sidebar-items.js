@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["BLACK","WHITE"],"enum":["Color"],"fn":["color_from_model_spec","format_component","from_model_components"]};

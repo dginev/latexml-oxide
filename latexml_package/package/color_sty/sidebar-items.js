@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["load_definitions","lookup_color","lookup_color_obj"]};

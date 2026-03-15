@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["alignment_bindings","digest_alignment_body","digest_alignment_column","extract_alignment_column","load_definitions","trim_column_template"]};
