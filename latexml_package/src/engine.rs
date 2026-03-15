@@ -2,7 +2,7 @@
 mod base_parameter_types;
 mod base_schema;
 mod base_utilities;
-mod base_xmath;
+pub mod base_xmath;
 pub mod tex;
 mod tex_box;
 mod tex_character;

@@ -1034,8 +1034,240 @@ LoadDefinitions!({
     }
   );
 
-  // TODO: Continue MathFork and equationgroup
 });
+
+/// Helper: get first child element node
+fn first_child_element(node: &Node) -> Option<Node> {
+  node.get_child_elements().into_iter().next()
+}
+
+/// Perl: openMathFork (Base_XMath.pool.ltxml L780-786)
+/// Creates a MathFork structure with two branches: main (semantic) and presentation.
+/// Returns (mainfork_math_node, branch_node).
+pub fn open_math_fork(
+  document: &mut Document,
+  equation: &mut Node,
+) -> Result<(Node, Node)> {
+  let mut fork = document.open_element_at(equation, "ltx:MathFork", None, None)?;
+  let mut mainfork = document.open_element_at(&mut fork, "ltx:Math", None, None)?;
+  let _xmath = document.open_element_at(&mut mainfork, "ltx:XMath", None, None)?;
+  let branch = document.open_element_at(&mut fork, "ltx:MathBranch", None, None)?;
+  Ok((mainfork, branch))
+}
+
+/// Perl: closeMathFork (Base_XMath.pool.ltxml L789-803)
+/// Closes all elements of an ltx:MathFork.
+pub fn close_math_fork(
+  document: &mut Document,
+  equation: &mut Node,
+  mainfork: &mut Node,
+  branch: &mut Node,
+) -> Result<()> {
+  document.close_element_at(branch)?;
+  // Close XMath (first child of mainfork)
+  if let Some(mut xmath) = first_child_element(mainfork) {
+    document.close_element_at(&mut xmath)?;
+  }
+  document.close_element_at(mainfork)?;
+  // Close the MathFork — find it defensively via xpath
+  let mfs = document.findnodes("ltx:MathFork", Some(equation));
+  if let Some(mut last_mf) = mfs.into_iter().last() {
+    document.close_element_at(&mut last_mf)?;
+  }
+  // Check if branch came up empty (only 1 child = just the Math)
+  let mut fork = branch.get_parent().unwrap();
+  let branches: Vec<Node> = fork.get_child_nodes();
+  if branches.len() == 1 {
+    // Whoops, came up empty! Remove the fork
+    fork.unlink_node();
+  }
+  Ok(())
+}
+
+/// Perl: addColumnToMathFork (Base_XMath.pool.ltxml L839-899)
+/// Distributes content from an ltx:_Capture_ cell into both the presentation branch
+/// (as ltx:td) AND the semantic main branch (cloned into XMath).
+pub fn add_column_to_math_fork(
+  document: &mut Document,
+  mainfork: &mut Node,
+  inbranch: &mut Node,
+  cell: &mut Node,
+) -> Result<()> {
+  let mut td = document.open_element_at(inbranch, "ltx:td", None, None)?;
+  // Copy align and colspan attributes
+  if let Some(align) = cell.get_attribute("align") {
+    document.set_attribute(&mut td, "align", &align)?;
+  }
+  if let Some(colspan) = cell.get_attribute("colspan") {
+    document.set_attribute(&mut td, "colspan", &colspan)?;
+  }
+  // Remove the _Capture_ from the document
+  cell.unlink_node();
+  // Process each child of _Capture_
+  let children: Vec<Node> = cell.get_child_nodes();
+  let math_qname = arena::pin_static("ltx:Math");
+  let text_qname = arena::pin_static("ltx:text");
+  let p_qname = arena::pin_static("ltx:p");
+  for node in children {
+    let qname = document::get_node_qname(&node);
+    if qname == math_qname {
+      // Clone XMath children to the main branch
+      if let Some(xmath) = first_child_element(&node) {
+        let xmath_children: Vec<Node> = xmath.get_child_elements();
+        if !xmath_children.is_empty() {
+          state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
+          if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+            document.append_clone(&mut mainfork_xmath, xmath_children)?;
+          }
+          state::assign_value("ID_SUFFIX", Stored::None, None);
+        }
+      }
+    } else if qname == text_qname || qname == p_qname {
+      let text_content = node.get_content();
+      if !text_content.is_empty() {
+        if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+          state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
+          let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
+          document.append_clone(&mut txt, vec![node.clone()])?;
+          document.close_element_at(&mut txt)?;
+          state::assign_value("ID_SUFFIX", Stored::None, None);
+        }
+      }
+    } else if node.get_type() == Some(libxml::tree::NodeType::TextNode) {
+      let string = node.get_content();
+      if !string.trim().is_empty() {
+        if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+          let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
+          let _ = txt.set_content(&string);
+          document.close_element_at(&mut txt)?;
+        }
+      }
+    } else if node.get_type() == Some(libxml::tree::NodeType::CommentNode) {
+      // Skip comments
+    } else {
+      if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+        state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
+        let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
+        document.append_clone(&mut txt, vec![node.clone()])?;
+        document.close_element_at(&mut txt)?;
+        state::assign_value("ID_SUFFIX", Stored::None, None);
+      }
+    }
+    // Move the original node to the td (presentation side)
+    document.unrecord_node_ids(&node);
+    document.append_tree(&mut td, vec![node])?;
+  }
+  document.close_element_at(&mut td)?;
+  Ok(())
+}
+
+/// Perl: equationgroupJoinCols (Base_XMath.pool.ltxml L970-980)
+/// Groups every $ncols columns into a MathFork structure within an equation.
+pub fn equationgroup_join_cols(
+  document: &mut Document,
+  ncols: usize,
+  equation: &mut Node,
+) -> Result<()> {
+  let mut col = 0usize;
+  let mut mainfork: Option<Node> = None;
+  let mut branch: Option<Node> = None;
+  let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(equation));
+  for mut cell in cells {
+    let qname_str = arena::to_string(document::get_node_qname(&cell));
+    if !qname_str.ends_with("_Capture_") {
+      continue;
+    }
+    if (col % ncols) == 0 {
+      if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+        close_math_fork(document, equation, mf, br)?;
+      }
+      let (mf, br) = open_math_fork(document, equation)?;
+      mainfork = Some(mf);
+      branch = Some(br);
+    }
+    if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+      add_column_to_math_fork(document, mf, br, &mut cell)?;
+    }
+    col += 1;
+  }
+  if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+    close_math_fork(document, equation, mf, br)?;
+  }
+  Ok(())
+}
+
+/// Perl: equationgroupJoinRows (Base_XMath.pool.ltxml L926-963)
+/// Combines multiple row equations into a single semantic equation with a MathFork structure.
+pub fn equationgroup_join_rows(
+  document: &mut Document,
+  equationgroup: &mut Node,
+  mut equations: Vec<Node>,
+) -> Result<()> {
+  if equations.is_empty() {
+    return Ok(());
+  }
+  // Create new equation at the position of the first input equation
+  let mut equation = document.open_element_at(equationgroup, "ltx:equation", None, None)?;
+  // Move it before the first input equation
+  equations[0].add_prev_sibling(&mut equation).ok();
+  // Consolidate labels, id, refnum, tags from the input equations
+  let mut labels: Option<String> = None;
+  let mut id: Option<String> = None;
+  let mut tags: Option<Node> = None;
+  for eq in equations.iter() {
+    if let Some(l) = eq.get_attribute("labels") {
+      labels = Some(match labels {
+        Some(existing) => s!("{existing} {l}"),
+        None => l,
+      });
+    }
+    if let Some(eq_id) = eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .or_else(|| eq.get_attribute("xml:id"))
+    {
+      id = Some(eq_id);
+    }
+    let found_tags = document.findnodes("ltx:tags", Some(eq));
+    if let Some(t) = found_tags.into_iter().last() {
+      tags = Some(t);
+    }
+  }
+  if let Some(ref id_str) = id {
+    document.unrecord_id(id_str);
+  }
+  if let Some(ref l) = labels {
+    document.set_attribute(&mut equation, "labels", l)?;
+  }
+  if let Some(ref id_str) = id {
+    document.set_attribute(&mut equation, "xml:id", id_str)?;
+  }
+  if let Some(mut t) = tags {
+    t.unlink_node();
+    equation.add_child(&mut t).ok();
+  }
+  // Create MathFork
+  let (mut mainfork, mut branch_node) = open_math_fork(document, &mut equation)?;
+  for eq in equations {
+    let mut eq = eq;
+    eq.unlink_node();
+    let mut tr = document.open_element_at(&mut branch_node, "ltx:tr", None, None)?;
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
+    if let Some(first_cell) = cells.first() {
+      if let Some(class) = first_cell.get_attribute("class") {
+        if class.contains("lefteqn") {
+          document.set_attribute(&mut tr, "class", "ltx_eqn_lefteqn")?;
+        }
+      }
+    }
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
+    for mut cell in cells {
+      add_column_to_math_fork(document, &mut mainfork, &mut tr, &mut cell)?;
+    }
+    document.close_element_at(&mut tr)?;
+  }
+  close_math_fork(document, &mut equation, &mut mainfork, &mut branch_node)?;
+  document.close_element_at(&mut equation)?;
+  Ok(())
+}
 
 /// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
 pub fn add_meaning_rec(document: &mut Document, node: Node, meaning: &str) -> Result<()> {

@@ -337,7 +337,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
 - [ ] **39. cleveref_minimal_test** (80_complex) — 302 diffs. Port cleveref.sty.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **41. aastex631_deluxetable_test** (80_complex) — 35 diffs. Port aastex631.cls binding.
+- [x] **41. aastex631_deluxetable_test** (80_complex) — DONE. Ported deluxetable.sty, Stored::Template, version-stripping dispatch.
 - [ ] **42. aliceblog_test** (80_complex) — 144 diffs. Port blog.cls binding.
 
 ### Tier 4: Needs major infrastructure

@@ -494,7 +494,12 @@ LoadDefinitions!({
 
   DefConstructor!("\\@@amsgather SkipSpaces DigestedBody",
     "#1",
-    before_digest => { bgroup(); });
+    before_digest => { bgroup(); },
+    after_construct => sub[document, _whatsit] {
+      if let Some(mut last) = document.get_node().get_last_child() {
+        rearrange_ams_gather(document, &mut last)?;
+      }
+    });
   DefPrimitive!("\\end@amsgather", { egroup()?; });
 
   DefMacro!("\\gather",
@@ -522,7 +527,12 @@ LoadDefinitions!({
 
   DefConstructor!("\\@@amsalign SkipSpaces DigestedBody",
     "#1",
-    before_digest => { bgroup(); });
+    before_digest => { bgroup(); },
+    after_construct => sub[document, _whatsit] {
+      if let Some(mut last) = document.get_node().get_last_child() {
+        rearrange_ams_align(document, &mut last)?;
+      }
+    });
   DefPrimitive!("\\end@amsalign", { egroup()?; });
 
   DefMacro!("\\align",
@@ -710,3 +720,87 @@ LoadDefinitions!({
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
 });
+
+use latexml_core::document;
+
+/// Perl: rearrangeAMSGather (amsmath.sty.ltxml L400-415)
+/// Each equation row consists of single equation. Pull math content up past _Capture_.
+pub fn rearrange_ams_gather(
+  document: &mut Document,
+  equationgroup: &mut Node,
+) -> Result<()> {
+  let equations: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
+  for mut equation in equations {
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&equation));
+    if cells.is_empty() {
+      continue;
+    }
+    let cell1_children: Vec<Node> = cells[0].get_child_elements();
+    // Check if this equation is really an intertext
+    if cells.len() == 1 && cell1_children.len() == 1 {
+      let class = cell1_children[0].get_attribute("class").unwrap_or_default();
+      if class.contains("ltx_intertext") {
+        // Replace equation with the block
+        let mut block = cell1_children[0].clone();
+        block.unlink_node();
+        equation.add_prev_sibling(&mut block).ok();
+        equation.unlink_node();
+        continue;
+      }
+    }
+    if cells.len() == 1 && cell1_children.is_empty() {
+      // Empty row — remove it
+      equation.unlink_node();
+      continue;
+    }
+    // Unwrap _Capture_ elements, set Math mode to display
+    let children: Vec<Node> = equation.get_child_elements();
+    for mut child in children {
+      let qname = document::get_node_qname(&child);
+      if qname == arena::pin_static("ltx:_Capture_") {
+        document.unwrap_nodes(child)?;
+      }
+    }
+    // Set mode='display' on Math elements
+    let maths: Vec<Node> = document.findnodes("ltx:Math", Some(&equation));
+    for mut math in maths {
+      document.set_attribute(&mut math, "mode", "display")?;
+    }
+  }
+  Ok(())
+}
+
+/// Perl: rearrangeAMSAlign (amsmath.sty.ltxml L460-473)
+/// Each equation row consists of pairs (LHS, =RHS); group accordingly.
+pub fn rearrange_ams_align(
+  document: &mut Document,
+  equationgroup: &mut Node,
+) -> Result<()> {
+  use crate::engine::base_xmath::equationgroup_join_cols;
+  let equations: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
+  for mut equation in equations {
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&equation));
+    if cells.is_empty() {
+      continue;
+    }
+    let cell1_children: Vec<Node> = cells[0].get_child_elements();
+    // Check if this equation is really an intertext
+    if cells.len() == 1 && cell1_children.len() == 1 {
+      let class = cell1_children[0].get_attribute("class").unwrap_or_default();
+      if class.contains("ltx_intertext") {
+        let mut block = cell1_children[0].clone();
+        block.unlink_node();
+        equation.add_prev_sibling(&mut block).ok();
+        equation.unlink_node();
+        continue;
+      }
+    }
+    if cells.len() == 1 && cell1_children.is_empty() {
+      equation.unlink_node();
+      continue;
+    }
+    // Group every 2 columns into a MathFork
+    equationgroup_join_cols(document, 2, &mut equation)?;
+  }
+  Ok(())
+}
