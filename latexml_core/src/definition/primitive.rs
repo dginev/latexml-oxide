@@ -2,7 +2,8 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 
 use crate::Digested;
-use crate::common::arena::SymHashMap;
+use crate::common::arena::{SymHashMap, EMPTY_SYM};
+use crate::common::store::Stored;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::definition::{
@@ -114,7 +115,27 @@ impl Definition for Primitive {
           box_props,
         )));
       },
-      None => {},
+      None => {
+        // Perl: Box(undef, undef, undef, Tokens($self->getCSorAlias, ...), isEmpty => 1)
+        // Even with no replacement, Perl creates a Box with the CS as reversion and isEmpty flag.
+        // This is essential for font switches (\rm, \it, etc.) to appear in tex attributes.
+        let cs_token = self
+          .alias
+          .as_ref()
+          .map(|alias| T_CS!(alias))
+          .unwrap_or(self.cs);
+        let box_tokens = vec![cs_token];
+        // TODO: add revert_arguments for ArgWrap type when needed
+        let mut box_props = SymHashMap::default();
+        box_props.insert("isEmpty", Stored::Bool(true));
+        invoked_boxes.push(Digested::from(Tbox::new(
+          *EMPTY_SYM,
+          None,
+          None,
+          Tokens::new(box_tokens),
+          box_props,
+        )));
+      },
     }
     if !self.after_digest.is_empty() {
       // optimize to avoid needless generation of whatsits

@@ -16,6 +16,7 @@ pub mod amsart_cls;
 pub mod bbold_sty;
 pub mod calc_sty;
 pub mod cancel_sty;
+pub mod colortbl_sty;
 pub mod amsfonts_sty;
 pub mod amsgen_sty;
 pub mod amsmath_sty;

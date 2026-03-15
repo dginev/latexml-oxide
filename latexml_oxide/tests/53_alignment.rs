@@ -21,7 +21,7 @@ fn cells_test() {
 }
 
 #[test]
-#[ignore] // TooManyErrors — needs colortbl.sty binding
+#[ignore] // TooManyErrors — needs dcolumn.sty, hhline.sty bindings + \newcolumntype support
 fn colortbls_test() {
   latexml_test_single("tests/alignment/colortbls.tex", "colortbls", DIR, None, None);
 }
