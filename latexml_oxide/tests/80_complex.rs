@@ -59,7 +59,6 @@ fn equationnest_test() { complex("equationnest"); }
 // Tests that need missing packages or have significant diffs
 
 #[test]
-#[ignore] // needs aastex631.cls binding
 fn aastex631_deluxetable_test() { complex("aastex631_deluxetable"); }
 
 #[test]

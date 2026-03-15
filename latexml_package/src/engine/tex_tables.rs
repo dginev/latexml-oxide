@@ -398,7 +398,8 @@ LoadDefinitions!({
     properties =>  { Ok(stored_map!("isHorizontalRule" => true))},
     sizer      => 0, alias => "\\hline");
 
-  DefMacro!("\\@tabular@begin@heading", {
+  // Perl: DefMacroI('\lx@alignment@begin@heading', undef, sub { ... in_tabular_head = 1 })
+  DefMacro!("\\lx@alignment@begin@heading", {
     if let Some(alignment_stored) = lookup_alignment() {
       alignment_stored
         .alignment_cell()
@@ -407,7 +408,8 @@ LoadDefinitions!({
         .set_in_tabular_head();
     }
   });
-  DefMacro!("\\@tabular@end@heading", {
+  // Perl: DefMacroI('\lx@alignment@end@heading', undef, sub { ... in_tabular_head = 0 })
+  DefMacro!("\\lx@alignment@end@heading", {
     if let Some(alignment_stored) = lookup_alignment() {
       alignment_stored
         .alignment_cell()
@@ -416,19 +418,36 @@ LoadDefinitions!({
         .unset_in_tabular_head();
     }
   });
+  // Deprecated aliases (Base_Deprecated.pool.ltxml)
+  Let!("\\@tabular@begin@heading", "\\lx@alignment@begin@heading");
+  Let!("\\@tabular@end@heading", "\\lx@alignment@end@heading");
 
   //======================================================================
   // Multicolumn support
-  // DefRegisterI('\@alignment@ncolumns', undef, Dimension(0),
-  //   getter => sub {
-  //     if (my $alignment = LookupValue('Alignment')) {
-  //       Number(scalar($alignment->getTemplate->columns)); }
-  //     else { Number(0); } });
-  // DefRegisterI('\@alignment@column', undef, Dimension(0),
-  //   getter => sub {
-  //     if (my $alignment = LookupValue('Alignment')) {
-  //       Number($alignment->currentColumnNumber); }
-  //     else { Number(0); } });
+  // Perl: DefRegisterI('\lx@alignment@ncolumns', undef, Dimension(0), getter => sub { ... })
+  DefRegister!("\\lx@alignment@ncolumns", Number::new(0),
+    getter => {
+      if let Some(alignment_stored) = lookup_alignment() {
+        let data = alignment_stored.alignment_cell().unwrap();
+        let borrowed = data.borrow();
+        Number::new(borrowed.get_template().get_columns().len() as i64)
+      } else {
+        Number::new(0)
+      }
+    }
+  );
+  // Perl: DefRegisterI('\lx@alignment@column', undef, Dimension(0), getter => sub { ... })
+  DefRegister!("\\lx@alignment@column", Number::new(0),
+    getter => {
+      if let Some(alignment_stored) = lookup_alignment() {
+        let data = alignment_stored.alignment_cell().unwrap();
+        let borrowed = data.borrow();
+        Number::new(borrowed.current_column_number() as i64)
+      } else {
+        Number::new(0)
+      }
+    }
+  );
 
   // Perl: DefMacro('\lx@alignment@multicolumn {Number} AlignmentTemplate {}', sub { ... })
   // Expands to \omit + (span-1) × (\span \omit) + before_cell_tokens + body + after_cell_tokens

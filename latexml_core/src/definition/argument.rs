@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::{self, Display};
+use std::rc::Rc;
 
 use crate::Locator;
 use crate::alignment::template::Template;
@@ -441,7 +442,8 @@ impl From<Stored> for Result<ArgWrap> {
       | Stored::VecDigested(_)
       | Stored::Chars(_)
       | Stored::KeyVal(_)
-      | Stored::KeyVals(_) => {
+      | Stored::KeyVals(_)
+      | Stored::Template(_) => {
         Error!(
           "stored",
           "type",
@@ -466,7 +468,8 @@ impl From<ArgWrap> for Result<Stored> {
       ArgWrap::MuGlue(v) => Stored::MuGlue(v),
       ArgWrap::Float(v) => Stored::Float(v),
       ArgWrap::None => Stored::None,
-      ArgWrap::KV(_) | ArgWrap::RegisterDefinition(_) | ArgWrap::AlignmentTemplate(_) => {
+      ArgWrap::AlignmentTemplate(t) => Stored::Template(Rc::new(*t)),
+      ArgWrap::KV(_) | ArgWrap::RegisterDefinition(_) => {
         Error!(
           "stored",
           "type",

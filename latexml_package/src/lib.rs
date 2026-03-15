@@ -30,6 +30,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "marvosym.sty" => package::marvosym_sty::load_definitions(),
     "mathbbol.sty" => package::mathbbol_sty::load_definitions(),
     "aastex.cls" => package::aastex_cls::load_definitions(),
+    "aastex631.cls" => package::aastex_cls::load_definitions(), // version fallback
     "aastex.sty" => package::aas_support_sty::load_definitions(),
     "aas_support.sty" => package::aas_support_sty::load_definitions(),
     "ams_core.cls" => package::ams_core_cls::load_definitions(),
@@ -49,6 +50,8 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "remreset.sty" => package::remreset_sty::load_definitions(),
     "report.cls" => package::report_cls::load_definitions(),
     "revtex4.cls" => package::revtex4_cls::load_definitions(),
+    "revtex4-1.cls" => package::revtex4_cls::load_definitions(), // version fallback
+    "revtex4-2.cls" => package::revtex4_cls::load_definitions(), // version fallback
     "revtex4_support.sty" => package::revtex4_support_sty::load_definitions(),
     "rotating.sty" => package::rotating_sty::load_definitions(),
     "amsmath.sty" => package::amsmath_sty::load_definitions(),
@@ -66,6 +69,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "fullpage.sty" => package::fullpage_sty::load_definitions(),
     "comment.sty" => package::comment_sty::load_definitions(),
     "csquotes.sty" => package::csquotes_sty::load_definitions(),
+    "deluxetable.sty" => package::deluxetable_sty::load_definitions(),
     "endnotes.sty" => package::endnotes_sty::load_definitions(),
     "enumitem.sty" => package::enumitem_sty::load_definitions(),
     "epigraph.sty" => package::epigraph_sty::load_definitions(),

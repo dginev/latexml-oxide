@@ -51,11 +51,26 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
   let figure_qname = arena::pin_static("ltx:figure");
   let table_qname = arena::pin_static("ltx:table");
   let float_qname = arena::pin_static("ltx:float");
+  let note_qname = arena::pin_static("ltx:note");
+  let caption_qname = arena::pin_static("ltx:caption");
   let mut panels: Vec<libxml::tree::Node> = Vec::new();
+  let mut notes: Vec<libxml::tree::Node> = Vec::new();
+  let mut caption: Option<libxml::tree::Node> = None;
   for child in node.get_child_elements() {
     let qname = latexml_core::document::get_node_qname(&child);
     if qname == figure_qname || qname == table_qname || qname == float_qname {
       panels.push(child);
+    } else if qname == note_qname {
+      notes.push(child);
+    } else if qname == caption_qname {
+      caption = Some(child);
+    }
+  }
+  // Perl BuildPanelsAndID L3317-3324: move top-level ltx:note to nearest caption
+  if let Some(mut cap) = caption {
+    for mut note in notes {
+      note.unlink_node();
+      cap.add_child(&mut note).ok();
     }
   }
   if panels.len() >= 2 {
