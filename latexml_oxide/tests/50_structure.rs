@@ -3,7 +3,7 @@ use latexml::util::test::*;
 use std::rc::Rc;
 const DIR: &str = "tests/structure";
 
-// --- Currently passing tests (26) ---
+// --- Currently passing tests (27) ---
 
 #[test]
 fn abstract_test() {
@@ -131,6 +131,11 @@ fn filelist_test() {
     Some(Rc::new(latexml_contrib::dispatch)));
 }
 
+#[test]
+fn floatnames_test() {
+  latexml_test_single("tests/structure/floatnames.tex", "floatnames", DIR, None, None);
+}
+
 // --- Newly added tests (need package/infrastructure work) ---
 
 #[test]
@@ -185,12 +190,6 @@ fn figure_grids_test() {
 #[ignore] // needs figure float infrastructure
 fn figures_test() {
   latexml_test_single("tests/structure/figures.tex", "figures", DIR, None, None);
-}
-
-#[test]
-#[ignore] // needs float naming infrastructure
-fn floatnames_test() {
-  latexml_test_single("tests/structure/floatnames.tex", "floatnames", DIR, None, None);
 }
 
 #[test]

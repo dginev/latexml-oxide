@@ -226,7 +226,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 202 pass, 0 fail, 59 ignored test functions**
+**Current totals: 203 pass, 0 fail, 58 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 60% of Perl test cases passing**
 
@@ -293,7 +293,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [ ] **2. eqnums_test** (50_structure) — >100 errors. Regression from amsmath changes. Debug: equation numbering (`\eqref`, `\tag`) in structure context.
 - [ ] **3. algx_test** (53_alignment) — 100 diffs. algorithmicx ported but `\csname` expansion errors in nested `\ALG@bl@...` macros. Fix `\csname`/`\edef` in gullet.rs.
 - [ ] **4. figures_test** (50_structure) — needs `\@captype` and float figure infrastructure stubs.
-- [ ] **5. floatnames_test** (50_structure) — needs `\newfloat` / `\DeclareFloatingEnvironment`. Port float.sty binding.
+- [x] **5. floatnames_test** (50_structure) — DONE. Ported `\newfloat` (float.sty) and `\DeclareFloatingEnvironment` (newfloat.sty) with full float environment creation, beforeFloat/afterFloat, addFloatFrames.
 - [x] **6. filelist_test** (50_structure) — DONE. Fixed `\@filelist` init to `\@gobble` (matching latex.ltx), added `\@addtofilelist` in `input_definitions`, added `RequirePackage!("textcomp")` to latex.rs engine.
 - [x] **7. options_test** (50_structure) — DONE. Created myclass.cls + apackage.sty Rust bindings in latexml_contrib.
 
