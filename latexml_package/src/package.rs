@@ -62,6 +62,8 @@ pub mod multirow_sty;
 pub mod nameref_sty;
 pub mod natbib_sty;
 pub mod newfloat_sty;
+pub mod pifont_sty;
+pub mod pzd_fontmap;
 pub mod ntheorem_sty;
 pub mod paralist_sty;
 pub mod remreset_sty;

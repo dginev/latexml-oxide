@@ -104,6 +104,8 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "t2b.fontmap" => package::t2b_fontmap::load_definitions(),
     "t2c.fontmap" => package::t2c_fontmap::load_definitions(),
     "ts1.fontmap" => package::ts1_fontmap::load_definitions(),
+    "pzd.fontmap" => package::pzd_fontmap::load_definitions(),
+    "pifont.sty" => package::pifont_sty::load_definitions(),
     "utf8.def" => package::utf8_def::load_definitions(),
     "tcilatex.tex" => package::tcilatex_tex::load_definitions(),
     "textcase.sty" => package::textcase_sty::load_definitions(),
