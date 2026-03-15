@@ -1,8 +1,9 @@
 // Structure tests — individually listed for per-test #[ignore] support.
 use latexml::util::test::*;
+use std::rc::Rc;
 const DIR: &str = "tests/structure";
 
-// --- Currently passing tests (24) ---
+// --- Currently passing tests (26) ---
 
 #[test]
 fn abstract_test() {
@@ -124,6 +125,12 @@ fn titlepage_test() {
   latexml_test_single("tests/structure/titlepage.tex", "titlepage", DIR, None, None);
 }
 
+#[test]
+fn filelist_test() {
+  latexml_test_single("tests/structure/filelist.tex", "filelist", DIR, None,
+    Some(Rc::new(latexml_contrib::dispatch)));
+}
+
 // --- Newly added tests (need package/infrastructure work) ---
 
 #[test]
@@ -181,12 +188,6 @@ fn figures_test() {
 }
 
 #[test]
-#[ignore] // needs \listfiles infrastructure
-fn filelist_test() {
-  latexml_test_single("tests/structure/filelist.tex", "filelist", DIR, None, None);
-}
-
-#[test]
 #[ignore] // needs float naming infrastructure
 fn floatnames_test() {
   latexml_test_single("tests/structure/floatnames.tex", "floatnames", DIR, None, None);
@@ -211,9 +212,9 @@ fn natbib_test() {
 }
 
 #[test]
-#[ignore] // needs package option handling improvements
 fn options_test() {
-  latexml_test_single("tests/structure/options.tex", "options", DIR, None, None);
+  latexml_test_single("tests/structure/options.tex", "options", DIR, None,
+    Some(Rc::new(latexml_contrib::dispatch)));
 }
 
 #[test]

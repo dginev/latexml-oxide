@@ -20,10 +20,16 @@ pub mod xkvdop4_sty;
 pub mod xkvdop5_cls;
 pub mod xkvdop6_cls;
 pub mod xkvview_sty;
+pub mod apackage_sty;
+pub mod filelistclass_cls;
+pub mod myclass_cls;
 
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
+    "apackage.sty" => Some(apackage_sty::load_definitions()),
+    "filelistclass.cls" => Some(filelistclass_cls::load_definitions()),
+    "myclass.cls" => Some(myclass_cls::load_definitions()),
     "mykeyval.sty" => Some(mykeyval_sty::load_definitions()),
     "mytemplate.sty" => Some(mytemplate_sty::load_definitions()),
     "myxkeyval.sty" => Some(myxkeyval_sty::load_definitions()),

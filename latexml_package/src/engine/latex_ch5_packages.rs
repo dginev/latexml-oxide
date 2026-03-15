@@ -286,7 +286,9 @@ LoadDefinitions!({
     Vec::new()
   });
 
-  DefMacro!("\\@filelist", None);
+  // latex.ltx initializes \@filelist to \@gobble, which eats the leading comma
+  // from the first \@addtofilelist call. We replicate this by using \@gobble.
+  DefMacro!("\\@filelist", "\\@gobble");
   DefMacro!("\\@addtofilelist{}", sub[(arg)] {
     let expansion = Expand!(Tokens!(T_CS!("\\@filelist"), T_OTHER!(","), arg.unlist()));
     DefMacro!("\\@filelist",None,expansion);

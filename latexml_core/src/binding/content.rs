@@ -187,6 +187,14 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     );
   }
 
+  // Track loaded files in \@filelist BEFORE loading (Perl: Package.pm calls
+  // \@addtofilelist before reading the file, so \@filelist is available inside)
+  if options.handleoptions {
+    digest(Tokens!(
+      T_CS!("\\@addtofilelist"), T_BEGIN!(), Explode!(filename), T_END!()
+    ))?;
+  }
+
   let is_binding =
     !options.noltxml && (load_external_binding(&filename)? || load_binding(&filename)?);
   let mut is_found_raw = false;

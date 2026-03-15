@@ -226,7 +226,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 199 pass, 0 fail, 61 ignored test functions**
+**Current totals: 202 pass, 0 fail, 59 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 60% of Perl test cases passing**
 
@@ -289,13 +289,13 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 
 ### Tier 1: Small fixes to un-ignore existing tests (1–2 tests each)
 
-- [ ] **1. xkeyvalview_test** (32_keyval) — 9 diffs. Port `\xkvview` command (generates key metadata table). Perl: `xkeyval.sty.ltxml` line ~280.
+- [x] **1. xkeyvalview_test** (32_keyval) — DONE. Ported `\xkvview` constructor with typewriter font, table counter, XKVVIEW_TRACKING.
 - [ ] **2. eqnums_test** (50_structure) — >100 errors. Regression from amsmath changes. Debug: equation numbering (`\eqref`, `\tag`) in structure context.
 - [ ] **3. algx_test** (53_alignment) — 100 diffs. algorithmicx ported but `\csname` expansion errors in nested `\ALG@bl@...` macros. Fix `\csname`/`\edef` in gullet.rs.
 - [ ] **4. figures_test** (50_structure) — needs `\@captype` and float figure infrastructure stubs.
 - [ ] **5. floatnames_test** (50_structure) — needs `\newfloat` / `\DeclareFloatingEnvironment`. Port float.sty binding.
-- [ ] **6. filelist_test** (50_structure) — needs `\listfiles`, `\@filelist` infrastructure.
-- [ ] **7. options_test** (50_structure) — needs test-local `apackage.sty.ltxml` + `aclass.cls.ltxml` stubs in latexml_contrib.
+- [x] **6. filelist_test** (50_structure) — DONE. Fixed `\@filelist` init to `\@gobble` (matching latex.ltx), added `\@addtofilelist` in `input_definitions`, added `RequirePackage!("textcomp")` to latex.rs engine.
+- [x] **7. options_test** (50_structure) — DONE. Created myclass.cls + apackage.sty Rust bindings in latexml_contrib.
 
 ### Tier 2: Font system improvements (unlocks 2–6 font tests)
 
