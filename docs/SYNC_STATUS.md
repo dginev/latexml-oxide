@@ -224,11 +224,11 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-14)
+## Test Suite Status (2026-03-15)
 
-**Current totals: 214 pass, 0 fail, 47 ignored test functions (updated 2026-03-15)**
+**Current totals: 214 pass, 0 fail, 65 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 82% of Perl test cases passing (214/261)**
+**Coverage: 77% pass rate (214/279 non-permanent-ignore tests)**
 
 | Suite | Pass | Ignored | Notes |
 |-------|------|---------|-------|
@@ -240,32 +240,26 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 10_expansion | 36 | 0 | |
 | 12_grouping | 2 | 0 | |
 | 20_digestion | 10 | 0 | |
-| 22_fonts | 17 | 6 | fonts, plainfonts, ding, stmaryrd, abxtest, sizes |
+| 22_fonts | 17 | 6 | fonts(156), plainfonts(66), sizes(393), ding(371), abxtest(crash), stmaryrd(1449) |
 | 30_encoding | 26 | 0 | |
-| 32_keyval | 8 | 0 | xkeyvalview now passing |
+| 32_keyval | 8 | 0 | |
 | 33_keyval_options | 11 | 0 | |
-| 40_math | 0 | 1 | math parser deferred |
-| 50_structure | 31 | 11 | package bindings needed |
+| 40_math | 0 | 1 | batch 149 diffs (math parser) |
+| 50_structure | 31 | 5 | eqnums(598), enum(543), figure_grids(331), amsarticle(898), ieee(979) |
 | 52_namespace | 0 | 5 | DTD not supported (permanent) |
-| 53_alignment | 18 | 11 | crashes + math parser |
-| 55_theorem | 4 | 1 | ntheorem (math parser) |
-| 56_ams | 2 | 5 | afterConstruct rearrangement |
-| 65_graphics | 5 | 4 | package bindings + xcolor |
-| 70_parse | 0 | 1 | math parser regression |
+| 53_alignment | 18 | 11 | cells(overflow), colortbls(crash), supertabular(629), algx(163), plainmath(351), split(2228), badeqnarray(507), eqnarray(1176), diagbox(timeout), ncases(timeout), vmode(segfault) |
+| 55_theorem | 4 | 1 | ntheorem(1479) |
+| 56_ams | 2 | 5 | amsdisplay(963), matrix(187), sideset(488), cd(crash), mathtools(crash) |
+| 65_graphics | 5 | 4 | graphrot(596), picture(3125), xcolors(447), xytest(crash) |
+| 70_parse | 0 | 1 | batch 120 diffs |
 | 700_unit_parse | 3 | 0 | |
-| 80_complex | 8 | 8 | labelled, tcilatex_minimal, hypertest newly passing |
-| 81_babel | 0 | 1 | memory leak |
-
-### Perl-only tests (not yet copied to Rust)
-
-| Suite | Perl-only tests | Notes |
-|-------|----------------|-------|
-| graphics | xytest | 1 missing .tex/.xml |
-| keyval | keyvalemptyvalue | 1 missing .tex/.xml |
-| moderncv | orc | 1 missing .tex/.xml |
-| complex | 15 tests | .tex/.xml not copied; 4 Perl-new (no .xml in Perl either) |
-| pgf | 2 tests | Entirely unported suite |
-| tikz | 10 tests | Entirely unported suite |
+| 80_complex | 8 | 8 | deluxetable(35), aliceblog(144), cleveref(302), mixed_content(1142), physics(5417), si(9024), acm_aria(timeout), revtex(missing) |
+| 81_babel | 0 | 1 | memory leak timeout |
+| 82_moderncv | 0 | 2 | needs moderncv.cls binding |
+| 83_expl3 | 0 | 2 | needs \ExplSyntaxOn |
+| 84_slides | 0 | 2 | needs beamer.cls/slides.cls |
+| 85_pgf | 0 | 2 | needs pgf.sty |
+| 86_tikz | 0 | 10 | needs tikz.sty |
 
 ### Perl-only test infrastructure (not applicable to Rust)
 - `00_unittest.t` — Perl module unit tests (Perl-specific)
@@ -285,110 +279,108 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 ## Work Plan — Ordered TODO List
 
-Follow this list in order. Work on the first unchecked `[ ]` item. Only investigate what to do next when all items are clearly completed.
+Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-### Tier 1: Small fixes to un-ignore existing tests (1–2 tests each)
+**Status (2026-03-15):** 214 pass, 0 fail, 65 ignored (77% pass rate). Full diff scan below.
 
-- [x] **1. xkeyvalview_test** (32_keyval) — DONE. Ported `\xkvview` constructor with typewriter font, table counter, XKVVIEW_TRACKING.
-- [ ] **2. eqnums_test** (50_structure) — 362 diffs. BLOCKED: needs MathFork infrastructure (afterConstruct rearrangement).
-- [ ] **3. algx_test** (53_alignment) — 141 diffs. csname errors FIXED (optional parameter bug). Remaining: math parser XMDual + algorithmic line number fontsize.
-- [x] **4. figures_test** (50_structure) — DONE. Ported subfigure.sty font options (DeclareOption handlers).
-- [x] **5. floatnames_test** (50_structure) — DONE. Ported `\newfloat` (float.sty) and `\DeclareFloatingEnvironment` (newfloat.sty) with full float environment creation, beforeFloat/afterFloat, addFloatFrames.
-- [x] **6. filelist_test** (50_structure) — DONE. Fixed `\@filelist` init to `\@gobble` (matching latex.ltx), added `\@addtofilelist` in `input_definitions`, added `RequirePackage!("textcomp")` to latex.rs engine.
-- [x] **7. options_test** (50_structure) — DONE. Created myclass.cls + apackage.sty Rust bindings in latexml_contrib.
+### Completed items
 
-### Tier 2: Font system improvements (unlocks 2–6 font tests)
+- [x] **1. xkeyvalview_test** (32_keyval) — DONE. Ported `\xkvview` constructor.
+- [x] **4. figures_test** (50_structure) — DONE. Ported subfigure.sty font options.
+- [x] **5. floatnames_test** (50_structure) — DONE. Ported float.sty/newfloat.sty.
+- [x] **6. filelist_test** (50_structure) — DONE. Fixed `\@filelist` init.
+- [x] **7. options_test** (50_structure) — DONE. Created myclass.cls + apackage.sty.
+- [x] **14. paralists_test** (50_structure) — DONE. `set_enumeration_style`/`set_itemization_style`.
+- [x] **15. subcaption_test** (50_structure) — DONE. Ported subcaption.sty.
+- [x] **17. natbib_test** (50_structure) — DONE. Full natbib.sty port.
+- [x] **19. csquotes_test** (50_structure) — DONE. Ported csquotes.sty.
+- [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty.
+- [x] **21. ieee_test** (50_structure) — DONE. Ported IEEEtran.cls (979 diffs remain — math parser).
+- [x] **22. acro_test** (50_structure) — DONE. Ported acronym.sty.
+- [x] **23. glossary_test** (50_structure) — DONE. Ported glossaries.sty.
+- [x] **24. bibsect_test** (50_structure) — DONE. Ported bibunits.sty.
+- [x] **24b. crazybib_test** (50_structure) — DONE. `\bibsection` parsing.
+- [x] **26. colortbls_test** (53_alignment) — DONE. Ported colortbl.sty (still needs dcolumn/hhline).
+- [x] **57–61. Test suite sync** — DONE. Copied pgf (2), tikz (10), moderncv/orc, expl3 (2), slides (2). All 18 new tests ignored.
 
-- [ ] **8. fonts_test + plainfonts_test** (22_fonts) — fonts: 177 diffs (delimited-[] math parser + `\rm`/`\bf` tex attr). plainfonts: 72 diffs (`\the\fontCS` returns 0, fontsize not propagated, `\meaning` after hyphenchar assignment). Per-font `\hyphenchar` + `\defaulthyphenchar` init FIXED.
-- [ ] **9. sizes_test** (22_fonts) — 377+ diffs. Font size from `\font` definitions not propagated to Font struct. `\font\myfont=cmr10 at 5pt` → `fontsize="50%"`.
-- [ ] **10. ding_test** (22_fonts) — pifont.sty + pzd font map DONE. 877 diffs from enumerate nesting + table structure issues.
-- [ ] **11. abxtest_test** (22_fonts) — needs `\hexnumber@`, `\mathxfam` (font allocation macros).
-- [ ] **12. stmaryrd_test** (22_fonts) — needs stmaryrd.sty binding (font symbol map, same pattern as esint/marvosym).
+### Tier 1: Actionable items (no infrastructure blockers)
 
-### Tier 3: Package bindings for structure tests (unlocks 1–3 tests each)
+- [ ] **8. fonts_test** (22_fonts) — 156 diffs. Math font map character lookup for `\cal`/`\it` in math mode. `\fontname` returns placeholder.
+- [ ] **8b. plainfonts_test** (22_fonts) — 66 diffs. Same font map issues + `\fontname` + cmsy10 glyph mapping.
+- [ ] **9. sizes_test** (22_fonts) — 393 diffs. Font size from `\font` definitions not propagated.
+- [ ] **10. ding_test** (22_fonts) — 371 diffs. Enumerate nesting + table structure.
+- [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
+- [ ] **13. enum_test** (50_structure) — 543 diffs. Port enumitem.sty binding.
+- [ ] **16. figure_grids_test** (50_structure) — 331 diffs. Needs graphicx figure grid support.
+- [ ] **18. amsarticle_test** (50_structure) — 898 diffs. Port amsart.cls binding.
+- [ ] **25. cells_test** (53_alignment) — STACK OVERFLOW. Debug recursive state lookup.
+- [ ] **27. supertabular_test** (53_alignment) — 629 diffs + crash. Port supertabular.sty.
+- [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
+- [ ] **37. xcolors_test** (65_graphics) — 447 diffs. Complete xcolor port.
 
-- [ ] **13. enum_test** (50_structure) — port enumitem.sty binding (custom list environments).
-- [x] **14. paralists_test** (50_structure) — DONE. Added `set_enumeration_style`/`set_itemization_style`, `afterDigestBegin` hooks, conditional stock enum/itemize redefinition.
-- [x] **15. subcaption_test** (50_structure) — DONE. Ported subcaption.sty with beforeFloat/afterFloat preincrement, collapseFloat, \format@title@subfigure. Fixed rescue_caption_counters false-value pollution.
-- [ ] **16. figure_grids_test** (50_structure) — needs graphicx figure grid support.
-- [x] **17. natbib_test** (50_structure) — DONE. Full natbib.sty port: citation styles (authoryear/numbers/super), \cite/\citet/\citep/\citealt/\citealp/\citeauthor/\citeyear/\citeyearpar, \bibpunct, \setcitestyle, \bibstyle@* dispatchers, \NAT@wrout/\NAT@@wrout tag generation, \lx@NAT@parselabel bibitem parsing. Fixed Invocation! arg-shifting for None required params.
-- [ ] **18. amsarticle_test** (50_structure) — port amsart.cls binding.
-- [x] **19. csquotes_test** (50_structure) — DONE. Ported csquotes.sty binding (RawTeX overrides + DefConstructor markers). Fixed DefEnvironment `\FOO` constructor missing bgroup/begin_mode hooks.
-- [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty + inst_support.sty bindings.
-- [x] **21. ieee_test** (50_structure) — DONE. Ported IEEEtran.cls binding (conditionals, keywords/proof/biography environments, IEEEeqnarray redirect, L/C/R columns, list overrides). 979 diffs remain (math parser MathFork/MathBranch).
-- [x] **22. acro_test** (50_structure) — DONE. Ported acronym.sty binding + addIndexPhraseKey afterClose hook.
-- [x] **23. glossary_test** (50_structure) — DONE. Implemented glossaries.sty binding with \newglossaryentry, \longnewglossaryentry, \newacronym (state-stored entries), \gls/\Gls/\glspl/\Glspl/\glssymbol (runtime macros with first-use tracking), \printglossary/\printnoidxglossaries.
-- [x] **24. bibsect_test** (50_structure) — DONE. Ported \lx@bibliography, \bibstyle constructors, bibunits.sty binding.
-- [x] **24b. crazybib_test** (50_structure) — DONE. Implemented `\bibsection` parsing in `begin_bibliography_clean`: deciphers sectional unit from expansion tokens, updates BACKMATTER_ELEMENT mapping, extracts custom title.
+### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
 
-### Tier 4: Alignment crashes and diffs (unlocks 3–8 tests)
+- [ ] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. ~200 lines Perl. Unlocks items 2, 3, 28, 30–32.
+- [ ] **2. eqnums_test** (50_structure) — 598 diffs. BLOCKED: needs afterConstruct MathFork.
+- [ ] **3. algx_test** (53_alignment) — 163 diffs. BLOCKED: needs math parser XMDual + fontsize.
+- [ ] **28. badeqnarray_test** (53_alignment) — 507 diffs. BLOCKED: needs afterConstruct.
+- [ ] **30. amsdisplay_test** (56_ams) — 963 diffs. BLOCKED: needs afterConstruct + `\text{}`.
+- [ ] **31. matrix_test** (56_ams) — 187 diffs. BLOCKED: needs afterConstruct + math parser.
+- [ ] **32. sideset_test** (56_ams) — 488 diffs. BLOCKED: needs afterConstruct.
 
-- [ ] **25. cells_test** (53_alignment) — stack overflow in state.rs. Debug recursive state lookup.
-- [x] **26. colortbls_test** (53_alignment) — DONE. Ported colortbl.sty binding. Still needs dcolumn.sty + hhline.sty + \newcolumntype for full test pass.
-- [ ] **27. supertabular_test** (53_alignment) — "alignment not active". Port supertabular.sty binding.
-- [ ] **28. badeqnarray_test** (53_alignment) — 306 diffs. Needs afterConstruct `rearrangeEqnarray`.
+### Tier 3: Needs package bindings (moderate effort)
 
-### Tier 5: AMS math + afterConstruct DOM rearrangement (unlocks 5–7 tests)
+- [ ] **12. stmaryrd_test** (22_fonts) — 1449 diffs. Port stmaryrd.sty (font symbol map).
+- [ ] **33. cd_test** (56_ams) — PANIC in math parser. Port amscd.sty.ltxml.
+- [ ] **34. mathtools_test** (56_ams) — TooManyErrors. Port mathtools.sty.
+- [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
+- [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
+- [ ] **39. cleveref_minimal_test** (80_complex) — 302 diffs. Port cleveref.sty.
+- [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
+- [ ] **41. aastex631_deluxetable_test** (80_complex) — 35 diffs. Port aastex631.cls binding.
+- [ ] **42. aliceblog_test** (80_complex) — 144 diffs. Port blog.cls binding.
 
-- [ ] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. ~200 lines Perl. Unlocks: amsdisplay, matrix, sideset, badeqnarray, split, eqnarray.
-- [ ] **30. amsdisplay_test** (56_ams) — needs afterConstruct + `\text{}` + math operators.
-- [ ] **31. matrix_test** (56_ams) — needs afterConstruct + math parser for XMDual wrapping.
-- [ ] **32. sideset_test** (56_ams) — needs afterConstruct.
-- [ ] **33. cd_test** (56_ams) — math parser panic in parse_rec. Port amscd.sty.ltxml.
-- [ ] **34. mathtools_test** (56_ams) — TooManyErrors. Port mathtools.sty binding.
+### Tier 4: Needs major infrastructure
 
-### Tier 6: Graphics + color (unlocks 4 tests)
+- [ ] **A. Port expl3 programming layer** — `\ExplSyntaxOn/Off`, `\cs_new:Npn`, `\tl_set:Nn`. Unlocks: beamer, fontspec, unicode-math, and many modern packages.
+  - [ ] expl3 tilde_tricks_test (83_expl3) — needs expl3
+  - [ ] expl3 xparse_test (83_expl3) — needs expl3
+  - [ ] beamer_test (84_slides) — needs beamer.cls + expl3
+  - [ ] slides_test (84_slides) — needs slides.cls
+- [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
+- [ ] **C. Port BibTeX.pool.ltxml** — bibliography infrastructure (~150 defs, ~9% ported).
+- [ ] **D. Port AmSTeX.pool.ltxml** — legacy AMS macros (~112 defs, ~30% ported).
 
-- [ ] **35. graphrot_test** (65_graphics) — TooManyErrors. `\begingroup` in `\csname..\endcsname`.
-- [ ] **36. picture_test** (65_graphics) — port picture environment (`\put`, `\line`, `\circle`, `\oval`). Port graphpap.sty.
-- [ ] **37. xcolors_test** (65_graphics) — ~600 diffs. Complete xcolor port (color expressions, testbox).
-- [ ] **38. xytest** (65_graphics) — port xy.sty binding.
+### Tier 5: Math parser tests (active research, Marpa grammar)
 
-### Tier 7: Complex integration tests (unlocks 8 tests)
+- [ ] **47. 40_math suite** (40_math) — 149 diffs across batch. Parser bugs vs intentional Marpa divergence.
+- [ ] **48. 70_parse suite** (70_parse) — 120 diffs across batch. Generate Rust-specific expected XMLs.
+- [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
+- [ ] **50. split_test** (53_alignment) — 2228 diffs. Amsmath split + math parser.
+- [ ] **51. eqnarray_test** (53_alignment) — 1176 diffs. afterConstruct + math parser.
+- [ ] **52. ntheorem_test** (55_theorem) — 1479 diffs. Math parser tree + eqnarray.
 
-- [ ] **39. cleveref_minimal_test** (80_complex) — 125 diffs. Port cleveref.sty binding.
-- [ ] **40. figure_mixed_content_test** (80_complex) — 875 diffs. Needs listings + figure + wrapfig.
-- [ ] **41. aastex_test** (80_complex) — port aastex631.cls binding.
-- [ ] **42. acm_aria_test** (80_complex) — port acmart.cls binding.
-- [ ] **43. aastex631_deluxetable_test** (80_complex) — port aastex.cls binding.
-- [ ] **44. aliceblog_test** (80_complex) — port blog.cls binding.
-- [ ] **45. physics_test** (80_complex) — port physics.sty binding.
-- [ ] **46. si_test** (80_complex) — port siunitx.sty binding.
+### Tier 6: Heavy package bindings (distant future)
 
-### Tier 8: Math parser tests (unlocks 1–28 tests, active research)
+- [ ] **43. acm_aria_test** (80_complex) — TIMEOUT. Port acmart.cls.
+- [ ] **44. physics_test** (80_complex) — 5417 diffs. Port physics.sty.
+- [ ] **45. si_test** (80_complex) — 9024 diffs. Port siunitx.sty.
+- [ ] **pgf suite** (85_pgf) — 2 tests. Port pgf.sty.
+- [ ] **tikz suite** (86_tikz) — 10 tests. Port tikz.sty (depends on pgf).
+- [ ] **moderncv suite** (82_moderncv) — 2 tests. Port moderncv.cls.
+- [ ] **revtex4_1_test** (80_complex) — needs revtex4-1.cls binding.
+- [ ] **tcilatex_test** (80_complex) — needs tcilatex support.
 
-- [ ] **47. 40_math suite** (40_math) — 14 tests. Enable and categorize: parser bugs vs intentional Marpa divergence.
-- [ ] **48. 70_parse suite** (70_parse) — 28 tests. Generate Rust-specific expected XMLs where Marpa diverges.
-- [ ] **49. plainmath_test** (53_alignment) — 382 diffs. Math parser XMDual structure.
-- [ ] **50. split_test** (53_alignment) — TooManyErrors. Amsmath split env + math parser.
-- [ ] **51. eqnarray_test** (53_alignment) — 2698 diffs. afterConstruct + math parser.
-- [ ] **52. ntheorem_test** (55_theorem) — 897 diffs. Math parser tree structure (873 diffs) + eqnarray (23 diffs).
+### Tier 7: Crashes and infinite loops (need deep debugging)
 
-### Tier 9: Infinite loops and timeouts (need deep debugging)
-
-- [ ] **53. diagboxtest_test** (53_alignment) — infinite loop in diagbox processing.
-- [ ] **54. ncases_test** (53_alignment) — infinite loop in ncases processing.
-- [ ] **55. vmode_test** (53_alignment) — infinite loop in vertical mode.
-- [ ] **56. babel_test** (81_babel) — unbounded memory leak. Port babel.sty + `.ldf` files.
-
-### Tier 10: New test suites from Perl (not yet copied)
-
-- [ ] **57. Copy + port pgf suite** (2 tests) — port pgf.sty binding.
-- [ ] **58. Copy + port tikz suite** (10 tests) — port tikz.sty binding (depends on pgf).
-- [ ] **59. Copy remaining complex tests** (15 tests) — copy .tex/.xml from Perl, port bindings.
-- [ ] **60. Port moderncv suite** (1 test) — port moderncv.cls binding.
-- [ ] **61. Copy keyvalemptyvalue** (1 test) — copy from Perl.
+- [ ] **53. diagboxtest_test** (53_alignment) — TIMEOUT: infinite loop in diagbox.
+- [ ] **54. ncases_test** (53_alignment) — TIMEOUT: infinite loop in ncases.
+- [ ] **55. vmode_test** (53_alignment) — SEGFAULT in vertical mode.
+- [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
 ### Permanent ignores (not counted)
 
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port. Permanently ignored.
-
-### Infrastructure prerequisites (not tied to specific tests)
-
-- [ ] **A. Port expl3 programming layer** — `\ExplSyntaxOn/Off`, `\cs_new:Npn`, `\tl_set:Nn`. Unlocks: soul, fontspec, unicode-math, beamer, and many modern packages.
-- [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
-- [ ] **C. Port BibTeX.pool.ltxml** — bibliography infrastructure (~150 defs, ~9% ported).
-- [ ] **D. Port AmSTeX.pool.ltxml** — legacy AMS macros (~112 defs, ~30% ported).
 
 ---
 
