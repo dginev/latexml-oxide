@@ -533,6 +533,11 @@ LoadDefinitions!({
     before_digest => {
       bgroup();
     },
+    after_construct => sub[document, _whatsit] {
+      if let Some(mut last) = document.get_node().get_last_child() {
+        rearrange_eqnarray(document, &mut last)?;
+      }
+    },
     mode => "restricted_horizontal",
     enter_horizontal => true);
   DefPrimitive!("\\end@eqnarray", {
@@ -571,3 +576,135 @@ LoadDefinitions!({
     document.generate_id(node, "m")?;
   });
 });
+
+/// Perl: rearrangeEqnarray (latex_constructs.pool.ltxml L2356-2445)
+/// Analyzes column patterns in eqnarray and rearranges into MathFork structures.
+fn rearrange_eqnarray(
+  document: &mut Document,
+  equationgroup: &mut Node,
+) -> Result<()> {
+  use crate::engine::base_xmath::{equationgroup_join_cols, equationgroup_join_rows};
+
+  struct EqRow {
+    node: Node,
+    cols: Vec<Node>,
+    has_l: bool,
+    has_m: bool,
+    has_r: bool,
+    numbered: bool,
+    _labelled: bool,
+  }
+
+  // Scan the equations (rows)
+  let mut rows: Vec<EqRow> = Vec::new();
+  let equation_nodes: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
+  for rownode in equation_nodes {
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&rownode));
+    let has_l = cells.get(0).map_or(false, |c| !c.get_child_nodes().is_empty());
+    let has_m = cells.get(1).map_or(false, |c| !c.get_child_nodes().is_empty());
+    let has_r = cells.get(2).map_or(false, |c| !c.get_child_nodes().is_empty());
+    let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
+    let labelled = rownode.get_attribute("label").is_some();
+    rows.push(EqRow {
+      node: rownode,
+      cols: cells,
+      has_l,
+      has_m,
+      has_r,
+      numbered,
+      _labelled: labelled,
+    });
+  }
+
+  let n_l = rows.iter().filter(|r| r.has_l).count();
+  let n_m = rows.iter().filter(|r| r.has_m).count();
+  let n_r = rows.iter().filter(|r| r.has_r).count();
+
+  // Only a single column was used
+  if (n_l > 0 && n_m == 0 && n_r == 0)
+    || (n_l == 0 && n_m > 0 && n_r == 0)
+    || (n_l == 0 && n_m == 0 && n_r > 0)
+  {
+    let keepcol = if n_l > 0 { 0 } else if n_m > 0 { 1 } else { 2 };
+    // Remove empty columns (in reverse order to preserve indices)
+    for c in (0..3).rev() {
+      if c == keepcol {
+        continue;
+      }
+      for row in rows.iter() {
+        if let Some(col) = row.cols.get(c) {
+          let mut col_clone = col.clone();
+          col_clone.unlink_node();
+        }
+      }
+    }
+    // Check if any column begins with a RELOP → join rows
+    let begins_with_relop = rows.iter().any(|row| {
+      row.cols.get(keepcol).and_then(|c| {
+        c.get_child_elements().into_iter().next().and_then(|first| {
+          first.get_attribute("role").map(|r| r == "RELOP")
+        })
+      }).unwrap_or(false)
+    });
+
+    if begins_with_relop {
+      let nodes: Vec<Node> = rows.into_iter().map(|r| r.node).collect();
+      equationgroup_join_rows(document, equationgroup, nodes)?;
+    } else {
+      for mut row in rows {
+        equationgroup_join_cols(document, 1, &mut row.node)?;
+      }
+    }
+    return Ok(());
+  }
+
+  // All 3 columns case — analyze continuation patterns
+  let mut eqs: Vec<Vec<Node>> = Vec::new();
+  let mut numbered = false;
+
+  for row in &rows {
+    let class;
+    if row.has_l {
+      class = "new";
+    } else if row.has_m {
+      if eqs.is_empty() {
+        class = "odd";
+      } else if numbered && row.numbered {
+        class = "new";
+      } else {
+        class = "continue";
+      }
+    } else if row.has_r {
+      if eqs.is_empty() {
+        class = "odd";
+      } else if numbered && row.numbered && row._labelled {
+        class = "odd";
+      } else {
+        class = "continue";
+      }
+    } else {
+      // All columns empty
+      class = "remove";
+    }
+
+    if class == "remove" {
+      let mut node = row.node.clone();
+      node.unlink_node();
+    } else if class == "new" || class == "odd" {
+      numbered = row.numbered;
+      eqs.push(vec![row.node.clone()]);
+    } else {
+      // "continue"
+      numbered |= row.numbered;
+      if let Some(last) = eqs.last_mut() {
+        last.push(row.node.clone());
+      }
+    }
+  }
+
+  // Now rearrange
+  for eqset in eqs {
+    equationgroup_join_rows(document, equationgroup, eqset)?;
+  }
+  Ok(())
+}
