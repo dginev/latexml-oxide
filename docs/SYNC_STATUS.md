@@ -226,7 +226,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 203 pass, 0 fail, 58 ignored test functions**
+**Current totals: 204 pass, 0 fail, 57 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 60% of Perl test cases passing**
 
@@ -314,7 +314,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [ ] **17. natbib_test** (50_structure) — port natbib.sty binding (author-year citations).
 - [ ] **18. amsarticle_test** (50_structure) — port amsart.cls binding.
 - [ ] **19. csquotes_test** (50_structure) — port csquotes.sty binding (context-sensitive quoting).
-- [ ] **20. svabstract_test** (50_structure) — port svjour.cls binding.
+- [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty + inst_support.sty bindings.
 - [ ] **21. ieee_test** (50_structure) — port IEEEtran.cls binding.
 - [ ] **22. acro_test** (50_structure) — port acronym.sty binding.
 - [ ] **23. glossary_test** (50_structure) — port glossaries.sty binding.

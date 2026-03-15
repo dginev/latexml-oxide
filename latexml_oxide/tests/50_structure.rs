@@ -3,7 +3,7 @@ use latexml::util::test::*;
 use std::rc::Rc;
 const DIR: &str = "tests/structure";
 
-// --- Currently passing tests (27) ---
+// --- Currently passing tests (28) ---
 
 #[test]
 fn abstract_test() {
@@ -229,7 +229,6 @@ fn subcaption_test() {
 }
 
 #[test]
-#[ignore] // needs svjour.cls binding
 fn svabstract_test() {
   latexml_test_single("tests/structure/svabstract.tex", "svabstract", DIR, None, None);
 }
