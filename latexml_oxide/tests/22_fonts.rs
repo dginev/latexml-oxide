@@ -121,7 +121,7 @@ fn abxtest_test() {
 }
 
 #[test]
-#[ignore] // 376 diffs — font size propagation from \font defs
+#[ignore]
 fn sizes_test() {
   latexml_test_single("tests/fonts/sizes.tex", "sizes", DIR, None, None);
 }

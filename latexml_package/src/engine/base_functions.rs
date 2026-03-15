@@ -599,13 +599,90 @@ pub fn decode_math_char_for_stomach(
 /// Perl: readBoxContents calls $stomach->beginMode($mode), then reads/digests tokens
 /// Predigest box contents by invoking T_BEGIN, which triggers
 /// the stomach's bgroup/egroup mechanism to properly handle the box body.
+///
+/// Perl's `List()` simplification (List.pm line 41-44):
+/// When a vertical-mode List has exactly one non-empty item and that item's mode
+/// is also vertical, return the item directly instead of wrapping in a List.
+/// This enables `is_vbox` property propagation for nested \vbox/\vtop.
 pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   let mut contents = stomach::invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
     Ok(None)
   } else {
-    Ok(Some(contents.remove(0)))
+    let item = contents.remove(0);
+    // Apply Perl's List() single-item simplification for vertical modes.
+    // In Perl, List(@boxes, mode=>'internal_vertical') returns the single box
+    // directly when @boxes has 1 element and the box's mode is also vertical.
+    // This is critical for nested \vbox/\vtop: the inner box's `is_vbox` property
+    // must be visible to the outer box's constructor.
+    Ok(Some(simplify_vertical_list(item)))
   }
+}
+
+/// Perl's List() single-item simplification for vertical modes.
+///
+/// Perl (List.pm line 41-44):
+/// ```perl
+/// if ((scalar(@boxes) == 1)
+///     && (!$mode || ($mode !~ /vertical$/)
+///         || (($boxes[0]->getProperty('mode')||'') =~ /vertical$/))) {
+///     return $boxes[0]; }   # Simplify!
+/// ```
+///
+/// When a List in vertical mode contains a single non-empty item whose mode is also
+/// vertical, return that item directly. This is critical for nested \vbox/\vtop:
+/// the inner \vbox Whatsit has `is_vbox = true` set by after_digest, and the outer
+/// \vtop constructor needs to see this property to skip double insertBlock wrapping.
+fn simplify_vertical_list(item: Digested) -> Digested {
+  // Only simplify if the item is a List
+  let is_vertical_list = match item.data() {
+    DigestedData::List(l) => {
+      let list = l.borrow();
+      // Check if the List's mode property indicates vertical
+      list.properties.get("mode")
+        .map(|m| m.to_string().ends_with("vertical"))
+        .unwrap_or(false)
+    },
+    _ => false,
+  };
+  if !is_vertical_list {
+    return item;
+  }
+
+  // Extract the List's boxes, filtering out empty marker items (isEmpty property)
+  let non_empty: Vec<Digested> = match item.data() {
+    DigestedData::List(l) => {
+      let list = l.borrow();
+      list.boxes.iter()
+        .filter(|b| !b.get_property_bool("isEmpty"))
+        .cloned()
+        .collect()
+    },
+    _ => unreachable!(),
+  };
+
+  // Perl simplification: single non-empty item whose mode is also vertical
+  if non_empty.len() == 1 {
+    let single = &non_empty[0];
+    let child_is_vertical = match single.data() {
+      DigestedData::List(l) => {
+        l.borrow().properties.get("mode")
+          .map(|m| m.to_string().ends_with("vertical"))
+          .unwrap_or(false)
+      },
+      DigestedData::Whatsit(w) => {
+        // Check whatsit's mode property (set by DefConstructor mode => "internal_vertical")
+        w.borrow().get_property("mode")
+          .map(|m| m.to_string().ends_with("vertical"))
+          .unwrap_or(false)
+      },
+      _ => false,
+    };
+    if child_is_vertical {
+      return non_empty.into_iter().next().unwrap();
+    }
+  }
+  item
 }
 
 /// Perl: revertSpec($whatsit, $keyword)
@@ -699,8 +776,7 @@ pub fn insert_block(
     context_tag = document::get_node_qname(&context);
   }
   let is_inline = is_svg || document::can_contain(&context, "#PCDATA");
-  let mut container_attr = block_attr.clone();
-  container_attr.insert("_vertical_mode_".to_string(), "true".to_string());
+  let container_attr = block_attr.clone();
   let mut container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
   document.absorb(contents, None)?;
 

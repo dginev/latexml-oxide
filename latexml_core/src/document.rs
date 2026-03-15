@@ -3035,7 +3035,8 @@ impl Document {
     // Copy ALL attributes from `node` to `newnode`
     let mut id = None;
     for (key, value) in node.get_attributes() {
-      if model::can_have_attribute(newname, arena::pin(&key)) {
+      let can_have = model::can_have_attribute(newname, arena::pin(&key));
+      if can_have {
         new.set_attribute(&key, &value)?;
       }
       if key == "xml:id" {
@@ -3056,7 +3057,8 @@ impl Document {
           self.open_text_internal(&child.get_content())?;
           self.close_text_internal()?;
         } else {
-          let mut point = self.find_insertion_point_qsym(get_node_qname(&child), None)?;
+          let child_qname = get_node_qname(&child);
+          let mut point = self.find_insertion_point_qsym(child_qname, None)?;
           point.add_child(&mut child)?;
         }
       }
