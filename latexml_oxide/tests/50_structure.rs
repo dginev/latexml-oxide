@@ -160,7 +160,6 @@ fn crazybib_test() {
 }
 
 #[test]
-#[ignore] // TooManyErrors — csname expansion errors with \not@math@alphabet@@
 fn csquotes_test() {
   latexml_test_single("tests/structure/csquotes.tex", "csquotes", DIR, None, None);
 }

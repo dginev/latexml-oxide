@@ -1188,21 +1188,33 @@ pub fn def_environment(
   install_definition(end_envname_constructor, options.scope);
 
   // For the uncommon case opened by \csname env\endcsname
+  // Perl Package.pm lines 1949-1969: \FOO gets the same hook pipeline as \begin{FOO}
+  let mut before_digest_bare: Vec<BeforeDigestClosure> = Vec::new();
+  before_digest_bare.push(before_digest_simple!({ bgroup(); }));
+  if let Some(ref bmode) = mode {
+    let bmode = bmode.clone();
+    before_digest_bare.push(before_digest_simple!({
+      begin_mode_opt(&bmode, true)?;
+    }));
+  }
+  let push_frame_bare = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
+    push_frame();
+    Ok(())
+  });
+  let pop_frame_bare = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
+    pop_frame()?;
+    Ok(())
+  });
   let name_constructor = Rc::new(Constructor {
     cs: T_CS!(s!("\\{}", &name)),
     paramlist,
     replacement: compiled_replacement,
-    // TODO: Perl Package.pm lines 1949-1969: \FOO has full hook pipeline
-    // (requireMath, forbidMath, enterHorizontal, leaveHorizontal, beginMode,
-    // font, beforeDigest, afterDigestBegin, afterDigestBody,
-    // beforeConstruct+pushFrame, afterConstruct+popFrame).
-    // Requires cloning closures from options earlier.
     nargs: options.nargs,
     capture_body: true,
     properties: options.properties.clone(),
-    // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
-    // (defined $sizer ? (sizer => $sizer) : ()),
-    // ), $options{scope});
+    before_digest: before_digest_bare,
+    before_construct: vec![push_frame_bare],
+    after_construct: vec![pop_frame_bare],
     ..Constructor::default()
   });
   install_definition(name_constructor, options.scope);

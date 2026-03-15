@@ -65,6 +65,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "fancyhdr.sty" => package::fancyhdr_sty::load_definitions(),
     "fullpage.sty" => package::fullpage_sty::load_definitions(),
     "comment.sty" => package::comment_sty::load_definitions(),
+    "csquotes.sty" => package::csquotes_sty::load_definitions(),
     "endnotes.sty" => package::endnotes_sty::load_definitions(),
     "enumitem.sty" => package::enumitem_sty::load_definitions(),
     "epigraph.sty" => package::epigraph_sty::load_definitions(),

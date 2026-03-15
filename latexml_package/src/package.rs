@@ -32,6 +32,7 @@ pub mod chngcntr_sty;
 pub mod cite_sty;
 pub mod color_sty;
 pub mod comment_sty;
+pub mod csquotes_sty;
 pub mod endnotes_sty;
 pub mod enumitem_sty;
 pub mod epigraph_sty;
