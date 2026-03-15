@@ -171,7 +171,7 @@ fn enum_test() {
 }
 
 #[test]
-#[ignore] // too many errors (>100) — regression
+#[ignore] // 362 diffs — needs MathFork infrastructure (afterConstruct rearrangement)
 fn eqnums_test() {
   latexml_test_single("tests/structure/eqnums.tex", "eqnums", DIR, None, None);
 }

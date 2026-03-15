@@ -74,6 +74,20 @@ LoadDefinitions!({
         }
       }
     }
+    // Perl: $$props{hyphenchar} = LookupRegister('\defaulthyphenchar')
+    // Perl: $$props{skewchar} = LookupRegister('\defaultskewchar')
+    let default_hyphen = lookup_int("\\defaulthyphenchar");
+    state::assign_value(
+      &s!("hyphenchar_{cs_str}"),
+      Stored::Number(Number::new(default_hyphen as i64)),
+      None,
+    );
+    let default_skew = lookup_int("\\defaultskewchar");
+    state::assign_value(
+      &s!("skewchar_{cs_str}"),
+      Stored::Number(Number::new(default_skew as i64)),
+      None,
+    );
     // Perl: installDefinition(FontDef->new($cs, $key))
     // When the font switch CS is invoked, set current_FontDef so \fontname\font works
     let cs_for_fontdef = cs.clone();

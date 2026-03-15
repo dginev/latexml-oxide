@@ -42,8 +42,26 @@ LoadDefinitions!({
   // must appear after the last hyphen in an hyphenated word. \uchyph           pi prevents
   // hyphenation of uppercase words unless this is positive.
 
-  // TODO: update getter and setter
-  DefRegister!("\\hyphenchar FontToken", Number::new(b'-' as i64));
+  // Perl: getter looks up $$fontinfo{hyphenchar}, setter stores in fontinfo
+  DefRegister!("\\hyphenchar FontToken", Number::new(b'-' as i64),
+    getter => sub[args] {
+      let font_token = args.remove(0).expected_token();
+      let cs_str = font_token.to_string();
+      match state::lookup_value(&s!("hyphenchar_{cs_str}")) {
+        Some(Stored::Number(n)) => n,
+        _ => Number::new(b'-' as i64),
+      }
+    },
+    setter => sub[value, _scope, args] {
+      let font_token = args.remove(0).expected_token();
+      let cs_str = font_token.to_string();
+      state::assign_value(
+        &s!("hyphenchar_{cs_str}"),
+        Stored::Number(value.into()),
+        None,
+      );
+    }
+  );
   DefRegister!("\\defaulthyphenchar", Number!(45));
   DefRegister!("\\lefthyphenmin", Number!(0));
   DefRegister!("\\righthyphenmin", Number!(0));
