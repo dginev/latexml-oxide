@@ -170,11 +170,19 @@ LoadDefinitions!({
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
   DefConstructor!("\\@framebox[Dimension][]{}",
-    "<ltx:text ?#width(width='#width') framed='rectangle' _noautoclose='1'>#3</ltx:text>",
+    "<ltx:text ?#width(width='#width') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>",
     alias => "\\framebox",
     mode => "text", bounded => true,
     before_digest => {
       reenter_text_mode(false); },
+    properties => sub[_args] {
+      // Perl: framecolor => LookupValue('font')->getColor
+      let framecolor = lookup_font()
+        .and_then(|f| f.get_color().cloned())
+        .map(|c| c.to_attribute())
+        .unwrap_or_else(|| s!("#000000"));
+      Ok(stored_map!("framecolor" => framecolor))
+    },
     after_construct => sub[document, _whatsit] {
       // Perl afterConstruct: if the <ltx:text> has a single non-text child
       // that can have 'framed', unwrap the text and copy attributes to the child.

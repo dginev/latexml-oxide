@@ -378,6 +378,11 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **55. vmode_test** (53_alignment) — SEGFAULT in vertical mode.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
+### Overarching projects
+
+- [ ] **E. Translate ALL Perl binding files** — Every `.sty.ltxml`, `.tex.ltxml`, `.cls.ltxml`, `.def.ltxml` in `LaTeXML/lib/LaTeXML/Package/` must have a corresponding `_sty.rs`, `_tex.rs`, `_cls.rs`, `_def.rs` in the Rust codebase. No file should be missed. This is the full package binding parity goal.
+- [ ] **F. Port Post-processing pipeline** — Translate `LaTeXML/lib/LaTeXML/Post/` to Rust. Copy XSLT and CSS from Perl and use them exactly as-is. This includes `LaTeXML::Post::MathML`, `LaTeXML::Post::OpenMath`, `LaTeXML::Post::CrossRef`, `LaTeXML::Post::MakeBibliography`, etc.
+
 ### Permanent ignores (not counted)
 
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port. Permanently ignored.

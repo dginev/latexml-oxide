@@ -84,8 +84,16 @@ fn begin_enum_itemize(
   // Build BeginItemizeOptions from the merged hash
   let mut opts = BeginItemizeOptions::default();
   if let Some(aw) = hash.get("start") {
-    if let ArgWrap::Number(n) = aw {
-      opts.start = Some(*n);
+    match aw {
+      ArgWrap::Number(n) => { opts.start = Some(*n); },
+      ArgWrap::Tokens(toks) => {
+        // start may arrive as a token string "12", parse it
+        let s = toks.to_string().trim().to_string();
+        if let Ok(n) = s.parse::<i64>() {
+          opts.start = Some(Number(n));
+        }
+      },
+      _ => {},
     }
   }
   if let Some(series_toks) = hash.get("series").and_then(argwrap_to_tokens) {

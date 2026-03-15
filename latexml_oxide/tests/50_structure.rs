@@ -165,7 +165,6 @@ fn csquotes_test() {
 }
 
 #[test]
-#[ignore] // 537 diffs — needs enumitem features
 fn enum_test() {
   latexml_test_single("tests/structure/enum.tex", "enum", DIR, None, None);
 }

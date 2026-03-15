@@ -805,11 +805,11 @@ pub fn begin_itemize(
     None => options.resume_star,
   } {
     if s != "noseries" {
-      series = s;
-      // TODO:
-      // SetCounter!(usecounter,
-      //   lookup_int(&s!("enumitem_series_{}_last",series)),
-      //   state);
+      series = s.clone();
+      let last_val = lookup_int(&s!("enumitem_series_{s}_last"));
+      if last_val != 0 {
+        SetCounter!(usecounter, Number(last_val));
+      }
     }
   } else {
     reset_counter(&T_OTHER!(&usecounter))?;
