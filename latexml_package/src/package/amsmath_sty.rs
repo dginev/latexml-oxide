@@ -210,6 +210,16 @@ LoadDefinitions!({
   DefMacro!("\\matrix@check{}", None);
 
   //======================================================================
+  // Perl: amsmath.sty.ltxml lines 687-721 — cases environments
+  DefMacro!("\\lx@ams@cases{}",
+    "\\lx@gen@cases@bindings{#1}\\lx@ams@cr@binding\\lx@ams@cases@{#1}\\lx@begin@alignment");
+  DefMacro!("\\lx@end@ams@cases",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\lx@end@gen@cases");
+
+  DefMacro!("\\cases",    "\\lx@ams@cases{name=cases,meaning=cases,left=\\lx@left\\{}");
+  DefMacro!("\\endcases", "\\lx@end@ams@cases");
+
+  //======================================================================
   // Section 4.2 Math spacing commands
   // \, == \thinspace
   // \: == \medspace
