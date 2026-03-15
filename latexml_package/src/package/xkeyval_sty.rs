@@ -802,26 +802,26 @@ LoadDefinitions!({
   //
   RawTeX!(r"\newtoks\XKV@tempa@toks");
   RawTeX!(concat!(
-    r"\long\def\XKV@for@n#1#2#3{%",
-    r"\XKV@tempa@toks{#1}\edef#2{\the\XKV@tempa@toks}%",
-    r"\ifx#2\@empty",
-    r"\XKV@for@break",
-    r"\else",
-    r"\expandafter\XKV@f@r",
-    r"\fi",
-    r"#2{#3}#1,\@nil,%",
-    r"}"
+    "\\long\\def\\XKV@for@n#1#2#3{%\n",
+    "\\XKV@tempa@toks{#1}\\edef#2{\\the\\XKV@tempa@toks}%\n",
+    "\\ifx#2\\@empty\n",
+    "\\XKV@for@break\n",
+    "\\else\n",
+    "\\expandafter\\XKV@f@r\n",
+    "\\fi\n",
+    "#2{#3}#1,\\@nil,%\n",
+    "}"
   ));
   RawTeX!(concat!(
-    r"\long\def\XKV@f@r#1#2#3,{%",
-    r"\XKV@tempa@toks{#3}\edef#1{\the\XKV@tempa@toks}%",
-    r"\ifx#1\@nnil",
-    r"\expandafter\@gobbletwo",
-    r"\else",
-    r"#2\expandafter\XKV@f@r",
-    r"\fi",
-    r"#1{#2}%",
-    r"}"
+    "\\long\\def\\XKV@f@r#1#2#3,{%\n",
+    "\\XKV@tempa@toks{#3}\\edef#1{\\the\\XKV@tempa@toks}%\n",
+    "\\ifx#1\\@nnil\n",
+    "\\expandafter\\@gobbletwo\n",
+    "\\else\n",
+    "#2\\expandafter\\XKV@f@r\n",
+    "\\fi\n",
+    "#1{#2}%\n",
+    "}"
   ));
   RawTeX!(r"\long\def\XKV@for@break #1\@nil,{\fi}");
 });
