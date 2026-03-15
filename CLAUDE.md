@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
+
 ## Project Overview
 
 latexml-oxide is a Rust port of [LaTeXML](https://github.com/brucemiller/latexml), a Perl tool that converts LaTeX documents into accessible web documents (HTML/XML).
@@ -123,3 +125,7 @@ git config --local core.hooksPath .githooks/
 ## CI
 
 GitHub Actions runs on push/PR: installs system deps, uses Rust nightly, runs `cargo test`.
+
+---
+
+> **Reminder:** This is a faithful Perl-to-Rust translation. When porting any Perl code, preserve the original semantics, control flow, edge cases, and naming conventions. Read the Perl source first, translate precisely, and only diverge when documented in `docs/OXIDIZED_DESIGN.md`.

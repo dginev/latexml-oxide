@@ -1,5 +1,7 @@
 # Engine Sync Status: Perl vs Rust
 
+> **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
+
 Updated 2026-03-14 (night). Only lists open gaps & TODOs; completed items live in git history.
 
 ## Legend
@@ -386,3 +388,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
 - [ ] **C. Port BibTeX.pool.ltxml** — bibliography infrastructure (~150 defs, ~9% ported).
 - [ ] **D. Port AmSTeX.pool.ltxml** — legacy AMS macros (~112 defs, ~30% ported).
+
+---
+
+> **Reminder:** Every entry ported from Perl must follow tightly the original semantics and nuances. Read the Perl source, translate precisely, preserve edge cases. The Perl code is the ground truth.
