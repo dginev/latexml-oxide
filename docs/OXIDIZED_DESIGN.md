@@ -33,6 +33,13 @@ internal contributors resuming work.
   pairs) is the ground truth. Every passing test in the Perl suite is a target for the
   Rust port.
 
+- **Curated Rust types and binding layer.** The current Rust types and the binding layer
+  (the `DefMacro!`/`DefPrimitive!`/`DefConstructor!`/`DefEnvironment!` macro system) have
+  been thoughtfully curated. Follow their patterns and levels of abstraction when adding
+  new code. Traits will often need to be extended with new implementations, and sometimes
+  new traits may be useful to introduce — consider that when the existing abstractions
+  don't quite fit.
+
 ---
 
 ## Architecture
