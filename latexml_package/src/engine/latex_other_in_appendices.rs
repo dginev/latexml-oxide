@@ -401,6 +401,13 @@ LoadDefinitions!({
      "
   );
   DefPrimitive!("\\@setsize{}{}{}{}", None);
+  DefMacro!("\\hexnumber@ {}", "\\ifcase\\number#1
+ 0\\or 1\\or 2\\or 3\\or 4\\or 5\\or 6\\or 7\\or 8\\or
+ 9\\or A\\or B\\or C\\or D\\or E\\or F\\fi");
+  DefMacro!("\\on@line", " on input line \\the\\inputlineno");
+  // Perl: latex.ltx \@latexbug — defined as a no-op marker that packages
+  // (e.g. mathabx.dcl) use to detect LaTeX vs plain TeX context
+  DefMacro!("\\@latexbug", "");
   Let!("\\@warning", "\\@latex@warning");
   Let!("\\@@warning", "\\@latex@warning@no@line");
   DefMacro!("\\G@refundefinedtrue", None);
