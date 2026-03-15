@@ -142,7 +142,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 3. **`LoadFormat` machinery** — Not ported; plain/latex bootstrap loaded inline.
 4. **Font `computeBoxesSize`** — Single-pass only; missing word/line/stack decomposition.
 5. **`DEFSIZE`** — Static 10.0; Perl reads `NOMINAL_FONT_SIZE` from state.
-6. **`.ltxml` file search** — Commented out in `content.rs` (line 946-959). Perl searches for `.ltxml` files in search paths; Rust only searches for raw `.sty`/`.tex` files. Blocks loading test-local package bindings.
+6. **`.ltxml` file search** — NOT APPLICABLE. Rust compiles all package bindings at build time. Every Perl `.sty.ltxml` must be translated to a Rust `_sty.rs` file. No runtime `.ltxml` loading possible. For external packages, use `latexml_contrib` crate.
 
 ---
 
@@ -210,7 +210,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 |---------|--------|-------|
 | calc.sty | OK | Full expression parser: +,-,*,/, \real, \ratio, \minof, \maxof, \widthof/heightof/depthof/totalheightof. RegisterValue smaller/larger preserve type variant. |
 | report.cls | OK | Faithful port of Perl report.cls.ltxml (identical to book.cls except CSS resource). |
-| amsmath.sty | GAPS | ~55% ported: spacing, \overunderset, \lvert/rvert/lVert/rVert, \notag, \tag, \tfrac/\dfrac, \xrightarrow/\xleftarrow, over/under arrows, alignment infrastructure (`ams_rearrangeable_bindings`, `ams_gather_bindings`, `ams_align_bindings`, `ams_aligned_bindings`), environment macros for {gather}/{gather*}/{align}/{align*}/{flalign}/{flalign*}/{alignat}/{alignat*}/{multline}/{multline*}/{split}/{gathered}/{aligned}/{alignedat}, `\@ams@intertext{}` constructor, `\lx@ams@cr@binding` primitive. Missing: afterConstruct DOM rearrangement (`rearrangeAMSAlign`/`rearrangeAMSGather`), `\text{}`, operators, `{subequations}`. |
+| amsmath.sty | GAPS | ~65% ported: spacing, \overunderset, \lvert/rvert/lVert/rVert, \notag, \tag, \tfrac/\dfrac, \xrightarrow/\xleftarrow, over/under arrows, alignment infrastructure (`ams_rearrangeable_bindings`, `ams_gather_bindings`, `ams_align_bindings`, `ams_aligned_bindings`), environment macros for {gather}/{gather*}/{align}/{align*}/{flalign}/{flalign*}/{alignat}/{alignat*}/{multline}/{multline*}/{split}/{gathered}/{aligned}/{alignedat}, `\@ams@intertext{}` constructor, `\lx@ams@cr@binding` primitive, **matrix environments** (`\lx@gen@matrix@bindings`, `\lx@gen@plain@matrix@`, `\lx@ams@matrix@`, all named matrix envs + subarray/substack). Missing: afterConstruct DOM rearrangement (`rearrangeAMSAlign`/`rearrangeAMSGather`), `\text{}`, operators, `{subequations}`. |
 | appendix.sty | OK | Core environments: appendices, subappendices, conditional switches. |
 | multicol.sty | OK | Full port: multicols/multicols* environments, registers, stubs. |
 | booktabs.sty | OK | Full port: toprule/midrule/bottomrule/cmidrule/specialrule, registers. |
@@ -224,7 +224,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 188 pass, 0 fail, 54 ignored test functions**
+**Current totals: 199 pass, 0 fail, 43 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 60% of Perl test cases passing**
 
@@ -302,11 +302,9 @@ These are foundational fixes that unblock large batches of tests across multiple
 **Effort:** Medium — systematic macro definitions, well-understood keyval semantics.
 **Yield:** +17 tests
 
-#### 1B. Port local .sty.ltxml loading — unlocks keyvalstyle + structure .todo tests
-**Root cause:** Tests with custom `.sty.ltxml` files in the test directory can't load them because the package loader only searches compiled-in packages.
-**Work:** Add test-directory search path to `FindFile`/`RequirePackage`. When processing `\usepackage{foo}`, also check the directory of the `.tex` file being processed for `foo.sty.ltxml`.
-**Effort:** Small — pathname.rs + package loader change.
-**Yield:** Unlocks keyvalstyle_test + many structure tests that use custom class files.
+#### 1B. ~~Port local .sty.ltxml loading~~ NOT APPLICABLE
+**Note:** Runtime `.sty.ltxml` loading is **not possible in Rust**. Perl interprets `.ltxml` files at runtime, but Rust compiles all package bindings at build time (`*_sty.rs` files). Every Perl `.sty.ltxml` must be translated to a Rust `_sty.rs` file in either `latexml_package` or `latexml_contrib`. For external/user-contributed additions, use `latexml_contrib` crate.
+**For tests with custom `.sty.ltxml`:** Must port each test-local `.sty.ltxml` to a Rust binding registered in `latexml_contrib`.
 
 #### 1C. Port missing structure packages — unlocks 18 .todo tests
 **Blocked tests:** acro, amsarticle, bibsect, crazybib, csquotes, enum, eqnums, figure_grids, figures, filelist, floatnames, glossary, IEEE, natbib, options, paralists, subcaption, svabstract
@@ -479,7 +477,7 @@ Namespace tests (ns1–ns5) permanently ignored. xii.tex converted to use standa
 expl3 ──→ soul, wasysym, cancels, mathcolor, fontspec, beamer
 color.sty ──→ xcolor ──→ tikz, beamer, colortbl, ntheorem backgrounds
 alignment engine ──→ eqnarray ──→ ntheorem, amsmath {align}
-local .ltxml loading ──→ keyvalstyle, structure .todo tests
+latexml_contrib bindings ──→ keyvalstyle, structure .todo tests (each test-local .sty.ltxml → _sty.rs)
 ```
 
 ### Ignored Tests — Ranked Priority (fewest diffs → most diffs)
@@ -525,5 +523,5 @@ Surveyed 2026-03-14 evening. Tests marked ~~struck~~ have been un-ignored and pa
 6. Port xkeyvalview `\xkvview` command (9 diffs — needs key metadata table generation)
 7. ~~Port tabbing environment~~ DONE — tabbing_test passes (0 diffs)
 8. Complete Document.pm audit (10-part sub-audit in progress)
-9. Implement local .sty.ltxml loading from test directories
+9. ~~Implement local .sty.ltxml loading~~ NOT APPLICABLE — port test-local `.sty.ltxml` files to Rust bindings instead
 10. Port color.sty.ltxml (unlocks graphics + downstream)
