@@ -45,14 +45,16 @@ pub fn after_float(whatsit: &mut Whatsit) {
 }
 
 /// Simplified version of Perl's arrange_panels_and_breaks().
-/// When a figure/table/float has 2+ child figure elements (panels),
+/// When a figure/table/float has 2+ child figure/table/float elements (panels),
 /// add the ltx_figure_panel class to each panel.
 fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Result<()> {
   let figure_qname = arena::pin_static("ltx:figure");
+  let table_qname = arena::pin_static("ltx:table");
+  let float_qname = arena::pin_static("ltx:float");
   let mut panels: Vec<libxml::tree::Node> = Vec::new();
   for child in node.get_child_elements() {
     let qname = latexml_core::document::get_node_qname(&child);
-    if qname == figure_qname {
+    if qname == figure_qname || qname == table_qname || qname == float_qname {
       panels.push(child);
     }
   }

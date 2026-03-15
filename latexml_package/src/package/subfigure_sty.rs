@@ -1,8 +1,10 @@
 use crate::prelude::*;
+use crate::engine::latex_ch9_figures_and_tables::{before_float, after_float};
 
+#[rustfmt::skip]
 LoadDefinitions!({
-  // Minimal stub for subfigure.sty to prevent loading raw TeX from system
-  // Full Perl version uses beforeFloat/afterFloat which aren't ported
+  // Perl: subfigure.sty.ltxml
+
   TeX!(r#"""
 \newif\ifsubcaphang
 \newif\ifsubcapcenter
@@ -16,8 +18,16 @@ LoadDefinitions!({
 \newdimen\subfigcapmargin  \subfigcapmargin  =  \z@
 \newskip\subfiglabelskip   \subfiglabelskip  =  0.33em plus 0.07em minus 0.03em
 \newcommand*{\subcapsize}{}
-\newcommand*{\subcaplabelfont}{}
-\newcommand*{\subcapfont}{}
+\newcommand*{\subcaplabelfont}{%
+  \subcaplabelfont@f\subcaplabelfont@c\subcaplabelfont@s}
+\newcommand*{\subcaplabelfont@f}{\fontfamily{\familydefault}\selectfont}
+\newcommand*{\subcaplabelfont@c}{\fontseries{\seriesdefault}\selectfont}
+\newcommand*{\subcaplabelfont@s}{\fontshape{\shapedefault}\selectfont}
+\newcommand*{\subcapfont}{%
+  \subcapfont@f\subcapfont@c\subcapfont@s}
+\newcommand*{\subcapfont@f}{\fontfamily{\familydefault}\selectfont}
+\newcommand*{\subcapfont@c}{\fontseries{\seriesdefault}\selectfont}
+\newcommand*{\subcapfont@s}{\fontshape{\shapedefault}\selectfont}
 \@ifundefined{figuretopcaptrue}{\newif\iffiguretopcap}{}
 \newif\ifsubfiguretopcap
 \@ifundefined{tabletopcaptrue}{\newif\iftabletopcap}{}
@@ -25,20 +35,21 @@ LoadDefinitions!({
 \newif\ifsf@tight          \sf@tighttrue
 """#);
 
-  DeclareOption!("normal", "");
+  DeclareOption!("normal",
+    "\\subcaphangfalse\\subcapcenterfalse\\subcapcenterlastfalse\\subcapnoonelinefalse\\subcapraggedrightfalse");
   DeclareOption!("hang", "\\subcaphangtrue");
   DeclareOption!("center", "\\subcapcentertrue");
   DeclareOption!("centerlast", "\\subcapcenterlasttrue");
   DeclareOption!("nooneline", "\\subcapnoonelinetrue");
   DeclareOption!("raggedright", "\\subcapraggedrighttrue");
-  DeclareOption!("isu", "");
-  DeclareOption!("anne", "");
-  DeclareOption!("scriptsize", "");
-  DeclareOption!("footnotesize", "");
-  DeclareOption!("small", "");
-  DeclareOption!("normalsize", "");
-  DeclareOption!("large", "");
-  DeclareOption!("Large", "");
+  DeclareOption!("isu", "\\subcaphangtrue");
+  DeclareOption!("anne", "\\subcapcenterlasttrue");
+  DeclareOption!("scriptsize", "\\renewcommand*{\\subcapsize}{\\scriptsize}");
+  DeclareOption!("footnotesize", "\\renewcommand*{\\subcapsize}{\\footnotesize}");
+  DeclareOption!("small", "\\renewcommand*{\\subcapsize}{\\small}");
+  DeclareOption!("normalsize", "\\renewcommand*{\\subcapsize}{\\normalsize}");
+  DeclareOption!("large", "\\renewcommand*{\\subcapsize}{\\large}");
+  DeclareOption!("Large", "\\renewcommand*{\\subcapsize}{\\Large}");
   DeclareOption!("rm", "");
   DeclareOption!("sf", "");
   DeclareOption!("tt", "");
@@ -65,26 +76,51 @@ LoadDefinitions!({
   DeclareOption!("FIGTOPCAP", "\\figuretopcaptrue\\subfiguretopcaptrue");
   DeclareOption!("TABBOTCAP", "\\tabletopcapfalse\\subtabletopcapfalse");
   DeclareOption!("TABTOPCAP", "\\tabletopcaptrue\\subtabletopcaptrue");
-  DeclareOption!("loose", "");
-  DeclareOption!("tight", "");
+  DeclareOption!("loose", "\\sf@tightfalse");
+  DeclareOption!("tight", "\\sf@tighttrue");
+
+  Digest!("\\ExecuteOptions{normal,footnotesize,FIGBOTCAP,TABBOTCAP,loose}")?;
   ProcessOptions!();
 
-  NewCounter!("subfigure", "figure");
-  NewCounter!("subtable", "table");
-  DefMacro!("\\thesubfigure", None, "(\\alph{subfigure})");
-  DefMacro!("\\thesubtable", None, "(\\alph{subtable})");
+  NewCounter!("subfigure", "figure", idprefix => "sf", idwithin => "figure");
+  NewCounter!("subtable", "table", idprefix => "st", idwithin => "table");
+  DefMacro!("\\thesubfigure", "(\\alph{subfigure})");
+  DefMacro!("\\thesubtable", "(\\alph{subtable})");
   Let!("\\p@subfigure", "\\thefigure");
   Let!("\\p@subtable", "\\thetable");
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable", "\\ext@table");
 
-  DefMacro!("\\fnum@font@subfigure", "");
-  DefMacro!("\\fnum@font@subtable", "");
-  DefMacro!("\\format@title@font@subfigure", "");
-  DefMacro!("\\format@title@font@subtable", "");
+  DefMacro!("\\fnum@font@subfigure", "\\subcapsize\\subcaplabelfont");
+  DefMacro!("\\fnum@font@subtable", "\\subcapsize\\subcaplabelfont");
+  DefMacro!("\\format@title@font@subfigure", "\\subcapsize\\subcapfont");
+  DefMacro!("\\format@title@font@subtable", "\\subcapsize\\subcapfont");
 
-  // Simplified: just pass content through
-  DefMacro!("\\subfigure[][]{}", "#3");
-  DefMacro!("\\subtable[][]{}", "#3");
-  DefMacro!("\\subref OptionalMatch:* Semiverbatim", "\\ref{#2}");
+  // \subfigure — Perl: subfigure.sty.ltxml L138-149
+  DefMacro!("\\subfigure[][]{}",
+    "\\begin{@subfigure}\\iffiguretopcap\\else\\addtocounter{figure}{1}\\fi\\ifsubfiguretopcap\\ifx.#2.\\ifx.#1.\\else\\caption{#1}\\fi\\else\\caption[#1]{#2}\\fi#3\\else#3\\ifx.#2.\\ifx.#1.\\else\\caption{#1}\\fi\\else\\caption[#1]{#2}\\fi\\fi\\iffiguretopcap\\else\\addtocounter{figure}{-1}\\fi\\end{@subfigure}");
+
+  // {@subfigure} environment — Perl: subfigure.sty.ltxml L151-158
+  DefEnvironment!("{@subfigure}",
+    "^<ltx:figure xml:id='#id'>#tags #body</ltx:figure>",
+    mode => "restricted_horizontal",
+    before_digest => {
+      before_float("subfigure", None);
+    },
+    after_digest => sub[whatsit] { after_float(whatsit); });
+
+  // \subtable — Perl: subfigure.sty.ltxml L160-171
+  DefMacro!("\\subtable[][]{}",
+    "\\begin{@subtable}\\iftabletopcap\\else\\addtocounter{table}{1}\\fi\\ifsubtabletopcap\\ifx.#2.\\ifx.#1.\\else\\caption{#1}\\fi\\else\\caption[#1]{#2}\\fi#3\\else#3\\ifx.#2.\\ifx.#1.\\else\\caption{#1}\\fi\\else\\caption[#1]{#2}\\fi\\fi\\iftabletopcap\\else\\addtocounter{table}{-1}\\fi\\end{@subtable}");
+
+  // {@subtable} environment — Perl: subfigure.sty.ltxml L172-179
+  DefEnvironment!("{@subtable}",
+    "^<ltx:table xml:id='#id'>#tags #body</ltx:table>",
+    mode => "restricted_horizontal",
+    before_digest => {
+      before_float("subtable", None);
+    },
+    after_digest => sub[whatsit] { after_float(whatsit); });
+
+  DefMacro!("\\subref Semiverbatim", "\\ref{#1}");
 });
