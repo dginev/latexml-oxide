@@ -676,4 +676,37 @@ LoadDefinitions!({
   DefMacro!("\\DOTSB", None);
   DefMacro!("\\DOTSI", None);
   DefMacro!("\\DOTSX", None);
+
+  //======================================================================
+  // Section 3.11.1 \numberwithin
+  // Perl: amsmath.sty.ltxml line 741
+  DefPrimitive!("\\numberwithin[]{}{}", sub[(format, counter, within)] {
+    let format_str = if format.as_ref().map_or(true, |f| f.is_empty()) {
+      s!("\\arabic")
+    } else {
+      format.unwrap().to_string()
+    };
+    let counter_str = counter.unwrap().to_string();
+    let within_str = within.unwrap().to_string();
+    new_counter(&counter_str, &within_str, None)?;
+    let the_body = s!("\\csname the{within_str}\\endcsname.{format_str}{{{counter_str}}}");
+    let expansion_tokens = latexml_core::mouth::tokenize(&the_body);
+    def_macro(
+      T_CS!(s!("\\the{counter_str}")),
+      None,
+      expansion_tokens,
+      Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+    )?;
+  });
+
+  // Section 3.11.2 Cross references to equation numbers
+  DefConstructor!("\\eqref Semiverbatim",
+    "(<ltx:ref labelref='#label' _force_font='true'/>)",
+    mode => "restricted_horizontal",
+    properties => sub[args] {
+      unpack_opt_ref!(args => label_opt);
+      let label = label_opt.as_ref().unwrap().to_string();
+      Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
+  });
+  DefMacro!("\\thetag{}", "{\\rm #1}");
 });

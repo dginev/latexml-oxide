@@ -316,7 +316,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [ ] **19. csquotes_test** (50_structure) — port csquotes.sty binding (context-sensitive quoting).
 - [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty + inst_support.sty bindings.
 - [ ] **21. ieee_test** (50_structure) — port IEEEtran.cls binding.
-- [ ] **22. acro_test** (50_structure) — port acronym.sty binding.
+- [x] **22. acro_test** (50_structure) — DONE. Ported acronym.sty binding + addIndexPhraseKey afterClose hook.
 - [x] **23. glossary_test** (50_structure) — DONE. Implemented glossaries.sty binding with \newglossaryentry, \longnewglossaryentry, \newacronym (state-stored entries), \gls/\Gls/\glspl/\Glspl/\glssymbol (runtime macros with first-use tracking), \printglossary/\printnoidxglossaries.
 - [ ] **24. bibsect_test + crazybib_test** (50_structure) — port biblatex binding.
 
