@@ -292,7 +292,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [x] **1. xkeyvalview_test** (32_keyval) — DONE. Ported `\xkvview` constructor with typewriter font, table counter, XKVVIEW_TRACKING.
 - [ ] **2. eqnums_test** (50_structure) — 0 errors, 362 diffs. Fixed agc drift (read_match, read_until_brace, newline@noskip extra }). Remaining: equation numbering/tags/MathFork infrastructure for AMS align, font-italic in tag primes.
 - [ ] **3. algx_test** (53_alignment) — 100 diffs. algorithmicx ported but `\csname` expansion errors in nested `\ALG@bl@...` macros. Fix `\csname`/`\edef` in gullet.rs.
-- [ ] **4. figures_test** (50_structure) — needs `\@captype` and float figure infrastructure stubs.
+- [x] **4. figures_test** (50_structure) — DONE. Ported subfigure.sty font options (DeclareOption handlers).
 - [x] **5. floatnames_test** (50_structure) — DONE. Ported `\newfloat` (float.sty) and `\DeclareFloatingEnvironment` (newfloat.sty) with full float environment creation, beforeFloat/afterFloat, addFloatFrames.
 - [x] **6. filelist_test** (50_structure) — DONE. Fixed `\@filelist` init to `\@gobble` (matching latex.ltx), added `\@addtofilelist` in `input_definitions`, added `RequirePackage!("textcomp")` to latex.rs engine.
 - [x] **7. options_test** (50_structure) — DONE. Created myclass.cls + apackage.sty Rust bindings in latexml_contrib.

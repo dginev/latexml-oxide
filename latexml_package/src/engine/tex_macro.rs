@@ -50,6 +50,8 @@ LoadDefinitions!({
   // \csname           c  forms a control sequence name from the characters making up a collection
   // of tokens. \endcsname        c  is used with \csname to make a control sequence name.
   DefParameterType!(CSName, reader => reader!( _inner, _extra, { read_cs_name() }));
+  // Quiet version: used by \ifcsname — no errors for non-expandable CS tokens
+  DefParameterType!(CSNameQuiet, reader => reader!( _inner, _extra, { read_cs_name_quiet() }));
   DefMacro!("\\csname CSName", sub[(token)] {
     if lookup_meaning(&token).is_none() {
       let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();

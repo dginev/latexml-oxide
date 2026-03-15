@@ -166,6 +166,7 @@ macro_rules! parameter_rust_type {
   (XToken) => {Token};
   (ExpandedIfToken) => {Token};
   (CSName) => {Token};
+  (CSNameQuiet) => {Token};
   (Variable) => {ArgWrap};
   // For now return the raw Tokens for KeyVals, until we figure out how to
   // do TryInto with access to the current "state" object.

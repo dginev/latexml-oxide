@@ -91,7 +91,9 @@ LoadDefinitions!({
   DefRegister!("\\currentgrouptype", Number!(0), readonly => true);
 
   // \ifcsname stuff \endcsname
-  DefConditional!("\\ifcsname CSName", sub[(t)] {
+  // Uses CSNameQuiet — unlike \csname, \ifcsname does NOT emit errors
+  // for non-expandable CS tokens encountered during expansion (TeX §506-507)
+  DefConditional!("\\ifcsname CSNameQuiet", sub[(t)] {
     lookup_meaning(&t).is_some()
   });
 

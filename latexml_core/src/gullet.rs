@@ -961,6 +961,17 @@ pub fn read_until_brace() -> Result<Option<Tokens>> {
 }
 
 pub fn read_cs_name() -> Result<Token> {
+  read_cs_name_inner(false)
+}
+
+/// Quiet version of read_cs_name — used by \ifcsname.
+/// In TeX, \ifcsname silently skips non-expandable CS tokens and returns the constructed name
+/// without emitting errors (unlike \csname which DOES emit errors).
+pub fn read_cs_name_quiet() -> Result<Token> {
+  read_cs_name_inner(true)
+}
+
+fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // TeX does NOT store the csname with the leading `\`, BUT stores active chars with a flag
   // However, so long as the Mouth's CS and \string properly respect \escapechar, all's well!
 
@@ -972,16 +983,19 @@ pub fn read_cs_name() -> Result<Token> {
     }
     match token.get_catcode() {
       Catcode::CS => {
-        if lookup_definition(&token)?.is_some() {
-          let message = s!(
-            "The control sequence {:?} should not appear between \\csname and \\endcsname",
-            token
-          );
-          Error!("unexpected", token, message);
-        } else {
-          let message = s!("The token {:?} is not defined", token);
-          Error!("undefined", token, message);
+        if !quiet {
+          if lookup_definition(&token)?.is_some() {
+            let message = s!(
+              "The control sequence {:?} should not appear between \\csname and \\endcsname",
+              token
+            );
+            Error!("unexpected", token, message);
+          } else {
+            let message = s!("The token {:?} is not defined", token);
+            Error!("undefined", token, message);
+          }
         }
+        // In quiet mode (ifcsname), just skip the CS token
       },
       Catcode::SPACE => cs.push(' '), // Keep newlines from having \n!
       _ => {
