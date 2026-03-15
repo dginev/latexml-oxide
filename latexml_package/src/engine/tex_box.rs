@@ -6,12 +6,64 @@ use crate::prelude::*;
 
 /// Perl: hackVBoxAttachment($box, $valign)
 /// Sets vattach on the box, with special handling for \halign alignment objects.
+///
+/// For \halign inside \vbox/\vtop, vattach must be set on the alignment's XML
+/// attributes (so it becomes an attribute on `<tabular>`), NOT on the box property
+/// (which would end up on `<para>` via insertBlock).
+///
+/// Perl's List() simplification returns single-item vertical lists unwrapped,
+/// so $box->getProperty('alignment') finds the alignment directly. In Rust,
+/// Lists are not simplified, so we must walk into children to find it.
 fn hack_vbox_attachment(whatsit: &mut Whatsit, valign: &'static str) {
   if let Some(content_box) = whatsit.get_arg_mut(2) {
-    // Perl: if alignment property exists AND definition is \halign,
-    // copy vattach to alignment's attributes hash. Otherwise set on box.
-    // TODO: Full \halign alignment attribute propagation
-    content_box.set_property("vattach", valign);
+    if !set_halign_vattach(content_box, valign) {
+      // No \halign alignment found — set vattach as property on the box
+      content_box.set_property("vattach", valign);
+    }
+  }
+}
+
+/// Walk into a Digested tree to find a \halign Whatsit with an 'alignment' property.
+/// If found, set vattach on the alignment's XML attributes and return true.
+/// Returns false if no \halign alignment was found.
+fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
+  match digested.data() {
+    DigestedData::Whatsit(ref w) => {
+      let w_ref = w.borrow();
+      if w_ref.get_property("alignment").is_some() {
+        // Check if this whatsit's definition is \halign
+        let def = w_ref.get_definition();
+        let is_halign = *def.get_cs_name() == *"\\halign";
+        if is_halign {
+          // Get the alignment property value and set vattach on it
+          if let Some(Cow::Borrowed(Stored::Digested(ref alignment_dig))) =
+            w_ref.get_property("alignment")
+          {
+            if let DigestedData::Alignment(ref alignment_cell) = *alignment_dig.data() {
+              alignment_cell
+                .borrow_mut()
+                .get_xml_attributes_mut()
+                .insert(String::from("vattach"), String::from(valign));
+              return true;
+            }
+          }
+        }
+        // Has alignment but not \halign (e.g. tabular) — don't set vattach
+        return false;
+      }
+      false
+    },
+    DigestedData::List(ref list_cell) => {
+      // Walk children to find a \halign
+      let children = list_cell.borrow().unlist();
+      for child in children.iter() {
+        if set_halign_vattach(child, valign) {
+          return true;
+        }
+      }
+      false
+    },
+    _ => false,
   }
 }
 
@@ -24,10 +76,16 @@ LoadDefinitions!({
   // Hidden bgroup/egroup: scoping without visible { } in reversion
   DefConstructor!("\\lx@hidden@bgroup", "#body",
     before_digest => { bgroup(); },
-    capture_body => true
+    capture_body => true,
+    reversion => sub[whatsit, _args] {
+      if let Some(body) = whatsit.get_body()? {
+        body.revert()
+      } else { Ok(Tokens!()) }
+    }
   );
   DefConstructor!("\\lx@hidden@egroup", "",
-    after_digest => sub[_whatsit] { egroup()?; }
+    after_digest => sub[_whatsit] { egroup()?; },
+    reversion => ""
   );
 
   //======================================================================
@@ -643,7 +701,14 @@ LoadDefinitions!({
     } else if w_pt == Some(0.0) {
       whatsit.set_property("invisible", true);
     }
-    // TODO: color handling
+    // Set color from current font (Perl: only if NOT black)
+    if let Some(font) = lookup_font() {
+      if let Some(color) = font.color {
+        if color != latexml_core::common::color::BLACK {
+          whatsit.set_property("color", color.to_attribute());
+        }
+      }
+    }
     Ok(Vec::new())
   });
 
@@ -700,14 +765,75 @@ LoadDefinitions!({
       }
     }
     // Outside alignment: isHorizontalRule is NOT set, so template outputs <ltx:rule>
-    // TODO: color handling
+    // Set color from current font (Perl: only if NOT black)
+    if let Some(font) = lookup_font() {
+      if let Some(color) = font.color {
+        if color != latexml_core::common::color::BLACK {
+          whatsit.set_property("color", color.to_attribute());
+        }
+      }
+    }
     Ok(Vec::new())
   });
 
-  // Various leaders, ignored for now...
-  DefPrimitive!("\\leaders", None);
-  DefPrimitive!("\\cleaders", None);
-  DefPrimitive!("\\xleaders", None);
+  // Various leaders — fill space with box or rule
+  // Perl: DefConstructor('\leaders Digested Digested', sub { ... },
+  //   bounded => 1, beforeDigest => sub { $STATE->assignValue(Alignment => undef); });
+  DefConstructor!("\\leaders Digested Digested", sub [document, args] {
+    let filler = &args[0];
+    let _glue = &args[1];
+
+    // Get the context element's box to check for explicit width
+    let context = document.get_element();
+    let cbox = context.as_ref().and_then(|n| document.get_node_box(n));
+    let req_width: Option<Dimension> = cbox.as_ref().and_then(|b| {
+      b.get_property("width").and_then(|s| {
+        let dim_opt: Option<Dimension> = (&*s).into();
+        dim_opt
+      })
+    });
+
+    let mut noautoclose_attrs = HashMap::default();
+    noautoclose_attrs.insert(String::from("_noautoclose"), String::from("1"));
+    let mut container = document.open_element("ltx:text", Some(noautoclose_attrs), None)?;
+
+    if let Some(ref filler_d) = filler {
+      document.absorb(filler_d, None)?;
+    }
+
+    // Check if we should extend a rule to fill the requested width
+    let mut unwrap = false;
+    if let (Some(_), Some(ref rw)) = (&cbox, &req_width) {
+      // Find the last child of the container — should be the absorbed rule
+      if let Some(mut fnode) = container.get_last_child() {
+        let qname = fnode.get_name();
+        if qname == "rule" {
+          // Extend the rule to fill the width
+          document.set_attribute(&mut fnode, "width", &rw.to_attribute())?;
+          document.add_class(&mut fnode, "ltx_filled_leader")?;
+          unwrap = true;
+        }
+      }
+    }
+    if !unwrap {
+      document.add_class(&mut container, "ltx_leader")?;
+    }
+
+    document.close_element("ltx:text")?;
+    if unwrap {
+      document.unwrap_nodes(container)?;
+    }
+  },
+    bounded => true,
+    before_digest => sub {
+      // Hide alignment so that \hrule inside \leaders doesn't add border="t"
+      // Perl: $STATE->assignValue(Alignment => undef);
+      state::assign_value("Alignment", Stored::None, None);
+    }
+  );
+
+  state::let_i(&T_CS!("\\cleaders"), &T_CS!("\\leaders"), None);
+  state::let_i(&T_CS!("\\xleaders"), &T_CS!("\\leaders"), None);
 
   // Overlay one glyph on another (used by \accent fallback)
   // Perl: enterHorizontal => 1

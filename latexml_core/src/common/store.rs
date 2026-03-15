@@ -29,6 +29,8 @@ use crate::definition::primitive::Primitive;
 use crate::definition::register::{Register, RegisterValue};
 use crate::definition::{Definition, FontDirective};
 use crate::document::tag::TagData;
+use crate::keyval::KeyVal;
+use crate::keyvals::KeyVals;
 use crate::ligature::Ligature;
 use crate::list::List;
 use crate::mouth;
@@ -143,6 +145,10 @@ pub enum Stored {
   Mouth(Rc<RefCell<Mouth>>),
   /// WALL OF SHAME (interior mutability) -- can we dispense with these?
   IfFrame(Rc<RefCell<IfFrame>>),
+  /// latexml keyval definition
+  KeyVal(KeyVal),
+  /// latexml keyvals collection
+  KeyVals(Rc<KeyVals>),
 }
 
 impl fmt::Debug for Stored {
@@ -190,6 +196,8 @@ impl fmt::Debug for Stored {
       HashTagData(ref htd) => write!(f, "HashTagData[{htd:?}]"),
       HashString(ref hstr) => write!(f, "HashStr[{hstr:?}]"),
       Ligature(ref lig) => write!(f, "Ligature[{lig:?}]"),
+      KeyVal(ref kv) => write!(f, "KeyVal[{kv:?}]"),
+      KeyVals(ref kvs) => write!(f, "KeyVals[{kvs:?}]")
     }
   }
 }
@@ -213,20 +221,16 @@ impl fmt::Display for Stored {
       Conditional(ref s) => write!(f, "{s}"),
       Constructor(ref c) => write!(f, "Constructor[{}]", c.get_cs_name()),
       Strings(ref vs) => write!(f, "{}", arena::join(vs, ",")),
+      KeyVals(ref kvs) => write!(f, "{kvs}"),
       None => write!(f, "Stored::None"),
       ref variant => {
         panic!("TODO: implement Display for Stored variant {variant:?}");
-        // write!(f, "{:?}", self)
       },
     }
   }
 }
 
-/// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
-/// if it is safe to eagerly borrow() from the RefCell guards over fields with interior
-/// mutability.
-/// Worse: some conditions depend on the stateful meaning of Token's,
-///        so the perfect equality check would need state::as an argument.
+/// Note: PartialEq on Stored is *structural*. See WISDOM.md for RegisterType trap.
 impl PartialEq for Stored {
   fn eq(&self, other: &Stored) -> bool {
     use crate::Stored::*;
@@ -509,6 +513,20 @@ impl PartialEq for Stored {
       Ligature(ref lig) => {
         if let Ligature(lig2) = other {
           *lig == *lig2
+        } else {
+          false
+        }
+      },
+      KeyVal(ref kv) => {
+        if let KeyVal(kv2) = other {
+          *kv == *kv2
+        } else {
+          false
+        }
+      },
+      KeyVals(ref kvs) => {
+        if let KeyVals(kvs2) = other {
+          Rc::ptr_eq(kvs, kvs2)
         } else {
           false
         }
@@ -846,6 +864,14 @@ impl From<Ligature> for Stored {
 
 impl From<Reversion> for Stored {
   fn from(rev: Reversion) -> Stored { Stored::Reversion(rev) }
+}
+
+impl From<KeyVal> for Stored {
+  fn from(kv: KeyVal) -> Stored { Stored::KeyVal(kv) }
+}
+
+impl From<KeyVals> for Stored {
+  fn from(kvs: KeyVals) -> Stored { Stored::KeyVals(Rc::new(kvs)) }
 }
 
 impl From<Option<&Stored>> for Stored {

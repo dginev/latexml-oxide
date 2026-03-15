@@ -45,6 +45,10 @@ LoadDefinitions!({
     // p          q           r           s             t           u          v           w
     '\u{1D561}', '\u{1D562}', '\u{1D563}', '\u{1D564}', '\u{1D565}', '\u{1D566}', '\u{1D567}', '\u{1D568}',
     // x          y           z          -             |          --          ``          omega
-    '\u{1D569}', '\u{1D56A}', '\u{1D56B}', '-',        '|',       '\u{2013}', '\u{201C}', '\u{03C9}'
+    '\u{1D569}', '\u{1D56A}', '\u{1D56B}', '-',        '|',       '\u{2013}', '`',        '\u{03C9}'
   ]);
+  // Position 0x7E is two backtick characters in Perl, not U+201C (ligature result)
+  DeclareFontMapMultichar!("U", {
+    0x7Eu8 => "``",
+  });
 });

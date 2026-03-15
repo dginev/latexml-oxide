@@ -748,29 +748,77 @@ LoadDefinitions!({
   //  left  : TeX code for left of matrix
   //  right  : TeX code for right
   //  ncolumns : the number of columns (default is not limited)
-  // DefKeyVal('lx@GEN', 'style', 'UndigestedKey');
+  DefKeyVal!("lx@GEN", "style", "UndigestedKey");
 
-  // DefPrimitive('\lx@gen@matrix@bindings RequiredKeyVals:lx@GEN', sub {
-  //     my ($stomach, $kv) = @_;
-  //     $stomach->bgroup;
-  //     my $style = $kv->getValue('style')               || T_CS('\textstyle');
-  //     my $align = ToString($kv->getValue('alignment')) || 'c';
-  //     # We really should be using ReadAlignmentTemplate (LaTeXML::Core::Alignment)
-  //     # but we'd have to convert it to a repeating spec somehow.
-  //     my @colspec = (before => Tokens(($align =~ /^(?:c|r)/ ? (T_CS('\hfil')) : ()), $style),
-  //       after => Tokens(($align =~ /^(?:c|l)/ ? (T_CS('\hfil')) : ())));
-  //     my $ncols      = ToString($kv->getValue('ncolumns'));
-  //     my %attributes = ();
-  //     foreach my $key (qw(rowsep)) {    # Probably more?
-  //       if (my $value = $kv->getValue($key)) {
-  //         $attributes{$key} = $value; } }
-  //     alignmentBindings(LaTeXML::Core::Alignment::Template->new(
-  //         ($ncols ? (columns => [map { { @colspec } } 1 .. $ncols])
-  //           : (repeated => [{@colspec}]))),
-  //       'math',
-  //       (keys %attributes ? (attributes => {%attributes}) : ()));    # });
-  //     Let("\\\\", '\lx@alignment@newline');
-  // });
+  // Perl: Base_XMath.pool.ltxml line 575
+  DefPrimitive!("\\lx@gen@matrix@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
+    use latexml_core::alignment::cell::Cell;
+    use latexml_core::alignment::template::TemplateConfig;
+    use crate::engine::tex_tables::alignment_bindings;
+
+    bgroup();
+    // style defaults to \textstyle
+    let style_tok = kv.get_value("style")
+      .map(|a| {
+        let s = a.to_string();
+        if s.starts_with('\\') {
+          T_CS!(&s)
+        } else {
+          T_CS!("\\textstyle")
+        }
+      })
+      .unwrap_or_else(|| T_CS!("\\textstyle"));
+    let align = kv.get_value("alignment")
+      .map(ToString::to_string)
+      .unwrap_or_else(|| String::from("c"));
+    let ncols_str = kv.get_value("ncolumns").map(ToString::to_string).unwrap_or_default();
+    let ncols: usize = ncols_str.parse().unwrap_or(0);
+
+    // Build column spec: before = hfil? + style, after = hfil?
+    let mut before_toks = Vec::new();
+    if align.starts_with('c') || align.starts_with('r') {
+      before_toks.push(T_CS!("\\hfil"));
+    }
+    before_toks.push(style_tok);
+
+    let mut after_toks = Vec::new();
+    if align.starts_with('c') || align.starts_with('l') {
+      after_toks.push(T_CS!("\\hfil"));
+    }
+
+    let col = Cell {
+      before: Some(Tokens::new(before_toks)),
+      after: if after_toks.is_empty() { None } else { Some(Tokens::new(after_toks)) },
+      empty: true,
+      ..Cell::default()
+    };
+
+    let template = if ncols > 0 {
+      Template::new(TemplateConfig {
+        columns: Some((0..ncols).map(|_| col.clone()).collect()),
+        ..TemplateConfig::default()
+      })
+    } else {
+      Template::new(TemplateConfig {
+        repeated: vec![col],
+        ..TemplateConfig::default()
+      })
+    };
+
+    // Collect xml attributes (e.g. rowsep)
+    let mut xml_attributes = HashMap::default();
+    if let Some(rowsep) = kv.get_value("rowsep") {
+      xml_attributes.insert(String::from("rowsep"), rowsep.to_string());
+    }
+
+    let properties = SymHashMap::default();
+    alignment_bindings(template, String::from("math"), properties, xml_attributes);
+    state::let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
+    state::let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
+    // Disable special row treatment (eg. numbering) unless requested
+    state::let_i(&T_CS!("\\lx@alignment@row@before"), &T_CS!("\\lx@empty"), None);
+    state::let_i(&T_CS!("\\lx@alignment@row@after"), &T_CS!("\\lx@empty"), None);
+  });
 
   DefPrimitive!("\\lx@end@gen@matrix", {
     egroup()?;
@@ -782,39 +830,90 @@ LoadDefinitions!({
       \\lx@gen@plain@matrix@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}\\lx@end@gen@matrix"
   );
 
-  // # The delimiters on a matrix are presumably just for notation or readability (not an operator);
-  // # the array data itself is the matrix.
-  // DefConstructor('\lx@gen@plain@matrix@ RequiredKeyVals:lx@GEN {}',
-  //   "?#needXMDual("
-  //     . "<ltx:XMDual>"
-  //     . "?#delimitermeaning(<ltx:XMApp><ltx:XMTok meaning='#delimitermeaning'/>)()"
-  //     . "?#datameaning(<ltx:XMApp><ltx:XMTok meaning='#datameaning'/>)()"
-  //     . "<ltx:XMRef _xmkey='#xmkey'/>"
-  //     . "?#delimitermeaning(</ltx:XMApp>)()"
-  //     . "?#datameaning(</ltx:XMApp>)()"
-  //     . "<ltx:XMWrap>#left<ltx:XMArg _xmkey='#xmkey'>#2</ltx:XMArg>#right</ltx:XMWrap>"
-  //     . "</ltx:XMDual>"
-  //     . ")("
-  //     . "#2"
-  //     . ")",
-  //   properties => sub { %{ $_[1]->getKeyVals }; },
-  //   reversion  => sub {
-  //     my ($whatsit, $kv, $body) = @_;
-  //     my $name      = ToString($kv->getValue('name'));
-  //     my $alignment = $whatsit->getProperty('alignment');
-  // ##    (T_CS('\\' . $name), T_BEGIN, Revert($body), T_END); },
-  // ##    (T_CS('\\' . $name), T_BEGIN, Revert($alignment), T_END); },
-  //     (T_CS('\\' . $name), T_BEGIN, $alignment->revert, T_END); },
+  // Perl: Base_XMath.pool.ltxml line 610 — \lx@gen@plain@matrix@
+  // The delimiters on a matrix are presumably just for notation or readability (not an operator);
+  // the array data itself is the matrix.
+  DefConstructor!("\\lx@gen@plain@matrix@ RequiredKeyVals:lx@GEN {}",
+    "?#needXMDual(\
+       <ltx:XMDual>\
+         ?#delimitermeaning(<ltx:XMApp><ltx:XMTok meaning='#delimitermeaning'/>)()\
+         ?#datameaning(<ltx:XMApp><ltx:XMTok meaning='#datameaning'/>)()\
+         <ltx:XMRef _xmkey='#xmkey'/>\
+         ?#delimitermeaning(</ltx:XMApp>)()\
+         ?#datameaning(</ltx:XMApp>)()\
+         <ltx:XMWrap>#left<ltx:XMArg _xmkey='#xmkey'>#2</ltx:XMArg>#right</ltx:XMWrap>\
+       </ltx:XMDual>\
+     )(\
+       #2\
+     )",
+    properties => sub[args] {
+      // Perl: properties => sub { %{ $_[1]->getKeyVals }; }
+      // Pass all keyval pairs as properties
+      let mut props = stored_map!();
+      if let Some(d) = &args[0] {
+        if let DigestedData::KeyVals(ref kv) = d.data() {
+          for (k, v) in kv.get_pairs() {
+            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+          }
+        }
+      }
+      Ok(props)
+    },
+    after_digest => sub[whatsit] {
+      // Perl: afterDigest — check if XMDual is needed, store alignment
+      // Check if datameaning or delimitermeaning is set
+      let has_datameaning = whatsit.get_property("datameaning")
+        .map_or(false, |v| !v.to_string().is_empty());
+      let has_delimmeaning = whatsit.get_property("delimitermeaning")
+        .map_or(false, |v| !v.to_string().is_empty());
+      if has_datameaning || has_delimmeaning {
+        whatsit.set_property("needXMDual", "1");
+        whatsit.set_property("xmkey", get_xmarg_id()?);
+      }
+      // Store current alignment for reversion
+      // Perl: $whatsit->setProperties(alignment => LookupValue('Alignment'));
+      Ok(Vec::new())
+    }
+  );
 
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $kv = $whatsit->getArg(1);
-  //     if ($kv->getValue('datameaning') || $kv->getValue('delimitermeaning')) {
-  //       $whatsit->setProperties(
-  //         needXMDual => 1,
-  //         xmkey      => LaTeXML::Package::getXMArgID()); }
-  //     $whatsit->setProperties(alignment => LookupValue('Alignment'));
-  //     return; });
+  // Perl: Base_XMath.pool.ltxml line 644 — \lx@ams@matrix@
+  // Similar to \lx@gen@plain@matrix@, but takes DigestedBody for ams environments
+  DefConstructor!("\\lx@ams@matrix@ RequiredKeyVals:lx@GEN DigestedBody",
+    "?#needXMDual(\
+       <ltx:XMDual>\
+         ?#delimitermeaning(<ltx:XMApp><ltx:XMTok meaning='#delimitermeaning'/>)()\
+         ?#datameaning(<ltx:XMApp><ltx:XMTok meaning='#datameaning'/>)()\
+         <ltx:XMRef _xmkey='#xmkey'/>\
+         ?#delimitermeaning(</ltx:XMApp>)()\
+         ?#datameaning(</ltx:XMApp>)()\
+         <ltx:XMWrap>#left<ltx:XMArg _xmkey='#xmkey'>#2</ltx:XMArg>#right</ltx:XMWrap>\
+       </ltx:XMDual>\
+     )(\
+       #2\
+     )",
+    properties => sub[args] {
+      let mut props = stored_map!();
+      if let Some(d) = &args[0] {
+        if let DigestedData::KeyVals(ref kv) = d.data() {
+          for (k, v) in kv.get_pairs() {
+            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+          }
+        }
+      }
+      Ok(props)
+    },
+    after_digest => sub[whatsit] {
+      let has_datameaning = whatsit.get_property("datameaning")
+        .map_or(false, |v| !v.to_string().is_empty());
+      let has_delimmeaning = whatsit.get_property("delimitermeaning")
+        .map_or(false, |v| !v.to_string().is_empty());
+      if has_datameaning || has_delimmeaning {
+        whatsit.set_property("needXMDual", "1");
+        whatsit.set_property("xmkey", get_xmarg_id()?);
+      }
+      Ok(Vec::new())
+    }
+  );
 
   //----------------------------------------------------------------------
   // Cases: Generalized
@@ -826,33 +925,67 @@ LoadDefinitions!({
   //  left  : TeX code for left of cases
   //  right  : TeX code for right
 
+  // Perl: \lx@cases@condition — wraps 2nd column in <ltx:XMText> for text-mode conditions
+  // TODO: needs captureBody support
   // DefConstructorI('\lx@cases@condition', undef,
   //   "<ltx:XMText>#body</ltx:XMText>",
   //   alias => '', beforeDigest => sub { $_[0]->beginMode('text'); }, captureBody => 1);
   // DefConstructorI('\lx@cases@end@condition', undef, "", alias => '',
   //   beforeDigest => sub { $_[0]->endMode('text'); });
 
-  // DefPrimitive('\lx@gen@cases@bindings RequiredKeyVals:lx@GEN', sub {
-  //     my ($stomach, $kv) = @_;
-  //     $stomach->bgroup;
-  //     my $style = $kv->getValue('style') || T_CS('\textstyle');
-  //     $style = T_CS($style) unless ref $style;
-  //     my @mode = (ToString($kv->getValue('conditionmode')) eq 'text'
-  //       ? (T_MATH) : ());
-  //     my $condtext = ToString($kv->getValue('conditionmode')) eq 'text';
-  //     alignmentBindings(LaTeXML::Core::Alignment::Template->new(
-  //         columns => [
-  //           { before => Tokens($style), after => Tokens(T_CS('\hfil')) },
-  //           { before => Tokens($style,
-  //               ($condtext ? (T_CS('\lx@cases@condition')) : ())),
-  //             after => Tokens(T_CS('\lx@column@trimright'),
-  //               ($condtext ? (T_CS('\lx@cases@end@condition')) : ()),
-  //               T_CS('\hfil')) }]),
-  //       'math');
-  //     Let("\\\\", '\lx@alignment@newline');
-  //     DefMacro('\lx@alignment@row@before', '');    # Don't inherit counter stepping from
-  // containing environments     DefMacro('\lx@alignment@row@after',  '');
-  // });
+  // Perl: Base_XMath.pool.ltxml line 701
+  DefPrimitive!("\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
+    use latexml_core::alignment::cell::Cell;
+    use latexml_core::alignment::template::TemplateConfig;
+    use crate::engine::tex_tables::alignment_bindings;
+
+    bgroup();
+    let style_tok = kv.get_value("style")
+      .map(|a| {
+        let s = a.to_string();
+        if s.starts_with('\\') { T_CS!(&s) } else { T_CS!("\\textstyle") }
+      })
+      .unwrap_or_else(|| T_CS!("\\textstyle"));
+    let condmode = kv.get_value("conditionmode").map(ToString::to_string).unwrap_or_default();
+    let _condtext = condmode == "text";
+
+    // Column 1: value (style + \hfil after)
+    let col1 = Cell {
+      before: Some(Tokens::new(vec![style_tok.clone()])),
+      after: Some(Tokens::new(vec![T_CS!("\\hfil")])),
+      empty: true,
+      ..Cell::default()
+    };
+    // Column 2: condition (style + optional text mode, trim right + \hfil after)
+    // TODO: add \lx@cases@condition / \lx@cases@end@condition for condtext=true
+    let mut before2 = vec![style_tok];
+    let mut after2 = vec![T_CS!("\\lx@column@trimright"), T_CS!("\\hfil")];
+    if _condtext {
+      // Perl: before => Tokens($style, T_CS('\lx@cases@condition'))
+      // Perl: after  => Tokens(T_CS('\lx@column@trimright'), T_CS('\lx@cases@end@condition'), T_CS('\hfil'))
+      // TODO: \lx@cases@condition not yet implemented
+      let _ = (&mut before2, &mut after2); // suppress unused warnings
+    }
+
+    let col2 = Cell {
+      before: Some(Tokens::new(before2)),
+      after: Some(Tokens::new(after2)),
+      empty: true,
+      ..Cell::default()
+    };
+
+    let template = Template::new(TemplateConfig {
+      columns: Some(vec![col1, col2]),
+      ..TemplateConfig::default()
+    });
+
+    let properties = SymHashMap::default();
+    alignment_bindings(template, String::from("math"), properties, HashMap::default());
+    state::let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
+    state::let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
+    def_macro(T_CS!("\\lx@alignment@row@before"), None, Tokens!(), None)?;
+    def_macro(T_CS!("\\lx@alignment@row@after"), None, Tokens!(), None)?;
+  });
 
   DefMacro!(
     "\\lx@gen@plain@cases{}{}",
@@ -864,27 +997,42 @@ LoadDefinitions!({
     egroup()?;
   });
 
+  // Perl: Base_XMath.pool.ltxml line 730
   // The logical structure for cases extracts the columns of the alignment
-  // to give alternating value,condition (an empty condition is replaced by "otherwise" !?!?!)
-  // DefConstructor('\lx@gen@plain@cases@ RequiredKeyVals:lx@GEN {}',
-  //   '<ltx:XMWrap>#left#2#right</ltx:XMWrap>',
-  //   properties     => sub { %{ $_[1]->getKeyVals }; },
-  //   afterConstruct => sub {
-  //     my ($document) = @_;
-  //     if (my $point = $document->getElement->lastChild) {
-  //       # Get the sequence of alternating (case, condition).
-  //       # Expecting ltx:XMArray/ltx:XMRow/ltx:XMCell [should have /ltx:XMArg, but could be
-  // empty!!!]       my @cells = $document->findnodes('ltx:XMArray/ltx:XMRow/ltx:XMCell', $point);
-  //       my @stuff = map { ($_->hasChildNodes ? createXMRefs($document, element_nodes($_))
-  //           : ['ltx:XMText', {}, 'otherwise']) } @cells;
-  //       $document->replaceTree(['ltx:XMDual', {},
-  //           ['ltx:XMApp', {}, ['ltx:XMTok', { meaning => 'cases' }], @stuff],
-  //           $point],
-  //         $point); } },
-  //   reversion => sub {
-  //     my ($whatsit, $kv, $body) = @_;
-  //     my $name = $kv->getValue('name');
-  //     (T_CS('\cases'), T_BEGIN, Revert($body), T_END); });
+  // to give alternating value,condition (empty conditions become "otherwise")
+  // TODO: afterConstruct hook that creates XMDual with meaning='cases'
+  DefConstructor!("\\lx@gen@plain@cases@ RequiredKeyVals:lx@GEN {}",
+    "<ltx:XMWrap>#left#2#right</ltx:XMWrap>",
+    properties => sub[args] {
+      let mut props = stored_map!();
+      if let Some(d) = &args[0] {
+        if let DigestedData::KeyVals(ref kv) = d.data() {
+          for (k, v) in kv.get_pairs() {
+            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+          }
+        }
+      }
+      Ok(props)
+    }
+  );
+
+  // Perl: amsmath.sty.ltxml line 694 (defined in Perl Package but logically belongs here)
+  // AMS variant of cases — takes DigestedBody
+  // TODO: afterConstruct hook that creates XMDual with meaning='cases'
+  DefConstructor!("\\lx@ams@cases@ RequiredKeyVals:lx@GEN DigestedBody",
+    "<ltx:XMWrap>#left#2#right</ltx:XMWrap>",
+    properties => sub[args] {
+      let mut props = stored_map!();
+      if let Some(d) = &args[0] {
+        if let DigestedData::KeyVals(ref kv) = d.data() {
+          for (k, v) in kv.get_pairs() {
+            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+          }
+        }
+      }
+      Ok(props)
+    }
+  );
 
   // TODO: Continue MathFork and equationgroup
 });

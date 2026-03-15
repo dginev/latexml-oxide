@@ -84,18 +84,14 @@ pub fn increment_align_group_count() {
   let mut locals = locals_mut!();
   match locals.align_group_count.last_mut() {
     Some(v) => *v += 1,
-    None => {
-      locals.align_group_count.push(1);
-    },
+    None => locals.align_group_count.push(1),
   }
 }
 pub fn decrement_align_group_count() {
   let mut locals = locals_mut!();
   match locals.align_group_count.last_mut() {
     Some(v) => *v -= 1,
-    None => {
-      locals.align_group_count.push(-1);
-    },
+    None => locals.align_group_count.push(-1),
   }
 }
 

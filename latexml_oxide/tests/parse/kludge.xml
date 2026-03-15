@@ -179,7 +179,7 @@
   </para>
   <para xml:id="p5">
     <equation xml:id="S0.Ex5">
-      <Math mode="display" tex="a+\mathbb{P}(\eta(x)\to 1)=\sum_{N=0}^{\infty}\sum_{j=0}^{N}\mathbb{P}(N_{x}=N%&#10;\mathrm{and}\frac{j-1}{N}&lt;T_{x}\leq\frac{j}{N})\bar{C}(y^{\circ}(x),T_{x})" xml:id="S0.Ex5.m1">
+      <Math mode="display" tex="a+\mathbb{P}(\eta(x)\to 1)=\sum_{N=0}^{\infty}\sum_{j=0}^{N}\mathbb{P}(N_{x}=N\mathrm{and}\frac{j-1}{N}&lt;T_{x}\leq\frac{j}{N})\bar{C}(y^{\circ}(x),T_{x})" xml:id="S0.Ex5.m1">
         <XMath>
           <XMTok font="italic" role="ERROR">a</XMTok>
           <XMTok meaning="plus" role="ADDOP">+</XMTok>

@@ -106,4 +106,8 @@ LoadDefinitions!({
   InnerPool!(latex_other_in_appendices);
   // lines 5200-5366
   InnerPool!(latex_semi_undocumented);
+
+  // latex_constructs.pool.ltxml line 5937-5938:
+  // LaTeX now includes textcomp by default.
+  RequirePackage!("textcomp");
 });

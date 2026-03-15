@@ -36,7 +36,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
         </tags>
-        <Math mode="display" tex="A,\qquad\mathnormal{A},\qquad\mathrm{A},\qquad\mathit{A},\qquad\mathbf{A},%&#10;\qquad\mathsf{A},\qquad\mathtt{A}," text="list@(A, A, A, A, A, A, A)" xml:id="S1.E1.m1">
+        <Math mode="display" tex="A,\qquad\mathnormal{A},\qquad\mathrm{A},\qquad\mathit{A},\qquad\mathbf{A},\qquad\mathsf{A},\qquad\mathtt{A}," text="list@(A, A, A, A, A, A, A)" xml:id="S1.E1.m1">
           <XMath>
             <XMDual>
               <XMRef idref="S1.E1.m1.8"/>
@@ -107,7 +107,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           <tag>(3)</tag>
           <tag role="refnum">3</tag>
         </tags>
-        <Math mode="display" tex="\mbox{\tiny $X$},\qquad\mbox{\scriptsize $X$},\qquad\mbox{\normalsize $X$},%&#10;\qquad\mbox{\large $X$},\qquad\mbox{\Large $X$},\qquad\mbox{\LARGE $X$},\qquad%&#10;\mbox{\huge $X$},\qquad\mbox{\Huge $X$}" text="list@([ X], [ X], [ X], [ X], [ X], [ X], [ X], [ X])" xml:id="S1.E3.m1">
+        <Math mode="display" tex="\mbox{\tiny $X$},\qquad\mbox{\scriptsize $X$},\qquad\mbox{\normalsize $X$},\qquad\mbox{\large $X$},\qquad\mbox{\Large $X$},\qquad\mbox{\LARGE $X$},\qquad\mbox{\huge $X$},\qquad\mbox{\Huge $X$}" text="list@([ X], [ X], [ X], [ X], [ X], [ X], [ X], [ X])" xml:id="S1.E3.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -182,7 +182,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           <tag>(4)</tag>
           <tag role="refnum">4</tag>
         </tags>
-        <Math mode="display" tex="{\color[rgb]{1,0,0}X},\qquad{\color[rgb]{0,0,1}X},\qquad{\color[rgb]{0,1,0}X},%&#10;\qquad\fcolorbox{blue}{red}{\textcolor{green}{X}}" text="list@(X, X, X, [X])" xml:id="S1.E4.m1">
+        <Math mode="display" tex="{\color[rgb]{1,0,0}X},\qquad{\color[rgb]{0,0,1}X},\qquad{\color[rgb]{0,1,0}X},\qquad\fcolorbox{blue}{red}{\textcolor{green}{X}}" text="list@(X, X, X, [X])" xml:id="S1.E4.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -213,7 +213,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           <tag>(5)</tag>
           <tag role="refnum">5</tag>
         </tags>
-        <Math mode="display" tex="(a|b),\qquad\bigl(a\bigm|b\bigr),\qquad\Bigl(a\Bigm|b\Bigr),\qquad\biggl(a%&#10;\biggm|b\biggr),\qquad\Biggl(a\Biggm|b\Biggr)" text="list@(conditional@(a, b), conditional@(a, b), conditional@(a, b), conditional@(a, b), conditional@(a, b))" xml:id="S1.E5.m1">
+        <Math mode="display" tex="(a|b),\qquad\bigl(a\bigm|b\bigr),\qquad\Bigl(a\Bigm|b\Bigr),\qquad\biggl(a\biggm|b\biggr),\qquad\Biggl(a\Biggm|b\Biggr)" text="list@(conditional@(a, b), conditional@(a, b), conditional@(a, b), conditional@(a, b), conditional@(a, b))" xml:id="S1.E5.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -301,7 +301,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           <tag>(6)</tag>
           <tag role="refnum">6</tag>
         </tags>
-        <Math class="ltx_math_unparsed" mode="display" tex="\left(a^{b}\middle|x\right),\qquad\left(a^{b^{c}}\middle|x\right),\qquad\left(%&#10;a^{b^{c^{d}}}\middle|x\right)" xml:id="S1.E6.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="\left(a^{b}\middle|x\right),\qquad\left(a^{b^{c}}\middle|x\right),\qquad\left(a^{b^{c^{d}}}\middle|x\right)" xml:id="S1.E6.m1">
           <XMath>
             <XMWrap>
               <XMTok role="OPEN" stretchy="true">(</XMTok>
@@ -525,7 +525,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
           <tag>(11)</tag>
           <tag role="refnum">11</tag>
         </tags>
-        <Math mode="display" tex="\binom{a}{b}\genfrac{}{}{0.0pt}{}{a}{b},\qquad\genfrac{}{}{0.04303pt}{}{a}{b},%&#10;\qquad\genfrac{}{}{0.43057pt}{}{a}{b},\qquad\genfrac{}{}{4.30554pt}{}{a}{b}" text="list@(binomial@(a, b) * (a FRACOP b), a / b, a / b, a / b)" xml:id="S2.E11.m1">
+        <Math mode="display" tex="\binom{a}{b}\genfrac{}{}{0.0pt}{}{a}{b},\qquad\genfrac{}{}{0.04303pt}{}{a}{b},\qquad\genfrac{}{}{0.43057pt}{}{a}{b},\qquad\genfrac{}{}{4.30554pt}{}{a}{b}" text="list@(binomial@(a, b) * (a FRACOP b), a / b, a / b, a / b)" xml:id="S2.E11.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -588,7 +588,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
           <tag>(12)</tag>
           <tag role="refnum">12</tag>
         </tags>
-        <Math mode="display" tex="\genfrac{(}{)}{}{}{a}{b},\qquad\genfrac{(}{)}{}{}{a^{2}}{b^{2}},\qquad\genfrac%&#10;{(}{)}{}{}{\int_{a}^{b}f(x)dx}{\int_{a}^{b}g(x)dx}" text="list@(a / b, a ^ 2 / b ^ 2, ((integral _ a) ^ b)@(f * x * differential-d@(x)) / ((integral _ a) ^ b)@(g * x * differential-d@(x)))" xml:id="S2.E12.m1">
+        <Math mode="display" tex="\genfrac{(}{)}{}{}{a}{b},\qquad\genfrac{(}{)}{}{}{a^{2}}{b^{2}},\qquad\genfrac{(}{)}{}{}{\int_{a}^{b}f(x)dx}{\int_{a}^{b}g(x)dx}" text="list@(a / b, a ^ 2 / b ^ 2, ((integral _ a) ^ b)@(f * x * differential-d@(x)) / ((integral _ a) ^ b)@(g * x * differential-d@(x)))" xml:id="S2.E12.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -721,7 +721,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
           <tag>(13)</tag>
           <tag role="refnum">13</tag>
         </tags>
-        <Math mode="display" tex="\sqrt{x},\qquad\sqrt[3]{x},\qquad\root 3 \of{x},\qquad\boxed{x^{2}},\qquad\not%&#10;{?}" text="list@(square-root@(x), nth-root@(3, x), nth-root@(3, x), x ^ 2, not-?)" xml:id="S2.E13.m1">
+        <Math mode="display" tex="\sqrt{x},\qquad\sqrt[3]{x},\qquad\root 3 \of{x},\qquad\boxed{x^{2}},\qquad\not{?}" text="list@(square-root@(x), nth-root@(3, x), nth-root@(3, x), x ^ 2, not-?)" xml:id="S2.E13.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1008,7 +1008,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
           <tag>(18)</tag>
           <tag role="refnum">18</tag>
         </tags>
-        <Math mode="display" tex="a^{b},\qquad a^{b^{c}},\qquad a^{b^{c^{d}}},\qquad a_{b},\qquad a_{b_{c}},%&#10;\qquad a_{b_{c_{d}}},\qquad a^{b}_{c}" text="list@(a ^ b, a ^ b ^ c, a ^ b ^ c ^ d, a _ b, a _ b _ c, a _ b _ c _ d, (a ^ b) _ c)" xml:id="S3.E18.m1">
+        <Math mode="display" tex="a^{b},\qquad a^{b^{c}},\qquad a^{b^{c^{d}}},\qquad a_{b},\qquad a_{b_{c}},\qquad a_{b_{c_{d}}},\qquad a^{b}_{c}" text="list@(a ^ b, a ^ b ^ c, a ^ b ^ c ^ d, a _ b, a _ b _ c, a _ b _ c _ d, (a ^ b) _ c)" xml:id="S3.E18.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1144,7 +1144,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
           <tag>(20)</tag>
           <tag role="refnum">20</tag>
         </tags>
-        <Math mode="display" tex="X=\sum_{1\leq i\leq j\leq n}X_{ij},\qquad X=\sum_{\mathclap{1\leq i\leq j\leq n%&#10;}}X_{ij},\qquad X=\smashoperator[r]{\sum_{1\leq i\leq j\leq n}^{}}X_{ij},%&#10;\qquad X=\smashoperator[l]{\sum_{1\leq i\leq j\leq n}^{}}X_{ij}" text="formulae@(X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), formulae@(X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), formulae@(X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)))))" xml:id="S3.E20.m1">
+        <Math mode="display" tex="X=\sum_{1\leq i\leq j\leq n}X_{ij},\qquad X=\sum_{\mathclap{1\leq i\leq j\leq n}}X_{ij},\qquad X=\smashoperator[r]{\sum_{1\leq i\leq j\leq n}^{}}X_{ij},\qquad X=\smashoperator[l]{\sum_{1\leq i\leq j\leq n}^{}}X_{ij}" text="formulae@(X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), formulae@(X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), formulae@(X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)))))" xml:id="S3.E20.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1302,7 +1302,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
           <tag>(21)</tag>
           <tag role="refnum">21</tag>
         </tags>
-        <Math mode="display" tex="a\overset{\mathrm{def}}{\rightarrow}b,\qquad a\underset{\mathrm{def}}{%&#10;\rightarrow}b,\qquad a\overrightarrow{\mathrm{def}}b,\qquad a\underrightarrow{%&#10;\mathrm{def}}b" text="list@(a * def@(rightarrow) * b, a * def@(rightarrow) * b, a * overrightarrow@(def) * b, a * underrightarrow@(def) * b)" xml:id="S3.E21.m1">
+        <Math mode="display" tex="a\overset{\mathrm{def}}{\rightarrow}b,\qquad a\underset{\mathrm{def}}{\rightarrow}b,\qquad a\overrightarrow{\mathrm{def}}b,\qquad a\underrightarrow{\mathrm{def}}b" text="list@(a * def@(rightarrow) * b, a * def@(rightarrow) * b, a * overrightarrow@(def) * b, a * underrightarrow@(def) * b)" xml:id="S3.E21.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1364,7 +1364,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
           <tag>(22)</tag>
           <tag role="refnum">22</tag>
         </tags>
-        <Math mode="display" tex="\overline{abc}^{s}\qquad\overleftarrow{abc}^{s}\qquad\overrightarrow{abc}^{s}%&#10;\qquad\overbrace{abc}^{s}\qquad\underline{abc}_{s}\qquad\underbrace{abc}_{s}" text="list@((overline@(a * b * c)) ^ s, (overleftarrow@(a * b * c)) ^ s, (overrightarrow@(a * b * c)) ^ s, (overbrace@(a * b * c)) ^ s, (underline@(a * b * c)) _ s, (underbrace@(a * b * c)) _ s)" xml:id="S3.E22.m1">
+        <Math mode="display" tex="\overline{abc}^{s}\qquad\overleftarrow{abc}^{s}\qquad\overrightarrow{abc}^{s}\qquad\overbrace{abc}^{s}\qquad\underline{abc}_{s}\qquad\underbrace{abc}_{s}" text="list@((overline@(a * b * c)) ^ s, (overleftarrow@(a * b * c)) ^ s, (overrightarrow@(a * b * c)) ^ s, (overbrace@(a * b * c)) ^ s, (underline@(a * b * c)) _ s, (underbrace@(a * b * c)) _ s)" xml:id="S3.E22.m1">
           <XMath>
             <XMDual>
               <XMApp>

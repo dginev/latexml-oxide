@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 
 use crate::common::arena;
 use crate::common::arena::SymHashMap as HashMap;
+use crate::common::color::Color;
 use crate::common::error::*;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
@@ -18,6 +19,13 @@ use crate::state::{Scope, lookup_font};
 use crate::token::*;
 use crate::whatsit::Whatsit;
 use crate::*;
+use crate::common::store::Stored;
+
+/// Helper for sizer string parsing: references either a numeric arg or a named property
+enum SizerRef {
+  Arg(usize),
+  Prop(String),
+}
 
 /// A trait for auto-wrapping a generic type `T` into `Option<Y>`,
 /// where Y can be inferred from context.
@@ -116,23 +124,58 @@ impl IntoOption<Option<SizingClosure>> for &str {
   fn into_option(self) -> Option<SizingClosure> {
     if self.is_empty() {
       None
-    } else if let Some(stripped) = self.strip_prefix('#') {
-      let arg = stripped.parse::<usize>().unwrap_or(1);
-      Some(Rc::new(move |w| match w.get_arg(arg) {
-        Some(arg) => arg.compute_size(HashMap::default()),
-        None => Ok((
-          Dimension::default(),
-          Dimension::default(),
-          Dimension::default(),
-        )),
-      }))
-    } else if self.is_empty() || self == "0" {
+    } else if self == "0" {
       Some(Rc::new(|_| {
         Ok((
           Dimension::default(),
           Dimension::default(),
           Dimension::default(),
         ))
+      }))
+    } else if self.starts_with('#') {
+      // Perl: /^(#\w+)*$/ — parse each #token as either numeric arg or property name
+      // e.g. "#3" → getArg(3), "#alignment" → props{alignment}, "#1#2" → both combined
+      let mut refs: Vec<SizerRef> = Vec::new();
+      let mut rest = self;
+      while let Some(stripped) = rest.strip_prefix('#') {
+        let end = stripped.find('#').unwrap_or(stripped.len());
+        let name = &stripped[..end];
+        if let Ok(n) = name.parse::<usize>() {
+          refs.push(SizerRef::Arg(n));
+        } else {
+          refs.push(SizerRef::Prop(name.to_string()));
+        }
+        rest = &stripped[end..];
+      }
+      Some(Rc::new(move |w| {
+        let mut boxes: Vec<Digested> = Vec::new();
+        for r in &refs {
+          match r {
+            SizerRef::Arg(n) => {
+              if let Some(arg) = w.get_arg(*n) {
+                boxes.push(arg.clone());
+              }
+            }
+            SizerRef::Prop(name) => {
+              if let Some(Stored::Digested(d)) = w.get_property(name).as_deref() {
+                boxes.push(d.clone());
+              }
+            }
+          }
+        }
+        if boxes.len() == 1 {
+          boxes[0].compute_size(HashMap::default())
+        } else if boxes.is_empty() {
+          Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+        } else {
+          let font =
+            if let Some(Stored::Font(ref font)) = w.get_property("font").as_deref() {
+              font.clone()
+            } else {
+              lookup_font().unwrap()
+            };
+          font.compute_boxes_size(&boxes, HashMap::default())
+        }
       }))
     } else {
       // literal string, get its size with the current font?
@@ -422,4 +465,7 @@ impl IntoFontField<Option<f64>> for f64 {
 }
 impl IntoFontField<Option<f64>> for i32 {
   fn into_font_field(self) -> Option<f64> { Some(self as f64) }
+}
+impl IntoFontField<Option<Color>> for Color {
+  fn into_font_field(self) -> Option<Color> { Some(self) }
 }

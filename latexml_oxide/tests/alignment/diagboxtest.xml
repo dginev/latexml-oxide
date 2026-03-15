@@ -99,7 +99,7 @@
       <thead>
         <tr>
           <td align="left" border="r t" thead="column row">NW</td>
-          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="24.27" tex="\diagbox[dir={NW}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[l]{M%&#10;}}}" width="28.74" xml:id="p2.pic1">
+          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="24.27" tex="\diagbox[dir={NW}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[l]{M}}}" width="28.74" xml:id="p2.pic1">
               <line points="14.37,24.27 28.74,0" stroke="#000000" stroke-width="0.4"/>
               <line points="0,12.135 28.74,0" stroke="#000000" stroke-width="0.4"/>
               <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
@@ -129,7 +129,7 @@
       <tbody>
         <tr>
           <td align="left" border="r t" thead="row">SE</td>
-          <td align="center" border="r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={SE}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[r]{M%&#10;}}}" width="28.74" xml:id="p2.pic2">
+          <td align="center" border="r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={SE}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[r]{M}}}" width="28.74" xml:id="p2.pic2">
               <line points="0,24.27 28.74,12.135" stroke="#000000" stroke-width="0.4"/>
               <line points="0,24.27 14.37,0" stroke="#000000" stroke-width="0.4"/>
               <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
@@ -157,7 +157,7 @@
         </tr>
         <tr>
           <td align="left" border="r t" thead="row">SW</td>
-          <td align="center" border="r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={SW}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[l]{M%&#10;}}}" width="28.74" xml:id="p2.pic3">
+          <td align="center" border="r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={SW}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[l]{M}}}" width="28.74" xml:id="p2.pic3">
               <line points="0,12.135 28.74,24.27" stroke="#000000" stroke-width="0.4"/>
               <line points="14.37,0 28.74,24.27" stroke="#000000" stroke-width="0.4"/>
               <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,14.81)">
@@ -185,7 +185,7 @@
         </tr>
         <tr>
           <td align="left" border="b r t" thead="row">NE</td>
-          <td align="center" border="b r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={NE}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[r]{M%&#10;}}}" width="28.74" xml:id="p2.pic4">
+          <td align="center" border="b r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={NE}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[r]{M}}}" width="28.74" xml:id="p2.pic4">
               <line points="0,0 14.37,24.27" stroke="#000000" stroke-width="0.4"/>
               <line points="0,0 28.74,12.135" stroke="#000000" stroke-width="0.4"/>
               <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,14.81)">
@@ -353,7 +353,7 @@
     <tabular class="ltx_guessed_headers" vattach="middle">
       <thead>
         <tr>
-          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="18.26" tex="\diagbox[dir={SW},width=56.9055pt]{{\shortstack[l]{num}}}{{\shortstack[r]{%&#10;alpha}}}{}" width="78.74" xml:id="p5.pic1">
+          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="18.26" tex="\diagbox[dir={SW},width=56.9055pt]{{\shortstack[l]{num}}}{{\shortstack[r]{alpha}}}{}" width="78.74" xml:id="p5.pic1">
               <line points="0,0, 78.74,18.26" stroke="#000000" stroke-width="0.4"/>
               <g class="ltx_svg_fog" innerheight="5.96" innerwidth="26.52" transform="translate(0,12.3)">
                 <inline-block>
@@ -392,7 +392,7 @@
     <tabular class="ltx_guessed_headers" vattach="middle">
       <thead>
         <tr>
-          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="18.26" tex="\diagbox[dir={NW},width=56.9055pt]{{\shortstack[l]{num}}}{{\shortstack[r]{%&#10;alpha}}}{}" width="78.74" xml:id="p6.pic1">
+          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="18.26" tex="\diagbox[dir={NW},width=56.9055pt]{{\shortstack[l]{num}}}{{\shortstack[r]{alpha}}}{}" width="78.74" xml:id="p6.pic1">
               <line points="0,18.26 78.74,0" stroke="#000000" stroke-width="0.4"/>
               <g class="ltx_svg_fog" innerheight="5.96" innerwidth="26.52" transform="translate(0,0)">
                 <inline-block>
@@ -434,7 +434,7 @@
     <tabular vattach="middle">
       <tbody>
         <tr>
-          <td align="left" border="r t" class="ltx_nopad"><picture height="100" tex="\diagbox[dir={NW},width=72.26999pt,height=72.26999pt,linewidth={2pt},linecolor%&#10;={blue},font={}]{{\shortstack[l]{Head\\&#10;A}}}{{\shortstack[r]{Head\\&#10;B}}}{}" width="100" xml:id="p8.pic1">
+          <td align="left" border="r t" class="ltx_nopad"><picture height="100" tex="\diagbox[dir={NW},width=72.26999pt,height=72.26999pt,linewidth={2pt},linecolor={blue},font={}]{{\shortstack[l]{Head\\&#10;A}}}{{\shortstack[r]{Head\\&#10;B}}}{}" width="100" xml:id="p8.pic1">
               <line points="0,100 100,0" stroke="blue" stroke-width="2pt"/>
               <g class="ltx_svg_fog" innerheight="26.21" innerwidth="30.09" transform="translate(0,0)">
                 <inline-block>
@@ -464,7 +464,7 @@
     <tabular vattach="middle">
       <tbody>
         <tr>
-          <td align="left" border="r t" class="ltx_nopad"><picture height="52.42" tex="\diagbox[dir={NW},innerwidth=72.26999pt,linewidth={2pt},linecolor={blue},font=%&#10;{}]{{\shortstack[l]{Head\\&#10;A}}}{{\shortstack[r]{Head\\&#10;B}}}{}" width="100" xml:id="p8.pic2">
+          <td align="left" border="r t" class="ltx_nopad"><picture height="52.42" tex="\diagbox[dir={NW},innerwidth=72.26999pt,linewidth={2pt},linecolor={blue},font={}]{{\shortstack[l]{Head\\&#10;A}}}{{\shortstack[r]{Head\\&#10;B}}}{}" width="100" xml:id="p8.pic2">
               <line points="0,52.42 100,0" stroke="blue" stroke-width="2pt"/>
               <g class="ltx_svg_fog" innerheight="26.21" innerwidth="30.09" transform="translate(0,0)">
                 <inline-block>

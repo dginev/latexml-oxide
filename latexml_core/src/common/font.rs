@@ -1,5 +1,6 @@
 use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::arena::{self, EMPTY_SYM, SymHashMap, SymStr};
+use crate::common::color::{self, Color};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::state::*;
@@ -28,11 +29,12 @@ pub type Fontmap = Rc<[Option<char>]>;
 static DEFFAMILY: &str = "serif";
 static DEFSERIES: &str = "medium";
 static DEFSHAPE: &str = "upright";
-static DEFCOLOR: &str = "black";
-static DEFBACKGROUND: &str = "white";
+/// Perl: $DEFCOLOR = Black = Color::rgb(0,0,0)
+static DEFCOLOR: Color = color::BLACK;
+// Perl: $DEFBACKGROUND = undef (transparent), $DEFLANGUAGE = undef
+// These are intentionally None in text_default/math_default.
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
-static DEFLANGUAGE: &str = "en";
 // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 static DEFSIZE: f64 = 10.0;
 
@@ -179,6 +181,8 @@ static STYLE_SIZE: Lazy<HashMap<&'static str, usize>> = Lazy::new(|| {
   "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5)
 });
 
+// Perl: Font.pm %mathstylesize — used in specialize() font size scaling (commented out in Perl too)
+#[allow(dead_code)]
 static MATH_STYLE_SIZE: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
   raw_map!(
   "display" => 1.0, "text" => 1.0, "script" => 0.7, "scriptscript" => 0.5)
@@ -262,7 +266,8 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
   [-1,  1, -2, -3, -1,  0, -1, -1],
 ];
 
-// Nominal baseline size for a given font size
+// Perl: Font.pm %baseline_map — used in computeStringSize() for baseline calculation
+#[allow(dead_code)]
 static BASELINE_MAP: Lazy<HashMap<i64, f64>> = Lazy::new(|| {
   raw_map!(
     5 => 6.0, 6 => 7.0, 7 => 8.0, 8 => 9.5, 9 => 10.0, 10 => 12.0,
@@ -380,8 +385,8 @@ pub struct Font {
   pub series:        Option<Cow<'static, str>>,
   pub shape:         Option<Cow<'static, str>>,
   pub size:          Option<f64>,
-  pub color:         Option<Cow<'static, str>>,
-  pub bg:            Option<Cow<'static, str>>,
+  pub color:         Option<Color>,
+  pub bg:            Option<Color>,
   pub opacity:       Option<Cow<'static, str>>,
   pub encoding:      Option<Cow<'static, str>>,
   pub language:      Option<Cow<'static, str>>,
@@ -453,9 +458,17 @@ impl fmt::Debug for Font {
       .unwrap_or_else(|| String::from('*'));
     write!(f, "{}", size_str)?;
     write!(f, ",")?;
-    write!(f, "{}", self.color.as_ref().unwrap_or(&star))?;
+    if let Some(ref c) = self.color {
+      write!(f, "{c}")?;
+    } else {
+      write!(f, "*")?;
+    }
     write!(f, ",")?;
-    write!(f, "{}", self.bg.as_ref().unwrap_or(&star))?;
+    if let Some(ref b) = self.bg {
+      write!(f, "{b}")?;
+    } else {
+      write!(f, "*")?;
+    }
     write!(f, ",")?;
     write!(f, "{}", self.opacity.as_ref().unwrap_or(&star))?;
     write!(f, ",")?;
@@ -500,11 +513,11 @@ impl Font {
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed(DEFSHAPE)),
       size:          Some(DEFSIZE),
-      color:         Some(Cow::Borrowed(DEFCOLOR)),
-      bg:            Some(Cow::Borrowed(DEFBACKGROUND)),
+      color:         Some(DEFCOLOR),
+      bg:            None, // Perl: $DEFBACKGROUND = undef (transparent)
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
       encoding:      Some(Cow::Borrowed(DEFENCODING)),
-      language:      Some(Cow::Borrowed(DEFLANGUAGE)),
+      language:      None, // Perl: $DEFLANGUAGE = undef
       mathstyle:     None,
       mathstylestep: None,
       emph:          None,
@@ -525,11 +538,11 @@ impl Font {
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed("italic")),
       size:          Some(DEFSIZE),
-      color:         Some(Cow::Borrowed(DEFCOLOR)),
-      bg:            Some(Cow::Borrowed(DEFBACKGROUND)),
+      color:         Some(DEFCOLOR),
+      bg:            None, // Perl: $DEFBACKGROUND = undef
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
-      encoding:      None,
-      language:      Some(Cow::Borrowed(DEFLANGUAGE)),
+      encoding:      None, // Perl has 'OT1' but Rust char decoding uses encoding differently
+      language:      None, // Perl: $DEFLANGUAGE = undef
       mathstyle:     Some(Cow::Borrowed("text")),
       mathstylestep: None,
       emph:          None,
@@ -580,15 +593,18 @@ impl Font {
         parts.push(&size_str);
       }
     }
+    let color_str;
     if let Some(ref col) = self.color {
-      if col.as_ref() != DEFCOLOR {
-        parts.push(col);
+      if *col != DEFCOLOR {
+        color_str = col.to_attribute();
+        parts.push(&color_str);
       }
     }
+    let bg_str;
     if let Some(ref bkg) = self.bg {
-      if bkg.as_ref() != DEFBACKGROUND {
-        parts.push(bkg);
-      }
+      // Perl: $DEFBACKGROUND = undef, so any set bg is non-default
+      bg_str = bkg.to_attribute();
+      parts.push(&bg_str);
     }
     if let Some(ref opa) = self.opacity {
       if opa.as_ref() != DEFOPACITY {
@@ -625,10 +641,10 @@ impl Font {
       info.insert("size".to_string(), v.to_string());
     }
     if let Some(ref v) = self.color {
-      info.insert("color".to_string(), v.to_string());
+      info.insert("color".to_string(), v.to_attribute());
     }
     if let Some(ref v) = self.bg {
-      info.insert("background".to_string(), v.to_string());
+      info.insert("background".to_string(), v.to_attribute());
     }
     if let Some(ref v) = self.opacity {
       info.insert("opacity".to_string(), v.to_string());
@@ -784,8 +800,8 @@ impl Font {
   pub fn get_series(&self) -> Option<&Cow<'_, str>> { self.series.as_ref() }
   pub fn get_shape(&self) -> Option<&Cow<'_, str>> { self.shape.as_ref() }
   pub fn get_size(&self) -> Option<f64> { self.size }
-  pub fn get_color(&self) -> Option<&Cow<'_, str>> { self.color.as_ref() }
-  pub fn get_background(&self) -> Option<&Cow<'_, str>> { self.bg.as_ref() }
+  pub fn get_color(&self) -> Option<&Color> { self.color.as_ref() }
+  pub fn get_background(&self) -> Option<&Color> { self.bg.as_ref() }
   pub fn get_opacity(&self) -> Option<&Cow<'_, str>> { self.opacity.as_ref() }
   pub fn get_encoding(&self) -> Option<&Cow<'_, str>> { self.encoding.as_ref() }
   pub fn get_language(&self) -> Option<&Cow<'_, str>> { self.language.as_ref() }
@@ -894,7 +910,7 @@ impl Font {
       flags &= !FLAG_EMPH;
     }
 
-    let mut newfont = Font {
+    let newfont = Font {
       family,
       series,
       shape,
@@ -918,13 +934,11 @@ impl Font {
       forcebold: None,
       scale: None,
     };
-    // Optional specialize pass (Perl: if my $specialize = $options{specialize})
-    if let Some(ref specialize_text) = newfont.name {
-      let text = specialize_text.to_string();
-      if !text.is_empty() {
-        newfont = newfont.specialize(&text);
-      }
-    }
+    // Note: Perl's merge() has an optional `specialize` option that is passed
+    // explicitly (e.g. merge(specialize => $text)). It's NOT keyed on the font name.
+    // Specialize is called at TBox creation time (tbox.rs) with the actual text content.
+    // Do NOT call specialize here with the font name — it corrupts font properties
+    // (e.g. resetting series "bold" to "medium" for font names like "cmb10").
     newfont
   }
 
@@ -1018,10 +1032,10 @@ impl Font {
     if is_diff_f64(self.size, other.size) {
       distance += 1;
     }
-    if is_diff_opt_str(self.color.as_deref(), other.color.as_deref()) {
+    if is_diff_color(self.color.as_ref(), other.color.as_ref()) {
       distance += 1;
     }
-    if is_diff_opt_str(self.bg.as_deref(), other.bg.as_deref()) {
+    if is_diff_color(self.bg.as_ref(), other.bg.as_ref()) {
       distance += 1;
     }
     if is_diff_opt_str(self.opacity.as_deref(), other.opacity.as_deref()) {
@@ -1042,6 +1056,30 @@ impl Font {
   }
 
   /// This method compares 2 fonts, returning the differences between them.
+  /// Returns the font attribute string (family/series/shape components that differ
+  /// from text defaults), joined by spaces. E.g., "italic" for a math font.
+  /// Used by cancel.sty to capture font state for XML attributes.
+  pub fn font_attribute_string(&self) -> String {
+    let mut parts = Vec::new();
+    if let Some(ref fam) = self.family {
+      let f = if fam == "math" { "serif" } else { fam.as_ref() };
+      if f != DEFFAMILY {
+        parts.push(f.to_string());
+      }
+    }
+    if let Some(ref ser) = self.series {
+      if ser.as_ref() != DEFSERIES {
+        parts.push(ser.to_string());
+      }
+    }
+    if let Some(ref shp) = self.shape {
+      if shp.as_ref() != DEFSHAPE {
+        parts.push(shp.to_string());
+      }
+    }
+    parts.join(" ")
+  }
+
   /// Noting that the font-related attributes in the schema distill the
   /// font properties into fewer attributes (font,fontsize,color,background,opacity),
   /// the return value encodes both the attribute changes that would be needed to effect
@@ -1106,20 +1144,20 @@ impl Font {
         ),
       );
     }
-    if is_diff(self.color.as_ref(), other.color.as_ref()) {
+    if is_diff_color(self.color.as_ref(), other.color.as_ref()) {
       result.insert(
         "color".to_string(),
         (
-          self.color.as_ref().unwrap().to_string(),
+          self.color.as_ref().unwrap().to_attribute(),
           Font { color: self.color.clone(), ..Font::default() },
         ),
       );
     }
-    if is_diff(self.bg.as_ref(), other.bg.as_ref()) {
+    if is_diff_color(self.bg.as_ref(), other.bg.as_ref()) {
       result.insert(
         "backgroundcolor".to_string(),
         (
-          self.bg.as_ref().unwrap().to_string(),
+          self.bg.as_ref().unwrap().to_attribute(),
           Font { bg: self.bg.clone(), ..Font::default() },
         ),
       );
@@ -1178,7 +1216,7 @@ impl Font {
       opacity: other.opacity.clone(), // should multiply or replace?
       ..Font::default()
     };
-    if is_diff(othercolor, Some(&Cow::Borrowed(DEFCOLOR))) {
+    if is_diff_color(othercolor, Some(&DEFCOLOR)) {
       changes.color.clone_from(&other.color);
     }
 
@@ -1473,6 +1511,10 @@ fn is_diff_opt_str(x: Option<&str>, y: Option<&str>) -> bool {
 
 fn is_diff_f64(x: Option<f64>, y: Option<f64>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
 
+fn is_diff_color(x: Option<&Color>, y: Option<&Color>) -> bool {
+  x.is_some() && (y.is_none() || (x != y))
+}
+
 /// Matches fonts when both are converted to toString strings.
 /// Uses regex caching for repeated lookups.
 /// Perl: match_font
@@ -1759,7 +1801,8 @@ pub fn rationalize_font_size(size: &str) -> f64 {
   if let Some(symbolic) = FONT_SIZE.get(size) {
     *symbolic * DEFSIZE
   } else {
-    DEFSIZE
+    // Perl: return $size — if not a symbolic name, return the numeric value as-is
+    size.parse::<f64>().unwrap_or(DEFSIZE)
   }
 }
 

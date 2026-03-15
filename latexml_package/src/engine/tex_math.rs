@@ -3,6 +3,7 @@
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
+use crate::engine::tex_character;
 
 /// Perl's mergeLimits (TeX_Math.pool.ltxml): walks backward through the
 /// digest list, extracts any existing script level from the previous
@@ -308,18 +309,31 @@ LoadDefinitions!({
     state::after_assignment();
   });
 
+  // Perl: DefConstructor('\mathaccent Number Digested', ..., afterDigest => sub { ... })
   DefConstructor!("\\mathaccent Number Digested",
-  "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
-  sizer => "#1",    // Close enough?
+  "<ltx:XMApp><ltx:XMTok role='#accrole' name='#name' stretchy='#stretchy'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
+  sizer => "#2",    // Close enough?
   after_digest => sub[whatsit] {
     let n = whatsit.get_arg(1).unwrap().value_of();
     let props = decode_math_char(n as u16)?;
     if let Some(glyph) = props.glyph {
-      whatsit.set_property("glyph", glyph);
-
-      let mut glyph_buf: [u8; 4] = [0; 4];
-      let glyph_str: &str = glyph.encode_utf8(&mut glyph_buf);
-      whatsit.set_property("font", lookup_font().unwrap().specialize(glyph_str));
+      let glyph_string = glyph.to_string();
+      let acc_props = tex_character::unicode_accent(&glyph_string);
+      // Perl: $glyph = $acc_props{unwrapped} if $acc_props{unwrapped};
+      let display_glyph = if let Some(ap) = acc_props {
+        if !ap.unwrapped.is_empty() { ap.unwrapped.to_string() } else { glyph_string.clone() }
+      } else { glyph_string.clone() };
+      let accrole = acc_props.map(|ap| ap.role).unwrap_or("OVERACCENT");
+      let name = acc_props.map(|ap| ap.name);
+      // Perl: $$acc_props{stretchy} || 'false'
+      let stretchy = "false";
+      whatsit.set_property("glyph", arena::pin(&display_glyph));
+      whatsit.set_property("font", lookup_font().unwrap().specialize(&display_glyph));
+      whatsit.set_property("accrole", accrole);
+      if let Some(n) = name {
+        whatsit.set_property("name", n);
+      }
+      whatsit.set_property("stretchy", stretchy);
     }
   });
 
@@ -416,9 +430,9 @@ LoadDefinitions!({
   // [The \@hidden@bgroup/egroup keep from putting a {} into the UnTeX]
   // HOWEVER, an additional complication is that it is a common mistake to omit the balancing
   // \right! Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
-  DefMacro!("\\left XToken", r"\@left #1\@hidden@bgroup");
-  // Like \@hidden@egroup, but softer about missing \left
-  DefConstructor!("\\right@hidden@egroup", "",
+  DefMacro!("\\left XToken", r"\@left #1\lx@hidden@bgroup");
+  // \lx@hidden@egroup@right: like \lx@hidden@egroup, but softer about missing \left
+  DefConstructor!("\\lx@hidden@egroup@right", "",
     after_digest => {
       if is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
         || lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
@@ -430,10 +444,10 @@ LoadDefinitions!({
     reversion => None);
 
   // \right is a constructor (non-expandable), so that LaTeX3 kernel can use it as a separator
-  // in \numexpr contexts. It unreads \right@hidden@egroup and \@right into the input stream.
+  // in \numexpr contexts. It unreads \lx@hidden@egroup@right and \lx@right into the input stream.
   DefConstructor!("\\right", "",
     before_digest => {
-      gullet::unread(Tokens::new(vec![T_CS!("\\right@hidden@egroup"), T_CS!("\\@right")]));
+      gullet::unread(Tokens::new(vec![T_CS!("\\lx@hidden@egroup@right"), T_CS!("\\lx@right")]));
     },
     reversion => None);
 
@@ -447,7 +461,9 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.left_role);
         whatsit.set_property("char", entry.char);
-        whatsit.set_property("name", entry.name);
+        if let Some(name) = entry.name {
+          whatsit.set_property("name", name);
+        }
         whatsit.set_property("stretchy", true);
         // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
@@ -473,7 +489,9 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.right_role);
         whatsit.set_property("char", entry.char);
-        whatsit.set_property("name", entry.name);
+        if let Some(name) = entry.name {
+          whatsit.set_property("name", name);
+        }
         whatsit.set_property("stretchy", true);
         // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(

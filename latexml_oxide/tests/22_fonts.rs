@@ -16,31 +16,28 @@ fn emph_test() {
 // -- Tests with diffs (need targeted fixes) --
 
 #[test]
-#[ignore] // diffs — table rows short by 1 column (alignment padding)
 fn accents_test() {
   latexml_test_single("tests/fonts/accents.tex", "accents", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — table alignment padding
+#[ignore] // diffs — \fontname not implemented (shows "fontname not implemented" instead of cmr10)
 fn fonts_test() {
   latexml_test_single("tests/fonts/fonts.tex", "fonts", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual/XMApp structure)
 fn mixed_test() {
   latexml_test_single("tests/fonts/mixed.tex", "mixed", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — table alignment padding
+#[ignore] // diffs — \fontname not implemented (shows "fontname not implemented" instead of cmr10)
 fn plainfonts_test() {
   latexml_test_single("tests/fonts/plainfonts.tex", "plainfonts", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — table alignment padding
 fn textcomp_test() {
   latexml_test_single("tests/fonts/textcomp.tex", "textcomp", DIR, None, None);
 }
@@ -56,25 +53,22 @@ fn omencodings_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser
 fn mathbbol_test() {
   latexml_test_single("tests/fonts/mathbbol.tex", "mathbbol", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — table + math
 fn bbold_test() {
   latexml_test_single("tests/fonts/bbold.tex", "bbold", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — needs pifont package (pzd font map)
+#[ignore] // 401 diffs — pifont works but enumerate nesting + table structure issues
 fn ding_test() {
   latexml_test_single("tests/fonts/ding.tex", "ding", DIR, None, None);
 }
 
 #[test]
-#[ignore] // crash in math parser — todo!() not implemented
 fn esint_test() {
   latexml_test_single("tests/fonts/esint.tex", "esint", DIR, None, None);
 }
@@ -87,43 +81,37 @@ fn marvosym_test() {
 // -- Tests that crash (need package/subsystem work) --
 
 #[test]
-#[ignore] // crash in alignment.rs — needs \mathgroup, \color@setgroup
 fn acc_test() {
   latexml_test_single("tests/fonts/acc.tex", "acc", DIR, None, None);
 }
 
 #[test]
-#[ignore] // crash in math parser — needs \DeclareMathAccent chain working
 fn mathaccents_test() {
   latexml_test_single("tests/fonts/mathaccents.tex", "mathaccents", DIR, None, None);
 }
 
 #[test]
-#[ignore] // needs stmaryrd.sty symbols via \DeclareMathSymbol
+#[ignore] // 679 diffs — mostly math parser (XMDual)
 fn stmaryrd_test() {
   latexml_test_single("tests/fonts/stmaryrd.tex", "stmaryrd", DIR, None, None);
 }
 
 #[test]
-#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
 fn mathcolor_test() {
   latexml_test_single("tests/fonts/mathcolor.tex", "mathcolor", DIR, None, None);
 }
 
 #[test]
-#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
 fn wasysym_test() {
   latexml_test_single("tests/fonts/wasysym.tex", "wasysym", DIR, None, None);
 }
 
 #[test]
-#[ignore] // needs \Gin, \ExplSyntaxOn (graphics/expl3)
 fn cancels_test() {
   latexml_test_single("tests/fonts/cancels.tex", "cancels", DIR, None, None);
 }
 
 #[test]
-#[ignore] // needs \ExplSyntaxOn (graphics/expl3)
 fn soul_test() {
   latexml_test_single("tests/fonts/soul.tex", "soul", DIR, None, None);
 }
@@ -135,7 +123,7 @@ fn abxtest_test() {
 }
 
 #[test]
-#[ignore] // many diffs after lastkern fix
+#[ignore] // 376 diffs — font size propagation from \font defs
 fn sizes_test() {
   latexml_test_single("tests/fonts/sizes.tex", "sizes", DIR, None, None);
 }

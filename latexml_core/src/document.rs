@@ -12,7 +12,7 @@ use rustc_hash::FxHashSet as HashSet;
 use std::backtrace::Backtrace;
 
 use std::borrow::Cow;
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 use std::fmt::Write as _;
 use std::rc::Rc;
 
@@ -121,7 +121,7 @@ impl Object for Document {
 }
 impl Document {
   pub fn new() -> Self {
-    set_node_rc_guard(10); // We will need a high treshold for Node mutability
+    set_node_rc_guard(50); // We will need a high threshold for Node mutability
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
@@ -234,9 +234,7 @@ impl Document {
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Rc::new(Font::text_default()));
       self.finalize_rec(&mut root)?;
-      if let Some(Stored::String(prefixes)) = state::lookup_value("RDFa_prefixes") {
-        self.set_rdfa_prefixes(Some(prefixes));
-      }
+      self.set_rdfa_prefixes();
       self.expire_local_font();
     }
     Ok(())
@@ -278,9 +276,14 @@ impl Document {
 
         for (key, mut value) in attrs_to_set {
           if key == arena::pin_static("class") {
-            // Generalize?
+            // Merge and sort class values alphabetically, matching Perl's behavior
             if let Some(ovalue) = node.get_attribute("class") {
-              value = arena::with(value, |value_str| arena::pin(s!("{value_str} {ovalue}")))
+              let new_s = arena::with(value, |s| s.to_string());
+              let mut classes: Vec<&str> =
+                new_s.split_whitespace().chain(ovalue.split_whitespace()).collect();
+              classes.sort();
+              classes.dedup();
+              value = arena::pin(classes.join(" "));
             }
           }
           // Resolve to owned Strings before calling set_attribute,
@@ -452,8 +455,22 @@ impl Document {
             self.record_constructed_node(&new_text);
           }
         },
-        KeyVals(_) => {
-          // KeyVals should not normally appear in the absorption pipeline.
+        KeyVals(ref kv) => {
+          // When KeyVals appear in body absorption (e.g. #1 for RequiredKeyVals),
+          // convert them to text representation matching Perl's stringify behavior.
+          let text = kv.to_string();
+          if !text.is_empty() {
+            let text_font = match self.box_to_absorb {
+              Some(ref thisbox) => thisbox
+                .get_font()?
+                .map(|f| Rc::new(f.into_owned()))
+                .unwrap_or_default(),
+              None => Rc::default(),
+            };
+            if let Some(new_text) = self.open_text(&text, &text_font)? {
+              self.record_constructed_node(&new_text);
+            }
+          }
         },
         RegisterValue(_) => {
           // RegisterValue should not normally appear in the absorption pipeline.
@@ -622,7 +639,6 @@ impl Document {
     //   self.with_node_qname(&self.node))
     // );
     let mut point = self.find_insertion_point(qname, None)?;
-
     let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned())?;
     self.set_node(&newnode);
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
@@ -772,7 +788,7 @@ impl Document {
   }
 
   /// Closes all nodes until $node becomes the current point.
-  pub fn close_to_node(&mut self, node: &Node, _ifopen: bool) -> Result<()> {
+  pub fn close_to_node(&mut self, node: &Node, ifopen: bool) -> Result<()> {
     let mut cant_close = Vec::new();
     let mut lastopen: Option<Node> = None;
     let mut n = self.node.clone();
@@ -792,14 +808,16 @@ impl Document {
     }
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
-      let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
-      arena::with(get_node_qname(node), |qname_str| {
-        {
-          Error!("malformed", qname_str, message)
-        };
-        Ok(())
-      })?;
-    //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
+      // Perl: suppress error when $ifopen is true
+      if !ifopen {
+        let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
+        arena::with(get_node_qname(node), |qname_str| {
+          {
+            Error!("malformed", qname_str, message)
+          };
+          Ok(())
+        })?;
+      }
     } else {
       // Found node.
       if !cant_close.is_empty() {
@@ -838,16 +856,16 @@ impl Document {
   }
 
   pub fn close_node_with_strictness(&mut self, strict: bool, node: &Node) -> Result<()> {
-    // my ($t, @cant_close) = ();
+    // Perl: my ($t, @cant_close) = (); ... while ((($t = $n->getType) != XML_DOCUMENT_NODE) ...
     let mut cant_close: Vec<Node> = Vec::new();
     let mut n = self.node.clone();
-    let mut t = node.get_type();
+    let mut t = n.get_type(); // track walker node type, not target
     while t.is_some() && t != Some(NodeType::DocumentNode) && &n != node {
       if !can_auto_close(&n) {
         cant_close.push(n.clone());
       }
       n = n.get_parent().unwrap();
-      t = node.get_type();
+      t = n.get_type(); // update to walker's type
     }
 
     if t == Some(NodeType::DocumentNode) {
@@ -1120,7 +1138,68 @@ impl Document {
   }
 
   // Internals
-  fn set_rdfa_prefixes(&mut self, _prefixes: Option<SymStr>) {}
+  /// Scan for RDFa attributes in the document and set the `prefix` attribute
+  /// on the root element based on which RDFa prefixes are actually used.
+  fn set_rdfa_prefixes(&mut self) {
+    // Collect the RDFa prefix mapping from state
+    let prefix_map: HashMap<String, String> =
+      state::with_mapping_keys("RDFa_prefixes", |keys| {
+        let mut map = HashMap::default();
+        for key_sym in keys {
+          let key_str = arena::to_string(key_sym);
+          if let Some(stored) = state::lookup_mapping("RDFa_prefixes", &key_str) {
+            map.insert(key_str, stored.to_string());
+          }
+        }
+        map
+      });
+    if prefix_map.is_empty() {
+      return;
+    }
+
+    let non_rdf_prefixes: HashSet<&str> =
+      ["http", "https", "ftp"].iter().copied().collect();
+    let rdf_term_attrs = ["about", "resource", "property", "typeof", "rel", "rev", "datatype"];
+
+    // Build XPath to find elements with any RDFa term attribute
+    let xpath = format!(
+      "descendant::*[{}]",
+      rdf_term_attrs
+        .iter()
+        .map(|a| format!("@{a}"))
+        .collect::<Vec<_>>()
+        .join(" or ")
+    );
+
+    let mut used_prefixes: BTreeSet<String> = BTreeSet::new();
+
+    let nodes = self.findnodes(&xpath, None);
+    for node in &nodes {
+      for attr_name in &rdf_term_attrs {
+        if let Some(value) = node.get_attribute(attr_name) {
+          for term in value.split_whitespace() {
+            if let Some(colon_pos) = term.find(':') {
+              let prefix = &term[..colon_pos];
+              if !non_rdf_prefixes.contains(prefix) && prefix_map.contains_key(prefix) {
+                used_prefixes.insert(prefix.to_string());
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if !used_prefixes.is_empty() {
+      if let Some(mut root) = self.document.get_root_element() {
+        let prefix_str = used_prefixes
+          .iter()
+          .map(|p| format!("{}: {}", p, prefix_map[p]))
+          .collect::<Vec<_>>()
+          .join(" ");
+        let _ = root.set_attribute("prefix", &prefix_str);
+      }
+    }
+  }
 
   pub fn insert_math_token(
     &mut self,
@@ -1419,12 +1498,7 @@ impl Document {
           to.set_attribute(key, val)?;
         }
       } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
-        if let Some(existing) = to.get_attribute(key) {
-          let merged = format!("{existing} {val}");
-          to.set_attribute(key, &merged)?;
-        } else {
-          to.set_attribute(key, val)?;
-        }
+        self.add_ss_values(to, key, val)?;
       } else if MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str()) {
         if let Some(existing) = to.get_attribute(key) {
           let merged = format!("{existing}; {val}");
@@ -2582,8 +2656,12 @@ impl Document {
     attributes: Option<HashMap<String, String>>,
     mut font_opt: Option<Font>,
   ) -> Result<Node> {
-    // DG: This is a cursed way to manage fonts, how can we unwind it all back to a clear
-    // organization?
+    // Font resolution priority (matching Perl's openElement/openElementAt):
+    // 1. Explicit font_opt parameter
+    // 2. _font attribute in attributes hash
+    // 3. box_to_absorb.get_font() — the font of the current box being absorbed
+    //    (Perl: $attributes{_box} = $LaTeXML::BOX; $font = $attributes{_box}->getFont)
+    // 4. Insertion point's font (final fallback, handled later)
     if font_opt.is_none() {
       if let Some(ref attrs) = attributes {
         if let Some(fontid) = attrs.get("_font") {
@@ -2591,6 +2669,13 @@ impl Document {
             .node_fonts
             .get(&fontid.parse::<u64>().unwrap())
             .cloned()
+        }
+      }
+    }
+    if font_opt.is_none() {
+      if let Some(ref digested) = self.box_to_absorb {
+        if let Ok(Some(font)) = digested.get_font() {
+          font_opt = Some(font.into_owned());
         }
       }
     }

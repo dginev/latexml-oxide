@@ -52,4 +52,23 @@ LoadDefinitions!({
   ProcessOptions!();
 
   DefConditional!("\\iflatexml", { true });
+
+  // Perl: DefMacroI('\lxTableRowHead', undef, sub { $alignment->currentColumn->{thead}{row} = 1 })
+  // Marks the current column as a row header in alignment/tabular contexts.
+  // Usage: >{\lxTableRowHead} in column spec with array.sty
+  def_primitive(
+    T_CS!("\\lxTableRowHead"),
+    None,
+    Some(PrimitiveBody::Closure(Rc::new(|_args| {
+      if let Some(alignment) = lookup_alignment() {
+        if let Some(data) = alignment.alignment_cell() {
+          if let Some(col) = data.borrow_mut().current_column() {
+            col.thead_in_row = true;
+          }
+        }
+      }
+      Ok(Vec::new())
+    }))),
+    PrimitiveOptions::default(),
+  )?;
 });

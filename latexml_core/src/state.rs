@@ -8,7 +8,7 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::BindingDispatcher;
+use crate::common::{BindingDispatcher, LabelMappingHook};
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -257,6 +257,8 @@ pub struct State {
   pub bindings_dispatch:       Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
+  /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
+  pub label_mapping_hook:      Option<LabelMappingHook>,
 }
 unsafe impl Send for State {}
 // State is NOT Sync!
@@ -301,6 +303,7 @@ impl Default for State {
       nomathparse:             false,
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
+      label_mapping_hook:      None,
     }
   }
 }
@@ -2033,15 +2036,21 @@ pub fn compute_indirect_model() -> IndirectModel {
   let mut imodel: IndirectModel = SymHashMap::default();
   // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
   let mut openable: HashSet<SymStr> = HashSet::default();
-  for tag in model::get_tags() {
-    if let Some(x) = state!().tag_properties.get(&tag) {
+  // Collect all known tags: from the schema model AND from state tag_properties
+  let mut all_tags: HashSet<SymStr> = model::get_tags().into_iter().collect();
+  for tag in state!().tag_properties.keys() {
+    all_tags.insert(*tag);
+  }
+  for tag in &all_tags {
+    if let Some(x) = state!().tag_properties.get(tag) {
       if let Some(true) = x.auto_open {
-        openable.insert(tag);
+        openable.insert(*tag);
       }
     }
   }
 
-  for tag in model::get_tags() {
+  for tag in &all_tags {
+    let tag = *tag;
     let mut desc: SymHashMap<SymHashMap<usize>> = SymHashMap::default();
     compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
     let desc_keys: Vec<SymStr> = desc.keys().copied().collect();
@@ -2175,6 +2184,14 @@ pub fn set_bindings_dispatch(dispatcher: BindingDispatcher) {
 pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   let mut state = state_mut!();
   state.extra_bindings_dispatch = Some(dispatcher);
+}
+
+pub fn get_label_mapping_hook() -> Option<LabelMappingHook> {
+  state!().label_mapping_hook.clone()
+}
+pub fn set_label_mapping_hook(hook: LabelMappingHook) {
+  let mut state = state_mut!();
+  state.label_mapping_hook = Some(hook);
 }
 
 pub fn get_search_paths() -> Vec<String> { state!().search_paths.iter().cloned().collect() }

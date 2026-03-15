@@ -155,6 +155,7 @@ LoadDefinitions!({
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
 
+      maybe_peek_label()?;
       let stype_str = stype.to_string();
       let mut props = ref_step_counter(&stype_str, false)?;
       // For appendix, look up the backmatter element mapping
@@ -220,6 +221,7 @@ LoadDefinitions!({
       // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
+      maybe_peek_label()?;
       let stype_str = stype.to_string();
       let mut props = RefStepID!(&stype_str)?;
       // For appendix, look up the backmatter element mapping
@@ -233,7 +235,7 @@ LoadDefinitions!({
         // the DigestedData::Postponed variant isn't ideal?
         // should we be draining it? Or is there a better conceptual organization?
         stomach::digest(
-          Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?
+          Tokens!(T_CS!("\\lx@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?
       } else {
         title.clone()
       };
@@ -243,8 +245,8 @@ LoadDefinitions!({
         if let Postponed(toctokens) = toctitle.data() {
           if !toctokens.is_empty() {
             let toctitle_digested = stomach::digest(
-              Tokens!(T_CS!("\\@hidden@bgroup"),
-                toctokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?;
+              Tokens!(T_CS!("\\lx@hidden@bgroup"),
+                toctokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?;
             props.insert("toctitle", toctitle_digested.into());
           }
         }

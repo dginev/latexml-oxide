@@ -73,9 +73,6 @@ pub static FONT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("font"));
 /// the unique symbol for str value "xml:id"
 #[thread_local]
 pub static XML_ID_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("xml:id"));
-/// the unique symbol for str value "DTD"
-#[thread_local]
-pub static DTD_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("DTD"));
 /// the unique symbol for str value "RelaxNG"
 #[thread_local]
 pub static RELAXNG_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("RelaxNG"));

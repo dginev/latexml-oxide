@@ -444,6 +444,8 @@ impl Tokens {
         } else {
           // any other case, preserve as-is, let the higher level call resolve any errors
           // e.g. \detokenize{#,} is legal, while \textbf{#,} is not
+          // Note: this also fires for alignment templates (\halign{#\hfil&...}) which is valid TeX.
+          // Perl has the same warning (Tokens.pm packParameters line 139). Non-fatal.
           Error!(
             "misdefined",
             "expansion",

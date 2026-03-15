@@ -79,7 +79,7 @@ impl fmt::Display for KeyVals {
     let mut first = true;
     for (key, value) in &self.cached_pairs {
       if !first {
-        write!(f, ",")?;
+        write!(f, ", ")?;
       }
       write!(f, "{}={}", key, value)?;
       first = false;
@@ -378,7 +378,7 @@ impl KeyVals {
   //======================================================================
   // Value Related Reversion
   //======================================================================
-  fn set_keys_expansion(&self) -> Tokens {
+  pub fn set_keys_expansion(&self) -> Tokens {
     let skip_keys = &self.skip;
     let set_internals = self.set_internals;
     let prefix = &self.prefix;
@@ -502,11 +502,16 @@ impl KeyVals {
             tokens.push(T_END!());
           }
 
-          if *use_default {
-            // Call the @default macro
+          // Perl: if ($useDefault) { push(@tokens, T_CS('\\' . $qname . '@default')); }
+          //       else { push(@tokens, T_CS('\\' . $qname), T_BEGIN, Revert($value), T_END); }
+          // Note: Perl unconditionally emits \qname@default for bare keys. In Rust, we guard
+          // with has_meaning to avoid undefined-CS errors when @default was never registered
+          // (e.g., xkeyval DeclareOptionX keys without default values).
+          if *use_default && state::has_meaning(&T_CS!(s!("\\{qname}@default"))) {
+            // Call the @default macro (bare key with registered default)
             tokens.push(T_CS!(s!("\\{qname}@default")));
           } else {
-            // Call the macro with the value
+            // Call the macro with the value (or empty if bare key without default)
             tokens.push(T_CS!(s!("\\{qname}")));
             tokens.push(T_BEGIN!());
             if let Some(v) = value {
@@ -645,7 +650,7 @@ impl KeyVals {
     // and add the new tuple to the set of tuples
     let value = if use_default {
       match keyval_get(&keyval_qname(&self.prefix, &primary_keyset, key), "default") {
-        None => None,
+        None => Some(ArgWrap::Tokens(Tokens!())), // bare key with no default: empty value
         Some(v) => {
           let arg: Result<ArgWrap> = v.into();
           Some(arg?)
@@ -673,8 +678,19 @@ impl KeyVals {
   pub fn set_value(&mut self, key: &str, value: ArgWrap, use_default: bool) -> Result<()> {
     // delete the existing values by skipping key
     self.rebuild(Some(key));
-    // set normally
-    self.add_value(key, value, use_default, false)
+    // Perl: if (ref $value eq 'ARRAY') { foreach ... addValue(..., 1) } rebuild()
+    //       elsif (defined($value)) { addValue($key, $value, $useDefault) }
+    //       else { just delete (already done by rebuild above) }
+    match &value {
+      ArgWrap::None => {
+        // undef — just delete (already done by rebuild above)
+        Ok(())
+      },
+      _ => {
+        // single value — set normally
+        self.add_value(key, value, use_default, false)
+      },
+    }
   }
 
   fn rebuild(&mut self, skip_opt: Option<&str>) {
@@ -708,6 +724,13 @@ impl KeyVals {
         // we always use Vec<ArgWrap> storage, just push the new value in
         let entry = hash.entry(key.to_string()).or_default();
         entry.push(v.clone());
+      } else if let Some(ref dv) = digested_value {
+        // After digestion, value is taken but digested_value is set.
+        // Populate cached_pairs from the digested value (matching Perl's rebuild behavior).
+        let fallback = ArgWrap::Tokens(dv.revert().unwrap_or_default());
+        pairs.push((key.to_string(), fallback.clone()));
+        let entry = hash.entry(key.to_string()).or_default();
+        entry.push(fallback);
       }
       // if we have a digested value, push that in the Vec<Digested> hash storage
       if let Some(ref dvalue) = digested_value {

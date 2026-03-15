@@ -598,7 +598,10 @@ LoadDefinitions!({
   // Ideally, we should set these sizes from class files
   AssignValue!("NOMINAL_FONT_SIZE", 10);
 
-  DefPrimitive!("\\mit", None, require_math => true, font => {family => "italic"});
+  // Perl: \mit is \fam\itfam (plain.tex); LaTeXML doesn't override it.
+  // In math mode, the default font is already italic, so \mit is effectively a no-op.
+  // Use empty alias so the reversion is empty (Perl's \mit expands as a TeX assignment, no Box).
+  DefMacro!("\\mit", None);
 
   DefPrimitive!("\\frenchspacing", None);
   DefPrimitive!("\\nonfrenchspacing", None);
@@ -640,7 +643,8 @@ LoadDefinitions!({
     Let!(&T_ACTIVE!('\r'), T_CS!("\\@break")); // More appropriate than \par, I think?
   });
 
-  DefConstructor!("\\@break", "<ltx:break/>");
+  DefConstructor!("\\@break", "<ltx:break/>",
+    properties => { stored_map!("isBreak" => true) });
 
   TeX!(
     r"
@@ -727,8 +731,10 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\vglue Glue", None);
   DefPrimitive!("\\topglue", None);
-  DefPrimitive!("\\nointerlineskip", None);
-  DefPrimitive!("\\offinterlineskip", None);
+  // Perl: DefMacroI('\nointerlineskip',undef,'\prevdepth-1000\p@');
+  DefMacro!("\\nointerlineskip", r"\prevdepth-1000\p@");
+  // Perl: DefMacroI('\offinterlineskip',undef, '\baselineskip-1000\p@\lineskip\z@ \lineskiplimit\maxdimen');
+  DefMacro!("\\offinterlineskip", r"\baselineskip-1000\p@\lineskip\z@ \lineskiplimit\maxdimen");
 
   DefMacro!("\\smallskip", "\\vskip\\smallskipamount");
   DefMacro!("\\medskip", "\\vskip\\medskipamount");
@@ -952,13 +958,125 @@ LoadDefinitions!({
   // COMBINING COMMA BELOW
   DefAccent!("\\lfhook", '\u{0326}', ",", below => true);
 
-  // This will fail if there really are "assignments" after the number!
-  // We're given a number pointing into the font, from which we can derive the standalone char.
-  // From that, we want to figure out the combining character, but there could be one for
-  // both the above & below cases!  We'll prefer the above case.
-  // Perl: \accent reads a number pointing into the font, derives combining accent char.
-  // Stub: consumes the number and letter arguments but produces no output.
-  DefPrimitive!("\\accent Number {}", None);
+  // Perl TeX_Character.pool.ltxml: DefPrimitive('\accent Number', sub { ... })
+  // \accent <number> <optional assignments> <character>; See TeX Book p.287
+  // Reads a number (font position), then optional assignments, then a character.
+  // Decodes the font position to a glyph, looks up accent data, applies accent.
+  DefPrimitive!("\\accent Number", sub[(num)] {
+    use crate::engine::tex_character;
+    // 1. Decode the accent glyph from font position (BEFORE processing assignments)
+    let n = num.value_of() as i32;
+    let (glyph_opt, _font) = font_decode(n, None, None);
+
+    // 2. Process optional assignments (Perl lines 117-123)
+    //    <assignments>: (<prefix>) simple assignment or macro assignment
+    //    <character> : letter, other, \char, \chardef token, \noboundary
+    let mut assignments: Vec<Digested> = Vec::new();
+    let mut last_token: Option<Token> = None;
+    let mut last_defn: Option<Rc<dyn Definition>> = None;
+    loop {
+      let token_opt = gullet::read_x_non_space()?;
+      let token = match token_opt {
+        Some(t) => t,
+        None => { break; }
+      };
+      let defn = if token.get_catcode().is_active_or_cs() {
+        state::lookup_definition(&token)?.map(|d| d as Rc<dyn Definition>)
+      } else {
+        None
+      };
+      // Perl: isPrefix || isFontDef || (isRegister && !isCharDef)
+      //       || token matches \def|\edef|\gdef|\xdef
+      let is_assignment = if let Some(ref d) = defn {
+        if d.is_prefix() {
+          true
+        } else if d.is_register()
+          && !matches!(d.register_type(), Some(RegisterType::CharDef)) {
+          true
+        } else {
+          // Check isFontDef: lookupValue("fontinfo_<cs>")
+          let cs_str = token.to_string();
+          let fontinfo_key = s!("fontinfo_{}", cs_str);
+          if state::lookup_value(&fontinfo_key).is_some() {
+            true
+          } else {
+            // Check \def, \edef, \gdef, \xdef
+            matches!(cs_str.as_str(), "\\def" | "\\edef" | "\\gdef" | "\\xdef")
+          }
+        }
+      } else {
+        false
+      };
+      if !is_assignment {
+        last_token = Some(token);
+        last_defn = defn;
+        break;
+      }
+      // Process the assignment: invoke the token
+      let digested = stomach::invoke_token(&token)?;
+      assignments.extend(digested);
+    }
+
+    // 3. Read the base character token (Perl lines 126-134)
+    let letter = if let Some(t) = last_token {
+      let cc = t.get_catcode();
+      if cc == Catcode::LETTER || cc == Catcode::OTHER
+        || last_defn.as_ref().is_some_and(|d|
+             matches!(d.register_type(), Some(RegisterType::CharDef))) {
+        Tokens!(t)
+      } else if t == T_CS!("\\char") {
+        Tokens!(t, ExplodeText!(&gullet::read_number()?.to_string()))
+      } else if t == T_CS!("\\noboundary") {
+        Tokens!() // Treat as empty
+      } else {
+        gullet::unread_one(t);
+        Tokens!()
+      }
+    } else {
+      Tokens!()
+    };
+
+    // 4. Enter horizontal mode
+    enter_horizontal();
+
+    // 5. Apply accent (Perl lines 137-141)
+    let accent_result: Vec<Digested> = if let Some(glyph_char) = glyph_opt {
+      let glyph_str = glyph_char.to_string();
+      if let Some(entry) = tex_character::unicode_accent(&glyph_str) {
+        let mut rev_toks = vec![T_CS!("\\accent")];
+        rev_toks.extend(ExplodeText!(&num.to_string()));
+        rev_toks.push(T_OTHER!(" "));
+        rev_toks.extend(letter.unlist_ref().iter().map(|t| (*t).clone()));
+        let reversion = Tokens::new(rev_toks);
+        let tbox = tex_character::apply_accent(
+          letter, entry.combiner, entry.standalone, Some(reversion))?;
+        vec![tbox.into()]
+      } else {
+        // Unknown accent: overlay glyph on letter using \lx@overlay
+        let glyph_s = glyph_char.to_string();
+        let overlay_toks = Tokens!(
+          T_CS!("\\lx@overlay"), T_BEGIN!(),
+          letter, T_END!(), T_BEGIN!(),
+          ExplodeText!(&glyph_s), T_END!()
+        );
+        vec![stomach::digest(overlay_toks)?]
+      }
+    } else {
+      // No glyph found: produce empty or just the letter
+      let text = if letter.is_empty() {
+        String::new()
+      } else {
+        letter.untex()
+      };
+      let tbox = Tbox::new(arena::pin(text), None, None, Tokens!(), SymHashMap::default());
+      vec![tbox.into()]
+    };
+
+    // 6. Return assignments + accent result (Perl line 142)
+    let mut result = assignments;
+    result.extend(accent_result);
+    Ok(result)
+  });
   // Note that these two apparently work in Math? BUT the argument is treated as text!!!
   DefMacro!(
     "\\d{}",
@@ -969,33 +1087,29 @@ LoadDefinitions!({
     r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi"
   );
 
-  //   DefConstructor('\@math@daccent {}',
-  //   "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\x{22c5}</ltx:XMTok>"
-  //     . "?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)"
-  //     . "</ltx:XMApp>",
-  //   mode        => 'text', alias => '\d',
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $arg = $whatsit->getArg(1);
-  //     if ($arg->isMath) {
-  //       $whatsit->setProperty(matharg => $arg->getBody); }
-  //     else {
-  //       $whatsit->setProperty(textarg => $arg); }
-  //     return; });
-
-  // DefConstructor('\@math@baccent {}',
-  //   "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>" . UTF(0xAF) . "</ltx:XMTok>"
-  //     . "?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)"
-  //     . "</ltx:XMApp>",
-  //   mode        => 'text', alias => '\b',
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $arg = $whatsit->getArg(1);
-  //     if ($arg->isMath) {
-  //       $whatsit->setProperty(matharg => $arg->getBody); }
-  //     else {
-  //       $whatsit->setProperty(textarg => $arg); }
-  //     return; });
+  // Perl: DefConstructor('\@math@daccent {}', "...", mode => 'text', alias => '\d', ...)
+  // Since mode => "text", the arg is always text, so textarg is always set.
+  DefConstructor!("\\@math@daccent {}",
+    "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\u{22c5}</ltx:XMTok>\
+     ?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)\
+     </ltx:XMApp>",
+    mode => "text", alias => "\\d",
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1).cloned() {
+        whatsit.set_property("textarg", arg);
+      }
+    });
+  // Perl: DefConstructor('\@math@baccent {}', "...", mode => 'text', alias => '\b', ...)
+  DefConstructor!("\\@math@baccent {}",
+    "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\u{00AF}</ltx:XMTok>\
+     ?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)\
+     </ltx:XMApp>",
+    mode => "text", alias => "\\b",
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1).cloned() {
+        whatsit.set_property("textarg", arg);
+      }
+    });
 
   //======================================================================
   // TeX Book, Appendix B. p. 357
@@ -1674,44 +1788,48 @@ LoadDefinitions!({
     r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}"
   );
 
+  // Perl: DefConstructor('\phantom{}', "?#isMath(...)(...)", properties => {isSpace=>1}, afterDigest => ...)
   DefConstructor!(
     "\\phantom{}",
     "?#isMath(<ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
-  ); // !?!?!?!
-  // TODO:
-  // properties  => { isSpace => 1 },
-  // afterDigest => sub {
-  //   my $whatsit = $_[1];
-  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-  //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    properties => { stored_map!("isSpace" => true) },
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg_mut(1) {
+        let (w, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(w));
+        whatsit.set_property("height", Stored::Dimension(h));
+        whatsit.set_property("depth", Stored::Dimension(d));
+      }
+    });
 
   DefConstructor!(
     "\\hphantom{}",
     "?#isMath(<ltx:XMHint width='#width' name='hphantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
-  ); // !?!?!?!
-  // TODO:
-  // properties  => { isSpace => 1 },
-  // afterDigest => sub {
-  //   my $whatsit = $_[1];
-  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-  //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    properties => { stored_map!("isSpace" => true) },
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg_mut(1) {
+        let (w, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(w));
+        whatsit.set_property("height", Stored::Dimension(h));
+        whatsit.set_property("depth", Stored::Dimension(d));
+      }
+    });
 
   DefConstructor!(
     "\\vphantom{}",
     "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)"
-  ); // !?!?!?!
-  // TODO:
-  // properties  => { isSpace => 1 },
-  // afterDigest => sub {
-  //   my $whatsit = $_[1];
-  //   my ($w, $h, $d) = $whatsit->getArg(1)->getSize;
-  //   $whatsit->setProperties(width => $w, height => $h, depth => $d);
-  //   return; });
+      (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    properties => { stored_map!("isSpace" => true) },
+    after_digest => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg_mut(1) {
+        let (w, h, d, _, _, _) = arg.get_size(None)?;
+        whatsit.set_property("width", Stored::Dimension(w));
+        whatsit.set_property("height", Stored::Dimension(h));
+        whatsit.set_property("depth", Stored::Dimension(d));
+      }
+    });
 
   DefConstructor!("\\mathstrut", "?#isMath(<ltx:XMHint name='mathstrut'/>)()",
     properties => { stored_map!("isSpace" => true) });
@@ -1875,10 +1993,11 @@ LoadDefinitions!({
 
   // What should this do? (needs to work with alignments..)
   // see https://www.tug.org/TUGboat/tb07-1/tb14beet.pdf
-  // use in arXiv:hep-th/0001208
-  // TODO:
-  // DefMacro!("\\displaylines{}", r###"\halign{\hbox
-  // to\displaywidth{$\hfil\displaystyle##\hfil$}\crcr#1\crcr}"###);
+  // Perl: DefMacro('\displaylines{}', '\halign{\hbox to\displaywidth{...}\crcr#1\crcr}')
+  DefMacro!(
+    "\\displaylines{}",
+    r"\halign{\hbox to\displaywidth{$\hfil\displaystyle##\hfil$}\crcr#1\crcr}"
+  );
 
   DefMacro!(
     "\\eqalign{}",

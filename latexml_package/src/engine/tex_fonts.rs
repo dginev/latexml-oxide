@@ -4,9 +4,6 @@
 
 use crate::prelude::*;
 
-static FONT_TOKEN_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap());
-
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Fonts Family of primitive control sequences
@@ -23,23 +20,44 @@ LoadDefinitions!({
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
+  // Perl: FontDef param type — for \textfont/\scriptfont/\scriptscriptfont, reads family
+  // number and looks up the stored font CS token.  For \font, returns current_FontDef.
   DefParameterType!(FontToken, sub[_inner, _extra] {
     let token = gullet::read_token()?.unwrap();
-    if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
-      gullet::read_number()?;
+    if let Some(font_type) = token.with_str(|ts| {
+      if ts.starts_with("\\textfont") && ts == "\\textfont" { Some("textfont") }
+      else if ts.starts_with("\\scriptscriptfont") && ts == "\\scriptscriptfont" { Some("scriptscriptfont") }
+      else if ts.starts_with("\\scriptfont") && ts == "\\scriptfont" { Some("scriptfont") }
+      else { None }
+    }) {
+      // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf)
+      let fam = gullet::read_number()?.value_of();
+      let key = s!("{font_type}_{fam}");
+      match state::lookup_value(&key) {
+        Some(Stored::Token(t)) => t,
+        _ => token,
+      }
+    } else if token.with_str(|ts| ts == "\\font") {
+      // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font')
+      match state::lookup_value("current_FontDef") {
+        Some(Stored::Token(t)) => t,
+        _ => T_CS!("\\lx@default@font"),
+      }
+    } else {
+      token
     }
-    token
   });
 
   DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
     let name = name_arg.to_string();
-    let props_opt = if let Some(mut props) = font::decode_fontname(&name,
-      gullet::read_keyword(&["at"])?
-        .map(|_| gullet::read_dimension().unwrap().pt_value(None)),
-      gullet::read_keyword(&["scaled"])?
-        .map(|_| gullet::read_number().unwrap().value_of() as f64 / 1000.0)) {
-      props.name = Some(Cow::Owned(name));
+    // Read optional "at <dimen>" or "scaled <number>"
+    let at_pt = gullet::read_keyword(&["at"])?
+      .map(|_| gullet::read_dimension().unwrap().pt_value(None));
+    let scaled = gullet::read_keyword(&["scaled"])?
+      .map(|_| gullet::read_number().unwrap().value_of() as f64 / 1000.0);
+    let props_opt = if let Some(mut props) = font::decode_fontname(&name, at_pt, scaled) {
+      props.name = Some(Cow::Owned(name.clone()));
       Some(props)
     } else { // Failed?
       let message = s!("Unrecognized font name {:?} Font switch macro {:?}
@@ -48,17 +66,91 @@ LoadDefinitions!({
       None
     };
     gullet::skip_spaces()?;
+    let cs_str = cs.to_string();
     if let Some(ref props) = props_opt {
-      AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
+      AssignValue!(&s!("fontinfo_{cs_str}"), props.clone());
     }
-    DefPrimitive!(cs, None, None, font => props_opt);
+    // Perl: $key = 'fontinfo_' . $name; $key .= " at " . ToString($at) if $at;
+    // Shared font key: fonts with same name+size share hyphenchar/skewchar
+    let at_str_opt = if let Some(at_val) = at_pt {
+      Some(s!("{at_val:.1}pt"))
+    } else if let Some(_sc) = scaled {
+      props_opt.as_ref().and_then(|p| p.size).map(|sz| s!("{sz:.1}pt"))
+    } else {
+      None
+    };
+    let shared_key = if let Some(ref at_str) = at_str_opt {
+      s!("fontinfo_{name} at {at_str}")
+    } else {
+      s!("fontinfo_{name}")
+    };
+    // Store CS → shared key mapping
+    state::assign_value(
+      &s!("font_shared_key_{cs_str}"),
+      Stored::String(arena::pin(&shared_key)),
+      None,
+    );
+    // Store explicit "at" value for \meaning (Perl: $$fontinfo{at} = ToString($at))
+    if let Some(ref at_str) = at_str_opt {
+      state::assign_value(
+        &s!("fontinfo_at_{cs_str}"),
+        Stored::String(arena::pin(at_str)),
+        None,
+      );
+    }
+    // Perl: only initialize hyphenchar/skewchar if this font key hasn't been seen before
+    // (shared fontinfo means second \font with same name+size reuses existing values)
+    let hc_key = s!("hyphenchar_{shared_key}");
+    if !state::has_value(&hc_key) {
+      let default_hyphen = lookup_int("\\defaulthyphenchar");
+      state::assign_value(
+        &hc_key,
+        Stored::Number(Number::new(default_hyphen as i64)),
+        Some(Scope::Global),
+      );
+      let default_skew = lookup_int("\\defaultskewchar");
+      state::assign_value(
+        &s!("skewchar_{shared_key}"),
+        Stored::Number(Number::new(default_skew as i64)),
+        Some(Scope::Global),
+      );
+    }
+    // Perl: installDefinition(FontDef->new($cs, $key))
+    // When the font switch CS is invoked, set current_FontDef so \fontname\font works
+    let cs_for_fontdef = cs.clone();
+    DefPrimitive!(cs, None, None, font => props_opt,
+      before_digest => sub {
+        AssignValue!("current_FontDef", cs_for_fontdef.clone(), None);
+      }
+    );
   });
 
-  DefMacro!(
-    T_CS!("\\fontname"),
-    None,
-    Tokens::new(Explode!("fontname not implemented"))
-  );
+  // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}
+  //       || "fontname not available") })
+  // Perl's FontDef param type: for \font, looks up current_FontDef, falls back to \lx@default@font
+  DefMacro!("\\fontname FontToken", sub[args] {
+    let token = args.into_iter().next().unwrap().expected_token();
+    let cs_str = token.to_string();
+    // Determine which font CS to look up
+    let lookup_cs = if cs_str == "\\font" {
+      // Current font — look up current_FontDef, fallback to \lx@default@font
+      match state::lookup_value("current_FontDef") {
+        Some(Stored::Token(t)) => t.to_string(),
+        _ => s!("\\lx@default@font"),
+      }
+    } else {
+      cs_str
+    };
+    let key = s!("fontinfo_{}", lookup_cs);
+    let name = state::lookup_value(&key).and_then(|stored| {
+      if let Stored::Font(f) = stored {
+        f.name.as_ref().map(|n| n.to_string())
+      } else {
+        None
+      }
+    });
+    Tokens::new(Explode!(name.unwrap_or_else(|| s!("fontname not available"))))
+  });
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
     getter => sub[args] {
       let p = args.remove(0).expect_number().value_of();

@@ -9,7 +9,9 @@ use crate::list::List;
 use std::collections::VecDeque;
 
 use crate::common::float::Float;
-use crate::common::numeric_ops::NumericOps;
+use crate::common::numeric_ops::{NumericOps, UNITY};
+use crate::common::object::Object;
+use std::str::FromStr;
 
 /// Normalize an alignment before construction
 ///
@@ -49,34 +51,71 @@ pub fn normalize_alignment(alignment: &mut Alignment) -> Result<()> {
   Ok(())
 }
 /// Compute (approximate) sizes of all cells
+/// Perl: normalize_cell_sizes (Alignment.pm L423-480)
 pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
-  // Examines: boxes, align, vattach
-  // Sets: cached_width, cached_height, cached_depth (per cell) & empty
+  // Examines: boxes, align, vattach, lspaces, rspaces
+  // Sets: cached_width, cached_height, cached_depth, lpadding, rpadding (per cell) & empty
   for row in &mut alignment.rows {
-    // Do we need to account for any space in the $$row{before} or $$row{after}?
     for cell in row.get_columns_mut() {
       if let Some(ref mut boxes) = &mut cell.boxes {
-        let (w, h, d, cw, _ch, _cd) = boxes.get_size(Some(stored_map!(
+        let (w, mut h, mut d, cw, ch, cd) = boxes.get_size(Some(stored_map!(
             "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
             "vattach" => cell.vattach.clone() )))?;
-        // Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width
-        // vattach))     . ") size " . showSize($w,  $h,  $d)
-        //     . " csize " . showSize($cw, $ch, $cd)
-        //     . " Boxes=" . ToString($boxes)) if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
-        // TODO: We can't do heights and depths yet
-        // || h.value_of() < 1
-        // || d.value_of() < 1
-        let empty = (cw.value_of() < 1
-          || boxes
-            .unlist_ref()
-            .iter()
-            .all(|tb| tb.get_property_bool("isSpace")))
+        let mut fullw = cw;
+        // Perl L441-450: lspaces/rspaces size computation
+        let mut lpad = None;
+        let mut rpad = None;
+        if let Some(ref mut lspaces) = cell.lspaces {
+          let (lw, lh, ld, _, _, _) = lspaces.get_size(None)?;
+          if lw.value_of() != 0 {
+            fullw = if fullw.value_of() != 0 { fullw.add(lw) } else { lw };
+            lpad = Some(lw);
+          }
+          if lh.value_of() != 0 {
+            h = if h.value_of() != 0 { h.larger(lh) } else { lh };
+          }
+          if ld.value_of() != 0 {
+            d = if d.value_of() != 0 { d.larger(ld) } else { ld };
+          }
+        }
+        if let Some(ref mut rspaces) = cell.rspaces {
+          let (rw, rh, rd, _, _, _) = rspaces.get_size(None)?;
+          if rw.value_of() != 0 {
+            fullw = if fullw.value_of() != 0 { fullw.add(rw) } else { rw };
+            rpad = Some(rw);
+          }
+          if rh.value_of() != 0 {
+            h = if h.value_of() != 0 { h.larger(rh) } else { rh };
+          }
+          if rd.value_of() != 0 {
+            d = if d.value_of() != 0 { d.larger(rd) } else { rd };
+          }
+        }
+        // Perl L452-456: check isrule
+        let boxes_list = boxes.unlist_ref();
+        let isrule = !boxes_list.is_empty()
+          && boxes_list.iter().all(|b| {
+            b.get_property_bool("isHorizontalRule")
+              || b.get_property_bool("isVerticalRule")
+              || b.get_property_bool("alignmentSkippable")
+              || b.is_comment()
+          });
+        // Perl L457-462
+        let empty = ((fullw.value_of() < 1
+          || (ch.value_of() < 1 && cd.value_of() < 1))
+          || isrule)
           && preserved_boxes(Some(boxes)).is_empty();
-        // Perl: $$cell{skippable} = $empty || isSkippable($boxes);
         let skippable = empty || boxes.is_skippable();
         cell.cached_width = Some(w);
         cell.cached_height = Some(h);
         cell.cached_depth = Some(d);
+        // Perl L466-467: set lpadding/rpadding from lspaces/rspaces
+        if let Some(lp) = lpad {
+          cell.left_padding = Some(lp.value_of() as usize);
+        }
+        if let Some(rp) = rpad {
+          cell.right_padding = Some(rp.value_of() as usize);
+        }
         cell.empty = empty;
         cell.skippable = skippable;
         if skippable {
@@ -193,18 +232,23 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
 }
 /// Scan for and remove empty rows
 /// but copying borders and adjusting rowspan's & colspan's appropriately.
+/// Perl: normalize_prune_rows (Alignment.pm L730-799)
 pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
   // Examines: rowspan,rowspanned, border, pseudorow, empty
   // Sets: border, rowspan
   let preserve = alignment.is_math || alignment.properties.contains_key("preserve_structure");
-  // First, do rows.
+  // We need indexed access for rowspan decrement, so collect into a Vec first
   let init_rows: Vec<_> = alignment.rows.drain(..).collect();
-  let mut rows = init_rows.into_iter().peekable();
-  let mut filtered = VecDeque::new();
-  while let Some(row) = rows.next() {
-    // Perl L742-753: prunable if all cells are skippable (not just empty).
-    // But if some cells are skippable-but-not-empty (only spacing), check if
-    // they're "bracketed" by borders — if so, keep the row.
+  // We need to be able to mutate filtered rows by index for rowspan decrement,
+  // so we track: original_index -> filtered_index mapping is complex.
+  // Instead, use a simpler approach: collect prunable indices first, then do border copies.
+  let nrows = init_rows.len();
+  let mut keep = vec![true; nrows];
+
+  // First pass: determine which rows are prunable
+  for i in 0..nrows {
+    let row = &init_rows[i];
+    let next = if i + 1 < nrows { Some(&init_rows[i + 1]) } else { None };
     let mut prunable = true;
     let mut check_bracketting = false;
     for c in row.get_columns().iter() {
@@ -216,14 +260,13 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
       }
     }
     if prunable && check_bracketting {
-      // If spacing cells have top borders, check if next row also has top borders
       let has_top = row
         .get_columns()
         .iter()
         .any(|c| c.border.contains('t') || c.border.contains('T'));
       if has_top {
-        if let Some(next) = rows.peek() {
-          let next_has_top = next
+        if let Some(next_row) = next {
+          let next_has_top = next_row
             .get_columns()
             .iter()
             .any(|c| c.border.contains('t') || c.border.contains('T'));
@@ -231,7 +274,6 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
             prunable = false;
           }
         } else {
-          // Last row: check for bottom borders
           let has_bottom = row
             .get_columns()
             .iter()
@@ -242,87 +284,131 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
         }
       }
     }
-    if !prunable {
-      // Not prunable, keep it
-      filtered.push_back(row);
-    } else if let Some(next) = rows.peek_mut() {
-      // Remove empty row, but copy top border to NEXT row
-      if preserve {
-        filtered.push_back(row);
-        continue;
-      } // don't remove inner rows from math EXCEPT last row!!
-      // let (mut pruneh, mut pruned) = (0, 0);
-      for (j, col) in row.get_columns().iter().enumerate() {
-        // TODO: add cached_height and cached_depth
-        // if let Some(cached_height) = col.cached_height {
-        //   let chv = cached_height.value_of();
-        //   if chv > pruneh { pruneh = chv; }
-        // }
-        // if let Some(cached_depth) = col.cached_depth {
-        //   let cdv = cached_depth.value_of();
-        //   if cdv > pruned {
-        //     pruned = cdv;
-        //   }
-        // }
-        // TODO: add rowspanned
-        // if !row.pseudorow && col.rowspanned.is_some() {
-        //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of
-        // spanning column
+    if prunable {
+      // Check preserve: don't remove inner rows from math EXCEPT last row
+      if preserve && i + 1 < nrows {
+        prunable = false;
+      }
+    }
+    keep[i] = !prunable;
+  }
+
+  // Second pass: copy borders and handle rowspan decrements
+  let mut rows: Vec<_> = init_rows;
+  for i in 0..nrows {
+    if keep[i] {
+      continue;
+    }
+    // Find next kept row
+    let next_kept = (i + 1..nrows).find(|&k| keep[k]);
+    // Find prev kept row
+    let prev_kept = (0..i).rev().find(|&k| keep[k]);
+
+    // Perl L760-764: track pruned height/depth
+    let mut pruneh: i64 = 0;
+    let mut pruned: i64 = 0;
+    let nc = rows[i].get_columns().len();
+
+    if let Some(next_idx) = next_kept {
+      // Remove empty row, copy border to NEXT row
+      for j in 0..nc {
+        let col = &rows[i].get_columns()[j];
+        if let Some(ch) = col.cached_height {
+          pruneh = pruneh.max(ch.value_of());
+        }
+        if let Some(cd) = col.cached_depth {
+          pruned = pruned.max(cd.value_of());
+        }
+        // Perl L765-766: decrement rowspan of spanning column
+        if !rows[i].is_pseudo() {
+          if let Some(rowspanned_idx) = col.rowspanned {
+            // Find the spanning row in filtered rows and decrement its rowspan
+            if let Some(spanning_col) = rows[rowspanned_idx].get_columns_mut().get_mut(j) {
+              if let Some(ref mut rs) = spanning_col.rowspan {
+                if *rs > 1 {
+                  *rs -= 1;
+                }
+              }
+            }
+          }
+        }
+        // Perl L767-771: mask all but top & bottom border, convert to top
         let mut converted_border = String::new();
-        for border_c in col.border.chars() {
+        for border_c in rows[i].get_columns()[j].border.chars() {
           match border_c {
-            //  but convert to top
             't' | 'b' => converted_border.push('t'),
             'T' | 'B' => converted_border.push('T'),
             _ => {},
           };
         }
-        if !converted_border.is_empty() {
-          next.get_columns_mut()[j].border.push_str(&converted_border); // add to NEXT row
+        if !converted_border.is_empty() && j < rows[next_idx].get_columns().len() {
+          rows[next_idx].get_columns_mut()[j].border.push_str(&converted_border);
         }
       }
-      // TODO:
-      // This top_padding should be combined w/any extra rowspacing from \\[dim] !
-      // let prune_both = pruneh + pruned;
-      // if prune_both > 0 {
-      //   next.top_padding = Some(Dimension::new(prune_both));
-      // }    // And save padding.
-    } else {
-      // Remove empty last row, but copy top border to bottom of prev.
-      let mut prev_opt = filtered.back_mut();
-      //     my $nc   = scalar(@{ $$row{columns} });
-      // let (mut pruneh, mut pruned) = (0, 0);
-      for (j, col) in row.get_columns().iter().enumerate() {
-        // TODO:
-        //  $pruneh = max($pruneh, $$col{cached_height}->value_of) if $$col{cached_height};
-        //  $pruned = max($pruned, $$col{cached_depth}->value_of)  if $$col{cached_depth};
-        //       if (!$$row{pseudorow} && defined $$col{rowspanned}) {
-        //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of
-        // spanning column
+      // Perl L773: save padding
+      let prune_both = pruneh + pruned;
+      if prune_both > 0 {
+        rows[next_idx].top_padding = Some(Dimension::new(prune_both));
+      }
+    } else if let Some(prev_idx) = prev_kept {
+      // Remove empty last row, copy top border to bottom of prev
+      for j in 0..nc {
+        let col = &rows[i].get_columns()[j];
+        if let Some(ch) = col.cached_height {
+          pruneh = pruneh.max(ch.value_of());
+        }
+        if let Some(cd) = col.cached_depth {
+          pruned = pruned.max(cd.value_of());
+        }
+        // Perl L784-785: decrement rowspan
+        if !rows[i].is_pseudo() {
+          if let Some(rowspanned_idx) = col.rowspanned {
+            if let Some(spanning_col) = rows[rowspanned_idx].get_columns_mut().get_mut(j) {
+              if let Some(ref mut rs) = spanning_col.rowspan {
+                if *rs > 1 {
+                  *rs -= 1;
+                }
+              }
+            }
+          }
+        }
+        // Perl L787-789: mask all but top border, convert to bottom
         let mut converted_border = String::new();
-        for c in col.border.chars() {
+        for c in rows[i].get_columns()[j].border.chars() {
           match c {
-            't' => converted_border.push('b'), // convert to bottom
-            'T' => converted_border.push('B'), // convert to bottom
+            't' => converted_border.push('b'),
+            'T' => converted_border.push('B'),
             _ => {},
           };
         }
-        if let Some(ref mut prev) = prev_opt {
-          let ccol = &mut prev.get_columns_mut()[j];
-          // TODO: rowspanned
-          //       if (defined $$ccol{rowspanned}) {                        // skip to spanning
-          // column if rowspanned!         $ccol = $rows[$$ccol{rowspanned}]{columns}[$j];
-          // }
-          if !converted_border.is_empty() {
-            ccol.border.push_str(&converted_border); // add to PREVIOUS row
+        if !converted_border.is_empty() && j < rows[prev_idx].get_columns().len() {
+          // Perl L790-792: follow rowspanned pointer
+          let ccol = &rows[prev_idx].get_columns()[j];
+          if let Some(rowspanned_idx) = ccol.rowspanned {
+            // Skip to spanning column
+            rows[rowspanned_idx].get_columns_mut()[j]
+              .border
+              .push_str(&converted_border);
+          } else {
+            rows[prev_idx].get_columns_mut()[j]
+              .border
+              .push_str(&converted_border);
           }
-          // TODO:
-          // let prune_both = pruneh + pruned;
-          // if prune_both > 0 {    // And save padding.
-          //   prev.bottom_padding = Some(Dimension::new(prune_both));
-          // }
         }
       }
+      // Perl L794: save padding
+      let prune_both = pruneh + pruned;
+      if prune_both > 0 {
+        rows[prev_idx].bottom_padding = Some(Dimension::new(prune_both));
+      }
+    }
+  }
+
+  // Collect kept rows
+  let mut filtered = VecDeque::new();
+  for (i, row) in rows.into_iter().enumerate() {
+    if keep[i] {
+      filtered.push_back(row);
     }
   }
   alignment.rows = filtered;
@@ -330,6 +416,7 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
 }
 /// Scan for and remove empty columns
 /// but copying borders and adjusting rowspan's & colspan's appropriately.
+/// Perl: normalize_prune_columns (Alignment.pm L801-857)
 pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
   if alignment.is_math || alignment.properties.contains_key("preserve_structure") {
     // Don't remove empty columns from math.
@@ -354,112 +441,149 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
     });
     if j_column_is_empty {
       // Empty!
-      let mut prunew = 0;
-      let mut colspanned = None;
+      let mut prunew: i64 = 0;
       for row in &mut alignment.rows {
         let mut new_border = String::new();
         let mut preserve = Vec::new();
+        let mut colspanned = None;
+        let mut lspaces_to_copy = None;
         if let Some(col) = row.get_columns().get(j) {
           colspanned = col.colspanned;
           if let Some(w) = col.cached_width {
             prunew = prunew.max(w.value_of());
           }
-
+          // Perl L819-843: border handling
           if j > 0 {
             for c in col.border.chars() {
-              // mask all but left and right border
               match c {
-                // convert to right
-                'l' | 'r' => {
-                  new_border.push('r');
-                },
-                // convert to right
-                'L' | 'R' => {
-                  new_border.push('R');
-                },
+                'l' | 'r' => new_border.push('r'),
+                'L' | 'R' => new_border.push('R'),
                 _ => {},
               }
             }
           } else {
             for c in col.border.chars() {
-              // mask all but left and right border
               match c {
-                // but convert to left
-                'l' | 'r' => {
-                  new_border.push('l');
-                },
-                // but convert to left
-                'L' | 'R' => {
-                  new_border.push('L');
-                },
+                'l' | 'r' => new_border.push('l'),
+                'L' | 'R' => new_border.push('L'),
                 _ => {},
               }
             }
           }
           preserve = preserved_boxes(col.boxes.as_ref());
+          // Perl L829: copy lspaces for transfer to prev's rspaces
+          lspaces_to_copy = col.lspaces.clone();
+        }
+
+        // Perl L816-817: decrement colspan of spanning column
+        if let Some(col_spanned) = colspanned {
+          if let Some(spanning_col) = row.get_columns_mut().get_mut(col_spanned) {
+            if let Some(ref mut colspan) = spanning_col.colspan {
+              if *colspan > 1 {
+                *colspan -= 1;
+              }
+            }
+          }
         }
 
         // Now, remove the column
-        row.get_columns_mut().remove(j);
-        if let Some(col_spanned) = colspanned {
-          // Decrement colspan of spanning column
-          if let Some(ref mut colspan) = &mut row.get_columns_mut()[col_spanned].colspan {
-            *colspan -= 1;
-          }
+        if j < row.get_columns().len() {
+          row.get_columns_mut().remove(j);
         }
-        // preserved-boxes handling moved here for mutability reasons.
+
         if j > 0 {
-          {
-            let mut prev = &mut row.get_columns_mut()[j - 1];
-            if let Some(jj) = prev.colspanned {
-              prev = &mut row.get_columns_mut()[jj];
+          // Perl L821-833: transfer border, lspaces, and boxes to prev column
+          // Follow colspanned pointer
+          let prev_idx = {
+            let mut idx = j - 1;
+            if let Some(jj) = row.get_columns().get(idx).and_then(|c| c.colspanned) {
+              idx = jj;
             }
+            idx
+          };
+          if let Some(prev) = row.get_columns_mut().get_mut(prev_idx) {
+            if !new_border.is_empty() {
+              prev.border.push_str(&new_border);
+            }
+            // Perl L829-830: copy lspaces to prev's rspaces and update rpadding
+            if let Some(ls) = lspaces_to_copy {
+              let new_rspaces = if let Some(ref existing) = prev.rspaces {
+                let mut items = existing.unlist();
+                items.extend(ls.unlist());
+                Digested::from(List::new(items))
+              } else {
+                ls
+              };
+              // Compute rpadding from combined rspaces
+              if let Ok((rw, _, _, _, _, _)) = new_rspaces.clone().get_size(None) {
+                if rw.value_of() != 0 {
+                  prev.right_padding = Some(rw.value_of() as usize);
+                }
+              }
+              prev.rspaces = Some(new_rspaces);
+            }
+            // Perl L831-833: copy boxes over
             if !preserve.is_empty() {
-              // Copy boxes over, in case side effects?
               let mut new_boxes = prev.boxes.as_mut().map(|b| b.unlist()).unwrap_or_default();
               new_boxes.extend(preserve);
               prev.boxes = Some(Digested::from(List::new(new_boxes)));
             }
           }
-        }
-        // Changed: we need to first finish all work with "col" before we can mutably re-borrow
-        // the "prev" column from the same row.
-        if !new_border.is_empty() {
-          if j > 0 {
-            if let Some(prev) = row.get_columns_mut().get_mut(j - 1) {
-              prev.border.push_str(&new_border);
-            }
-          } else {
-            // next border case
-            if let Some(next) = row.get_columns_mut().get_mut(1) {
-              // add to next row
+        } else {
+          // j==0: transfer to next column (now at index 0 after remove)
+          if let Some(next) = row.get_columns_mut().get_mut(0) {
+            if !new_border.is_empty() {
               next.border.push_str(&new_border);
+            }
+            // Perl L840-842: copy boxes to next
+            if !preserve.is_empty() {
+              let mut new_boxes = preserve;
+              new_boxes.extend(next.boxes.as_mut().map(|b| b.unlist()).unwrap_or_default());
+              next.boxes = Some(Digested::from(List::new(new_boxes)));
             }
           }
         }
       }
-      if j > 0 { // If not 1st row, add right padding to previous column
-        //         foreach my $row (@rows) {
-        //           if (my $col = $$row{columns}[$j - 1]) {
-        //             $$col{rpadding} = Dimension($prunew); } } }
-        //       else {       // Else add left padding to (newly) first column
-        //         foreach my $row (@rows) {    // And add the padding to previous column
-        //           if (my $col = $$row{columns}[0]) {
-        //             $$col{lpadding} = Dimension($prunew); } } }
+      // Perl L847-854: add padding
+      let prunew_dim = Dimension::new(prunew);
+      if j > 0 {
+        for row in &mut alignment.rows {
+          if let Some(col) = row.get_columns_mut().get_mut(j - 1) {
+            col.right_padding = Some(
+              col
+                .right_padding
+                .map(|rp| Dimension::new(rp as i64).add(prunew_dim).value_of() as usize)
+                .unwrap_or(prunew as usize),
+            );
+          }
+        }
+      } else {
+        for row in &mut alignment.rows {
+          if let Some(col) = row.get_columns_mut().get_mut(0) {
+            col.left_padding = Some(
+              col
+                .left_padding
+                .map(|lp| Dimension::new(lp as i64).add(prunew_dim).value_of() as usize)
+                .unwrap_or(prunew as usize),
+            );
+          }
+        }
       }
     }
   }
   Ok(())
 }
 
+/// Perl: normalize_sum_sizes (Alignment.pm L514-664)
 pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
-  let mut rowheights = Vec::new();
-  let mut colwidths = Vec::new();
-  let mut colrights = Vec::new();
-  let mut collefts = Vec::new();
+  let mut rowheights: Vec<i64> = Vec::new();
+  let mut rowdepths: Vec<i64> = Vec::new();
+  // Perl: indexed arrays for per-column max values
+  let mut colwidths: Vec<i64> = Vec::new();
+  let mut colrights: Vec<i64> = Vec::new();
+  let mut collefts: Vec<i64> = Vec::new();
   // Uses cell's cached_width,cached_height,cached_depth
   // Computes net row & column sizes & positions
-  // add spacing between rows? Or only from \\[..] ?
   let strut = if let Some(Stored::Dimension(ref d)) = alignment.get_property("strut").as_deref() {
     *d
   } else {
@@ -467,67 +591,109 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
   };
   let hs = strut.multiply(Float::new_f64(0.7));
   let ds = strut.multiply(Float::new_f64(0.3));
-  // let nrows = rows.len();
+  let is_latex = alignment.properties.contains_key("isLaTeX");
+  let nrows = alignment.rows.len();
 
-  for row in alignment.rows.iter_mut() {
-    //   my $ncols = scalar(@cols);
-    //   if (my $short = $ncols - scalar(@colwidths)) {    # Extend column arrays, if needed
-    //     push(@colwidths, map { 0 } 1 .. $short);
-    //     push(@collefts,  map { 0 } 1 .. $short);
-    //     push(@colrights, map { 0 } 1 .. $short);
-    //         }
-    let (mut rowh, mut rowd) = (0, 0);
+  for (i, row) in alignment.rows.iter_mut().enumerate() {
+    let ncols = row.get_columns().len();
+    // Perl L534-537: extend column arrays if needed
+    if ncols > colwidths.len() {
+      colwidths.resize(ncols, 0);
+      collefts.resize(ncols, 0);
+      colrights.resize(ncols, 0);
+    }
+    let (mut rowh, mut rowd): (i64, i64) = (0, 0);
     let mut rowt = row.top_padding.unwrap_or_default().value_of();
     let mut rowb = row.bottom_padding.unwrap_or_default().value_of();
-    //   for (my $j = 0 ; $j < $ncols ; $j++) {
-    for cell in row
-      .get_columns_mut()
-      .iter_mut()
-      .filter(|cell| !cell.skipped && cell.boxes.is_some())
-    {
-      let (mut colwidths_j, mut collefts_j, mut colrights_j) = (0, 0, 0);
-      let w = cell.cached_width.unwrap_or_default().value_of();
-      let h = cell.cached_height.unwrap_or_default().value_of();
-      let d = cell.cached_depth.unwrap_or_default().value_of();
-      let t = cell.top_padding.unwrap_or_default();
-      let b = cell.bottom_padding.unwrap_or_default();
-      let r = cell.right_padding.unwrap_or_default();
-      let l = cell.left_padding.unwrap_or_default();
-
-      if cell.colspan.unwrap_or(1) == 1 {
+    let (mut bordert, mut borderb) = (false, false);
+    // Perl L542-577: iterate over columns by index
+    for j in 0..ncols {
+      let cell = &row.get_columns()[j];
+      if cell.skipped || cell.boxes.is_none() {
+        continue;
+      }
+      let w = cell.cached_width.map(|d| d.value_of()).unwrap_or(0);
+      let h = cell.cached_height.map(|d| d.value_of()).unwrap_or(0);
+      let d = cell.cached_depth.map(|d| d.value_of()).unwrap_or(0);
+      let t = cell.top_padding.unwrap_or(0) as i64;
+      let b = cell.bottom_padding.unwrap_or(0) as i64;
+      let r = cell.right_padding.unwrap_or(0) as i64;
+      let l = cell.left_padding.unwrap_or(0) as i64;
+      let cs = cell.colspan.unwrap_or(1);
+      // Perl L555-567: column width tracking
+      if cs == 1 {
         if w > 0 {
-          colwidths_j = w.max(colwidths_j);
+          colwidths[j] = colwidths[j].max(w);
         }
         if l > 0 {
-          collefts_j = l.max(collefts_j);
+          collefts[j] = collefts[j].max(l);
         }
         if r > 0 {
-          colrights_j = r.max(colrights_j);
+          colrights[j] = colrights[j].max(r);
+        }
+      } else {
+        // Perl L559-567: divide up spanned columns
+        let inner_w = w - (cs as i64 - 1) * l - (cs as i64 - 1) * r;
+        let per_col = if cs > 0 { inner_w / cs as i64 } else { 0 };
+        let per_l = if cs > 0 { l / cs as i64 } else { 0 };
+        let per_r = if cs > 0 { r / cs as i64 } else { 0 };
+        for jj in j..std::cmp::min(j + cs, ncols) {
+          if w > 0 {
+            colwidths[jj] = colwidths[jj].max(per_col);
+          }
+          if l > 0 {
+            collefts[jj] = collefts[jj].max(per_l);
+          }
+          if r > 0 {
+            colrights[jj] = colrights[jj].max(per_r);
+          }
         }
       }
+      // Perl L569-573: row height/depth
       if cell.rowspan.unwrap_or(1) == 1 {
         rowh = rowh.max(h);
         rowd = rowd.max(d);
-        rowt = rowt.max(t as i64);
-        rowb = rowb.max(b as i64);
-      } //else {} // Ditto spanned rows
-      colwidths.push(colwidths_j);
-      collefts.push(collefts_j);
-      colrights.push(colrights_j);
+        rowt = rowt.max(t);
+        rowb = rowb.max(b);
+      }
+      // Perl L575-577: border detection
+      if !cell.border.is_empty() {
+        if cell.border.contains('t') || cell.border.contains('T') {
+          bordert = true;
+        }
+        if cell.border.contains('b') || cell.border.contains('B') {
+          borderb = true;
+        }
+      }
     }
-    row.cached_height = Some(Dimension::new(rowh).larger(hs));
-    row.cached_depth = Some(Dimension::new(rowd).larger(ds));
-    row.top_padding = Some(Dimension::new(rowt));
-    row.bottom_padding = Some(Dimension::new(rowb));
-    // NOTE: Should be storing column widths to; individually, as well as per-column!
-    rowheights.push(rowh + rowd);
-  } // somehow our heights are way too short????
+    // Perl L579-586: first/last row special handling (non-LaTeX only)
+    if i == 0 && !is_latex {
+      row.cached_height = Some(Dimension::new(rowh));
+    } else {
+      row.cached_height = Some(Dimension::new(rowh).larger(hs));
+    }
+    if i == nrows - 1 && !is_latex {
+      row.cached_depth = Some(Dimension::new(rowd));
+    } else {
+      row.cached_depth = Some(Dimension::new(rowd).larger(ds));
+    }
+    // Perl L587-588: border padding (0.4 * UNITY)
+    let border_pad = (0.4 * UNITY as f64) as i64;
+    row.top_padding = Some(Dimension::new(rowt + if bordert { border_pad } else { 0 }));
+    row.bottom_padding = Some(Dimension::new(rowb + if borderb { border_pad } else { 0 }));
+    // Perl L590-591: store row height and depth separately
+    rowdepths.push(row.cached_depth.unwrap().value_of());
+    rowheights.push(row.cached_height.unwrap().value_of());
+  }
   // Now compute the positions
   let mut rowpos = Vec::new();
   let mut colpos = Vec::new();
-  let mut y = 0;
+  let mut y: i64 = 0;
   // Row & column positions: left,top
-  for row in alignment.rows.iter().take(rowheights.len()) {
+  for (i, row) in alignment.rows.iter().enumerate() {
+    if i >= rowheights.len() {
+      break;
+    }
     if let Some(tp) = row.top_padding {
       y += tp.value_of();
     }
@@ -542,51 +708,87 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
       y += bp.value_of();
     }
   }
-  let mut x = 0i64;
-  for ((w, l), r) in colwidths.iter().zip(collefts.iter()).zip(colrights.iter()) {
-    x += *l as i64;
+  let mut x: i64 = 0;
+  for j in 0..colwidths.len() {
+    x += collefts[j];
     colpos.push(Dimension::new(x));
-    x += w;
-    x += *r as i64;
+    x += colwidths[j];
+    x += colrights[j];
   }
+  // Perl L610: vattach from $$self{properties}{attributes}{vattach}
+  // In Rust, xml_attributes holds what Perl calls properties.attributes
+  let vattach = alignment
+    .get_xml_attributes_mut()
+    .get("vattach")
+    .cloned()
+    .unwrap_or_else(|| "middle".to_string());
   alignment.cached_width = Some(Dimension::new(x));
-  // or account for vertical position of array as a whole)?
-  alignment.cached_height = Some(Dimension::new(y));
-  alignment.cached_depth = Some(Dimension::new(0));
+  match vattach.as_str() {
+    "top" => {
+      let h = rowheights.first().copied().unwrap_or(0);
+      alignment.cached_height = Some(Dimension::new(h));
+      alignment.cached_depth = Some(Dimension::new(y - h));
+    },
+    "bottom" => {
+      let d = rowdepths.last().copied().unwrap_or(0);
+      alignment.cached_height = Some(Dimension::new(y - d));
+      alignment.cached_depth = Some(Dimension::new(d));
+    },
+    _ => {
+      // middle (default)
+      // Perl L622-623: math axis approximation
+      let c = {
+        use crate::state::lookup_value;
+        let font_size = lookup_value("font")
+          .and_then(|v| {
+            if let Stored::Font(ref f) = v {
+              f.get_size().map(|s| (s * UNITY as f64) as i64 / 2)
+            } else {
+              None
+            }
+          })
+          .unwrap_or_else(|| Dimension::from_str("1ex").map(|d| d.value_of()).unwrap_or(0));
+        font_size
+      };
+      alignment.cached_height = Some(Dimension::new((y + c) / 2));
+      alignment.cached_depth = Some(Dimension::new((y - c) / 2));
+    },
+  }
   alignment.column_widths = colwidths.iter().map(|v| Dimension::new(*v)).collect();
   alignment.row_heights = rowheights.iter().map(|v| Dimension::new(*v)).collect();
+  alignment.row_depths = rowdepths.iter().map(|v| Dimension::new(*v)).collect();
 
-  for (i, row) in alignment.rows.iter_mut().take(rowheights.len()).enumerate() {
+  if colpos.is_empty() {
+    return Ok(());
+  }
+  for (i, row) in alignment.rows.iter_mut().enumerate() {
+    if i >= rowheights.len() {
+      break;
+    }
     row.x = Some(colpos[0]);
     row.y = Some(rowpos[i]);
     row.cached_width = Some(Dimension::new(x));
-    for ((cell, colwidth), colposx) in row
-      .get_columns_mut()
-      .iter_mut()
-      .zip(colwidths.iter())
-      .zip(colpos.iter())
-    {
+    let ncols = row.get_columns().len();
+    for j in 0..ncols {
+      let cell = &row.get_columns()[j];
       let a = cell.align.unwrap_or(Align::Left);
-      // Adjust position according to alignment
-      // If these are defined
       let cached_width = cell.cached_width.unwrap_or_default().value_of();
-      let colx = if *colwidth > 0 && cached_width > 0 && a != Align::Left {
+      let colposx = colpos.get(j).copied().unwrap_or_default();
+      let colwidth = colwidths.get(j).copied().unwrap_or(0);
+      // Perl L644-647: adjust position according to alignment
+      let colx = if colwidth > 0 && cached_width > 0 && a != Align::Left {
         let dx = Dimension::new(colwidth - cached_width);
         match a {
           Align::Center => colposx.add(dx.multiply(Float::new_f64(0.5))),
           Align::Right => colposx.add(dx),
-          _ => *colposx,
+          _ => colposx,
         }
       } else {
-        *colposx
+        colposx
       };
+      let cell = &mut row.get_columns_mut()[j];
       cell.x = Some(colx);
       cell.y = Some(rowpos[i]);
-      //     Debug("CELL[$j,$i] " . showSize($$cell{cached_width}, $$cell{cached_height},
-      // $$cell{cached_depth})         . " @ " . ToString($$cell{x}) . "," .
-      // ToString($$cell{y})         . " w/ " . join(',', map { $_ . '=' .
-      // ToString($$cell{$_}); }           (qw(align vattach skipped colspan rowspan))))
-      //       if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
     }
   }
 

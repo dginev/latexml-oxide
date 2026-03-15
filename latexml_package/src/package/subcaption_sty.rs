@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::engine::latex_ch9_figures_and_tables::{before_float, after_float};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -26,47 +27,62 @@ LoadDefinitions!({
   DefMacro!("\\format@title@font@subfigure", "\\format@title@font@figure");
   DefMacro!("\\format@title@font@subtable",  "\\format@title@font@table");
 
+  // Perl: \format@title@subfigure and \format@title@subtable use " " separator (not ": ")
+  DefMacro!(
+    "\\format@title@subfigure{}",
+    "\\lx@tag[][ ]{\\lx@fnum@@{subfigure}}#1"
+  );
+  DefMacro!(
+    "\\format@title@subtable{}",
+    "\\lx@tag[][ ]{\\lx@fnum@@{subtable}}#1"
+  );
+
   //======================================================================
   // \subcaption — Perl uses a closure to manipulate \@captype (prepending "sub" if not
-  // already sub-prefixed), then delegates to \caption. We use a simplified macro that
-  // just passes through to \caption, since the subfigure/subtable environments already
-  // set up the correct \@captype context.
-  // TODO: implement the \@captype sub-prefixing logic via a Rust closure once needed.
+  // already sub-prefixed), then delegates to \caption.
   DefMacro!("\\subcaption OptionalMatch:* []{}", "\\caption[#2]{#3}");
 
   //======================================================================
   // Subfigure environments
-  // Perl uses beforeFloat/afterFloat which aren't ported yet.
-  // We provide simplified environments that produce the correct XML structure.
-  // TODO: hook up beforeFloat('subfigure', preincrement => 'figure') / afterFloat
-  //       once those helpers are ported.
-
+  // Perl: beforeFloat('subfigure', preincrement => 'figure') / afterFloat
   DefEnvironment!("{subfigure}[]{Dimension}",
     "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
-    </ltx:figure>"
+    </ltx:figure>",
+    mode => "internal_vertical",
+    before_digest => { before_float("subfigure", Some("figure")); },
+    after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
   DefEnvironment!("{subfigure*}[]{Dimension}",
     "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
-    </ltx:figure>"
+    </ltx:figure>",
+    mode => "internal_vertical",
+    before_digest => { before_float("subfigure", Some("figure")); },
+    after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
   DefEnvironment!("{subtable}[]{Dimension}",
     "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
-    </ltx:table>"
+    </ltx:table>",
+    mode => "internal_vertical",
+    before_digest => { before_float("subtable", Some("table")); },
+    after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
   DefEnvironment!("{subtable*}[]{Dimension}",
     "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
-    </ltx:table>"
+    </ltx:table>",
+    mode => "internal_vertical",
+    before_digest => { before_float("subtable", Some("table")); },
+    after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
   //======================================================================
@@ -89,9 +105,8 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // \lx@subcaption@addinlist — constructor that sets inlist attribute
-  // TODO: Perl uses "^ inlist='#1'" to set an attribute on the parent.
-  // Attribute-only constructors aren't supported yet; stub as no-op.
+  // \lx@subcaption@addinlist — constructor that sets inlist attribute on parent
+  // Perl: "^ inlist='#1'" — attribute-only constructor (not yet supported in proc macro)
   DefMacro!("\\lx@subcaption@addinlist{}", "");
 
   //======================================================================

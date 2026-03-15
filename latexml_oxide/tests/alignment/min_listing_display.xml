@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="listings"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <resource src="ltx-listings.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>Display Listing</title>
+    <para xml:id="S1.p1">
+      <listing class="ltx_lstlisting" data="c3R1ZmYxCnN0dWZmMgpzdHVmZjM=" dataencoding="base64" datamimetype="text/plain">
+        <listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">stuff1</text></listingline>
+        <listingline xml:id="lstnumberx2"><text class="ltx_lst_identifier">stuff2</text></listingline>
+        <listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">stuff3</text></listingline>
+      </listing>
+      <listing class="ltx_lst_language_Pascal ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
+        <listingline xml:id="lstnumberx4"><text class="ltx_lst_keyword" font="bold">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_keyword" font="bold">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">do</text></listingline>
+        <listingline xml:id="lstnumberx5"><text class="ltx_lst_keyword" font="bold">begin</text></listingline>
+        <listingline xml:id="lstnumberx6"><text class="ltx_lst_space">  </text><text class="ltx_lst_comment">{<text class="ltx_lst_space" font="italic"> </text><text font="italic">do<text class="ltx_lst_space"> </text>nothing<text class="ltx_lst_space"> </text></text>}</text></listingline>
+        <listingline xml:id="lstnumberx7"><text class="ltx_lst_keyword" font="bold">end</text>;</listingline>
+      </listing>
+    </para>
+  </section>
+</document>

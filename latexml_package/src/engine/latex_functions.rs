@@ -231,11 +231,12 @@ pub fn tabular_bindings(
   if !xml_attributes.contains_key("rowsep") {
     let astr = gullet::do_expand(T_CS!("\\arraystretch"))?.to_string();
     if astr != "1" {
-      let astr_int = astr.parse::<i64>().expect(&astr);
-      xml_attributes.insert(
-        String::from("rowsep"),
-        Dimension::from_str(&s!("{}em", astr_int - 1))?.to_attribute(),
-      );
+      if let Ok(astr_f) = astr.parse::<f64>() {
+        if astr_f != 1.0 {
+          let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
+          xml_attributes.insert(String::from("rowsep"), rowsep.to_attribute());
+        }
+      }
     }
   }
 

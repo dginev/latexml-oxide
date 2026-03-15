@@ -156,6 +156,9 @@ impl ArgWrap {
     }
   }
 
+  /// Convert to an attribute string value (for constructor templates)
+  pub fn to_attribute(&self) -> String { self.to_string() }
+
   pub fn as_tokens(&self) -> Result<Option<Cow<'_, Tokens>>> {
     use ArgWrap::*;
     let result = match self {
@@ -436,7 +439,9 @@ impl From<Stored> for Result<ArgWrap> {
       | Stored::Locator(_)
       | Stored::VecDequeStored(_)
       | Stored::VecDigested(_)
-      | Stored::Chars(_) => {
+      | Stored::Chars(_)
+      | Stored::KeyVal(_)
+      | Stored::KeyVals(_) => {
         Error!(
           "stored",
           "type",
@@ -560,10 +565,10 @@ impl TryFrom<ArgWrap> for Token {
   fn try_from(aw: ArgWrap) -> Result<Token> { aw.try_to_token() }
 }
 
-// impl TryFrom<ArgWrap> for KeyVals {
-//   type Error = crate::common::error::Error;
-//   fn try_from(aw: ArgWrap) -> Result<KeyVals> { aw.try_to_keyvals() }
-// }
+impl TryFrom<ArgWrap> for KeyVals {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<KeyVals> { aw.try_to_keyvals() }
+}
 
 impl From<ArgWrap> for Option<KeyVals> {
   fn from(aw: ArgWrap) -> Option<KeyVals> {

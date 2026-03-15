@@ -20,10 +20,10 @@ fn prepare_equation_counter(options: SymHashMap<Stored>) {
 fn before_equation() -> Result<()> {
   let mut has_preset = false;
   let mut is_numbered = false;
+  maybe_peek_label()?;
   let ctr = with_value_mut("EQUATION_NUMBERING", |val_opt| {
     if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
       numbering.insert("in_equation", true.into());
-      // MaybePeekLabel();
       is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
       has_preset = numbering.contains_key("preset");
       match numbering.get("counter") {
@@ -63,7 +63,7 @@ fn before_equation() -> Result<()> {
   Ok(())
 }
 
-fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
+fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
   // Phase 1: Gather all needed data from state (immutable borrows only)
   enum EqAction { Retract, Postset, TagsUpdate, None }
   let mut action = EqAction::None;
@@ -111,8 +111,6 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
       retract_equation();
     },
     EqAction::Postset => {
-      // Perl: AssignValue(EQUATIONROW_TAGS => {
-      //   ($$numbering{numbered} ? RefStepCounter($ctr) : RefStepID($ctr)) }, 'global');
       let new_tags = if is_numbered_for_postset {
         ref_step_counter(&ctr, false)?
       } else {
@@ -154,12 +152,16 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
     _ => SymHashMap::default(),
   };
   if is_aligned {
-    // Perl: propagate id/tags to current alignment row.
-    // The Alignment struct's current_row is not easily accessible from a Digested wrapper.
-    // This is a stub — aligned equation numbering may not fully work yet.
-    // TODO: when Alignment is accessible, set row id/tags from props.
-  } else {
-    whatsit.set_properties(props);
+    // Perl: propagate id/tags to current alignment row properties.
+    // In Perl, these get stored as $$row{id}, $$row{tags} and later passed to
+    // the openRow hook. We store them in EQUATIONROW_PROPS for the open_row hook.
+    state::assign_value(
+      "EQUATIONROW_PROPS",
+      Stored::HashStored(props),
+      Some(Scope::Global),
+    );
+  } else if let Some(w) = whatsit {
+    w.set_properties(props);
   }
   Ok(())
 }
@@ -208,10 +210,120 @@ fn retract_equation() {
   }
 }
 
-// TODO: Perl: latex_constructs.pool.ltxml lines 2287-2325
-// Full eqnarrayBindings() with alignment template, custom containers,
-// row hooks, and rearrangeEqnarray post-processing. Deferred until
-// alignment-based eqnarray infrastructure is fully ported.
+/// Perl: latex_constructs.pool.ltxml lines 2287-2325
+/// eqnarrayBindings — creates alignment with equationgroup/equation/_Capture_ hooks
+pub fn eqnarray_bindings() -> Result<()> {
+  use latexml_core::alignment::cell::Cell;
+  use latexml_core::alignment::template::TemplateConfig;
+
+  // Perl: 3-column template: col1=right, col2=center, col3=left
+  let col1 = Cell {
+    before: Some(Tokens::new(vec![
+      T_CS!("\\hfil"), T_MATH!(), T_CS!("\\displaystyle"),
+    ])),
+    after: Some(Tokens::new(vec![T_MATH!()])),
+    empty: true,
+    ..Cell::default()
+  };
+  let col2 = Cell {
+    before: Some(Tokens::new(vec![
+      T_CS!("\\hfil"), T_MATH!(), T_CS!("\\displaystyle"),
+    ])),
+    after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
+    empty: true,
+    ..Cell::default()
+  };
+  let col3 = Cell {
+    before: Some(Tokens::new(vec![
+      T_MATH!(), T_CS!("\\displaystyle"),
+    ])),
+    after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
+    empty: true,
+    ..Cell::default()
+  };
+
+  let template = Template::new(TemplateConfig {
+    columns: Some(vec![col1, col2, col3]),
+    ..TemplateConfig::default()
+  });
+
+  let mut xml_attrs = HashMap::default();
+  xml_attrs.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
+  // Perl: colsep => LookupDimension('\arraycolsep')->multiply(2)
+  // TODO: compute colsep from \arraycolsep
+
+  let mut properties = SymHashMap::default();
+  properties.insert("preserve_structure", Stored::Bool(true));
+
+  // Use custom alignment hooks for equationgroup/equation/_Capture_
+  let alignment = Alignment::new(AlignmentConfig {
+    template: Some(template),
+    open_container: Rc::new(|document, mut props| {
+      // Perl: my %attr = RefStepID('@equationgroup');
+      if let Ok(id_props) = ref_step_id("@equationgroup") {
+        if let Some(id) = id_props.get("id") {
+          props.insert(String::from("xml:id"), id.to_string());
+        }
+      }
+      props.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
+      document
+        .open_element("ltx:equationgroup", Some(props), None)
+        .map(Option::Some)
+    }),
+    close_container: Rc::new(|document| document.close_element("ltx:equationgroup")),
+    open_row: Rc::new(|document, mut props| {
+      // Perl: my $tags = $props{tags}; $doc->openElement('ltx:equation', %props);
+      //       $doc->absorb($tags) if $tags;
+      // Read equation props from state (set by after_equation in aligned mode)
+      if let Some(Stored::HashStored(eq_props)) =
+        state::remove_value("EQUATIONROW_PROPS")
+      {
+        if let Some(id) = eq_props.get("id") {
+          props.insert(String::from("xml:id"), id.to_string());
+        }
+      }
+      document
+        .open_element("ltx:equation", Some(props), None)
+        .and(Ok(()))
+    }),
+    close_row: Rc::new(|document| document.close_element("ltx:equation")),
+    open_column: Rc::new(|document, props| {
+      document
+        .open_element("ltx:_Capture_", Some(props), None)
+        .map(Option::Some)
+    }),
+    close_column: Rc::new(|document| document.close_element("ltx:_Capture_")),
+    is_math: true,
+    properties,
+    xml_attributes: xml_attrs,
+  });
+
+  assign_alignment(alignment, None);
+  state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
+  state::let_i(
+    &T_CS!("\\\\"),
+    &T_CS!("\\lx@alignment@newline"),
+    None,
+  );
+  state::let_i(
+    &T_CS!("\\lx@intercol"),
+    &T_CS!("\\lx@math@intercol"),
+    None,
+  );
+  state::let_i(
+    &T_CS!("\\lx@alignment@row@before"),
+    &T_CS!("\\eqnarray@row@before"),
+    None,
+  );
+  state::let_i(
+    &T_CS!("\\lx@alignment@row@after"),
+    &T_CS!("\\eqnarray@row@after"),
+    None,
+  );
+  // Perl: Let('\label', '\lx@eqnarray@label');
+  // TODO: eqnarray label handling
+  Ok(())
+}
 
 LoadDefinitions!({
   DefMacro!("\\@eqnnum", "(\\theequation)", locked => true);
@@ -274,7 +386,7 @@ LoadDefinitions!({
       before_equation()?;
     },
     after_digest_body => sub[whatsit] {
-      after_equation(whatsit)?;
+      after_equation(Some(whatsit))?;
     },
     locked => true);
 
@@ -289,7 +401,7 @@ LoadDefinitions!({
       before_equation()?;
     },
     after_digest_body => sub[whatsit] {
-      after_equation(whatsit)?;
+      after_equation(Some(whatsit))?;
     },
     locked => true);
 
@@ -362,65 +474,91 @@ LoadDefinitions!({
     }
   }, protected => true);
 
-  // TODO: Perl latex_constructs.pool.ltxml lines 2237-2239
-  // \@equationgroup@numbering RequiredKeyVals — full impl needs alignment-based eqnarray
-  // DefPrimitive!("\\@equationgroup@numbering RequiredKeyVals", sub[(kv_opt)] { ... });
+  // Perl: latex_constructs.pool.ltxml lines 2237-2239
+  // \@equationgroup@numbering{numbered=1,postset=1,...}
+  DefPrimitive!("\\@equationgroup@numbering{}", sub[(kv_arg)] {
+    let kv_str = kv_arg.to_string();
+    let mut options = SymHashMap::default();
+    for part in kv_str.split(',') {
+      let part = part.trim();
+      if let Some((key, value)) = part.split_once('=') {
+        let key = key.trim();
+        let value = value.trim();
+        if value == "1" {
+          options.insert(key, Stored::Bool(true));
+        } else if value == "0" {
+          options.insert(key, Stored::Bool(false));
+        } else {
+          options.insert(key, Stored::from(value.to_string()));
+        }
+      }
+    }
+    prepare_equation_counter(options);
+    Ok(())
+  });
+
+  // Perl: latex_constructs.pool.ltxml lines 2282-2285
+  DefPrimitive!("\\eqnarray@row@before@", { before_equation()?; });
+  DefPrimitive!("\\eqnarray@row@after@", {
+    after_equation(None)?;
+  });
+  DefMacro!("\\eqnarray@row@before", "\\lx@hidden@noalign{\\eqnarray@row@before@}");
+  DefMacro!("\\eqnarray@row@after", "\\lx@hidden@noalign{\\eqnarray@row@after@}");
 
   // Perl: latex_constructs.pool.ltxml lines 2262-2335
-  // Full eqnarray with alignment is complex; using simplified environment for now
-  // that produces equationgroup > equation > Math structure.
-  // TODO: implement full eqnarrayBindings with alignment template
-  DefEnvironment!("{eqnarray}",
-    "<ltx:equationgroup class='ltx_eqn_eqnarray' xml:id='#id'>\
-      <ltx:equation xml:id='#eq_id'>#tags\
-        <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
-      </ltx:equation>\
-    </ltx:equationgroup>",
-    mode => "display_math",
-    before_digest => {
-      prepare_equation_counter(stored_map!(
-        "numbered" => true, "preset" => true,
-        "deferretract" => true, "grouped" => true));
-      before_equation()?;
-    },
-    properties => sub[_args] {
-      let mut props = ref_step_id("@equationgroup")?;
-      let eq_props = ref_step_id("equation")?;
-      if let Some(eq_id) = eq_props.get("id") {
-        props.insert("eq_id", eq_id.clone());
-      }
-      Ok(props)
-    },
-    after_digest_body => sub[whatsit] {
-      after_equation(whatsit)?;
-    },
+  // eqnarray and eqnarray* — alignment-based environments
+  DefPrimitive!("\\@eqnarray@bindings", {
+    eqnarray_bindings()?;
+  });
+
+  DefMacro!("\\eqnarray",
+    "\\@eqnarray@bindings\\@@eqnarray\
+     \\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\
+     \\lx@begin@alignment",
+    locked => true);
+  DefMacro!("\\endeqnarray",
+    "\\cr\\lx@end@alignment\\end@eqnarray",
+    locked => true);
+  DefMacro!("\\csname eqnarray*\\endcsname",
+    "\\@eqnarray@bindings\\@@eqnarray\
+     \\@equationgroup@numbering{numbered=1,preset=1,retract=1,grouped=1,aligned=1}\
+     \\lx@begin@alignment",
+    locked => true);
+  DefMacro!("\\csname endeqnarray*\\endcsname",
+    "\\lx@end@alignment\\end@eqnarray",
     locked => true);
 
-  DefEnvironment!("{eqnarray*}",
-    "<ltx:equationgroup class='ltx_eqn_eqnarray' xml:id='#id'>\
-      <ltx:equation xml:id='#eq_id'>#tags\
-        <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
-      </ltx:equation>\
-    </ltx:equationgroup>",
-    mode => "display_math",
+  DefConstructor!("\\@@eqnarray SkipSpaces DigestedBody",
+    "#1",
     before_digest => {
-      prepare_equation_counter(stored_map!(
-        "numbered" => true, "preset" => true,
-        "retract" => true, "grouped" => true));
-      before_equation()?;
+      bgroup();
     },
-    properties => sub[_args] {
-      let mut props = ref_step_id("@equationgroup")?;
-      let eq_props = ref_step_id("equation")?;
-      if let Some(eq_id) = eq_props.get("id") {
-        props.insert("eq_id", eq_id.clone());
+    mode => "restricted_horizontal",
+    enter_horizontal => true);
+  DefPrimitive!("\\end@eqnarray", {
+    egroup()?;
+  });
+
+  // Perl: latex_constructs.pool.ltxml lines 2243-2247
+  DefConditional!("\\if@in@firstcolumn", {
+    if let Some(alignment_digested) = lookup_alignment() {
+      if let Some(alignment_cell) = alignment_digested.alignment_cell() {
+        let alignment = alignment_cell.borrow();
+        !alignment.is_in_row()
+          || (!alignment.is_in_column() && alignment.current_column_number() < 2)
+      } else {
+        false
       }
-      Ok(props)
-    },
-    after_digest_body => sub[whatsit] {
-      after_equation(whatsit)?;
-    },
-    locked => true);
+    } else {
+      false
+    }
+  });
+
+  // Perl: latex_constructs.pool.ltxml lines 2251-2254
+  DefMacro!("\\lefteqn{}",
+    "\\ifx.#1.\\else\
+      \\if@in@firstcolumn\\multicolumn{3}{l}{\\@ADDCLASS{ltx_eqn_lefteqn}\\lx@begin@inline@math \\displaystyle #1\\lx@end@inline@math\\mbox{}}\
+      \\else\\rlap{\\lx@begin@inline@math\\displaystyle #1\\lx@end@inline@math}\\fi\\fi");
 
   // Perl: latex_constructs.pool.ltxml lines 2258-2259
   Let!("\\displ@y", "\\displaystyle");

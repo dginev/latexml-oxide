@@ -263,8 +263,10 @@ LoadDefinitions!({
   //         $options .= "trim=$left $bottom 0 0,clip=true"; } }
   //     (options => $options, path => $path, candidates => join(',', @candidates)); },
   //   mode => 'text');
-  // # Since these ultimately generate external resources, it can be useful to have a handle on
-  // them. Tag('ltx:graphics', afterOpen => sub { GenerateID(@_, 'g'); });
+  // Since these ultimately generate external resources, it can be useful to have a handle on them.
+  Tag!("ltx:graphics", after_open => sub[document, node] {
+    document.generate_id(node, "g")?;
+  });
 
   //======================================================================
   // output processing

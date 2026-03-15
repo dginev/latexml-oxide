@@ -63,11 +63,13 @@ LoadDefinitions!({
         .add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")])
     });
   });
+  // Perl: l/c/r column types do NOT set `align` explicitly.
+  // Alignment is derived from \hfil fills during extractAlignmentColumn:
+  //   \hfil after  → left,  \hfil before+after → center,  \hfil before → right
   DefColumnType!("l", {
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
         after: Some(Tokens!(T_CS!("\\hfil"))),
-        align: Some(Align::Left),
         ..Cell::default()
       })
     });
@@ -77,7 +79,6 @@ LoadDefinitions!({
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         after: Some(Tokens!(T_CS!("\\hfil"))),
-        align: Some(Align::Center),
         ..Cell::default()
       })
     });
@@ -86,7 +87,6 @@ LoadDefinitions!({
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
-        align: Some(Align::Right),
         ..Cell::default()
       })
     });
@@ -310,7 +310,6 @@ LoadDefinitions!({
       tokens.push(T_END!());
     } else {
       tokens.push(T_CS!("\\lx@alignment@newline@marker"));
-      tokens.push(T_END!());
     }
     tokens.push(T_END!());
     Tokens::new(tokens)
@@ -740,7 +739,6 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
       //   stomach.box_list.extend(invoked.into_iter());
       } else {
         // Else, we're getting some actual content for the column
-        // eprintln!("Halign: COLUMN invoking {}", token.stringify());// if $LaTeXML::DEBUG{halign};
         let invoked = stomach::invoke_token(&token)?;
         extend_box_list(invoked);
         // eprintln!("Halign: COLUMN {} ==> {}",token.stringify(),
@@ -801,19 +799,43 @@ pub fn extract_alignment_column(
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
   let n0 = lookup_int("alignmentStartColumn") as usize + 1;
   let n1 = alignment.current_column_number();
-  let colspec = alignment.get_column(n0).unwrap();
-  let template_align = colspec.align.unwrap_or(Align::Left);
-  let mut align = template_align;
+
+  // --- Read phase: extract values from colspec, then drop the borrow ---
+  let (initial_align, tabskip_clone, is_omitted, has_before_fill, has_after_fill, old_border);
+  {
+    let colspec = match alignment.get_column(n0) {
+      Some(c) => c,
+      None => {
+        return Ok(Digested::default());
+      }
+    };
+    initial_align = colspec.align.unwrap_or(Align::Left);
+    tabskip_clone = colspec.tabskip.clone();
+    is_omitted = colspec.omitted;
+    old_border = colspec.border.clone();
+    has_before_fill = colspec
+      .before
+      .as_ref()
+      .map(|b| b.unlist_ref().iter().any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill")))
+      .unwrap_or(false);
+    has_after_fill = colspec
+      .after
+      .as_ref()
+      .map(|a| a.unlist_ref().iter().any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill")))
+      .unwrap_or(false);
+  } // colspec borrow dropped
+
+  let mut align = initial_align;
   let mut border = String::new();
-  // Peel off any boxes from both sides until we get the "meat" of the column.
-  // from this we can establish borders, alignment and emptiness.
-  // But we, of course, immediately put them back...
   let mut saveleft = VecDeque::new();
   let mut saveright = VecDeque::new();
   let mut lspaces: Vec<Digested> = Vec::new();
   let mut rspaces: Vec<Digested> = Vec::new();
+  // Perl L487-489: lspaces to transfer to previous column when vrule found
+  let mut prev_rspaces_transfer: Option<Vec<Digested>> = None;
+
   // Perl L476-477: add tabskip as \hskip to lspaces
-  if let Some(skip) = &colspec.tabskip {
+  if let Some(skip) = &tabskip_clone {
     if skip.value_of() != 0 {
       let hskip_toks = Tokens!(
         T_CS!("\\hskip"),
@@ -824,6 +846,15 @@ pub fn extract_alignment_column(
       lspaces.push(hskip_digested);
     }
   }
+  // Determine expected alignment from template fills, as a fallback for when
+  // the trailing fill box is lost during digestion (known issue with nested \hbox groups).
+  let expected_from_template = match (has_before_fill, has_after_fill) {
+    (true, true) => Some(Align::Center),
+    (false, true) => Some(Align::Left),
+    (true, false) => Some(Align::Right),
+    (false, false) => None,
+  };
+  // --- Scan phase: peel boxes from both sides ---
   while let Some(front_box) = boxes.pop_front() {
     match front_box.data() {
       DigestedData::List(_) => {
@@ -837,9 +868,10 @@ pub fn extract_alignment_column(
       },
       _ if front_box.get_property("isVerticalRule").is_some() => {
         border.push('l');
-        // Perl L487-489: space before | ? move lspaces to previous column
-        // (deferred until after we release colspec borrow)
-        lspaces.clear(); // discard lspaces when border found
+        // Perl L487-489: space before | ? move lspaces to previous column's rspaces
+        if !lspaces.is_empty() {
+          prev_rspaces_transfer = Some(std::mem::take(&mut lspaces));
+        }
       },
       _ if front_box.get_property("isSpace").is_some() => {
         lspaces.push(front_box);
@@ -853,7 +885,6 @@ pub fn extract_alignment_column(
         saveleft.push_front(front_box)
       },
       _ => {
-        // put the box back, and terminate left side loop.
         boxes.push_front(front_box);
         break;
       },
@@ -888,21 +919,20 @@ pub fn extract_alignment_column(
         saveright.push_front(last_box);
       },
       _ => {
-        // put the box back, and terminate right side loop.
         boxes.push_back(last_box);
         break;
       },
     }
   }
-  // Workaround: when left fill was found but right fill was not (align=Right),
-  // AND the template originally specified Center, fall back to the template alignment.
-  // This compensates for the right \hfil sometimes being missing from column content
-  // due to agc tracking across \hbox groups.
-  if align == Align::Right && template_align == Align::Center {
-    align = Align::Center;
-  }
-  if align != Align::Justify {
-    colspec.width = None;
+  // Fallback: if only one fill was found but the template expects two, use template's alignment.
+  if !is_omitted {
+    if let Some(expected) = expected_from_template {
+      if (align == Align::Right && expected == Align::Center)
+        || (align == Align::Left && expected != Align::Left)
+      {
+        align = expected;
+      }
+    }
   }
   // Replacing boxes with the fil padding & vertical rules stripped off
   let mut final_boxes = Vec::from(saveleft);
@@ -915,26 +945,52 @@ pub fn extract_alignment_column(
     TexMode::Text
   });
   let digested_out = Digested::from(boxes_list);
-  // record relevant info in the Alignment.
-  colspec.align = Some(align);
-  border = s!("{}{}", colspec.border, border);
-  colspec.border = border;
-  colspec.boxes = Some(digested_out.clone());
-  // Perl L526-527: store lspaces/rspaces
-  if !lspaces.is_empty() {
-    colspec.lspaces = Some(List::new(lspaces).into());
+
+  // --- Write phase: apply to previous column (Perl L487-489) ---
+  if let Some(transfer) = prev_rspaces_transfer {
+    if n0 >= 2 {
+      if let Some(prev_col) = alignment.get_column(n0 - 1) {
+        // Perl: $$prev{rspaces} = List(($$prev{rspaces} || ()), @lspaces)
+        let mut all_rspaces = Vec::new();
+        if let Some(existing) = prev_col.rspaces.take() {
+          all_rspaces.extend(existing.unlist());
+        }
+        all_rspaces.extend(transfer);
+        prev_col.rspaces = Some(List::new(all_rspaces).into());
+      }
+    }
   }
-  if !rspaces.is_empty() {
-    colspec.rspaces = Some(List::new(rspaces).into());
+
+  // --- Write phase: apply to current column ---
+  let in_thead = alignment.is_in_tabular_head();
+  {
+    let colspec = alignment.get_column(n0).unwrap();
+    colspec.align = Some(align);
+    if align != Align::Justify {
+      colspec.width = None;
+    }
+    let new_border = s!("{}{}", old_border, border);
+    colspec.border = new_border;
+    colspec.boxes = Some(digested_out.clone());
+    // Perl L526-527: store lspaces/rspaces
+    if !lspaces.is_empty() {
+      colspec.lspaces = Some(List::new(lspaces).into());
+    }
+    if !rspaces.is_empty() {
+      colspec.rspaces = Some(List::new(rspaces).into());
+    }
+    colspec.colspan = Some(if n1 >= n0 { n1 - n0 + 1 } else { 1 });
+    // Perl L530-534: mark thead columns
+    if in_thead {
+      colspec.thead_in_column = true;
+    }
   }
-  colspec.colspan = Some(if n1 >= n0 { n1 - n0 + 1 } else { 1 });
-  //   if ($$alignment{in_tabular_head} || $$alignment{in_tabular_foot}) {
-  //     $$colspec{thead}{column} = 1; }
-  //   for (my $i = $n0 + 1 ; $i <= $n1 ; $i++) {
-  //     my $c = $alignment->getColumn($i);
-  //     $$c{skipped} = 1 if $c; }
-  //   Debug("Halign $alignment: INSTALL column " . join(',', map { $_ . "=" .
-  // ToString($$colspec{$_}); } sort keys %$colspec)) if $LaTeXML::DEBUG{halign};
+  // Mark skipped (spanned) columns
+  for i in (n0 + 1)..=n1 {
+    if let Some(c) = alignment.get_column(i) {
+      c.skipped = true;
+    }
+  }
   Ok(digested_out)
 }
 

@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
+
 ## Project Overview
 
 latexml-oxide is a Rust port of [LaTeXML](https://github.com/brucemiller/latexml), a Perl tool that converts LaTeX documents into accessible web documents (HTML/XML).
@@ -20,9 +22,26 @@ Cargo workspace with 6 crates:
 - **latexml_contrib** — User-contributed style packages
 
 Supporting directories:
-- `resources/` — CSS, DTD, JavaScript, RelaxNG schemas, XSLT, Profiles
+- `resources/` — CSS, JavaScript, RelaxNG schemas, XSLT, Profiles
 - `tools/` — Utility scripts (e.g. `compile_metrics.pl`)
 - `.githooks/` — Pre-push hook for quality checks
+- `docs/` — Internal project documentation (see below)
+
+## Internal Documentation
+
+Three key documents track porting progress and known issues:
+
+- **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — Master tracking document: file-by-file Perl→Rust sync status, test suite counts, Rust error fixes, infrastructure gaps, package bindings status, and the 9-phase roadmap to full parity. **Start here** when resuming work.
+- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_package/src/engine/*.rs`). Shows loading hierarchy and LaTeX chapter structure.
+- **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Documents upstream Perl LaTeXML issues: `packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders` heuristic. When investigating test failures, check here first to see if the issue is inherited from Perl.
+- **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals, discovered through specialized debugging. Covers: compile-time vs runtime token packing, Font::merge/specialize interaction, catcode CS vs ESCAPE, RegisterType PartialEq trap, at_letter restore. Check here to avoid re-introducing known bugs.
+- **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design document: architecture decisions, intentional Perl divergences, type system improvements, tactical insights. Read this file to check if a translation difference was marked as intentional.
+
+**Rules for these docs:**
+- `KNOWN_PERL_ERRORS.md` is for Perl-origin issues only. Include minimal trigger examples.
+- `WISDOM.md` is for tactical system insights — record when specialized analysis leads to a correct patch.
+- Rust-specific error fixes go in `SYNC_STATUS.md` under "Rust Error Fixes", referencing the KNOWN_PERL_ERRORS entry when applicable.
+- When an upstream Perl error is identified, record it. Fix in Rust if simple; otherwise keep as-is.
 
 ## Build & Test
 
@@ -65,23 +84,31 @@ git config --local core.hooksPath .githooks/
 ## Architecture Notes
 
 **Important:** The one novelty in the Rust rewrite is the math parser engine, which now uses a highly ambiguous Marpa grammar.
-  - the new goal is to be highly ambiguous in parsing, 
+  - the new goal is to be highly ambiguous in parsing,
   - but aggressively prune in the semantics rules, so as to minimize the final parses
   - this is active ongoing research. So be very cautious when porting math tests, ideally do them after everything else is solid.
 
 - **State** is a thread-local, global, mutable singleton (see CHANGELOG 0.3.2 decision)
 - Uses a **string interner** for efficient symbol handling
 - TeX macro definitions can be compiled at compile-time via proc macros in `latexml_codegen`
+- **No DTD support** — the Rust port only supports RelaxNG schemas. DTD-based document tests (namespace ns1–ns5, xii) are permanently ignored. The `DocType!` macro has been removed; `RegisterDocumentNamespaces!` handles namespace registration only.
 - The port aims to be **faithful to the Perl original** while using idiomatic Rust where possible
 - Test files (`.t` extension) mirror the original LaTeXML Perl test suite; `.rs` files are the Rust equivalents
 - most tests are regression-oriented. They contain a complete TeX input, and can experience failures in many different intermediate stages.
 - we are interested in finding meaningful Rust types for the previously untyped Perl.
+
+## Intentional divergences from Perl
+
+- **`%\n` not emitted**: Rust does not emit `%\n` (TeX comment-newline line-break separator) in `tex` attributes. When copying test XMLs from Perl, strip all `%&#10;` occurrences. This is a no-semantic-content formatting artifact.
+- **`\cdots` role**: Uses `role="ELIDEOP"` (Perl uses `role="ID"`) for math parser grammar rules.
 
 ## Practical guidance
 
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - The Perl LaTeXML directory gets updated at times, as the original project is still active. Before doing new work, always revise the current Rust against the current Perl, and update the Rust when outdated.
+- **Follow the Work Plan in `docs/SYNC_STATUS.md`**: Always work on the first unchecked `[ ]` item in the "Work Plan — Ordered TODO List" section. Do not skip ahead or investigate what to do next until all preceding items are clearly completed. Mark items `[x]` when done.
+- When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 
 ## Key Concepts Mapping (Perl → Rust)
 
@@ -98,3 +125,7 @@ git config --local core.hooksPath .githooks/
 ## CI
 
 GitHub Actions runs on push/PR: installs system deps, uses Rust nightly, runs `cargo test`.
+
+---
+
+> **Reminder:** This is a faithful Perl-to-Rust translation. When porting any Perl code, preserve the original semantics, control flow, edge cases, and naming conventions. Read the Perl source first, translate precisely, and only diverge when documented in `docs/OXIDIZED_DESIGN.md`.

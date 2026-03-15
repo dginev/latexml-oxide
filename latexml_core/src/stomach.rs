@@ -101,7 +101,7 @@ pub fn regurgitate() -> Vec<Digested> { stomach_mut!().box_list.drain(..).collec
 
 /// Adds a new stack frame for a TeX group.
 pub fn push_stack_frame(nobox: bool) {
-  let current_token = get_current_token().unwrap();
+  let current_token = get_current_token().unwrap_or_else(|| T_CS!("\\relax"));
   push_frame();
   assign_value(
     "beforeAfterGroup",
@@ -211,12 +211,8 @@ pub fn current_frame_message() -> String {
 /// and a new level of boxing the digested output.
 pub fn bgroup() {
   push_stack_frame(false);
-  // NOTE: This is WRONG; should really only track "scanned" (not digested) braces
-  // Alas, there're too many code structuring differences between TeX and LaTeXML
-  // to find all the places to manage it.
-  // So, let's try this for now...
-  // was $LaTeXML::ALIGN_STATE
-  increment_align_group_count();
+  // Perl's bgroup does NOT touch $ALIGN_STATE — it's tracked only at the scan level
+  // (in read_token/read_x_token). The scan-level tracking in gullet.rs is sufficient.
 }
 /// End a level of binding by popping the last stack frame,
 /// undoing whatever bindings appeared there, and also
@@ -245,7 +241,7 @@ pub fn egroup() -> Result<()> {
     // Don't pop if there's an error; maybe we'll recover?
     pop_stack_frame(false)?;
   }
-  decrement_align_group_count();
+  // Perl's egroup does NOT touch $ALIGN_STATE — tracked at scan level only.
   Ok(())
 }
 /// Begin a new level of binding by pushing a new stack frame.
@@ -631,8 +627,6 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
         || token == T_CS!("\\lx@hidden@cr")
         || token == T_CS!("\\lx@hidden@crcr"))
     {
-      // at least \over calls in here without the intent to passing through the alignment.
-      // So if we already have some digested boxes available, return them here.
       gullet::unread_one(token);
       return Ok(expire_local_box_list());
     }

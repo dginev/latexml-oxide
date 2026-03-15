@@ -31,7 +31,8 @@ use crate::definition::{
 use crate::document::Document;
 use crate::gullet;
 use crate::mouth;
-use crate::parameter::Parameters;
+use crate::definition::argument::ArgWrap;
+use crate::parameter::{Parameter, Parameters};
 use crate::state::*;
 use crate::stomach::*;
 use crate::tbox::Tbox;
@@ -85,7 +86,9 @@ pub fn is_defined_token(cs: &Token) -> bool {
       Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",
       Stored::Constructor(ref m) => m.get_cs_name() != "\\relax",
       Stored::Register(ref m) => m.get_cs_name() != "\\relax",
-      other => panic!("TODO: unexpected case for is_defined_token, got: {other:?}"),
+      Stored::Conditional(ref m) => m.get_cs_name() != "\\relax",
+      Stored::MathPrimitive(ref m) => m.get_cs_name() != "\\relax",
+      _ => true, // other stored values are considered defined
     },
     _ => false,
   }
@@ -363,13 +366,20 @@ pub fn def_primitive(
     });
     before_digest_env.push(bgroup_closure);
   }
-  if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_simple!({
-      if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
-        merge_font((**chosen_font).clone());
-      }
-    });
-    before_digest_env.push(merge_font_closure);
+  match options.font {
+    Some(FontDirective::Asset(chosen_font)) => {
+      let merge_font_closure = before_digest_simple!({
+        merge_font((*chosen_font).clone());
+      });
+      before_digest_env.push(merge_font_closure);
+    },
+    Some(FontDirective::Closure(font_closure)) => {
+      let execute_font_closure = before_digest_simple!({
+        merge_font(font_closure(None)?);
+      });
+      before_digest_env.push(execute_font_closure);
+    },
+    None => {},
   }
   before_digest_env.extend(options.before_digest);
 
@@ -1001,13 +1011,12 @@ pub fn def_environment(
   let end_name = s!("\\end{{{name}}}");
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
 
-  // Perl: mode => 'text' becomes restricted_horizontal for environments (no enterHorizontal)
-  // Perl also defaults to restricted_horizontal when mode is None, but we keep
-  // existing Rust behavior of not setting mode when None, to avoid regressions.
-  let mode = if options.mode.as_deref() == Some("text") {
-    Some("restricted_horizontal".to_string())
-  } else {
-    options.mode
+  // Perl Package.pm line 1885: $mode = 'restricted_horizontal' if !$mode || ($mode eq 'text');
+  // Environments ALWAYS have a mode — defaults to restricted_horizontal.
+  // This means \end{env} always calls endMode(), never egroup().
+  let mode = match options.mode.as_deref() {
+    None | Some("text") => Some("restricted_horizontal".to_string()),
+    _ => options.mode,
   };
 
   if options.require_math {
@@ -1062,13 +1071,20 @@ pub fn def_environment(
   });
   before_digest_env.push(current_environment_closure);
 
-  if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_simple!({
-      if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
-        merge_font((**chosen_font).clone());
-      }
-    });
-    before_digest_env.push(merge_font_closure);
+  match options.font {
+    Some(FontDirective::Asset(chosen_font)) => {
+      let merge_font_closure = before_digest_simple!({
+        merge_font((*chosen_font).clone());
+      });
+      before_digest_env.push(merge_font_closure);
+    },
+    Some(FontDirective::Closure(font_closure)) => {
+      let execute_font_closure = before_digest_simple!({
+        merge_font(font_closure(None)?);
+      });
+      before_digest_env.push(execute_font_closure);
+    },
+    None => {},
   }
   before_digest_env.extend(options.before_digest);
 
@@ -1087,9 +1103,31 @@ pub fn def_environment(
   });
   after_construct_with_frame.push(pop_frame_closure);
 
+  // Perl Package.pm L1891-1895: "in pure LaTeX would usually have expanded to \env
+  // and would have skipped spaces before parsing args, if any."
+  // Prepend SkipSpaces parameter when the environment has arguments.
+  let paramlist_skips = match paramlist {
+    Some(ref pl) if pl.get_num_args() > 0 => {
+      let skip_spaces_param = Parameter {
+        novalue: true,
+        name: arena::pin_static("SkipSpaces"),
+        spec: arena::pin_static("SkipSpaces"),
+        reader: Rc::new(|_inner, _extra| {
+          gullet::skip_spaces()?;
+          Ok(ArgWrap::None)
+        }),
+        ..Parameter::default()
+      };
+      let mut params = vec![skip_spaces_param];
+      params.extend(pl.get_parameters().into_iter().cloned());
+      Some(Parameters::new(params))
+    },
+    _ => paramlist.clone(),
+  };
+
   let begin_name_constructor = Rc::new(Constructor {
     cs:                T_CS!(begin_name),
-    paramlist:         paramlist.clone(),
+    paramlist:         paramlist_skips,
     replacement:       compiled_replacement.clone(),
     nargs:             options.nargs,
     before_digest:     before_digest_env,
@@ -1173,21 +1211,33 @@ pub fn def_environment(
   install_definition(end_envname_constructor, options.scope);
 
   // For the uncommon case opened by \csname env\endcsname
+  // Perl Package.pm lines 1949-1969: \FOO gets the same hook pipeline as \begin{FOO}
+  let mut before_digest_bare: Vec<BeforeDigestClosure> = Vec::new();
+  before_digest_bare.push(before_digest_simple!({ bgroup(); }));
+  if let Some(ref bmode) = mode {
+    let bmode = bmode.clone();
+    before_digest_bare.push(before_digest_simple!({
+      begin_mode_opt(&bmode, true)?;
+    }));
+  }
+  let push_frame_bare = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
+    push_frame();
+    Ok(())
+  });
+  let pop_frame_bare = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
+    pop_frame()?;
+    Ok(())
+  });
   let name_constructor = Rc::new(Constructor {
     cs: T_CS!(s!("\\{}", &name)),
     paramlist,
     replacement: compiled_replacement,
-    // TODO: Perl Package.pm lines 1949-1969: \FOO has full hook pipeline
-    // (requireMath, forbidMath, enterHorizontal, leaveHorizontal, beginMode,
-    // font, beforeDigest, afterDigestBegin, afterDigestBody,
-    // beforeConstruct+pushFrame, afterConstruct+popFrame).
-    // Requires cloning closures from options earlier.
     nargs: options.nargs,
     capture_body: true,
     properties: options.properties.clone(),
-    // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
-    // (defined $sizer ? (sizer => $sizer) : ()),
-    // ), $options{scope});
+    before_digest: before_digest_bare,
+    before_construct: vec![push_frame_bare],
+    after_construct: vec![pop_frame_bare],
     ..Constructor::default()
   });
   install_definition(name_constructor, options.scope);

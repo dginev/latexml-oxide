@@ -282,3 +282,50 @@ pub fn apply_accent(
     SymHashMap::default(),
   ))
 }
+
+/// Accent data entry: maps a character (combiner or standalone) to its accent properties.
+/// Perl: @accent_data in LaTeXML/Util/Unicode.pm
+pub struct AccentEntry {
+  pub combiner: char,
+  pub standalone: &'static str,
+  pub unwrapped: &'static str,
+  pub name: &'static str,
+  pub role: &'static str,
+}
+
+/// Lookup accent data by standalone or combiner character.
+/// Perl: sub unicode_accent in LaTeXML/Util/Unicode.pm
+pub fn unicode_accent(glyph: &str) -> Option<&'static AccentEntry> {
+  // Table from Perl: @accent_data in LaTeXML/Util/Unicode.pm
+  static ACCENT_DATA: &[AccentEntry] = &[
+    AccentEntry { combiner: '\u{0300}', standalone: "\u{0060}", unwrapped: "`", name: "grave", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0301}', standalone: "\u{00B4}", unwrapped: "\u{00B4}", name: "acute", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0302}', standalone: "\u{02C6}", unwrapped: "\u{005E}", name: "hat", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0308}', standalone: "\u{00A8}", unwrapped: "\u{00A8}", name: "ddot", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0303}', standalone: "\u{02DC}", unwrapped: "\u{007E}", name: "tilde", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0304}', standalone: "\u{00AF}", unwrapped: "\u{00AF}", name: "bar", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0307}', standalone: "\u{02D9}", unwrapped: "\u{02D9}", name: "dot", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{030B}', standalone: "\u{02DD}", unwrapped: "\u{2032}\u{2032}", name: "dtick", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0306}', standalone: "\u{02D8}", unwrapped: "\u{02D8}", name: "breve", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{030C}', standalone: "\u{02C7}", unwrapped: "\u{02C7}", name: "check", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{030A}', standalone: "\u{02DA}", unwrapped: "\u{02DA}", name: "ring", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{20D7}', standalone: "\u{00A0}\u{20D7}", unwrapped: "\u{2192}", name: "vec", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0311}', standalone: "\u{00A0}\u{0311}", unwrapped: "u", name: "arch", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0361}', standalone: "\u{00A0}\u{0361}", unwrapped: "u", name: "tie", role: "OVERACCENT" },
+    AccentEntry { combiner: '\u{0327}', standalone: "\u{00B8}", unwrapped: "\u{00B8}", name: "cedilla", role: "UNDERACCENT" },
+    AccentEntry { combiner: '\u{0323}', standalone: ".", unwrapped: "\u{22C5}", name: "underdot", role: "UNDERACCENT" },
+    AccentEntry { combiner: '\u{0331}', standalone: "_", unwrapped: "\u{00AF}", name: "underbar", role: "UNDERACCENT" },
+    AccentEntry { combiner: '\u{0326}', standalone: ",", unwrapped: ",", name: "lfhook", role: "UNDERACCENT" },
+    AccentEntry { combiner: '\u{0328}', standalone: "\u{02DB}", unwrapped: "\u{02DB}", name: "ogonek", role: "UNDERACCENT" },
+  ];
+
+  for entry in ACCENT_DATA {
+    if entry.standalone == glyph {
+      return Some(entry);
+    }
+    if glyph.len() == entry.combiner.len_utf8() && glyph.starts_with(entry.combiner) {
+      return Some(entry);
+    }
+  }
+  None
+}

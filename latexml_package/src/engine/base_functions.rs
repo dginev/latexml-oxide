@@ -597,38 +597,8 @@ pub fn decode_math_char_for_stomach(
 /// Stomach-level counterpart to `read_box_contents`.
 ///
 /// Perl: readBoxContents calls $stomach->beginMode($mode), then reads/digests tokens
-/// in a loop until T_END, then calls $stomach->endMode($mode), returning a List.
-/// This mirrors that approach: beginMode, digest loop, endMode.
-pub fn predigest_box_contents_with_mode(
-  _tokens: ArgWrap,
-  mode: &str,
-) -> Result<Option<Digested>> {
-  // Perl: $stomach->beginMode($mode);
-  stomach::begin_mode(mode)?;
-  // Perl: local @LaTeXML::LIST = (); read tokens via readXToken until T_END
-  let mut box_list: Vec<Digested> = Vec::new();
-  while let Some(t) = match gullet::get_pending_comment() {
-    Some(comment) => Some(comment),
-    None => gullet::read_x_token(Some(true), false, None)?,
-  } {
-    if t.get_catcode() == Catcode::END {
-      break;
-    }
-    let invoked = stomach::invoke_token(&t)?;
-    box_list.extend(invoked);
-  }
-  // Perl: $stomach->endMode($mode);
-  stomach::end_mode(mode)?;
-  let mut list = List::new(box_list);
-  list.mode = Some(match mode {
-    "restricted_horizontal" => TexMode::Text,
-    "internal_vertical" => TexMode::Text,
-    _ => TexMode::Text,
-  });
-  Ok(Some(list.into()))
-}
-
-/// Legacy predigest — kept for cases that don't need full body reading.
+/// Predigest box contents by invoking T_BEGIN, which triggers
+/// the stomach's bgroup/egroup mechanism to properly handle the box body.
 pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   let mut contents = stomach::invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
@@ -722,7 +692,7 @@ pub fn insert_block(
       tag == "ltx:XMText",
     )
   });
-  let mut ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
+  let ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
   if is_xmath && !is_xmtext {
     // but math always needs this
     context = document.open_element("ltx:XMText", None, None)?;
@@ -1374,10 +1344,12 @@ pub fn in_svg(document: &Document) -> bool {
 }
 
 pub fn adjust_box_color(tbox: &Digested) -> Result<()> {
-  let color_opt = lookup_font().and_then(|f| f.get_color().map(|c| c.clone().into_owned()));
+  use latexml_core::common::color;
+  let color_opt = lookup_font().and_then(|f| f.get_color().cloned());
   if let Some(color) = color_opt {
-    if color != "black" {
-      adjust_box_color_rec(&color, HashMap::default(), tbox);
+    if color != color::BLACK {
+      let hex = color.to_attribute();
+      adjust_box_color_rec(&hex, HashMap::default(), tbox);
     }
   }
   Ok(())

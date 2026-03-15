@@ -121,12 +121,30 @@ LoadDefinitions!({
     "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
     mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
     before_digest => {
-      reenter_text_mode(false); }
-    // properties   => sub[args] {
-    //   let arg1 = &args[0];
-    //   let arg2 = &args[1];
-    //   (($_[2] ? (align => $makebox_alignment{ ToString($_[2]) }) : ()),
-    //     ($_[1] ? (width => $_[1]) : ())) }
+      reenter_text_mode(false); },
+    properties   => sub[args] {
+      // Perl: (($_[2] ? (align => $makebox_alignment{...}) : ()), ($_[1] ? (width => $_[1]) : ()))
+      let mut props = stored_map!();
+      if let Some(ref dim_d) = args[0] {
+        if let DigestedData::RegisterValue(v) = dim_d.data() {
+          let dim: Dimension = v.into();
+          props.insert("width", Stored::from(dim));
+        }
+      }
+      if let Some(ref align_d) = args[1] {
+        let align_str = align_d.to_string();
+        let align = match align_str.as_str() {
+          "l" => "left",
+          "r" => "right",
+          "s" => "justified",
+          _ => "",
+        };
+        if !align.is_empty() {
+          props.insert("align", Stored::from(align));
+        }
+      }
+      Ok(props)
+    }
   );
 
   DefRegister!("\\fboxrule", Dimension!(".4pt"));
@@ -152,11 +170,19 @@ LoadDefinitions!({
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
   DefConstructor!("\\@framebox[Dimension][]{}",
-    "<ltx:text ?#width(width='#width') framed='rectangle' _noautoclose='1'>#3</ltx:text>",
+    "<ltx:text ?#width(width='#width') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>",
     alias => "\\framebox",
     mode => "text", bounded => true,
     before_digest => {
       reenter_text_mode(false); },
+    properties => sub[_args] {
+      // Perl: framecolor => LookupValue('font')->getColor
+      let framecolor = lookup_font()
+        .and_then(|f| f.get_color().cloned())
+        .map(|c| c.to_attribute())
+        .unwrap_or_else(|| s!("#000000"));
+      Ok(stored_map!("framecolor" => framecolor))
+    },
     after_construct => sub[document, _whatsit] {
       // Perl afterConstruct: if the <ltx:text> has a single non-text child
       // that can have 'framed', unwrap the text and copy attributes to the child.

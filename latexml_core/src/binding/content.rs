@@ -119,11 +119,29 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       .unwrap_or(Cow::Borrowed(""))
   };
 
+  // If loading a class, store class options (Perl Package.pm lines 2561-2564)
+  if as_type == "cls" && !options.options.is_empty() {
+    for opt in &options.options {
+      push_value("class_options", arena::pin(opt))?;
+    }
+    let class_opts_str = options.options.join(",");
+    def_macro(
+      T_CS!("\\@classoptionslist"),
+      None,
+      Tokens!(Explode!(class_opts_str)),
+      None,
+    )?;
+  }
+
   // Compute the exact name based on the type
   let filename = match &options.extension {
     None => name.to_string(),
     Some(ext) => s!("{}.{}", name, ext),
   };
+  // Store the document class filename for xkeyval's isInClassFile check
+  if as_type == "cls" && options.handleoptions {
+    assign_value("document_class_filename", filename.clone(), Some(Scope::Global));
+  }
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
     if let Some(Stored::String(prevoptions)) = lookup_value(&s!("{filename}_loaded_with_options")) {
@@ -169,6 +187,14 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     );
   }
 
+  // Track loaded files in \@filelist BEFORE loading (Perl: Package.pm calls
+  // \@addtofilelist before reading the file, so \@filelist is available inside)
+  if options.handleoptions {
+    digest(Tokens!(
+      T_CS!("\\@addtofilelist"), T_BEGIN!(), Explode!(filename), T_END!()
+    ))?;
+  }
+
   let is_binding =
     !options.noltxml && (load_external_binding(&filename)? || load_binding(&filename)?);
   let mut is_found_raw = false;
@@ -196,18 +222,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       is_found_raw = true;
       load_tex_definitions(&filename, &file, options.reloadable)?;
     } else if !options.noerror {
-      // TODO: Proper missing reports
-      Warn!("missing_file", name, s!("Can't find file for {name}"));
-      // note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
-      // # We'll only warn about a missing file of definitions: it may be ignorable or never used.
-      // # if there ARE problems, they'll likely produce their own errors!
-      // Warn('missing_file', $name, $STATE>getStomach->getGullet,
-      //   "Can't find "
-      //     . ($options{notex} ? "binding for " : "")
-      //     . (($options{type} && $definition_name{ $options{type} }) || 'definitions') . ' '
-      //     . $name,
-      //   "Anticipate undefined macros or environments",
-      //   maybeReportSearchPaths()); }
+      Error!("missing_file", name,
+        s!("Can't find binding or file for '{filename}'. \
+          No dispatcher entry and no raw file found on disk."));
     }
   }
 
@@ -469,17 +486,30 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     load_tex_content(&path, options)
   //   }
   } else {
+    // Perl heuristic: if the file has no directory, and is a .tex or no extension,
+    // try loading it as definitions (which checks for binding dispatchers).
+    // This handles cases like \input tcilatex where tcilatex.tex.ltxml exists.
+    let has_dir = clean_req.contains('/') || clean_req.contains('\\');
+    let ext = clean_req.rsplit('.').next().unwrap_or("");
+    let is_tex_like = ext == clean_req.as_ref() || ext == "tex"; // no extension or .tex
+    if !has_dir && is_tex_like {
+      // Try loading as a .tex binding (e.g. tcilatex → tcilatex.tex)
+      let tex_name = if ext == "tex" {
+        clean_req.to_string()
+      } else {
+        s!("{}.tex", clean_req)
+      };
+      if load_binding(&tex_name)? {
+        return Ok(());
+      }
+    }
     // Couldn't find anything?
     note_status(LogStatus::Missing, Some(request));
-
-    // We presumably are trying to input Content; an error if we can't find it (contrast to
-    // Definitions)
     Error!(
       "missing_file",
       request,
       s!("Can't find TeX file {}", request)
     );
-    //  maybeReportSearchPaths());
     Ok(())
   }
 }
@@ -574,7 +604,11 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
 /// Pass the sequence of @options to the package $name (if $ext is 'sty'),
 /// or class $name (if $ext is 'cls').
 fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
-  push_value(&s!("opt@{}.{}", name, ext), options)
+  let key = s!("opt@{}.{}", name, ext);
+  for opt in options {
+    push_value(&key, arena::pin(&opt))?;
+  }
+  Ok(())
 }
 
 pub fn process_options() -> Result<()> {
@@ -594,9 +628,6 @@ pub fn process_options() -> Result<()> {
   let opt_key = s!("opt@{}.{}", name, ext);
   let current_options = lookup_vecdeque(&opt_key).unwrap_or_default();
   let class_options = lookup_vecdeque("class_options").unwrap_or_default();
-  if !declared_options.is_empty() || !current_options.is_empty() {
-    eprintln!("DEBUG process_options: name={name:?} ext={ext:?} declared={declared_options:?} current={current_options:?}");
-  }
   // Execute options in declared order (unless \ProcessOptions*)
 
   // TODO: processing options, not yet supported
@@ -842,9 +873,10 @@ pub fn require_resource(mut resource: Resource) {
   // }
 }
 
-pub fn load_class(name: &str, _options: Vec<String>, after: Tokens) -> Result<()> {
+pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
   input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
+    options,
     after,
     notex: true,
     handleoptions: true,
@@ -1027,25 +1059,30 @@ pub fn merge_font(font: Font) {
 
 /// Define a named color (Perl: DefColor).
 /// Stores as color_{name} and also defines \\color@{name} macro.
-pub fn def_color(name: &str, color: &[&str], scope: Option<Scope>) -> Result<()> {
-  if color.is_empty() {
-    return Ok(());
-  }
-  let model = color[0];
-  let spec = &color[1..];
+pub fn def_color(name: &str, color: &crate::common::color::Color, scope: Option<Scope>) -> Result<()> {
+  use crate::common::color;
   // Check ifglobalcolors
   let effective_scope = if if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true) {
     Some(Scope::Global)
   } else {
     scope
   };
+  // Store in state as "model c1 c2 ..."
+  let stored = color.to_stored();
   assign_value(
     &s!("color_{name}"),
-    Stored::String(arena::pin(color.join(" "))),
+    Stored::String(arena::pin(stored)),
     effective_scope,
   );
-  // Define \\color@{name} macro
-  let model_spec = s!("\\relax\\relax{{{} {}}}{{{model}}}{{{}}}", model, spec.join(" "), spec.join(","));
+  // Define \\color@{name} macro for reversion
+  // Perl: DefMacroI('\\color@'.$name, undef,
+  //   '\relax\relax{model spec}{model}{spec_commas}')
+  let model = color.model();
+  let comps = color.components();
+  let spec_parts: Vec<String> = comps.iter().map(|c| color::format_component(*c)).collect();
+  let spec_space = spec_parts.join(" ");
+  let spec_comma = spec_parts.join(",");
+  let model_spec = s!("\\relax\\relax{{{model} {spec_space}}}{{{model}}}{{{spec_comma}}}");
   def_macro(
     T_CS!(s!("\\\\color@{name}")),
     None,

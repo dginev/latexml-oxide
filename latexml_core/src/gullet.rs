@@ -183,8 +183,14 @@ pub fn unread_mut(tokens: &mut Tokens) {
     }
   };
 }
-/// Unreads a single `Token` to the start of the token stream
+/// Unreads a single `Token` to the start of the token stream.
+/// Perl: unread() always adjusts $ALIGN_STATE when unreading { or } tokens.
 pub fn unread_one(token: Token) {
+  match token.get_catcode() {
+    Catcode::BEGIN => decrement_align_group_count(), // Retract scanned brace
+    Catcode::END => increment_align_group_count(),
+    _ => {},
+  }
   if let Some(ref mut runtime) = gullet_mut!().runtime {
     runtime.pushback.push_front(token);
   };
@@ -280,9 +286,7 @@ fn handle_template(
   vtype: &str,
   hidden: bool,
 ) -> Result<()> {
-  // eprintln!("Halign: ALIGNMENT Column ended at {} type {vtype} [{}]",token.stringify(),
-  // lookup_meaning(&token).unwrap());     . "@ " . ToString($self->getLocator))
-  // if $LaTeXML::DEBUG{halign};
+
 
   //  Append expansion to end!?!?!?!
   local_current_token(token);
@@ -540,12 +544,8 @@ pub fn read_x_token(
     } else {
       // Perl Gullet.pm L421-422: track { and } at scan level for ALIGN_STATE
       match token.get_catcode() {
-        Catcode::BEGIN => {
-          increment_align_group_count();
-        },
-        Catcode::END => {
-          decrement_align_group_count();
-        },
+        Catcode::BEGIN => increment_align_group_count(),
+        Catcode::END => decrement_align_group_count(),
         _ => {},
       }
       return Ok(Some(token));
@@ -946,11 +946,7 @@ pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
   while let Some(token) = read_token()? {
     if token.get_catcode() == Catcode::BEGIN {
-      if let Some(runtime) = runtime_mut!() {
-        runtime.pushback.push_front(token); // Unread
-      } else {
-        fatal!(Mouth, NotFound, "No Mouth in read_until_brace")
-      }
+      unread_one(token); // Unread with proper agc adjustment
       break;
     } else {
       tokens.push(token);
@@ -965,6 +961,17 @@ pub fn read_until_brace() -> Result<Option<Tokens>> {
 }
 
 pub fn read_cs_name() -> Result<Token> {
+  read_cs_name_inner(false)
+}
+
+/// Quiet version of read_cs_name — used by \ifcsname.
+/// In TeX, \ifcsname silently skips non-expandable CS tokens and returns the constructed name
+/// without emitting errors (unlike \csname which DOES emit errors).
+pub fn read_cs_name_quiet() -> Result<Token> {
+  read_cs_name_inner(true)
+}
+
+fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // TeX does NOT store the csname with the leading `\`, BUT stores active chars with a flag
   // However, so long as the Mouth's CS and \string properly respect \escapechar, all's well!
 
@@ -976,16 +983,19 @@ pub fn read_cs_name() -> Result<Token> {
     }
     match token.get_catcode() {
       Catcode::CS => {
-        if lookup_definition(&token)?.is_some() {
-          let message = s!(
-            "The control sequence {:?} should not appear between \\csname and \\endcsname",
-            token
-          );
-          Error!("unexpected", token, message);
-        } else {
-          let message = s!("The token {:?} is not defined", token);
-          Error!("undefined", token, message);
+        if !quiet {
+          if lookup_definition(&token)?.is_some() {
+            let message = s!(
+              "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
+              token, cs
+            );
+            Error!("unexpected", token, message);
+          } else {
+            let message = s!("The token {:?} is not defined", token);
+            Error!("undefined", token, message);
+          }
         }
+        // In quiet mode (ifcsname), just skip the CS token
       },
       Catcode::SPACE => cs.push(' '), // Keep newlines from having \n!
       _ => {
@@ -1251,11 +1261,8 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
             // If this was space, SKIP any following!!!
             while let Some(space_token) = read_token()? {
               if space_token.get_catcode() != Catcode::SPACE {
-                // Unread non-space and end
-                match runtime_mut!() {
-                  Some(mouth) => mouth.pushback.push_front(space_token),
-                  None => fatal!(Mouth, NotFound, "No Mouth in read_match"),
-                }
+                // Unread non-space and end — use unread_one for proper agc adjustment
+                unread_one(space_token);
                 break;
               } else {
                 matched.push(space_token);
@@ -1268,12 +1275,8 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
     if to_match.is_empty() {
       return Ok(Some((*choice).clone())); // All matched!!!
     } else {
-      for matched_token in matched.into_iter().rev() {
-        match runtime_mut!() {
-          Some(mouth) => mouth.pushback.push_front(matched_token), // Put 'em back and try next!
-          None => fatal!(Mouth, NotFound, "No Mouth in read_match"),
-        }
-      }
+      // Put 'em back and try next — use unread_vec for proper agc adjustment
+      unread_vec(matched);
     }
   }
   Ok(None)
@@ -1343,7 +1346,7 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         if s.starts_with('\\') {
           s.remove(0);
         }
-        let s_char = s.chars().next().unwrap();
+        let s_char = s.chars().next().unwrap_or('\0');
         // Perl: skip1Space($self, 1); — consume one optional space after charcode
         skip_one_space()?;
         Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
@@ -1826,8 +1829,6 @@ fn handle_marker(marker_token: Token) {
   marker_token.with_str(|arg| match arg {
     "before-column" => {
       // Were in before-column template
-      // let alignment = lookup_alignment();
-      // Debug("Halign $alignment: alignment => 0") if $LaTeXML::DEBUG{halign};
       set_align_group_count(0);
     }, // switch to column proper!
     "after-column" => { // Were in before-column template

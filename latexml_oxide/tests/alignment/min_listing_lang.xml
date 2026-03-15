@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="listings"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <resource src="ltx-listings.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><text class="ltx_lst_language_C ltx_lstlisting"><text class="ltx_lst_keyword" font="bold">int</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">x</text>;</text></p>
+  </para>
+</document>

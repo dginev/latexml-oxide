@@ -8,7 +8,7 @@
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
     <equation xml:id="S0.Ex1">
-      <Math mode="display" tex="\Join\Box\Diamond\leadsto\sqsubset\sqsupset\lhd\unlhd\LHD\rhd\unrhd\RHD\apprle%&#10;\apprge\wasypropto\invneg\ocircle\logof" text="Join * Box * Diamond * leadsto * sqsubset * sqsupset * lhd * unlhd * LHD * rhd * unrhd * RHD * apprle * apprge * wasypropto * invneg * ocircle * logof" xml:id="S0.Ex1.m1">
+      <Math mode="display" tex="\Join\Box\Diamond\leadsto\sqsubset\sqsupset\lhd\unlhd\LHD\rhd\unrhd\RHD\apprle\apprge\wasypropto\invneg\ocircle\logof" text="Join * Box * Diamond * leadsto * sqsubset * sqsupset * lhd * unlhd * LHD * rhd * unrhd * RHD * apprle * apprge * wasypropto * invneg * ocircle * logof" xml:id="S0.Ex1.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -37,21 +37,20 @@
   </para>
   <para xml:id="p2">
     <equation xml:id="S0.Ex2">
-      <Math mode="display" tex="\int\iint\iiint\oint\oiint" text="integral@(double-integral@(triple-integral@(contour-integral@(surface-integral))))" xml:id="S0.Ex2.m1">
+      <Math mode="display" tex="\int\iint\iiint\oint\oiint" text="list@(integral, double-integral)" xml:id="S0.Ex2.m1">
         <XMath>
-          <XMApp>
-            <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+          <XMDual>
             <XMApp>
-              <XMTok mathstyle="display" meaning="double-integral" name="iint" role="INTOP">∬</XMTok>
-              <XMApp>
-                <XMTok mathstyle="display" meaning="triple-integral" name="iiint" role="INTOP">∭</XMTok>
-                <XMApp>
-                  <XMTok mathstyle="display" meaning="contour-integral" name="oint" role="INTOP">∮</XMTok>
-                  <XMTok mathstyle="display" meaning="surface-integral" name="oiint" role="INTOP">∯</XMTok>
-                </XMApp>
-              </XMApp>
+              <XMTok meaning="list"/>
+              <XMRef idref="S0.Ex2.m1.1"/>
+              <XMRef idref="S0.Ex2.m1.2"/>
             </XMApp>
-          </XMApp>
+            <XMWrap>
+              <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" xml:id="S0.Ex2.m1.1">∫</XMTok>
+              <XMTok role="PUNCT">⁣</XMTok>
+              <XMTok mathstyle="display" meaning="double-integral" name="iint" role="INTOP" xml:id="S0.Ex2.m1.2">∬</XMTok>
+            </XMWrap>
+          </XMDual>
         </XMath>
       </Math>
     </equation>

@@ -103,6 +103,10 @@ pub struct Alignment {
   cached_depth:      Option<Dimension>,
   column_widths:     Vec<Dimension>,
   row_heights:       Vec<Dimension>,
+  row_depths:        Vec<Dimension>,
+  // Longtable: stored head/foot rows for reinsertion
+  pub head_rows:     Vec<Row>,
+  pub foot_rows:     Vec<Row>,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -118,6 +122,12 @@ impl Alignment {
   ///   - xml_attributes = hashmap containing attributes for the main XML node
   pub fn new(config: AlignmentConfig) -> Self {
     let template = config.template.unwrap_or_default();
+    // Perl Alignment.pm: Copy width/height/depth from XML attributes to main properties,
+    // but REMOVE them from XML attributes so they don't appear on the element.
+    let mut xml_attributes = config.xml_attributes;
+    for key in ["width", "height", "depth"] {
+      xml_attributes.remove(key);
+    }
     Alignment {
       template,
       current_row: None,
@@ -139,10 +149,13 @@ impl Alignment {
       in_tabular_head: false,
       is_normalized: false,
       properties: config.properties,
-      xml_attributes: config.xml_attributes,
+      xml_attributes,
       rows: VecDeque::new(),
       column_widths: Vec::new(),
       row_heights: Vec::new(),
+      row_depths: Vec::new(),
+      head_rows: Vec::new(),
+      foot_rows: Vec::new(),
     }
   }
 
@@ -242,8 +255,7 @@ impl Alignment {
     self.current_row.and_then(|cw| {
       self
         .rows
-        .get_mut(cw)
-        .unwrap()
+        .get_mut(cw)?
         .get_column_mut(self.current_column)
     })
   }
@@ -256,21 +268,23 @@ impl Alignment {
   pub fn get_column_mut(&mut self, n: usize) -> Option<&mut Cell> {
     self
       .current_row
-      .and_then(|cw| self.rows.get_mut(cw).unwrap().get_column_mut(n))
+      .and_then(|cw| self.rows.get_mut(cw)?.get_column_mut(n))
   }
 
   // Ugh... these take boxes; adding before/after columns takes tokens!
   pub fn add_before_row(&mut self, boxes: Vec<Digested>) {
     if let Some(cw) = self.current_row {
-      let current_row = self.rows.get_mut(cw).unwrap();
-      current_row.before.extend(boxes);
+      if let Some(current_row) = self.rows.get_mut(cw) {
+        current_row.before.extend(boxes);
+      }
     }
   }
 
   pub fn add_after_row(&mut self, boxes: Vec<Digested>) {
     if let Some(cw) = self.current_row {
-      let current_row = self.rows.get_mut(cw).unwrap();
-      current_row.after.extend(boxes);
+      if let Some(current_row) = self.rows.get_mut(cw) {
+        current_row.after.extend(boxes);
+      }
     }
   }
 
@@ -282,8 +296,10 @@ impl Alignment {
 
   pub fn omit_next_column(&mut self) {
     if let Some(cw) = self.current_row {
-      if let Some(column) = self.rows.get_mut(cw).unwrap().get_column_mut(self.current_column + 1) {
-        column.omitted = true;
+      if let Some(row) = self.rows.get_mut(cw) {
+        if let Some(column) = row.get_column_mut(self.current_column + 1) {
+          column.omitted = true;
+        }
       }
     }
   }
@@ -308,7 +324,7 @@ impl Alignment {
       if !column.omitted {
         // Possible \lx@column@trimright ??? (if LaTeX style???)
         Tokens!(
-          column.after.clone().unwrap().unlist(),
+          column.after.clone().unwrap_or_default().unlist(),
           T_CS!("\\lx@alignment@column@after")
         )
       } else {
@@ -535,11 +551,8 @@ impl BoxOps for Alignment {
         // Based on lspaces/rspaces width relative to 0.2em threshold
         let mut classes: Vec<String> = Vec::new();
         let empty = cell.empty;
-        // Perl: $$cell{boxes} — truthy when boxes is defined and non-empty
-        let has_boxes = cell
-          .boxes
-          .as_ref()
-          .is_some_and(|b| !b.is_empty().unwrap_or(true));
+        // Perl: $$cell{boxes} — truthy when boxes field is defined (even if empty List)
+        let has_boxes = cell.boxes.is_some();
         let mut pre_absorb: Option<Digested> = None;
         let mut post_absorb: Option<Digested> = None;
         if !ismath {
@@ -947,11 +960,13 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
       ncols = n;
     }
   }
+  // eprintln!("classify_alignment_rows: {} rows, max {} cols", alignment.rows.len(), ncols);
   let (mut h, mut v) = (false, false);
-  for arow in &mut alignment.rows {
+  for (_ri, arow) in alignment.rows.iter_mut().enumerate() {
     let cols = arow.get_columns_mut();
     let this_row_len = cols.len();
-    for col in cols.iter_mut() {
+    // eprintln!("  row {_ri}: {this_row_len} cols");
+    for (_ci, col) in cols.iter_mut().enumerate() {
       col.cell_type = Some('d');
       col.content_class = Some(
         // Assume mixed content for any justified cell???
@@ -963,6 +978,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
           ColumnSpec::Unknown
         },
       );
+      // eprintln!("    cell[{ri},{ci}]: cell={}, class={:?}", col.cell.is_some(), col.content_class);
       col.content_length = Some(if col.content_class == Some(ColumnSpec::Graphics) {
         1000
       } else if col.cell.is_some() {
@@ -1306,6 +1322,7 @@ fn alignment_characterize_lines(
   let (mut max_diff, mut min_diff, _avg_diff) = (0.0, 99999999.0, 0.0);
   for l in 0..n - 1 {
     let d = alignment_compare(axis, true, reversed, l, l + 1, lines);
+    // eprintln!("  compare({l},{}) = {d}", l + 1);
     // avg_diff += d;
     if d > max_diff {
       max_diff = d;
@@ -1317,15 +1334,16 @@ fn alignment_characterize_lines(
   // avg_diff = avg_diff / (n - 1) as f64;
   if max_diff < 0.05 {
     // virtually no differences.
-    // eprintln!("Lines are almost identical => Fail");
+    // eprintln!("Lines are almost identical => Fail (max_diff={max_diff})");
     return Ok(());
   }
   if (n > 2) && ((max_diff - min_diff) < max_diff * 0.5) {
     // differences too similar to establish pattern
-    // eprintln!("Differences between lines are almost identical => Fail");
+    // eprintln!("Differences between lines are almost identical => Fail (max={max_diff}, min={min_diff})");
     return Ok(());
   }
   let tab_threshold = min_diff + 0.3 * (max_diff - min_diff);
+  // eprintln!("Differences {min_diff} -- {max_diff} => threshold = {tab_threshold}");
 
   // eprintln!("Differences {min_diff} -- {max_diff} => threshold = {tab_threshold}");
   // Find the first hump in differences. These are candidates for header lines.
@@ -1412,6 +1430,7 @@ fn alignment_test_headers(
     }
     //   Debug("Repeated headers: " . ($matched ? "Matched=> Fail" : "Nomatch => Succeed"))
     //     if $LaTeXML::DEBUG{alignment};
+    // eprintln!("  repeated pattern check: matched={matched}");
     if matched {
       return Vec::new();
     }
@@ -1419,6 +1438,7 @@ fn alignment_test_headers(
 
   // And find a following grouping of data lines.
   let ndata = alignment_skip_data(next_line, tab_threshold, axis, lines);
+  // eprintln!("  ndata={ndata} from next_line={next_line}");
   if ndata < nhead {
     // ???? Well, maybe if _really_ convincing???
     return Vec::new();
@@ -1442,12 +1462,14 @@ fn alignment_test_headers(
     } else {
       0
     };
+    // eprintln!("  while: next_line={next_line}, nd={nd}");
     if nd > 0 {
       data_length = alignment_max_content_length(data_length, next_line, next_line + nd - 1, lines);
       next_line += nd;
     }
     // Else, try to match the first header block; less common.
     else if alignment_match_head(0, next_line, nhead, tab_threshold, axis, lines) > 0 {
+      // eprintln!("  matched head at next_line={next_line}");
       for idx in next_line..next_line + nhead {
         heads.push(idx);
       }
@@ -1461,11 +1483,12 @@ fn alignment_test_headers(
       data_length = alignment_max_content_length(data_length, next_line, next_line + nd - 1, lines);
       next_line += nd;
     } else {
+      // eprintln!("  no match at next_line={next_line} => fail");
       return Vec::new();
     }
   }
   // Header content seems too large relative to data?
-  // eprintln!("header content = {head_length}; data content = {data_length}");
+  // eprintln!("  header content = {head_length}; data content = {data_length}");
   if (head_length > 10) && (head_length > 4 * data_length) {
     //   Debug("header content too much longer than data content")
     //     if $LaTeXML::DEBUG{alignment};
@@ -1479,7 +1502,7 @@ fn alignment_test_headers(
     return Vec::new();
   }
 
-  // Debug("Succeeded with $nhead headers") if $LaTeXML::DEBUG{alignment};
+  // eprintln!("  Succeeded with {nhead} headers: {heads:?}");
   heads
 }
 
@@ -1537,6 +1560,11 @@ fn alignment_match_lines(
 /// Skip through a block of lines starting at $i that appear to be data, returning the number of
 /// lines. We'll assume the 1st line is data, compare it to following lines,
 /// but also accept `continuation' data lines.
+///
+/// Note: Perl's continuation-line logic (accepting mostly-empty outlier rows) is effectively
+/// dead code due to `scalar($::TABLINES[0])` evaluating to a memory address instead of an
+/// array length. We match that behavior: break on any diff >= threshold.
+/// See KNOWN_PERL_ERRORS.md for details.
 fn alignment_skip_data(
   i: usize,
   tab_threshold: f64,
@@ -1550,17 +1578,9 @@ fn alignment_skip_data(
   // eprintln!("Scanning for data at {i}");
   let mut n = 1;
   while i + n < tab_lines_length {
-    if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold
-      && (n < 2
-        || (tablines[i + n]
-          .iter()
-          .filter(|c| matches!(c.content_class, Some(ColumnSpec::Empty)))
-          .count() as f64
-          <= 0.4 * tablines[0].len() as f64))
-    {
+    if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold {
       break;
     }
-    // Accept an outlying `continuation line' as data, if mostly empty
     n += 1;
   }
   // eprintln!("Found {n} data lines at {i}");

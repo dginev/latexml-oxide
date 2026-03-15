@@ -42,46 +42,120 @@ LoadDefinitions!({
   DefMacro!("\\setdefaultleftmargin{}{}{}{}{}{}", "");
 
   // Enumerations
-  DefMacro!("\\setdefaultenum{}{}{}{}", "");
+  DefMacro!("\\setdefaultenum{}{}{}{}", sub[(tag1, tag2, tag3, tag4)] {
+    set_enumeration_style(Some(&tag1), Some(1))?;
+    set_enumeration_style(Some(&tag2), Some(2))?;
+    set_enumeration_style(Some(&tag3), Some(3))?;
+    set_enumeration_style(Some(&tag4), Some(4))?;
+    Tokens::new(vec![])
+  });
 
   DefEnvironment!("{inparaenum} OptionalUndigested",
     "<ltx:inline-enumerate xml:id='#id'>#body</ltx:inline-enumerate>",
     properties => sub[_args] {
       begin_itemize("inline@enumerate", Some("enum"), BeginItemizeOptions::default())
     },
+    after_digest_begin => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1) {
+        set_enumeration_style(arg.raw_tokens(), None)?;
+      }
+    },
     mode => "internal_vertical"
   );
   DefEnvironment!("{compactenum} OptionalUndigested",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     properties => sub[_args] { BeginItemize!("enumerate", "enum") },
+    after_digest_begin => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1) {
+        set_enumeration_style(arg.raw_tokens(), None)?;
+      }
+    },
     mode => "internal_vertical"
   );
   DefEnvironment!("{asparaenum} OptionalUndigested",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     properties => sub[_args] { BeginItemize!("enumerate", "enum") },
+    after_digest_begin => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1) {
+        set_enumeration_style(arg.raw_tokens(), None)?;
+      }
+    },
     mode => "internal_vertical"
   );
 
+  // Conditionally redefine stock enumerate (Perl: if (IfCondition(T_CS('\if@plnewenum'))))
+  if if_condition(&T_CS!("\\if@plnewenum"))? == Some(true) {
+    DefEnvironment!("{enumerate} OptionalUndigested",
+      "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
+      properties => sub[_args] { BeginItemize!("enumerate", "enum") },
+      after_digest_begin => sub[whatsit] {
+        if let Some(arg) = whatsit.get_arg(1) {
+          set_enumeration_style(arg.raw_tokens(), None)?;
+        }
+      },
+      before_digest_end => { Digest!("\\par") },
+      locked => true,
+      mode => "internal_vertical"
+    );
+  }
+
   // Itemizations
-  DefMacro!("\\setdefaultitem{}{}{}{}", "");
+  DefMacro!("\\setdefaultitem{}{}{}{}", sub[(tag1, tag2, tag3, tag4)] {
+    set_itemization_style(Some(&tag1), Some(1))?;
+    set_itemization_style(Some(&tag2), Some(2))?;
+    set_itemization_style(Some(&tag3), Some(3))?;
+    set_itemization_style(Some(&tag4), Some(4))?;
+    Tokens::new(vec![])
+  });
 
   DefEnvironment!("{inparaitem} OptionalUndigested",
     "<ltx:inline-itemize xml:id='#id'>#body</ltx:inline-itemize>",
     properties => sub[_args] {
       begin_itemize("inline@itemize", Some("@item"), BeginItemizeOptions::default())
     },
+    after_digest_begin => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1) {
+        set_itemization_style(arg.raw_tokens(), None)?;
+      }
+    },
     mode => "internal_vertical"
   );
   DefEnvironment!("{compactitem} OptionalUndigested",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     properties => sub[_args] { BeginItemize!("itemize", "@item") },
+    after_digest_begin => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1) {
+        set_itemization_style(arg.raw_tokens(), None)?;
+      }
+    },
     mode => "internal_vertical"
   );
   DefEnvironment!("{asparaitem} OptionalUndigested",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     properties => sub[_args] { BeginItemize!("itemize", "@item") },
+    after_digest_begin => sub[whatsit] {
+      if let Some(arg) = whatsit.get_arg(1) {
+        set_itemization_style(arg.raw_tokens(), None)?;
+      }
+    },
     mode => "internal_vertical"
   );
+
+  // Conditionally redefine stock itemize (Perl: if (IfCondition(T_CS('\if@plnewitem'))))
+  if if_condition(&T_CS!("\\if@plnewitem"))? == Some(true) {
+    DefEnvironment!("{itemize} OptionalUndigested",
+      "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+      properties => sub[_args] { BeginItemize!("itemize", "@item") },
+      after_digest_begin => sub[whatsit] {
+        if let Some(arg) = whatsit.get_arg(1) {
+          set_itemization_style(arg.raw_tokens(), None)?;
+        }
+      },
+      before_digest_end => { Digest!("\\par") },
+      locked => true,
+      mode => "internal_vertical"
+    );
+  }
 
   // Descriptions
   DefEnvironment!("{inparadesc}",

@@ -27,9 +27,6 @@ LoadDefinitions!({
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
   sub[(_star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
-    let opt = if let Some(ref opt_content) = opt {
-      if opt_content.is_empty() { None } else { opt }
-    } else { opt };
     let macro_args = convert_latex_args(nargs, opt)?;
     DefMacro!(cs, macro_args, body);
   });
@@ -46,15 +43,9 @@ LoadDefinitions!({
 
   DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
   sub[(_star, cs, nargs, opt, body)] {
-    // TODO: Consider if we should just treat the empty tokens directly in convert_latex_args ?
-    let opt_checked = if let Some(ref opt_content) = opt {
-      if opt_content.is_empty() {
-        None
-      } else { opt }
-    } else { opt };
     if IsDefinable!(&cs) {
       let nargs = nargs.value_of() as usize;
-      let cs_args = convert_latex_args(nargs, opt_checked)?;
+      let cs_args = convert_latex_args(nargs, opt)?;
       DefMacro!(cs, cs_args, body);
     }
   });
@@ -62,12 +53,8 @@ LoadDefinitions!({
   // Crazy; define \cs in terms of \cs[space] !!!
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(_star,cs,nargs,opt,body)] {
-    let opt_checked = match opt {
-      Some(opt_content) if !opt_content.is_empty() => Some(opt_content),
-      _ => None
-    };
     let nargs = nargs.value_of() as usize;
-    let cs_args = convert_latex_args(nargs, opt_checked)?;
+    let cs_args = convert_latex_args(nargs, opt)?;
     DefMacro!(cs, cs_args, body, robust => true);
   });
 

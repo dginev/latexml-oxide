@@ -1,12 +1,14 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.4.0-orange.svg) 
-[![ported tests 26%](https://img.shields.io/badge/ported%20tests%20-%2026%25%20-%20%23a89932?style=flat)
+[![ported tests 77%](https://img.shields.io/badge/ported%20tests%20-%2077%25%20-%20%23a89932?style=flat)
 ](https://github.com/dginev/latexml-oxide/issues/30)
 
-This project is in a **pre-alpha** stage! Please avoid using it in any real world setting before test parity is reached. 
+This project is in an **alpha** stage. Please avoid using it in any real world setting before test parity is reached.
 
 **If the "ported tests" badge above isn't at `100%`, we aren't stable and we aren't ready**.
+
+**Current status (2026-03-15):** 214 tests passing, 65 ignored (mostly math parser + missing package bindings).
 
 ### Why?
 
@@ -54,7 +56,7 @@ $ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick
 
 ### Development Tips
 
-To enable linting quality control via rustfmt and clippy, you can activate the inlcuded hooks via:
+To enable linting quality control via rustfmt and clippy, you can activate the included hooks via:
 ```bash
 $ rustup component add rust-analyzer --toolchain nightly
 $ rustup component add rustfmt --toolchain nightly

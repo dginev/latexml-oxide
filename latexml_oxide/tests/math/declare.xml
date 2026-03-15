@@ -633,7 +633,7 @@
         <text>sign</text>
       </declare>
       <equation xml:id="S4.Ex9">
-        <Math mode="display" tex="\varepsilon,\varepsilon_{1},\mathcal{T}_{\varepsilon},\mathcal{T}_{\varepsilon%&#10;_{1}},\mathcal{T}_{\varepsilon_{1},\varepsilon_{2},\varepsilon_{3}}" text="list@(varepsilon, varepsilon _ 1, T _ varepsilon, T _ varepsilon _ 1, T _ (list@(varepsilon _ 1, varepsilon _ 2, varepsilon _ 3)))" xml:id="S4.Ex9.m1">
+        <Math mode="display" tex="\varepsilon,\varepsilon_{1},\mathcal{T}_{\varepsilon},\mathcal{T}_{\varepsilon_{1}},\mathcal{T}_{\varepsilon_{1},\varepsilon_{2},\varepsilon_{3}}" text="list@(varepsilon, varepsilon _ 1, T _ varepsilon, T _ varepsilon _ 1, T _ (list@(varepsilon _ 1, varepsilon _ 2, varepsilon _ 3)))" xml:id="S4.Ex9.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -770,7 +770,7 @@
     </declare>
     <para xml:id="S5.p1">
       <equation xml:id="S5.Ex10">
-        <Math mode="display" tex="\varepsilon,\varepsilon_{1},\mathcal{T}_{\varepsilon},\mathcal{T}_{\varepsilon%&#10;_{1}},\mathcal{T}_{\varepsilon_{1},\varepsilon_{2},\varepsilon_{3}}" text="list@(varepsilon, varepsilon _ 1, T _ varepsilon, T _ varepsilon _ 1, T _ (list@(varepsilon _ 1, varepsilon _ 2, varepsilon _ 3)))" xml:id="S5.Ex10.m1">
+        <Math mode="display" tex="\varepsilon,\varepsilon_{1},\mathcal{T}_{\varepsilon},\mathcal{T}_{\varepsilon_{1}},\mathcal{T}_{\varepsilon_{1},\varepsilon_{2},\varepsilon_{3}}" text="list@(varepsilon, varepsilon _ 1, T _ varepsilon, T _ varepsilon _ 1, T _ (list@(varepsilon _ 1, varepsilon _ 2, varepsilon _ 3)))" xml:id="S5.Ex10.m1">
           <XMath>
             <XMDual>
               <XMApp>

@@ -162,7 +162,7 @@
       <title>Cramped</title>
       <para xml:id="S1.SS0.SSS0.Px2.p1">
         <equation xml:id="S1.Ex5">
-          <Math mode="display" tex="\cramped{x^{2}}\leftrightarrow x^{2}\quad\cramped[\scriptstyle]{x^{2}}%&#10;\leftrightarrow{\scriptstyle x^{2}}" text="x ^ 2 leftrightarrow list@(x ^ 2, x ^ 2) leftrightarrow x ^ 2" xml:id="S1.Ex5.m1">
+          <Math mode="display" tex="\cramped{x^{2}}\leftrightarrow x^{2}\quad\cramped[\scriptstyle]{x^{2}}\leftrightarrow{\scriptstyle x^{2}}" text="x ^ 2 leftrightarrow list@(x ^ 2, x ^ 2) leftrightarrow x ^ 2" xml:id="S1.Ex5.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="multirelation"/>
@@ -208,7 +208,7 @@
       <title>Smashoperator</title>
       <para xml:id="S1.SS0.SSS0.Px3.p1">
         <equation xml:id="S1.Ex6">
-          <Math mode="display" tex="V=\sum_{1\leq i\leq j\leq n}^{\infty}V_{ij}\quad X=\sum_{1\leq i\leq j\leq n}^%&#10;{3456}X_{ij}\quad Y=\sum\limits_{1\leq i\leq j\leq n}Y_{ij}\quad Z=\mathop{T}_%&#10;{1\leq i\leq j\leq n}Z_{ij}" text="formulae@(V = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ infinity)@(V _ (i * j)), formulae@(X = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ 3456)@(X _ (i * j)), formulae@(Y = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(Y _ (i * j)), Z = (T _ (1 &lt;= i &lt;= j &lt;= n))@(Z _ (i * j)))))" xml:id="S1.Ex6.m1">
+          <Math mode="display" tex="V=\sum_{1\leq i\leq j\leq n}^{\infty}V_{ij}\quad X=\sum_{1\leq i\leq j\leq n}^{3456}X_{ij}\quad Y=\sum\limits_{1\leq i\leq j\leq n}Y_{ij}\quad Z=\mathop{T}_{1\leq i\leq j\leq n}Z_{ij}" text="formulae@(V = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ infinity)@(V _ (i * j)), formulae@(X = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ 3456)@(X _ (i * j)), formulae@(Y = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(Y _ (i * j)), Z = (T _ (1 &lt;= i &lt;= j &lt;= n))@(Z _ (i * j)))))" xml:id="S1.Ex6.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -370,7 +370,7 @@
       </para>
       <para xml:id="S1.SS0.SSS0.Px3.p2">
         <equation xml:id="S1.Ex7">
-          <Math mode="display" tex="V=\sum_{1\leq i\leq j\leq n}^{\infty}V_{ij}\quad X=\smashoperator[]{\sum_{1%&#10;\leq i\leq j\leq n}^{3456}}X_{ij}\quad Y=\smashoperator[r]{\sum_{1\leq i\leq j%&#10;\leq n}^{}}Y_{ij}\quad Z=\smashoperator[l]{\mathop{T}_{1\leq i\leq j\leq n}^{}%&#10;}Z_{ij}" text="formulae@(V = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ infinity)@(V _ (i * j)), formulae@(X = ((sum ^ 3456) _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), formulae@(Y = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(Y _ (i * j)), Z = (T _ (1 &lt;= i &lt;= j &lt;= n))@(Z _ (i * j)))))" xml:id="S1.Ex7.m1">
+          <Math mode="display" tex="V=\sum_{1\leq i\leq j\leq n}^{\infty}V_{ij}\quad X=\smashoperator[]{\sum_{1\leq i\leq j\leq n}^{3456}}X_{ij}\quad Y=\smashoperator[r]{\sum_{1\leq i\leq j\leq n}^{}}Y_{ij}\quad Z=\smashoperator[l]{\mathop{T}_{1\leq i\leq j\leq n}^{}}Z_{ij}" text="formulae@(V = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ infinity)@(V _ (i * j)), formulae@(X = ((sum ^ 3456) _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), formulae@(Y = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(Y _ (i * j)), Z = (T _ (1 &lt;= i &lt;= j &lt;= n))@(Z _ (i * j)))))" xml:id="S1.Ex7.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -535,7 +535,7 @@
       <title>Adjustlimits</title>
       <para xml:id="S1.SS0.SSS0.Px4.p1">
         <equation xml:id="S1.Ex8">
-          <Math mode="display" tex="\text{a)}\lim_{n\to\infty}\max_{p\geq n}\quad\text{b)}\lim_{n\to\infty}\max_{p%&#10;^{2}\geq n}\quad\text{c)}\lim_{n\to\infty}\sup_{p^{2}\geq nK}\quad\text{d)}%&#10;\limsup_{n\to\infty}\max_{p\geq n}" text="list@([a)] * (limit _ (n to infinity))@(maximum _ (p &gt;= n)), [b)] * (limit _ (n to infinity))@(maximum _ (p ^ 2 &gt;= n)), [c)] * (limit _ (n to infinity))@(supremum _ (p ^ 2 &gt;= n * K)), [d)] * (limit-supremum _ (n to infinity))@(maximum _ (p &gt;= n)))" xml:id="S1.Ex8.m1">
+          <Math mode="display" tex="\text{a)}\lim_{n\to\infty}\max_{p\geq n}\quad\text{b)}\lim_{n\to\infty}\max_{p^{2}\geq n}\quad\text{c)}\lim_{n\to\infty}\sup_{p^{2}\geq nK}\quad\text{d)}\limsup_{n\to\infty}\max_{p\geq n}" text="list@([a)] * (limit _ (n to infinity))@(maximum _ (p &gt;= n)), [b)] * (limit _ (n to infinity))@(maximum _ (p ^ 2 &gt;= n)), [c)] * (limit _ (n to infinity))@(supremum _ (p ^ 2 &gt;= n * K)), [d)] * (limit-supremum _ (n to infinity))@(maximum _ (p &gt;= n)))" xml:id="S1.Ex8.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -665,7 +665,7 @@
       </para>
       <para xml:id="S1.SS0.SSS0.Px4.p2">
         <equation xml:id="S1.Ex9">
-          <Math mode="display" tex="\text{a)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p\geq n}\quad\text{b)}%&#10;\adjustlimits{\lim}_{n\to\infty}{\max}_{p^{2}\geq n}\quad\text{c)}%&#10;\adjustlimits{\lim}_{n\to\infty}{\sup}_{p^{2}\geq nK}\quad\text{d)}%&#10;\adjustlimits{\limsup}_{n\to\infty}{\max}_{p\geq n}" text="list@([a)] * limit _ (n to infinity) * maximum _ (p &gt;= n), [b)] * limit _ (n to infinity) * maximum _ (p ^ 2 &gt;= n), [c)] * limit _ (n to infinity) * supremum _ (p ^ 2 &gt;= n * K), [d)] * limit-supremum _ (n to infinity) * maximum _ (p &gt;= n))" xml:id="S1.Ex9.m1">
+          <Math mode="display" tex="\text{a)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p\geq n}\quad\text{b)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p^{2}\geq n}\quad\text{c)}\adjustlimits{\lim}_{n\to\infty}{\sup}_{p^{2}\geq nK}\quad\text{d)}\adjustlimits{\limsup}_{n\to\infty}{\max}_{p\geq n}" text="list@([a)] * limit _ (n to infinity) * maximum _ (p &gt;= n), [b)] * limit _ (n to infinity) * maximum _ (p ^ 2 &gt;= n), [c)] * limit _ (n to infinity) * supremum _ (p ^ 2 &gt;= n * K), [d)] * limit-supremum _ (n to infinity) * maximum _ (p &gt;= n))" xml:id="S1.Ex9.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -1214,7 +1214,7 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S3.Ex18">
-        <Math mode="display" tex="x\xleftrightarrow[under]{overlooooooong}y\xLeftrightarrow[underloooooooong]{%&#10;over}z" text="x (u * n * d * e * r)@((o * v * e * r * l * o * o * o * o * o * o * o * n * g)@(xleftrightarrow)) y (u * n * d * e * r * l * o * o * o * o * o * o * o * o * n * g)@((o * v * e * r)@(xLeftrightarrow)) z" xml:id="S3.Ex18.m1">
+        <Math mode="display" tex="x\xleftrightarrow[under]{overlooooooong}y\xLeftrightarrow[underloooooooong]{over}z" text="x (u * n * d * e * r)@((o * v * e * r * l * o * o * o * o * o * o * o * n * g)@(xleftrightarrow)) y (u * n * d * e * r * l * o * o * o * o * o * o * o * o * n * g)@((o * v * e * r)@(xLeftrightarrow)) z" xml:id="S3.Ex18.m1">
           <XMath>
             <XMApp>
               <XMApp role="METARELOP">
@@ -1288,7 +1288,7 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S3.Ex19">
-        <Math mode="display" tex="x\xhookleftarrow[bar]{foo}y\xhookrightarrow[bluuuuuuuuub]{baz}t\xmapsto{%&#10;heeereee}k" text="x (b * a * r)@((f * o * o)@(xhookleftarrow)) y (b * l * u * u * u * u * u * u * u * u * u * b)@((b * a * z)@(xhookrightarrow)) t (h * e * e * e * r * e * e * e)@(xmapsto) k" xml:id="S3.Ex19.m1">
+        <Math mode="display" tex="x\xhookleftarrow[bar]{foo}y\xhookrightarrow[bluuuuuuuuub]{baz}t\xmapsto{heeereee}k" text="x (b * a * r)@((f * o * o)@(xhookleftarrow)) y (b * l * u * u * u * u * u * u * u * u * u * b)@((b * a * z)@(xhookrightarrow)) t (h * e * e * e * r * e * e * e)@(xmapsto) k" xml:id="S3.Ex19.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
@@ -1358,7 +1358,7 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S3.Ex20">
-        <Math class="ltx_math_unparsed" mode="display" tex="k\xleftharpoonup[.]{}l\xleftharpoondown{..}m\xrightharpoondown[...]{}n%&#10;\xrightharpoonup{....}o" text="k .@(absent@(xleftharpoonup)) l .@.@(xlefttharpoondown) m ldots@(absent@(xrightharpoondown)) n ldots@.@(xrightharpoonup) o" xml:id="S3.Ex20.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="k\xleftharpoonup[.]{}l\xleftharpoondown{..}m\xrightharpoondown[...]{}n\xrightharpoonup{....}o" text="k .@(absent@(xleftharpoonup)) l .@.@(xlefttharpoondown) m ldots@(absent@(xrightharpoondown)) n ldots@.@(xrightharpoonup) o" xml:id="S3.Ex20.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
@@ -1446,7 +1446,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S3.p2">
       <equation xml:id="S3.Ex22">
-        <Math mode="display" tex="z=\overbrace{\underbracket{x}_{\text{real}}+i\underbracket{y}_{\text{imaginary%&#10;}}}^{\text{complex number}}\quad\underbrace{1+1}_{=2}" text="z = list@((overbrace@((underbracket@(x)) _ [real] + i * (underbracket@(y)) _ [imaginary])) ^ [complex number], (underbrace@(1 + 1)) _ (absent = 2))" xml:id="S3.Ex22.m1">
+        <Math mode="display" tex="z=\overbrace{\underbracket{x}_{\text{real}}+i\underbracket{y}_{\text{imaginary}}}^{\text{complex number}}\quad\underbrace{1+1}_{=2}" text="z = list@((overbrace@((underbracket@(x)) _ [real] + i * (underbracket@(y)) _ [imaginary])) ^ [complex number], (underbrace@(1 + 1)) _ (absent = 2))" xml:id="S3.Ex22.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -3499,7 +3499,7 @@ Then a switch of tag forms.</p>
     <title><tag close=" ">7</tag>Delimiters</title>
     <para xml:id="S7.p1">
       <equation xml:id="S7.Ex51">
-        <Math mode="display" tex="\lvert\frac{a}{c}\rvert\quad\left\lvert\frac{a}{c}\right\rvert\quad\Bigg\lvert%&#10;\frac{a}{b}\Bigg\rvert" text="list@(absolute-value@(a / c), absolute-value@(a / c), absolute-value@(a / b))" xml:id="S7.Ex51.m1">
+        <Math mode="display" tex="\lvert\frac{a}{c}\rvert\quad\left\lvert\frac{a}{c}\right\rvert\quad\Bigg\lvert\frac{a}{b}\Bigg\rvert" text="list@(absolute-value@(a / c), absolute-value@(a / c), absolute-value@(a / b))" xml:id="S7.Ex51.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -3564,7 +3564,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p2">
       <equation xml:id="S7.Ex52">
-        <Math mode="display" tex="\lvert\frac{a}{b}\rvert\quad\left\lvert\frac{a}{b}\right\rvert\quad\big\lvert%&#10;\frac{a}{b}\big\rvert\quad\Bigg\lvert\frac{a}{b}\Bigg\rvert" text="list@(absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b))" xml:id="S7.Ex52.m1">
+        <Math mode="display" tex="\lvert\frac{a}{b}\rvert\quad\left\lvert\frac{a}{b}\right\rvert\quad\big\lvert\frac{a}{b}\big\rvert\quad\Bigg\lvert\frac{a}{b}\Bigg\rvert" text="list@(absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b))" xml:id="S7.Ex52.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -3694,7 +3694,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p3">
       <equation xml:id="S7.Ex54">
-        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k%&#10;}\,\Big|\,C\Big\rangle" text="list@(list@(A, 1 / 2), quantum-operator-product@(B, (sum _ k)@(f _ k), C))" xml:id="S7.Ex54.m1">
+        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Big\rangle" text="list@(list@(A, 1 / 2), quantum-operator-product@(B, (sum _ k)@(f _ k), C))" xml:id="S7.Ex54.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -3892,7 +3892,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p6">
       <equation xml:id="S7.Ex56">
-        <Math mode="display" tex="\left(\frac{\pi}{\omega}\right)\cdot\left[\int xdx\right]\ldots[\sqrt{\frac{%&#10;\sin x}{\cos z}}]\cdots\lparen\frac{\frac{foo}{bar}}{\frac{baz}{qux}}\rparen" text="((pi / omega) cdot delimited-[]@(integral@(x * differential-d@(x)))) * ldots * delimited-[]@(square-root@(sine@(x) / cosine@(z))) * cdots * ((f * o * o) / (b * a * r) / (b * a * z) / (q * u * x))" xml:id="S7.Ex56.m1">
+        <Math mode="display" tex="\left(\frac{\pi}{\omega}\right)\cdot\left[\int xdx\right]\ldots[\sqrt{\frac{\sin x}{\cos z}}]\cdots\lparen\frac{\frac{foo}{bar}}{\frac{baz}{qux}}\rparen" text="((pi / omega) cdot delimited-[]@(integral@(x * differential-d@(x)))) * ldots * delimited-[]@(square-root@(sine@(x) / cosine@(z))) * cdots * ((f * o * o) / (b * a * r) / (b * a * z) / (q * u * x))" xml:id="S7.Ex56.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -4134,7 +4134,7 @@ Then a switch of tag forms.</p>
     <title><tag close=" ">8</tag>Prescripts</title>
     <para xml:id="S8.p1">
       <equation xml:id="S8.Ex60">
-        <Math mode="display" tex="{}^{4}_{12}\mathbf{C}^{5+}_{2}\quad\prescript{14}{2}{\mathbf{C}}^{5+}_{2}\quad%&#10;\prescript{4}{12}{\mathbf{C}}^{5+}_{2}\quad\prescript{14}{}{\mathbf{C}}^{5+}_{%&#10;2}\quad\prescript{}{2}{\mathbf{C}}^{5+}_{2}" text="list@(^ 4 _ 12 (C ^ (limit-from@(5, +))) _ 2, ^ 14 _ 2 (C ^ (limit-from@(5, +))) _ 2, ^ 4 _ 12 (C ^ (limit-from@(5, +))) _ 2, ^ 14 (C ^ (limit-from@(5, +))) _ 2, _ 2 (C ^ (limit-from@(5, +))) _ 2)" xml:id="S8.Ex60.m1">
+        <Math mode="display" tex="{}^{4}_{12}\mathbf{C}^{5+}_{2}\quad\prescript{14}{2}{\mathbf{C}}^{5+}_{2}\quad\prescript{4}{12}{\mathbf{C}}^{5+}_{2}\quad\prescript{14}{}{\mathbf{C}}^{5+}_{2}\quad\prescript{}{2}{\mathbf{C}}^{5+}_{2}" text="list@(^ 4 _ 12 (C ^ (limit-from@(5, +))) _ 2, ^ 14 _ 2 (C ^ (limit-from@(5, +))) _ 2, ^ 4 _ 12 (C ^ (limit-from@(5, +))) _ 2, ^ 14 (C ^ (limit-from@(5, +))) _ 2, _ 2 (C ^ (limit-from@(5, +))) _ 2)" xml:id="S8.Ex60.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -4304,7 +4304,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S8.p3">
       <equation xml:id="S8.Ex62">
-        <Math mode="display" tex="a=\frac{\begin{multlined}xy+xy+\int xy\,\text{dx}+xy+xy\\&#10;+xy+xy+xy+xy\end{multlined}xy+xy+\int xy\,\text{dx}+xy+xy\\&#10;+xy+xy+xy+xy}{z}=\frac{\displaystyle\begin{multlined}xy+xy+\int xy\,\text{dx}+%&#10;xy+xy\\&#10;+xy+xy+xy+xy\end{multlined}xy+xy+\int xy\,\text{dx}+xy+xy\\&#10;+xy+xy+xy+xy}{z}" text="a = (x * y + x * y + integral@(x * y * [dx]) + x * y + x * y + x * y + x * y + x * y + x * y) / z = (x * y + x * y + integral@(x * y * [dx]) + x * y + x * y + x * y + x * y + x * y + x * y) / z" xml:id="S8.Ex62.m1">
+        <Math mode="display" tex="a=\frac{\begin{multlined}xy+xy+\int xy\,\text{dx}+xy+xy\\&#10;+xy+xy+xy+xy\end{multlined}xy+xy+\int xy\,\text{dx}+xy+xy\\&#10;+xy+xy+xy+xy}{z}=\frac{\displaystyle\begin{multlined}xy+xy+\int xy\,\text{dx}+xy+xy\\&#10;+xy+xy+xy+xy\end{multlined}xy+xy+\int xy\,\text{dx}+xy+xy\\&#10;+xy+xy+xy+xy}{z}" text="a = (x * y + x * y + integral@(x * y * [dx]) + x * y + x * y + x * y + x * y + x * y + x * y) / z = (x * y + x * y + integral@(x * y * [dx]) + x * y + x * y + x * y + x * y + x * y + x * y) / z" xml:id="S8.Ex62.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
@@ -6575,7 +6575,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S10.p11">
       <equation xml:id="S10.Ex76">
-        <Math class="ltx_math_unparsed" mode="display" tex="\left.\begin{aligned} B^{\prime}&amp;=-\partial\times E,\\&#10;E^{\prime}&amp;=\partial\times B-4\pi j,\end{aligned}\right\}\qquad\text{Maxwell's%&#10; equations}" xml:id="S10.Ex76.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="\left.\begin{aligned} B^{\prime}&amp;=-\partial\times E,\\&#10;E^{\prime}&amp;=\partial\times B-4\pi j,\end{aligned}\right\}\qquad\text{Maxwell's equations}" xml:id="S10.Ex76.m1">
           <XMath>
             <XMArray colsep="0pt" name="aligned" rowsep="30.0pt">
               <XMRow>

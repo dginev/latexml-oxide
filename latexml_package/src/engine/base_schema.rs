@@ -28,8 +28,8 @@ LoadDefinitions!({
   Tag!("ltx:document", after_open => sub[document,root] {
     let mut bg_to_set = None;
     if let Some(bg) = document.get_node_font(root).get_background() {
-      if bg != "white" {
-        bg_to_set = Some(bg.clone().into_owned());
+      if *bg != latexml_core::common::color::WHITE {
+        bg_to_set = Some(bg.to_attribute());
       }
     }
     if let Some(bg) = bg_to_set {

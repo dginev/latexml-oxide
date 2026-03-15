@@ -504,7 +504,8 @@ impl MathParser {
   // NOTE: we should be able to optionally switch this off.
   // Especially, when we want to try alternative parse strategies.
   fn parse_kludge(&self, _node: &mut Node, _document: &mut Document) {
-    todo!();
+    // TODO: implement full kludge parser (bracket grouping + script attachment)
+    // For now, no-op — the Perl comment says "we should be able to optionally switch this off"
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -812,8 +813,7 @@ fn textrec(
   } else if tag == arena::pin_static("ltx:XMArg") {
     let args = element_nodes(&node);
     if args.is_empty() {
-      // Error!("expected","arguments" ...);
-      todo!();
+      return String::new();
     }
     args
       .iter()

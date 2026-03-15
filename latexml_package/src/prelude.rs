@@ -14,6 +14,7 @@ pub use std::sync::Arc;
 pub use latexml_core::alignment::cell::Cell;
 pub use latexml_core::alignment::template::{Align, Template};
 pub use latexml_core::alignment::{Alignment, AlignmentConfig};
+pub use latexml_core::common::LabelMappingHook;
 pub use latexml_core::common::arena;
 pub use latexml_core::common::arena::*;
 pub use latexml_core::common::cleaners::*;
@@ -90,3 +91,17 @@ pub mod setup_binding_language;
 pub use crate::engine::base_functions::*;
 pub use crate::engine::latex_functions::*;
 pub use crate::package::*;
+
+// Functions callable from constructor templates via &GetKeyVal(#1,key) syntax.
+// Returns Option<Digested> to be compatible with both attribute (to_attribute/to_string)
+// and body absorption (Into<Option<Digested>>) contexts in constructor templates.
+#[allow(non_snake_case)]
+pub fn GetKeyVal(keyval_opt: &Option<Digested>, key: &str) -> Option<Digested> {
+  match keyval_opt {
+    Some(digested) => match digested.data() {
+      DigestedData::KeyVals(keyval) => keyval.get_value_digested(key).cloned(),
+      _ => None,
+    },
+    _ => None,
+  }
+}

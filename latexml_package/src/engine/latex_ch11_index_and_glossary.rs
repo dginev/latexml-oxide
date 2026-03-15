@@ -1,4 +1,25 @@
 use crate::prelude::*;
+
+/// Perl: addIndexPhraseKey — sets the `key` attribute on index/glossary phrase
+/// nodes from their text content, applying CleanIndexKey normalization.
+fn add_index_phrase_key(node: &mut Node) -> Result<()> {
+  if node.get_attribute("key").is_none() {
+    let text = node.get_content();
+    let key = clean_index_key(&text);
+    if !key.is_empty() {
+      node.set_attribute("key", &key)?;
+    }
+  }
+  Ok(())
+}
+
+/// Perl: CleanIndexKey — trim whitespace, remove trailing punctuation.
+fn clean_index_key(key: &str) -> String {
+  let key = key.trim();
+  // Remove trailing punctuation
+  key.trim_end_matches(['.', ',', ';']).to_string()
+}
+
 LoadDefinitions!({
   // #======================================================================
   // # C.11.5 Index and Glossary
@@ -71,15 +92,13 @@ LoadDefinitions!({
 
   // DefMacro('\index{}', \&process_index_phrases);
 
-  // Tag('ltx:indexphrase',    afterClose => \&addIndexPhraseKey);
-  // Tag('ltx:glossaryphrase', afterClose => \&addIndexPhraseKey);
-  // ### ltx:indexsee does NOT get a key (at this stage)!
-
-  // sub addIndexPhraseKey {
-  //   my ($document, $node) = @_;
-  //   if (!$node->getAttribute('key')) {
-  //     $node->setAttribute(key => CleanIndexKey($node->textContent)); }
-  //   return; }
+  Tag!("ltx:indexphrase", after_close => sub[_document, node] {
+    add_index_phrase_key(node)?;
+  });
+  Tag!("ltx:glossaryphrase", after_close => sub[_document, node] {
+    add_index_phrase_key(node)?;
+  });
+  // ltx:indexsee does NOT get a key (at this stage)
 
   // DefConstructor('\@index[]{}', "^<ltx:indexmark style='#1'>#2</ltx:indexmark>",
   //   mode => 'text', reversion => '', sizer => 0);

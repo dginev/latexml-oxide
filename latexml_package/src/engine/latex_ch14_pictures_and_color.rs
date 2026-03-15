@@ -31,4 +31,21 @@ LoadDefinitions!({
     Ok(stored_map!("align" => align, "vattach" => "bottom"))
   },
   mode => "text");
+
+  // Perl: latex_constructs.pool.ltxml line 4862
+  // Stubs for color/xcolor packages (overridden when color.sty is loaded)
+  Let!("\\set@color", "\\relax");
+  Let!("\\color@begingroup", "\\relax");
+  Let!("\\color@endgroup", "\\relax");
+  Let!("\\color@setgroup", "\\relax");
+  Let!("\\color@hbox", "\\relax");
+  Let!("\\color@vbox", "\\relax");
+  Let!("\\color@endbox", "\\relax");
+
+  // Perl: latex_constructs.pool.ltxml line 5802
+  DefMacro!("\\ignorespacesafterend", None);
+
+  // Perl: latex_constructs.pool.ltxml line 5027
+  // Pre-define \Gin@driver so graphics.sty doesn't error when loaded from disk
+  DefMacro!("\\Gin@driver", "");
 });

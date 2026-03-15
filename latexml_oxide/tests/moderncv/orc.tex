@@ -1,0 +1,25 @@
+\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{orcidlink}
+\title{ORCID Test}
+\author{Bruce\orcidlink{0000-0002-2300-0367}}
+\makeatletter%avoid page break portability issues with tikz emulation
+\let\lx@newpage\relax
+\makeatother
+\begin{document}
+\maketitle
+
+Adaptable
+{\small small \orcidlink{0000-0002-2300-0367}};
+{\normalsize normal \orcidlink{0000-0002-2300-0367}};
+{\large large \orcidlink{0000-0002-2300-0367}};
+{\Large Large \orcidlink{0000-0002-2300-0367}};
+{\Huge Huge \orcidlink{0000-0002-2300-0367}}.
+
+
+Full form: \orcidlinkf{0000-0002-2300-0367}.
+
+Compact form:  \orcidlinkc{0000-0002-2300-0367}.
+
+Inline form:  \orcidlinki{Bruce}{0000-0002-2300-0367}.
+\end{document}

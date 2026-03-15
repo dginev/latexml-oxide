@@ -33,7 +33,7 @@ macro_rules! SPECIALS (() => (r"\#\?&\\"));
 // Quoted special characters (or semi-special)
 macro_rules! QUOTED_SPECIALS (
     () => (concat!(r"\\\\\\[",SPECIALS!(),
-                   r"]|\\#\\#|\\&amp;"))); // or special cases: doubled #, &amp;
+                   r"]|\\#\\#|\\&amp;|&amp;"))); // or special cases: doubled #, \&amp;, &amp;
 macro_rules! LEAD_QUOTED_RE_STR (() => (
   concat!(r"^((",QUOTED_SPECIALS!(),r"|[^",SPECIALS!(),"'\"])+)")));
 macro_rules! LEAD_RANDOM_TEXT_RE_STR (() => (
@@ -508,7 +508,8 @@ fn translate_value(
       panic!("Missing ')' in &$fcn(...) at '{text:?}'\n");
     }
     // println!("text after translate_value: {:?}", text);
-    val = quote!(#fcn( #(#args),* ));
+    let fcn_ident = proc_macro2::Ident::new(&fcn, proc_macro2::Span::call_site());
+    val = quote!(#fcn_ident( #(#args),* ));
   }
 
   if !is_match {
@@ -529,7 +530,7 @@ fn translate_value(
           val = if for_test {
             quote!(if args.len() < #n_lit_usize { &None } else { &args[#n_usize] })
           } else {
-            quote!(args[#n_usize])
+            quote!(&args[#n_usize])
           }
         }
         String::new()
@@ -555,7 +556,7 @@ fn translate_value(
     exclusion_str = exclusion_str + exclude_chars + r"])+)";
     let exclusion_re: Regex = Regex::new(&exclusion_str).unwrap();
 
-    exclusion_re
+    *text = exclusion_re
       .replace(text, |quoted_refs: &Captures| {
         is_match = true;
         let quoted = quoted_refs.get(1).map_or("", |m| m.as_str()).to_owned();

@@ -24,6 +24,19 @@ impl Default for Float {
 impl Object for Float {
   fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
   fn stringify(&self) -> String { s!("Float[{}]", self.0) }
+  fn be_digested(self) -> Result<crate::Digested> {
+    // Float can be digested as a text box containing its string representation
+    let s = self.to_string();
+    Ok(
+      crate::Tbox::new(
+        crate::common::arena::into_pin(&s),
+        None, None,
+        Tokens::new(ExplodeText!(&s)),
+        crate::common::arena::SymHashMap::default(),
+      )
+      .into(),
+    )
+  }
 }
 
 impl NumericOps for Float {

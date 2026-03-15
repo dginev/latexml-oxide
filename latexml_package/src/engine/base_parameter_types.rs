@@ -247,20 +247,25 @@ LoadDefinitions!({
   );
 
   // Read a matching keyword, eg. Match:=
+  // Perl: returns undef on no-match. We must return ArgWrap::None, NOT empty Tokens.
   DefParameterType!(Match, sub[_inner, extra] {
     let extra_refs = extra.iter().collect::<Vec<&Tokens>>();
-    gullet::read_match(&extra_refs)?.unwrap_or_default()
+    match gullet::read_match(&extra_refs)? {
+      Some(tks) => ArgWrap::Tokens(tks),
+      None => ArgWrap::None,
+    }
   });
 
   // Read a keyword; eg. Keyword:to
   // (like Match, but ignores catcodes)
+  // Perl: returns undef on no-match.
   DefParameterType!(Keyword, sub[_inner, extra] {
     let extra_string : String = extra.iter().map(ToString::to_string)
       .collect::<Vec<String>>().join("");
-    Ok(
-      gullet::read_keyword(&[&extra_string])?.map(|t| Tokens!(T_OTHER!(t)))
-        .unwrap_or_default()
-    )
+    match gullet::read_keyword(&[&extra_string])? {
+      Some(t) => ArgWrap::Tokens(Tokens!(T_OTHER!(t))),
+      None => ArgWrap::None,
+    }
   });
 
   // Read balanced material (?)

@@ -62,15 +62,41 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   let clctr = s!("\\cl@{ctr}");
   let cunctr = s!("\\c@{unctr}");
   let clunctr = s!("\\cl@{unctr}");
-  def_register(
-    T_CS!(&cctr),
-    None,
-    Number::new(0),
-    Some(RegisterOptions {
-      allocate: Some(String::from("\\count")),
-      ..RegisterOptions::default()
-    }),
-  )?;
+  // Perl Package.pm L660-672: Check if counter already defined. Skip register if already a Register.
+  // Warn if previously defined as something other than \relax.
+  let cs_cctr = T_CS!(&cctr);
+  let prev_defn = lookup_definition(&cs_cctr)?;
+  if let Some(ref defn) = prev_defn {
+    if defn.is_register() {
+      // Counter already exists as a register — fine, just continue (may change within/nesting)
+    } else {
+      // Warn unless the previous definition was \relax
+      let relax_meaning = state::lookup_meaning(&T_RELAX!());
+      let prev_meaning = state::lookup_meaning(&cs_cctr);
+      if prev_meaning != relax_meaning {
+        Warn!("unexpected", &cctr, s!("Counter {} was already defined; redefining", cctr));
+      }
+      def_register(
+        cs_cctr,
+        None,
+        Number::new(0),
+        Some(RegisterOptions {
+          allocate: Some(String::from("\\count")),
+          ..RegisterOptions::default()
+        }),
+      )?;
+    }
+  } else {
+    def_register(
+      cs_cctr,
+      None,
+      Number::new(0),
+      Some(RegisterOptions {
+        allocate: Some(String::from("\\count")),
+        ..RegisterOptions::default()
+      }),
+    )?;
+  }
   after_assignment();
   if !has_value(&clctr) {
     state::assign_value(&clctr, Tokens!(), Some(Scope::Global));
@@ -385,7 +411,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
 /// Assign a sub to LABEL_MAPPING_HOOK: &sub($label,$counter,$norefnum)
 /// to return the desired refnum and id for a given object.
 fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
-  if has_value("LABEL_MAPPING_HOOK") {
+  if let Some(mapper) = state::get_label_mapping_hook() {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
@@ -395,32 +421,47 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     if lookup_meaning(&hj_id).is_some() {
       state::let_i(&T_CS!(s!("\\the{ctr}@ID")), &hj_id, Some(Scope::Global));
     }
-    // TODO: Continue once we know the type of "mapper"
-    // let _label = state!().lookup_value("PEEKED_LABEL");
-    todo!();
-    //   let (fixedrefnum, fixedid) = mapper(label, ctr, norefnum);
-    //   if !norefnum && fixedrefnum {
-    //     if !state!().lookup_neaning(hj_refnum) {    // Save for later
-    //       state::let_i(&hj_refnum, T_CS!(s!("\\the{}",ctr)), Some(Scope::Global));
-    //     }
-    //     def_macro(T_CS!(s!("\\the{}",ctr)), None, fixedrefnum, Some(ExpandableOptions { scope:
-    // Some(Scope::Global), ..ExpandableOptions::default()}));   }
-    //   if fixedid {
-    //     if lookup_meaning(&hj_id).is_none() {        // Save for later
-    //       state::let_i(&hj_id, T_CS!(s!("\\the{}@ID",ctr)), Some(Scope::Global));
-    //     }
-    //     def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, fixedid, Some(ExpandableOptions { scope:
-    // Some(Scope::Global), ..ExpandableOptions::default()}));   }
-    //   state::remove_value("PEEKED_LABEL"); // CONSUME the label
-    //   state::assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've
-    // consumed the label
+    let label = state::lookup_string("PEEKED_LABEL");
+    let (fixedrefnum, fixedid) = mapper(&label, ctr, norefnum);
+    if let Some(refnum) = fixedrefnum {
+      if !norefnum {
+        if lookup_meaning(&hj_refnum).is_none() {
+          // Save for later
+          state::let_i(&hj_refnum, &T_CS!(s!("\\the{ctr}")), Some(Scope::Global));
+        }
+        let _ = def_macro(
+          T_CS!(s!("\\the{ctr}")),
+          None,
+          ExpansionBody::Tokens(Tokens::new(Explode!(&refnum))),
+          Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+        );
+      }
+    }
+    if let Some(id) = fixedid {
+      if lookup_meaning(&hj_id).is_none() {
+        // Save for later
+        state::let_i(&hj_id, &T_CS!(s!("\\the{ctr}@ID")), Some(Scope::Global));
+      }
+      let _ = def_macro(
+        T_CS!(s!("\\the{ctr}@ID")),
+        None,
+        ExpansionBody::Tokens(Tokens::new(Explode!(&id))),
+        Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+      );
+    }
+    state::remove_value("PEEKED_LABEL"); // CONSUME the label
+    state::assign_value(
+      "PROCESSED_LABEL",
+      Stored::String(arena::pin(label)),
+      Some(Scope::Global),
+    );
   }
 }
 
 /// Use to peek for FOLLOWING \label{...} to support label-derived reference numbers
 /// (Perl: MaybePeekLabel)
 pub fn maybe_peek_label() -> Result<()> {
-  if has_value("LABEL_MAPPING_HOOK") {
+  if state::get_label_mapping_hook().is_some() {
     let peek = crate::gullet::read_non_space()?;
     if let Some(ref token) = peek {
       if x_equals(token, &T_CS!("\\label")) {
@@ -452,7 +493,7 @@ pub fn maybe_peek_label() -> Result<()> {
 /// Can by used by \label, among others. Note we only record the label
 /// if it hasn't already been peeked, and consumed.
 pub fn maybe_note_label(label: &str) {
-  if has_value("LABEL_MAPPING_HOOK") {
+  if state::get_label_mapping_hook().is_some() {
     let label = clean_label(label, Some(""));
     let processed = state::lookup_string("PROCESSED_LABEL");
     if processed.is_empty() || processed != label {
@@ -764,11 +805,11 @@ pub fn begin_itemize(
     None => options.resume_star,
   } {
     if s != "noseries" {
-      series = s;
-      // TODO:
-      // SetCounter!(usecounter,
-      //   lookup_int(&s!("enumitem_series_{}_last",series)),
-      //   state);
+      series = s.clone();
+      let last_val = lookup_int(&s!("enumitem_series_{s}_last"));
+      if last_val != 0 {
+        SetCounter!(usecounter, Number(last_val));
+      }
     }
   } else {
     reset_counter(&T_OTHER!(&usecounter))?;
@@ -780,21 +821,143 @@ pub fn begin_itemize(
   Ok(rsc)
 }
 
+/// Set the itemization style for a given level.
+/// Perl: setItemizationStyle($stuff, $level)
+/// If $level is not given, uses the current @itemlevel.
+/// Defines \labelitem$level to $stuff.
+pub fn set_itemization_style(stuff: Option<&Tokens>, level: Option<i32>) -> Result<()> {
+  if let Some(stuff) = stuff {
+    if stuff.is_empty() {
+      return Ok(());
+    }
+    let level = level.unwrap_or_else(|| lookup_int("@itemlevel").max(0) as i32);
+    let level_str = roman_aux(level);
+    let cs_name = s!("\\labelitem{level_str}");
+    def_macro(T_CS!(&cs_name), None, stuff.clone(), None)?;
+  }
+  Ok(())
+}
+
+/// Set the enumeration style for a given level.
+/// Perl: setEnumerationStyle($stuff, $level)
+/// Parses the style tokens to detect A/a/I/i/1 patterns
+/// and defines \theenum$level and \labelenum$level accordingly.
+pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Result<()> {
+  if let Some(stuff) = stuff {
+    if stuff.is_empty() {
+      return Ok(());
+    }
+    let level = level.unwrap_or_else(|| lookup_int("enumlevel").max(0) as i32);
+    let level_str = roman_aux(level);
+    let tokens = stuff.clone().unlist();
+    let mut out: Vec<Token> = Vec::new();
+    let ctr = T_OTHER!(s!("enum{level_str}"));
+    let mut i = 0;
+    while i < tokens.len() {
+      let t = tokens[i].clone();
+      if t.get_catcode() == Catcode::BEGIN {
+        // Copy braced groups verbatim
+        out.push(t);
+        let mut brlevel = 1i32;
+        i += 1;
+        while brlevel > 0 && i < tokens.len() {
+          let tt = tokens[i].clone();
+          if tt.get_catcode() == Catcode::BEGIN {
+            brlevel += 1;
+          } else if tt.get_catcode() == Catcode::END {
+            brlevel -= 1;
+          }
+          out.push(tt);
+          i += 1;
+        }
+      } else {
+        let ch = char::from_u32(t.get_charcode()).unwrap_or('\0');
+        let cat = t.get_catcode();
+        match (ch, cat) {
+          ('A', Catcode::LETTER) => {
+            // \Alph{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\Alph"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          ('a', Catcode::LETTER) => {
+            // \alph{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\alph"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          ('I', Catcode::LETTER) => {
+            // \Roman{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\Roman"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          ('i', Catcode::LETTER) => {
+            // \roman{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\roman"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          ('1', Catcode::OTHER) => {
+            // \arabic{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\arabic"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          _ => {
+            out.push(t);
+          }
+        }
+        i += 1;
+      }
+    }
+    // Define \labelenum$level = { out }
+    let mut label_tokens = vec![T_BEGIN!()];
+    label_tokens.extend(out);
+    label_tokens.push(T_END!());
+    def_macro(
+      T_CS!(s!("\\labelenum{level_str}")),
+      None,
+      Tokens::new(label_tokens),
+      None,
+    )?;
+  }
+  Ok(())
+}
+
 /// Copies the current id, tags, and inlist counter values into whatsit properties
+/// Perl: RescueCaptionCounters (latex_constructs.pool.ltxml L3260-3271)
 pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit) {
   let tagskey = &s!("{captype}_tags");
   if let Some(tags) = state::remove_value(tagskey) {
-    state::assign_value(tagskey, false, Some(Scope::Global));
     whatsit.set_property("tags", tags);
   }
   let idkey = s!("{captype}_id");
   if let Some(id) = state::remove_value(&idkey) {
-    state::assign_value(&idkey, false, Some(Scope::Global));
     whatsit.set_property("id", id);
   }
   let inlistkey = s!("{captype}_inlist");
   if let Some(inlist) = state::remove_value(&inlistkey) {
-    state::assign_value(&inlistkey, false, Some(Scope::Global));
     whatsit.set_property("inlist", inlist);
   }
 }
