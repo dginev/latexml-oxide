@@ -946,20 +946,18 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
 }
 
 /// Copies the current id, tags, and inlist counter values into whatsit properties
+/// Perl: RescueCaptionCounters (latex_constructs.pool.ltxml L3260-3271)
 pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit) {
   let tagskey = &s!("{captype}_tags");
   if let Some(tags) = state::remove_value(tagskey) {
-    state::assign_value(tagskey, false, Some(Scope::Global));
     whatsit.set_property("tags", tags);
   }
   let idkey = s!("{captype}_id");
   if let Some(id) = state::remove_value(&idkey) {
-    state::assign_value(&idkey, false, Some(Scope::Global));
     whatsit.set_property("id", id);
   }
   let inlistkey = s!("{captype}_inlist");
   if let Some(inlist) = state::remove_value(&inlistkey) {
-    state::assign_value(&inlistkey, false, Some(Scope::Global));
     whatsit.set_property("inlist", inlist);
   }
 }

@@ -3,12 +3,32 @@ use latexml_core::document::Document;
 
 /// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
 /// Sets \@captype, adjusts \hsize for single/double column floats.
-pub fn before_float(float_type: &str) {
+/// `preincrement`: if Some("figure"), pre-increments the parent float counter
+///   on first subfloat entry (before main caption), storing result for later use.
+pub fn before_float(float_type: &str, preincrement: Option<&str>) {
   def_macro(
     T_CS!("\\@captype"), None,
     Tokens::new(ExplodeText!(float_type)),
     None,
   ).ok();
+  // Perl: if (my $main = $options{preincrement}) {
+  //   if (($type ne (LookupValue('LAST_FLOATTYPE') || ''))
+  //     && !IfCondition('\iflx@donecaption')) {
+  //     AssignValue('PREINCREMENTED_' . $main => { RefStepCounter($main) }, 'global'); } }
+  if let Some(main_counter) = preincrement {
+    let last_type = state::lookup_value("LAST_FLOATTYPE")
+      .map(|s| s.to_string())
+      .unwrap_or_default();
+    let done_caption = if_condition(&T_CS!("\\iflx@donecaption"))
+      .unwrap_or(None)
+      .unwrap_or(false);
+    if float_type != last_type && !done_caption {
+      if let Ok(props) = ref_step_counter(main_counter, false) {
+        let prekey = s!("PREINCREMENTED_{main_counter}");
+        state::assign_value(&prekey, props, Some(Scope::Global));
+      }
+    }
+  }
 }
 
 /// Perl: afterFloat (latex_constructs.pool.ltxml L3440-3448)
@@ -17,6 +37,9 @@ pub fn after_float(whatsit: &mut Whatsit) {
   let captype = stomach::digest(T_CS!("\\@captype"))
     .map(|d| d.to_string())
     .unwrap_or_default();
+  // Perl: AssignValue('PREINCREMENTED_' . $type => undef, 'global');
+  let prekey = s!("PREINCREMENTED_{captype}");
+  state::remove_value(&prekey);
   rescue_caption_counters(&captype, whatsit);
   state::assign_value("LAST_FLOATTYPE", Stored::String(arena::pin(&captype)), Some(Scope::Global));
 }
@@ -38,6 +61,66 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
       document.add_class(&mut panel, "ltx_figure_panel")?;
     }
   }
+  Ok(())
+}
+
+/// Perl: collapseFloat (latex_constructs.pool.ltxml L3493-3520)
+/// If a figure/table/float contains exactly one inner float child,
+/// and they don't BOTH have captions, collapse the inner into the outer.
+fn collapse_float(document: &mut Document, float: &mut libxml::tree::Node) -> Result<()> {
+  let caption_qname = arena::pin_static("ltx:caption");
+  let figure_qname = arena::pin_static("ltx:figure");
+  let table_qname = arena::pin_static("ltx:table");
+  let float_qname = arena::pin_static("ltx:float");
+  // Find inner float/figure/table children
+  let mut inners: Vec<libxml::tree::Node> = Vec::new();
+  for child in float.get_child_elements() {
+    let qname = latexml_core::document::get_node_qname(&child);
+    if qname == figure_qname || qname == table_qname || qname == float_qname {
+      inners.push(child);
+    }
+  }
+  if inners.len() != 1 {
+    return Ok(());
+  }
+  let mut inner = inners.into_iter().next().unwrap();
+  // Check captions: collapse only if they don't BOTH have captions
+  let outer_has_caption = float.get_child_elements().iter()
+    .any(|c| latexml_core::document::get_node_qname(c) == caption_qname);
+  let inner_has_caption = inner.get_child_elements().iter()
+    .any(|c| latexml_core::document::get_node_qname(c) == caption_qname);
+  if outer_has_caption && inner_has_caption {
+    return Ok(());
+  }
+  // Copy inner's attributes to outer (except xml:id)
+  let attrs = inner.get_attributes();
+  for (name, value) in &attrs {
+    // get_attributes() may return the key as "id" (local name) or "xml:id" (prefixed)
+    if name != "xml:id" && name != "id" {
+      document.set_attribute(float, name, value)?;
+    }
+  }
+  // If inner has caption, promote inner's xml:id to outer
+  if inner_has_caption {
+    let inner_id = inner.get_attribute("xml:id")
+      .or_else(|| inner.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"));
+    if let Some(id) = inner_id {
+      // Unrecord the outer's old ID and remove the attribute before setting the new one
+      if let Some(old_id) = float.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
+        document.unrecord_id(&old_id);
+      }
+      float.remove_attribute("xml:id").ok();
+      document.unrecord_id(&id);
+      document.set_attribute(float, "xml:id", &id)?;
+    }
+  }
+  // Replace inner element with its children (unwrap inner)
+  let children: Vec<libxml::tree::Node> = inner.get_child_nodes();
+  for mut child in children {
+    child.unlink_node();
+    float.add_child(&mut child).ok();
+  }
+  inner.unlink_node();
   Ok(())
 }
 
@@ -122,9 +205,16 @@ LoadDefinitions!({
   );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
+  // Perl: latex_constructs.pool.ltxml L3250-3258
+  // Checks PREINCREMENTED_ first (set by beforeFloat with preincrement option).
   DefPrimitive!("\\@@add@caption@counters", {
     let captype = stomach::digest(T_CS!("\\@captype"))?.to_string();
-    let props   = ref_step_counter(&captype, false)?;
+    let prekey = s!("PREINCREMENTED_{captype}");
+    let props = if let Some(Stored::HashStored(pre)) = state::remove_value(&prekey) {
+      pre
+    } else {
+      ref_step_counter(&captype, false)?
+    };
     let inlist  = stomach::digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
     state::assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
     state::assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
@@ -136,18 +226,21 @@ LoadDefinitions!({
     Error!("unexpected", "\\caption", "Use of \\caption outside any known float"); });
 
   // Note that even without \caption, we'd probably like to have xml:id.
-  // Perl: arrange_panels_and_breaks() — adds ltx_figure_panel class when 2+ panels detected
+  // Perl: BuildPanelsAndID + collapseFloat (afterClose hooks)
   Tag!("ltx:figure", after_close => sub[document, node] {
     document.generate_id(node, "fig")?;
     arrange_panels(document, node)?;
+    collapse_float(document, node)?;
   });
   Tag!("ltx:table",  after_close => sub[document, node] {
     document.generate_id(node, "tab")?;
     arrange_panels(document, node)?;
+    collapse_float(document, node)?;
   });
   Tag!("ltx:float",  after_close => sub[document, node] {
     document.generate_id(node, "tab")?;
     arrange_panels(document, node)?;
+    collapse_float(document, node)?;
   });
 
   // # These may need to float up to where they're allowed,
@@ -161,6 +254,8 @@ LoadDefinitions!({
     "^^<ltx:toccaption>#1</ltx:toccaption>", //sizer => 0
     mode => "text");
 
+  // Perl: latex_constructs.pool.ltxml L3450-3458
+  // Uses beforeFloat('figure') / afterFloat — sets LAST_FLOATTYPE, rescues counters.
   DefEnvironment!("{figure}[]",r###"
   <ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>
     #tags
@@ -168,10 +263,8 @@ LoadDefinitions!({
   </ltx:figure>
   "###,
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { DefMacro!("\\@captype", "figure"); },
-    after_digest  => sub[tag] {
-      rescue_caption_counters("figure", tag);
-    },
+    before_digest => { before_float("figure", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
   // Perl: latex_constructs.pool.ltxml line 3460
@@ -182,24 +275,23 @@ LoadDefinitions!({
   </ltx:figure>
   "###,
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { DefMacro!("\\@captype", "figure"); },
-    after_digest  => sub[tag] {
-      rescue_caption_counters("figure", tag);
-    },
+    before_digest => { before_float("figure", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
+  // Perl: latex_constructs.pool.ltxml L3469-3477
   DefEnvironment!("{table}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { DefMacro!("\\@captype", "table"); },
-    after_digest  => sub[whatsit] { rescue_caption_counters("table", whatsit); },
+    before_digest => { before_float("table", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
   // Perl: latex_constructs.pool.ltxml line 3478
   DefEnvironment!("{table*}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { DefMacro!("\\@captype", "table"); },
-    after_digest  => sub[whatsit] { rescue_caption_counters("table", whatsit); },
+    before_digest => { before_float("table", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
   DefPrimitive!("\\flushbottom",      None);

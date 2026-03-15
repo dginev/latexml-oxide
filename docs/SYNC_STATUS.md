@@ -226,7 +226,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 205 pass, 0 fail, 56 ignored test functions**
+**Current totals: 206 pass, 0 fail, 55 ignored test functions (updated 2026-03-15)**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 60% of Perl test cases passing**
 
@@ -242,10 +242,10 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 20_digestion | 10 | 0 | |
 | 22_fonts | 17 | 6 | fonts, plainfonts, ding, stmaryrd, abxtest, sizes |
 | 30_encoding | 26 | 0 | |
-| 32_keyval | 7 | 1 | xkeyvalview |
+| 32_keyval | 8 | 0 | xkeyvalview now passing |
 | 33_keyval_options | 11 | 0 | |
 | 40_math | 0 | 1 | math parser deferred |
-| 50_structure | 25 | 17 | package bindings needed |
+| 50_structure | 30 | 12 | package bindings needed |
 | 52_namespace | 0 | 5 | DTD not supported (permanent) |
 | 53_alignment | 18 | 11 | crashes + math parser |
 | 55_theorem | 4 | 1 | ntheorem (math parser) |
@@ -309,7 +309,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 
 - [ ] **13. enum_test** (50_structure) — port enumitem.sty binding (custom list environments).
 - [x] **14. paralists_test** (50_structure) — DONE. Added `set_enumeration_style`/`set_itemization_style`, `afterDigestBegin` hooks, conditional stock enum/itemize redefinition.
-- [ ] **15. subcaption_test** (50_structure) — port subcaption.sty binding (subfigures).
+- [x] **15. subcaption_test** (50_structure) — DONE. Ported subcaption.sty with beforeFloat/afterFloat preincrement, collapseFloat, \format@title@subfigure. Fixed rescue_caption_counters false-value pollution.
 - [ ] **16. figure_grids_test** (50_structure) — needs graphicx figure grid support.
 - [ ] **17. natbib_test** (50_structure) — port natbib.sty binding (author-year citations).
 - [ ] **18. amsarticle_test** (50_structure) — port amsart.cls binding.

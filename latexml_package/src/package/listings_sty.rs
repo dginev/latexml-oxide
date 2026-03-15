@@ -1697,7 +1697,7 @@ LoadDefinitions!({
      </ltx:float>",
     mode => "internal_vertical",
     before_digest => {
-      crate::engine::latex_ch9_figures_and_tables::before_float("lstlisting");
+      crate::engine::latex_ch9_figures_and_tables::before_float("lstlisting", None);
     },
     after_digest => sub[whatsit] {
       crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
@@ -1714,7 +1714,7 @@ LoadDefinitions!({
       RefStepID!("lstlisting")?
     },
     before_digest => {
-      crate::engine::latex_ch9_figures_and_tables::before_float("lstlisting");
+      crate::engine::latex_ch9_figures_and_tables::before_float("lstlisting", None);
     },
     after_digest => sub[whatsit] {
       crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);

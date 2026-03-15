@@ -222,7 +222,6 @@ fn paralists_test() {
 }
 
 #[test]
-#[ignore] // needs subcaption.sty binding
 fn subcaption_test() {
   latexml_test_single("tests/structure/subcaption.tex", "subcaption", DIR, None, None);
 }

@@ -158,7 +158,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   // before_digest: beforeFloat($type)
   let bt = base_type.clone();
   let before_closure: BeforeDigestClosure = Rc::new(move || {
-    before_float(&bt);
+    before_float(&bt, None);
     Ok(Vec::new())
   });
   options.before_digest.push(before_closure);
