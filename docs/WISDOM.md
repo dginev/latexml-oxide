@@ -396,3 +396,36 @@ which causes undefined-CS errors for bare keys without registered defaults
 `KEYVAL@default@{qname}` key, (b) that the KeyVals parser (`add_value`)
 successfully retrieves it, (c) that the calling code doesn't introduce a
 different key naming convention.
+
+---
+
+## 13. Star (`*`) in CS names causes infinite compile loop
+
+**Date:** 2026-03-15
+
+The `DefMacro!` and `Let!` proc macros enter an infinite loop (OOM kill at
+14GB+) when the control sequence name contains special characters like `*`
+(star) or `{}` (braces). For example:
+
+```rust
+// BROKEN — causes infinite compile loop:
+DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
+Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
+```
+
+The compile-time tokenizer in `latexml_codegen` interprets `*` and `{}`
+as special tokens or parameter spec patterns and gets stuck in an infinite
+matching loop. Both `*` and `{}` are valid in TeX control sequences (e.g.
+`\eqnarray*`, `\begin{foo}`).
+
+**Workaround:** For `Let!`, use the `T_CS!()` wrapper. For `DefMacro!`, use
+`\csname...\endcsname` form or runtime `def_macro()` calls:
+
+```rust
+DefMacro!("\\csname IEEEeqnarray*\\endcsname{}", "\\csname eqnarray*\\endcsname");
+Let!("\\csname endIEEEeqnarray*\\endcsname", "\\csname endeqnarray*\\endcsname");
+```
+
+**Refactoring needed:** `DefMacro!` and `Let!` should accept `T_CS!("\\foo*")`
+as the first argument, bypassing string tokenization entirely. The internal
+tokenizer should also be fixed to handle `*` in CS names without looping.
