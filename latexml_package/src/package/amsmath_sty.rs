@@ -186,6 +186,30 @@ LoadDefinitions!({
   RequirePackage!("amsopn");
 
   //======================================================================
+  // Perl: amsmath.sty.ltxml lines 769-812
+  // Matrix environments
+  DefMacro!("\\lx@ams@matrix {}",
+    "\\lx@gen@matrix@bindings{#1}\\lx@ams@cr@binding\\lx@ams@matrix@{#1}\\lx@begin@alignment");
+  DefMacro!("\\lx@end@ams@matrix",
+    "\\lx@end@alignment\\lx@end@gen@matrix");
+
+  DefMacro!("\\matrix",    "\\lx@ams@matrix{name=matrix,datameaning=matrix}");
+  DefMacro!("\\endmatrix", "\\lx@end@ams@matrix");
+  DefMacro!("\\pmatrix", "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}");
+  DefMacro!("\\endpmatrix", "\\lx@end@ams@matrix");
+  DefMacro!("\\bmatrix", "\\lx@ams@matrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}");
+  DefMacro!("\\endbmatrix", "\\lx@end@ams@matrix");
+  DefMacro!("\\Bmatrix", "\\lx@ams@matrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}");
+  DefMacro!("\\endBmatrix", "\\lx@end@ams@matrix");
+  DefMacro!("\\vmatrix", "\\lx@ams@matrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}");
+  DefMacro!("\\endvmatrix", "\\lx@end@ams@matrix");
+  DefMacro!("\\Vmatrix", "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}");
+  DefMacro!("\\endVmatrix", "\\lx@end@ams@matrix");
+  DefMacro!("\\smallmatrix", "\\lx@ams@matrix{name=smallmatrix,datameaning=matrix,style=\\scriptsize}");
+  DefMacro!("\\endsmallmatrix", "\\lx@end@ams@matrix");
+  DefMacro!("\\matrix@check{}", None);
+
+  //======================================================================
   // Section 4.2 Math spacing commands
   // \, == \thinspace
   // \: == \medspace
@@ -628,6 +652,13 @@ LoadDefinitions!({
     "#1",
     before_digest => { bgroup(); },
     reversion => "\\begin{aligned} #1\\end{aligned}");
+
+  //======================================================================
+  // Perl: amsmath.sty.ltxml lines 1170-1175 — subarray/substack
+  DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}");
+  DefMacro!("\\subarray{}",
+    "\\lx@ams@matrix{name=subarray,style=\\scriptsize,datameaning=list,rowsep=0pt,alignment=#1,alignment-required=true}");
+  DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
 
   //======================================================================
   // subequations environment
