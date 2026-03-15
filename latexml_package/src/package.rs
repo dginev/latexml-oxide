@@ -1,4 +1,6 @@
 // Supported package bindings
+pub mod aas_support_sty;
+pub mod aastex_cls;
 pub mod accents_sty;
 pub mod algorithm_sty;
 pub mod algorithmicx_sty;
@@ -67,6 +69,8 @@ pub mod subcaption_sty;
 pub mod subfigure_sty;
 pub mod subfiles_sty;
 pub mod report_cls;
+pub mod revtex4_cls;
+pub mod revtex4_support_sty;
 pub mod rotating_sty;
 pub mod latin10_def;
 pub mod ly1_fontmap;

@@ -67,7 +67,6 @@ fn aastex631_deluxetable_test() { complex("aastex631_deluxetable"); }
 fn acm_aria_test() { complex("acm_aria"); }
 
 #[test]
-#[ignore] // needs aastex.cls binding
 fn aastex_test_test() { complex("aastex_test"); }
 
 #[test]
