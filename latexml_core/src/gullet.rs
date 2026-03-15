@@ -986,8 +986,8 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         if !quiet {
           if lookup_definition(&token)?.is_some() {
             let message = s!(
-              "The control sequence {:?} should not appear between \\csname and \\endcsname",
-              token
+              "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
+              token, cs
             );
             Error!("unexpected", token, message);
           } else {

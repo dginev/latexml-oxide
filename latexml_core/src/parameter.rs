@@ -314,24 +314,15 @@ impl Parameter {
     let closure = &self.reader;
     let value_from_reader: ArgWrap = closure(self.inner.as_ref(), &self.extra)?;
     let value_arg = if value_from_reader.is_tokens() {
-      let wants_option = self.optional || value_from_reader.is_none();
       match value_from_reader.owned_tokens() {
         Some(mut value) => {
           if let Some(ref semi_chars) = self.semiverbatim {
             value = value.neutralize(semi_chars);
           }
-          if wants_option {
-            if value.is_empty() {
-              ArgWrap::None
-            } else {
-              ArgWrap::Tokens(value)
-            }
-          } else {
-            ArgWrap::Tokens(value)
-          }
+          ArgWrap::Tokens(value)
         },
         None => {
-          if wants_option {
+          if self.optional {
             ArgWrap::None
           } else {
             ArgWrap::Tokens(Tokens!())
