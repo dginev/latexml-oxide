@@ -53,41 +53,51 @@ LoadDefinitions!({
     if let Some(ref props) = props_opt {
       AssignValue!(&s!("fontinfo_{cs_str}"), props.clone());
     }
+    // Perl: $key = 'fontinfo_' . $name; $key .= " at " . ToString($at) if $at;
+    // Shared font key: fonts with same name+size share hyphenchar/skewchar
+    let at_str_opt = if let Some(at_val) = at_pt {
+      Some(s!("{at_val:.1}pt"))
+    } else if let Some(_sc) = scaled {
+      props_opt.as_ref().and_then(|p| p.size).map(|sz| s!("{sz:.1}pt"))
+    } else {
+      None
+    };
+    let shared_key = if let Some(ref at_str) = at_str_opt {
+      s!("fontinfo_{name} at {at_str}")
+    } else {
+      s!("fontinfo_{name}")
+    };
+    // Store CS → shared key mapping
+    state::assign_value(
+      &s!("font_shared_key_{cs_str}"),
+      Stored::String(arena::pin(&shared_key)),
+      None,
+    );
     // Store explicit "at" value for \meaning (Perl: $$fontinfo{at} = ToString($at))
-    if let Some(at_val) = at_pt {
-      let at_str = s!("{at_val:.1}pt");
+    if let Some(ref at_str) = at_str_opt {
       state::assign_value(
         &s!("fontinfo_at_{cs_str}"),
-        Stored::String(arena::pin(&at_str)),
+        Stored::String(arena::pin(at_str)),
         None,
       );
-    } else if let Some(_sc) = scaled {
-      // "scaled" maps to "at" — compute the actual pt value
-      if let Some(ref props) = props_opt {
-        if let Some(sz) = props.size {
-          let at_str = s!("{sz:.1}pt");
-          state::assign_value(
-            &s!("fontinfo_at_{cs_str}"),
-            Stored::String(arena::pin(&at_str)),
-            None,
-          );
-        }
-      }
     }
-    // Perl: $$props{hyphenchar} = LookupRegister('\defaulthyphenchar')
-    // Perl: $$props{skewchar} = LookupRegister('\defaultskewchar')
-    let default_hyphen = lookup_int("\\defaulthyphenchar");
-    state::assign_value(
-      &s!("hyphenchar_{cs_str}"),
-      Stored::Number(Number::new(default_hyphen as i64)),
-      None,
-    );
-    let default_skew = lookup_int("\\defaultskewchar");
-    state::assign_value(
-      &s!("skewchar_{cs_str}"),
-      Stored::Number(Number::new(default_skew as i64)),
-      None,
-    );
+    // Perl: only initialize hyphenchar/skewchar if this font key hasn't been seen before
+    // (shared fontinfo means second \font with same name+size reuses existing values)
+    let hc_key = s!("hyphenchar_{shared_key}");
+    if !state::has_value(&hc_key) {
+      let default_hyphen = lookup_int("\\defaulthyphenchar");
+      state::assign_value(
+        &hc_key,
+        Stored::Number(Number::new(default_hyphen as i64)),
+        Some(Scope::Global),
+      );
+      let default_skew = lookup_int("\\defaultskewchar");
+      state::assign_value(
+        &s!("skewchar_{shared_key}"),
+        Stored::Number(Number::new(default_skew as i64)),
+        Some(Scope::Global),
+      );
+    }
     // Perl: installDefinition(FontDef->new($cs, $key))
     // When the font switch CS is invoked, set current_FontDef so \fontname\font works
     let cs_for_fontdef = cs.clone();

@@ -215,22 +215,29 @@ LoadDefinitions!({
             return Ok(Tokens!(T_CS!("\\lx@default@font")));
           }
         } else {
-          // the argument token is Undefined
-          if token.get_catcode() == Catcode::CS {
-            // but IS a cs \something
-            Error!(
-              "expected",
-              "<register>",
-              "A <register> was supposed to be here",
-              s!("Got {} Defining it now.", token)
-            );
-            // Hackery: to avoid potential repeated errors, define it now as a number register
-            def_register(token, None, Number!(0), None)?; // Dimension, or what?
-            return Ok(Tokens!(T_OTHER!("0")));
+          // Perl: elsif ($defn->isFontDef) { return $defn->getCS; }
+          // Check if this is a font CS defined by \font (has fontinfo in state)
+          let cs_str = token.to_string();
+          if let Some(Stored::Font(_)) = state::lookup_value(&s!("fontinfo_{cs_str}")) {
+            return Ok(Tokens!(token));
           }
         }
+      } else {
+        // the token is Undefined
+        if token.get_catcode() == Catcode::CS {
+          // but IS a cs \something
+          Error!(
+            "expected",
+            "<register>",
+            "A <register> was supposed to be here",
+            s!("Got {} Defining it now.", token)
+          );
+          // Hackery: to avoid potential repeated errors, define it now as a number register
+          def_register(token, None, Number!(0), None)?; // Dimension, or what?
+          return Ok(Tokens!(T_OTHER!("0")));
+        }
       }
-      // If we fall through to here, whatever $token is shouln't have been used with \the
+      // If we fall through to here, whatever $token is shouldn't have been used with \the
       let (the_t, msg) =
         token.with_str(|tstr| (s!("\\the{tstr}"), s!("You can't use {tstr} after \\the")));
       Error!("unexpected", the_t, msg);

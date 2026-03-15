@@ -43,11 +43,18 @@ LoadDefinitions!({
   // hyphenation of uppercase words unless this is positive.
 
   // Perl: getter looks up $$fontinfo{hyphenchar}, setter stores in fontinfo
+  // Uses shared font key so fonts with same name+size share hyphenchar
+  // Perl: $$fontinfo{hyphenchar} = $value (modifies shared hash directly, unscoped)
   DefRegister!("\\hyphenchar FontToken", Number::new(b'-' as i64),
     getter => sub[args] {
       let font_token = args.remove(0).expected_token();
       let cs_str = font_token.to_string();
-      match state::lookup_value(&s!("hyphenchar_{cs_str}")) {
+      // Look up the shared font key for this CS
+      let hc_key = match state::lookup_value(&s!("font_shared_key_{cs_str}")) {
+        Some(Stored::String(s)) => s!("hyphenchar_{}", arena::to_string(s)),
+        _ => s!("hyphenchar_{cs_str}"),
+      };
+      match state::lookup_value(&hc_key) {
         Some(Stored::Number(n)) => n,
         _ => Number::new(b'-' as i64),
       }
@@ -55,10 +62,16 @@ LoadDefinitions!({
     setter => sub[value, _scope, args] {
       let font_token = args.remove(0).expected_token();
       let cs_str = font_token.to_string();
+      // Look up the shared font key for this CS
+      let hc_key = match state::lookup_value(&s!("font_shared_key_{cs_str}")) {
+        Some(Stored::String(s)) => s!("hyphenchar_{}", arena::to_string(s)),
+        _ => s!("hyphenchar_{cs_str}"),
+      };
+      // Perl stores directly in fontinfo hash (unscoped/global)
       state::assign_value(
-        &s!("hyphenchar_{cs_str}"),
+        &hc_key,
         Stored::Number(value.into()),
-        None,
+        Some(Scope::Global),
       );
     }
   );
