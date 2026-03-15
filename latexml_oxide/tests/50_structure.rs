@@ -201,7 +201,6 @@ fn ieee_test() {
 }
 
 #[test]
-#[ignore] // needs natbib.sty binding
 fn natbib_test() {
   latexml_test_single("tests/structure/natbib.tex", "natbib", DIR, None, None);
 }

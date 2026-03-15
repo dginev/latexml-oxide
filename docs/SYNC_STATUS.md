@@ -2,7 +2,7 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-14 (night). Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-15. Only lists open gaps & TODOs; completed items live in git history.
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
@@ -301,7 +301,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 
 - [ ] **8. fonts_test + plainfonts_test** (22_fonts) — `\fontname` format: need "select font X at Ypt" instead of just filename. Store full description in fontinfo at `\font` definition time.
 - [ ] **9. sizes_test** (22_fonts) — 377+ diffs. Font size from `\font` definitions not propagated to Font struct. `\font\myfont=cmr10 at 5pt` → `fontsize="50%"`.
-- [ ] **10. ding_test** (22_fonts) — needs pifont.sty binding + pzd font map.
+- [ ] **10. ding_test** (22_fonts) — pifont.sty + pzd font map DONE. 877 diffs from enumerate nesting + table structure issues.
 - [ ] **11. abxtest_test** (22_fonts) — needs `\hexnumber@`, `\mathxfam` (font allocation macros).
 - [ ] **12. stmaryrd_test** (22_fonts) — needs stmaryrd.sty binding (font symbol map, same pattern as esint/marvosym).
 
@@ -311,14 +311,15 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [x] **14. paralists_test** (50_structure) — DONE. Added `set_enumeration_style`/`set_itemization_style`, `afterDigestBegin` hooks, conditional stock enum/itemize redefinition.
 - [x] **15. subcaption_test** (50_structure) — DONE. Ported subcaption.sty with beforeFloat/afterFloat preincrement, collapseFloat, \format@title@subfigure. Fixed rescue_caption_counters false-value pollution.
 - [ ] **16. figure_grids_test** (50_structure) — needs graphicx figure grid support.
-- [ ] **17. natbib_test** (50_structure) — port natbib.sty binding (author-year citations).
+- [x] **17. natbib_test** (50_structure) — DONE. Full natbib.sty port: citation styles (authoryear/numbers/super), \cite/\citet/\citep/\citealt/\citealp/\citeauthor/\citeyear/\citeyearpar, \bibpunct, \setcitestyle, \bibstyle@* dispatchers, \NAT@wrout/\NAT@@wrout tag generation, \lx@NAT@parselabel bibitem parsing. Fixed Invocation! arg-shifting for None required params.
 - [ ] **18. amsarticle_test** (50_structure) — port amsart.cls binding.
 - [ ] **19. csquotes_test** (50_structure) — port csquotes.sty binding (context-sensitive quoting).
 - [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty + inst_support.sty bindings.
 - [ ] **21. ieee_test** (50_structure) — port IEEEtran.cls binding.
 - [x] **22. acro_test** (50_structure) — DONE. Ported acronym.sty binding + addIndexPhraseKey afterClose hook.
 - [x] **23. glossary_test** (50_structure) — DONE. Implemented glossaries.sty binding with \newglossaryentry, \longnewglossaryentry, \newacronym (state-stored entries), \gls/\Gls/\glspl/\Glspl/\glssymbol (runtime macros with first-use tracking), \printglossary/\printnoidxglossaries.
-- [ ] **24. bibsect_test + crazybib_test** (50_structure) — port biblatex binding.
+- [x] **24. bibsect_test** (50_structure) — DONE. Ported \lx@bibliography, \bibstyle constructors, bibunits.sty binding.
+- [ ] **24b. crazybib_test** (50_structure) — 234 diffs. Needs biblatex binding.
 
 ### Tier 4: Alignment crashes and diffs (unlocks 3–8 tests)
 
