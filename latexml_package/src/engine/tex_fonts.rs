@@ -34,12 +34,13 @@ LoadDefinitions!({
   DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
     let name = name_arg.to_string();
-    let props_opt = if let Some(mut props) = font::decode_fontname(&name,
-      gullet::read_keyword(&["at"])?
-        .map(|_| gullet::read_dimension().unwrap().pt_value(None)),
-      gullet::read_keyword(&["scaled"])?
-        .map(|_| gullet::read_number().unwrap().value_of() as f64 / 1000.0)) {
-      props.name = Some(Cow::Owned(name));
+    // Read optional "at <dimen>" or "scaled <number>"
+    let at_pt = gullet::read_keyword(&["at"])?
+      .map(|_| gullet::read_dimension().unwrap().pt_value(None));
+    let scaled = gullet::read_keyword(&["scaled"])?
+      .map(|_| gullet::read_number().unwrap().value_of() as f64 / 1000.0);
+    let props_opt = if let Some(mut props) = font::decode_fontname(&name, at_pt, scaled) {
+      props.name = Some(Cow::Owned(name.clone()));
       Some(props)
     } else { // Failed?
       let message = s!("Unrecognized font name {:?} Font switch macro {:?}
@@ -48,8 +49,30 @@ LoadDefinitions!({
       None
     };
     gullet::skip_spaces()?;
+    let cs_str = cs.to_string();
     if let Some(ref props) = props_opt {
-      AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
+      AssignValue!(&s!("fontinfo_{cs_str}"), props.clone());
+    }
+    // Store explicit "at" value for \meaning (Perl: $$fontinfo{at} = ToString($at))
+    if let Some(at_val) = at_pt {
+      let at_str = s!("{at_val:.1}pt");
+      state::assign_value(
+        &s!("fontinfo_at_{cs_str}"),
+        Stored::String(arena::pin(&at_str)),
+        None,
+      );
+    } else if let Some(_sc) = scaled {
+      // "scaled" maps to "at" — compute the actual pt value
+      if let Some(ref props) = props_opt {
+        if let Some(sz) = props.size {
+          let at_str = s!("{sz:.1}pt");
+          state::assign_value(
+            &s!("fontinfo_at_{cs_str}"),
+            Stored::String(arena::pin(&at_str)),
+            None,
+          );
+        }
+      }
     }
     // Perl: installDefinition(FontDef->new($cs, $key))
     // When the font switch CS is invoked, set current_FontDef so \fontname\font works

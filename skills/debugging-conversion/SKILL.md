@@ -1,9 +1,9 @@
 ---
-name: debugging-conversion
+name: understanding-a-failure-and-debugging-conversion
 description: Debug a conversion difference between latexml-oxide (Rust) and latexml (Perl) using a minimal TeX example. Use when investigating why a specific TeX construct produces different XML output in Rust vs Perl.
 ---
 
-# Debugging Conversion for Minimal TeX Example
+# Understanding a failure and debugging Conversion for Minimal TeX Example
 
 ### Step 1: Extract Minimal Example
 
@@ -19,10 +19,10 @@ Run latexml-oxide (Rust) and latexml (Perl) on the same input:
 
 ```bash
 # Rust
-cargo run --release --bin latexml_oxide /tmp/debug_minimal.tex > /tmp/debug_rust.xml 2>/tmp/debug_rust.log
+timeout 30 cargo run --release --bin latexml_oxide /tmp/debug_minimal.tex > /tmp/debug_rust.xml 2>/tmp/debug_rust.log
 
 # Perl (--includestyles ensures raw .sty files are processed, matching Rust behavior)
-latexml --includestyles /tmp/debug_minimal.tex > /tmp/debug_perl.xml 2>/tmp/debug_perl.log
+latexml --timeout=30 --includestyles /tmp/debug_minimal.tex > /tmp/debug_perl.xml 2>/tmp/debug_perl.log
 ```
 
 ### Step 3: Compare the Two XMLs
