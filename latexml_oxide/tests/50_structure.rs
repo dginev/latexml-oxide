@@ -193,7 +193,6 @@ fn figures_test() {
 }
 
 #[test]
-#[ignore] // needs glossaries.sty binding
 fn glossary_test() {
   latexml_test_single("tests/structure/glossary.tex", "glossary", DIR, None, None);
 }
