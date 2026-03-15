@@ -315,7 +315,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [ ] **18. amsarticle_test** (50_structure) — port amsart.cls binding.
 - [x] **19. csquotes_test** (50_structure) — DONE. Ported csquotes.sty binding (RawTeX overrides + DefConstructor markers). Fixed DefEnvironment `\FOO` constructor missing bgroup/begin_mode hooks.
 - [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty + inst_support.sty bindings.
-- [ ] **21. ieee_test** (50_structure) — port IEEEtran.cls binding.
+- [x] **21. ieee_test** (50_structure) — DONE. Ported IEEEtran.cls binding (conditionals, keywords/proof/biography environments, IEEEeqnarray redirect, L/C/R columns, list overrides). 979 diffs remain (math parser MathFork/MathBranch).
 - [x] **22. acro_test** (50_structure) — DONE. Ported acronym.sty binding + addIndexPhraseKey afterClose hook.
 - [x] **23. glossary_test** (50_structure) — DONE. Implemented glossaries.sty binding with \newglossaryentry, \longnewglossaryentry, \newacronym (state-stored entries), \gls/\Gls/\glspl/\Glspl/\glssymbol (runtime macros with first-use tracking), \printglossary/\printnoidxglossaries.
 - [x] **24. bibsect_test** (50_structure) — DONE. Ported \lx@bibliography, \bibstyle constructors, bibunits.sty binding.
@@ -324,7 +324,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 ### Tier 4: Alignment crashes and diffs (unlocks 3–8 tests)
 
 - [ ] **25. cells_test** (53_alignment) — stack overflow in state.rs. Debug recursive state lookup.
-- [ ] **26. colortbls_test** (53_alignment) — TooManyErrors. Port colortbl.sty binding.
+- [x] **26. colortbls_test** (53_alignment) — DONE. Ported colortbl.sty binding. Still needs dcolumn.sty + hhline.sty + \newcolumntype for full test pass.
 - [ ] **27. supertabular_test** (53_alignment) — "alignment not active". Port supertabular.sty binding.
 - [ ] **28. badeqnarray_test** (53_alignment) — 306 diffs. Needs afterConstruct `rearrangeEqnarray`.
 
