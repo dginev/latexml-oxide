@@ -30,8 +30,8 @@ LoadDefinitions!({
             document.absorb_string(&format!("Width: {}", w_str), props)?;
           }
         }
-        // &amp;
-        document.absorb_string("&amp;", props)?;
+        // &amp; (literal ampersand)
+        document.absorb_string("&", props)?;
         // ?&GetKeyVal(#1,height)(Height: &GetKeyVal(#1,height))
         if let Some(height) = GetKeyVal(&args[0], "height") {
           let h_str = height.to_string();

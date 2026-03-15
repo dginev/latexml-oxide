@@ -31,7 +31,8 @@ use crate::definition::{
 use crate::document::Document;
 use crate::gullet;
 use crate::mouth;
-use crate::parameter::Parameters;
+use crate::definition::argument::ArgWrap;
+use crate::parameter::{Parameter, Parameters};
 use crate::state::*;
 use crate::stomach::*;
 use crate::tbox::Tbox;
@@ -1102,9 +1103,31 @@ pub fn def_environment(
   });
   after_construct_with_frame.push(pop_frame_closure);
 
+  // Perl Package.pm L1891-1895: "in pure LaTeX would usually have expanded to \env
+  // and would have skipped spaces before parsing args, if any."
+  // Prepend SkipSpaces parameter when the environment has arguments.
+  let paramlist_skips = match paramlist {
+    Some(ref pl) if pl.get_num_args() > 0 => {
+      let skip_spaces_param = Parameter {
+        novalue: true,
+        name: arena::pin_static("SkipSpaces"),
+        spec: arena::pin_static("SkipSpaces"),
+        reader: Rc::new(|_inner, _extra| {
+          gullet::skip_spaces()?;
+          Ok(ArgWrap::None)
+        }),
+        ..Parameter::default()
+      };
+      let mut params = vec![skip_spaces_param];
+      params.extend(pl.get_parameters().into_iter().cloned());
+      Some(Parameters::new(params))
+    },
+    _ => paramlist.clone(),
+  };
+
   let begin_name_constructor = Rc::new(Constructor {
     cs:                T_CS!(begin_name),
-    paramlist:         paramlist.clone(),
+    paramlist:         paramlist_skips,
     replacement:       compiled_replacement.clone(),
     nargs:             options.nargs,
     before_digest:     before_digest_env,
