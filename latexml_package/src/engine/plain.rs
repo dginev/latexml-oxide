@@ -598,7 +598,9 @@ LoadDefinitions!({
   // Ideally, we should set these sizes from class files
   AssignValue!("NOMINAL_FONT_SIZE", 10);
 
-  DefPrimitive!("\\mit", None, require_math => true, font => {family => "italic"});
+  // Perl: \mit is \fam\itfam (plain.tex); in LaTeXML it's not overridden.
+  // In math mode, the default font is already italic, so \mit is effectively a no-op.
+  DefPrimitive!("\\mit", None, require_math => true);
 
   DefPrimitive!("\\frenchspacing", None);
   DefPrimitive!("\\nonfrenchspacing", None);

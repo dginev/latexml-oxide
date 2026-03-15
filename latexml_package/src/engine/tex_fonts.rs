@@ -4,9 +4,6 @@
 
 use crate::prelude::*;
 
-static FONT_TOKEN_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap());
-
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Fonts Family of primitive control sequences
@@ -23,12 +20,32 @@ LoadDefinitions!({
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
+  // Perl: FontDef param type — for \textfont/\scriptfont/\scriptscriptfont, reads family
+  // number and looks up the stored font CS token.  For \font, returns current_FontDef.
   DefParameterType!(FontToken, sub[_inner, _extra] {
     let token = gullet::read_token()?.unwrap();
-    if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
-      gullet::read_number()?;
+    if let Some(font_type) = token.with_str(|ts| {
+      if ts.starts_with("\\textfont") && ts == "\\textfont" { Some("textfont") }
+      else if ts.starts_with("\\scriptscriptfont") && ts == "\\scriptscriptfont" { Some("scriptscriptfont") }
+      else if ts.starts_with("\\scriptfont") && ts == "\\scriptfont" { Some("scriptfont") }
+      else { None }
+    }) {
+      // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf)
+      let fam = gullet::read_number()?.value_of();
+      let key = s!("{font_type}_{fam}");
+      match state::lookup_value(&key) {
+        Some(Stored::Token(t)) => t,
+        _ => token,
+      }
+    } else if token.with_str(|ts| ts == "\\font") {
+      // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font')
+      match state::lookup_value("current_FontDef") {
+        Some(Stored::Token(t)) => t,
+        _ => T_CS!("\\lx@default@font"),
+      }
+    } else {
+      token
     }
-    token
   });
 
   DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
