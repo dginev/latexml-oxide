@@ -50,34 +50,36 @@ LoadDefinitions!({
   DeclareOption!("normalsize", "\\renewcommand*{\\subcapsize}{\\normalsize}");
   DeclareOption!("large", "\\renewcommand*{\\subcapsize}{\\large}");
   DeclareOption!("Large", "\\renewcommand*{\\subcapsize}{\\Large}");
-  DeclareOption!("rm", "");
-  DeclareOption!("sf", "");
-  DeclareOption!("tt", "");
-  DeclareOption!("md", "");
-  DeclareOption!("bf", "");
-  DeclareOption!("up", "");
-  DeclareOption!("it", "");
-  DeclareOption!("sl", "");
-  DeclareOption!("sc", "");
-  DeclareOption!("RM", "");
-  DeclareOption!("SF", "");
-  DeclareOption!("TT", "");
-  DeclareOption!("MD", "");
-  DeclareOption!("BF", "");
-  DeclareOption!("IT", "");
-  DeclareOption!("SL", "");
-  DeclareOption!("SC", "");
-  DeclareOption!("UP", "");
+  DeclareOption!("rm", "\\renewcommand*{\\subcaplabelfont@f}{\\rmfamily}");
+  DeclareOption!("sf", "\\renewcommand*{\\subcaplabelfont@f}{\\sffamily}");
+  DeclareOption!("tt", "\\renewcommand*{\\subcaplabelfont@f}{\\ttfamily}");
+  DeclareOption!("md", "\\renewcommand*{\\subcaplabelfont@c}{\\mdseries}");
+  DeclareOption!("bf", "\\renewcommand*{\\subcaplabelfont@c}{\\bfseries}");
+  DeclareOption!("up", "\\renewcommand*{\\subcaplabelfont@s}{\\upshape}");
+  DeclareOption!("it", "\\renewcommand*{\\subcaplabelfont@s}{\\itshape}");
+  DeclareOption!("sl", "\\renewcommand*{\\subcaplabelfont@s}{\\slshape}");
+  DeclareOption!("sc", "\\renewcommand*{\\subcaplabelfont@s}{\\scshape}");
+  DeclareOption!("RM", "\\renewcommand*{\\subcapfont@f}{\\rmfamily}");
+  DeclareOption!("SF", "\\renewcommand*{\\subcapfont@f}{\\sffamily}");
+  DeclareOption!("TT", "\\renewcommand*{\\subcapfont@f}{\\ttfamily}");
+  DeclareOption!("MD", "\\renewcommand*{\\subcapfont@c}{\\mdseries}");
+  DeclareOption!("BF", "\\renewcommand*{\\subcapfont@c}{\\bfseries}");
+  DeclareOption!("IT", "\\renewcommand*{\\subcapfont@s}{\\itshape}");
+  DeclareOption!("SL", "\\renewcommand*{\\subcapfont@s}{\\slshape}");
+  DeclareOption!("SC", "\\renewcommand*{\\subcapfont@s}{\\scshape}");
+  DeclareOption!("UP", "\\renewcommand*{\\subcapfont@s}{\\upshape}");
   DeclareOption!("figbotcap", "\\figuretopcapfalse");
   DeclareOption!("figtopcap", "\\figuretopcaptrue");
   DeclareOption!("tabbotcap", "\\tabletopcapfalse");
   DeclareOption!("tabtopcap", "\\tabletopcaptrue");
-  DeclareOption!("FIGBOTCAP", "\\figuretopcapfalse\\subfiguretopcapfalse");
-  DeclareOption!("FIGTOPCAP", "\\figuretopcaptrue\\subfiguretopcaptrue");
-  DeclareOption!("TABBOTCAP", "\\tabletopcapfalse\\subtabletopcapfalse");
-  DeclareOption!("TABTOPCAP", "\\tabletopcaptrue\\subtabletopcaptrue");
-  DeclareOption!("loose", "\\sf@tightfalse");
-  DeclareOption!("tight", "\\sf@tighttrue");
+  DeclareOption!("FIGBOTCAP", "\\ExecuteOptions{figbotcap}\\subfiguretopcapfalse");
+  DeclareOption!("FIGTOPCAP", "\\ExecuteOptions{figtopcap}\\subfiguretopcaptrue");
+  DeclareOption!("TABBOTCAP", "\\ExecuteOptions{tabbotcap}\\subtabletopcapfalse");
+  DeclareOption!("TABTOPCAP", "\\ExecuteOptions{tabtopcap}\\subtabletopcaptrue");
+  DeclareOption!("loose",
+    "\\subfigtopskip=10\\p@ \\subfigcapskip=10\\p@ \\subfigcaptopadj=0\\p@ \\subfigbottomskip=10\\p@ \\subfigcapmargin=10\\p@ \\subfiglabelskip=0.33em \\sf@tightfalse");
+  DeclareOption!("tight",
+    "\\subfigtopskip=5\\p@ \\subfigcapskip=0\\p@ \\subfigcaptopadj=3\\p@ \\subfigbottomskip=5\\p@ \\subfigcapmargin=\\z@ \\subfiglabelskip=0.33em plus 0.07em minus 0.03em \\sf@tighttrue");
 
   Digest!("\\ExecuteOptions{normal,footnotesize,FIGBOTCAP,TABBOTCAP,loose}")?;
   ProcessOptions!();
@@ -122,5 +124,7 @@ LoadDefinitions!({
     },
     after_digest => sub[whatsit] { after_float(whatsit); });
 
+  // Perl: DefMacro('\subref OptionalMatch:* Semiverbatim', '\ref{#2}');
+  // Note: OptionalMatch:* blocked by codegen star bug — use simple form
   DefMacro!("\\subref Semiverbatim", "\\ref{#1}");
 });

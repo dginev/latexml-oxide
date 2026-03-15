@@ -163,7 +163,7 @@ fn crazybib_test() {
 }
 
 #[test]
-#[ignore] // needs csquotes.sty binding
+#[ignore] // TooManyErrors — csname expansion errors with \not@math@alphabet@@
 fn csquotes_test() {
   latexml_test_single("tests/structure/csquotes.tex", "csquotes", DIR, None, None);
 }
@@ -187,7 +187,6 @@ fn figure_grids_test() {
 }
 
 #[test]
-#[ignore] // needs figure float infrastructure
 fn figures_test() {
   latexml_test_single("tests/structure/figures.tex", "figures", DIR, None, None);
 }
