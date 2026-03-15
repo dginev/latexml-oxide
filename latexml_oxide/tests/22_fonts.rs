@@ -63,7 +63,7 @@ fn bbold_test() {
 }
 
 #[test]
-#[ignore] // diffs — needs pifont package (pzd font map)
+#[ignore] // 401 diffs — pifont works but enumerate nesting + table structure issues
 fn ding_test() {
   latexml_test_single("tests/fonts/ding.tex", "ding", DIR, None, None);
 }
@@ -91,7 +91,7 @@ fn mathaccents_test() {
 }
 
 #[test]
-#[ignore] // needs stmaryrd.sty symbols via \DeclareMathSymbol
+#[ignore] // 679 diffs — mostly math parser (XMDual)
 fn stmaryrd_test() {
   latexml_test_single("tests/fonts/stmaryrd.tex", "stmaryrd", DIR, None, None);
 }
@@ -123,7 +123,7 @@ fn abxtest_test() {
 }
 
 #[test]
-#[ignore] // many diffs after lastkern fix
+#[ignore] // 376 diffs — font size propagation from \font defs
 fn sizes_test() {
   latexml_test_single("tests/fonts/sizes.tex", "sizes", DIR, None, None);
 }

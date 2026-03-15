@@ -144,7 +144,7 @@ fn acro_test() {
 }
 
 #[test]
-#[ignore] // needs amsart.cls binding
+#[ignore] // 825 diffs — needs \@add@to@frontmatter, MathFork
 fn amsarticle_test() {
   latexml_test_single("tests/structure/amsarticle.tex", "amsarticle", DIR, None, None);
 }
@@ -168,7 +168,7 @@ fn csquotes_test() {
 }
 
 #[test]
-#[ignore] // needs enumitem.sty binding
+#[ignore] // 537 diffs — needs enumitem features
 fn enum_test() {
   latexml_test_single("tests/structure/enum.tex", "enum", DIR, None, None);
 }

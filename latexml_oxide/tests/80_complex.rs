@@ -37,7 +37,7 @@ fn figure_dual_caption_test() { complex("figure_dual_caption"); }
 fn hyperchars_test() { complex("hyperchars"); }
 
 #[test]
-#[ignore] // crash — \lstKV@SetIf@ parameter spec error (listings.sty)
+#[ignore] // 876 diffs — listings.sty issues + math parser
 fn figure_mixed_content_test() { complex("figure_mixed_content"); }
 
 #[test]
@@ -50,7 +50,7 @@ fn labelled_test() { complex("labelled"); }
 fn versioned_fallback_test() { complex("versioned_fallback"); }
 
 #[test]
-#[ignore] // diffs — cleveref references
+#[ignore] // 125 diffs — needs cleveref + MathFork
 fn cleveref_minimal_test() { complex("cleveref_minimal"); }
 
 #[test]

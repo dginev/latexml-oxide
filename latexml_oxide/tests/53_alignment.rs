@@ -15,13 +15,13 @@ fn tabtab_test() {
 // Tests with crashes or large diffs — need alignment/math fixes
 
 #[test]
-#[ignore] // crash — unwrap on None in tex_tables.rs:803
+#[ignore] // stack overflow in state.rs
 fn cells_test() {
   latexml_test_single("tests/alignment/cells.tex", "cells", DIR, None, None);
 }
 
 #[test]
-#[ignore] // crash — removal index out of bounds in normalize.rs
+#[ignore] // TooManyErrors — needs colortbl.sty binding
 fn colortbls_test() {
   latexml_test_single("tests/alignment/colortbls.tex", "colortbls", DIR, None, None);
 }
@@ -103,7 +103,7 @@ fn morse_test() {
 }
 
 #[test]
-#[ignore] // diffs — algorithmic package
+#[ignore] // 101 diffs — \csname expansion in ALG@ macros
 fn algx_test() {
   latexml_test_single("tests/alignment/algx.tex", "algx", DIR, None, None);
 }

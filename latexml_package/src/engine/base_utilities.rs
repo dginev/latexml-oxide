@@ -292,8 +292,23 @@ LoadDefinitions!({
       state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
     });
 
-  // Fallback: if \maketitle wasn't used, this still triggers frontmatter placement
-  DefPrimitive!("\\lx@frontmatter@fallback", None);
+  // Fallback: if \maketitle wasn't used, this still triggers frontmatter placement.
+  // Perl: processes @at@begin@maketitle tokens.
+  DefPrimitive!("\\lx@frontmatter@fallback", None,
+    after_digest => {
+      if let Some(Stored::VecDequeStored(ref tks_list)) = state::lookup_value("@at@begin@maketitle") {
+        let mut all_tokens = Vec::new();
+        for stored_item in tks_list.iter() {
+          if let Stored::Tokens(ref tks) = stored_item {
+            all_tokens.extend(tks.clone().unlist());
+          }
+        }
+        if !all_tokens.is_empty() {
+          let _ = stomach::digest(Tokens::new(all_tokens));
+        }
+        state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
+      }
+    });
 
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
