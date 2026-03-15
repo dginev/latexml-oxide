@@ -150,7 +150,6 @@ fn amsarticle_test() {
 }
 
 #[test]
-#[ignore] // needs biblatex binding
 fn bibsect_test() {
   latexml_test_single("tests/structure/bibsect.tex", "bibsect", DIR, None, None);
 }

@@ -156,53 +156,49 @@ LoadDefinitions!({
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:index"        => "ltx:section");
 
-  // DefConstructor('\lx@bibliography [] Semiverbatim',
-  //   "<ltx:bibliography files='#2' xml:id='#id' "
-  //     . "bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#1'>"
-  //     . "<ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>"
-  //     . "</ltx:bibliography>",
-  //   afterDigest => sub { $_[0]->begingroup;    # wrapped so redefns don't take effect!
-  //     beginBibliography($_[1]);
-  //     $_[0]->endgroup; },
-  //   beforeConstruct => sub { adjustBackmatterElement($_[0], $_[1]); });
+  DefConstructor!("\\lx@bibliography [] Semiverbatim",
+    "<ltx:bibliography files='#2' xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#1'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title></ltx:bibliography>",
+    after_digest => sub[whatsit] {
+      stomach::bgroup();
+      begin_bibliography(whatsit)?;
+      let _ = stomach::egroup();
+    },
+    before_construct => sub[doc,whatsit] {
+      adjust_backmatter_element(doc, whatsit)?;
+    }
+  );
 
-  // # NOTE: This totally needs to be made extensible (parsing *.bst!?!? OMG!)
-  // our $BIBSTYLES = {
-  //   plain    => { citestyle => 'numbers', sort => 'true' },
-  //   unsrt    => { citestyle => 'numbers', sort => 'false' },
-  //   alpha    => { citestyle => 'AY',      sort => 'true' },
-  //   abbrv    => { citestyle => 'numbers', sort => 'true' },
-  //   plainnat => { citestyle => 'numbers', sort => 'true' },
-  //   unsrtnat => { citestyle => 'numbers', sort => 'false' },
-  //   alphanat => { citestyle => 'AY',      sort => 'true' },
-  //   abbrvnat => { citestyle => 'numbers', sort => 'true' } };
-
-  // sub setBibstyle {
-  //   my ($style) = @_;
-  //   $style = ToString($style);
-  //   AssignValue(BIBSTYLE => $style);
-  //   if (my $parms = $$BIBSTYLES{$style}) {
-  //     AssignValue(CITE_STYLE => $$parms{citestyle});
-  //     AssignValue(CITE_SORT  => $$parms{sort}); }
-  //   return; }
-
-  // DefConstructor('\bibstyle{}', sub {
-  //     my ($document, $style) = @_;
-  //     setBibstyle($style);
-  //     # Really ?
-  //     if (my $bib = $document->findnode('//ltx:bibliography')) {
-  //       $document->setAttribute($bib, bibstyle  => LookupValue('BIBSTYLE'));
-  //       $document->setAttribute($bib, citestyle => LookupValue('CITE_STYLE'));
-  //       $document->setAttribute($bib, sort      => LookupValue('CITE_SORT')); }
-  //   },
-  //   afterDigest => sub {
-  //     my $style = ToString($_[1]->getArg(1));
-  //     AssignValue(BIBSTYLE => $style, 'global');
-  //     if (my $parms = $$BIBSTYLES{$style}) {
-  //       AssignValue(CITE_STYLE => $$parms{citestyle}); }
-  //     else {
-  //       Info('unexpected', $style, $_[0], "Unknown bibstyle '$style', it will be ignored"); }
-  //     return; });
+  DefConstructor!("\\bibstyle{}", sub[document, _whatsit, props] {
+    let style = prop_string!(props, "style");
+    set_bibstyle(&style);
+    if let Some(mut bib) = document.findnode("//ltx:bibliography", None) {
+      if let Some(Stored::String(bs)) = lookup_value("BIBSTYLE") {
+        document.set_attribute(&mut bib, "bibstyle", &arena::to_string(bs))?;
+      }
+      if let Some(Stored::String(cs)) = lookup_value("CITE_STYLE") {
+        document.set_attribute(&mut bib, "citestyle", &arena::to_string(cs))?;
+      }
+      if let Some(Stored::String(so)) = lookup_value("CITE_SORT") {
+        document.set_attribute(&mut bib, "sort", &arena::to_string(so))?;
+      }
+    }
+  },
+    after_digest => sub[whatsit] {
+      let style = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+      assign_value("BIBSTYLE", arena::pin(&style), Some(Scope::Global));
+      if let Some((cs, so)) = lookup_bibstyle_params(&style) {
+        assign_value("CITE_STYLE", arena::pin(cs), None);
+        assign_value("CITE_SORT", arena::pin(so), None);
+      } else {
+        Info!("unexpected", style, s!("Unknown bibstyle '{style}', it will be ignored"));
+      }
+    },
+    properties => sub[args] {
+      unpack_opt_ref!(args => style_opt);
+      let style = style_opt.as_ref().map_or(String::new(), |s| s.to_string());
+      Ok(stored_map!("style" => Stored::String(arena::pin(&style))))
+    }
+  );
 
   DefMacro!("\\bibliographystyle Semiverbatim", "\\bibstyle{#1}");
 
@@ -390,7 +386,7 @@ LoadDefinitions!({
 
   // \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
-    "<ltx:bibref show='#1' bibrefs='#bibrefs' separator='#separator'
+    "<ltx:bibref show='#1' bibrefs='#bibrefs' inlist='#bibunit' separator='#separator'
       yyseparator='#yyseparator'>#3#4</ltx:bibref>",
     properties => sub[args] {
       unref!(args => _show, keys, _phrase1, _phrase2);
@@ -400,7 +396,10 @@ LoadDefinitions!({
           None => String::new() },
         "yyseparator" => match state::lookup_tokens("CITE_YY_SEPARATOR") {
           Some(yysep) => stomach::digest(yysep)?.to_string(),
-          None => String::new() }
+          None => String::new() },
+        "bibunit" => match state::lookup_value("CITE_UNIT") {
+          Some(Stored::String(s)) => arena::to_string(s),
+          _ => String::new() }
       ))
     }
   );
@@ -526,11 +525,37 @@ fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
     whatsit.set_property("titlefont", title.get_font()?.unwrap());
     whatsit.set_property("title", title);
   }
-  {
-    whatsit.set_property("bibstyle", lookup_value("BIBSTYLE"));
-    whatsit.set_property("citestyle", lookup_value("CITE_STYLE"));
+  if let Some(bs) = lookup_value("BIBSTYLE") {
+    whatsit.set_property("bibstyle", bs);
+  }
+  if let Some(cs) = lookup_value("CITE_STYLE") {
+    whatsit.set_property("citestyle", cs);
   }
   // And prepare for the likely nonsense that appears within bibliographies
   ResetCounter!("enumiv");
   Ok(())
+}
+
+// Perl: $BIBSTYLES hash — maps bib style names to (citestyle, sort) pairs
+fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
+  match style {
+    "plain"    => Some(("numbers", "true")),
+    "unsrt"    => Some(("numbers", "false")),
+    "alpha"    => Some(("AY",      "true")),
+    "abbrv"    => Some(("numbers", "true")),
+    "plainnat" => Some(("numbers", "true")),
+    "unsrtnat" => Some(("numbers", "false")),
+    "alphanat" => Some(("AY",      "true")),
+    "abbrvnat" => Some(("numbers", "true")),
+    _ => None,
+  }
+}
+
+// Perl: setBibstyle($style) — set BIBSTYLE, CITE_STYLE, CITE_SORT
+fn set_bibstyle(style: &str) {
+  assign_value("BIBSTYLE", arena::pin(style), None);
+  if let Some((cs, so)) = lookup_bibstyle_params(style) {
+    assign_value("CITE_STYLE", arena::pin(cs), None);
+    assign_value("CITE_SORT", arena::pin(so), None);
+  }
 }
