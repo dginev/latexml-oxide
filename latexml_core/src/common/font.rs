@@ -2,7 +2,7 @@ use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::arena::{self, EMPTY_SYM, SymHashMap, SymStr};
 use crate::common::color::{self, Color};
 use crate::common::dimension::Dimension;
-use crate::common::numeric_ops::{NumericOps, UNITY_F64};
+use crate::common::numeric_ops::{NumericOps, UNITY, UNITY_F64, kround};
 use crate::state::*;
 use crate::common::store::Stored;
 use crate::{BoxOps, Digested, DigestedData, Result};
@@ -1374,130 +1374,296 @@ impl Font {
   // Another issue; SVG needs (sometimes) real sizes, even if the programmer
   // set some dimensions to 0 (eg.)   We may need to distinguish & store
   // requested vs real sizes?
+  /// Perl: Font.pm sub computeBoxesSize (L635-680)
+  /// Compute the size of a List of boxes, dispatching to helpers based on layout mode.
   pub fn compute_boxes_size(
     &self,
     boxes: &[Digested],
     options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
-    let fillwidth = match options.get("width") {
-      Some(Stored::Int(fw)) => Some(*fw),
-      None => match lookup_definition(&T_CS!("\\textwidth"))? {
-        Some(def) => def.value_of(Vec::new()).map(|x| x.value_of()),
-        None => None,
-      },
-      _ => None,
+    // Perl L638: my $mode = $boxes->getProperty('mode') || 'restricted_horizontal';
+    let mode_str = match options.get("mode") {
+      Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
+      _ => "restricted_horizontal".to_string(),
     };
-    let _maxwidth = fillwidth.unwrap_or_default();
-    //   # baselineskip, lineskip ??
-    let _baseline = lookup_definition(&T_CS!("\\baselineskip"))?
-      .expect("baseline skip should aways be defined")
-      .value_of(Vec::new())
-      .expect("\\baselineskip should always have a value.")
-      .value_of();
-    let _lineskip = lookup_definition(&T_CS!("\\lineskip"))?
-      .expect("lineskip should always be defined")
-      .value_of(Vec::new())
-      .expect("\\lineskip should always have a value.")
-      .value_of();
-    let mut _lines: Vec<(Dimension, Dimension, Dimension)> = Vec::new();
-    let (mut wd, mut ht, mut dp) = (0.0, 0, 0);
-    let (_minwd, _minht, _mindp) = (0.0, 0.0, 0.0);
-    let _vattach = match options.get("vattach") {
-      Some(Stored::String(vattach)) => *vattach,
-      _ => arena::pin_static("baseline"),
+    // Perl L639-640: determine layout from mode
+    let layout = if mode_str == "horizontal" {
+      "paragraph"
+    } else if mode_str.ends_with("vertical") {
+      "vertical"
+    } else {
+      "restricted_horizontal"
     };
-    // Flatten top-level Lists (orrr pass-thru `fillwidth` ???)
-    let filtered_boxes = boxes
+    // Perl L642: $vattach = $boxes->getProperty('vattach') || $options{vattach} || 'baseline'
+    let vattach = match options.get("vattach") {
+      Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
+      _ => "baseline".to_string(),
+    };
+    // Perl L643-648: wrapwidth for paragraph layout
+    let wrapwidth = if layout == "paragraph" {
+      let ww = match options.get("width") {
+        Some(Stored::Dimension(d)) => Some(d.value_of()),
+        Some(Stored::Int(i)) => Some(*i),
+        _ => match lookup_definition(&T_CS!("\\hsize"))? {
+          Some(def) => def.value_of(Vec::new()).map(|x| x.value_of()),
+          None => None,
+        },
+      };
+      ww
+    } else {
+      None
+    };
+    // Perl L650-651: filter boxes
+    // NOTE: Perl does $boxes->unlist (one level) then filters. In Rust, boxes are
+    // already the unlist'd children. We also flat_map(unlist) to match existing
+    // behavior where nested Lists are flattened (Perl handles nested Lists via
+    // recursive getSize inside computeBoxesSize_box).
+    let owned_filtered: Vec<Digested> = boxes
       .iter()
       .flat_map(|thisbox| thisbox.unlist())
-      .filter(|thisbox| !thisbox.has_property("isEmpty"));
-
-    let mut prevbox_opt: Option<Digested> = None;
-    for mut thisbox in filtered_boxes {
-      // Should any `options` be inherited by the contained boxes?
-      let (w, h, d, ..) = thisbox.get_size(None)?;
-
-      // DG: TODO: We'll have to figure out how to rearrange this logic,
-      //           now that every emitted result of get_size is a Dimension.
-      //           likely the sizing case moves elsewhere?
-      // wd += if w._unit() == "mu" { w.sp_value() } else { w.value_of() };
-      wd += w.value_of() as f64;
-
-      //     if ((ref $h) && $h->can('_unit')) {
-      //       $ht = max($ht, ($h->_unit eq 'mu' ? $h->spValue : $h->valueOf)); }
-      ht = max(ht, h.value_of());
-
-      //     if ((ref $d) && $d->can('_unit')) {
-      //       $dp = max($dp, ($d->_unit eq 'mu' ? $d->spValue : $d->valueOf)); }
-      dp = max(dp, d.value_of());
-
-      // Kern HACK for lists of individual Box's
-      if let Some(prevbox) = prevbox_opt {
-        if matches!(prevbox.data(), DigestedData::TBox(_))
-          && matches!(thisbox.data(), DigestedData::TBox(_))
-        {
-          let prevchar = prevbox.get_string()?.chars().last();
-          let curchar = thisbox.get_string()?.chars().next();
-          let metric = self.get_metric(curchar);
-          if let Some(family) = self.get_family() {
-            if family == "math" {
-              wd += self.math_bearing(&thisbox, &prevbox);
-            }
+      .filter(|thisbox| !thisbox.has_property("isEmpty"))
+      .collect();
+    let filtered: Vec<&Digested> = owned_filtered.iter().collect();
+    // Perl L653-670: dispatch based on layout
+    let lines = if layout == "vertical" {
+      // Perl L654-666: For vertical, ALL boxes are lines
+      let mut lines: Vec<[i64; 3]> = Vec::new();
+      for bx in &filtered {
+        // Perl L658-663: horizontal sub-Lists get paragraph treatment
+        if matches!(bx.data(), DigestedData::List(_)) {
+          let sub_mode = bx
+            .get_property("mode")
+            .map(|v| v.to_string())
+            .unwrap_or_default();
+          if sub_mode == "horizontal" {
+            let sub_boxes: Vec<Digested> = bx.unlist();
+            let sub_refs: Vec<&Digested> = sub_boxes.iter().collect();
+            let sub_width = bx
+              .get_property("width")
+              .and_then(|v| match &*v {
+                Stored::Dimension(d) => Some(d.value_of()),
+                Stored::Int(i) => Some(*i),
+                _ => None,
+              })
+              .or(wrapwidth);
+            let words = self.compute_boxes_size_words(&sub_refs)?;
+            lines.extend(Self::compute_boxes_size_lines(sub_width, &words));
+            continue;
           }
-          if let Some(prevc) = prevchar {
-            if let Some(curc) = curchar {
-              let kern_key = String::from(prevc) + &String::from(curc);
-              if let Some(kern) = metric.kerns.get(kern_key.as_str()) {
-                let size = self.get_size().unwrap_or(DEFSIZE);
-                wd += size * kern;
+        }
+        // Perl L665-666: single box sizing
+        let (w, h, d) = self.compute_boxes_size_box(bx)?;
+        if w != 0 || h != 0 || d != 0 {
+          lines.push([w, h, d]);
+        }
+      }
+      lines
+    } else {
+      // Perl L668-670: Scan all boxes, collecting into "words", then break into lines.
+      let words = self.compute_boxes_size_words(&filtered)?;
+      Self::compute_boxes_size_lines(wrapwidth, &words)
+    };
+    // Perl L673: stack up the multiple lines
+    let (wd, ht, dp) = self.compute_boxes_size_stack(&vattach, &lines);
+    Ok((Dimension::new(wd), Dimension::new(ht), Dimension::new(dp)))
+  }
+
+  /// Perl: Font.pm sub computeBoxesSize_box (L683-702)
+  /// Compute the size of a single box, returning (w, h, d) in sp.
+  fn compute_boxes_size_box(&self, bx: &Digested) -> Result<(i64, i64, i64)> {
+    // Clone to avoid caching side effects on the original box
+    let mut bx_clone = bx.clone();
+    let (w, h, d, ..) = bx_clone.get_size(None)?;
+    Ok((w.value_of(), h.value_of(), d.value_of()))
+  }
+
+  /// Perl: Font.pm sub computeBoxesSize_words (L705-746)
+  /// Compute a list of sizes of space-delimited "words" within a NON-vertical list.
+  /// Returns Vec of [prevspace, wd, ht, dp] where prevspace=-1 means line break.
+  fn compute_boxes_size_words(&self, boxes: &[&Digested]) -> Result<Vec<[f64; 4]>> {
+    let mut words: Vec<[f64; 4]> = Vec::new();
+    let mut prevbox: Option<&Digested> = None;
+    let mut prevspace: f64 = 0.0;
+    // Perl L711: my $size = int($self->getSize || DEFSIZE() || 10);
+    let size = self.get_size().unwrap_or(DEFSIZE) as i64;
+    let (mut wd, mut ht, mut dp): (f64, i64, i64) = (0.0, 0, 0);
+    for bx in boxes {
+      let (w, h, d) = self.compute_boxes_size_box(bx)?;
+      // Perl L716-721: Check for possible line-break points
+      if bx.get_property_bool("isBreak") {
+        if wd != 0.0 || ht != 0 || dp != 0 || prevspace > 0.0 {
+          words.push([prevspace, wd, ht as f64, dp as f64]);
+          wd = 0.0;
+          ht = 0;
+          dp = 0;
+          prevspace = -1.0;
+        } else {
+          prevspace = -1.0;
+        }
+      }
+      // Perl L723-728: isSpace (but not isVerticalSpace) — word boundary
+      else if bx.get_property_bool("isSpace") && !bx.get_property_bool("isVerticalSpace") {
+        if wd != 0.0 || ht != 0 || dp != 0 || prevspace < 0.0 {
+          words.push([prevspace, wd, ht as f64, dp as f64]);
+          wd = 0.0;
+          ht = 0;
+          dp = 0;
+          prevspace = w as f64;
+        } else {
+          prevspace += w as f64;
+        }
+      }
+      // Perl L729-741: Else accumulate into "word"
+      else {
+        wd += w as f64;
+        ht = max(ht, h);
+        dp = max(dp, d);
+        // Perl L734-741: Kern HACK for lists of individual Box's
+        if let Some(pb) = prevbox {
+          if matches!(pb.data(), DigestedData::TBox(_))
+            && matches!(bx.data(), DigestedData::TBox(_))
+          {
+            let prevchar = pb.get_string()?.chars().last();
+            let curchar = bx.get_string()?.chars().next();
+            let metric = self.get_metric(curchar);
+            // Perl L738-739: math bearing
+            if let Some(family) = self.get_family() {
+              if family == "math" {
+                wd += self.math_bearing(bx, pb);
+              }
+            }
+            // Perl L740-741: kerning
+            if let Some(prevc) = prevchar {
+              if let Some(curc) = curchar {
+                let kern_key = String::from(prevc) + &String::from(curc);
+                if let Some(kern) = metric.kerns.get(kern_key.as_str()) {
+                  wd += size as f64 * kern;
+                }
               }
             }
           }
         }
       }
-      //     my $newline = (($options{layout} || '') eq 'vertical')        # EVERY box is a row?
-      //       || ((ref $box) && $box->getProperty('isBreak'))             # || $box is a linebreak
-      //       || ((defined $maxwidth) && ($wd >= $maxwidth));             # or we've reached the
-      // requested width     if ($newline) {
-      //       if (@boxes) {
-      //         if ($baseline > $ht + $dp) {
-      //           $dp = $baseline - $ht; }
-      //         else {
-      //           $dp += $lineskip; } }
-      //       push(@lines, [$wd, $ht, $dp]); $wd = $ht = $dp = 0; }
-      prevbox_opt = Some(thisbox);
+      // Perl L743: $prevbox = $box
+      prevbox = Some(bx);
     }
+    // Perl L744-745: be sure to get last bit
+    if wd != 0.0 || ht != 0 || dp != 0 || prevspace != 0.0 {
+      words.push([prevspace, wd, ht as f64, dp as f64]);
+    }
+    Ok(words)
+  }
 
-    //   if ($wd || $ht || $dp) {    # be sure to get last line
-    //     push(@lines, [$wd, $ht, $dp]); }
-    //   # Deal with multiple lines
-    //   my $nlines = scalar(@lines);
-    //   if ($nlines == 0) {
-    //     $wd = $ht = $dp = 0; }
-    //   else {
-    //     $wd = max(map { $$_[0] } @lines);
-    //     $ht = sum(map { $$_[1] } @lines);
-    //     $dp = sum(map { $$_[2] } @lines);
-    //     if ($vattach eq 'top') {    # Top of box is aligned with top(?) of current text
-    //       my ($w, $h, $d) = $font->getNominalSize;
-    //       $h  = $h->valueOf;
-    //       $dp = $ht + $dp - $h; $ht = $h; }
-    //     elsif ($vattach eq 'bottom') {    # Bottom of box is aligned with bottom (?) of current
-    // text       $ht = $ht + $dp; $dp = 0; }
-    //     elsif ($vattach eq 'middle') {
-    //       my ($w, $h, $d) = $font->getNominalSize;
-    //       $h = $h->valueOf;
-    //       my $c = ($ht + $dp) / 2;
-    //       $ht = $c + $h / 2; $dp = $c - $h / 2; }
-    //     else {                            # default is baseline (of the 1st line)
-    //       my $h = $lines[0][1];
-    //       $dp = $ht + $dp - $h; $ht = $h; } }
+  /// Perl: Font.pm sub computeBoxesSize_lines (L749-766)
+  /// Do line breaking of words into lines, according to wrapwidth (if any), or explicit breaks.
+  fn compute_boxes_size_lines(wrapwidth: Option<i64>, words: &[[f64; 4]]) -> Vec<[i64; 3]> {
+    let mut lines: Vec<[i64; 3]> = Vec::new();
+    let (mut wd, mut ht, mut dp): (f64, i64, i64) = (0.0, 0, 0);
+    for item in words {
+      let (space, w, h, d) = (item[0], item[1], item[2] as i64, item[3] as i64);
+      // Perl L755-757: explicit line break (space == -1)
+      if space == -1.0 {
+        if wd != 0.0 {
+          lines.push([kround(wd), ht, dp]);
+        }
+        wd = w;
+        ht = h;
+        dp = d;
+      }
+      // Perl L758-760: wrapwidth line breaking
+      else if let Some(ww) = wrapwidth {
+        if kround(wd + space * 0.5 + w) > ww {
+          if wd != 0.0 {
+            lines.push([ww, ht, dp]);
+          }
+          wd = w;
+          ht = h;
+          dp = d;
+        } else {
+          wd += space + w;
+          ht = max(ht, h);
+          dp = max(dp, d);
+        }
+      }
+      // Perl L761-764: no wrap — just accumulate
+      else {
+        wd += space + w;
+        ht = max(ht, h);
+        dp = max(dp, d);
+      }
+    }
+    // Perl L765: push final line
+    if wd != 0.0 || ht != 0 || dp != 0 {
+      let final_wd = if let Some(ww) = wrapwidth {
+        if kround(wd) > 0 { ww } else { kround(wd) }
+      } else {
+        kround(wd)
+      };
+      lines.push([final_wd, ht, dp]);
+    }
+    lines
+  }
 
-    Ok((
-      Dimension::new_f64(wd),
-      Dimension::new(ht),
-      Dimension::new(dp),
-    ))
+  /// Perl: Font.pm sub computeBoxesSize_stack (L769-801)
+  /// Sum up a stack of lines, determining w as max, and h & d according to vattach.
+  fn compute_boxes_size_stack(&self, vattach: &str, lines: &[[i64; 3]]) -> (i64, i64, i64) {
+    let nlines = lines.len();
+    if nlines == 0 {
+      (0, 0, 0)
+    } else if nlines == 1 {
+      (lines[0][0], lines[0][1], lines[0][2])
+    } else {
+      // Perl L779-780: baseline adjustment
+      let size = self.get_size().unwrap_or(DEFSIZE) as i64;
+      let baseline = {
+        let bl_pt = BASELINE_MAP
+          .get(&size)
+          .copied()
+          .unwrap_or(size as f64 * 1.2);
+        kround(bl_pt * UNITY_F64)
+      };
+      // Perl L781: $lineskip = $STATE->lookupDefinition(T_CS('\lineskip'))->valueOf->valueOf
+      let lineskip = lookup_definition(&T_CS!("\\lineskip"))
+        .ok()
+        .flatten()
+        .and_then(|def| def.value_of(Vec::new()))
+        .map(|v| v.value_of())
+        .unwrap_or(0);
+      // Perl L782-789: adjust depths for baseline spacing
+      let mut adjusted = lines.to_vec();
+      for i in 0..adjusted.len() - 1 {
+        let cur_depth = adjusted[i][2];
+        let next_height = adjusted[i + 1][1];
+        if cur_depth + next_height < baseline {
+          adjusted[i][2] = baseline - next_height;
+        } else {
+          adjusted[i][2] += lineskip;
+        }
+      }
+      // Perl L790-792
+      let wd = adjusted.iter().map(|l| l[0]).max().unwrap_or(0);
+      let mut ht: i64 = adjusted.iter().map(|l| l[1]).sum();
+      let mut dp: i64 = adjusted.iter().map(|l| l[2]).sum();
+      // Perl L793-800: vattach adjustments
+      if vattach == "middle" {
+        // Perl L793-796
+        let hh = (ht + dp) / 2; // half total height
+        let c = size * UNITY / 4; // math axis ≈ size/4
+        ht = hh + c;
+        dp = hh - c;
+      } else if vattach == "bottom" {
+        // Perl L797-798: align to baseline of bottom row
+        let total = ht + dp;
+        dp = adjusted.last().unwrap()[2];
+        ht = total - dp;
+      } else {
+        // Perl L799-800: default — align to baseline of top row (includes "baseline" & "top")
+        let total = ht + dp;
+        ht = adjusted[0][1];
+        dp = total - ht;
+      }
+      (wd, ht, dp)
+    }
   }
 }
 

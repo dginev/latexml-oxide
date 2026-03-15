@@ -405,7 +405,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.borrow().get_property_bool(key),
       List(ref l) => l.borrow().get_property_bool(key),
       Whatsit(ref w) => w.borrow().get_property_bool(key),
-      _ => todo!(),
+      Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => false,
     }
   }
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> {

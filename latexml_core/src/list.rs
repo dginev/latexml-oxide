@@ -2,7 +2,7 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 use std::fmt;
 
-use crate::common::arena::SymHashMap as HashMap;
+use crate::common::arena::{self, SymHashMap as HashMap};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -11,7 +11,6 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
 
-use crate::common::numeric_ops::NumericOps;
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, TexMode};
 
@@ -92,18 +91,37 @@ impl BoxOps for List {
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { todo!() }
 
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
-  fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(&self, mut options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     let font = self.font.as_ref().cloned().unwrap_or_else(Font::text_default);
-    // Perl: horizontal mode Lists use paragraph layout with wrapwidth = width property
-    let is_paragraph = matches!(self.mode, Some(TexMode::Text));
-    let (wd, ht, dp) = font.compute_boxes_size(&self.boxes, options)?;
-    if is_paragraph {
-      // Perl: for paragraph layout, line width = stored width property (\hsize)
-      if let Some(Stored::Dimension(d)) = self.properties.get("width") {
-        return Ok((Dimension::new(d.value_of()), ht, dp));
+    // Perl: pass mode, vattach, and width from List properties through options
+    // so that compute_boxes_size can determine layout mode
+    //
+    // In Perl, List stores mode as a property string ("horizontal", "restricted_horizontal",
+    // "internal_vertical"). In Rust, we have: list.mode = TexMode::Text for horizontal modes.
+    // The actual mode string may be stored as a property, OR we infer from context:
+    //  - If "width" property is set, this is a horizontal-mode List (paragraph layout)
+    //  - Otherwise, default to "restricted_horizontal"
+    if let Some(mode_str) = self.properties.get("mode") {
+      if let Stored::String(s) = mode_str {
+        options.insert("mode", Stored::String(*s));
+      }
+    } else if self.properties.get("width").is_some()
+      && matches!(self.mode, Some(TexMode::Text))
+    {
+      // Lists with width property set are from horizontal mode (paragraph layout)
+      options.insert("mode", Stored::String(arena::pin_static("horizontal")));
+    }
+    if let Some(vattach) = self.properties.get("vattach") {
+      if let Stored::String(s) = vattach {
+        options.insert("vattach", Stored::String(*s));
       }
     }
-    Ok((wd, ht, dp))
+    if let Some(width) = self.properties.get("width") {
+      if options.get("width").is_none() {
+        options.insert("width", width.clone());
+      }
+    }
+    font.compute_boxes_size(&self.boxes, options)
   }
 }
 

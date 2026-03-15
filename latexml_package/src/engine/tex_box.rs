@@ -118,8 +118,16 @@ LoadDefinitions!({
       }
     }
     let mut properties = SymHashMap::default();
+    // Perl: List stores mode property from current TeX mode string.
+    // Only set for vertical modes to enable vertical stacking in compute_size.
+    // Not set for horizontal modes to avoid interfering with repack_horizontal's
+    // mode detection logic which defaults to "horizontal" when mode property is None.
+    let mode_str = state::lookup_string("MODE");
+    if mode_str.ends_with("vertical") {
+      properties.insert("mode", Stored::String(arena::pin(&mode_str)));
+    }
     // Perl: List() sets width => \hsize when mode eq 'horizontal' (NOT restricted_horizontal)
-    if matches!(mode, Some(TexMode::Text)) && state::lookup_string("MODE") == "horizontal" {
+    if matches!(mode, Some(TexMode::Text)) && mode_str == "horizontal" {
       if let Some(hsize) = state::lookup_dimension("\\hsize") {
         properties.insert("width", Stored::Dimension(hsize));
       }
