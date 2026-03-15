@@ -184,28 +184,84 @@ LoadDefinitions!({
   // otherwise, just append to the last item in $tag.
 
   // \@add@to@frontmatter{tag}[label]{content}
-  DefPrimitive!("\\@add@to@frontmatter {} [] {}", sub[(_tag,_label,_tokens)] {
-  //     $tag = ToString($tag);
-  //     $label = ToString($label) if $label;
-  //     my $frontmatter = LookupValue('frontmatter');
-
-  //     my $inpreamble = LookupValue('inPreamble');
-  //     AssignValue(inPreamble => 0);
-  //     my $datum = Digest(Tokens(T_BEGIN, $tokens, T_END));
-  //     AssignValue(inPreamble => $inpreamble);
-  //     if ($label) {
-  //       my $entry;
-  //       foreach my $item (@{ $$frontmatter{$tag} || [] }) {
-  //         my ($itag, $iattr, @stuff) = @$item;
-  //         if ($label eq ($$iattr{label} || '')) {
-  //           push(@$item, $datum);
-  //           return; } } }
-  //     elsif (my $list = $$frontmatter{$tag}) {
-  //       push(@{ $$list[-1] }, $datum);
-  //       return; }
-  //     push(@{ $$frontmatter{$tag} }, [$tag, ($label ? { label => $label } : undef), $datum]);
-    // Stub: full frontmatter manipulation is deferred.
+  // Perl: defers processing by pushing \@add@to@frontmatter@now invocation
+  // into @at@begin@maketitle, which is digested at \maketitle time.
+  DefPrimitive!("\\@add@to@frontmatter {} [] {}", sub[(tag, label, tokens)] {
+    // Build invocation: \@add@to@frontmatter@now{tag}[label]{tokens}
+    let mut inv_tokens = vec![T_CS!("\\@add@to@frontmatter@now"), T_BEGIN!()];
+    inv_tokens.extend(tag.unwrap_or_default().unlist());
+    inv_tokens.push(T_END!());
+    if let Some(ref lbl) = label {
+      inv_tokens.push(T_OTHER!("["));
+      inv_tokens.extend(lbl.clone().unlist());
+      inv_tokens.push(T_OTHER!("]"));
+    }
+    inv_tokens.push(T_BEGIN!());
+    inv_tokens.extend(tokens.unwrap_or_default().unlist());
+    inv_tokens.push(T_END!());
+    let _ = state::push_value("@at@begin@maketitle", Stored::Tokens(Tokens::new(inv_tokens)));
   });
+
+  // \@add@to@frontmatter@now{tag}[label]{content}
+  // Actually processes content into the frontmatter hash.
+  DefPrimitive!("\\@add@to@frontmatter@now {} [] {}",
+    sub[(tag_tks, label_opt, tokens)] {
+    let tag = tag_tks.unwrap().to_string();
+    let label = label_opt.as_ref().map(|l| l.to_string());
+    let inpreamble = lookup_bool("inPreamble");
+    assign_value("inPreamble", false, None);
+
+    // Digest the content tokens
+    let mut wrapped = vec![T_BEGIN!()];
+    wrapped.extend(tokens.unwrap_or_default().unlist());
+    wrapped.push(T_END!());
+    let datum = stomach::digest(Tokens::new(wrapped))?;
+
+    assign_value("inPreamble", inpreamble, None);
+
+    state::with_value_mut("frontmatter", |val_opt| {
+      let frontmatter = match val_opt {
+        Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
+        _ => fatal!(TexPool, Expected, "Frontmatter hash missing"),
+      };
+      if let Some(ref lbl) = label {
+        // Look for existing item with matching label
+        if let Some(list) = frontmatter.get_mut(&tag) {
+          for item in list.iter_mut() {
+            let (_, ref iattr, _) = item;
+            if let Some(ref attrs) = iattr {
+              if attrs.get("label").map(|s| s.as_str()) == Some(lbl.as_str()) {
+                // Append datum to existing item
+                let (_, _, ref mut existing_content) = item;
+                let items = vec![existing_content.clone(), datum.clone()];
+                *existing_content = Digested::from(List::new(items));
+                return Ok(());
+              }
+            }
+          }
+        }
+      } else if let Some(list) = frontmatter.get_mut(&tag) {
+        // No label: append datum to last item in tag
+        if let Some(last) = list.last_mut() {
+          let (_, _, ref mut existing_content) = last;
+          let items = vec![existing_content.clone(), datum.clone()];
+          *existing_content = Digested::from(List::new(items));
+          return Ok(());
+        }
+      }
+      // New entry
+      let attrs = label.map(|l| {
+        let mut m = HashMap::default();
+        m.insert("label".to_string(), l);
+        m
+      });
+      let entry = (tag.clone(), attrs, datum);
+      frontmatter.entry(tag).or_insert_with(Vec::new).push(entry);
+      Ok(())
+    })?;
+  },
+  before_digest => { stomach::bgroup(); },
+  after_digest => { let _ = stomach::egroup(); });
 
   // Add FrontMatter at document begin, unless deferred to a better position.
   Tag!("ltx:document", after_open_late => sub[document,_root] {
@@ -217,7 +273,24 @@ LoadDefinitions!({
   // Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
-    after_digest => { state::assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
+    after_digest => {
+      // Perl: digest @at@begin@maketitle tokens (which runs \@add@to@frontmatter@now
+      // for each deferred frontmatter entry, populating the frontmatter hash)
+      if let Some(Stored::VecDequeStored(ref tks_list)) = state::lookup_value("@at@begin@maketitle") {
+        // Collect all token lists into one
+        let mut all_tokens = Vec::new();
+        for stored_item in tks_list.iter() {
+          if let Stored::Tokens(ref tks) = stored_item {
+            all_tokens.extend(tks.clone().unlist());
+          }
+        }
+        if !all_tokens.is_empty() {
+          let _ = stomach::digest(Tokens::new(all_tokens));
+        }
+        state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
+      }
+      state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
+    });
 
   // Fallback: if \maketitle wasn't used, this still triggers frontmatter placement
   DefPrimitive!("\\lx@frontmatter@fallback", None);
