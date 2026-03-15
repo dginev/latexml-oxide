@@ -755,7 +755,7 @@ pub fn rearrange_ams_gather(
     }
     // Unwrap _Capture_ elements, set Math mode to display
     let children: Vec<Node> = equation.get_child_elements();
-    for mut child in children {
+    for child in children {
       let qname = document::get_node_qname(&child);
       if qname == arena::pin_static("ltx:_Capture_") {
         document.unwrap_nodes(child)?;

@@ -615,7 +615,12 @@ impl BoxOps for Alignment {
           let box_ref = cell.boxes.as_ref().unwrap();
           // local $LaTeXML::BOX
           document.set_box_to_absorb(Some(box_ref.clone()));
-          if ismath {
+          // Perl wraps cell content in XMArg for math alignments, but NOT for _Capture_ columns
+          // (_Capture_ is not in the schema, so Perl's openElement validation prevents XMArg there)
+          let cur_qname = crate::document::get_node_qname(document.get_node());
+          let wrap_xmarg = ismath
+            && !crate::common::arena::to_string(cur_qname).ends_with("_Capture_");
+          if wrap_xmarg {
             // Hacky!
             document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None)?;
           }
@@ -628,7 +633,7 @@ impl BoxOps for Alignment {
           if let Some(ref post) = post_absorb {
             document.absorb(post, None)?;
           }
-          if ismath {
+          if wrap_xmarg {
             // Hacky!
             document.close_element("ltx:XMArg")?;
           }
