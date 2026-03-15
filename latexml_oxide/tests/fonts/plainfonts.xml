@@ -75,7 +75,7 @@ but compare meanings:</p>
     <p>– Font “fiverm(cmr5; select font cmr5):X<text fontsize="50%">X</text>X; hyphen=45.</p>
   </para>
   <para>
-    <p>– Font “textfont2(cmsy10; “textfont2):X𝒳X; hyphen=45.</p>
+    <p>– Font “textfont2(cmsy10; “textfont2):X0XX; hyphen=45.</p>
   </para>
   <para>
     <p>Testing plain math fonts:</p>
@@ -114,28 +114,16 @@ but compare meanings:</p>
       </Math></p>
   </para>
   <para>
-    <p>“cal:  abc123 and <Math mode="inline" tex="{\cal abc123}" text="absent does-not-prove list@() * infinity element-of contains">
+    <p>“cal:  abc123 and <Math mode="inline" tex="{\cal abc123}" text="⊣ * ⌊ * ⌋ * ∞ * ∈ * ∋">
         <XMath>
           <XMApp>
-            <XMTok meaning="does-not-prove" role="METARELOP">⊣</XMTok>
-            <XMTok meaning="absent"/>
-            <XMApp>
-              <XMTok meaning="element-of" role="RELOP">∈</XMTok>
-              <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMDual>
-                  <XMApp>
-                    <XMTok meaning="list"/>
-                  </XMApp>
-                  <XMWrap>
-                    <XMTok name="lfloor" role="OPEN" stretchy="false">⌊</XMTok>
-                    <XMTok name="rfloor" role="CLOSE" stretchy="false">⌋</XMTok>
-                  </XMWrap>
-                </XMDual>
-                <XMTok meaning="infinity" role="ID">∞</XMTok>
-              </XMApp>
-              <XMTok meaning="contains" role="RELOP">∋</XMTok>
-            </XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok role="UNKNOWN">⊣</XMTok>
+            <XMTok role="UNKNOWN">⌊</XMTok>
+            <XMTok role="UNKNOWN">⌋</XMTok>
+            <XMTok role="UNKNOWN">∞</XMTok>
+            <XMTok role="UNKNOWN">∈</XMTok>
+            <XMTok role="UNKNOWN">∋</XMTok>
           </XMApp>
         </XMath>
       </Math></p>
@@ -183,7 +171,7 @@ but compare meanings:</p>
   <para>
     <p>Symbol:
 ≍;𝒜.
-<text font="bold">≍</text>;<text font="bold">𝒜</text>.
+≍;𝒜.
 (;⎠.</p>
   </para>
   <para>

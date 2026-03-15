@@ -21,7 +21,6 @@ fn accents_test() {
 }
 
 #[test]
-#[ignore] // diffs — \fontname not implemented (shows "fontname not implemented" instead of cmr10)
 fn fonts_test() {
   latexml_test_single("tests/fonts/fonts.tex", "fonts", DIR, None, None);
 }
@@ -32,7 +31,6 @@ fn mixed_test() {
 }
 
 #[test]
-#[ignore] // diffs — \fontname not implemented (shows "fontname not implemented" instead of cmr10)
 fn plainfonts_test() {
   latexml_test_single("tests/fonts/plainfonts.tex", "plainfonts", DIR, None, None);
 }

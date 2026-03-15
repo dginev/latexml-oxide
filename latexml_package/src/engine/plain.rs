@@ -592,8 +592,18 @@ LoadDefinitions!({
     font => {shape => "slanted", family => "serif", series => "medium" });
   DefPrimitive!("\\sc", None,
     font => {shape => "smallcaps", family => "serif", series => "medium" });
-  DefPrimitive!("\\cal", None,
-    font => {family => "caligraphic", series => "medium", shape => "upright" });
+  // Perl: DefPrimitiveI('\cal', undef, sub {
+  //   if (LookupValue('IN_MATH')) {
+  //     MergeFont(family=>'caligraphic', series=>'medium', shape=>'upright', encoding=>'OMS');
+  //     return Box(undef, undef, undef, T_CS('\cal')); } return; });
+  DefPrimitive!("\\cal", {
+    if state::lookup_bool("IN_MATH") {
+      merge_font(fontmap!(family => "caligraphic", series => "medium",
+        shape => "upright", encoding => "OMS"));
+    }
+    Tbox::new(arena::pin_static(""), None, None, Tokens::from(T_CS!("\\cal")),
+      SymHashMap::default())
+  });
 
   // Ideally, we should set these sizes from class files
   AssignValue!("NOMINAL_FONT_SIZE", 10);
@@ -2114,13 +2124,22 @@ LoadDefinitions!({
   });
 
   // Change math font while still in text!
-  DefPrimitive!("\\boldmath", None);
-  //  beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 1),
-  // 'local'); }, forbidMath => 1);
-  DefPrimitive!("\\unboldmath", None);
-  // TODO:
-  // beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0),
-  // 'local'); }, forbidMath => 1);
+  // Perl: AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 1), 'local')
+  DefPrimitive!("\\boldmath", None,
+    before_digest => {
+      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let merged = mf.merge(Font { forcebold: Some(true), ..Font::default() });
+      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+    },
+    forbid_math => true);
+  // Perl: AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0), 'local')
+  DefPrimitive!("\\unboldmath", None,
+    before_digest => {
+      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let merged = mf.merge(Font { forcebold: Some(false), ..Font::default() });
+      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+    },
+    forbid_math => true);
 });
 
 fn non_typewriter(font: &Font) -> bool {

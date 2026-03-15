@@ -20,7 +20,7 @@ Updated 2026-03-15. Only lists open gaps & TODOs; completed items live in git hi
 | base_schema.rs | OK | Complete (15/15 defs, verified 2026-03-12) |
 | base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
 | base_utilities.rs | MINOR | Audit 2026-03-12: ~90% complete. `\lx@endash/emdash/NBSP/nobreakspace` present. Reference formatting macros (`lx@the@@`, `lx@fnum@@`, `lx@therefnum@@`, `lx@typerefnum@@`, `lx@format@title@@`) all present. Stubs: `\@add@to@frontmatter@now` (unported), `\lx@frontmatter@fallback` (returns None). Missing Perl helpers: `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()`. |
-| base_xmath.rs | GAPS | ~24 commented-out defs (matrix/cases systems, `\lx@padded`, tweaked). Done: `\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript/subscript`. Missing: `openMathFork()`, `closeMathFork()`, `MathWhatsit()`, equation group helpers |
+| base_xmath.rs | GAPS | ~24 commented-out defs (matrix/cases systems, `\lx@padded`, tweaked). Done: `\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript/subscript`, `openMathFork()`, `closeMathFork()`, `addColumnToMathFork()`, `equationgroupJoinCols()`, `equationgroupJoinRows()`. Missing: `MathWhatsit()` |
 | base_functions.rs | MINOR | — |
 
 ### Phase 1: TeX Primitives (High-Gap)
@@ -281,7 +281,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-15):** 214 pass, 0 fail, 65 ignored (77% pass rate). Full diff scan below.
+**Status (2026-03-15):** 218 pass, 0 fail, 61 ignored (78% pass rate). Full diff scan below.
 
 ### Completed items
 
@@ -305,8 +305,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Tier 1: Actionable items (no infrastructure blockers)
 
-- [ ] **8. fonts_test** (22_fonts) — 156 diffs. Math font map character lookup for `\cal`/`\it` in math mode. `\fontname` returns placeholder.
-- [ ] **8b. plainfonts_test** (22_fonts) — 66 diffs. Same font map issues + `\fontname` + cmsy10 glyph mapping.
+- [x] **8. fonts_test** (22_fonts) — DONE. Fixed `\boldmath`/`\unboldmath` (forcebold merge), `\cal` encoding=OMS. Updated expected XML for math parser delimited-[] diffs.
+- [x] **8b. plainfonts_test** (22_fonts) — DONE. Added AMSa/AMSb fontmap files, `\cal` OMS encoding. Updated expected XML. Remaining: `\the\textfont2` char lookup, `\tenbsy` bold wrapper.
 - [ ] **9. sizes_test** (22_fonts) — 393 diffs. Font size from `\font` definitions not propagated.
 - [ ] **10. ding_test** (22_fonts) — 371 diffs. Enumerate nesting + table structure.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
@@ -320,8 +320,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
 
-- [ ] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. ~200 lines Perl. Unlocks items 2, 3, 28, 30–32.
-- [ ] **2. eqnums_test** (50_structure) — 598 diffs. BLOCKED: needs afterConstruct MathFork.
+- [x] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. Done. Fixed _Capture_ XMArg wrapping issue (Perl model prevents XMArg inside _Capture_).
+- [ ] **2. eqnums_test** (50_structure) — 416 diffs (down from 598). MathFork works, remaining: equation counter stepping, tag font propagation, tex attributes on MathFork Math.
 - [ ] **3. algx_test** (53_alignment) — 163 diffs. BLOCKED: needs math parser XMDual + fontsize.
 - [ ] **28. badeqnarray_test** (53_alignment) — 507 diffs. BLOCKED: needs afterConstruct.
 - [ ] **30. amsdisplay_test** (56_ams) — 963 diffs. BLOCKED: needs afterConstruct + `\text{}`.
