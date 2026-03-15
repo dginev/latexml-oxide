@@ -226,9 +226,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 207 pass, 0 fail, 54 ignored test functions (updated 2026-03-15)**
+**Current totals: 214 pass, 0 fail, 47 ignored test functions (updated 2026-03-15)**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 60% of Perl test cases passing**
+**Coverage: 82% of Perl test cases passing (214/261)**
 
 | Suite | Pass | Ignored | Notes |
 |-------|------|---------|-------|
@@ -290,8 +290,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 ### Tier 1: Small fixes to un-ignore existing tests (1–2 tests each)
 
 - [x] **1. xkeyvalview_test** (32_keyval) — DONE. Ported `\xkvview` constructor with typewriter font, table counter, XKVVIEW_TRACKING.
-- [ ] **2. eqnums_test** (50_structure) — 0 errors, 362 diffs. Fixed agc drift (read_match, read_until_brace, newline@noskip extra }). Remaining: equation numbering/tags/MathFork infrastructure for AMS align, font-italic in tag primes.
-- [ ] **3. algx_test** (53_alignment) — 100 diffs. algorithmicx ported but `\csname` expansion errors in nested `\ALG@bl@...` macros. Fix `\csname`/`\edef` in gullet.rs.
+- [ ] **2. eqnums_test** (50_structure) — 362 diffs. BLOCKED: needs MathFork infrastructure (afterConstruct rearrangement).
+- [ ] **3. algx_test** (53_alignment) — 141 diffs. csname errors FIXED (optional parameter bug). Remaining: math parser XMDual + algorithmic line number fontsize.
 - [x] **4. figures_test** (50_structure) — DONE. Ported subfigure.sty font options (DeclareOption handlers).
 - [x] **5. floatnames_test** (50_structure) — DONE. Ported `\newfloat` (float.sty) and `\DeclareFloatingEnvironment` (newfloat.sty) with full float environment creation, beforeFloat/afterFloat, addFloatFrames.
 - [x] **6. filelist_test** (50_structure) — DONE. Fixed `\@filelist` init to `\@gobble` (matching latex.ltx), added `\@addtofilelist` in `input_definitions`, added `RequirePackage!("textcomp")` to latex.rs engine.
@@ -299,7 +299,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 
 ### Tier 2: Font system improvements (unlocks 2–6 font tests)
 
-- [ ] **8. fonts_test + plainfonts_test** (22_fonts) — `\fontname` format: need "select font X at Ypt" instead of just filename. Store full description in fontinfo at `\font` definition time.
+- [ ] **8. fonts_test + plainfonts_test** (22_fonts) — fonts: 177 diffs (delimited-[] math parser + `\rm`/`\bf` tex attr). plainfonts: 72 diffs (`\the\fontCS` returns 0, fontsize not propagated, `\meaning` after hyphenchar assignment). Per-font `\hyphenchar` + `\defaulthyphenchar` init FIXED.
 - [ ] **9. sizes_test** (22_fonts) — 377+ diffs. Font size from `\font` definitions not propagated to Font struct. `\font\myfont=cmr10 at 5pt` → `fontsize="50%"`.
 - [ ] **10. ding_test** (22_fonts) — pifont.sty + pzd font map DONE. 877 diffs from enumerate nesting + table structure issues.
 - [ ] **11. abxtest_test** (22_fonts) — needs `\hexnumber@`, `\mathxfam` (font allocation macros).
@@ -313,7 +313,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [ ] **16. figure_grids_test** (50_structure) — needs graphicx figure grid support.
 - [x] **17. natbib_test** (50_structure) — DONE. Full natbib.sty port: citation styles (authoryear/numbers/super), \cite/\citet/\citep/\citealt/\citealp/\citeauthor/\citeyear/\citeyearpar, \bibpunct, \setcitestyle, \bibstyle@* dispatchers, \NAT@wrout/\NAT@@wrout tag generation, \lx@NAT@parselabel bibitem parsing. Fixed Invocation! arg-shifting for None required params.
 - [ ] **18. amsarticle_test** (50_structure) — port amsart.cls binding.
-- [ ] **19. csquotes_test** (50_structure) — port csquotes.sty binding (context-sensitive quoting).
+- [x] **19. csquotes_test** (50_structure) — DONE. Ported csquotes.sty binding (RawTeX overrides + DefConstructor markers). Fixed DefEnvironment `\FOO` constructor missing bgroup/begin_mode hooks.
 - [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty + inst_support.sty bindings.
 - [ ] **21. ieee_test** (50_structure) — port IEEEtran.cls binding.
 - [x] **22. acro_test** (50_structure) — DONE. Ported acronym.sty binding + addIndexPhraseKey afterClose hook.
