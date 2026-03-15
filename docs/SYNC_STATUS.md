@@ -224,34 +224,35 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 199 pass, 0 fail, 43 ignored test functions**
+**Current totals: 199 pass, 0 fail, 61 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 60% of Perl test cases passing**
 
-| Suite | Pass/Total | Notes |
-|-------|-----------|-------|
-| 000_hello | 1/1 | |
-| 00_tokenize | 14/14 | All pass |
-| 00_contrib | 1/1 | All pass |
-| 01_unit_tokens | 1/1 | |
-| 01_unit_state | 9/9 | |
-| 10_expansion | 36/36 | All pass (Rust 48 .tex, Perl 47) |
-| 12_grouping | 2/2 | All pass |
-| 20_digestion | 10/10 | All pass |
-| 22_fonts | 11/23 | 11 pass (bbold un-ignored); 12 ignored |
-| 30_encoding | 26/26 | All pass |
-| 32_keyval | 7/8 | 7 pass; 1 ignored (xkeyvalview) |
-| 33_keyval_options | 11/11 | All pass |
-| 50_structure | 24/24 | All pass (18 .todo disabled at build level) |
-| 52_namespace | 0/5 | **All ignored** — DTD not supported in Rust port |
-| 53_alignment | 13/29 | halign, tabtab, tabularstar, morse, mathmix, halignatt, longtable, min_listing, min_listing_data, min_listing_lang, min_listing_short, min_listing_string, min_listing_display pass; 16 ignored |
-| 55_theorem | 4/4 | All pass (ntheorem disabled) |
-| 56_ams | 1/7 | genfracs pass; 6 ignored (need afterConstruct DOM rearrangement for MathFork/MathBranch) |
-| 65_graphics | 5/9 | 5 pass; 4 ignored |
-| 70_parse | 0/1 | **All ignored** — math parser regression tests |
-| 700_unit_parse | 3/3 | |
-| 80_complex | 8/16 | xii, figure_dual_caption, hyperchars, hypertest, versioned_fallback, equationnest, tcilatex_minimal, labelled pass; 8 ignored |
-| 81_babel | 0/1 | **All ignored** — needs babel language `.ldf` files |
+| Suite | Pass | Ignored | Notes |
+|-------|------|---------|-------|
+| 000_hello | 1 | 0 | |
+| 00_tokenize | 14 | 0 | |
+| 00_contrib | 1 | 0 | |
+| 01_unit_tokens | 1 | 0 | |
+| 01_unit_state | 9 | 0 | |
+| 10_expansion | 36 | 0 | |
+| 12_grouping | 2 | 0 | |
+| 20_digestion | 10 | 0 | |
+| 22_fonts | 17 | 6 | fonts, plainfonts, ding, stmaryrd, abxtest, sizes |
+| 30_encoding | 26 | 0 | |
+| 32_keyval | 7 | 1 | xkeyvalview |
+| 33_keyval_options | 11 | 0 | |
+| 40_math | 0 | 1 | math parser deferred |
+| 50_structure | 24 | 18 | package bindings needed |
+| 52_namespace | 0 | 5 | DTD not supported (permanent) |
+| 53_alignment | 18 | 11 | crashes + math parser |
+| 55_theorem | 4 | 1 | ntheorem (math parser) |
+| 56_ams | 2 | 5 | afterConstruct rearrangement |
+| 65_graphics | 5 | 4 | package bindings + xcolor |
+| 70_parse | 0 | 1 | math parser regression |
+| 700_unit_parse | 3 | 0 | |
+| 80_complex | 5 | 8 | package bindings + cleveref |
+| 81_babel | 0 | 1 | memory leak |
 
 ### Perl-only tests (not yet copied to Rust)
 
@@ -278,250 +279,110 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 ### Daemon frame pattern (not yet ported)
 Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate state per conversion. This creates a locked frame, deep-copies mutable values, and allows rollback after conversion. Rust has the code commented out as TODO (state.rs L1784-1818). Currently Rust relies on `initialize_singletons` + `Core::new` resetting STATE/GULLET/STOMACH/MODEL/REPORT/LOCALIZED_VARS, which is sufficient for single-conversion use but lacks the deep-copy rollback semantics needed for daemon mode.
 
-### ntheorem test gap analysis
-- **Math parser tree structure** (873/896 diffs): XMApp/XMTok nesting differs due to Marpa-based parser architecture. Not fixable without parser changes (active research).
-- **eqnarray** (23/896 diffs): Now uses alignment-based `eqnarray_bindings()` with 3-column `$\displaystyle` template and equationgroup/equation/_Capture_ hooks. Still missing: afterConstruct `rearrangeEqnarray` post-processing (~200 lines Perl) that transforms `_Capture_` into `MathFork`/`MathBranch`/`tr`/`td` structure.
-- **Equation numbering**: Offset by ~1 due to simplified eqnarray not splitting rows.
-- **Shaded theorems**: `backgroundcolor` attribute missing (needs `\colorbox` from xcolor.sty).
-
 ---
 
-## Roadmap to Full Parity — Ambitious Plan
+## Work Plan — Ordered TODO List
 
-### Philosophy
-We aim for **complete Perl test parity**. No test is too hard — some just need prerequisite infrastructure first. This plan attacks root causes that block the most tests, not just easy wins.
+Follow this list in order. Work on the first unchecked `[ ]` item. Only investigate what to do next when all items are clearly completed.
 
-### Phase 1: Infrastructure Unlocks (target: 139 → ~180)
+### Tier 1: Small fixes to un-ignore existing tests (1–2 tests each)
 
-These are foundational fixes that unblock large batches of tests across multiple suites.
+- [ ] **1. xkeyvalview_test** (32_keyval) — 9 diffs. Port `\xkvview` command (generates key metadata table). Perl: `xkeyval.sty.ltxml` line ~280.
+- [ ] **2. eqnums_test** (50_structure) — >100 errors. Regression from amsmath changes. Debug: equation numbering (`\eqref`, `\tag`) in structure context.
+- [ ] **3. algx_test** (53_alignment) — 100 diffs. algorithmicx ported but `\csname` expansion errors in nested `\ALG@bl@...` macros. Fix `\csname`/`\edef` in gullet.rs.
+- [ ] **4. figures_test** (50_structure) — needs `\@captype` and float figure infrastructure stubs.
+- [ ] **5. floatnames_test** (50_structure) — needs `\newfloat` / `\DeclareFloatingEnvironment`. Port float.sty binding.
+- [ ] **6. filelist_test** (50_structure) — needs `\listfiles`, `\@filelist` infrastructure.
+- [ ] **7. options_test** (50_structure) — needs test-local `apackage.sty.ltxml` + `aclass.cls.ltxml` stubs in latexml_contrib.
 
-#### 1A. Port xkeyval.sty.ltxml — unlocks 17 tests
-**Blocked tests:** 5 keyval tests + 11 keyval_options tests + keyvalstyle_test
-**Root cause:** No Rust binding → raw TeX fallback → `\input xkeyval.sty` → recursive chain → infinite loop.
-**Work:** Port `xkeyval.sty.ltxml` (~300 lines Perl). Key constructs: `\define@key`, `\setkeys`, `\presetkeys`, `\savekeys`, option processing with `\XKV@` prefix. Also need test-local `.sty.ltxml` loading for `mykeyval`/`myxkeyval` test stubs.
-**Effort:** Medium — systematic macro definitions, well-understood keyval semantics.
-**Yield:** +17 tests
+### Tier 2: Font system improvements (unlocks 2–6 font tests)
 
-#### 1B. ~~Port local .sty.ltxml loading~~ NOT APPLICABLE
-**Note:** Runtime `.sty.ltxml` loading is **not possible in Rust**. Perl interprets `.ltxml` files at runtime, but Rust compiles all package bindings at build time (`*_sty.rs` files). Every Perl `.sty.ltxml` must be translated to a Rust `_sty.rs` file in either `latexml_package` or `latexml_contrib`. For external/user-contributed additions, use `latexml_contrib` crate.
-**For tests with custom `.sty.ltxml`:** Must port each test-local `.sty.ltxml` to a Rust binding registered in `latexml_contrib`.
+- [ ] **8. fonts_test + plainfonts_test** (22_fonts) — `\fontname` format: need "select font X at Ypt" instead of just filename. Store full description in fontinfo at `\font` definition time.
+- [ ] **9. sizes_test** (22_fonts) — 377+ diffs. Font size from `\font` definitions not propagated to Font struct. `\font\myfont=cmr10 at 5pt` → `fontsize="50%"`.
+- [ ] **10. ding_test** (22_fonts) — needs pifont.sty binding + pzd font map.
+- [ ] **11. abxtest_test** (22_fonts) — needs `\hexnumber@`, `\mathxfam` (font allocation macros).
+- [ ] **12. stmaryrd_test** (22_fonts) — needs stmaryrd.sty binding (font symbol map, same pattern as esint/marvosym).
 
-#### 1C. Port missing structure packages — unlocks 18 .todo tests
-**Blocked tests:** acro, amsarticle, bibsect, crazybib, csquotes, enum, eqnums, figure_grids, figures, filelist, floatnames, glossary, IEEE, natbib, options, paralists, subcaption, svabstract
-**Work per test (roughly grouped):**
-- **Easy (stub-only):** options, filelist, floatnames — just need option processing
-- **Medium:** enum/paralists (enumitem.sty), figures/figure_grids/subcaption (subfigure/subcaption.sty), svabstract (svjour.cls)
-- **Hard:** csquotes (context-sensitive quoting), natbib (bibliography), amsarticle (amsart.cls), IEEE (IEEEtran.cls), glossary (glossaries.sty), acro (acro.sty), eqnums (equation numbering), bibsect/crazybib (bibliography)
-**Effort:** High aggregate — ~15 new package stubs/ports. But each is independent work.
-**Yield:** +18 tests
+### Tier 3: Package bindings for structure tests (unlocks 1–3 tests each)
 
-#### 1D. Fix "misdefined expansion" warning
-**Impact:** Appears in almost every test (non-fatal but noisy). Some macro definition is producing `#` in expansion text without proper `#1`-`#9` or `##` form.
-**Work:** Track down the source — likely a recently-added macro with bare `#` in its body.
-**Effort:** Small — diagnostic + fix.
+- [ ] **13. enum_test** (50_structure) — port enumitem.sty binding (custom list environments).
+- [ ] **14. paralists_test** (50_structure) — port paralist.sty binding (compact lists).
+- [ ] **15. subcaption_test** (50_structure) — port subcaption.sty binding (subfigures).
+- [ ] **16. figure_grids_test** (50_structure) — needs graphicx figure grid support.
+- [ ] **17. natbib_test** (50_structure) — port natbib.sty binding (author-year citations).
+- [ ] **18. amsarticle_test** (50_structure) — port amsart.cls binding.
+- [ ] **19. csquotes_test** (50_structure) — port csquotes.sty binding (context-sensitive quoting).
+- [ ] **20. svabstract_test** (50_structure) — port svjour.cls binding.
+- [ ] **21. ieee_test** (50_structure) — port IEEEtran.cls binding.
+- [ ] **22. acro_test** (50_structure) — port acronym.sty binding.
+- [ ] **23. glossary_test** (50_structure) — port glossaries.sty binding.
+- [ ] **24. bibsect_test + crazybib_test** (50_structure) — port biblatex binding.
 
-### Phase 2: Font System Completion (target: ~180 → ~195)
+### Tier 4: Alignment crashes and diffs (unlocks 3–8 tests)
 
-#### 2A. Per-font \hyphenchar tracking
-**Blocked tests:** fonts_test, plainfonts_test, sizes_test
-**Root cause:** `\hyphenchar` is global — should be per-font. `\font\myfont=cmr10` stores hyphenchar=45, `\hyphenchar\myfont=99` should update only that font's hyphenchar.
-**Work:** Store hyphenchar in the per-font `fontinfo_\cs` state. `\hyphenchar` getter/setter reads/writes from fontinfo.
-**Effort:** Small-medium.
+- [ ] **25. cells_test** (53_alignment) — stack overflow in state.rs. Debug recursive state lookup.
+- [ ] **26. colortbls_test** (53_alignment) — TooManyErrors. Port colortbl.sty binding.
+- [ ] **27. supertabular_test** (53_alignment) — "alignment not active". Port supertabular.sty binding.
+- [ ] **28. badeqnarray_test** (53_alignment) — 306 diffs. Needs afterConstruct `rearrangeEqnarray`.
 
-#### 2B. \fontname "select font X at Ypt" format
-**Blocked tests:** plainfonts_test (all font descriptions wrong format)
-**Root cause:** `\fontname` returns just the font filename, not "select font cmr10 at 5.0pt" for scaled fonts.
-**Work:** Store the full font description string (including `at Xpt` / `scaled Y`) in fontinfo at `\font` definition time. `\fontname` returns this stored string.
-**Effort:** Small.
+### Tier 5: AMS math + afterConstruct DOM rearrangement (unlocks 5–7 tests)
 
-#### 2C. Font size effect on text rendering
-**Blocked tests:** plainfonts_test, sizes_test (376 diffs)
-**Root cause:** `\font\myrmfiveA=cmr10 at 5pt` should produce `<text fontsize="50%">` wrapping. Currently the font size from `\font` definitions isn't propagated to the Font struct's `size` field.
-**Work:** In `decode_fontname`, extract size from the font command parameters. Store in Font struct. `relative_to()` then produces correct fontsize attribute.
-**Effort:** Medium — touches font pipeline.
+- [ ] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. ~200 lines Perl. Unlocks: amsdisplay, matrix, sideset, badeqnarray, split, eqnarray.
+- [ ] **30. amsdisplay_test** (56_ams) — needs afterConstruct + `\text{}` + math operators.
+- [ ] **31. matrix_test** (56_ams) — needs afterConstruct + math parser for XMDual wrapping.
+- [ ] **32. sideset_test** (56_ams) — needs afterConstruct.
+- [ ] **33. cd_test** (56_ams) — math parser panic in parse_rec. Port amscd.sty.ltxml.
+- [ ] **34. mathtools_test** (56_ams) — TooManyErrors. Port mathtools.sty binding.
 
-#### 2D. Port missing font package bindings
-**Blocked tests:** soul (needs expl3), stmaryrd, wasysym, cancels, mathcolor (need expl3/graphics), pifont (ding), abxtest (font allocation)
-**Work:** Each needs its `.sty.ltxml` port. stmaryrd is a font symbol map (like esint/marvosym — already done pattern). pifont needs pzd font map.
-**Effort:** Medium per package. stmaryrd/pifont are tractable. soul/wasysym/cancels/mathcolor blocked on expl3.
-**Yield:** +3–7 font tests
+### Tier 6: Graphics + color (unlocks 4 tests)
 
-### Phase 3: Alignment Engine (target: ~195 → ~215)
+- [ ] **35. graphrot_test** (65_graphics) — TooManyErrors. `\begingroup` in `\csname..\endcsname`.
+- [ ] **36. picture_test** (65_graphics) — port picture environment (`\put`, `\line`, `\circle`, `\oval`). Port graphpap.sty.
+- [ ] **37. xcolors_test** (65_graphics) — ~600 diffs. Complete xcolor port (color expressions, testbox).
+- [ ] **38. xytest** (65_graphics) — port xy.sty binding.
 
-#### 3A. ~~Fix nested tabular handling — unlocks tabtab_test~~ DONE
-**Fixed:** Sizer string parsing (`IntoOption<SizingClosure> for &str`) only handled `#digit` patterns, not `#property_name`. The `\lx@begin@alignment` constructor uses `sizer => "#alignment"` which was being parsed as arg 1 instead of property lookup. Fixed in `traits.rs` to match Perl's `$sizer =~ /^(#\w+)*$/` pattern.
+### Tier 7: Complex integration tests (unlocks 8 tests)
 
-#### 3B. ~~Fix nested halign alignment — unlocks halign_test~~ DONE
-**Fixed:** Two bugs in `align_group_count` (`$ALIGN_STATE`) tracking:
-1. `unread_one()` didn't adjust agc when unreading `{`/`}` tokens (Perl's `unread()` always adjusts).
-2. `stomach::bgroup()/egroup()` incorrectly adjusted agc (Perl only tracks at scan level in Gullet).
-These caused `handle_template` not to fire for outer alignment columns after nested `\vbox{\halign{...}}`.
+- [ ] **39. cleveref_minimal_test** (80_complex) — 125 diffs. Port cleveref.sty binding.
+- [ ] **40. figure_mixed_content_test** (80_complex) — 875 diffs. Needs listings + figure + wrapfig.
+- [ ] **41. aastex_test** (80_complex) — port aastex631.cls binding.
+- [ ] **42. acm_aria_test** (80_complex) — port acmart.cls binding.
+- [ ] **43. aastex631_deluxetable_test** (80_complex) — port aastex.cls binding.
+- [ ] **44. aliceblog_test** (80_complex) — port blog.cls binding.
+- [ ] **45. physics_test** (80_complex) — port physics.sty binding.
+- [ ] **46. si_test** (80_complex) — port siunitx.sty binding.
 
-#### 3C. Port alignment packages — unlocks remaining 20 alignment tests
-**Packages needed:** longtable.sty, multirow.sty, supertabular.sty, colortbl.sty, rotating.sty, tabbing environment, listings.sty
-**Work:** Each is a separate port. longtable and multirow are the most common. listings is large (~500 lines Perl).
-**Effort:** High aggregate.
-**Yield:** +5–20 tests
+### Tier 8: Math parser tests (unlocks 1–28 tests, active research)
 
-### Phase 4: Math Parser + Math Tests (target: ~215 → ~260)
+- [ ] **47. 40_math suite** (40_math) — 14 tests. Enable and categorize: parser bugs vs intentional Marpa divergence.
+- [ ] **48. 70_parse suite** (70_parse) — 28 tests. Generate Rust-specific expected XMLs where Marpa diverges.
+- [ ] **49. plainmath_test** (53_alignment) — 382 diffs. Math parser XMDual structure.
+- [ ] **50. split_test** (53_alignment) — TooManyErrors. Amsmath split env + math parser.
+- [ ] **51. eqnarray_test** (53_alignment) — 2698 diffs. afterConstruct + math parser.
+- [ ] **52. ntheorem_test** (55_theorem) — 897 diffs. Math parser tree structure (873 diffs) + eqnarray (23 diffs).
 
-#### 4A. Math parser regression tests — 28 tests
-**Work:** Run all 28 70_parse tests. Categorize: (a) bugs in Rust code feeding parser, (b) intentional Marpa divergence. For (a), fix. For (b), generate Rust-specific expected XMLs by running `latexmlmath_oxide` and validating output manually.
-**Effort:** High — each test needs individual analysis.
-**Yield:** +10–28 tests
+### Tier 9: Infinite loops and timeouts (need deep debugging)
 
-#### 4B. Math pipeline tests — 14 tests
-**Work:** Enable 40_math tests. Many will have non-parser issues (missing `\DeclareMathOperator`, delimiter macros, spacing). Fix those first, then address parser tree diffs.
-**Effort:** Medium-high.
-**Yield:** +5–14 tests
+- [ ] **53. diagboxtest_test** (53_alignment) — infinite loop in diagbox processing.
+- [ ] **54. ncases_test** (53_alignment) — infinite loop in ncases processing.
+- [ ] **55. vmode_test** (53_alignment) — infinite loop in vertical mode.
+- [ ] **56. babel_test** (81_babel) — unbounded memory leak. Port babel.sty + `.ldf` files.
 
-#### 4C. AMS math tests — 7 tests
-**Work:** Complete amsmath.sty port: `{align}`, `{gather}`, `{multline}`, `{split}`, `\text{}`, `\intertext`, math operators. Port `amscd.sty.ltxml` for CD diagrams.
-**Effort:** High — `{align}` needs full alignment-based equation groups.
-**Yield:** +3–7 tests
+### Tier 10: New test suites from Perl (not yet copied)
 
-#### 4D. eqnarray with MathFork/MathBranch
-**Work:** Implement full 3-column eqnarray with `$\displaystyle` template, `rearrangeEqnarray` post-processing. Needed by ntheorem and several structure tests.
-**Effort:** High (~200 lines Perl to port).
-**Yield:** Unlocks ntheorem + several equation tests.
+- [ ] **57. Copy + port pgf suite** (2 tests) — port pgf.sty binding.
+- [ ] **58. Copy + port tikz suite** (10 tests) — port tikz.sty binding (depends on pgf).
+- [ ] **59. Copy remaining complex tests** (15 tests) — copy .tex/.xml from Perl, port bindings.
+- [ ] **60. Port moderncv suite** (1 test) — port moderncv.cls binding.
+- [ ] **61. Copy keyvalemptyvalue** (1 test) — copy from Perl.
 
-### Phase 5: Graphics + Color (target: ~260 → ~275)
+### Permanent ignores (not counted)
 
-#### 5A. Port color.sty.ltxml — unlocks graphics tests + downstream
-**Root cause:** `\usepackage{color}` causes infinite recursion.
-**Work:** Full port of `color.sty.ltxml` (~200 lines). Key: `\color`, `\textcolor`, `\colorbox`, `\fcolorbox`, color models (rgb, cmyk, named). Also port `dvipsnam.def.ltxml` for named colors.
-**Effort:** Medium.
-**Yield:** Unlocks graphics tests + shaded theorem backgrounds + many structure tests.
+- **ns1–ns5** (52_namespace) — DTD not supported in Rust port. Permanently ignored.
 
-#### 5B. Port xcolor.sty.ltxml
-**Work:** Extended color package — `\definecolor`, `\colorlet`, color mixing, tints. Used by many modern packages.
-**Effort:** Medium-high.
-**Yield:** Unlocks packages that depend on xcolor (tikz, beamer, many structure tests).
+### Infrastructure prerequisites (not tied to specific tests)
 
-#### 5C. Port graphicx improvements + picture environment
-**Work:** `\includegraphics` options, picture environment (`\put`, `\line`, `\circle`, `\oval`).
-**Effort:** High for picture env.
-**Yield:** +3–8 graphics tests
-
-#### 5D. Port pgf/tikz — 12 new tests
-**Work:** PGF is a massive library (~5000 lines in Perl bindings). TikZ builds on PGF. Both need `\pgfkeys` (key-value on steroids), coordinate parsing, path construction.
-**Effort:** Very high. Consider stub approach first.
-**Yield:** +2–12 tests (pgf 2, tikz 10)
-
-### Phase 6: Language + Internationalization (target: ~275 → ~285)
-
-#### 6A. Port babel.sty.ltxml — unlocks 6 babel tests
-**Work:** Language selection system, `\selectlanguage`, `\foreignlanguage`, `\otherlanguage`. Port frenchb, germanb, greek `.ldf` files.
-**Effort:** Medium — well-defined structure.
-**Yield:** +2–6 babel tests
-
-#### 6B. Port csquotes.sty.ltxml
-**Work:** Context-sensitive quotation marks. Used by some structure tests.
-**Effort:** Medium.
-**Yield:** Unlocks csquotes structure test.
-
-### Phase 7: ~~Namespace + Document Bindings~~ REMOVED
-
-DTD support removed from Rust port (decision 2026-03-13). Only RelaxNG schemas supported.
-Namespace tests (ns1–ns5) permanently ignored. xii.tex converted to use standard LaTeXML elements.
-
-### Phase 8: Complex Integration + New Suites (target: ~290 → ~320+)
-
-#### 8A. Port complex tests incrementally
-**Easy tier:** ~~tcilatex_minimal~~, ~~versioned_fallback~~, ~~hypertest~~ — all pass now.
-**Medium tier:** labelled, aastex_test, hyperurls — need cleveref, aastex631.cls.
-**Hard tier:** physics, si, figure_mixed_content — massive output, many packages (siunitx, physics, wrapfig, algorithm).
-**Yield:** +3–16 tests
-
-#### 8B. Port expl3 programming layer — unlocks 2 expl3 tests + many packages
-**Work:** LaTeX3 `\ExplSyntaxOn/Off`, `\cs_new:Npn`, `\tl_set:Nn`, etc. This is architecturally significant — many modern packages (soul, fontspec, unicode-math) depend on expl3.
-**Effort:** Very high — new programming paradigm within TeX.
-**Yield:** +2 direct tests, unlocks soul/wasysym/cancels/mathcolor/fontspec and modern packages.
-
-#### 8C. Port beamer.cls.ltxml — unlocks 2 slides tests
-**Work:** Presentation class with frames, overlays, themes. Complex but well-structured.
-**Effort:** High.
-**Yield:** +2 tests
-
-#### 8D. Port moderncv.cls.ltxml — unlocks 2 moderncv tests
-**Work:** CV/resume class with custom layout.
-**Effort:** Medium.
-**Yield:** +1–2 tests
-
-### Phase 9: Post-Processing Pipeline (stretch goal)
-
-#### 9A. Port post-processing (XSLT → Rust)
-**Work:** The Perl pipeline has post-processing stages: bibliography resolution, cross-referencing, MathML generation, HTML5 output. Currently Rust only produces the intermediate XML.
-**Effort:** Very high — entire new subsystem.
-**Yield:** Enables format/profile/EPUB tests.
-
-### Summary: Expected Progression
-
-| Phase | Cumulative Tests | Delta | Key Infrastructure |
-|-------|-----------------|-------|--------------------|
-| Current | 186 | — | — |
-| Phase 1 (infrastructure) | ~190 | +35 | local .ltxml, structure packages |
-| Phase 2 (fonts) | ~205 | +15 | per-font hyphenchar, fontname format, font sizes |
-| Phase 3 (alignment) | ~225 | +20 | nested tabular, alignment packages |
-| Phase 4 (math) | ~270 | +45 | parser tests, amsmath, eqnarray |
-| Phase 5 (graphics) | ~285 | +15 | color, xcolor, graphicx, pgf/tikz |
-| Phase 6 (languages) | ~295 | +10 | babel, csquotes |
-| Phase 7 (namespace) | — | — | REMOVED (DTD not supported) |
-| Phase 8 (integration) | ~325 | +30 | complex tests, expl3, beamer |
-| Phase 9 (post-proc) | ~354 | +29 | XSLT, MathML, HTML5 output |
-| **Full Perl parity** | **~354** | | **all suites, all tests** |
-
-### Critical Path Dependencies
-
-```
-expl3 ──→ soul, wasysym, cancels, mathcolor, fontspec, beamer
-color.sty ──→ xcolor ──→ tikz, beamer, colortbl, ntheorem backgrounds
-alignment engine ──→ eqnarray ──→ ntheorem, amsmath {align}
-latexml_contrib bindings ──→ keyvalstyle, structure .todo tests (each test-local .sty.ltxml → _sty.rs)
-```
-
-### Ignored Tests — Ranked Priority (fewest diffs → most diffs)
-
-Surveyed 2026-03-14 evening. Tests marked ~~struck~~ have been un-ignored and pass.
-
-| Priority | Test | Diffs | Blocker |
-|----------|------|-------|---------|
-| ~~1~~ | ~~tcilatex_minimal~~ | 0 | **PASSES** — un-ignored |
-| ~~2~~ | ~~hypertest~~ | 0 | **PASSES** — un-ignored |
-| 3 | xkeyvalview | 9 | `\xkvview` command not ported (generates key metadata table) |
-| 4 | ns1–ns5 | N/A | DTD not supported (permanent ignore) |
-| 5 | tabbing | **PASS** | Tabbing environment ported + \leaders + \makebox properties |
-| 6 | algx | 100 | algorithm/algorithmicx/algpseudocode ported, but raw .sty has `\csname` expansion errors (nested `\ALG@bl@...` macros). Needs `\csname`/`\edef` fix in gullet.rs |
-| 7 | cleveref_minimal | 125 | cleveref.sty binding missing |
-| 8 | tabular | 261 | Deep tabular issues (`\@mkpreamarray` etc) |
-| 9 | badeqnarray | 306 | eqnarray afterConstruct rearrangement missing |
-| 10 | sizes | 377 | Font size + `\fontname` format issues |
-| 11 | mathaccents | 375 | tabular border + section structure diffs |
-| 12 | plainmath | 382 | math parser (XMDual structure) |
-| 13 | figure_mixed_content | 875 | Mixed content handling, listings, itemize diffs |
-| 14 | listing | 2062 | Math parser (mathescape XMDual, dominates all diffs) |
-| **Math parser blocked** | split, array, eqnarray, plainmath, min_listing2, mixed, mathbbol, bbold, acc, dots, amsdisplay, matrix, sideset, ntheorem | 100–900+ each | All blocked by Marpa parser tree differences |
-| **Missing packages** | aastex_test, aastex631_deluxetable, acm_aria, aliceblog, physics, si, wasysym, stmaryrd, abxtest, ding, esint, xcolors, picture, xytest | varies | Need class/package bindings or expl3 |
-| **Crashes** | cells (stack overflow), colortbls (TooManyErrors), supertabular (alignment not active), graphrot (TooManyErrors), mathtools (TooManyErrors), cd_test (math parser panic), split (TooManyErrors) | N/A | Infrastructure issues |
-| **Timeouts** | diagboxtest, ncases, vmode, babel | N/A | Infinite loops |
-
-**Crash status updates (2026-03-14):**
-- ~~halignatt~~: FIXED — now passes
-- colortbls: normalize.rs crash fixed → now hits TooManyErrors (`\@mkpreamarray` undefined, colortbl.sty not ported)
-- cells: stack overflow in state.rs:870 (recursive state lookup?)
-- figure_mixed_content: no longer crashes (was `\lstKV@SetIf@` param spec), now produces output with 875 diffs
-- split: TooManyErrors cascade (100+ errors from missing amsmath split env support)
-- mathtools: TooManyErrors (100+ errors)
-- cd_test: math parser `replacing tree should always work` panic
-
-### Immediate Next Actions (prioritized)
-1. ~~Fix alignment.rs:317 crash~~ DONE — halignatt now passes
-2. ~~Fix colortbls normalize.rs:403 crash~~ normalize.rs rewritten; colortbls still fails (TooManyErrors from unported colortbl.sty)
-3. ~~Port tcilatex binding~~ DONE — tcilatex_minimal passes
-4. ~~Fix hypertest~~ DONE — hypertest passes
-5. ~~Fix listings comment styling~~ DONE — lstAddDelimiter style parameter, min_listing_display passes
-6. Port xkeyvalview `\xkvview` command (9 diffs — needs key metadata table generation)
-7. ~~Port tabbing environment~~ DONE — tabbing_test passes (0 diffs)
-8. Complete Document.pm audit (10-part sub-audit in progress)
-9. ~~Implement local .sty.ltxml loading~~ NOT APPLICABLE — port test-local `.sty.ltxml` files to Rust bindings instead
-10. Port color.sty.ltxml (unlocks graphics + downstream)
+- [ ] **A. Port expl3 programming layer** — `\ExplSyntaxOn/Off`, `\cs_new:Npn`, `\tl_set:Nn`. Unlocks: soul, fontspec, unicode-math, beamer, and many modern packages.
+- [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
+- [ ] **C. Port BibTeX.pool.ltxml** — bibliography infrastructure (~150 defs, ~9% ported).
+- [ ] **D. Port AmSTeX.pool.ltxml** — legacy AMS macros (~112 defs, ~30% ported).

@@ -105,7 +105,7 @@ git config --local core.hooksPath .githooks/
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - The Perl LaTeXML directory gets updated at times, as the original project is still active. Before doing new work, always revise the current Rust against the current Perl, and update the Rust when outdated.
-- Before starting work, check `docs/SYNC_STATUS.md` for current test status, known issues, and the roadmap.
+- **Follow the Work Plan in `docs/SYNC_STATUS.md`**: Always work on the first unchecked `[ ]` item in the "Work Plan — Ordered TODO List" section. Do not skip ahead or investigate what to do next until all preceding items are clearly completed. Mark items `[x]` when done.
 - When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 
 ## Key Concepts Mapping (Perl → Rust)
