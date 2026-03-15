@@ -319,7 +319,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [x] **22. acro_test** (50_structure) — DONE. Ported acronym.sty binding + addIndexPhraseKey afterClose hook.
 - [x] **23. glossary_test** (50_structure) — DONE. Implemented glossaries.sty binding with \newglossaryentry, \longnewglossaryentry, \newacronym (state-stored entries), \gls/\Gls/\glspl/\Glspl/\glssymbol (runtime macros with first-use tracking), \printglossary/\printnoidxglossaries.
 - [x] **24. bibsect_test** (50_structure) — DONE. Ported \lx@bibliography, \bibstyle constructors, bibunits.sty binding.
-- [ ] **24b. crazybib_test** (50_structure) — 234 diffs. Needs biblatex binding.
+- [x] **24b. crazybib_test** (50_structure) — DONE. Implemented `\bibsection` parsing in `begin_bibliography_clean`: deciphers sectional unit from expansion tokens, updates BACKMATTER_ELEMENT mapping, extracts custom title.
 
 ### Tier 4: Alignment crashes and diffs (unlocks 3–8 tests)
 

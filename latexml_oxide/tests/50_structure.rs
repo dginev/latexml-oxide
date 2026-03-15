@@ -155,7 +155,6 @@ fn bibsect_test() {
 }
 
 #[test]
-#[ignore] // needs biblatex binding
 fn crazybib_test() {
   latexml_test_single("tests/structure/crazybib.tex", "crazybib", DIR, None, None);
 }

@@ -500,9 +500,34 @@ fn begin_bibliography(whatsit: &mut Whatsit) -> Result<()> {
 fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // Check if \bibsection is defined and try to decipher it.
   // Expecting something like \section*{sometext}
-
-  // TODO: Continue updating here...
-  // let bs_opt       = lookup_definition(&T_CS!("\\bibsection"))?;
+  // Perl: beginBibliography_clean in latex_constructs.pool.ltxml
+  let mut bibtitle: Option<Tokens> = None;
+  if let Some(bs) = lookup_definition(&T_CS!("\\bibsection"))? {
+    if bs.is_expandable() {
+      if let Some(ExpansionBody::Tokens(expansion_toks)) = bs.get_expansion() {
+        let mut tokens = expansion_toks.clone().unlist();
+        if !tokens.is_empty() {
+          let bibunitmap: &[(&str, &str)] = &[
+            ("\\part", "ltx:part"), ("\\chapter", "ltx:chapter"),
+            ("\\section", "ltx:section"), ("\\subsection", "ltx:subsection"),
+            ("\\subsubsection", "ltx:subsubsection"), ("\\paragraph", "ltx:paragraph"),
+            ("\\subparagraph", "ltx:subparagraph"),
+          ];
+          let first_cs = tokens.remove(0).to_string();
+          if let Some((_, unit)) = bibunitmap.iter().find(|(cs, _)| *cs == first_cs) {
+            state::assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(arena::pin(unit)));
+            // Strip * if present
+            if !tokens.is_empty() && tokens[0].to_string() == "*" {
+              tokens.remove(0);
+            }
+            if !tokens.is_empty() {
+              bibtitle = Some(Tokens::new(tokens));
+            }
+          }
+        }
+      }
+    }
+  }
 
   note_backmatter_element(whatsit, "ltx:bibliography");
   // Try to compute a reasonable, but unique ID;
@@ -517,9 +542,13 @@ fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   let bibid = s!("{}bib{}", docid, radix::radix_alpha(bibnumber - 1));
   DefMacro!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
   whatsit.set_property("id", bibid);
-  let title_opt = match DigestIf!("\\refname")? {
-    Some(v) => Some(v),
-    None => DigestIf!("\\bibname")?,
+  let title_opt = if let Some(bt) = bibtitle {
+    Some(Digest!(bt)?)
+  } else {
+    match DigestIf!("\\refname")? {
+      Some(v) => Some(v),
+      None => DigestIf!("\\bibname")?,
+    }
   };
   if let Some(title) = title_opt {
     whatsit.set_property("titlefont", title.get_font()?.unwrap());
