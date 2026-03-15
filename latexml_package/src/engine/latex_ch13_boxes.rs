@@ -318,9 +318,37 @@ LoadDefinitions!({
     before_digest => {
       stomach::digest(Tokens!(T_CS!("\\@minipagetrue")))?;
     },
-    after_digest_begin => {
-      // TODO: set hsize/textwidth/columnwidth from width arg via whatsit access
+    after_digest_begin => sub[whatsit] {
+      // Perl: afterDigestBegin sets \hsize, \textwidth, \columnwidth from width arg
+      let vattach = whatsit.get_arg(1)
+        .map(|a| translate_attachment(&a.to_string()))
+        .unwrap_or("middle");
+      if let Some(width_arg) = whatsit.get_arg(4) {
+        let width_val = width_arg.value_of();
+        let dim = Dimension::new(width_val);
+        let rv: RegisterValue = dim.into();
+        state::assign_register("\\hsize", rv.clone(), None, Vec::new())?;
+        state::assign_register("\\textwidth", rv.clone(), None, Vec::new())?;
+        state::assign_register("\\columnwidth", rv, None, Vec::new())?;
+        whatsit.set_property("width", Stored::from(width_arg.to_attribute()));
+      }
+      whatsit.set_property("vattach", Stored::from(vattach.to_string()));
       Let!("\\\\", "\\lx@newline");
+    },
+    after_digest_body => sub[whatsit] {
+      // Perl: afterDigestBody copies vattach from whatsit to body
+      let va = whatsit.get_property("vattach").map(|v| v.into_owned());
+      eprintln!("DEBUG minipage after_digest_body: vattach={va:?} has_body={}", whatsit.properties.contains_key("body"));
+      if let Some(vattach) = va {
+        if let Some(Stored::Digested(body)) = whatsit.properties.get("body").cloned() {
+          let mut body = body;
+          body.set_property("vattach", vattach);
+          // Verify that the property was actually set on the shared body
+          let verify = whatsit.properties.get("body")
+            .and_then(|s| if let Stored::Digested(d) = s { d.get_property("vattach").map(|v| v.into_owned()) } else { None });
+          eprintln!("DEBUG minipage verify body vattach via whatsit: {verify:?}");
+        }
+      }
     }
   );
 
