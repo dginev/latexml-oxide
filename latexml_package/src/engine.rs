@@ -38,7 +38,7 @@ pub mod latex;
 mod latex_ch10_array_and_tabular;
 mod latex_ch10_tabbing_environment;
 mod latex_ch11_index_and_glossary;
-mod latex_ch11_moving_information;
+pub(crate) mod latex_ch11_moving_information;
 mod latex_ch11_splitting_the_input;
 mod latex_ch11_terminal_io;
 mod latex_ch12_line_and_page_breaking;

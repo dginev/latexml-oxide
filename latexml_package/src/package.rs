@@ -2,6 +2,7 @@
 pub mod aas_support_sty;
 pub mod aastex_cls;
 pub mod accents_sty;
+pub mod acronym_sty;
 pub mod algorithm_sty;
 pub mod algorithmicx_sty;
 pub mod algpseudocode_sty;

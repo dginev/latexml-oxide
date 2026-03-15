@@ -139,7 +139,6 @@ fn floatnames_test() {
 // --- Newly added tests (need package/infrastructure work) ---
 
 #[test]
-#[ignore] // needs acronym.sty binding
 fn acro_test() {
   latexml_test_single("tests/structure/acro.tex", "acro", DIR, None, None);
 }

@@ -441,13 +441,13 @@ LoadDefinitions!({
   //   properties => sub { (bibrefs => CleanBibKey($_[1])) });
 });
 
-fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
+pub(crate) fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
   if let Some(val) = state::lookup_mapping("BACKMATTER_ELEMENT", backelement) {
     whatsit.set_property("backmatterelement", val);
   }
 }
 
-fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
+pub(crate) fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
   let asif_opt =
     if let Some(Stored::String(asif_sym)) = whatsit.get_property("backmatterelement").as_deref() {
       Some(arena::to_string(*asif_sym))

@@ -108,6 +108,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "color.sty" => package::color_sty::load_definitions(),
     "calc.sty" => package::calc_sty::load_definitions(),
     "accents.sty" => package::accents_sty::load_definitions(),
+    "acronym.sty" => package::acronym_sty::load_definitions(),
     "cancel.sty" => package::cancel_sty::load_definitions(),
     "chngcntr.sty" => package::chngcntr_sty::load_definitions(),
     "natbib.sty" => package::natbib_sty::load_definitions(),
