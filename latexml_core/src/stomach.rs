@@ -627,8 +627,6 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
         || token == T_CS!("\\lx@hidden@cr")
         || token == T_CS!("\\lx@hidden@crcr"))
     {
-      // at least \over calls in here without the intent to passing through the alignment.
-      // So if we already have some digested boxes available, return them here.
       gullet::unread_one(token);
       return Ok(expire_local_box_list());
     }

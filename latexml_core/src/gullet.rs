@@ -286,9 +286,7 @@ fn handle_template(
   vtype: &str,
   hidden: bool,
 ) -> Result<()> {
-  // eprintln!("Halign: ALIGNMENT Column ended at {} type {vtype} [{}]",token.stringify(),
-  // lookup_meaning(&token).unwrap());     . "@ " . ToString($self->getLocator))
-  // if $LaTeXML::DEBUG{halign};
+
 
   //  Append expansion to end!?!?!?!
   local_current_token(token);
@@ -948,11 +946,7 @@ pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
   while let Some(token) = read_token()? {
     if token.get_catcode() == Catcode::BEGIN {
-      if let Some(runtime) = runtime_mut!() {
-        runtime.pushback.push_front(token); // Unread
-      } else {
-        fatal!(Mouth, NotFound, "No Mouth in read_until_brace")
-      }
+      unread_one(token); // Unread with proper agc adjustment
       break;
     } else {
       tokens.push(token);
@@ -1253,11 +1247,8 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
             // If this was space, SKIP any following!!!
             while let Some(space_token) = read_token()? {
               if space_token.get_catcode() != Catcode::SPACE {
-                // Unread non-space and end
-                match runtime_mut!() {
-                  Some(mouth) => mouth.pushback.push_front(space_token),
-                  None => fatal!(Mouth, NotFound, "No Mouth in read_match"),
-                }
+                // Unread non-space and end — use unread_one for proper agc adjustment
+                unread_one(space_token);
                 break;
               } else {
                 matched.push(space_token);
@@ -1270,12 +1261,8 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
     if to_match.is_empty() {
       return Ok(Some((*choice).clone())); // All matched!!!
     } else {
-      for matched_token in matched.into_iter().rev() {
-        match runtime_mut!() {
-          Some(mouth) => mouth.pushback.push_front(matched_token), // Put 'em back and try next!
-          None => fatal!(Mouth, NotFound, "No Mouth in read_match"),
-        }
-      }
+      // Put 'em back and try next — use unread_vec for proper agc adjustment
+      unread_vec(matched);
     }
   }
   Ok(None)

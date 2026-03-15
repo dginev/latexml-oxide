@@ -310,7 +310,6 @@ LoadDefinitions!({
       tokens.push(T_END!());
     } else {
       tokens.push(T_CS!("\\lx@alignment@newline@marker"));
-      tokens.push(T_END!());
     }
     tokens.push(T_END!());
     Tokens::new(tokens)
