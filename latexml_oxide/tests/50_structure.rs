@@ -193,7 +193,7 @@ fn glossary_test() {
 }
 
 #[test]
-#[ignore] // needs IEEEtran.cls binding
+#[ignore] // 979 diffs — eqnarray MathFork/MathBranch structure (math parser), QED symbol, equation numbering
 fn ieee_test() {
   latexml_test_single("tests/structure/IEEE.tex", "IEEE", DIR, None, None);
 }

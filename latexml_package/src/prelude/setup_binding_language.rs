@@ -1105,6 +1105,13 @@ macro_rules! DefMacro {
     def_macro(cs, params, compiled_expansion, Some(options))?;
   };
   // Internal-level use
+  ($cs:expr, $parameters:literal, $expansion: literal) => {
+    let cs = $cs;
+    let params = parse_parameters($parameters, &cs, true)?;
+    let compiled_expansion;
+    compile_expansion!(compiled_expansion, $expansion);
+    def_macro(cs, params, compiled_expansion, None)?;
+  };
   ($cs:expr, $parameters:expr, sub [$args:ident]
     $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
