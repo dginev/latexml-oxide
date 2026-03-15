@@ -821,6 +821,130 @@ pub fn begin_itemize(
   Ok(rsc)
 }
 
+/// Set the itemization style for a given level.
+/// Perl: setItemizationStyle($stuff, $level)
+/// If $level is not given, uses the current @itemlevel.
+/// Defines \labelitem$level to $stuff.
+pub fn set_itemization_style(stuff: Option<&Tokens>, level: Option<i32>) -> Result<()> {
+  if let Some(stuff) = stuff {
+    if stuff.is_empty() {
+      return Ok(());
+    }
+    let level = level.unwrap_or_else(|| lookup_int("@itemlevel").max(0) as i32);
+    let level_str = roman_aux(level);
+    let cs_name = s!("\\labelitem{level_str}");
+    def_macro(T_CS!(&cs_name), None, stuff.clone(), None)?;
+  }
+  Ok(())
+}
+
+/// Set the enumeration style for a given level.
+/// Perl: setEnumerationStyle($stuff, $level)
+/// Parses the style tokens to detect A/a/I/i/1 patterns
+/// and defines \theenum$level and \labelenum$level accordingly.
+pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Result<()> {
+  if let Some(stuff) = stuff {
+    if stuff.is_empty() {
+      return Ok(());
+    }
+    let level = level.unwrap_or_else(|| lookup_int("enumlevel").max(0) as i32);
+    let level_str = roman_aux(level);
+    let tokens = stuff.clone().unlist();
+    let mut out: Vec<Token> = Vec::new();
+    let ctr = T_OTHER!(s!("enum{level_str}"));
+    let mut i = 0;
+    while i < tokens.len() {
+      let t = tokens[i].clone();
+      if t.get_catcode() == Catcode::BEGIN {
+        // Copy braced groups verbatim
+        out.push(t);
+        let mut brlevel = 1i32;
+        i += 1;
+        while brlevel > 0 && i < tokens.len() {
+          let tt = tokens[i].clone();
+          if tt.get_catcode() == Catcode::BEGIN {
+            brlevel += 1;
+          } else if tt.get_catcode() == Catcode::END {
+            brlevel -= 1;
+          }
+          out.push(tt);
+          i += 1;
+        }
+      } else {
+        let ch = char::from_u32(t.get_charcode()).unwrap_or('\0');
+        let cat = t.get_catcode();
+        match (ch, cat) {
+          ('A', Catcode::LETTER) => {
+            // \Alph{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\Alph"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          ('a', Catcode::LETTER) => {
+            // \alph{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\alph"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          ('I', Catcode::LETTER) => {
+            // \Roman{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\Roman"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          ('i', Catcode::LETTER) => {
+            // \roman{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\roman"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          ('1', Catcode::OTHER) => {
+            // \arabic{enum$level}
+            def_macro(
+              T_CS!(s!("\\theenum{level_str}")),
+              None,
+              Tokens::new(vec![T_CS!("\\arabic"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              None,
+            )?;
+            out.push(T_CS!(s!("\\theenum{level_str}")));
+          }
+          _ => {
+            out.push(t);
+          }
+        }
+        i += 1;
+      }
+    }
+    // Define \labelenum$level = { out }
+    let mut label_tokens = vec![T_BEGIN!()];
+    label_tokens.extend(out);
+    label_tokens.push(T_END!());
+    def_macro(
+      T_CS!(s!("\\labelenum{level_str}")),
+      None,
+      Tokens::new(label_tokens),
+      None,
+    )?;
+  }
+  Ok(())
+}
+
 /// Copies the current id, tags, and inlist counter values into whatsit properties
 pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit) {
   let tagskey = &s!("{captype}_tags");

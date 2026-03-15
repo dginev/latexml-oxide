@@ -217,7 +217,6 @@ fn options_test() {
 }
 
 #[test]
-#[ignore] // needs paralist.sty binding
 fn paralists_test() {
   latexml_test_single("tests/structure/paralists.tex", "paralists", DIR, None, None);
 }

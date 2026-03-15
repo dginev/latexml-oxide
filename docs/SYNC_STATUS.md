@@ -226,7 +226,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 204 pass, 0 fail, 57 ignored test functions**
+**Current totals: 205 pass, 0 fail, 56 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 60% of Perl test cases passing**
 
@@ -245,7 +245,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 32_keyval | 7 | 1 | xkeyvalview |
 | 33_keyval_options | 11 | 0 | |
 | 40_math | 0 | 1 | math parser deferred |
-| 50_structure | 24 | 18 | package bindings needed |
+| 50_structure | 25 | 17 | package bindings needed |
 | 52_namespace | 0 | 5 | DTD not supported (permanent) |
 | 53_alignment | 18 | 11 | crashes + math parser |
 | 55_theorem | 4 | 1 | ntheorem (math parser) |
@@ -253,7 +253,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 65_graphics | 5 | 4 | package bindings + xcolor |
 | 70_parse | 0 | 1 | math parser regression |
 | 700_unit_parse | 3 | 0 | |
-| 80_complex | 5 | 8 | package bindings + cleveref |
+| 80_complex | 8 | 8 | labelled, tcilatex_minimal, hypertest newly passing |
 | 81_babel | 0 | 1 | memory leak |
 
 ### Perl-only tests (not yet copied to Rust)
@@ -290,7 +290,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 ### Tier 1: Small fixes to un-ignore existing tests (1–2 tests each)
 
 - [x] **1. xkeyvalview_test** (32_keyval) — DONE. Ported `\xkvview` constructor with typewriter font, table counter, XKVVIEW_TRACKING.
-- [ ] **2. eqnums_test** (50_structure) — >100 errors. Regression from amsmath changes. Debug: equation numbering (`\eqref`, `\tag`) in structure context.
+- [ ] **2. eqnums_test** (50_structure) — 0 errors, 362 diffs. Fixed agc drift (read_match, read_until_brace, newline@noskip extra }). Remaining: equation numbering/tags/MathFork infrastructure for AMS align, font-italic in tag primes.
 - [ ] **3. algx_test** (53_alignment) — 100 diffs. algorithmicx ported but `\csname` expansion errors in nested `\ALG@bl@...` macros. Fix `\csname`/`\edef` in gullet.rs.
 - [ ] **4. figures_test** (50_structure) — needs `\@captype` and float figure infrastructure stubs.
 - [x] **5. floatnames_test** (50_structure) — DONE. Ported `\newfloat` (float.sty) and `\DeclareFloatingEnvironment` (newfloat.sty) with full float environment creation, beforeFloat/afterFloat, addFloatFrames.
@@ -308,7 +308,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 ### Tier 3: Package bindings for structure tests (unlocks 1–3 tests each)
 
 - [ ] **13. enum_test** (50_structure) — port enumitem.sty binding (custom list environments).
-- [ ] **14. paralists_test** (50_structure) — port paralist.sty binding (compact lists).
+- [x] **14. paralists_test** (50_structure) — DONE. Added `set_enumeration_style`/`set_itemization_style`, `afterDigestBegin` hooks, conditional stock enum/itemize redefinition.
 - [ ] **15. subcaption_test** (50_structure) — port subcaption.sty binding (subfigures).
 - [ ] **16. figure_grids_test** (50_structure) — needs graphicx figure grid support.
 - [ ] **17. natbib_test** (50_structure) — port natbib.sty binding (author-year citations).
