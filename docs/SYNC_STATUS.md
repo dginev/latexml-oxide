@@ -226,7 +226,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-14)
 
-**Current totals: 206 pass, 0 fail, 55 ignored test functions (updated 2026-03-15)**
+**Current totals: 207 pass, 0 fail, 54 ignored test functions (updated 2026-03-15)**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
 **Coverage: 60% of Perl test cases passing**
 
@@ -245,7 +245,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 32_keyval | 8 | 0 | xkeyvalview now passing |
 | 33_keyval_options | 11 | 0 | |
 | 40_math | 0 | 1 | math parser deferred |
-| 50_structure | 30 | 12 | package bindings needed |
+| 50_structure | 31 | 11 | package bindings needed |
 | 52_namespace | 0 | 5 | DTD not supported (permanent) |
 | 53_alignment | 18 | 11 | crashes + math parser |
 | 55_theorem | 4 | 1 | ntheorem (math parser) |
@@ -317,7 +317,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Only investig
 - [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty + inst_support.sty bindings.
 - [ ] **21. ieee_test** (50_structure) — port IEEEtran.cls binding.
 - [ ] **22. acro_test** (50_structure) — port acronym.sty binding.
-- [ ] **23. glossary_test** (50_structure) — port glossaries.sty binding.
+- [x] **23. glossary_test** (50_structure) — DONE. Implemented glossaries.sty binding with \newglossaryentry, \longnewglossaryentry, \newacronym (state-stored entries), \gls/\Gls/\glspl/\Glspl/\glssymbol (runtime macros with first-use tracking), \printglossary/\printnoidxglossaries.
 - [ ] **24. bibsect_test + crazybib_test** (50_structure) — port biblatex binding.
 
 ### Tier 4: Alignment crashes and diffs (unlocks 3–8 tests)
