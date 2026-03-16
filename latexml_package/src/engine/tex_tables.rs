@@ -341,7 +341,7 @@ LoadDefinitions!({
   // Perl: Candidates for binding \lx@intercol for LaTeX tabular or math arrays
   DefConstructor!("\\lx@text@intercol", sub[document, _args, props] {
     if let Some(width) = props.get("width") {
-      let dim: Option<Dimension> = (&*width).into();
+      let dim: Option<Dimension> = width.into();
       if let Some(d) = dim {
         let s = dimension_to_spaces(d);
         if !s.is_empty() {
@@ -829,7 +829,7 @@ pub fn extract_alignment_column(
       }
     };
     initial_align = colspec.align.unwrap_or(Align::Left);
-    tabskip_clone = colspec.tabskip.clone();
+    tabskip_clone = colspec.tabskip;
     is_omitted = colspec.omitted;
     old_border = colspec.border.clone();
     has_before_fill = colspec
@@ -1126,13 +1126,13 @@ fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
     } else if before {
       // Other random tokens go into the column's pre-template
       if !pre.is_empty() || cc != Catcode::SPACE {
-        pre.push(t.clone());
+        pre.push(t);
       }
       tokens.push(t);
     } else {
       // Or the post-template
       if !post.is_empty() || cc != Catcode::SPACE {
-        post.push(t.clone());
+        post.push(t);
       }
       tokens.push(t);
     }

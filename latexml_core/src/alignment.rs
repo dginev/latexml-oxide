@@ -967,11 +967,11 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   }
   // eprintln!("classify_alignment_rows: {} rows, max {} cols", alignment.rows.len(), ncols);
   let (mut h, mut v) = (false, false);
-  for (_ri, arow) in alignment.rows.iter_mut().enumerate() {
+  for arow in alignment.rows.iter_mut() {
     let cols = arow.get_columns_mut();
     let this_row_len = cols.len();
     // eprintln!("  row {_ri}: {this_row_len} cols");
-    for (_ci, col) in cols.iter_mut().enumerate() {
+    for col in cols.iter_mut() {
       col.cell_type = Some('d');
       col.content_class = Some(
         // Assume mixed content for any justified cell???

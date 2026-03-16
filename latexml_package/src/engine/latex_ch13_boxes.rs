@@ -301,7 +301,7 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml lines 4822-4846
   DefEnvironment!("{minipage}[] OptionalUndigested [] {Dimension}",
     sub[document, args, props] {
-      let attachment = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let attachment = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let vattach = translate_attachment(&attachment);
       let width = props.get("width").map(|w| w.to_string())
         .or_else(|| args.get(3).and_then(|a| a.as_ref()).map(|a| a.to_attribute()))
@@ -321,7 +321,7 @@ LoadDefinitions!({
     after_digest_begin => sub[whatsit] {
       // Perl: afterDigestBegin sets \hsize, \textwidth, \columnwidth from width arg
       let vattach = whatsit.get_arg(1)
-        .map(|a| translate_attachment(&a.to_string()))
+        .map(|a| translate_attachment(a.to_string()))
         .unwrap_or("middle");
       if let Some(width_arg) = whatsit.get_arg(4) {
         let width_val = width_arg.value_of();

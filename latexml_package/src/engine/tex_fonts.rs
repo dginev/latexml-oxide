@@ -117,10 +117,10 @@ LoadDefinitions!({
     }
     // Perl: installDefinition(FontDef->new($cs, $key))
     // When the font switch CS is invoked, set current_FontDef so \fontname\font works
-    let cs_for_fontdef = cs.clone();
+    let cs_for_fontdef = cs;
     DefPrimitive!(cs, None, None, font => props_opt,
       before_digest => sub {
-        AssignValue!("current_FontDef", cs_for_fontdef.clone(), None);
+        AssignValue!("current_FontDef", cs_for_fontdef, None);
       }
     );
   });

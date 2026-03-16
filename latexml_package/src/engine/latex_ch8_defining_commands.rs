@@ -182,9 +182,10 @@ LoadDefinitions!({
     if let Some(ch) = glyph {
       let presentation = ch.to_string();
       let paramlist = parse_parameters("Digested", &cs, true)?;
-      let mut opts = MathPrimitiveOptions::default();
-      opts.operator_role = Some("OVERACCENT".to_string());
-      def_math(cs.clone(), paramlist, presentation, opts)?;
+      let opts = MathPrimitiveOptions{
+        operator_role: Some("OVERACCENT".to_string()),
+        ..Default::default()};
+      def_math(cs, paramlist, presentation, opts)?;
     }
   });
 
@@ -216,7 +217,7 @@ LoadDefinitions!({
       if let Some(r) = role {
         opts.role = Some(r.to_string());
       }
-      def_math(cs.clone(), None, presentation, opts)?;
+      def_math(cs, None, presentation, opts)?;
     }
   });
 

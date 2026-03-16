@@ -739,7 +739,8 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
       // Perl L622-623: math axis approximation
       let c = {
         use crate::state::lookup_value;
-        let font_size = lookup_value("font")
+        
+        lookup_value("font")
           .and_then(|v| {
             if let Stored::Font(ref f) = v {
               f.get_size().map(|s| (s * UNITY as f64) as i64 / 2)
@@ -747,8 +748,7 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
               None
             }
           })
-          .unwrap_or_else(|| Dimension::from_str("1ex").map(|d| d.value_of()).unwrap_or(0));
-        font_size
+          .unwrap_or_else(|| Dimension::from_str("1ex").map(|d| d.value_of()).unwrap_or(0))
       };
       alignment.cached_height = Some(Dimension::new((y + c) / 2));
       alignment.cached_depth = Some(Dimension::new((y - c) / 2));

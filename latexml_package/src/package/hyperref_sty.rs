@@ -212,7 +212,7 @@ LoadDefinitions!({
         };
 
         let mut keys = state::with_mapping_keys("Hyperref_options", |keys| {
-          keys.into_iter().map(|k| arena::to_string(k)).collect::<Vec<_>>()
+          keys.into_iter().map(arena::to_string).collect::<Vec<_>>()
         });
         keys.sort();
         for key_str in &keys {
@@ -664,25 +664,23 @@ LoadDefinitions!({
   // until we come up with a nice, clean formal scheme, just hack through...
 
   // Process hyperref package options (keyval-style)
-  if let Some(stored) = state::lookup_value("opt@hyperref.sty") {
-    if let Stored::VecDequeStored(vdq) = stored {
-      for entry in vdq {
-        // Each entry is Stored::Strings from PassOptionsToPackage/\usepackage
-        let opt_strs: Vec<String> = match entry {
-          Stored::Strings(syms) => syms.iter().map(|s| arena::to_string(*s)).collect(),
-          Stored::String(sym) => vec![arena::to_string(sym)],
-          other => vec![other.to_string()],
-        };
-        for option in &opt_strs {
-          if option == "colorlinks" {
-            RequirePackage!("color");
-          } else if let Some(eq_pos) = option.find('=') {
-            let key = option[..eq_pos].trim();
-            let value = option[eq_pos + 1..].trim();
-            state::assign_mapping("Hyperref_options", key, Some(value.to_string()));
-            if key == "baseurl" {
-              AssignValue!("BASE_URL" => value.to_string());
-            }
+  if let Some(Stored::VecDequeStored(vdq)) = state::lookup_value("opt@hyperref.sty") {
+    for entry in vdq {
+      // Each entry is Stored::Strings from PassOptionsToPackage/\usepackage
+      let opt_strs: Vec<String> = match entry {
+        Stored::Strings(syms) => syms.iter().map(|s| arena::to_string(*s)).collect(),
+        Stored::String(sym) => vec![arena::to_string(sym)],
+        other => vec![other.to_string()],
+      };
+      for option in &opt_strs {
+        if option == "colorlinks" {
+          RequirePackage!("color");
+        } else if let Some(eq_pos) = option.find('=') {
+          let key = option[..eq_pos].trim();
+          let value = option[eq_pos + 1..].trim();
+          state::assign_mapping("Hyperref_options", key, Some(value.to_string()));
+          if key == "baseurl" {
+            AssignValue!("BASE_URL" => value.to_string());
           }
         }
       }

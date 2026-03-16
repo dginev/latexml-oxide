@@ -578,7 +578,7 @@ pub fn decode_math_char_for_stomach(
     properties.insert("stretchy", Stored::String(arena::pin(stretchy)));
   }
   let glyph_sym = if let Some(glyph) = props.glyph {
-    arena::pin(&glyph.to_string())
+    arena::pin(glyph.to_string())
   } else {
     meaning.get_sym()
   };

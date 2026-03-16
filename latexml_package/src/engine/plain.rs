@@ -998,10 +998,8 @@ LoadDefinitions!({
       // Perl: isPrefix || isFontDef || (isRegister && !isCharDef)
       //       || token matches \def|\edef|\gdef|\xdef
       let is_assignment = if let Some(ref d) = defn {
-        if d.is_prefix() {
-          true
-        } else if d.is_register()
-          && !matches!(d.register_type(), Some(RegisterType::CharDef)) {
+        if d.is_prefix() || (
+          d.is_register() && !matches!(d.register_type(), Some(RegisterType::CharDef))) {
           true
         } else {
           // Check isFontDef: lookupValue("fontinfo_<cs>")
@@ -1056,7 +1054,7 @@ LoadDefinitions!({
         let mut rev_toks = vec![T_CS!("\\accent")];
         rev_toks.extend(ExplodeText!(&num.to_string()));
         rev_toks.push(T_OTHER!(" "));
-        rev_toks.extend(letter.unlist_ref().iter().map(|t| (*t).clone()));
+        rev_toks.extend(letter.unlist_ref().iter().copied());
         let reversion = Tokens::new(rev_toks);
         let tbox = tex_character::apply_accent(
           letter, entry.combiner, entry.standalone, Some(reversion))?;

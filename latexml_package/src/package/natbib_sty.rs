@@ -401,7 +401,6 @@ LoadDefinitions!({
 
   // \citenum
   DefMacro!("\\citenum Semiverbatim", sub[(keys)] {
-    let keys = keys;
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
     Ok(Invocation!(T_CS!("\\@@cite"),
@@ -735,7 +734,7 @@ LoadDefinitions!({
 
     // Check if first token is a CS
     if !tokens.is_empty() && tokens[0].get_catcode() == Catcode::CS {
-      let cs = tokens[0].clone();
+      let cs = tokens[0];
       if cs == T_CS!("\\citeauthoryear") {
         tokens.remove(0);
         let (a1, rest) = nat_peel_arg(tokens);
@@ -781,7 +780,7 @@ LoadDefinitions!({
           found_paren = true;
           break;
         }
-        author_toks.push(t.clone());
+        author_toks.push(*t);
       }
 
       if found_paren {
@@ -791,7 +790,7 @@ LoadDefinitions!({
             rest_idx = rest_idx + i + 1;
             break;
           }
-          year_toks.push(t.clone());
+          year_toks.push(*t);
         }
       } else {
         // No paren — try splitting digits from end
@@ -819,8 +818,10 @@ LoadDefinitions!({
       }
     }
 
-    let number_arg: Option<Tokens> = Some(number.unwrap_or_else(
-      || Tokens::new(vec![T_CS!("\\the@bibitem")])));
+    let number_arg: Option<Tokens> = match number {
+      Some(n) => Some(n),
+      None => Some(Tokens::new(vec![T_CS!("\\the@bibitem")]))
+    };
     // All args for required {} params must be Some (even if empty) to ensure
     // revert produces {} braces. None would skip the arg entirely, causing arg-shifting.
     let empty = || Some(Tokens!());

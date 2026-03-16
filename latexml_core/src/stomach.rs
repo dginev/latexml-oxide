@@ -304,8 +304,8 @@ pub fn set_mode(mode: &str) -> Result<()> {
     assign_value("script_base_level", stomach!().boxing.len(), None);
     let isdisplay = mode.starts_with("display");
     let new_font = lookup_mathfont().unwrap().merge(Font {
-      color: curfont.color.clone(),
-      bg: curfont.bg.clone(),
+      color: curfont.color,
+      bg: curfont.bg,
       size: curfont.size,
       mathstyle: if isdisplay {
         Some("display".into())
@@ -323,8 +323,8 @@ pub fn set_mode(mode: &str) -> Result<()> {
     if let Some(Stored::Font(saved_font)) = saved_opt {
       assign_font(
         Rc::new(saved_font.merge(Font {
-          color: curfont.color.clone(),
-          bg: curfont.bg.clone(),
+          color: curfont.color,
+          bg: curfont.bg,
           size: curfont.size,
           ..Font::default()
         })),
@@ -461,7 +461,7 @@ pub fn leave_horizontal_internal() {
   let bound = lookup_string("BOUND_MODE");
   if mode == "horizontal" && bound.ends_with("vertical") {
     repack_horizontal();
-    assign_value_inplace("MODE", arena::pin(&bound.to_string()));
+    assign_value_inplace("MODE", arena::pin(&bound));
   }
 }
 

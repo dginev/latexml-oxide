@@ -152,8 +152,8 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   let env_cs = T_CS!(s!("\\begin{{{name}}}"));
   let paramlist = parse_parameters("[]", &env_cs, true)?;
 
-  let mut options = ConstructorOptions::default();
-  options.mode = Some("internal_vertical".into());
+  let mut options = ConstructorOptions { mode: Some("internal_vertical".into()), 
+    ..Default::default() };
 
   // before_digest: beforeFloat($type)
   let bt = base_type.clone();

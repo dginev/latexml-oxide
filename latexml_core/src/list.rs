@@ -111,10 +111,8 @@ impl BoxOps for List {
       // Lists with width property set are from horizontal mode (paragraph layout)
       options.insert("mode", Stored::String(arena::pin_static("horizontal")));
     }
-    if let Some(vattach) = self.properties.get("vattach") {
-      if let Stored::String(s) = vattach {
-        options.insert("vattach", Stored::String(*s));
-      }
+    if let Some(Stored::String(s)) = self.properties.get("vattach") {
+      options.insert("vattach", Stored::String(*s));
     }
     if let Some(width) = self.properties.get("width") {
       if options.get("width").is_none() {

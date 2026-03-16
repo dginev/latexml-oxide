@@ -180,8 +180,8 @@ LoadDefinitions!({
   // Defines \cmd to use text-font-switch in text mode, math-font-cmd in math mode.
   DefPrimitive!("\\DeclareOldFontCommand{}{}{}", sub[(cmd, font, mathcmd)] {
     // cmd contains a CS token like \bf; get the first token
-    let cmd_cs = cmd.unlist_ref().first()
-      .ok_or("DeclareOldFontCommand: expected a CS token")?.clone();
+    let cmd_cs = *cmd.unlist_ref().first()
+      .ok_or("DeclareOldFontCommand: expected a CS token")?;
     let font_toks = font.clone();
     let math_toks = mathcmd.clone();
     DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {

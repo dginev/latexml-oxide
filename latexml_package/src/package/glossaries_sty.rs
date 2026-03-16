@@ -53,7 +53,7 @@ fn store_glossary_entry(
     types.push(entry_type.to_string());
     state::assign_value(
       types_key,
-      Stored::String(arena::pin(&types.join(","))),
+      Stored::String(arena::pin(types.join(","))),
       Some(Scope::Global),
     );
   }

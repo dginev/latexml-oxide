@@ -69,7 +69,7 @@ impl Color {
   /// Convert to RGB model. Perl: $self->rgb
   pub fn to_rgb(&self) -> Color {
     match self {
-      Color::Rgb(..) => self.clone(),
+      Color::Rgb(..) => *self,
       Color::Cmy(c, m, y) => Color::Rgb(1.0 - c, 1.0 - m, 1.0 - y),
       Color::Cmyk(..) => self.to_cmy().to_rgb(),
       Color::Hsb(h, s, b) => {
@@ -96,7 +96,7 @@ impl Color {
   /// Convert to CMY model. Perl: $self->cmy
   pub fn to_cmy(&self) -> Color {
     match self {
-      Color::Cmy(..) => self.clone(),
+      Color::Cmy(..) => *self,
       Color::Rgb(r, g, b) => Color::Cmy(1.0 - r, 1.0 - g, 1.0 - b),
       Color::Cmyk(c, m, y, k) => {
         Color::Cmy((c + k).min(1.0), (m + k).min(1.0), (y + k).min(1.0))
@@ -109,7 +109,7 @@ impl Color {
   /// Convert to CMYK model. Perl: $self->cmyk
   pub fn to_cmyk(&self) -> Color {
     match self {
-      Color::Cmyk(..) => self.clone(),
+      Color::Cmyk(..) => *self,
       Color::Cmy(c, m, y) => {
         // Perl: undercolor-removal with beta parameters all = 1
         let k = c.min(*m).min(*y);
@@ -129,7 +129,7 @@ impl Color {
   /// Convert to HSB model. Perl: $self->hsb
   pub fn to_hsb(&self) -> Color {
     match self {
-      Color::Hsb(..) => self.clone(),
+      Color::Hsb(..) => *self,
       Color::Rgb(r, g, b) => {
         // Perl: rgb.pm Phi function + hsb dispatch
         let i =
@@ -156,7 +156,7 @@ impl Color {
   /// Convert to gray model. Perl: $self->gray
   pub fn to_gray(&self) -> Color {
     match self {
-      Color::Gray(..) => self.clone(),
+      Color::Gray(..) => *self,
       Color::Rgb(r, g, b) => Color::Gray(0.3 * r + 0.59 * g + 0.11 * b),
       Color::Cmy(c, m, y) => Color::Gray(1.0 - (0.3 * c + 0.59 * m + 0.11 * y)),
       Color::Cmyk(c, m, y, k) => {
@@ -174,7 +174,7 @@ impl Color {
       "cmyk" => self.to_cmyk(),
       "hsb" => self.to_hsb(),
       "gray" => self.to_gray(),
-      _ => self.clone(),
+      _ => *self,
     }
   }
 
@@ -248,12 +248,12 @@ impl Color {
   /// Perl: if base is gray, convert to other's model; else convert other to base's model.
   fn align_models(&self, other: &Color) -> (Color, Color) {
     if self.model() == other.model() {
-      return (self.clone(), other.clone());
+      return (*self, *other);
     }
     if self.model() == "gray" {
-      (self.convert(other.model()), other.clone())
+      (self.convert(other.model()), *other)
     } else {
-      (self.clone(), other.convert(self.model()))
+      (*self, other.convert(self.model()))
     }
   }
 

@@ -378,8 +378,8 @@ LoadDefinitions!({
         "divide".to_string()
       };
 
-      let has_open = open.as_ref().map_or(false, |o| !o.to_string().trim().is_empty());
-      let has_close = close.as_ref().map_or(false, |c| !c.to_string().trim().is_empty());
+      let has_open = open.as_ref().is_some_and(|o| !o.to_string().trim().is_empty());
+      let has_close = close.as_ref().is_some_and(|c| !c.to_string().trim().is_empty());
 
       if has_open || has_close {
         whatsit.set_property("needXMDual", "1");
@@ -691,7 +691,7 @@ LoadDefinitions!({
   // Section 3.11.1 \numberwithin
   // Perl: amsmath.sty.ltxml line 741
   DefPrimitive!("\\numberwithin[]{}{}", sub[(format, counter, within)] {
-    let format_str = if format.as_ref().map_or(true, |f| f.is_empty()) {
+    let format_str = if format.as_ref().is_none_or(|f| f.is_empty()) {
       s!("\\arabic")
     } else {
       format.unwrap().to_string()

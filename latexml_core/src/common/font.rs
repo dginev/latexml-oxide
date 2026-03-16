@@ -688,8 +688,8 @@ impl Font {
       series: self.series.clone().or_else(|| concrete.series.clone()),
       shape: self.shape.clone().or_else(|| concrete.shape.clone()),
       size: self.size.or(concrete.size),
-      color: self.color.clone().or_else(|| concrete.color.clone()),
-      bg: self.bg.clone().or_else(|| concrete.bg.clone()),
+      color: self.color.or(concrete.color),
+      bg: self.bg.or(concrete.bg),
       opacity: self.opacity.clone().or_else(|| concrete.opacity.clone()),
       encoding: self.encoding.clone().or_else(|| concrete.encoding.clone()),
       language: self.language.clone().or_else(|| concrete.language.clone()),
@@ -851,15 +851,15 @@ impl Font {
       other.shape
     };
     let mut size = other.size.or(self.size);
-    let color = other.color.or_else(|| self.color.clone());
+    let color = other.color.or(self.color);
     // Perl: $bg = $$self[5] if (!exists $options{background});
     // Only override bg if `other` actually specifies one
-    let bg = if other.bg.is_some() { other.bg } else { self.bg.clone() };
+    let bg = if other.bg.is_some() { other.bg } else { self.bg };
     let opacity = other.opacity.or_else(|| self.opacity.clone());
     let encoding = other.encoding.or_else(|| self.encoding.clone());
     let language = other.language.or_else(|| self.language.clone());
     let mut mathstyle = other.mathstyle.clone().or_else(|| self.mathstyle.clone());
-    flags = (self.flags.unwrap_or(0)) | flags;
+    flags |= self.flags.unwrap_or(0) ;
 
     // Dynamic adjustment directives
     if let Some(scale) = other.scale {
@@ -1149,7 +1149,7 @@ impl Font {
         "color".to_string(),
         (
           self.color.as_ref().unwrap().to_attribute(),
-          Font { color: self.color.clone(), ..Font::default() },
+          Font { color: self.color, ..Font::default() },
         ),
       );
     }
@@ -1158,7 +1158,7 @@ impl Font {
         "backgroundcolor".to_string(),
         (
           self.bg.as_ref().unwrap().to_attribute(),
-          Font { bg: self.bg.clone(), ..Font::default() },
+          Font { bg: self.bg, ..Font::default() },
         ),
       );
     }
@@ -1212,7 +1212,7 @@ impl Font {
     let othercolor = other.get_color();
     let mut changes = Font {
       scale: Some(other.get_size().unwrap() / self.get_size().unwrap()),
-      bg: other.bg.clone(),
+      bg: other.bg,
       opacity: other.opacity.clone(), // should multiply or replace?
       ..Font::default()
     };
@@ -1710,7 +1710,7 @@ pub fn font_match_xpaths(font: &str) -> String {
     let comps: Vec<&str> = inner.split(',').collect();
     // Only check family, series, shape (indices 0, 1, 2)
     let mut frags: Vec<String> = Vec::new();
-    if comps.len() > 0 && comps[0] != "*" {
+    if !comps.is_empty() && comps[0] != "*" {
       frags.push(format!("[{},", comps[0]));
     }
     if comps.len() > 1 && comps[1] != "*" {

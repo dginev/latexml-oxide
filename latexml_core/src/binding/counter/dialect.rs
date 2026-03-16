@@ -854,14 +854,14 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
     let ctr = T_OTHER!(s!("enum{level_str}"));
     let mut i = 0;
     while i < tokens.len() {
-      let t = tokens[i].clone();
+      let t = tokens[i];
       if t.get_catcode() == Catcode::BEGIN {
         // Copy braced groups verbatim
         out.push(t);
         let mut brlevel = 1i32;
         i += 1;
         while brlevel > 0 && i < tokens.len() {
-          let tt = tokens[i].clone();
+          let tt = tokens[i];
           if tt.get_catcode() == Catcode::BEGIN {
             brlevel += 1;
           } else if tt.get_catcode() == Catcode::END {
@@ -879,7 +879,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
             def_macro(
               T_CS!(s!("\\theenum{level_str}")),
               None,
-              Tokens::new(vec![T_CS!("\\Alph"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              Tokens::new(vec![T_CS!("\\Alph"), T_BEGIN!(), ctr, T_END!()]),
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
@@ -889,7 +889,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
             def_macro(
               T_CS!(s!("\\theenum{level_str}")),
               None,
-              Tokens::new(vec![T_CS!("\\alph"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              Tokens::new(vec![T_CS!("\\alph"), T_BEGIN!(), ctr, T_END!()]),
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
@@ -899,7 +899,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
             def_macro(
               T_CS!(s!("\\theenum{level_str}")),
               None,
-              Tokens::new(vec![T_CS!("\\Roman"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              Tokens::new(vec![T_CS!("\\Roman"), T_BEGIN!(), ctr, T_END!()]),
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
@@ -909,7 +909,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
             def_macro(
               T_CS!(s!("\\theenum{level_str}")),
               None,
-              Tokens::new(vec![T_CS!("\\roman"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              Tokens::new(vec![T_CS!("\\roman"), T_BEGIN!(), ctr, T_END!()]),
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
@@ -919,7 +919,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
             def_macro(
               T_CS!(s!("\\theenum{level_str}")),
               None,
-              Tokens::new(vec![T_CS!("\\arabic"), T_BEGIN!(), ctr.clone(), T_END!()]),
+              Tokens::new(vec![T_CS!("\\arabic"), T_BEGIN!(), ctr, T_END!()]),
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));

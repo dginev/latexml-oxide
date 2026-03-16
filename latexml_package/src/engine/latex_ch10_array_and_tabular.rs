@@ -157,7 +157,7 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml lines 3792-3809
   DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[(pos, template)] {
     let mut attrs = HashMap::default();
-    let attachment = pos.map(|a| translate_attachment(&a.to_string()))
+    let attachment = pos.map(|a| translate_attachment(a.to_string()))
       .unwrap_or_else(|| translate_attachment(""));
     attrs.insert(String::from("vattach"), attachment.to_string());
     attrs.insert(String::from("role"), String::from("ARRAY"));

@@ -3,9 +3,7 @@ use base64::Engine as _;
 
 /// Helper to build an invocation without requiring `?` context.
 fn invoke(cs: Token, args: Vec<Tokens>) -> Vec<Token> {
-  let result: Result<Tokens> = (|| {
-    Ok(build_invocation(cs, args.into_iter().map(Into::into).collect())?)
-  })();
+  let result: Result<Tokens> = build_invocation(cs, args.into_iter().map(Into::into).collect());
   result.map(|t| t.unlist()).unwrap_or_default()
 }
 
@@ -56,7 +54,7 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
             return vec![T_CS!(cs)];
           }
         }
-        vec![t.clone()]
+        vec![*t]
       })
       .collect();
     Tokens::new(remapped)
@@ -123,11 +121,7 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
     }
     // Check for mathescape $ toggle
     if mathescape && token.to_string() == "$" {
-      if inmath {
-        inmath = false;
-      } else {
-        inmath = true;
-      }
+      inmath = !inmath;
       tokens.push(T_OTHER!("$"));
       continue;
     }
@@ -151,7 +145,7 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
     }
   }
   // Remove trailing spaces
-  while tokens.last().map_or(false, |t| t.get_catcode() == Catcode::SPACE) {
+  while tokens.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
     tokens.pop();
   }
   // UnTeX: convert tokens to string representation
@@ -189,11 +183,11 @@ fn listings_read_raw_file(file: &str) -> Option<String> {
 
 /// Perl: lstUnGroup — strip outer {} if there's only a single group.
 fn lst_un_group(tokens: Option<Tokens>) -> Option<Tokens> {
-  tokens.and_then(|toks| {
+  tokens.map(|toks| {
     let mut t = toks.unlist();
     if t.len() >= 2
-    && t.first().map_or(false, |tok| tok.get_catcode() == Catcode::BEGIN)
-    && t.last().map_or(false, |tok| tok.get_catcode() == Catcode::END)
+    && t.first().is_some_and(|tok| tok.get_catcode() == Catcode::BEGIN)
+    && t.last().is_some_and(|tok| tok.get_catcode() == Catcode::END)
     {
       let mut groups = 0;
       let mut level = 0;
@@ -213,7 +207,7 @@ fn lst_un_group(tokens: Option<Tokens>) -> Option<Tokens> {
         t.remove(0);
       }
     }
-    Some(Tokens::new(t))
+    Tokens::new(t)
   })
 }
 
@@ -263,7 +257,7 @@ fn lst_split_delimiters(delims: &Tokens) -> (String, String) {
   for tok in delims.unlist_ref() {
     if *tok == T_BEGIN!() {
       if level > 0 {
-        current_group.push(tok.clone());
+        current_group.push(*tok);
       }
       level += 1;
     } else if *tok == T_END!() {
@@ -271,13 +265,13 @@ fn lst_split_delimiters(delims: &Tokens) -> (String, String) {
       if level == 0 {
         groups.push(std::mem::take(&mut current_group));
       } else if level > 0 {
-        current_group.push(tok.clone());
+        current_group.push(*tok);
       }
     } else if level > 0 {
-      current_group.push(tok.clone());
+      current_group.push(*tok);
     } else {
       // Tokens outside groups go to a trailing group
-      current_group.push(tok.clone());
+      current_group.push(*tok);
     }
   }
   // If there are ungrouped tokens, add them as a final group
@@ -587,7 +581,7 @@ fn lst_add_delimiter(
     let key_class = s!("LST_DELIM@{open_str}@class");
     let key_recursive = s!("LST_DELIM@{open_str}@recursive");
     let key_invisible = s!("LST_DELIM@{open_str}@invisible");
-    state::assign_value(&key_open, Stored::String(arena::pin(&regex::escape(&open_str))), None);
+    state::assign_value(&key_open, Stored::String(arena::pin(regex::escape(&open_str))), None);
     state::assign_value(&key_close, Stored::String(arena::pin(&close_re)), None);
     state::assign_value(&key_class, Stored::String(arena::pin(&class)), None);
     state::assign_value(&key_recursive, Stored::Bool(recursive), None);
@@ -1076,7 +1070,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
       let re_str = re.as_str();
       if re_str.contains("__NONWORD__") {
         let close = ctx.listing.is_empty()
-          || ctx.listing.chars().next().map_or(true, |c| !c.is_alphanumeric() && c != '_');
+          || ctx.listing.chars().next().is_none_or(|c| !c.is_alphanumeric() && c != '_');
         if close {
           break;
         }
@@ -1127,7 +1121,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
 
         // Check if this is an 'eval' class (mathescape, texcl, escapechar)
         let is_eval = lst_class_property(&classname, "eval")
-          .map_or(false, |v| v == "true" || v == "1");
+          .is_some_and(|v| v == "true" || v == "1");
 
         if is_eval {
           // For eval classes: match until close, then tokenize the content as TeX
@@ -1245,11 +1239,10 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
             Some(Stored::String(s)) => arena::to_string(s) == "true",
             _ => false,
           };
-          if has_excludeslash {
-            if !styled_tokens.is_empty() {
+          if has_excludeslash
+            && !styled_tokens.is_empty() {
               pre_tokens.push(styled_tokens.remove(0));
             }
-          }
 
           ctx.lsttokens.extend(pre_tokens);
           ctx.lsttokens.extend(lst_class_begin(&classname));
@@ -1319,7 +1312,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
       ctx.listing = ctx.listing[m.end()..].to_string();
       ctx.lsttokens.extend(lst_class_begin("spaces"));
       for _ in 0..n {
-        ctx.lsttokens.push(ctx.space_token.clone());
+        ctx.lsttokens.push(ctx.space_token);
       }
       ctx.lsttokens.extend(lst_class_end("spaces"));
       ctx.colnum += n;
@@ -1467,7 +1460,7 @@ fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
     }
   }
 
-  let name_nonempty = name.as_ref().map_or(false, |n| !n.is_empty());
+  let name_nonempty = name.as_ref().is_some_and(|n| !n.is_empty());
 
   if numbered || name_nonempty {
     result.extend(invoke(T_CS!("\\@listings"), vec![Tokens::new(body)]));
@@ -1529,7 +1522,7 @@ LoadDefinitions!({
     // Read opening delimiter
     let init = gullet::read_token()?;
     let until = init.as_ref().map(|t| {
-      if t.get_catcode() == Catcode::BEGIN { T_END!() } else { t.clone() }
+      if t.get_catcode() == Catcode::BEGIN { T_END!() } else { *t }
     });
     let body = listings_read_raw_string(until.as_ref());
     let mut result = Vec::new();
@@ -1557,7 +1550,7 @@ LoadDefinitions!({
       expansion.extend(kv_tok.unlist_ref().iter().cloned());
       expansion.push(T_OTHER!("]"));
     }
-    expansion.push(active_tok.clone());
+    expansion.push(active_tok);
     def_macro(active_tok, None, Tokens::new(expansion), None)?;
   });
 
@@ -2393,8 +2386,8 @@ LoadDefinitions!({
     let esc1 = lst_deslash(&args[0].to_string());
     let esc2 = lst_deslash(&args[1].to_string());
     if !esc1.is_empty() && !esc2.is_empty() {
-      state::assign_value(&s!("LST_DELIM@{esc1}@open"), Stored::String(arena::pin(&regex::escape(&esc1))), None);
-      state::assign_value(&s!("LST_DELIM@{esc1}@close"), Stored::String(arena::pin(&regex::escape(&esc2))), None);
+      state::assign_value(&s!("LST_DELIM@{esc1}@open"), Stored::String(arena::pin(regex::escape(&esc1))), None);
+      state::assign_value(&s!("LST_DELIM@{esc1}@close"), Stored::String(arena::pin(regex::escape(&esc2))), None);
       state::assign_value(&s!("LST_DELIM@{esc1}@class"), Stored::String(arena::pin("evaluate")), None);
       state::assign_value(&s!("LST_DELIM@{esc1}@escape"), Stored::Bool(true), None);
       state::assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
@@ -2492,7 +2485,7 @@ LoadDefinitions!({
     .map(|s| s.to_string())
     .collect();
   for file in &lang_files {
-    let _ = InputDefinitions!(file, noerror => true);
+    InputDefinitions!(file, noerror => true);
   }
 
   // Internal macros used by sibling bindings (e.g. cleveref)

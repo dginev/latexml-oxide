@@ -6,10 +6,10 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
     let text_str = text.to_string();
     let has_star = star.is_some();
-    let mut opts = MathPrimitiveOptions::default();
-    opts.role = Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string());
-    opts.font = Some(
-      fontmap!(family => "serif", series => "medium", shape => "upright").into());
+    let opts = MathPrimitiveOptions {
+      role: Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string()),
+      font: Some(fontmap!(family => "serif", series => "medium", shape => "upright").into()),
+      ..Default::default()};
     def_math(cs, None, text_str, opts)?;
   });
 

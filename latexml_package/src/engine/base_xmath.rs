@@ -853,7 +853,7 @@ LoadDefinitions!({
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+            props.insert(k, Stored::String(arena::pin(v.to_string())));
           }
         }
       }
@@ -863,9 +863,9 @@ LoadDefinitions!({
       // Perl: afterDigest — check if XMDual is needed, store alignment
       // Check if datameaning or delimitermeaning is set
       let has_datameaning = whatsit.get_property("datameaning")
-        .map_or(false, |v| !v.to_string().is_empty());
+        .is_some_and(|v| !v.to_string().is_empty());
       let has_delimmeaning = whatsit.get_property("delimitermeaning")
-        .map_or(false, |v| !v.to_string().is_empty());
+        .is_some_and(|v| !v.to_string().is_empty());
       if has_datameaning || has_delimmeaning {
         whatsit.set_property("needXMDual", "1");
         whatsit.set_property("xmkey", get_xmarg_id()?);
@@ -896,7 +896,7 @@ LoadDefinitions!({
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+            props.insert(k, Stored::String(arena::pin(v.to_string())));
           }
         }
       }
@@ -904,9 +904,9 @@ LoadDefinitions!({
     },
     after_digest => sub[whatsit] {
       let has_datameaning = whatsit.get_property("datameaning")
-        .map_or(false, |v| !v.to_string().is_empty());
+        .is_some_and(|v| !v.to_string().is_empty());
       let has_delimmeaning = whatsit.get_property("delimitermeaning")
-        .map_or(false, |v| !v.to_string().is_empty());
+        .is_some_and(|v| !v.to_string().is_empty());
       if has_datameaning || has_delimmeaning {
         whatsit.set_property("needXMDual", "1");
         whatsit.set_property("xmkey", get_xmarg_id()?);
@@ -951,7 +951,7 @@ LoadDefinitions!({
 
     // Column 1: value (style + \hfil after)
     let col1 = Cell {
-      before: Some(Tokens::new(vec![style_tok.clone()])),
+      before: Some(Tokens::new(vec![style_tok])),
       after: Some(Tokens::new(vec![T_CS!("\\hfil")])),
       empty: true,
       ..Cell::default()
@@ -1008,7 +1008,7 @@ LoadDefinitions!({
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+            props.insert(k, Stored::String(arena::pin(v.to_string())));
           }
         }
       }
@@ -1026,7 +1026,7 @@ LoadDefinitions!({
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+            props.insert(k, Stored::String(arena::pin(v.to_string())));
           }
         }
       }
@@ -1177,7 +1177,7 @@ pub fn equationgroup_join_cols(
     if !qname_str.ends_with("_Capture_") {
       continue;
     }
-    if (col % ncols) == 0 {
+    if col.is_multiple_of(ncols) {
       if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
         close_math_fork(document, equation, mf, br)?;
       }

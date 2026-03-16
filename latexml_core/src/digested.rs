@@ -39,6 +39,9 @@ use crate::{BoxOps, NO_PROPERTIES};
 pub struct Digested(Rc<DigestedData>);
 /// These are all kinds of data which we consider officially supported
 /// as outputs from the digestion phase of TeX, i.e. from invoking a token.
+#[allow(clippy::large_enum_variant)]
+// TODO: Investigate if the outer Rc<> wrap of Digested is enough to avoid performance penalties from having 
+//       the concrete structs in DigestedData vary a lot in size.
 pub enum DigestedData {
   /// A TeX Box
   TBox(RefCell<Tbox>),

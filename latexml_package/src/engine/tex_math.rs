@@ -298,13 +298,14 @@ LoadDefinitions!({
         Some(value.into()),
         props.glyph,
         props.role.as_deref().map(arena::pin),
-        props.meaning.as_deref().map(arena::pin),
-        None, // chardef_name: synthesized at invoke time from CS name
-        props.stretchy.as_deref().map(arena::pin),
-        props.scriptpos.as_deref().map(arena::pin),
-        props.mathstyle.as_deref().map(arena::pin),
-        props.need_scriptpos,
-        props.need_mathstyle,
+        CharDefProps {
+          meaning: props.meaning.as_deref().map(arena::pin),
+          // chardef_name: synthesized at invoke time from CS name
+          stretchy: props.stretchy.as_deref().map(arena::pin),
+          scriptpos: props.scriptpos.as_deref().map(arena::pin),
+          mathstyle: props.mathstyle.as_deref().map(arena::pin),
+          need_scriptpos: props.need_scriptpos,
+          need_mathstyle: props.need_mathstyle }
       ), None);
     state::after_assignment();
   });

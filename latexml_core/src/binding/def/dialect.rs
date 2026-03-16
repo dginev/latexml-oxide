@@ -619,7 +619,7 @@ pub fn def_math_primitive(
         if properties.dynamic_mathstyle {
           let is_display = state_font
             .get_mathstyle()
-            .map_or(false, |s| s.as_ref() == "display");
+            .is_some_and(|s| s.as_ref() == "display");
           properties.mathstyle =
             Some(if is_display { "display" } else { "text" }.to_string());
         }
@@ -627,7 +627,7 @@ pub fn def_math_primitive(
         if properties.dynamic_scriptpos {
           let is_display = state_font
             .get_mathstyle()
-            .map_or(false, |s| s.as_ref() == "display");
+            .is_some_and(|s| s.as_ref() == "display");
           properties.scriptpos =
             Some(if is_display { "mid" } else { "post" }.to_string());
         }

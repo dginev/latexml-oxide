@@ -600,9 +600,9 @@ fn rearrange_eqnarray(
   let equation_nodes: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
   for rownode in equation_nodes {
     let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&rownode));
-    let has_l = cells.get(0).map_or(false, |c| !c.get_child_nodes().is_empty());
-    let has_m = cells.get(1).map_or(false, |c| !c.get_child_nodes().is_empty());
-    let has_r = cells.get(2).map_or(false, |c| !c.get_child_nodes().is_empty());
+    let has_l = cells.first().is_some_and(|c| !c.get_child_nodes().is_empty());
+    let has_m = cells.get(1).is_some_and(|c| !c.get_child_nodes().is_empty());
+    let has_r = cells.get(2).is_some_and(|c| !c.get_child_nodes().is_empty());
     let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
     let labelled = rownode.get_attribute("label").is_some();
     rows.push(EqRow {
@@ -675,9 +675,7 @@ fn rearrange_eqnarray(
         class = "continue";
       }
     } else if row.has_r {
-      if eqs.is_empty() {
-        class = "odd";
-      } else if numbered && row.numbered && row._labelled {
+      if eqs.is_empty() || (numbered && row.numbered && row._labelled) {
         class = "odd";
       } else {
         class = "continue";
