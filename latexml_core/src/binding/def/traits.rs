@@ -363,6 +363,12 @@ impl IntoRegisterValueOption<Option<RegisterValue>> for Glue {
 impl IntoRegisterValueOption<Option<RegisterValue>> for MuGlue {
   fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::MuGlue(self)) }
 }
+impl IntoRegisterValueOption<Option<RegisterValue>> for Token {
+  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Token(self)) }
+}
+impl IntoRegisterValueOption<Option<RegisterValue>> for Option<Token> {
+  fn into_register_value_option(self) -> Option<RegisterValue> { self.map(RegisterValue::Token) }
+}
 impl IntoRegisterValueOption<Option<RegisterValue>> for Tokens {
   fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Tokens(self)) }
 }
