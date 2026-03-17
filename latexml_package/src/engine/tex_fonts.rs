@@ -336,8 +336,9 @@ LoadDefinitions!({
     ]
   );
 
-  let mut cal_font = latexml_core::common::font::Font::default();
-  cal_font.family = Some(std::borrow::Cow::Borrowed("caligraphic"));
+  let cal_font = Font {
+    family: Some(std::borrow::Cow::Borrowed("caligraphic")),
+    ..Default::default() };
   latexml_core::state::assign_value("OMS_uppercase_mathstyle", latexml_core::state::Stored::Font(std::rc::Rc::new(cal_font)), Some(latexml_core::state::Scope::Global));
 
   #[rustfmt::skip]

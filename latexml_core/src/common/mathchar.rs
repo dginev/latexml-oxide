@@ -23,6 +23,8 @@ pub struct MathCharProps {
   pub need_mathstyle: bool,
   pub scriptpos: Option<String>,
   pub mathstyle: Option<String>,
+  pub reversion: Option<crate::tokens::Tokens>,
+  pub font: Option<crate::common::font::Font>,
 }
 
 impl MathCharProps {
@@ -279,51 +281,104 @@ pub fn unicode_math_properties(c: char) -> Option<MathCharProps> {
     need_mathstyle: need_ms,
     scriptpos: None,
     mathstyle: None,
+    reversion: None,
+    font: None,
   })
 }
 
 // Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
 // What we're really after is a connection to a font encoding mapping.
-pub fn decode_math_char(mut n: u16) -> Result<MathCharProps> {
+pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) -> Result<MathCharProps> {
   let class: u16 = n / (16 * 256);
   n %= 16 * 256;
   let mut fam: u16 = n / 256;
-  let mut curfam_val = -1;
+  
+  let curfam_val: i32 = match state::lookup_register("\\fam", Vec::new()) {
+    Ok(Some(crate::definition::register::RegisterValue::Number(curfam))) => curfam.0 as i32,
+    _ => -1,
+  };
+
   if class == 7 {
-    if let Ok(Some(crate::definition::register::RegisterValue::Number(curfam))) = state::lookup_register("\\fam", Vec::new()) {
-      curfam_val = curfam.0;
-      if curfam.0 >= 0 && curfam.0 <= 15 {
-        fam = curfam.0 as u16;
-      }
+    if curfam_val >= 0 && curfam_val <= 15 {
+      fam = curfam_val as u16;
     }
   }
   n %= 256;
 
   let curfont = state::lookup_font().unwrap();
+  let initfont = match state::lookup_value("initial_math_font") {
+    Some(Stored::Font(f)) => f.clone(),
+    _ => curfont.clone(),
+  };
+
   let mut use_current_font = false;
-  if class == 7 && curfam_val < 0 {
-    let family = curfont.family.as_deref().unwrap_or("");
-    if family != "math" {
-      use_current_font = true;
-    }
+  let mut maybe_rev = curfam_val >= 0 && fam != 1;
+  let mut fontdef_tok: Option<Token> = None;
+  
+  if class == 7 && curfam_val < 0 && curfont != initfont {
+    use_current_font = true;
+    maybe_rev = true;
+    fontdef_tok = Some(crate::T_CS!("\\font"));
   }
 
-  let font = state::lookup_value(&crate::s!("textfont_{fam}")).unwrap_or_else(|| {
-    state::lookup_value(&crate::s!("scriptfont_{fam}"))
-      .unwrap_or_else(|| state::lookup_value(&crate::s!("scriptscriptfont_{fam}")).unwrap_or(Stored::Bool(false)))
-  });
+  let mut downsize = 0;
+  if fontdef_tok.is_none() {
+    let style = curfont.get_mathstyle().map(|s| s.to_string()).unwrap_or_default();
+    let style_str = if style == "script" || style == "scriptscript" || style == "text" { style.as_str() } else { "text" };
+    if style_str == "text" {
+      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t.clone()); }
+    } else if style_str == "script" {
+      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptfont_{fam}")) { fontdef_tok = Some(t.clone()); }
+      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t.clone()); downsize = 1; }
+    } else if style_str == "scriptscript" {
+      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptscriptfont_{fam}")) { fontdef_tok = Some(t.clone()); }
+      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptfont_{fam}")) { fontdef_tok = Some(t.clone()); downsize = 1; }
+      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t.clone()); downsize = 2; }
+    }
+  }
+  
   let c = n as u8 as char;
   let class_role = MATH_CLASS_ROLE[class as usize];
 
-  // Decode the glyph from the font encoding
+  let mut f = (*curfont).clone();
+  if let Some(ftok) = &fontdef_tok {
+    if use_current_font {
+      // f is already curfont
+    } else {
+      state::with_font_info(ftok, |fontinfo| {
+        if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
+          f = f.merge((**info).clone());
+        } else {
+          // Perl: fallback to \lx@default@font if not found
+          if let Some(Stored::Token(d_tok)) = state::lookup_value("\\lx@default@font") {
+             state::with_font_info(&d_tok, |d_info| {
+               if let Some(Stored::Font(ref d_f)) = d_info.unwrap_or(None) {
+                 f = f.merge((**d_f).clone());
+               }
+             });
+          }
+        }
+      });
+    }
+  }
+
+  if downsize > 0 {
+    f.scripted = Some(true);
+  }
+  if downsize > 1 {
+    f.scripted = Some(true);
+  }
+
+  let d = f.relative_to(&curfont);
+
   let glyph = if use_current_font {
     if let Some(ref data) = curfont.encoding {
       crate::common::font::decode(n as u8, Some(data.to_string()), false)
     } else {
       Some(c)
     }
-  } else {
-    state::with_font_info(&crate::T_CS!(font.to_string()), |fontinfo| {
+  } else if let Some(ftok) = &fontdef_tok {
+    state::with_font_info(ftok, |fontinfo| {
       let cinfo = if let Some(Stored::Font(ref info)) = fontinfo? {
         if let Some(ref data) = info.encoding {
           crate::common::font::decode(n as u8, Some(data.to_string()), false)
@@ -331,19 +386,19 @@ pub fn decode_math_char(mut n: u16) -> Result<MathCharProps> {
           Some(c)
         }
       } else {
-        None
+        Some(c)
       };
       Ok::<Option<char>, crate::common::error::Error>(cinfo)
     })?
+  } else {
+    Some(c)
   };
 
-  // Look up unicode math properties for the decoded glyph
   let glyph_char = glyph.unwrap_or(c);
   let charinfo = unicode_math_properties(glyph_char);
   let mut props = charinfo.clone().unwrap_or_default();
   props.glyph = glyph;
 
-  // Apply class-based role if no role from unicode properties, or class gives a specific role
   let mut role = charinfo.as_ref().and_then(|info| info.role.clone());
   if role.is_none() && !class_role.is_empty() {
     role = Some(class_role.to_string());
@@ -352,8 +407,26 @@ pub fn decode_math_char(mut n: u16) -> Result<MathCharProps> {
     props.role = role;
   }
 
-  // Resolve need_scriptpos/need_mathstyle to actual values
   props.resolve_style_props();
+
+  let mut final_reversion = reversion;
+  if let Some(rev) = final_reversion.clone() {
+    let mut wrap = maybe_rev && !d.is_empty();
+    if state::lookup_value("LaTeX.pool.ltxml_loaded").is_some() {
+      wrap = false;
+    }
+    if wrap {
+      if let Some(ftok) = fontdef_tok {
+        let mut new_rev = vec![crate::T_BEGIN!(), ftok];
+        new_rev.extend(rev.unlist());
+        new_rev.push(crate::T_END!());
+        final_reversion = Some(crate::tokens::Tokens::new(new_rev));
+      }
+    }
+    props.reversion = final_reversion;
+  }
+
+  props.font = Some(f);
 
   Ok(props)
 }
@@ -365,10 +438,8 @@ pub fn decode_math_char_for_stomach(
   mathcode: u16,
   meaning: Token,
 ) -> Result<Option<Digested>> {
-  let props = decode_math_char(mathcode)?;
-  
-  // If the font map explicitly maps this character to nothing (or it's missing and implicit=false),
-  // we discard it entirely, matching Perl's `return unless defined $glyph;`
+  let props = decode_math_char(mathcode, Some(crate::Tokens!(meaning.clone())))?;
+
   let glyph = match props.glyph {
     Some(g) => g,
     None => return Ok(None),
@@ -388,17 +459,17 @@ pub fn decode_math_char_for_stomach(
   if let Some(ref stretchy) = props.stretchy {
     properties.insert("stretchy", Stored::String(arena::pin(stretchy)));
   }
-  
+
   let glyph_sym = arena::pin(glyph.to_string());
-  
-  let font = state::lookup_font().map(|f| {
+
+  let font = props.font.map(|f| {
     Rc::new(arena::with(glyph_sym, |s| f.specialize(s)))
   });
   Ok(Some(Digested::from(Tbox::new(
     glyph_sym,
     font,
     None,
-    crate::Tokens!(meaning),
+    props.reversion.unwrap_or(crate::Tokens!(meaning)),
     properties,
   ))))
 }

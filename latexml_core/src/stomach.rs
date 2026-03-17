@@ -292,7 +292,7 @@ pub fn set_mode(mode: &str) -> Result<()> {
     // see get_script_level()
     assign_value("script_base_level", stomach!().boxing.len(), None);
     let isdisplay = mode.starts_with("display");
-    let new_font = lookup_mathfont().unwrap().merge(Font {
+    let new_font = Rc::new(lookup_mathfont().unwrap().merge(Font {
       color: curfont.color,
       bg: curfont.bg,
       size: curfont.size,
@@ -302,8 +302,9 @@ pub fn set_mode(mode: &str) -> Result<()> {
         Some("text".into())
       },
       ..Font::default()
-    });
-    assign_font(Rc::new(new_font), Some(Scope::Local));
+    }));
+    assign_value("initial_math_font", Stored::Font(new_font.clone()), Some(Scope::Local));
+    assign_font(new_font, Some(Scope::Local));
   } else {
     let curfont = lookup_font().unwrap();
     // When entering text mode, we should set the font to the text font in use before the math

@@ -235,7 +235,7 @@ LoadDefinitions!({
     sizer       => "#1",
     after_digest => sub[whatsit] {
       let n = whatsit.get_arg(1).unwrap().value_of();
-      let props = decode_math_char(n as u16)?;
+      let props = decode_math_char(n as u16, None)?;
       if let Some(glyph) = props.glyph {
         whatsit.set_property("glyph", glyph);
         whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
@@ -269,7 +269,7 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     let mut n = whatsit.get_arg(1).unwrap().value_of();
     n >>= 12;    // Ignore 3 rightmost digits and treat as \mathchar
-    let props = decode_math_char(n as u16)?;
+    let props = decode_math_char(n as u16, None)?;
     if let Some(glyph) = props.glyph {
       whatsit.set_property("glyph", glyph);
       whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
@@ -292,7 +292,7 @@ LoadDefinitions!({
     let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, means_relax, None);
     let value = gullet::read_number().unwrap_or_default();
-    let props = decode_math_char(value.value_of() as u16)?;
+    let props = decode_math_char(value.value_of() as u16, None)?;
     state::install_definition(
       Register::new_math_chardef(
         newcs,
@@ -317,7 +317,7 @@ LoadDefinitions!({
   sizer => "#2",    // Close enough?
   after_digest => sub[whatsit] {
     let n = whatsit.get_arg(1).unwrap().value_of();
-    let props = decode_math_char(n as u16)?;
+    let props = decode_math_char(n as u16, None)?;
     if let Some(glyph) = props.glyph {
       let glyph_string = glyph.to_string();
       let acc_props = tex_character::unicode_accent(&glyph_string);
