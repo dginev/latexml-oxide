@@ -68,10 +68,6 @@ impl DigestionAPI for Core {
     // now handle conversion state
     gullet::initialize_gullet();
     stomach::initialize_stomach();
-    // Register the decode_math_char hook from latexml_package
-    stomach::set_decode_math_char_hook(
-      latexml_package::engine::base_functions::decode_math_char_for_stomach,
-    );
     // should we reset the model also?
     model::initialize_model();
     // let paths = state::search_paths;

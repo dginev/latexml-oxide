@@ -11,6 +11,7 @@ pub mod glue;
 pub mod ligature;
 pub mod local_assignments;
 pub mod locator;
+pub mod mathchar;
 pub mod model;
 pub mod mudimension;
 pub mod muglue;

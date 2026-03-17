@@ -145,12 +145,19 @@ LoadDefinitions!({
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   {
+    for digit in 0..10 {
+      assign_mathcode((b'0' + digit) as char, 0x7030 + (digit as u16), Some(Scope::Global));
+    }
     for letter in b'A'..=b'Z' {
       //FYI: 0x20 == 32
       assign_lccode(letter, letter + 32, Some(Scope::Global));
       assign_uccode(letter, letter, Some(Scope::Global));
+      assign_mathcode(letter as char, 0x7100 + (letter as u16), Some(Scope::Global));
+      assign_sfcode(letter as char, 999u16, Some(Scope::Global));
+
       assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
       assign_uccode(letter + 32, letter, Some(Scope::Global));
+      assign_mathcode((letter + 32) as char, 0x7100 + ((letter + 32) as u16), Some(Scope::Global));
     }
   }
   DefRegister!("\\magnification", Number!(1000));

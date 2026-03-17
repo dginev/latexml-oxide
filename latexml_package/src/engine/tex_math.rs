@@ -4,6 +4,7 @@
 
 use crate::prelude::*;
 use crate::engine::tex_character;
+use latexml_core::common::mathchar::decode_math_char;
 
 /// Perl's mergeLimits (TeX_Math.pool.ltxml): walks backward through the
 /// digest list, extracts any existing script level from the previous
@@ -546,7 +547,7 @@ LoadDefinitions!({
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
+    lookup_token(&s!("textfont_{fam}")).unwrap_or_else(|| T_CS!("\\tenrm"))
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
@@ -556,7 +557,7 @@ LoadDefinitions!({
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
+    lookup_token(&s!("scriptfont_{fam}")).unwrap_or_else(|| T_CS!("\\sevenrm"))
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
@@ -566,7 +567,7 @@ LoadDefinitions!({
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
+    lookup_token(&s!("scriptscriptfont_{fam}")).unwrap_or_else(|| T_CS!("\\fiverm"))
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();

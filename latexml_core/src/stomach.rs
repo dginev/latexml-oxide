@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use std::borrow::Cow;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
@@ -21,18 +21,7 @@ use crate::tokens::Tokens;
 use crate::definition::register::RegisterValue;
 use crate::{BoxOps, Digested, TexMode, gullet};
 
-/// Hook for decoding math characters (Perl: decodeMathChar).
-/// Set by latexml_package during initialization, since the full implementation
-/// depends on Package-level utilities (unicode_math_properties, etc.)
-pub type DecodeMathCharFn = fn(u16, Token) -> Result<Digested>;
 
-#[thread_local]
-static DECODE_MATH_CHAR_HOOK: Cell<Option<DecodeMathCharFn>> = Cell::new(None);
-
-/// Register the decode_math_char hook from latexml_package
-pub fn set_decode_math_char_hook(hook: DecodeMathCharFn) {
-  DECODE_MATH_CHAR_HOOK.set(Some(hook));
-}
 
 static MAXSTACK: usize = 200;
 
@@ -928,9 +917,13 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // the font encoding. In Rust, Tbox::new already handles IN_MATH:
       // it sets mode="math", looks up math_token_attributes for role/meaning/name,
       // and specializes the font. This produces the correct LaTeXML-level properties.
-      // The DECODE_MATH_CHAR_HOOK is available for cases where TeX-level mathcode
-      // font decoding is needed (e.g., non-ASCII chars needing font map lookup).
-      // TODO: Use hook for chars where font-encoding glyph differs from input.
+      // The mathchar parsing handles non-ASCII chars needing font map lookup.
+      // TODO: Use for chars where font-encoding glyph differs from input.
+      if lookup_bool("IN_MATH") {
+        if let Some(mathcode) = lookup_mathcode_sym(&meaning.get_sym()) {
+          return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning.clone());
+        }
+      }
       if !lookup_bool("IN_MATH") {
         enter_horizontal();
       }
