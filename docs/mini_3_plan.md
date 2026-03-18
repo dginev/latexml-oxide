@@ -1,32 +1,39 @@
-# Mini Plan: Round 3
+# Mini Plan: Round 4
 
 ## Status: 217 pass, 0 fail, 62 ignored
+
+## Analysis
+Most remaining tests need either:
+1. Math parser improvements (text= attr) — affects ~20 tests
+2. Package bindings (stmaryrd, mathtools, makecell, etc.) — affects ~10 tests
+3. Equation numbering (tags) — affects ~8 tests
+4. Specific code fixes (preamble PI, \underaccent, etc.) — scattered
 
 ## Three most connected work packets
 
 ### Selection rationale
-Looking at the remaining 62 ignored tests, most are blocked by the math parser (text= diffs)
-or equation numbering (tags diffs). I'll focus on tests that have structural diffs fixable
-without math parser changes, and crashes that can be resolved.
+Focus on **equation numbering** which affects 8+ tests (eqnums, badeqnarray, amsarticle,
+ieee, ntheorem, amsdisplay, listing, split). The equation counter stepping and `<tags>`
+element generation is a single infrastructure piece that unblocks many tests.
 
-### Packet 1: Fix `cd_test` — port amscd.sty binding (56_ams)
-- **Current state**: 199 diffs after panic fix. Most diffs are structural — missing `ltx:XMApp` elements from the CD (commutative diagram) environment.
-- **Root cause**: amscd.sty binding not ported. Perl has amscd.sty.ltxml.
-- **Approach**: Port the amscd.sty.ltxml binding. It's a small package (~100 lines) defining `\CD`, `\@>`, `\@<`, `\@A`, `\@V`, `\@=`.
-- **Expected**: Many diffs should resolve with the binding ported.
+### Packet 1: Implement equation counter stepping
+- **Problem**: `\refstepcounter{equation}` during eqnarray doesn't increment properly,
+  leading to wrong/missing equation numbers in `<tags>` elements.
+- **Compare**: Run `latexml --noparse` on a minimal numbered eqnarray in both Perl and Rust.
+- **Fix**: Ensure counter stepping works in alignment context.
 
-### Packet 2: Fix `mathtools_test` — port mathtools.sty binding (56_ams)
-- **Current state**: TooManyErrors (>100 undefined tokens like \radical, \ext@arrow, \arrowfill@).
-- **Root cause**: mathtools.sty.ltxml not ported. It redefines many amsmath commands.
-- **Approach**: Port mathtools.sty.ltxml. Focus on the core definitions — the package is moderate size.
-- **Expected**: Reduce errors, see actual test output.
+### Packet 2: Implement `<tags>` element generation for equations
+- **Problem**: The `<tags>` element with `<tag>`, `<tag role="refnum">`, `<tag role="typerefnum">`
+  is missing from equation/equationgroup output.
+- **Compare**: Perl's `@equationgroup@numbering` macro and `stepping` hooks.
+- **Fix**: Port the tags generation hooks.
 
-### Packet 3: Fix `matrix_test` — afterConstruct + equation numbering (56_ams)
-- **Current state**: 176 diffs. afterConstruct is ported. Diffs likely from matrix environment structure.
-- **Root cause**: ams matrix/cases environments need proper MathFork generation.
-- **Expected**: Assess remaining diffs after tex= fix from previous round.
+### Packet 3: Fix badeqnarray xml:id numbering (.m1 vs .m4)
+- **Problem**: MathFork Math gets xml:id S0.Ex1.m1 instead of S0.Ex1.m4.
+- **Root cause**: generate_id counter doesn't account for MathBranch cells.
+- **Fix**: Ensure counter is synced after MathFork construction.
 
 ### Execution order
-1. Port amscd.sty binding → cd_test structural fix
-2. Port mathtools.sty binding → mathtools_test error reduction
-3. Analyze matrix_test remaining diffs → targeted fixes
+1. Minimal test comparison: numbered eqnarray in Perl vs Rust
+2. Fix counter stepping → tags elements appear
+3. Fix id numbering → MathFork ids match

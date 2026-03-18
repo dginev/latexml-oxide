@@ -232,8 +232,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-18)
 
-**Current totals: 216 pass, 0 fail, 63 ignored test functions (279 total)**
-**Coverage: 79% pass rate (216/274 non-permanent-ignore tests)**
+**Current totals: 217 pass, 0 fail, 62 ignored test functions (279 total)**
+**Coverage: 79% pass rate (217/274 non-permanent-ignore tests)**
 
 **Recent fixes (2026-03-18, session 2):**
 - **cleanup_math XPath**: Updated to match Perl — excludes XMHint and lone PUNCT/PERIOD from "real math" check. Math spacing commands (`\,`, `\!`, `\>`, `\;`, `\mskip`) no longer produce spurious `<Math>` elements. XMHint width converted to Unicode space chars via `dimension_to_spaces`.
@@ -371,7 +371,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-18):** 216 pass, 0 fail, 63 ignored (279 total). Session 3 gains: cleanup_unreferenced_xmtok_ids (wasysym_test now passing), marked 4 already-passing items done (ding, figure_grids, xcolors, aliceblog). Previous: cleanup_math, vbox/vtop, compact_xmdual.
+**Status (2026-03-18):** 217 pass, 0 fail, 62 ignored (279 total). Session 4 gains: wasysym (unreferenced XMTok ids), colors (\pagecolor reversion), amscd.sty binding ported, MathFork tex= attribute, Box::get_body returns self, cd_test panic fix. Equation numbering (tags) for eqnarray: identified blocker — alignment Row properties use HashMap<String,String>, can't store Digested tags. Needs Row type change.
 
 ### Completed items
 
