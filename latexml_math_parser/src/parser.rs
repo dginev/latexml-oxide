@@ -450,9 +450,10 @@ impl MathParser {
           document.set_attribute(&mut result, &key, &value)?;
           // }
         }
-        result = document
-          .replace_tree(result, node)?
-          .expect("replacing the tree should always work.");
+        if let Some(r) = document.replace_tree(result.clone(), node)? {
+          result = r;
+        }
+        // If replace_tree returns None, node was already detached; keep result as-is.
         // Danger: the above code replaced the id on the parsed result with the one from XMArg,..
         // If there are any references to `resultid`, we need to point them to `newid`!
         if let Some(rid) = resultid {
