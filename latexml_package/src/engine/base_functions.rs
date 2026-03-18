@@ -545,29 +545,59 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
   // Cleanup ltx:Math elements; particularly if they aren't "really" math.
   // But record the oddity with class=ltx_markedasmath
 
-  // If the Math ONLY contains XMath/XMText, it apparently isn't math at all!?!
-  if document
-    .findnodes("ltx:XMath/ltx:*[local-name() != 'XMText']", Some(&mathnode))
-    .is_empty()
-  {
+  // If the Math ONLY contains XMath/XMText and XMHint, it apparently isn't math at all!?!
+  // Single token PUNCTs can also be taken out of math.
+  let xpath = concat!(
+    "ltx:XMath/ltx:*[local-name() != 'XMText' and local-name() != 'XMHint'",
+    " and not(",
+    "local-name() = 'XMTok' and (@role='PUNCT' or @role='PERIOD')",
+    " and not(preceding-sibling::*) and not(following-sibling::*) )]"
+  );
+  if document.findnodes(xpath, Some(&mathnode)).is_empty() {
     // So unwrap down to the contents of the XMText's.
-    let xmtexts = mathnode.get_child_nodes().into_iter().flat_map(|child| {
-      child
-        .get_child_nodes()
-        .into_iter()
-        .flat_map(|grandhcild| grandhcild.get_child_nodes())
-    });
-    let mut texts = vec![];
-    for mut text in xmtexts {
-      text = if text.get_type() == Some(NodeType::ElementNode) {
-        // Make sure we've got an element
-        text
+    let xmath_children: Vec<_> = mathnode
+      .get_child_nodes()
+      .into_iter()
+      .flat_map(|child| child.get_child_nodes())
+      .collect();
+    let mut texts: Vec<Node> = vec![];
+    for xmnode in xmath_children {
+      let is_hint =
+        document::with_node_qname(&xmnode, |qname| qname == "ltx:XMHint");
+      if is_hint {
+        // Convert XMHint width to spacing characters
+        if let Some(width_str) = xmnode.get_attribute("width") {
+          // Width may be a full glue spec like "2.22217pt plus 1.11108pt minus 2.22217pt"
+          // Extract just the base dimension (before "plus" or "minus")
+          let base_dim_str = width_str
+            .split_once(" plus")
+            .or_else(|| width_str.split_once(" minus"))
+            .map_or(width_str.as_str(), |(base, _)| base);
+          if let Ok(dim) = Dimension::from_str(base_dim_str) {
+            let spaces = super::tex_glue::dimension_to_spaces(dim);
+            if !spaces.is_empty() {
+              if let Ok(text_node) = Node::new_text(&spaces, &document.document) {
+                texts.push(text_node);
+              }
+            }
+          }
+        }
       } else {
-        document.wrap_nodes("ltx:text", vec![text])?.unwrap()
-      };
-      // Now record that it originally was marked as math
-      document.add_class(&mut text, "ltx_markedasmath")?;
-      texts.push(text)
+        // is XMText — process its children
+        for mut child in xmnode.get_child_nodes() {
+          let t = child.get_type();
+          if t == Some(NodeType::CommentNode) {
+            continue;
+          }
+          if t != Some(NodeType::ElementNode) {
+            // Make sure we've got an element
+            child = document.wrap_nodes("ltx:text", vec![child])?.unwrap();
+          }
+          // Now record that it originally was marked as math
+          document.add_class(&mut child, "ltx_markedasmath")?;
+          texts.push(child);
+        }
+      }
     }
     document.replace_node(mathnode.clone(), texts)?; // and replace the whole Math with the pieces
   } else {

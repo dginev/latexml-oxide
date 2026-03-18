@@ -500,7 +500,9 @@ pub fn repack_horizontal() {
   if keep {
     let mut list = List::new(para);
     list.mode = Some(TexMode::Text); // "horizontal" in Perl
-    // Perl: $list->setProperty(width => LookupRegister('\hsize')) if $mode eq 'horizontal';
+    // Perl: List(@para, mode => 'horizontal') — set mode property string
+    // This is needed for compute_boxes_size vertical layout to detect paragraph Lists
+    list.set_property("mode", Stored::String(arena::pin_static("horizontal")));
     // Perl: $list->setProperty(width => LookupRegister('\hsize')) if $mode eq 'horizontal';
     if let Some(hsize) = lookup_dimension("\\hsize") {
       list.set_property("width", hsize);

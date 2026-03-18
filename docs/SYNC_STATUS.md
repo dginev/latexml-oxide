@@ -235,6 +235,12 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Current totals: 215 pass, 0 fail, 64 ignored test functions (279 total)**
 **Coverage: 78% pass rate (215/274 non-permanent-ignore tests)**
 
+**Recent fixes (2026-03-18, session 2):**
+- **cleanup_math XPath**: Updated to match Perl — excludes XMHint and lone PUNCT/PERIOD from "real math" check. Math spacing commands (`\,`, `\!`, `\>`, `\;`, `\mskip`) no longer produce spurious `<Math>` elements. XMHint width converted to Unicode space chars via `dimension_to_spaces`.
+- **vbox/vtop height/depth**: Fixed 3 bugs — sizer closure now passes Whatsit properties (vattach etc.), `repack_horizontal` sets "mode" property string, removed extra `flat_map(unlist)` in `compute_boxes_size`.
+- **compact_xmdual xml:id leak**: Fixed content token xml:id leaking to presentation token when dual has no xml:id (Case 1).
+- **Sizes test progress**: Down from 313 to 20 diff lines. Remaining: dimension rounding (4), super/subscript widths (3), table sizing (6+), section 8 (7).
+
 ### Per-test enumeration
 
 - [x] **000_hello** (1/1)
@@ -365,7 +371,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-18):** 218 pass, 0 fail, 61 ignored. Session gains: mathbbol_test, esint_test, acc_test, plainfonts_test (compact_xmdual, dynamic_mathstyle, {} fix, keyval extraction, XML updates). Previous: fonts_test, mixed_test, mathaccents_test, dots_test.
+**Status (2026-03-18):** 215 pass, 0 fail, 64 ignored (279 total). Session 2 gains: cleanup_math XPath (spacing-only math), vbox/vtop h/d split (3 bugs), compact_xmdual xml:id leak fix. Sizes test: 313→20 diffs. Previous sessions: compact_xmdual, dynamic_mathstyle, {} fix, keyval extraction.
 
 ### Completed items
 
@@ -393,7 +399,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
 - [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
 - [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
-- [ ] **9. sizes_test** (22_fonts) — ~26 diff hunks (was 393). Fixed: infer_sizer reversion inference removed + METRIC_MAP math_medium_italic lookup. Remaining: vbox/vtop height/depth (5), math spacing visibility (6), super/subscript widths (3), halign table sizing (6), whitespace (5).
+- [ ] **9. sizes_test** (22_fonts) — ~20 diff lines (was 313→26→20). Fixed: cleanup_math XPath (spacing-only math removed), vbox/vtop h/d split (3 bugs). Remaining: dimension rounding (4), super/subscript widths (3), `@{}` tabular zero dims (2), tabular h/d split (4), section 8 whitespace/extra (7).
 - [ ] **10. ding_test** (22_fonts) — 371 diffs. Enumerate nesting + table structure.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
@@ -467,7 +473,11 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Overarching projects
 
 - [ ] **E. Translate ALL Perl binding files** — Every `.sty.ltxml`, `.tex.ltxml`, `.cls.ltxml`, `.def.ltxml` in `LaTeXML/lib/LaTeXML/Package/` must have a corresponding `_sty.rs`, `_tex.rs`, `_cls.rs`, `_def.rs` in the Rust codebase. No file should be missed. This is the full package binding parity goal.
-- [ ] **F. Port Post-processing pipeline** — Translate `LaTeXML/lib/LaTeXML/Post/` to Rust. Copy XSLT and CSS from Perl and use them exactly as-is. This includes `LaTeXML::Post::MathML`, `LaTeXML::Post::OpenMath`, `LaTeXML::Post::CrossRef`, `LaTeXML::Post::MakeBibliography`, etc.
+- [ ] **F. Port Post-processing pipeline** — Fully translate `LaTeXML/lib/LaTeXML/Post/` to Rust. This is the second major subsystem (after the TeX engine) and converts LaTeXML XML into final output (HTML5, XHTML, EPUB, JATS).
+  - **Resources (copy as-is):** XSLT stylesheets (`LaTeXML/lib/LaTeXML/resources/XSLT/`), CSS (`resources/CSS/`), JavaScript, RelaxNG schemas, Profiles. These are declarative and used unchanged.
+  - **Core modules to port:** `Post.pm` (pipeline orchestrator), `Post::Scan` (cross-ref scanning), `Post::CrossRef` (cross-references + navigation), `Post::MathML` (content/presentation MathML), `Post::OpenMath`, `Post::MathImages` (math-to-image fallback), `Post::Graphics` (image conversion), `Post::SVG`, `Post::XSLT` (apply XSLT transforms), `Post::Writer` (serialize to file), `Post::Split` (multi-page split), `Post::MakeBibliography`, `Post::MakeIndex`.
+  - **Approach:** Port each Post module as a Rust crate or module. Use `libxslt` (already a system dep) for XSLT transforms. Use existing `resources/` directory structure.
+  - **Testing:** Post-processing tests compare final HTML/MathML output. Start with `latexmlpost` CLI equivalent.
 
 ### Permanent ignores (not counted)
 

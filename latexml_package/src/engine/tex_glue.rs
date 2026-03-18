@@ -13,7 +13,7 @@ static UNICODE_EM_SPACES: [(f64, char); 7] = [
   (1.000, '\u{2003}'), // em-quad, "mutton"
 ];
 /// String of spacing chars with width roughly equivalent to $dimen
-fn dimension_to_spaces(dimen: Dimension) -> String {
+pub(crate) fn dimension_to_spaces(dimen: Dimension) -> String {
   let fs = lookup_font().unwrap().get_size().unwrap_or(1.0); // 1 em
   let mut ems = dimen.pt_value(None) / fs;
   let mut s = String::default();

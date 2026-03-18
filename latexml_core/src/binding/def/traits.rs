@@ -21,6 +21,19 @@ use crate::whatsit::Whatsit;
 use crate::*;
 use crate::common::store::Stored;
 
+/// Build sizing options from a Whatsit's properties, matching Perl's computeSizeStore behavior.
+/// Perl (Box.pm L267-271) adds width, height, depth, vattach, layout from properties to options
+/// before calling computeSize, which passes them through to computeBoxesSize.
+fn sizer_options_from_whatsit(w: &Whatsit) -> HashMap<Stored> {
+  let mut options: HashMap<Stored> = HashMap::default();
+  for key in ["width", "height", "depth", "vattach", "layout", "mode"] {
+    if let Some(v) = w.get_property(key) {
+      options.insert(key, v.into_owned());
+    }
+  }
+  options
+}
+
 /// Helper for sizer string parsing: references either a numeric arg or a named property
 enum SizerRef {
   Arg(usize),
@@ -164,7 +177,10 @@ impl IntoOption<Option<SizingClosure>> for &str {
           }
         }
         if boxes.len() == 1 {
-          boxes[0].compute_size(HashMap::default())
+          // Perl: computeBoxesSize($boxes[0], %options) — pass whatsit properties as options
+          // so vattach, width, etc. propagate to compute_boxes_size
+          let options = sizer_options_from_whatsit(w);
+          boxes[0].compute_size(options)
         } else if boxes.is_empty() {
           Ok((Dimension::default(), Dimension::default(), Dimension::default()))
         } else {
@@ -174,7 +190,8 @@ impl IntoOption<Option<SizingClosure>> for &str {
             } else {
               lookup_font().unwrap()
             };
-          font.compute_boxes_size(&boxes, HashMap::default())
+          let options = sizer_options_from_whatsit(w);
+          font.compute_boxes_size(&boxes, options)
         }
       }))
     } else {
@@ -186,12 +203,13 @@ impl IntoOption<Option<SizingClosure>> for &str {
         } else {
           lookup_font().unwrap()
         };
+        let options = sizer_options_from_whatsit(w);
         font.compute_boxes_size(
           &[Digested::from(Tbox {
             text: arena::pin(&sized_data),
             ..Tbox::default()
           })],
-          HashMap::default(),
+          options,
         )
       }))
     }

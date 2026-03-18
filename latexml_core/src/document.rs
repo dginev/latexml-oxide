@@ -2422,8 +2422,17 @@ impl Document {
     // Case 1: Quick fix — merge two tokens
     if c_name == "ltx:XMTok" && p_name == "ltx:XMTok" {
       let mut pres = presentation;
+      let pres_had_id = pres.has_attribute("xml:id");
       self.merge_attributes(&content, &mut pres, Some(&CONTENT_TRANSFER))?;
       self.merge_attributes(&dual, &mut pres, Some(&DUAL_TRANSFER))?;
+      // If presentation didn't originally have an xml:id and the dual doesn't either,
+      // remove the content's xml:id that leaked through merge_attributes
+      if !pres_had_id && !dual.has_attribute("xml:id") {
+        if let Some(id) = pres.get_attribute("xml:id") {
+          self.unrecord_id(&id);
+          let _ = pres.remove_attribute("xml:id");
+        }
+      }
       // Unlink presentation from dual before replacing, since presentation is a child of dual
       pres.unlink();
       self.replace_node(dual, vec![pres])?;

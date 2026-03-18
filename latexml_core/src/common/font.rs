@@ -226,7 +226,7 @@ static METRIC_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     "sansserif_bold_upright"     => "cmssbx",
     "typewriter_medium_upright"  => "cmtt",
     "typewriter_medium_slanted"  => "cmsltt",
-    "math_medium_italic"         => "cmmi",
+    "math_medium_italic"         => "cmm",
     "math_medium_upright"        => "cmr",
     "math_bold_italic"           => "cmiib"
   )
@@ -234,7 +234,7 @@ static METRIC_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
 
 // Fallback fontnames for looking up random Unicode,
 // when they're not in the indicated FontMap
-static METRIC_FALLBACKS: [&str; 6] = ["cmr", "cmmi", "cmsy", "cmex", "msam", "msbm"];
+static METRIC_FALLBACKS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "msam", "msbm"];
 
 // Math bearing atom types
 // 0=Ord, 1=Op, 2=Bin, 3=Rel, 4=Open, 5=Close, 6=Punct, 7=Inner
@@ -1415,15 +1415,14 @@ impl Font {
     };
     // Perl L650-651: filter boxes
     // NOTE: Perl does $boxes->unlist (one level) then filters. In Rust, boxes are
-    // already the unlist'd children. We also flat_map(unlist) to match existing
-    // behavior where nested Lists are flattened (Perl handles nested Lists via
-    // recursive getSize inside computeBoxesSize_box).
-    let owned_filtered: Vec<Digested> = boxes
+    // already the unlist'd children (one level of unlist already applied).
+    // Do NOT flat_map(unlist) again — that would destroy paragraph Lists in vertical
+    // mode, preventing proper line-breaking and vattach height/depth splitting.
+    // Nested Lists are handled recursively via computeBoxesSize_box → getSize.
+    let filtered: Vec<&Digested> = boxes
       .iter()
-      .flat_map(|thisbox| thisbox.unlist())
       .filter(|thisbox| !thisbox.has_property("isEmpty"))
       .collect();
-    let filtered: Vec<&Digested> = owned_filtered.iter().collect();
     // Perl L653-670: dispatch based on layout
     let lines = if layout == "vertical" {
       // Perl L654-666: For vertical, ALL boxes are lines

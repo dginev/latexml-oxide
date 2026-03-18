@@ -123,7 +123,7 @@ LoadDefinitions!({
     merge_font(fontmap!(bg => color));
 
     // TODO: Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
-    // Returning a Tbox here breaks framed.xml — needs investigation into Tbox absorption path.
+    // Returning a Tbox here causes timeout in some tests (framed/colors) — needs investigation.
     Ok(Vec::new())
   });
 
