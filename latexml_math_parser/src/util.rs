@@ -11,6 +11,17 @@ use std::error::Error;
 /// Generate a textual token for each node; The parser operates on this encoded
 /// string.
 pub fn node_to_grammar_lexemes(mathnode: &Node, idx: &mut usize) -> (Vec<String>, Vec<Node>) {
+  let child_nodes = filter_hints(mathnode.get_child_nodes());
+  node_to_grammar_lexemes_from(mathnode, child_nodes, idx)
+}
+
+/// Same as `node_to_grammar_lexemes` but with pre-filtered child nodes.
+/// Used when `filter_hints` has already been called (to avoid double-filtering).
+pub fn node_to_grammar_lexemes_from(
+  mathnode: &Node,
+  child_nodes: Vec<Node>,
+  idx: &mut usize,
+) -> (Vec<String>, Vec<Node>) {
   let mut lexemes = Vec::new();
   let mut nodes = Vec::new();
   let top_role_opt = mathnode.get_attribute("role");
@@ -19,7 +30,6 @@ pub fn node_to_grammar_lexemes(mathnode: &Node, idx: &mut usize) -> (Vec<String>
     lexemes.push(format!("start_{top_role}:start:{idx}"));
     nodes.push(mathnode.clone());
   }
-  let child_nodes = filter_hints(mathnode.get_child_nodes());
   for node in child_nodes.into_iter() {
     if node.get_name() == "XMApp" && node.get_attribute("role").is_some() {
       // Only recurse into XMApp nodes that have a role (scripts, etc.)
@@ -90,10 +100,13 @@ fn get_xmhint_spacing(width: &str) -> f64 {
 /// Filter XMHint nodes from a list of child nodes, transferring their spacing
 /// info to adjacent tokens as `lpadding`/`rpadding` attributes (matching Perl).
 /// XMHints are also unlinked from the XML tree so they won't be seen again.
+/// Large spacings (≥10pt, e.g. \quad) become virtual PUNCT nodes (Perl MathParser.pm L483-490).
 pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
   const HINT_PUNCT_THRESHOLD: f64 = 10.0;
   let mut prefiltered: Vec<Node> = Vec::new();
   let mut pending_space: f64 = 0.0;
+  // Save hint nodes that contributed to _space, for possible PUNCT reuse
+  let mut last_hint_for: Vec<Option<Node>> = Vec::new(); // parallel to prefiltered
 
   for mut node in nodes {
     if node.get_type() != Some(NodeType::ElementNode) {
@@ -111,6 +124,11 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
               .and_then(|v| v.parse().ok())
               .unwrap_or(0.0);
             let _ = prev.set_attribute("_space", &format!("{}", s + pts));
+            // Save this hint node for potential PUNCT reuse
+            let idx = prefiltered.len() - 1;
+            if idx < last_hint_for.len() {
+              last_hint_for[idx] = Some(node.clone());
+            }
           } else {
             pending_space += pts;
           }
@@ -124,22 +142,32 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
         pending_space = 0.0;
       }
       prefiltered.push(node);
+      last_hint_for.push(None);
     }
   }
 
   // Second pass: convert _space to rpadding (or PUNCT XMHint if above threshold)
   let mut filtered: Vec<Node> = Vec::new();
-  for mut node in prefiltered {
+  for (i, mut node) in prefiltered.into_iter().enumerate() {
+    filtered.push(node.clone());
     if let Some(s_str) = node.get_attribute("_space") {
       let _ = node.remove_attribute("_space");
       let s: f64 = s_str.parse().unwrap_or(0.0);
-      if s < HINT_PUNCT_THRESHOLD {
+      if s >= HINT_PUNCT_THRESHOLD && node.get_attribute("role").as_deref() != Some("PUNCT") {
+        // Perl MathParser.pm L487: create virtual PUNCT XMHint
+        // Reuse the saved hint node, setting role="PUNCT"
+        if let Some(Some(mut hint)) = last_hint_for.get(i).cloned() {
+          let _ = hint.set_attribute("role", "PUNCT");
+          let width = format!("{}pt", s);
+          let _ = hint.set_attribute("width", &width);
+          let quads = "q".repeat((s / 10.0) as usize);
+          let _ = hint.set_attribute("name", &format!("{quads}uad"));
+          filtered.push(hint);
+        }
+      } else {
         let _ = node.set_attribute("rpadding", &format!("{:.1}pt", s));
       }
-      // Note: large spacings (≥10pt) would become PUNCT XMHints in Perl,
-      // but this requires document access; skip for now as it's uncommon.
     }
-    filtered.push(node);
   }
   filtered
 }

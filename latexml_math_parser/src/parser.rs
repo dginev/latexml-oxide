@@ -14,7 +14,7 @@ use latexml_core::{Error, Fatal, fatal, map, s, static_map, sym_map};
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
 use crate::semantics::*;
-use crate::util::{filter_hints, node_to_grammar_lexemes};
+use crate::util::{filter_hints, node_to_grammar_lexemes_from};
 use marpa::lexer::byte_scanner::*;
 use marpa::parser::*;
 use marpa::thin::Grammar as ThinGrammar;
@@ -546,7 +546,8 @@ impl MathParser {
       let result = content_nodes.remove(0);
       Ok(Some(self.wrap_with_punct(result, punct_nodes, mathnode, document)?))
     } else {
-      let (lexemes, mut nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
+      // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called above)
+      let (lexemes, mut nodes) = node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
       if let Ok(Some(parse_tree)) = self.parse_lexemes(lexemes, &nodes, document) {
         //START reparent: the reparenting used to be in `parse_rec` in Perl. Is this a good place?
         // Replace the content of XMath with parsed result
