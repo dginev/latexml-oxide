@@ -5,16 +5,22 @@
 <?latexml package="url"?>
 <?latexml package="graphicx"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
-<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line" prefix="cc: http://creativecommons.org/ns# dcterms: http://purl.org/dc/terms/ foaf: http://xmlns.com/foaf/0.1/ schema: http://schema.org/ xsd: http://www.w3.org/2001/XMLSchema#">
+<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <rdf about="" property="foaf:neighbor" resourceidref="fredblog"/>
+  <para xml:id="p1">
+    <ERROR class="undefined"/>
+    <p>about=<ref labelref="LABEL:blog:photos"/>,property=cc:license,resource=<ref labelref="LABEL:license"/></p>
+  </para>
+  <para xml:id="p2">
+    <ERROR class="undefined"/>
+    <p>property=foaf:neighbor,resource=#fredblog</p>
+  </para>
   <title>Alice’s Blog</title>
   <creator role="author">
     <personname>Alice</personname>
   </creator>
-  <rdf aboutlabelref="LABEL:blog:photos" property="cc:license" resourcelabelref="LABEL:license"/>
-  <section inlist="toc" labels="LABEL:sidebar" resourceidref="me" typeof="foaf:Person" xml:id="S1">
+  <section inlist="toc" labels="LABEL:sidebar" xml:id="S1">
     <tags>
       <tag>1</tag>
       <tag role="refnum">1</tag>
@@ -22,36 +28,44 @@
     </tags>
     <title><tag close=" ">1</tag>Sidebar</title>
     <para xml:id="S1.p1">
-      <p><text property="foaf:name">Alice Birpemswick</text>,<break/>Email: <ref href="mailto:alice@example.com" property="foaf:mbox">alice@example.com</ref>,<break/>Phone: <ref href="tel:+1-617-555-7332" property="foaf:phone">+1 617.555.7332</ref>.</p>
+      <ERROR class="undefined"/>
+      <p>typeof=foaf:Person,resource=#me
+<ERROR class="undefined"/>property=foaf:nameAlice Birpemswick,<break/>Email: <ERROR class="undefined"/>[alice@example.com<ERROR class="undefined"/>property=foaf:mbox]mailto:alice@example.com,<break/>Phone: <ERROR class="undefined"/>[+1 617.555.7332<ERROR class="undefined"/>property=foaf:phone]tel:+1-617-555-7332.</p>
     </para>
     <para xml:id="S1.p2">
       <p>My Buddies:</p>
       <itemize xml:id="S1.I1">
-        <item property="foaf:knows" typeof="foaf:Person" xml:id="S1.I1.i1">
+        <item xml:id="S1.I1.i1">
           <tags>
             <tag>•</tag>
             <tag role="typerefnum">1st item</tag>
           </tags>
           <para xml:id="S1.I1.i1.p1">
-            <p><ref href="http://example.com/bob/" property="foaf:homepage"><text property="foaf:name">Bob</text></ref></p>
+            <ERROR class="undefined"/>
+            <p>property=foaf:knows,typeof=foaf:Person
+<ERROR class="undefined"/>[<ERROR class="undefined"/>property=foaf:nameBob<ERROR class="undefined"/>property=foaf:homepage]http://example.com/bob/</p>
           </para>
         </item>
-        <item property="foaf:knows" typeof="foaf:Person" xml:id="S1.I1.i2">
+        <item xml:id="S1.I1.i2">
           <tags>
             <tag>•</tag>
             <tag role="typerefnum">2nd item</tag>
           </tags>
           <para xml:id="S1.I1.i2.p1">
-            <p><ref href="http://example.com/eve/" property="foaf:homepage"><text property="foaf:name">Eve</text></ref></p>
+            <ERROR class="undefined"/>
+            <p>property=foaf:knows,typeof=foaf:Person
+<ERROR class="undefined"/>[<ERROR class="undefined"/>property=foaf:nameEve<ERROR class="undefined"/>property=foaf:homepage]http://example.com/eve/</p>
           </para>
         </item>
-        <item property="foaf:knows" typeof="foaf:Person" xml:id="S1.I1.i3">
+        <item xml:id="S1.I1.i3">
           <tags>
             <tag>•</tag>
             <tag role="typerefnum">3rd item</tag>
           </tags>
           <para xml:id="S1.I1.i3.p1">
-            <p><ref href="http://example.com/manu/" property="foaf:homepage"><text property="foaf:name">Manu</text></ref></p>
+            <ERROR class="undefined"/>
+            <p>property=foaf:knows,typeof=foaf:Person
+<ERROR class="undefined"/>[<ERROR class="undefined"/>property=foaf:nameManu<ERROR class="undefined"/>property=foaf:homepage]http://example.com/manu/</p>
           </para>
         </item>
       </itemize>
@@ -64,43 +78,58 @@
       <tag role="typerefnum">§2</tag>
     </tags>
     <title><tag close=" ">2</tag>Blog Content</title>
-    <paragraph inlist="toc" labels="LABEL:blog:trouble" resource="/alice/posts/trouble_with_bob" typeof="schema:BlogPosting" xml:id="S2.SS0.SSS0.Px1">
-      <title property="dcterms:title">The Trouble with Bob</title>
+    <paragraph inlist="toc" labels="LABEL:blog:trouble" xml:id="S2.SS0.SSS0.Px1">
+      <title>The Trouble with Bob<ERROR class="undefined"/>property=dcterms:title</title>
       <para xml:id="S2.SS0.SSS0.Px1.p1">
-        <p>Date: <text content="2011-09-10" datatype="xsd:date" property="dcterms:created">10<sup><text font="italic">th</text></sup> of September, 2011</text>.<break/><text property="dcterms:creator schema:creator">Alice</text>.</p>
+        <ERROR class="undefined"/>
+        <p>resource=/alice/posts/trouble_with_bob,typeof=schema:BlogPosting
+Date: <ERROR class="undefined"/>property=dcterms:created,datatype=xsd:date,content=2011-09-1010<sup><text font="italic">th</text></sup> of September, 2011.<break/><ERROR class="undefined"/>property=dcterms:creator schema:creatorAlice.</p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px1.p2">
-        <p property="schema:articleBody">The trouble with Bob is that he takes much better photos than I do.</p>
+        <p>The trouble with Bob is that he takes much better photos than I do.
+<ERROR class="undefined"/>property=schema:articleBody</p>
       </para>
-      <para resource="http://examplecom/bob/photos/sunset.jpg" xml:id="S2.SS0.SSS0.Px1.p3">
+      <para xml:id="S2.SS0.SSS0.Px1.p3">
         <graphics candidates="sunset.jpg" graphic="sunset.jpg" xml:id="S2.SS0.SSS0.Px1.p3.g1"/>
-        <p><text property="dcterms:title">Beautiful Sunset</text>
+        <ERROR class="undefined"/>
+        <p>resource=http://examplecom/bob/photos/sunset.jpg
+<ERROR class="undefined"/>property=dcterms:titleBeautiful Sunset
 by
-<text property="dcterms:creator">Bob</text>.</p>
+<ERROR class="undefined"/>property=dcterms:creatorBob.</p>
       </para>
     </paragraph>
-    <paragraph inlist="toc" labels="LABEL:blog:josbbq" resource="/alice/posts/jos_barbeque" typeof="schema:BlogPosting" xml:id="S2.SS0.SSS0.Px2">
-      <title property="dcterms:title">Jo’s Barbeque</title>
+    <paragraph inlist="toc" labels="LABEL:blog:josbbq" xml:id="S2.SS0.SSS0.Px2">
+      <title>Jo’s Barbeque<ERROR class="undefined"/>property=dcterms:title</title>
       <para xml:id="S2.SS0.SSS0.Px2.p1">
-        <p>Date: <text content="2011-09-14" datatype="xsd:date" property="dcterms:created">14<sup><text font="italic">th</text></sup> of September, 2011</text>.<break/></p>
+        <ERROR class="undefined"/>
+        <p>resource=/alice/posts/jos_barbeque,typeof=schema:BlogPosting</p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px2.p2">
-        <p><text property="dcterms:creator">Eve</text>.</p>
+        <p>Date: <ERROR class="undefined"/>property=dcterms:created,datatype=xsd:date,content=2011-09-1414<sup><text font="italic">th</text></sup> of September, 2011.<break/></p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px2.p3">
-        <p property="schema:articleBody">…</p>
+        <ERROR class="undefined"/>
+        <p>property=dcterms:creatorEve.</p>
+      </para>
+      <para xml:id="S2.SS0.SSS0.Px2.p4">
+        <p>…<ERROR class="undefined"/>property=schema:articleBody</p>
       </para>
     </paragraph>
-    <paragraph inlist="toc" labels="LABEL:blog:photos" resource="/alice/posts/my_photos" typeof="schema:BlogPosting" xml:id="S2.SS0.SSS0.Px3">
-      <title property="dcterms:title">I will post my photos nevertheless…</title>
+    <paragraph inlist="toc" labels="LABEL:blog:photos" xml:id="S2.SS0.SSS0.Px3">
+      <title>I will post my photos nevertheless…<ERROR class="undefined"/>property=dcterms:title</title>
       <para xml:id="S2.SS0.SSS0.Px3.p1">
-        <p>Date: <text content="2011-09-15" datatype="xsd:date" property="dcterms:created">15<sup><text font="italic">th</text></sup> of September, 2011</text>.<break/></p>
+        <ERROR class="undefined"/>
+        <p>resource=/alice/posts/my_photos,typeof=schema:BlogPosting</p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px3.p2">
-        <p><text property="dcterms:creator" resourceidref="me">Alice</text>.</p>
+        <p>Date: <ERROR class="undefined"/>property=dcterms:created,datatype=xsd:date,content=2011-09-1515<sup><text font="italic">th</text></sup> of September, 2011.<break/></p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px3.p3">
-        <p property="schema:articleBody">…</p>
+        <ERROR class="undefined"/>
+        <p>property=dcterms:creator,resource=#meAlice.</p>
+      </para>
+      <para xml:id="S2.SS0.SSS0.Px3.p4">
+        <p>…<ERROR class="undefined"/>property=schema:articleBody</p>
       </para>
     </paragraph>
   </section>
@@ -113,7 +142,8 @@ by
     <title><tag close=" ">3</tag>License</title>
     <para xml:id="S3.p1">
       <p>All content on this site is licensed under
-<ref href="http://creativecommons.org/licenses/by/3.0/" property="cc:license">a Creative Commons License</ref>.
+<ERROR class="undefined"/>[a Creative Commons License<ERROR class="undefined"/>property=cc:license]
+http://creativecommons.org/licenses/by/3.0/.
 © Alice Birpemswick.</p>
     </para>
   </section>

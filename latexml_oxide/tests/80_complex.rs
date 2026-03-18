@@ -50,7 +50,6 @@ fn labelled_test() { complex("labelled"); }
 fn versioned_fallback_test() { complex("versioned_fallback"); }
 
 #[test]
-#[ignore] // 125 diffs — needs cleveref + MathFork
 fn cleveref_minimal_test() { complex("cleveref_minimal"); }
 
 #[test]
@@ -69,7 +68,6 @@ fn acm_aria_test() { complex("acm_aria"); }
 fn aastex_test_test() { complex("aastex_test"); }
 
 #[test]
-#[ignore] // needs blog.cls binding
 fn aliceblog_test() { complex("aliceblog"); }
 
 #[test]

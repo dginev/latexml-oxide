@@ -21,7 +21,6 @@ fn cells_test() {
 }
 
 #[test]
-#[ignore] // TooManyErrors — needs dcolumn.sty, hhline.sty bindings + \newcolumntype support
 fn colortbls_test() {
   latexml_test_single("tests/alignment/colortbls.tex", "colortbls", DIR, None, None);
 }
@@ -103,7 +102,6 @@ fn morse_test() {
 }
 
 #[test]
-#[ignore] // 141 diffs — math parser XMDual + algorithmic line number fontsize
 fn algx_test() {
   latexml_test_single("tests/alignment/algx.tex", "algx", DIR, None, None);
 }
@@ -114,7 +112,6 @@ fn mathmix_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
 fn plainmath_test() {
   latexml_test_single("tests/alignment/plainmath.tex", "plainmath", DIR, None, None);
 }
@@ -126,7 +123,6 @@ fn split_test() {
 }
 
 #[test]
-#[ignore] // diffs — badeqnarray
 fn badeqnarray_test() {
   latexml_test_single("tests/alignment/badeqnarray.tex", "badeqnarray", DIR, None, None);
 }

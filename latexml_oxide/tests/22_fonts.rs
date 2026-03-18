@@ -61,7 +61,6 @@ fn bbold_test() {
 }
 
 #[test]
-#[ignore] // 401 diffs — pifont works but enumerate nesting + table structure issues
 fn ding_test() {
   latexml_test_single("tests/fonts/ding.tex", "ding", DIR, None, None);
 }
@@ -121,7 +120,6 @@ fn abxtest_test() {
 }
 
 #[test]
-#[ignore]
 fn sizes_test() {
   latexml_test_single("tests/fonts/sizes.tex", "sizes", DIR, None, None);
 }

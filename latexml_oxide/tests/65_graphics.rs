@@ -27,7 +27,6 @@ fn framed_test() {
 }
 
 #[test]
-#[ignore] // crashes — \begingroup in \csname..\endcsname, too many errors
 fn graphrot_test() {
   latexml_test_single("tests/graphics/graphrot.tex", "graphrot", DIR, None, None);
 }
@@ -50,7 +49,6 @@ fn simplekv_test() {
 }
 
 #[test]
-#[ignore] // xcolor port WIP: ~600 diffs remaining (color expressions, testbox, etc.)
 fn xcolors_test() {
   latexml_test_single("tests/graphics/xcolors.tex", "xcolors", DIR, Some(&REQUIRES), None);
 }

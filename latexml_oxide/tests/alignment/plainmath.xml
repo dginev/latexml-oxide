@@ -4,7 +4,7 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <para>
     <equation>
-      <Math mode="display" tex="\matrix{a&amp;b\cr c&amp;d}" text="matrix@(Array[[a, b], [c, d]])">
+      <Math mode="display" tex="\lx@gen@plain@matrix@{name,datameaning}{a&amp;b\cr c&amp;d}" text="matrix@(Array[[a, b], [c, d]])">
         <XMath>
           <XMDual>
             <XMApp>
@@ -34,70 +34,59 @@
       </Math>
     </equation>
     <equation>
-      <Math class="ltx_math_unparsed" mode="display" tex="\bordermatrix{&amp;A&amp;B\cr C&amp;0&amp;1\cr D&amp;2&amp;3}" text="Array[[, , A, B, ], [C, (@ , 0, 1, )@ ], [D, , 2, 3, ]]">
+      <Math mode="display" tex="\lx@hack@bordermatrix{\lx@gen@plain@matrix@{name}{&amp;A&amp;B\cr C&amp;0&amp;1\cr D&amp;2&amp;3}}" text="[] * Array[[, A, B], [C, 0, 1], [D, 2, 3]]">
         <XMath>
-          <XMArray>
-            <XMRow>
-              <XMCell/>
-              <XMCell class="ltx_nopad"/>
-              <XMCell align="center">
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-              </XMCell>
-              <XMCell align="center">
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
-              </XMCell>
-              <XMCell class="ltx_nopad"/>
-            </XMRow>
-            <XMRow>
-              <XMCell align="center">
-                <XMTok font="italic" role="UNKNOWN">C</XMTok>
-              </XMCell>
-              <XMCell class="ltx_nopad" rowspan="2">
-                <XMWrap height="8.4pt" yoffset="-5.2pt">
-                  <XMTok role="OPEN" stretchy="true">(</XMTok>
-                  <XMTok depth="12.0pt" height="12.0pt"> </XMTok>
-                </XMWrap>
-              </XMCell>
-              <XMCell align="center">
-                <XMTok meaning="0" role="NUMBER">0</XMTok>
-              </XMCell>
-              <XMCell align="center">
-                <XMTok meaning="1" role="NUMBER">1</XMTok>
-              </XMCell>
-              <XMCell class="ltx_nopad" rowspan="2">
-                <XMWrap height="8.4pt" yoffset="-5.2pt">
-                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
-                  <XMTok depth="12.0pt" height="12.0pt"> </XMTok>
-                </XMWrap>
-              </XMCell>
-            </XMRow>
-            <XMRow>
-              <XMCell align="center">
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
-              </XMCell>
-              <XMCell class="ltx_nopad"/>
-              <XMCell align="center">
-                <XMTok meaning="2" role="NUMBER">2</XMTok>
-              </XMCell>
-              <XMCell align="center">
-                <XMTok meaning="3" role="NUMBER">3</XMTok>
-              </XMCell>
-              <XMCell class="ltx_nopad"/>
-            </XMRow>
-          </XMArray>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <ERROR class="undefined"/>
+            <XMArray>
+              <XMRow>
+                <XMCell/>
+                <XMCell align="center">
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                </XMCell>
+                <XMCell align="center">
+                  <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                </XMCell>
+              </XMRow>
+              <XMRow>
+                <XMCell align="center">
+                  <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                </XMCell>
+                <XMCell align="center">
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMCell>
+                <XMCell align="center">
+                  <XMTok meaning="1" role="NUMBER">1</XMTok>
+                </XMCell>
+              </XMRow>
+              <XMRow>
+                <XMCell align="center">
+                  <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                </XMCell>
+                <XMCell align="center">
+                  <XMTok meaning="2" role="NUMBER">2</XMTok>
+                </XMCell>
+                <XMCell align="center">
+                  <XMTok meaning="3" role="NUMBER">3</XMTok>
+                </XMCell>
+              </XMRow>
+            </XMArray>
+          </XMApp>
         </XMath>
       </Math>
     </equation>
     <equation>
-      <Math mode="display" tex="\pmatrix{a&amp;b\cr c&amp;d}" text="matrix@(Array[[a, b], [c, d]])">
+      <Math mode="display" tex="\lx@gen@plain@matrix@{name,datameaning,left,right}{a&amp;b\cr c&amp;d}" text="matrix@(Array[[a, b], [c, d]])">
         <XMath>
           <XMDual>
             <XMApp>
               <XMTok meaning="matrix"/>
               <XMRef idref="id2"/>
             </XMApp>
-            <XMWrap>
-              <XMTok role="OPEN" stretchy="true">(</XMTok>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMText><text font="italic">\left(</text></XMText>
               <XMArray xml:id="id2">
                 <XMRow>
                   <XMCell align="center">
@@ -116,8 +105,8 @@
                   </XMCell>
                 </XMRow>
               </XMArray>
-              <XMTok role="CLOSE" stretchy="true">)</XMTok>
-            </XMWrap>
+              <XMText><text font="italic">\right)</text></XMText>
+            </XMApp>
           </XMDual>
         </XMath>
       </Math>
@@ -125,7 +114,7 @@
   </para>
   <para>
     <equation>
-      <Math mode="display" tex="s(x)=\cases{+1&amp;whatever\cr-1&amp;$x&lt;0$\cr 0}" text="s * x = cases@(+ 1, [whatever], - 1, x &lt; 0, 0, [otherwise])">
+      <Math mode="display" tex="s(x)=\lx@gen@plain@cases@{meaning,left,conditionmode,style}{+1&amp;whatever\cr-1&amp;$x&lt;0$\cr 0}" text="s * x = [\left\{] * Array[[+ 1, w * h * a * t * e * v * e * r], [- 1, [x¡0]], [0, ]]">
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -133,62 +122,58 @@
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok font="italic" role="UNKNOWN">s</XMTok>
               <XMDual>
-                <XMRef idref="id8"/>
+                <XMRef idref="id3"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="id8">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="id3">x</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
             </XMApp>
-            <XMDual>
-              <XMApp>
-                <XMTok meaning="cases"/>
-                <XMRef idref="id3"/>
-                <XMRef idref="id4"/>
-                <XMRef idref="id5"/>
-                <XMRef idref="id6"/>
-                <XMRef idref="id7"/>
-                <XMText><text font="italic">otherwise</text></XMText>
-              </XMApp>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="true">{</XMTok>
-                <XMArray>
-                  <XMRow>
-                    <XMCell align="left">
-                      <XMApp xml:id="id3">
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok meaning="1" role="NUMBER">1</XMTok>
-                      </XMApp>
-                    </XMCell>
-                    <XMCell align="left">
-                      <XMText xml:id="id4">whatever</XMText>
-                    </XMCell>
-                  </XMRow>
-                  <XMRow>
-                    <XMCell align="left">
-                      <XMApp xml:id="id5">
-                        <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                        <XMTok meaning="1" role="NUMBER">1</XMTok>
-                      </XMApp>
-                    </XMCell>
-                    <XMCell align="left">
-                      <XMApp xml:id="id6">
-                        <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                        <XMTok meaning="0" role="NUMBER">0</XMTok>
-                      </XMApp>
-                    </XMCell>
-                  </XMRow>
-                  <XMRow>
-                    <XMCell align="left">
-                      <XMTok meaning="0" role="NUMBER" xml:id="id7">0</XMTok>
-                    </XMCell>
-                    <XMCell/>
-                  </XMRow>
-                </XMArray>
-              </XMWrap>
-            </XMDual>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMText><text font="italic">\left\{</text></XMText>
+              <XMArray>
+                <XMRow>
+                  <XMCell align="left">
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                  </XMCell>
+                  <XMCell align="left">
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">w</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">v</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                    </XMApp>
+                  </XMCell>
+                </XMRow>
+                <XMRow>
+                  <XMCell align="left">
+                    <XMApp>
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                    </XMApp>
+                  </XMCell>
+                  <XMCell align="left">
+                    <XMText>x¡0</XMText>
+                  </XMCell>
+                </XMRow>
+                <XMRow>
+                  <XMCell align="left">
+                    <XMTok meaning="0" role="NUMBER">0</XMTok>
+                  </XMCell>
+                  <XMCell/>
+                </XMRow>
+              </XMArray>
+            </XMApp>
           </XMApp>
         </XMath>
       </Math>
@@ -196,189 +181,112 @@
   </para>
   <para>
     <equation>
-      <Math mode="display" tex="\eqalign{x&amp;\ll y+i+\cdots+y_{n}\cr&amp;\leq z}" text="Array[[x, absent &lt;&lt; y + i + cdots + y _ n], [, absent &lt;= z]]">
+      <Math mode="display" tex="\@@eqalign{x&amp;\ll y+i+\cdots+y_{n}\cr&amp;\leq z\lx@close@alignment}">
         <XMath>
-          <XMArray vattach="baseline">
-            <XMRow>
-              <XMCell align="right">
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
-              </XMCell>
-              <XMCell align="left">
-                <XMApp>
-                  <XMTok meaning="much-less-than" name="ll" role="RELOP">≪</XMTok>
-                  <XMTok meaning="absent"/>
-                  <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                    <XMTok name="cdots" role="ID">⋯</XMTok>
-                    <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="post5"/>
-                      <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                    </XMApp>
-                  </XMApp>
-                </XMApp>
-              </XMCell>
-            </XMRow>
-            <XMRow>
-              <XMCell/>
-              <XMCell align="left">
-                <XMApp>
-                  <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                  <XMTok meaning="absent"/>
-                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                </XMApp>
-              </XMCell>
-            </XMRow>
-          </XMArray>
+          <ERROR class="undefined"/>
+          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          <XMTok meaning="much-less-than" name="ll" role="RELOP">≪</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">i</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMApp role="POSTSUBSCRIPT" scriptpos="2">
+            <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+          </XMApp>
+          <XMTok font="italic" role="UNKNOWN">
+</XMTok>
+          <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+          <XMTok font="italic" role="UNKNOWN">z</XMTok>
+          <XMTok font="italic" role="UNKNOWN">
+</XMTok>
         </XMath>
       </Math>
     </equation>
     <equation>
-      <Math mode="display" tex="\eqalign{x+y+z&amp;\ll y+i+\cdots+y_{n}\cr&amp;\leq q}" text="Array[[x + y + z, absent &lt;&lt; y + i + cdots + y _ n], [, absent &lt;= q]]">
+      <Math mode="display" tex="\@@eqalign{x+y+z&amp;\ll y+i+\cdots+y_{n}\cr&amp;\leq q\lx@close@alignment}">
         <XMath>
-          <XMArray vattach="baseline">
-            <XMRow>
-              <XMCell align="right">
-                <XMApp>
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                </XMApp>
-              </XMCell>
-              <XMCell align="left">
-                <XMApp>
-                  <XMTok meaning="much-less-than" name="ll" role="RELOP">≪</XMTok>
-                  <XMTok meaning="absent"/>
-                  <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                    <XMTok name="cdots" role="ID">⋯</XMTok>
-                    <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="post5"/>
-                      <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                    </XMApp>
-                  </XMApp>
-                </XMApp>
-              </XMCell>
-            </XMRow>
-            <XMRow>
-              <XMCell/>
-              <XMCell align="left">
-                <XMApp>
-                  <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                  <XMTok meaning="absent"/>
-                  <XMTok font="italic" role="UNKNOWN">q</XMTok>
-                </XMApp>
-              </XMCell>
-            </XMRow>
-          </XMArray>
+          <ERROR class="undefined"/>
+          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">z</XMTok>
+          <XMTok meaning="much-less-than" name="ll" role="RELOP">≪</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">i</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMApp role="POSTSUBSCRIPT" scriptpos="2">
+            <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+          </XMApp>
+          <XMTok font="italic" role="UNKNOWN">
+</XMTok>
+          <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+          <XMTok font="italic" role="UNKNOWN">q</XMTok>
+          <XMTok font="italic" role="UNKNOWN">
+</XMTok>
         </XMath>
       </Math>
     </equation>
     <equation>
-      <Math mode="display" tex="\eqalignno{x&amp;\ll y+i+\cdots+y_{n}&amp;(x)\cr&amp;\leq z}" text="Array[[x, absent &lt;&lt; y + i + cdots + y _ n, x], [, absent &lt;= z, ]]">
+      <Math mode="display" tex="\@@eqalignno{x&amp;\ll y+i+\cdots+y_{n}&amp;(x)\cr&amp;\leq z\lx@close@alignment}">
         <XMath>
-          <XMArray vattach="baseline">
-            <XMRow>
-              <XMCell align="right">
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
-              </XMCell>
-              <XMCell align="left">
-                <XMApp>
-                  <XMTok meaning="much-less-than" name="ll" role="RELOP">≪</XMTok>
-                  <XMTok meaning="absent"/>
-                  <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                    <XMTok name="cdots" role="ID">⋯</XMTok>
-                    <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="post5"/>
-                      <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                    </XMApp>
-                  </XMApp>
-                </XMApp>
-              </XMCell>
-              <XMCell align="left">
-                <XMDual>
-                  <XMRef idref="id9"/>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="id9">x</XMTok>
-                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                  </XMWrap>
-                </XMDual>
-              </XMCell>
-            </XMRow>
-            <XMRow>
-              <XMCell/>
-              <XMCell align="left">
-                <XMApp>
-                  <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                  <XMTok meaning="absent"/>
-                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                </XMApp>
-              </XMCell>
-              <XMCell/>
-            </XMRow>
-          </XMArray>
+          <ERROR class="undefined"/>
+          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          <XMTok meaning="much-less-than" name="ll" role="RELOP">≪</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">i</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMApp role="POSTSUBSCRIPT" scriptpos="2">
+            <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+          </XMApp>
+          <XMTok role="OPEN" stretchy="false">(</XMTok>
+          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          <XMTok role="CLOSE" stretchy="false">)</XMTok>
+          <XMTok font="italic" role="UNKNOWN">
+</XMTok>
+          <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+          <XMTok font="italic" role="UNKNOWN">z</XMTok>
+          <XMTok font="italic" role="UNKNOWN">
+</XMTok>
         </XMath>
       </Math>
     </equation>
     <equation>
-      <Math mode="display" tex="\leqalignno{x&amp;\ll y+i+\cdots+y_{n}&amp;(x)\cr&amp;\leq z}" text="Array[[x, absent &lt;&lt; y + i + cdots + y _ n, x], [, absent &lt;= z, ]]">
+      <Math mode="display" tex="\@@leqalignno{x&amp;\ll y+i+\cdots+y_{n}&amp;(x)\cr&amp;\leq z\lx@close@alignment}">
         <XMath>
-          <XMArray vattach="baseline">
-            <XMRow>
-              <XMCell align="right">
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
-              </XMCell>
-              <XMCell align="left">
-                <XMApp>
-                  <XMTok meaning="much-less-than" name="ll" role="RELOP">≪</XMTok>
-                  <XMTok meaning="absent"/>
-                  <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                    <XMTok name="cdots" role="ID">⋯</XMTok>
-                    <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="post5"/>
-                      <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                    </XMApp>
-                  </XMApp>
-                </XMApp>
-              </XMCell>
-              <XMCell align="left">
-                <XMDual>
-                  <XMRef idref="id10"/>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="id10">x</XMTok>
-                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                  </XMWrap>
-                </XMDual>
-              </XMCell>
-            </XMRow>
-            <XMRow>
-              <XMCell/>
-              <XMCell align="left">
-                <XMApp>
-                  <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                  <XMTok meaning="absent"/>
-                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                </XMApp>
-              </XMCell>
-              <XMCell/>
-            </XMRow>
-          </XMArray>
+          <ERROR class="undefined"/>
+          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          <XMTok meaning="much-less-than" name="ll" role="RELOP">≪</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">i</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          <XMApp role="POSTSUBSCRIPT" scriptpos="2">
+            <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+          </XMApp>
+          <XMTok role="OPEN" stretchy="false">(</XMTok>
+          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          <XMTok role="CLOSE" stretchy="false">)</XMTok>
+          <XMTok font="italic" role="UNKNOWN">
+</XMTok>
+          <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+          <XMTok font="italic" role="UNKNOWN">z</XMTok>
+          <XMTok font="italic" role="UNKNOWN">
+</XMTok>
         </XMath>
       </Math>
     </equation>
