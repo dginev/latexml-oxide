@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?latexml class="article"?>
 <?latexml package="accents"?>
+<?latexml preamble="\DeclareMathAccent\wtilde{\mathord}{largesymbols}{101}"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
@@ -74,7 +75,7 @@
   </para>
   <para xml:id="p3">
     <equation xml:id="S0.Ex3">
-      <Math mode="display" tex="\underaccent{\hat{}}{x},\qquad\underaccent{\bar{}}{\gamma},\qquad\underaccent{\triangleright}{q},\qquad\underaccent{\tilde{}}{\mathcal{A}}" text="list@((hat@(absent))@(x), (bar@(absent))@(gamma), triangleright@(q), (tilde@(absent))@(A))" xml:id="S0.Ex3.m1">
+      <Math mode="display" tex="\underaccent{\hat}{x},\qquad\underaccent{\bar}{\gamma},\qquad\underaccent{\triangleright}{q},\qquad\underaccent{\tilde}{\mathcal{A}}" text="list@(hat@(x), bar@(gamma), triangleright@(q), tilde@(A))" xml:id="S0.Ex3.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -86,18 +87,12 @@
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex3.m1.1">
-                <XMApp role="UNDERACCENT">
-                  <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                  <XMTok meaning="absent"/>
-                </XMApp>
+                <XMTok name="hat" role="UNDERACCENT" stretchy="false">^</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
               <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
               <XMApp xml:id="S0.Ex3.m1.2">
-                <XMApp role="UNDERACCENT">
-                  <XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok>
-                  <XMTok meaning="absent"/>
-                </XMApp>
+                <XMTok name="bar" role="UNDERACCENT" stretchy="false">¯</XMTok>
                 <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
               </XMApp>
               <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
@@ -107,10 +102,7 @@
               </XMApp>
               <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
               <XMApp xml:id="S0.Ex3.m1.4">
-                <XMApp role="UNDERACCENT">
-                  <XMTok name="tilde" role="OVERACCENT" stretchy="false">~</XMTok>
-                  <XMTok meaning="absent"/>
-                </XMApp>
+                <XMTok name="tilde" role="UNDERACCENT" stretchy="false">~</XMTok>
                 <XMTok font="caligraphic" role="UNKNOWN">A</XMTok>
               </XMApp>
             </XMWrap>
@@ -121,13 +113,10 @@
   </para>
   <para xml:id="p4">
     <equation xml:id="S0.Ex4">
-      <Math mode="display" tex="\underaccent{\wtilde{}}{V}" text="(wtilde@(absent))@(V)" xml:id="S0.Ex4.m1">
+      <Math mode="display" tex="\underaccent{\wtilde}{V}" text="wtilde@(V)" xml:id="S0.Ex4.m1">
         <XMath>
           <XMApp>
-            <XMApp role="UNDERACCENT">
-              <XMTok name="wtilde" role="OVERACCENT">~</XMTok>
-              <XMTok meaning="absent"/>
-            </XMApp>
+            <XMTok name="wtilde" role="UNDERACCENT">~</XMTok>
             <XMTok font="italic" role="UNKNOWN">V</XMTok>
           </XMApp>
         </XMath>

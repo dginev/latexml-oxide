@@ -61,8 +61,8 @@ even if later on, the equation tag is removed or set explicitly!</p>
       <p>Numbered, Tag before (w/eq=1)</p>
       <equation xml:id="S1.Ex3">
         <tags>
-          <tag>(1<sup>′</sup>)</tag>
-          <tag role="refnum">1<sup>′</sup></tag>
+          <tag>(1<sup><text font="italic">′</text></sup>)</tag>
+          <tag role="refnum">1<sup><text font="italic">′</text></sup></tag>
         </tags>
         <Math mode="display" tex="N=\mbox{1}" text="N = [1]" xml:id="S1.Ex3.m3">
           <XMath>
@@ -77,8 +77,8 @@ even if later on, the equation tag is removed or set explicitly!</p>
       <p>Numbered, Tag after (w/eq=1)</p>
       <equation xml:id="S1.Ex4">
         <tags>
-          <tag>(1<sup>′′</sup>)</tag>
-          <tag role="refnum">1<sup>′′</sup></tag>
+          <tag>(1<sup><text font="italic">′′</text></sup>)</tag>
+          <tag role="refnum">1<sup><text font="italic">′′</text></sup></tag>
         </tags>
         <Math mode="display" tex="N=\mbox{2}" text="N = [2]" xml:id="S1.Ex4.m3">
           <XMath>
@@ -138,8 +138,8 @@ even if later on, the equation tag is removed or set explicitly!</p>
       <p>UnNumbered, Tag before (w/eq=1)</p>
       <equation xml:id="S1.Ex8">
         <tags>
-          <tag>(1<sup>′′′</sup>)</tag>
-          <tag role="refnum">1<sup>′′′</sup></tag>
+          <tag>(1<sup><text font="italic">′′′</text></sup>)</tag>
+          <tag role="refnum">1<sup><text font="italic">′′′</text></sup></tag>
         </tags>
         <Math mode="display" tex="N=\mbox{1}" text="N = [1]" xml:id="S1.Ex8.m3">
           <XMath>
@@ -154,8 +154,8 @@ even if later on, the equation tag is removed or set explicitly!</p>
       <p>UnNumbered, Tag after (w/eq=1)</p>
       <equation xml:id="S1.Ex9">
         <tags>
-          <tag>(1<sup>′′′′</sup>)</tag>
-          <tag role="refnum">1<sup>′′′′</sup></tag>
+          <tag>(1<sup><text font="italic">′′′′</text></sup>)</tag>
+          <tag role="refnum">1<sup><text font="italic">′′′′</text></sup></tag>
         </tags>
         <Math mode="display" tex="N=\mbox{1}" text="N = [1]" xml:id="S1.Ex9.m3">
           <XMath>
@@ -185,8 +185,12 @@ even if later on, the equation tag is removed or set explicitly!</p>
       <p>Mostly numbered, unnumbered before and after (w/eq=1)</p>
       <equationgroup class="ltx_eqn_eqnarray" xml:id="S3.EGx1">
         <equation xml:id="S2.E2">
+          <tags>
+            <tag>(2)</tag>
+            <tag role="refnum">2</tag>
+          </tags>
           <MathFork>
-            <Math text="N = [2]" xml:id="S2.E2.m1">
+            <Math tex="\displaystyle N=\mbox{2}" text="N = [2]" xml:id="S2.E2.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -213,8 +217,12 @@ even if later on, the equation tag is removed or set explicitly!</p>
           </MathFork>
         </equation>
         <equation xml:id="S2.E3">
+          <tags>
+            <tag>(3)</tag>
+            <tag role="refnum">3</tag>
+          </tags>
           <MathFork>
-            <Math text="N = [3]" xml:id="S2.E3.m1">
+            <Math tex="\displaystyle N=\mbox{3}" text="N = [3]" xml:id="S2.E3.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -242,7 +250,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
         </equation>
         <equation xml:id="S2.Ex10">
           <MathFork>
-            <Math text="N = [4]" xml:id="S2.Ex10.m1">
+            <Math tex="\displaystyle N=\mbox{4}" text="N = [4]" xml:id="S2.Ex10.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -270,7 +278,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
         </equation>
         <equation xml:id="S2.Ex11">
           <MathFork>
-            <Math text="N = [4]" xml:id="S2.Ex11.m1">
+            <Math tex="\displaystyle N=\mbox{4}" text="N = [4]" xml:id="S2.Ex11.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -297,8 +305,12 @@ even if later on, the equation tag is removed or set explicitly!</p>
           </MathFork>
         </equation>
         <equation xml:id="S2.E4">
+          <tags>
+            <tag>(4)</tag>
+            <tag role="refnum">4</tag>
+          </tags>
           <MathFork>
-            <Math text="N = [4]" xml:id="S2.E4.m1">
+            <Math tex="\displaystyle N=\mbox{4}" text="N = [4]" xml:id="S2.E4.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -331,7 +343,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
       <equationgroup class="ltx_eqn_eqnarray" xml:id="S3.EGx2">
         <equation xml:id="S2.Ex12">
           <MathFork>
-            <Math text="N = [5]" xml:id="S2.Ex12.m1">
+            <Math tex="\displaystyle N=\mbox{5}" text="N = [5]" xml:id="S2.Ex12.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -359,7 +371,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
         </equation>
         <equation xml:id="S2.Ex13">
           <MathFork>
-            <Math text="N = [5]" xml:id="S2.Ex13.m1">
+            <Math tex="\displaystyle N=\mbox{5}" text="N = [5]" xml:id="S2.Ex13.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -404,8 +416,12 @@ until the end of line mark!</p>
       <p>Align numbered, some unnumbered before, after, some tagged before, after (w/eq=4)</p>
       <equationgroup class="ltx_eqn_align" xml:id="S3.EGx3">
         <equation xml:id="S3.E5">
+          <tags>
+            <tag>(5)</tag>
+            <tag role="refnum">5</tag>
+          </tags>
           <MathFork>
-            <Math text="N = [4]" xml:id="S3.E5.m3">
+            <Math tex="\displaystyle N=\mbox{4}" text="N = [4]" xml:id="S3.E5.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -420,18 +436,25 @@ until the end of line mark!</p>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{4}" xml:id="S3.E5.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{4}" text="absent = [4]" xml:id="S3.E5.m2">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>4</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>4</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
           </MathFork>
         </equation>
         <equation xml:id="S3.E6">
+          <tags>
+            <tag>(6)</tag>
+            <tag role="refnum">6</tag>
+          </tags>
           <MathFork>
-            <Math text="N = [5]" xml:id="S3.E6.m3">
+            <Math tex="\displaystyle N=\mbox{5}" text="N = [5]" xml:id="S3.E6.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -446,10 +469,13 @@ until the end of line mark!</p>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{5}" xml:id="S3.E6.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{5}" text="absent = [5]" xml:id="S3.E6.m2">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>5</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>5</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
@@ -457,7 +483,7 @@ until the end of line mark!</p>
         </equation>
         <equation xml:id="S3.Ex14">
           <MathFork>
-            <Math text="N = [6]" xml:id="S3.Ex14.m3">
+            <Math tex="\displaystyle N=\mbox{6}" text="N = [6]" xml:id="S3.Ex14.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -472,10 +498,13 @@ until the end of line mark!</p>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{6}" xml:id="S3.Ex14.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{6}" text="absent = [6]" xml:id="S3.Ex14.m2">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>6</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>6</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
@@ -483,7 +512,7 @@ until the end of line mark!</p>
         </equation>
         <equation xml:id="S3.Ex15">
           <MathFork>
-            <Math text="N = [6]" xml:id="S3.Ex15.m3">
+            <Math tex="\displaystyle N=\mbox{6}" text="N = [6]" xml:id="S3.Ex15.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -498,18 +527,25 @@ until the end of line mark!</p>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{6}" xml:id="S3.Ex15.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{6}" text="absent = [6]" xml:id="S3.Ex15.m2">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>6</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>6</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
           </MathFork>
         </equation>
         <equation xml:id="S3.E7">
+          <tags>
+            <tag>(7)</tag>
+            <tag role="refnum">7</tag>
+          </tags>
           <MathFork>
-            <Math text="N = [6]" xml:id="S3.E7.m3">
+            <Math tex="\displaystyle N=\mbox{6}" text="N = [6]" xml:id="S3.E7.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -524,18 +560,25 @@ until the end of line mark!</p>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{6}" xml:id="S3.E7.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{6}" text="absent = [6]" xml:id="S3.E7.m2">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>6</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>6</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
           </MathFork>
         </equation>
         <equation xml:id="S3.Ex16">
+          <tags>
+            <tag>(7<sup><text font="italic">′</text></sup>)</tag>
+            <tag role="refnum">7<sup><text font="italic">′</text></sup></tag>
+          </tags>
           <MathFork>
-            <Math text="N = [7]" xml:id="S3.Ex16.m3">
+            <Math tex="\displaystyle N=\mbox{7}" text="N = [7]" xml:id="S3.Ex16.m5">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -545,23 +588,30 @@ until the end of line mark!</p>
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle N" text="N" xml:id="S3.Ex16.m1">
+              <td align="right"><Math mode="inline" tex="\displaystyle N" text="N" xml:id="S3.Ex16.m3">
                   <XMath>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" xml:id="S3.Ex16.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" text="absent = [7]" xml:id="S3.Ex16.m4">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>7</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>7</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
           </MathFork>
         </equation>
         <equation xml:id="S3.Ex17">
+          <tags>
+            <tag>(7<sup><text font="italic">′′</text></sup>)</tag>
+            <tag role="refnum">7<sup><text font="italic">′′</text></sup></tag>
+          </tags>
           <MathFork>
-            <Math text="N = [7]" xml:id="S3.Ex17.m3">
+            <Math tex="\displaystyle N=\mbox{7}" text="N = [7]" xml:id="S3.Ex17.m5">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -571,15 +621,18 @@ until the end of line mark!</p>
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle N" text="N" xml:id="S3.Ex17.m1">
+              <td align="right"><Math mode="inline" tex="\displaystyle N" text="N" xml:id="S3.Ex17.m3">
                   <XMath>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" xml:id="S3.Ex17.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" text="absent = [7]" xml:id="S3.Ex17.m4">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>7</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>7</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
@@ -592,7 +645,7 @@ until the end of line mark!</p>
       <equationgroup class="ltx_eqn_align" xml:id="S3.EGx4">
         <equation xml:id="S3.Ex18">
           <MathFork>
-            <Math text="N = [7]" xml:id="S3.Ex18.m3">
+            <Math tex="\displaystyle N=\mbox{7}" text="N = [7]" xml:id="S3.Ex18.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -607,18 +660,25 @@ until the end of line mark!</p>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" xml:id="S3.Ex18.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" text="absent = [7]" xml:id="S3.Ex18.m2">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>7</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>7</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
           </MathFork>
         </equation>
         <equation xml:id="S3.Ex19">
+          <tags>
+            <tag>(7<sup><text font="italic">′′′</text></sup>)</tag>
+            <tag role="refnum">7<sup><text font="italic">′′′</text></sup></tag>
+          </tags>
           <MathFork>
-            <Math text="N = [7]" xml:id="S3.Ex19.m3">
+            <Math tex="\displaystyle N=\mbox{7}" text="N = [7]" xml:id="S3.Ex19.m5">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -628,23 +688,30 @@ until the end of line mark!</p>
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle N" text="N" xml:id="S3.Ex19.m1">
+              <td align="right"><Math mode="inline" tex="\displaystyle N" text="N" xml:id="S3.Ex19.m3">
                   <XMath>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" xml:id="S3.Ex19.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" text="absent = [7]" xml:id="S3.Ex19.m4">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>7</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>7</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
           </MathFork>
         </equation>
         <equation xml:id="S3.Ex20">
+          <tags>
+            <tag>(7<sup><text font="italic">′′′′</text></sup>)</tag>
+            <tag role="refnum">7<sup><text font="italic">′′′′</text></sup></tag>
+          </tags>
           <MathFork>
-            <Math text="N = [7]" xml:id="S3.Ex20.m3">
+            <Math tex="\displaystyle N=\mbox{7}" text="N = [7]" xml:id="S3.Ex20.m5">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -654,15 +721,18 @@ until the end of line mark!</p>
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle N" text="N" xml:id="S3.Ex20.m1">
+              <td align="right"><Math mode="inline" tex="\displaystyle N" text="N" xml:id="S3.Ex20.m3">
                   <XMath>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" xml:id="S3.Ex20.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" text="absent = [7]" xml:id="S3.Ex20.m4">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>7</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>7</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>
@@ -670,7 +740,7 @@ until the end of line mark!</p>
         </equation>
         <equation xml:id="S3.Ex21">
           <MathFork>
-            <Math text="N = [7]" xml:id="S3.Ex21.m3">
+            <Math tex="\displaystyle N=\mbox{7}" text="N = [7]" xml:id="S3.Ex21.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -685,10 +755,13 @@ until the end of line mark!</p>
                     <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" xml:id="S3.Ex21.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\mbox{7}" text="absent = [7]" xml:id="S3.Ex21.m2">
                   <XMath>
-                    <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMText>7</XMText>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
+                      <XMText>7</XMText>
+                    </XMApp>
                   </XMath>
                 </Math></td>
             </MathBranch>

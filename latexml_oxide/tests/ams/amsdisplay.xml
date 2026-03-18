@@ -37,58 +37,99 @@
         <tag>(2)</tag>
         <tag role="refnum">2</tag>
       </tags>
-      <Math mode="display" tex="\begin{split}a&amp;=b+c-c\\&#10;&amp;\quad+e-f\\&#10;&amp;=g+h\\&#10;&amp;=i\end{split}" text="Array[[a, =b+c-c], [, (+ e) - f], [, =g+h], [, =i]]" xml:id="S0.E2.m1">
+      <Math mode="display" tex="\begin{split}a&amp;=b+c-c\\&#10;&amp;\quad+e-f\\&#10;&amp;=g+h\\&#10;&amp;=i\end{split}" text="a = (((b + c) - c) + e) - f = g + h = i" xml:id="S0.E2.m1">
         <XMath>
-          <XMArray>
-            <XMRow>
-              <XMCell align="right">
-                <XMTok font="italic" role="UNKNOWN">a</XMTok>
-              </XMCell>
-              <XMCell align="left">
-                <XMArg rule="Anything">
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                </XMArg>
-              </XMCell>
-            </XMRow>
-            <XMRow>
-              <XMCell/>
-              <XMCell align="left">
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="multirelation"/>
+              <XMRef idref="S0.E2.m1.1"/>
+              <XMRef idref="S0.E2.m1.2"/>
+              <XMApp>
+                <XMRef idref="S0.E2.m1.10"/>
                 <XMApp>
-                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                  <XMRef idref="S0.E2.m1.8"/>
                   <XMApp>
-                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                    <XMRef idref="S0.E2.m1.6"/>
+                    <XMApp>
+                      <XMRef idref="S0.E2.m1.4"/>
+                      <XMRef idref="S0.E2.m1.3"/>
+                      <XMRef idref="S0.E2.m1.5"/>
+                    </XMApp>
+                    <XMRef idref="S0.E2.m1.7"/>
                   </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMRef idref="S0.E2.m1.9"/>
                 </XMApp>
-              </XMCell>
-            </XMRow>
-            <XMRow>
-              <XMCell/>
-              <XMCell align="left">
-                <XMArg rule="Anything">
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">g</XMTok>
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                </XMArg>
-              </XMCell>
-            </XMRow>
-            <XMRow>
-              <XMCell/>
-              <XMCell align="left">
-                <XMArg rule="Anything">
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                </XMArg>
-              </XMCell>
-            </XMRow>
-          </XMArray>
+                <XMRef idref="S0.E2.m1.11"/>
+              </XMApp>
+              <XMRef idref="S0.E2.m1.12"/>
+              <XMApp>
+                <XMRef idref="S0.E2.m1.14"/>
+                <XMRef idref="S0.E2.m1.13"/>
+                <XMRef idref="S0.E2.m1.15"/>
+              </XMApp>
+              <XMRef idref="S0.E2.m1.16"/>
+              <XMRef idref="S0.E2.m1.17"/>
+            </XMApp>
+            <XMArray colsep="0pt" name="aligned">
+              <XMRow>
+                <XMCell align="right">
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.1">a</XMTok>
+                </XMCell>
+                <XMCell align="left">
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP" xml:id="S0.E2.m1.2">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="minus" role="ADDOP" xml:id="S0.E2.m1.6">-</XMTok>
+                      <XMApp>
+                        <XMTok meaning="plus" role="ADDOP" xml:id="S0.E2.m1.4">+</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.3">b</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.5">c</XMTok>
+                      </XMApp>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.7">c</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMCell>
+              </XMRow>
+              <XMRow>
+                <XMCell/>
+                <XMCell align="left">
+                  <XMApp>
+                    <XMTok meaning="minus" role="ADDOP" xml:id="S0.E2.m1.10">-</XMTok>
+                    <XMApp>
+                      <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP" xml:id="S0.E2.m1.8">+</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.9">e</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.11">f</XMTok>
+                  </XMApp>
+                </XMCell>
+              </XMRow>
+              <XMRow>
+                <XMCell/>
+                <XMCell align="left">
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP" xml:id="S0.E2.m1.12">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP" xml:id="S0.E2.m1.14">+</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.13">g</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.15">h</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMCell>
+              </XMRow>
+              <XMRow>
+                <XMCell/>
+                <XMCell align="left">
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP" xml:id="S0.E2.m1.16">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.17">i</XMTok>
+                  </XMApp>
+                </XMCell>
+              </XMRow>
+            </XMArray>
+          </XMDual>
         </XMath>
       </Math>
     </equation>
@@ -97,28 +138,65 @@
         <tag>(3)</tag>
         <tag role="refnum">3</tag>
       </tags>
-      <Math mode="display" text="a + b + c + d + e + f + i + j + k + l + m + n" xml:id="S0.E3.m1">
+      <Math mode="display" tex="a+b+c+d+e+f\\&#10;+i+j+k+l+m+n" text="a + b + c + d + e + f + i + j + k + l + m + n" xml:id="S0.E3.m1">
         <XMath>
-          <XMApp>
-            <XMTok meaning="plus" role="ADDOP">+</XMTok>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-            <XMTok font="italic" role="UNKNOWN">c</XMTok>
-            <XMTok font="italic" role="UNKNOWN">d</XMTok>
-            <XMTok font="italic" role="UNKNOWN">e</XMTok>
-            <XMTok font="italic" role="UNKNOWN">f</XMTok>
-            <XMTok font="italic" role="UNKNOWN">i</XMTok>
-            <XMTok font="italic" role="UNKNOWN">j</XMTok>
-            <XMTok font="italic" role="UNKNOWN">k</XMTok>
-            <XMTok font="italic" role="UNKNOWN">l</XMTok>
-            <XMTok font="italic" role="UNKNOWN">m</XMTok>
-            <XMTok font="italic" role="UNKNOWN">n</XMTok>
-          </XMApp>
+          <XMDual>
+            <XMApp>
+              <XMRef idref="S0.E3.m1.2"/>
+              <XMRef idref="S0.E3.m1.1"/>
+              <XMRef idref="S0.E3.m1.3"/>
+              <XMRef idref="S0.E3.m1.5"/>
+              <XMRef idref="S0.E3.m1.7"/>
+              <XMRef idref="S0.E3.m1.9"/>
+              <XMRef idref="S0.E3.m1.11"/>
+              <XMRef idref="S0.E3.m1.13"/>
+              <XMRef idref="S0.E3.m1.15"/>
+              <XMRef idref="S0.E3.m1.17"/>
+              <XMRef idref="S0.E3.m1.19"/>
+              <XMRef idref="S0.E3.m1.21"/>
+              <XMRef idref="S0.E3.m1.23"/>
+            </XMApp>
+            <XMArray name="multline">
+              <XMRow>
+                <XMCell align="left">
+                  <XMApp>
+                    <XMTok meaning="plus" role="ADDOP" xml:id="S0.E3.m1.2">+</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.1">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.3">b</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.5">c</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.7">d</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.9">e</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.11">f</XMTok>
+                  </XMApp>
+                </XMCell>
+              </XMRow>
+              <XMRow>
+                <XMCell align="right">
+                  <XMApp>
+                    <XMTok meaning="plus" role="ADDOP" xml:id="S0.E3.m1.14">+</XMTok>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP" xml:id="S0.E3.m1.12">+</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.13">i</XMTok>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.15">j</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.17">k</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.19">l</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.21">m</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.23">n</XMTok>
+                  </XMApp>
+                </XMCell>
+              </XMRow>
+            </XMArray>
+          </XMDual>
         </XMath>
       </Math>
     </equation>
     <equationgroup class="ltx_eqn_gather" xml:id="S0.EGx1">
       <equation xml:id="S0.E4">
+        <tags>
+          <tag>(4)</tag>
+          <tag role="refnum">4</tag>
+        </tags>
         <Math mode="display" tex="\displaystyle a_{1}=b_{1}+c_{1}" text="a _ 1 = b _ 1 + c _ 1" xml:id="S0.E4.m1">
           <XMath>
             <XMApp>
@@ -146,6 +224,10 @@
         </Math>
       </equation>
       <equation xml:id="S0.E5">
+        <tags>
+          <tag>(5)</tag>
+          <tag role="refnum">5</tag>
+        </tags>
         <Math mode="display" tex="\displaystyle a_{2}=b_{2}+c_{2}-d_{2}+e_{2}" text="a _ 2 = ((b _ 2 + c _ 2) - d _ 2) + e _ 2" xml:id="S0.E5.m1">
           <XMath>
             <XMApp>
@@ -191,8 +273,12 @@
     </equationgroup>
     <equationgroup class="ltx_eqn_align" xml:id="S0.EGx2">
       <equation xml:id="S0.E6">
+        <tags>
+          <tag>(6)</tag>
+          <tag role="refnum">6</tag>
+        </tags>
         <MathFork>
-          <Math text="a _ 1 = b _ 1 + c _ 1" xml:id="S0.E6.m3">
+          <Math tex="\displaystyle a_{1}=b_{1}+c_{1}" text="a _ 1 = b _ 1 + c _ 1" xml:id="S0.E6.m3">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -227,17 +313,24 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{1}+c_{1}" xml:id="S0.E6.m2">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{1}+c_{1}" text="absent = b _ 1 + c _ 1" xml:id="S0.E6.m2">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                  </XMApp>
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -245,8 +338,12 @@
         </MathFork>
       </equation>
       <equation xml:id="S0.E7">
+        <tags>
+          <tag>(7)</tag>
+          <tag role="refnum">7</tag>
+        </tags>
         <MathFork>
-          <Math text="a _ 2 = ((b _ 2 + c _ 2) - d _ 2) + e _ 2" xml:id="S0.E7.m3">
+          <Math tex="\displaystyle a_{2}=b_{2}+c_{2}-d_{2}+e_{2}" text="a _ 2 = ((b _ 2 + c _ 2) - d _ 2) + e _ 2" xml:id="S0.E7.m3">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -297,27 +394,40 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{2}+c_{2}-d_{2}+e_{2}" xml:id="S0.E7.m2">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{2}+c_{2}-d_{2}+e_{2}" text="absent = ((b _ 2 + c _ 2) - d _ 2) + e _ 2" xml:id="S0.E7.m2">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">e</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMApp>
+                        <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                        <XMApp>
+                          <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                          <XMApp>
+                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                          </XMApp>
+                          <XMApp>
+                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                          </XMApp>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                          <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                          <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -327,8 +437,12 @@
     </equationgroup>
     <equationgroup class="ltx_eqn_align" xml:id="S0.EGx3">
       <equation xml:id="S0.E8">
+        <tags>
+          <tag>(8)</tag>
+          <tag role="refnum">8</tag>
+        </tags>
         <MathFork>
-          <Math text="a _ 11 = b _ 11" xml:id="S0.E8.m5">
+          <Math tex="\displaystyle a_{11}=b_{11}" text="a _ 11 = b _ 11" xml:id="S0.E8.m5">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -355,19 +469,23 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{11}" xml:id="S0.E8.m2">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{11}" text="absent = b _ 11" xml:id="S0.E8.m2">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="11" role="NUMBER">11</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok fontsize="70%" meaning="11" role="NUMBER">11</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
           </MathBranch>
         </MathFork>
         <MathFork>
-          <Math text="a _ 12 = b _ 12" xml:id="S0.E8.m6">
+          <Math tex="\displaystyle a_{12}=b_{12}" text="a _ 12 = b _ 12" xml:id="S0.E8.m6">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -394,12 +512,16 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{12}" xml:id="S0.E8.m4">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{12}" text="absent = b _ 12" xml:id="S0.E8.m4">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="12" role="NUMBER">12</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok fontsize="70%" meaning="12" role="NUMBER">12</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -407,8 +529,12 @@
         </MathFork>
       </equation>
       <equation xml:id="S0.E9">
+        <tags>
+          <tag>(9)</tag>
+          <tag role="refnum">9</tag>
+        </tags>
         <MathFork>
-          <Math text="a _ 21 = b _ 21" xml:id="S0.E9.m5">
+          <Math tex="\displaystyle a_{21}=b_{21}" text="a _ 21 = b _ 21" xml:id="S0.E9.m5">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -435,19 +561,23 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{21}" xml:id="S0.E9.m2">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{21}" text="absent = b _ 21" xml:id="S0.E9.m2">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="21" role="NUMBER">21</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok fontsize="70%" meaning="21" role="NUMBER">21</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
           </MathBranch>
         </MathFork>
         <MathFork>
-          <Math text="a _ 22 = b _ 22 + c _ 22" xml:id="S0.E9.m6">
+          <Math tex="\displaystyle a_{22}=b_{22}+c_{22}" text="a _ 22 = b _ 22 + c _ 22" xml:id="S0.E9.m6">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -482,17 +612,24 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{22}+c_{22}" xml:id="S0.E9.m4">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{22}+c_{22}" text="absent = b _ 22 + c _ 22" xml:id="S0.E9.m4">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="22" role="NUMBER">22</XMTok>
-                  </XMApp>
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="22" role="NUMBER">22</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok fontsize="70%" meaning="22" role="NUMBER">22</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                        <XMTok fontsize="70%" meaning="22" role="NUMBER">22</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -502,8 +639,12 @@
     </equationgroup>
     <equationgroup class="ltx_eqn_align" xml:id="S0.EGx4">
       <equation xml:id="S0.E11">
+        <tags>
+          <tag>(11)</tag>
+          <tag role="refnum">11</tag>
+        </tags>
         <MathFork>
-          <Math text="a _ 11 = b _ 11" xml:id="S0.E11.m5">
+          <Math tex="\displaystyle a_{11}=b_{11}" text="a _ 11 = b _ 11" xml:id="S0.E11.m5">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -530,19 +671,23 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{11}" xml:id="S0.E11.m2">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{11}" text="absent = b _ 11" xml:id="S0.E11.m2">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="11" role="NUMBER">11</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok fontsize="70%" meaning="11" role="NUMBER">11</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
           </MathBranch>
         </MathFork>
         <MathFork>
-          <Math text="a _ 12 = b _ 12" xml:id="S0.E11.m6">
+          <Math tex="\displaystyle a_{12}=b_{12}" text="a _ 12 = b _ 12" xml:id="S0.E11.m6">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -569,12 +714,16 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{12}" xml:id="S0.E11.m4">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{12}" text="absent = b _ 12" xml:id="S0.E11.m4">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="12" role="NUMBER">12</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok fontsize="70%" meaning="12" role="NUMBER">12</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -582,8 +731,12 @@
         </MathFork>
       </equation>
       <equation xml:id="S0.E12">
+        <tags>
+          <tag>(12)</tag>
+          <tag role="refnum">12</tag>
+        </tags>
         <MathFork>
-          <Math text="a _ 21 = b _ 21" xml:id="S0.E12.m5">
+          <Math tex="\displaystyle a_{21}=b_{21}" text="a _ 21 = b _ 21" xml:id="S0.E12.m5">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -610,19 +763,23 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{21}" xml:id="S0.E12.m2">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{21}" text="absent = b _ 21" xml:id="S0.E12.m2">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="21" role="NUMBER">21</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok fontsize="70%" meaning="21" role="NUMBER">21</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
           </MathBranch>
         </MathFork>
         <MathFork>
-          <Math text="a _ 22 = b _ 22 + c _ 22" xml:id="S0.E12.m6">
+          <Math tex="\displaystyle a_{22}=b_{22}+c_{22}" text="a _ 22 = b _ 22 + c _ 22" xml:id="S0.E12.m6">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -657,17 +814,24 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math mode="inline" tex="\displaystyle=b_{22}+c_{22}" xml:id="S0.E12.m4">
+            <td align="left"><Math mode="inline" tex="\displaystyle=b_{22}+c_{22}" text="absent = b _ 22 + c _ 22" xml:id="S0.E12.m4">
                 <XMath>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="22" role="NUMBER">22</XMTok>
-                  </XMApp>
-                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-                    <XMTok fontsize="70%" meaning="22" role="NUMBER">22</XMTok>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok fontsize="70%" meaning="22" role="NUMBER">22</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                        <XMTok fontsize="70%" meaning="22" role="NUMBER">22</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -677,123 +841,165 @@
     </equationgroup>
   </para>
   <para xml:id="p2">
-    <p>Sub-numbered equations
-<ERROR class="undefined"/></p>
-    <equation xml:id="S0.E14">
+    <p>Sub-numbered equations</p>
+    <equationgroup xml:id="S0.E14">
       <tags>
         <tag>(14)</tag>
         <tag role="refnum">14</tag>
       </tags>
-      <Math mode="display" tex="N=14" text="N = 14" xml:id="S0.E14.m1">
-        <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">N</XMTok>
-            <XMTok meaning="14" role="NUMBER">14</XMTok>
-          </XMApp>
-        </XMath>
-      </Math>
-    </equation>
-    <equation xml:id="S0.E15">
+      <equation xml:id="S0.E14.1">
+        <tags>
+          <tag>(14a)</tag>
+          <tag role="refnum">14a</tag>
+        </tags>
+        <Math mode="display" tex="N=14a" text="N = 14 * a" xml:id="S0.E14.1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="14" role="NUMBER">14</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S0.E14.2">
+        <tags>
+          <tag>(14b)</tag>
+          <tag role="refnum">14b</tag>
+        </tags>
+        <Math mode="display" tex="N=14b" text="N = 14 * b" xml:id="S0.E14.2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="14" role="NUMBER">14</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </equationgroup>
+  </para>
+  <para xml:id="p3">
+    <p>Subnumbered, but some unnumbered (before/after) or tagged explicitly (before/after)</p>
+    <equationgroup xml:id="S0.E15">
       <tags>
         <tag>(15)</tag>
         <tag role="refnum">15</tag>
       </tags>
-      <Math mode="display" tex="N=15" text="N = 15" xml:id="S0.E15.m1">
-        <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">N</XMTok>
-            <XMTok meaning="15" role="NUMBER">15</XMTok>
-          </XMApp>
-        </XMath>
-      </Math>
-    </equation>
-  </para>
-  <para xml:id="p3">
-    <p>Subnumbered, but some unnumbered (before/after) or tagged explicitly (before/after)
-<ERROR class="undefined"/></p>
-    <equation xml:id="S0.E16">
-      <tags>
-        <tag>(16)</tag>
-        <tag role="refnum">16</tag>
-      </tags>
-      <Math mode="display" tex="N=16" text="N = 16" xml:id="S0.E16.m1">
-        <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">N</XMTok>
-            <XMTok meaning="16" role="NUMBER">16</XMTok>
-          </XMApp>
-        </XMath>
-      </Math>
-    </equation>
-    <equation xml:id="S0.Ex2">
-      <Math mode="display" tex="N=16" text="N = 16" xml:id="S0.Ex2.m1">
-        <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">N</XMTok>
-            <XMTok meaning="16" role="NUMBER">16</XMTok>
-          </XMApp>
-        </XMath>
-      </Math>
-    </equation>
-    <equation xml:id="S0.Ex3">
-      <Math mode="display" tex="N=17" text="N = 17" xml:id="S0.Ex3.m1">
-        <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">N</XMTok>
-            <XMTok meaning="17" role="NUMBER">17</XMTok>
-          </XMApp>
-        </XMath>
-      </Math>
-    </equation>
-    <equation xml:id="S0.Ex4">
-      <tags>
-        <tag>(16<sup>′</sup>)</tag>
-        <tag role="refnum">16<sup>′</sup></tag>
-      </tags>
-      <Math mode="display" tex="N=16" text="N = 16" xml:id="S0.Ex4.m3">
-        <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">N</XMTok>
-            <XMTok meaning="16" role="NUMBER">16</XMTok>
-          </XMApp>
-        </XMath>
-      </Math>
-    </equation>
-    <equation xml:id="S0.Ex5">
-      <tags>
-        <tag>(16<sup>′′</sup>)</tag>
-        <tag role="refnum">16<sup>′′</sup></tag>
-      </tags>
-      <Math mode="display" tex="N=17" text="N = 17" xml:id="S0.Ex5.m3">
-        <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">N</XMTok>
-            <XMTok meaning="17" role="NUMBER">17</XMTok>
-          </XMApp>
-        </XMath>
-      </Math>
-    </equation>
-    <equation xml:id="S0.E17">
-      <tags>
-        <tag>(17)</tag>
-        <tag role="refnum">17</tag>
-      </tags>
-      <Math mode="display" tex="N=17" text="N = 17" xml:id="S0.E17.m1">
-        <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">N</XMTok>
-            <XMTok meaning="17" role="NUMBER">17</XMTok>
-          </XMApp>
-        </XMath>
-      </Math>
-    </equation>
+      <equation xml:id="S0.E15.1">
+        <tags>
+          <tag>(15a)</tag>
+          <tag role="refnum">15a</tag>
+        </tags>
+        <Math mode="display" tex="N=15a" text="N = 15 * a" xml:id="S0.E15.1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="15" role="NUMBER">15</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S0.E15.x1">
+        <Math mode="display" tex="N=15a" text="N = 15 * a" xml:id="S0.E15.x1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="15" role="NUMBER">15</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S0.E15.x2">
+        <Math mode="display" tex="N=15b" text="N = 15 * b" xml:id="S0.E15.x2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="15" role="NUMBER">15</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S0.E15.x3">
+        <tags>
+          <tag>(15a<sup><text font="italic">′</text></sup>)</tag>
+          <tag role="refnum">15a<sup><text font="italic">′</text></sup></tag>
+        </tags>
+        <Math mode="display" tex="N=15a" text="N = 15 * a" xml:id="S0.E15.x3.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="15" role="NUMBER">15</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S0.E15.x4">
+        <tags>
+          <tag>(15a<sup><text font="italic">′′</text></sup>)</tag>
+          <tag role="refnum">15a<sup><text font="italic">′′</text></sup></tag>
+        </tags>
+        <Math mode="display" tex="N=15b" text="N = 15 * b" xml:id="S0.E15.x4.m3">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="15" role="NUMBER">15</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S0.E15.2">
+        <tags>
+          <tag>(15b)</tag>
+          <tag role="refnum">15b</tag>
+        </tags>
+        <Math mode="display" tex="N=15b" text="N = 15 * b" xml:id="S0.E15.2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="equals" role="RELOP">=</XMTok>
+              <XMTok font="italic" role="UNKNOWN">N</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="15" role="NUMBER">15</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </equationgroup>
   </para>
 </document>

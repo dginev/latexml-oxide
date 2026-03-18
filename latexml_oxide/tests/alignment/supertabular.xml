@@ -2,22 +2,26 @@
 <?latexml class="article"?>
 <?latexml package="supertabular"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
-<document xmlns="http://dlmf.nist.gov/LaTeXML" inlist="lot lot lot">
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <para xml:id="p1">
-    <ERROR class="undefined"/>
-    <p>The ISOGRK3 entity set</p>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p2">
-    <tabular vattach="middle">
-      <tbody>
+  <table inlist="lot" xml:id="S0.T1">
+    <tags>
+      <tag>Table 1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">Table 1</tag>
+    </tags>
+    <toccaption><tag close=" ">1</tag>The ISOGRK3 entity set</toccaption>
+    <caption><tag close=": ">Table 1</tag>The ISOGRK3 entity set</caption>
+    <tabular>
+      <thead>
         <tr>
-          <td align="left"><text font="bold">Entity</text></td>
-          <td align="left"><text font="bold">Unicode Name</text></td>
-          <td align="left"><text font="bold">Unicode</text></td>
+          <td align="left" thead="column"><text font="bold">Entity</text></td>
+          <td align="left" thead="column"><text font="bold">Unicode Name</text></td>
+          <td align="left" thead="column"><text font="bold">Unicode</text></td>
         </tr>
+      </thead>
+      <tbody>
         <tr>
           <td align="left" border="t">alpha</td>
           <td align="left" border="t">GREEK SMALL LETTER ALPHA</td>
@@ -29,606 +33,189 @@
           <td align="left">03B2</td>
         </tr>
         <tr>
-          <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
+          <td align="left">chi</td>
+          <td align="left">GREEK SMALL LETTER CHI</td>
+          <td align="left">03C7</td>
+        </tr>
+        <tr>
+          <td align="left">Delta</td>
+          <td align="left">GREEK CAPITAL LETTER DELTA</td>
+          <td align="left">0394</td>
+        </tr>
+        <tr>
+          <td align="left">delta</td>
+          <td align="left">GREEK SMALL LETTER DELTA</td>
+          <td align="left">03B4</td>
+        </tr>
+        <tr>
+          <td align="left">epsi</td>
+          <td align="left">GREEK SMALL LETTER EPSILON</td>
+          <td align="left">03B5</td>
+        </tr>
+        <tr>
+          <td align="left" border="b">epsis</td>
+          <td align="left" border="b">GREEK LUNATE EPSILON SYMBOL</td>
+          <td align="left" border="b">03F5</td>
         </tr>
       </tbody>
     </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p3">
-    <tabular vattach="middle">
+  </table>
+  <table inlist="lot" xml:id="S0.T2">
+    <tags>
+      <tag>Table 2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">Table 2</tag>
+    </tags>
+    <toccaption><tag close=" ">2</tag>The ISOGRK3 entity set, wider</toccaption>
+    <caption><tag close=": ">Table 2</tag>The ISOGRK3 entity set, wider</caption>
+    <tabular colsep="20.0pt">
+      <thead>
+        <tr>
+          <td align="left" thead="column">  <text font="bold">Entity</text></td>
+          <td align="left" thead="column">  <text font="bold">Unicode Name</text></td>
+          <td align="left" thead="column">  <text font="bold">Unicode</text></td>
+        </tr>
+      </thead>
       <tbody>
         <tr>
-          <td align="left"><text font="bold">Entity</text></td>
-          <td align="left"><text font="bold">Unicode Name</text></td>
-          <td align="left"><text font="bold">Unicode</text></td>
+          <td align="left" border="t">  alpha</td>
+          <td align="left" border="t">  GREEK SMALL LETTER ALPHA</td>
+          <td align="left" border="t">  03B1</td>
         </tr>
         <tr>
-          <td align="left" border="t">chi</td>
-          <td align="left" border="t">GREEK SMALL LETTER CHI</td>
-          <td align="left" border="t">03C7</td>
+          <td align="left">  beta</td>
+          <td align="left">  GREEK SMALL LETTER BETA</td>
+          <td align="left">  03B2</td>
         </tr>
         <tr>
-          <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
+          <td align="left">  chi</td>
+          <td align="left">  GREEK SMALL LETTER CHI</td>
+          <td align="left">  03C7</td>
+        </tr>
+        <tr>
+          <td align="left">  Delta</td>
+          <td align="left">  GREEK CAPITAL LETTER DELTA</td>
+          <td align="left">  0394</td>
+        </tr>
+        <tr>
+          <td align="left">  delta</td>
+          <td align="left">  GREEK SMALL LETTER DELTA</td>
+          <td align="left">  03B4</td>
+        </tr>
+        <tr>
+          <td align="left">  epsi</td>
+          <td align="left">  GREEK SMALL LETTER EPSILON</td>
+          <td align="left">  03B5</td>
+        </tr>
+        <tr>
+          <td align="left" border="b">  epsis</td>
+          <td align="left" border="b">  GREEK LUNATE EPSILON SYMBOL</td>
+          <td align="left" border="b">  03F5</td>
         </tr>
       </tbody>
     </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p4">
-    <tabular vattach="middle">
+  </table>
+  <table xml:id="tab1">
+    <tabular>
+      <thead>
+        <tr>
+          <td align="left" thead="column"><text font="bold">Entity</text></td>
+          <td align="left" thead="column"><text font="bold">Unicode Name</text></td>
+          <td align="left" thead="column"><text font="bold">Unicode</text></td>
+        </tr>
+      </thead>
       <tbody>
         <tr>
-          <td align="left"><text font="bold">Entity</text></td>
-          <td align="left"><text font="bold">Unicode Name</text></td>
-          <td align="left"><text font="bold">Unicode</text></td>
+          <td align="left" border="t">alpha</td>
+          <td align="left" border="t">GREEK SMALL LETTER ALPHA</td>
+          <td align="left" border="t">03B1</td>
         </tr>
         <tr>
-          <td align="left" border="t">Delta</td>
-          <td align="left" border="t">GREEK CAPITAL LETTER DELTA</td>
-          <td align="left" border="t">0394</td>
+          <td align="left">beta</td>
+          <td align="left">GREEK SMALL LETTER BETA</td>
+          <td align="left">03B2</td>
         </tr>
         <tr>
-          <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
+          <td align="left">chi</td>
+          <td align="left">GREEK SMALL LETTER CHI</td>
+          <td align="left">03C7</td>
+        </tr>
+        <tr>
+          <td align="left">Delta</td>
+          <td align="left">GREEK CAPITAL LETTER DELTA</td>
+          <td align="left">0394</td>
+        </tr>
+        <tr>
+          <td align="left">delta</td>
+          <td align="left">GREEK SMALL LETTER DELTA</td>
+          <td align="left">03B4</td>
+        </tr>
+        <tr>
+          <td align="left">epsi</td>
+          <td align="left">GREEK SMALL LETTER EPSILON</td>
+          <td align="left">03B5</td>
+        </tr>
+        <tr>
+          <td align="left" border="b">epsis</td>
+          <td align="left" border="b">GREEK LUNATE EPSILON SYMBOL</td>
+          <td align="left" border="b">03F5</td>
         </tr>
       </tbody>
     </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p5">
-    <tabular vattach="middle">
+  </table>
+  <table inlist="lot" xml:id="S0.T3">
+    <tags>
+      <tag>Table 3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">Table 3</tag>
+    </tags>
+    <toccaption><tag close=" ">3</tag>Another table in a minipage</toccaption>
+    <caption><tag close=": ">Table 3</tag>Another table in a minipage</caption>
+    <tabular colsep="20.0pt">
+      <thead>
+        <tr>
+          <td align="left" thead="column">  <text font="bold">Entity</text></td>
+          <td align="left" thead="column">  <text font="bold">Unicode Name</text></td>
+          <td align="left" thead="column">  <text font="bold">Unicode</text></td>
+        </tr>
+      </thead>
       <tbody>
         <tr>
-          <td align="left"><text font="bold">Entity</text></td>
-          <td align="left"><text font="bold">Unicode Name</text></td>
-          <td align="left"><text font="bold">Unicode</text></td>
+          <td align="left" border="t">  alpha</td>
+          <td align="left" border="t">  GREEK SMALL LETTER ALPHA</td>
+          <td align="left" border="t">  03B1</td>
         </tr>
         <tr>
-          <td align="left" border="t">delta</td>
-          <td align="left" border="t">GREEK SMALL LETTER DELTA</td>
-          <td align="left" border="t">03B4</td>
+          <td align="left">  beta</td>
+          <td align="left">  GREEK SMALL LETTER BETA</td>
+          <td align="left">  03B2</td>
         </tr>
         <tr>
-          <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
+          <td align="left">  chi</td>
+          <td align="left">  GREEK SMALL LETTER CHI</td>
+          <td align="left">  03C7</td>
+        </tr>
+        <tr>
+          <td align="left">  Delta</td>
+          <td align="left">  GREEK CAPITAL LETTER DELTA</td>
+          <td align="left">  0394</td>
+        </tr>
+        <tr>
+          <td align="left">  delta</td>
+          <td align="left">  GREEK SMALL LETTER DELTA</td>
+          <td align="left">  03B4</td>
+        </tr>
+        <tr>
+          <td align="left">  epsi</td>
+          <td align="left">  GREEK SMALL LETTER EPSILON</td>
+          <td align="left">  03B5</td>
+        </tr>
+        <tr>
+          <td align="left" border="b">  epsis</td>
+          <td align="left" border="b">  GREEK LUNATE EPSILON SYMBOL</td>
+          <td align="left" border="b">  03F5</td>
         </tr>
       </tbody>
     </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p6">
-    <tabular vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left"><text font="bold">Entity</text></td>
-          <td align="left"><text font="bold">Unicode Name</text></td>
-          <td align="left"><text font="bold">Unicode</text></td>
-        </tr>
-        <tr>
-          <td align="left" border="t">epsi</td>
-          <td align="left" border="t">GREEK SMALL LETTER EPSILON</td>
-          <td align="left" border="t">03B5</td>
-        </tr>
-        <tr>
-          <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p7">
-    <tabular vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left"><text font="bold">Entity</text></td>
-          <td align="left"><text font="bold">Unicode Name</text></td>
-          <td align="left"><text font="bold">Unicode</text></td>
-        </tr>
-        <tr>
-          <td align="left" border="t">epsis</td>
-          <td align="left" border="t">GREEK LUNATE EPSILON SYMBOL</td>
-          <td align="left" border="t">03F5</td>
-        </tr>
-        <tr>
-          <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p8">
-    <tabular vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left" border="bb"><text font="bold">Entity</text></td>
-          <td align="left" border="bb"><text font="bold">Unicode Name</text></td>
-          <td align="left" border="bb"><text font="bold">Unicode</text></td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <para xml:id="p9">
-    <ERROR class="undefined"/>
-    <p>The ISOGRK3 entity set, wider</p>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p10">
-    <tabular colsep="20.0pt" vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left">  <text font="bold">Entity  </text></td>
-          <td align="left">  <text font="bold">Unicode Name  </text></td>
-          <td align="left">  <text font="bold">Unicode  </text></td>
-        </tr>
-        <tr>
-          <td align="left" border="t">  alpha  </td>
-          <td align="left" border="t">  GREEK SMALL LETTER ALPHA  </td>
-          <td align="left" border="t">  03B1  </td>
-        </tr>
-        <tr>
-          <td align="left">  beta  </td>
-          <td align="left">  GREEK SMALL LETTER BETA  </td>
-          <td align="left">  03B2  </td>
-        </tr>
-        <tr>
-          <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p11">
-    <tabular colsep="20.0pt" vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left">  <text font="bold">Entity  </text></td>
-          <td align="left">  <text font="bold">Unicode Name  </text></td>
-          <td align="left">  <text font="bold">Unicode  </text></td>
-        </tr>
-        <tr>
-          <td align="left" border="t">  chi  </td>
-          <td align="left" border="t">  GREEK SMALL LETTER CHI  </td>
-          <td align="left" border="t">  03C7  </td>
-        </tr>
-        <tr>
-          <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p12">
-    <tabular colsep="20.0pt" vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left">  <text font="bold">Entity  </text></td>
-          <td align="left">  <text font="bold">Unicode Name  </text></td>
-          <td align="left">  <text font="bold">Unicode  </text></td>
-        </tr>
-        <tr>
-          <td align="left" border="t">  Delta  </td>
-          <td align="left" border="t">  GREEK CAPITAL LETTER DELTA  </td>
-          <td align="left" border="t">  0394  </td>
-        </tr>
-        <tr>
-          <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p13">
-    <tabular colsep="20.0pt" vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left">  <text font="bold">Entity  </text></td>
-          <td align="left">  <text font="bold">Unicode Name  </text></td>
-          <td align="left">  <text font="bold">Unicode  </text></td>
-        </tr>
-        <tr>
-          <td align="left" border="t">  delta  </td>
-          <td align="left" border="t">  GREEK SMALL LETTER DELTA  </td>
-          <td align="left" border="t">  03B4  </td>
-        </tr>
-        <tr>
-          <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p14">
-    <tabular colsep="20.0pt" vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left">  <text font="bold">Entity  </text></td>
-          <td align="left">  <text font="bold">Unicode Name  </text></td>
-          <td align="left">  <text font="bold">Unicode  </text></td>
-        </tr>
-        <tr>
-          <td align="left" border="t">  epsi  </td>
-          <td align="left" border="t">  GREEK SMALL LETTER EPSILON  </td>
-          <td align="left" border="t">  03B5  </td>
-        </tr>
-        <tr>
-          <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p15">
-    <tabular colsep="20.0pt" vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left">  <text font="bold">Entity  </text></td>
-          <td align="left">  <text font="bold">Unicode Name  </text></td>
-          <td align="left">  <text font="bold">Unicode  </text></td>
-        </tr>
-        <tr>
-          <td align="left" border="t">  epsis  </td>
-          <td align="left" border="t">  GREEK LUNATE EPSILON SYMBOL  </td>
-          <td align="left" border="t">  03F5  </td>
-        </tr>
-        <tr>
-          <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p16">
-    <tabular colsep="20.0pt" vattach="middle">
-      <tbody>
-        <tr>
-          <td align="left" border="bb">  <text font="bold">Entity  </text></td>
-          <td align="left" border="bb">  <text font="bold">Unicode Name  </text></td>
-          <td align="left" border="bb">  <text font="bold">Unicode  </text></td>
-        </tr>
-      </tbody>
-    </tabular>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p17">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p17.p1">
-        <tabular vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left"><text font="bold">Entity</text></td>
-              <td align="left"><text font="bold">Unicode Name</text></td>
-              <td align="left"><text font="bold">Unicode</text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">alpha</td>
-              <td align="left" border="t">GREEK SMALL LETTER ALPHA</td>
-              <td align="left" border="t">03B1</td>
-            </tr>
-            <tr>
-              <td align="left">beta</td>
-              <td align="left">GREEK SMALL LETTER BETA</td>
-              <td align="left">03B2</td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p18">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p18.p1">
-        <tabular vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left"><text font="bold">Entity</text></td>
-              <td align="left"><text font="bold">Unicode Name</text></td>
-              <td align="left"><text font="bold">Unicode</text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">chi</td>
-              <td align="left" border="t">GREEK SMALL LETTER CHI</td>
-              <td align="left" border="t">03C7</td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p19">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p19.p1">
-        <tabular vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left"><text font="bold">Entity</text></td>
-              <td align="left"><text font="bold">Unicode Name</text></td>
-              <td align="left"><text font="bold">Unicode</text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">Delta</td>
-              <td align="left" border="t">GREEK CAPITAL LETTER DELTA</td>
-              <td align="left" border="t">0394</td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p20">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p20.p1">
-        <tabular vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left"><text font="bold">Entity</text></td>
-              <td align="left"><text font="bold">Unicode Name</text></td>
-              <td align="left"><text font="bold">Unicode</text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">delta</td>
-              <td align="left" border="t">GREEK SMALL LETTER DELTA</td>
-              <td align="left" border="t">03B4</td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p21">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p21.p1">
-        <tabular vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left"><text font="bold">Entity</text></td>
-              <td align="left"><text font="bold">Unicode Name</text></td>
-              <td align="left"><text font="bold">Unicode</text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">epsi</td>
-              <td align="left" border="t">GREEK SMALL LETTER EPSILON</td>
-              <td align="left" border="t">03B5</td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p22">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p22.p1">
-        <tabular vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left"><text font="bold">Entity</text></td>
-              <td align="left"><text font="bold">Unicode Name</text></td>
-              <td align="left"><text font="bold">Unicode</text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">epsis</td>
-              <td align="left" border="t">GREEK LUNATE EPSILON SYMBOL</td>
-              <td align="left" border="t">03F5</td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3"><emph font="italic">Continued on next page</emph></td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p23">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p23.p1">
-        <tabular class="ltx_guessed_headers" vattach="middle">
-          <thead>
-            <tr>
-              <td align="left" thead="column"><text font="bold">Entity</text></td>
-              <td align="left" thead="column"><text font="bold">Unicode Name</text></td>
-              <td align="left" thead="column"><text font="bold">Unicode</text></td>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td align="right" border="tt" colspan="3"><emph font="italic">Continued on next page</emph></td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <para xml:id="p24">
-    <ERROR class="undefined"/>
-    <p>Another table in a minipage</p>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p25">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p25.p1">
-        <tabular colsep="20.0pt" vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left">  <text font="bold">Entity  </text></td>
-              <td align="left">  <text font="bold">Unicode Name  </text></td>
-              <td align="left">  <text font="bold">Unicode  </text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">  alpha  </td>
-              <td align="left" border="t">  GREEK SMALL LETTER ALPHA  </td>
-              <td align="left" border="t">  03B1  </td>
-            </tr>
-            <tr>
-              <td align="left">  beta  </td>
-              <td align="left">  GREEK SMALL LETTER BETA  </td>
-              <td align="left">  03B2  </td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p26">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p26.p1">
-        <tabular colsep="20.0pt" vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left">  <text font="bold">Entity  </text></td>
-              <td align="left">  <text font="bold">Unicode Name  </text></td>
-              <td align="left">  <text font="bold">Unicode  </text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">  chi  </td>
-              <td align="left" border="t">  GREEK SMALL LETTER CHI  </td>
-              <td align="left" border="t">  03C7  </td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p27">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p27.p1">
-        <tabular colsep="20.0pt" vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left">  <text font="bold">Entity  </text></td>
-              <td align="left">  <text font="bold">Unicode Name  </text></td>
-              <td align="left">  <text font="bold">Unicode  </text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">  Delta  </td>
-              <td align="left" border="t">  GREEK CAPITAL LETTER DELTA  </td>
-              <td align="left" border="t">  0394  </td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p28">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p28.p1">
-        <tabular colsep="20.0pt" vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left">  <text font="bold">Entity  </text></td>
-              <td align="left">  <text font="bold">Unicode Name  </text></td>
-              <td align="left">  <text font="bold">Unicode  </text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">  delta  </td>
-              <td align="left" border="t">  GREEK SMALL LETTER DELTA  </td>
-              <td align="left" border="t">  03B4  </td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p29">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p29.p1">
-        <tabular colsep="20.0pt" vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left">  <text font="bold">Entity  </text></td>
-              <td align="left">  <text font="bold">Unicode Name  </text></td>
-              <td align="left">  <text font="bold">Unicode  </text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">  epsi  </td>
-              <td align="left" border="t">  GREEK SMALL LETTER EPSILON  </td>
-              <td align="left" border="t">  03B5  </td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p30">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p30.p1">
-        <tabular colsep="20.0pt" vattach="middle">
-          <tbody>
-            <tr>
-              <td align="left">  <text font="bold">Entity  </text></td>
-              <td align="left">  <text font="bold">Unicode Name  </text></td>
-              <td align="left">  <text font="bold">Unicode  </text></td>
-            </tr>
-            <tr>
-              <td align="left" border="t">  epsis  </td>
-              <td align="left" border="t">  GREEK LUNATE EPSILON SYMBOL  </td>
-              <td align="left" border="t">  03F5  </td>
-            </tr>
-            <tr>
-              <td align="right" border="t" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
-  <pagination role="newpage"/>
-  <para class="ltx_noindent" xml:id="p31">
-    <logical-block class="ltx_minipage" width="433.6pt">
-      <para class="ltx_noindent" xml:id="p31.p1">
-        <tabular class="ltx_guessed_headers" colsep="20.0pt" vattach="middle">
-          <thead>
-            <tr>
-              <td align="left" thead="column">  <text font="bold">Entity  </text></td>
-              <td align="left" thead="column">  <text font="bold">Unicode Name  </text></td>
-              <td align="left" thead="column">  <text font="bold">Unicode  </text></td>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td align="right" border="tt" colspan="3">  <emph font="italic">Continued on next page</emph>  </td>
-            </tr>
-          </tbody>
-        </tabular>
-      </para>
-    </logical-block>
-  </para>
+  </table>
 </document>

@@ -1,0 +1,67 @@
+latexml (LaTeXML version 0.8.8; revision 8cbd3ae5) processing wasysym.tex
+(Digesting TeX wasysym...
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX.pool.ltxml...
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/Base.pool.ltxml...
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/Base_Schema.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/Base_ParameterTypes.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/Base_Utility.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/Base_XMath.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Box.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Character.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Debugging.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_FileIO.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Fonts.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Glue.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Hyphenation.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Inserts.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Job.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Kern.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Logic.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Macro.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Marks.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Math.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Page.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Paragraph.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Penalties.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Registers.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Tables.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/eTeX.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/pdfTeX.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/Base_Deprecated.pool.ltxml... 0.00 sec) 0.05 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/plain_bootstrap.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/plain_dump.pool.ltxml... 0.01 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/plain_constructs.pool.ltxml...
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/math_common.pool.ltxml... 0.01 sec) 0.01 sec) 0.08 sec)
+(Processing content /home/deyan/git/latexml-oxide/latexml_oxide/tests/fonts/wasysym.tex...
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/LaTeX.pool.ltxml...
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/latex_bootstrap.pool.ltxml... 0.00 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/latex_dump.pool.ltxml... 0.58 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/latex_constructs.pool.ltxml...
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/plain_constructs.pool.ltxml...
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Engine/math_common.pool.ltxml... 0.01 sec) 0.01 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Package/textcomp.sty.ltxml...
+(Processing definitions /usr/local/texlive/2025/texmf-dist/tex/latex/base/ts1enc.dfu... 0.01 sec) 0.18 sec) 0.26 sec) 0.85 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Package/article.cls.ltxml... 0.01 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Package/color.sty.ltxml... 0.01 sec)
+(Loading /home/deyan/perl5/lib/perl5/LaTeXML/Package/wasysym.sty.ltxml... 0.00 sec)
+Warning:expected:unicode There's no Unicode equivalent for the symbol '\octagon'
+	at \octagon
+	In Core::Definition::Constructor[\lx@tex... /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Box.pool.ltxml; line 97
+Warning:expected:unicode There's no Unicode equivalent for the symbol '\Leftcircle'
+	at \Leftcircle
+	In Core::Definition::Constructor[\lx@tex... /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Box.pool.ltxml; line 97
+Warning:expected:unicode There's no Unicode equivalent for the symbol '\Rightcircle'
+	at \Rightcircle
+	In Core::Definition::Constructor[\lx@tex... /home/deyan/perl5/lib/perl5/LaTeXML/Engine/TeX_Box.pool.ltxml; line 97
+ 0.90 sec) 0.98 sec)
+(Building...
+(Loading compiled schema /home/deyan/perl5/lib/perl5/LaTeXML/resources/RelaxNG/LaTeXML.model... 0.01 sec) 0.03 sec)
+(Rewriting... 0.00 sec)
+(Math Parsing 2 formulae ...... 0.01 sec)
+Math parsing succeeded:
+   ltx:XMath: 2/2
+Symbols assumed as simple identifiers (with # of occurences):
+   'Box' (1), 'Diamond' (1), 'Join' (1), 'LHD' (1), 'RHD' (1), 'apprge' (1), 'apprle' (1), 'invneg' (1), 'leadsto' (1), 'lhd' (1), 'logof' (1), 'ocircle' (1), 'rhd' (1), 'sqsubset' (1), 'sqsupset' (1), 'unlhd' (1), 'unrhd' (1), 'wasypropto' (1)
+Set MATHPARSER_SPECULATE to speculate on possible notations.
+(Finalizing... 0.00 sec)
+Conversion complete: 3 warnings (See /home/deyan/git/latexml-oxide/latexml_oxide/tests/fonts/wasysym.latexml.log) (reqd. 1.08s)

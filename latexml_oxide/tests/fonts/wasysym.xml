@@ -40,14 +40,14 @@
       <Math mode="display" tex="\int\iint\iiint\oint\oiint" text="integral@(double-integral@(triple-integral@(contour-integral@(surface-integral))))" xml:id="S0.Ex2.m1">
         <XMath>
           <XMApp>
-            <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" xml:id="S0.Ex2.m1.1">∫</XMTok>
+            <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
             <XMApp>
               <XMTok mathstyle="display" meaning="double-integral" name="iint" role="INTOP">∬</XMTok>
               <XMApp>
                 <XMTok mathstyle="display" meaning="triple-integral" name="iiint" role="INTOP">∭</XMTok>
                 <XMApp>
                   <XMTok mathstyle="display" meaning="contour-integral" name="oint" role="INTOP">∮</XMTok>
-                  <XMTok mathstyle="display" meaning="surface-integral" name="oiint" role="INTOP" xml:id="S0.Ex2.m1.2">∯</XMTok>
+                  <XMTok mathstyle="display" meaning="surface-integral" name="oiint" role="INTOP">∯</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
