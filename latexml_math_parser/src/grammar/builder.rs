@@ -95,10 +95,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | factor addop => postfix_apply;
 
     // Formula
+    // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
+    modifier_expression = modifierop expression => prefix_apply;
     formula = expression
       | formula relop expression => infix_relation
       | formula arrow expression => infix_relation
-      | arrow expression => prefix_arrow_apply;
+      | arrow expression => prefix_arrow_apply
+      | modifier_expression;
 
     // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
     // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
@@ -161,7 +164,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     anyop = addop | mulop | relop | arrow | metarelop
       | bigop | sumop | intop
       | limitop | diffop | vertbar | supop
-      | composed_bigop;
+      | modifierop | composed_bigop;
 
     anyscript = floatsuperscript | floatsubscript;
 
