@@ -224,11 +224,11 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-15)
+## Test Suite Status (2026-03-18)
 
-**Current totals: 177 pass, 7 fail (22_fonts math-parser-related), 58+ ignored test functions**
+**Current totals: 210 pass, 8 fail, 61 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: ~75% pass rate (177/242 non-permanent-ignore tests)**
+**Coverage: ~77% pass rate (210/279 non-permanent-ignore tests)**
 
 | Suite | Pass | Ignored | Notes |
 |-------|------|---------|-------|
@@ -240,20 +240,20 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 10_expansion | 36 | 0 | |
 | 12_grouping | 2 | 0 | |
 | 20_digestion | 10 | 0 | |
-| 22_fonts | 12 | 4 | acc(181), esint(257), mathaccents(422), mathbbol(168), fonts(98), plainfonts(78), mixed(69), wasysym(PASS). Ignored: sizes, ding, abxtest, stmaryrd |
+| 22_fonts | 12/7 | 4 | FAIL: acc, esint, mathaccents, mathbbol, fonts, plainfonts, mixed. Ignored: sizes, ding, abxtest, stmaryrd |
 | 30_encoding | 26 | 0 | |
 | 32_keyval | 8 | 0 | |
 | 33_keyval_options | 11 | 0 | |
 | 40_math | 0 | 1 | batch 149 diffs (math parser) |
-| 50_structure | 31 | 5 | eqnums(598), enum(543), figure_grids(331), amsarticle(898), ieee(979) |
+| 50_structure | 38 | 4 | Ignored: eqnums, figure_grids, amsarticle, ieee |
 | 52_namespace | 0 | 5 | DTD not supported (permanent) |
-| 53_alignment | 18 | 11 | cells(overflow), colortbls(crash), supertabular(629), algx(163), plainmath(351), split(2228), badeqnarray(507), eqnarray(1176), diagbox(timeout), ncases(timeout), vmode(segfault) |
+| 53_alignment | 18 | 11 | cells(overflow), colortbls(crash), supertabular(629), algx(163), plainmath(351), split(2228), badeqnarray(182), eqnarray(1176), diagbox(timeout), ncases(timeout), vmode(segfault) |
 | 55_theorem | 4 | 1 | ntheorem(1479) |
-| 56_ams | 2 | 5 | amsdisplay(963), matrix(187), sideset(488), cd(crash), mathtools(crash) |
+| 56_ams | 1/1 | 5 | FAIL: dots (composed_bigop regression). Ignored: amsdisplay, matrix, sideset, cd, mathtools |
 | 65_graphics | 5 | 4 | graphrot(596), picture(3125), xcolors(447), xytest(crash) |
 | 70_parse | 0 | 1 | batch 120 diffs |
 | 700_unit_parse | 3 | 0 | |
-| 80_complex | 8 | 8 | deluxetable(35), aliceblog(144), cleveref(302), mixed_content(1142), physics(5417), si(9024), acm_aria(timeout), revtex(missing) |
+| 80_complex | 10 | 6 | Ignored: aliceblog, cleveref, mixed_content, physics, si, acm_aria |
 | 81_babel | 0 | 1 | memory leak timeout |
 | 82_moderncv | 0 | 2 | needs moderncv.cls binding |
 | 83_expl3 | 0 | 2 | needs \ExplSyntaxOn |
@@ -281,7 +281,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-18):** 177 pass, 7 fail (22_fonts math parser), 58+ ignored. wasysym_test newly passing. Gemini 3 math parser regressions reverted.
+**Status (2026-03-18):** 210 pass, 8 fail (7 in 22_fonts + dots_test), 61 ignored. wasysym_test newly passing. Gemini 3 regressions reverted. Per-row equation ID fix (badeqnarray 507→182).
 
 ### Completed items
 

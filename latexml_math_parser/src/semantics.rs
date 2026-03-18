@@ -145,6 +145,65 @@ pub fn infix_apply(
   Ok(Some(apply_tree))
 }
 
+/// Perl MathGrammar: Anything : Statement PUNCT <leftop: Statement PUNCT Statement>
+/// Creates a list@(...) XMDual: content arm is Apply(meaning=list, refs...),
+/// presentation arm is Wrap(items with separators).
+/// Left-recursive: first call creates a 2-item list, subsequent calls extend it.
+pub fn list_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, sep, right);
+  let mut left = left;
+  let mut right = right.unwrap();
+  let sep = sep.unwrap();
+
+  // If left is already a list Dual, extend it
+  if let Some(XM::Dual(ref mut content, ref mut pres, _, _)) = left {
+    if let XM::Apply(ref op, ref mut op_args, _, _) = **content {
+      // Check if operator is the list token (meaning="list")
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some("list") {
+          // Extend: add ref for new item to content args
+          let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
+          op_args.0.extend(new_ref.into_iter().map(Option::Some));
+          // Add separator and new item to presentation wrap
+          if let XM::Wrap(ref mut items, _, _) = **pres {
+            items.push(sep);
+            items.push(right);
+          }
+          return Ok(left);
+        }
+      }
+    }
+  }
+
+  // New list: create XMDual with list operator
+  let mut left = left.unwrap();
+  let list_op = XProps {
+    meaning: Some(Cow::Borrowed("list")),
+    ..XProps::default()
+  };
+  let ref_args = create_xmrefs(&mut [&mut left, &mut right], ctxt)?;
+  Ok(Some(XM::Dual(
+    Box::new(XM::Apply(
+      list_op.into(),
+      Args(ref_args.into_iter().map(Option::Some).collect()),
+      XProps::default(),
+      Meta::default(),
+    )),
+    Box::new(XM::Wrap(
+      vec![left, sep, right],
+      XProps::default(),
+      Meta::default(),
+    )),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 /// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
 pub fn infix_apply_and_elide(
   rule_id: i32,
@@ -828,7 +887,7 @@ fn invisible_comma() -> XProps {
 
 fn xnew(text: String) -> XProps {
   XProps {
-    content: Some(Cow::Owned(text)),
+    meaning: Some(Cow::Owned(text)),
     ..XProps::default()
   }
 }
