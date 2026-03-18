@@ -480,11 +480,11 @@ impl BoxOps for Alignment {
     for row in rows {
       let vpad_opt = row.get_padding().copied();
       //     # Which properties do we expose to the constructor?
-      let open_row_attrs = HashMap::default();
-      //     "xml:id" => $$row{id}, tags => $$row{tags},
-      //     x      => $$row{x}, y => $$row{y},
-      //     cached_width => $$row{cached_width}, cached_height => $$row{cached_height},
-      // cached_depth => $$row{cached_depth},   );
+      // Perl: pass $$row{id}, $$row{tags} to openRow
+      let mut open_row_attrs = HashMap::default();
+      for (k, v) in &row.properties {
+        open_row_attrs.insert(k.clone(), v.clone());
+      }
       let open_row_fn = &self.open_row;
       open_row_fn(document, open_row_attrs)?;
       for before in row.before.iter() {

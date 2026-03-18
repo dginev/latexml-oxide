@@ -152,14 +152,19 @@ fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
     _ => SymHashMap::default(),
   };
   if is_aligned {
-    // Perl: propagate id/tags to current alignment row properties.
-    // In Perl, these get stored as $$row{id}, $$row{tags} and later passed to
-    // the openRow hook. We store them in EQUATIONROW_PROPS for the open_row hook.
-    state::assign_value(
-      "EQUATIONROW_PROPS",
-      Stored::HashStored(props),
-      Some(Scope::Global),
-    );
+    // Perl: propagate id/tags to current alignment row.
+    // In Perl, these get stored as $$row{id}, $$row{tags} on the row object.
+    // Store on the current alignment row so each row retains its own props.
+    if let Some(alignment_digested) = lookup_alignment() {
+      if let Some(alignment_cell) = alignment_digested.alignment_cell() {
+        let mut alignment = alignment_cell.borrow_mut();
+        if let Some(row) = alignment.current_row_mut() {
+          for (key, val) in &props {
+            row.properties.insert(arena::to_string(*key), val.to_string());
+          }
+        }
+      }
+    }
   } else if let Some(w) = whatsit {
     w.set_properties(props);
   }
@@ -272,15 +277,10 @@ pub fn eqnarray_bindings() -> Result<()> {
     }),
     close_container: Rc::new(|document| document.close_element("ltx:equationgroup")),
     open_row: Rc::new(|document, mut props| {
-      // Perl: my $tags = $props{tags}; $doc->openElement('ltx:equation', %props);
-      //       $doc->absorb($tags) if $tags;
-      // Read equation props from state (set by after_equation in aligned mode)
-      if let Some(Stored::HashStored(eq_props)) =
-        state::remove_value("EQUATIONROW_PROPS")
-      {
-        if let Some(id) = eq_props.get("id") {
-          props.insert(String::from("xml:id"), id.to_string());
-        }
+      // Perl: $$row{id} and $$row{tags} are passed via props from be_absorbed.
+      // The id was stored on the row during after_equation.
+      if let Some(id) = props.remove("id") {
+        props.insert(String::from("xml:id"), id);
       }
       document
         .open_element("ltx:equation", Some(props), None)

@@ -201,6 +201,9 @@ pub struct Template {
   pub cached_depth:     Option<Dimension>,
   pub x:                Option<Dimension>,
   pub y:                Option<Dimension>,
+  /// Per-row properties (e.g. xml:id, tags) set during digestion
+  /// and consumed during construction. Perl: $$row{id}, $$row{tags}.
+  pub properties:       std::collections::HashMap<String, String>,
 }
 
 impl Display for Template {
@@ -243,6 +246,7 @@ impl Template {
       y: None,
       reversion: config.reversion,
       tokens: config.tokens.unwrap_or_default(),
+      properties: std::collections::HashMap::new(),
     }
   }
   pub fn set_reversion(&mut self, tks: Tokens) { self.reversion = Some(tks); }
