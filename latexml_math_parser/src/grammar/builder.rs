@@ -100,8 +100,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | formula arrow expression => infix_relation
       | arrow expression => prefix_arrow_apply;
 
+    // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
+    // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
     statement = formula
-      | statement metarelop formula => infix_relation;
+      | statement metarelop formula => infix_relation
+      | any_bigop | composed_bigop;
 
     end_punct = punct | period;
     statements = statement

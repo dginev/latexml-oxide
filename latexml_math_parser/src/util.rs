@@ -158,8 +158,13 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
         // Reuse the saved hint node, setting role="PUNCT"
         if let Some(Some(mut hint)) = last_hint_for.get(i).cloned() {
           let _ = hint.set_attribute("role", "PUNCT");
-          let width = format!("{}pt", s);
+          // Clean width: round to integer if close, matching Perl format
+          let s_rounded = if (s - s.round()).abs() < 0.01 { s.round() } else { s };
+          let width = format!("{}pt", s_rounded);
           let _ = hint.set_attribute("width", &width);
+          // Remove extraneous attributes from the reused hint node
+          let _ = hint.remove_attribute("depth");
+          let _ = hint.remove_attribute("height");
           let quads = "q".repeat((s / 10.0) as usize);
           let _ = hint.set_attribute("name", &format!("{quads}uad"));
           filtered.push(hint);
