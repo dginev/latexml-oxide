@@ -70,15 +70,22 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     factor_base = unknown | number | id | atom | opfunction;
     factor = factor_base;
     // Terms
+    // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
+    any_bigop = bigop | sumop | intop | limitop | diffop;
+    // Adjacent bigops compose like higher-order functions:
+    // \int\iint => integral(double-integral), itself a compound operator
+    composed_bigop = any_bigop any_bigop => prefix_apply
+      | any_bigop composed_bigop => prefix_apply;
+
     tight_term = factor
       | tight_term factor => apply_invisible_times
-      // TODO: develop this further
-      | function factor => prefix_apply;
+      | function factor => prefix_apply
+      | any_bigop tight_term => prefix_apply
+      | composed_bigop tight_term => prefix_apply;
 
     term = tight_term
     | term mulop tight_term => infix_apply_nary
-    | term mulop tight_term elideop => infix_apply_and_elide
-    | bigop tight_term => prefix_apply;
+    | term mulop tight_term elideop => infix_apply_and_elide;
 
     // Expressions
     expression = term
@@ -150,7 +157,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     anyop = addop | mulop | relop | arrow | metarelop
       | bigop | sumop | intop
-      | limitop | diffop | vertbar | supop;
+      | limitop | diffop | vertbar | supop
+      | composed_bigop;
 
     anyscript = floatsuperscript | floatsubscript;
 

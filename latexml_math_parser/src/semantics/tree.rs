@@ -720,10 +720,11 @@ impl XM {
           None => Ok(None),
         };
       },
-      other => {
-        dbg!(other);
-        todo!()
+      XM::Apply(ref op, _, _, _) => {
+        // Compound operator (e.g. composed_bigop): get meaning from the operator
+        return op.0.get_token_meaning(nodes);
       },
+      _ => return Ok(None),
     };
     Ok(match props.meaning {
       Some(ref v) if !v.is_empty() => Some(Cow::Borrowed(v)),
