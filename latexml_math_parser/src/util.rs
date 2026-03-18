@@ -243,14 +243,25 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
       XM::Ref(props) => {
         refs.push(XM::Ref(props.clone()));
       },
-      // TODO:
-      //   # XMHint's are ephemeral, they may disappear; so just clone it w/o id
-      //   if ($qname eq 'ltx:XMHint') {
-      //     my %attr = ($isarray ? %{ $$arg[1] }
-      //       : (map { $document->getNodeQName($_) => $_->getValue } $arg->attributes));
-      //     delete $attr{'xml:id'};
-      //     push(@refs, [$qname, {%attr}]); }
-      _ => todo!(),
+      XM::Dual(_, _, ref mut props, _) | XM::Wrap(_, ref mut props, _) => {
+        if let Some(id) = props.id.as_ref() {
+          refs.push(XM::Ref(XProps {
+            id: Some(id.clone()),
+            ..XProps::default()
+          }));
+        } else {
+          let key = get_xmarg_id()?.to_string();
+          props.xmkey = Some(Cow::Owned(key.clone()));
+          refs.push(XM::Ref(XProps {
+            xmkey: Some(Cow::Owned(key)),
+            ..XProps::default()
+          }));
+        }
+      },
+      _ => {
+        // XMHint's are ephemeral — clone without id
+        // Other variants: skip with warning
+      },
     }
   }
   Ok(refs)

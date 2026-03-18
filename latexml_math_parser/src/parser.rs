@@ -537,7 +537,13 @@ impl MathParser {
     }
 
     if content_nodes.is_empty() {
-      Ok(None) // nothing to parse
+      // Perl MathParser.pm L683: $result = $nodes[0] || Absent()
+      // Empty XMArg/XMWrap: create <XMTok meaning="absent"/>
+      let mut absent_tok = document.open_element_at(mathnode, "ltx:XMTok", None, None)?;
+      document.set_attribute(&mut absent_tok, "meaning", "absent")?;
+      document.close_element_at(&mut absent_tok)?;
+      absent_tok.unlink();
+      Ok(Some(absent_tok))
     } else if content_nodes.len() == 1 && punct_nodes.is_empty() {
       // single node, nothing to wrap
       Ok(Some(content_nodes.remove(0)))
