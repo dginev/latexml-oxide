@@ -17,7 +17,6 @@ fn calc_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math in color test
 fn colors_test() {
   latexml_test_single("tests/graphics/colors.tex", "colors", DIR, Some(&REQUIRES), None);
 }

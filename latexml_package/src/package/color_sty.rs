@@ -122,11 +122,12 @@ LoadDefinitions!({
     let color = parse_color(model_str.as_deref(), &spec_str);
     merge_font(fontmap!(bg => color));
 
-    // TODO: Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
-    // Returning a Tbox here causes infinite loop when used inside \colorbox -> \hbox.
-    // The \hbox constructor re-expands the Tbox reversion, recursing into \pagecolor.
-    // Needs investigation: \color works with Tbox but \pagecolor doesn't.
-    Ok(Vec::new())
+    // Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
+    let reversion_tokens = Invocation!("\\pagecolor",
+      vec![model_str.as_deref().map(|s| Tokens::from(T_OTHER!(s))),
+           Some(Tokens::from(T_OTHER!(&*spec_str)))]);
+    Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
+      reversion_tokens, arena::SymHashMap::default()))])
   });
 
   // \normalcolor — restores color from preamble
