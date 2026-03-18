@@ -310,7 +310,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **9. sizes_test** (22_fonts) — 393 diffs. Font size from `\font` definitions not propagated.
 - [ ] **10. ding_test** (22_fonts) — 371 diffs. Enumerate nesting + table structure.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
-- [ ] **13. enum_test** (50_structure) — 543 diffs. Port enumitem.sty binding.
+- [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [ ] **16. figure_grids_test** (50_structure) — 331 diffs. Needs graphicx figure grid support.
 - [ ] **18. amsarticle_test** (50_structure) — 898 diffs. Port amsart.cls binding.
 - [ ] **25. cells_test** (53_alignment) — STACK OVERFLOW. Debug recursive state lookup.
