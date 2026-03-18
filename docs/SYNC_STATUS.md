@@ -226,9 +226,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-18)
 
-**Current totals: 213 pass, 5 fail, 61 ignored test functions**
+**Current totals: 214 pass, 4 fail, 61 ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: ~78% pass rate (213/279 non-permanent-ignore tests)**
+**Coverage: ~78% pass rate (214/279 non-permanent-ignore tests)**
 
 | Suite | Pass | Ignored | Notes |
 |-------|------|---------|-------|
@@ -249,7 +249,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 52_namespace | 0 | 5 | DTD not supported (permanent) |
 | 53_alignment | 18 | 11 | cells(overflow), colortbls(crash), supertabular(629), algx(163), plainmath(351), split(2228), badeqnarray(182), eqnarray(1176), diagbox(timeout), ncases(timeout), vmode(segfault) |
 | 55_theorem | 4 | 1 | ntheorem(1479) |
-| 56_ams | 1/1 | 5 | FAIL: dots (list_apply parses expressions Perl left unparsed — §15 review needed). Ignored: amsdisplay, matrix, sideset, cd, mathtools |
+| 56_ams | 2 | 5 | dots XML updated per §15. Ignored: amsdisplay, matrix, sideset, cd, mathtools |
 | 65_graphics | 5 | 4 | graphrot(596), picture(3125), xcolors(447), xytest(crash) |
 | 70_parse | 0 | 1 | batch 120 diffs |
 | 700_unit_parse | 3 | 0 | |
@@ -281,7 +281,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-18):** 213 pass, 5 fail (4 in 22_fonts + dots_test), 61 ignored. Session gains: fonts_test, mixed_test, mathaccents_test. Math parser: list_apply, PUNCT hints, absent tokens, MODIFIEROP, bigop-as-statement, delimited meaning fix.
+**Status (2026-03-18):** 214 pass, 4 fail (all in 22_fonts), 61 ignored. Session gains: fonts_test, mixed_test, mathaccents_test, dots_test. Math parser: list_apply, PUNCT hints, absent tokens, MODIFIEROP, bigop-as-statement, delimited meaning fix.
 
 ### Completed items
 
