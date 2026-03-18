@@ -380,26 +380,10 @@ impl BoxOps for Digested {
   fn get_body(&self) -> Result<Option<Digested>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => {
-        Error!(
-          "digested",
-          "get_body",
-          self,
-          s!("Called get_body on Box: {:?}", b)
-        );
-        Ok(None)
-      },
-      List(ref l) => {
-        Error!(
-          "digested",
-          "get_body",
-          self,
-          s!("Called get_body on List: {:?}", l)
-        );
-        Ok(None)
-      },
+      // Perl: Box::getBody returns $self; List::getBody returns $self
+      TBox(_) | List(_) => Ok(Some(self.clone())),
       Whatsit(ref w) => w.borrow().get_body(),
-      _ => todo!(),
+      _ => Ok(None),
     }
   }
   fn get_property_bool(&self, key: &str) -> bool {

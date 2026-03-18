@@ -1071,6 +1071,37 @@ pub fn close_math_fork(
   mainfork: &mut Node,
   branch: &mut Node,
 ) -> Result<()> {
+  // Synthesize tex= attribute on mainfork Math from MathBranch cell tex attributes.
+  // Perl does this via MathWhatsit box accumulation + add_body_TeX afterClose,
+  // but Rust doesn't have MathWhatsit. Instead, we compose the tex attribute here.
+  if !mainfork.has_attribute("tex") {
+    let mut tex_parts: Vec<String> = Vec::new();
+    let tds = document.findnodes("descendant::ltx:td", Some(branch));
+    for td in &tds {
+      for math in document.findnodes("ltx:Math[@tex]", Some(td)) {
+        if let Some(tex) = math.get_attribute("tex") {
+          tex_parts.push(tex);
+        }
+      }
+    }
+    if !tex_parts.is_empty() {
+      // Normalize: Perl's MathWhatsit extracts \displaystyle to the front.
+      // Each cell's tex starts with "\displaystyle"; strip and prepend once.
+      let has_displaystyle = tex_parts.iter().any(|t| t.starts_with("\\displaystyle"));
+      let stripped: Vec<&str> = tex_parts
+        .iter()
+        .map(|t| t.strip_prefix("\\displaystyle").unwrap_or(t).trim_start())
+        .collect();
+      let body = stripped.join("");
+      let combined_tex = if has_displaystyle {
+        format!("\\displaystyle {body}")
+      } else {
+        body
+      };
+      document.set_attribute(mainfork, "tex", &combined_tex)?;
+    }
+  }
+
   document.close_element_at(branch)?;
   // Close XMath (first child of mainfork)
   if let Some(mut xmath) = first_child_element(mainfork) {

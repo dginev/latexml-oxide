@@ -1,45 +1,27 @@
-# Mini Plan: Round 1 — COMPLETED
-
-## Results
-- **Before**: 215 pass, 0 fail, 64 ignored
-- **After**: 216 pass, 0 fail, 63 ignored
-
-### Packet 1: wasysym_test — DONE
-- **Root cause found**: `create_xmrefs` in math parser called `generate_id` on XMTok nodes that didn't have xml:id. The `get_attribute("id")` check missed the NS attribute, so EVERY lexeme got a new id. After prune_xmduals collapsed the XMDual structures, the ids remained orphaned on XMTok elements.
-- **Fix**: Added `cleanup_unreferenced_xmtok_ids()` to Document, called after finalize. Removes xml:ids from XMTok elements not referenced by any idref. Uses `remove_attribute_ns("id", XML_NS)` for proper namespace-aware removal.
-
-### Packet 2: colors_test — BLOCKED
-- **\pagecolor Tbox causes infinite loop**: When `\colorbox{red}{R}` expands to `\hbox{\pagecolor{red}R}`, returning a Tbox from `\pagecolor` creates an infinite absorption loop inside `\hbox`. The `\color` primitive also returns Tbox but works because it's not used inside `\hbox`.
-- **Deferred**: Needs investigation into `\hbox` box content absorption path.
-
-### Packet 3: Mark already-passing tests — DONE
-- Marked items 10 (ding), 16 (figure_grids), 37 (xcolors), 42 (aliceblog) as [x] done.
-
----
-
 # Mini Plan: Round 2
 
 ## Three most connected work packets
 
 ### Selection rationale
-Focus on **crash/panic fixes** that could unlock tests with minimal code changes. Tests that crash/panic never produce diff output, so fixing the crash reveals whether the test is close to passing. The cd_test and mathtools_test both crash in the math parser/AMS area and share common infrastructure.
+The **missing `tex=` attribute on Math elements inside MathFork** affects most Tier 2 tests (badeqnarray, eqnums, amsdisplay, matrix, sideset). Fixing this single issue could reduce diff counts across 5+ tests. The root cause is in the `add_body_TeX` afterClose hook not finding a `node_box` for Math elements that are inside equation arrays. Connected: the xml:id numbering (`.m1` vs `.m4`) is also a MathFork issue.
 
-### Packet 1: cd_test (56_ams) — math parser panic in parse_rec
-- **Problem**: `parse_rec` panics during tree replacement.
-- **Fix**: Debug the panic, likely an unwrap on None or out-of-bounds access.
-- **Expected**: Fix panic, see actual diffs to assess if test can pass.
+### Packet 1: Fix `tex=` attribute on MathFork Math elements
+- **Problem**: `ltx:Math` afterClose hook at tex_math.rs:188 gets `node_box` to call `body.untex()` for the `tex` attribute. Inside MathFork (equation arrays), Math elements don't have their `node_box` set.
+- **Debug approach**:
+  1. Create minimal TeX: `\begin{eqnarray} a &=& b \end{eqnarray}`
+  2. Compare Perl vs Rust: check if Perl's `add_body_TeX` fires for MathFork Math, when it fires, and what box it gets
+  3. Add debug prints in the afterClose hook to see what `node_box` returns
+- **Fix**: Ensure MathFork Math elements have their `node_box` set during rearrangement.
 
-### Packet 2: mathtools_test (56_ams) — MathPrimitive unhandled in is_defined_token
-- **Problem**: `is_defined_token` doesn't handle MathPrimitive variant, causing a crash.
-- **Fix**: Add MathPrimitive case to `is_defined_token`.
-- **Expected**: Fix crash, see actual diffs.
+### Packet 2: Fix xml:id numbering for MathFork Math (`.m1` vs `.m4`)
+- **Problem**: In Perl, equation array Math elements get id suffix `.m4` (after 3 alignment-related math elements). In Rust, they get `.m1`.
+- **Root cause**: The `generate_id` counter for Math inside equations doesn't account for alignment-related Math elements that Perl creates.
+- **Connected**: Same MathFork rearrangement code path.
 
-### Packet 3: cells_test (53_alignment) — stack overflow in state.rs
-- **Problem**: Recursive state lookup causes stack overflow.
-- **Fix**: Debug the recursion, add depth limit or break cycle.
-- **Expected**: Fix overflow, see actual diffs.
+### Packet 3: badeqnarray_test math tree (Ex10)
+- **Problem**: Ex10 has flat XMath tree where Perl has nested XMApp. Math parser difference for `=e+f+g` without leading term.
+- **Connected**: Same test file, can be investigated together.
 
-### Execution order
-1. Fix mathtools_test crash (likely simplest — missing match arm)
-2. Fix cd_test panic
-3. Fix cells_test stack overflow
+### Expected outcome
+- badeqnarray_test: reduce from 158 to <20 diffs
+- Potentially unblock other MathFork tests
