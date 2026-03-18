@@ -712,7 +712,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\qquad")),
       stored_map!("name" => "qquad", "width" => Dimension::from_str("2em")?,
-        "isSpace"=>true, "asHint" => true),
+        "isSpace"=>true),
     )
   });
 

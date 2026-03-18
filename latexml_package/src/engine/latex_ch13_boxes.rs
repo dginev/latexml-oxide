@@ -337,16 +337,10 @@ LoadDefinitions!({
     },
     after_digest_body => sub[whatsit] {
       // Perl: afterDigestBody copies vattach from whatsit to body
-      let va = whatsit.get_property("vattach").map(|v| v.into_owned());
-      eprintln!("DEBUG minipage after_digest_body: vattach={va:?} has_body={}", whatsit.properties.contains_key("body"));
-      if let Some(vattach) = va {
+      if let Some(vattach) = whatsit.get_property("vattach").map(|v| v.into_owned()) {
         if let Some(Stored::Digested(body)) = whatsit.properties.get("body").cloned() {
           let mut body = body;
           body.set_property("vattach", vattach);
-          // Verify that the property was actually set on the shared body
-          let verify = whatsit.properties.get("body")
-            .and_then(|s| if let Stored::Digested(d) = s { d.get_property("vattach").map(|v| v.into_owned()) } else { None });
-          eprintln!("DEBUG minipage verify body vattach via whatsit: {verify:?}");
         }
       }
     }

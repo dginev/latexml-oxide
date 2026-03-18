@@ -30,7 +30,7 @@ pub struct MathCharProps {
 impl MathCharProps {
   /// Convert need_scriptpos/need_mathstyle flags to actual values based on display mode
   pub fn resolve_style_props(&mut self) {
-    let in_display = state::lookup_string("IN_MATH_DISPLAY") == "true"
+    let in_display = state::lookup_bool("IN_MATH_DISPLAY")
       || state::lookup_font()
         .map(|f| f.get_mathstyle().map(|s| s.as_ref()) == Some("display"))
         .unwrap_or(false);
@@ -458,6 +458,12 @@ pub fn decode_math_char_for_stomach(
   }
   if let Some(ref stretchy) = props.stretchy {
     properties.insert("stretchy", Stored::String(arena::pin(stretchy)));
+  }
+  if let Some(ref scriptpos) = props.scriptpos {
+    properties.insert("scriptpos", Stored::String(arena::pin(scriptpos)));
+  }
+  if let Some(ref mathstyle) = props.mathstyle {
+    properties.insert("mathstyle", Stored::String(arena::pin(mathstyle)));
   }
 
   let glyph_sym = arena::pin(glyph.to_string());

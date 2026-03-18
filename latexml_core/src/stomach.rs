@@ -292,6 +292,7 @@ pub fn set_mode(mode: &str) -> Result<()> {
     // see get_script_level()
     assign_value("script_base_level", stomach!().boxing.len(), None);
     let isdisplay = mode.starts_with("display");
+    assign_value("IN_MATH_DISPLAY", isdisplay, Some(Scope::Local));
     let new_font = Rc::new(lookup_mathfont().unwrap().merge(Font {
       color: curfont.color,
       bg: curfont.bg,
