@@ -1487,14 +1487,20 @@ impl Document {
     &mut self,
     from: &Node,
     to: &mut Node,
-    _force: Option<HashSet<&'static str>>,
+    force: Option<&HashSet<&'static str>>,
   ) -> Result<()> {
     for (key, val) in from.get_attributes().iter() {
+      // Skip internal attributes
+      if key.starts_with('_') {
+        continue;
+      }
+      let is_forced = force.map_or(false, |f| f.contains(key.as_str()));
       // Special case attributes
       if key.as_str() == "xml:id" {
         // Use the replacement id
-        if !to.has_attribute(key) {
-          // val = self.record_id(val, node); // TODO
+        if !to.has_attribute(key) || is_forced {
+          self.unrecord_id(val);
+          self.record_id_with_node(val, to);
           to.set_attribute(key, val)?;
         }
       } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
@@ -1507,13 +1513,16 @@ impl Document {
           to.set_attribute(key, val)?;
         }
       } else if MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str()) {
-        // For now, just set it if not present (full implementation would parse+sum)
-        if !to.has_attribute(key) {
+        if let Some(val2) = to.get_attribute(key) {
+          // Parse and sum pt values
+          let v1 = val.trim_end_matches("pt").parse::<f64>().unwrap_or(0.0);
+          let v2 = val2.trim_end_matches("pt").parse::<f64>().unwrap_or(0.0);
+          to.set_attribute(key, &format!("{}pt", v1 + v2))?;
+        } else {
           to.set_attribute(key, val)?;
         }
-      } else if !to.has_attribute(key) {
-        // || force...
-        // Else if attribute not present on $to, or if we specificallly override it, just copy
+      } else if !to.has_attribute(key) || is_forced {
+        // Else if attribute not present on $to, or if we specifically override it, just copy
         to.set_attribute(key, val)?;
       }
     }
@@ -2390,62 +2399,95 @@ impl Document {
     Ok(())
   }
 
-  // our $content_transfer_overrides = { map { ($_ => 1) } qw(decl_id meaning name omcd) };
-  // our $dual_transfer_overrides    = { %$content_transfer_overrides,
-  //   map { ($_ => 1) } qw(xml:id role) };
-
   fn compact_xmdual(
     &mut self,
-    _dual: Node,
-    _content: Node,
-    _presentation: Option<Node>,
+    dual: Node,
+    content: Node,
+    presentation: Option<Node>,
   ) -> Result<()> {
-    //   my $c_name = $self->getNodeQName($content);
-    //   my $p_name = $self->getNodeQName($presentation);
-    // 1.Quick fix: merge two tokens
-    //   if (($c_name eq 'ltx:XMTok') && ($p_name eq 'ltx:XMTok')) {
-    //     $self->mergeAttributes($content, $presentation, $content_transfer_overrides);
-    //     $self->mergeAttributes($dual,    $presentation, $dual_transfer_overrides);
-    //     $self->replaceNode($dual, $presentation);
+    // Perl: our $content_transfer_overrides = { decl_id, meaning, name, omcd };
+    // Perl: our $dual_transfer_overrides = { decl_id, meaning, name, omcd, xml:id, role };
+    static CONTENT_TRANSFER: Lazy<HashSet<&'static str>> =
+      Lazy::new(|| HashSet::from_iter(["decl_id", "meaning", "name", "omcd"]));
+    static DUAL_TRANSFER: Lazy<HashSet<&'static str>> =
+      Lazy::new(|| HashSet::from_iter(["decl_id", "meaning", "name", "omcd", "xml:id", "role"]));
 
-    //   # 2.For now, only main use case is compacting mirror XMApp nodes
-    //   return if ($c_name ne 'ltx:XMApp') || ($p_name ne 'ltx:XMApp');
-    //   my @content_args = element_nodes($content);
-    //   my @pres_args    = element_nodes($presentation);
-    //   return if scalar(@content_args) != scalar(@pres_args);
+    let presentation = match presentation {
+      Some(p) => p,
+      None => return Ok(()),
+    };
+    let c_name = with_node_qname(&content, |n| n.to_string());
+    let p_name = with_node_qname(&presentation, |n| n.to_string());
 
-    //   my @new_args = ();
-    //   # walk the corresponding children, and double-check they are referenced in the same order
-    //   while ((my $c_arg = shift(@content_args)) and (my $p_arg = shift(@pres_args))) {
-    //     my $c_idref = $c_arg->getAttribute('idref');
-    //     if ($c_idref && ($c_idref eq ($p_arg->getAttribute('xml:id') || ''))) {
-    //       push @new_args, $p_arg;
-    //       next; }    # content-refs-pres, OK
-    //     my $p_idref = $p_arg->getAttribute('idref');
-    //     if ($p_idref && ($p_idref eq ($c_arg->getAttribute('xml:id') || ''))) {
-    //       push @new_args, $c_arg;
-    //       next; }    # pres-refs-content, OK
+    // Case 1: Quick fix — merge two tokens
+    if c_name == "ltx:XMTok" && p_name == "ltx:XMTok" {
+      let mut pres = presentation;
+      self.merge_attributes(&content, &mut pres, Some(&CONTENT_TRANSFER))?;
+      self.merge_attributes(&dual, &mut pres, Some(&DUAL_TRANSFER))?;
+      // Unlink presentation from dual before replacing, since presentation is a child of dual
+      pres.unlink();
+      self.replace_node(dual, vec![pres])?;
+      return Ok(());
+    }
 
-    //     # we can handle content-side XMToks, to any XM* presentation subtree differing for now.
-    //     if ($self->getNodeQName($c_arg) ne 'ltx:XMTok') {
-    //       return; }
-    //     else { # otherwise we can compact this case. but delay actual libxml changes until we are
-    // *sure* the entire tree is compactable       push(@new_args, [$c_arg, $p_arg]); } }
+    // Case 2: Compact mirror XMApp nodes
+    if c_name != "ltx:XMApp" || p_name != "ltx:XMApp" {
+      return Ok(());
+    }
+    let content_args = xml::element_nodes(&content);
+    let pres_args = xml::element_nodes(&presentation);
+    if content_args.len() != pres_args.len() {
+      return Ok(());
+    }
 
-    // # If we made it here, this is a dual with two mirrored applications and a single XMTok
-    // difference, compact it.   my $compact_apply = $self->openElementAt($dual->parentNode,
-    // 'ltx:XMApp');   for my $n_arg (@new_args) {
-    //     # one of the args has our dual node that needs compacting
-    //     if (ref $n_arg eq 'ARRAY') {
-    //       my ($c_arg, $p_arg) = @$n_arg;
-    //       $self->mergeAttributes($c_arg, $p_arg, $content_transfer_overrides);
-    //       $n_arg = $p_arg; }
-    //     $n_arg->unbindNode;
-    //     $compact_apply->appendChild($n_arg); }
-    //   # if the dual has any attributes migrate them to the new XMApp
-    //   $self->mergeAttributes($dual, $compact_apply, $dual_transfer_overrides);
-    //   $self->replaceNode($dual, $compact_apply);
-    //   $self->closeElementAt($compact_apply);
+    // Walk the corresponding children, double-check they are referenced in the same order
+    enum NewArg {
+      Single(Node),
+      Pair(Node, Node), // (content_arg, pres_arg) — to be merged
+    }
+    let mut new_args: Vec<NewArg> = Vec::new();
+    for (c_arg, p_arg) in content_args.into_iter().zip(pres_args.into_iter()) {
+      if let Some(c_idref) = c_arg.get_attribute("idref") {
+        if c_idref == p_arg.get_attribute_ns("id", XML_NS).unwrap_or_default() {
+          new_args.push(NewArg::Single(p_arg));
+          continue;
+        }
+      }
+      if let Some(p_idref) = p_arg.get_attribute("idref") {
+        if p_idref == c_arg.get_attribute_ns("id", XML_NS).unwrap_or_default() {
+          new_args.push(NewArg::Single(c_arg));
+          continue;
+        }
+      }
+      // We can handle content-side XMToks to any XM* presentation subtree
+      let c_arg_name = with_node_qname(&c_arg, |n| n.to_string());
+      if c_arg_name != "ltx:XMTok" {
+        return Ok(()); // Can't compact this structure
+      }
+      new_args.push(NewArg::Pair(c_arg, p_arg));
+    }
+
+    // If we made it here, this dual has two mirrored applications — compact it.
+    let mut parent = match dual.get_parent() {
+      Some(p) => p,
+      None => return Ok(()),
+    };
+    let mut compact_apply = self.open_element_at(&mut parent, "ltx:XMApp", None, None)?;
+    for n_arg in new_args {
+      let mut node = match n_arg {
+        NewArg::Single(n) => n,
+        NewArg::Pair(c_arg, mut p_arg) => {
+          self.merge_attributes(&c_arg, &mut p_arg, Some(&CONTENT_TRANSFER))?;
+          p_arg
+        }
+      };
+      node.unlink();
+      compact_apply.add_child(&mut node)?;
+    }
+    // Migrate dual attributes to the new XMApp
+    self.merge_attributes(&dual, &mut compact_apply, Some(&DUAL_TRANSFER))?;
+    self.replace_tree(compact_apply.clone(), dual)?;
+    self.close_element_at(&mut compact_apply)?;
     Ok(())
   }
 

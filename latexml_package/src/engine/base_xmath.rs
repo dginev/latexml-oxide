@@ -263,8 +263,16 @@ LoadDefinitions!({
     if let Some(Stored::HashStored(xmargs)) = pop_value("PENDING_DUAL_XMARGS")? { // Really SHOULD be a hash
       whatsit.set_properties(xmargs);  // Hopefully no name class with XM<digits>
     }
-    // TODO:
-    // whatsit.set_properties($kv->getPairs) if $kv;
+    // Perl: whatsit.set_properties($kv->getPairs) if $kv;
+    // Extract key-value pairs from the OptionalKeyVals argument and set as properties.
+    // This makes #role, #name, #meaning etc. available in the constructor template.
+    if let Some(kv_arg) = whatsit.get_arg(1) {
+      if let DigestedData::KeyVals(kv) = kv_arg.data() {
+        for (k, v) in kv.get_hash() {
+          whatsit.set_property(&k, Stored::from(v));
+        }
+      }
+    }
 
     let props = whatsit.get_properties();
     let cr    = props.get("content_reversion").cloned();
