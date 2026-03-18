@@ -243,6 +243,19 @@ ACCENT) and U+02DC (SMALL TILDE) respectively. When the font is typewriter or AS
 **Rationale:** Matches Perl behavior. The typewriter font hack ensures that accents
 in monospace contexts produce the expected ASCII-compatible output.
 
+### 15. Improved Math Parses Over Perl
+
+**Decision:** When the Rust Marpa grammar successfully parses an expression that Perl's
+Parse::RecDescent left unparsed, the Rust output is preferred if the parse is mathematically
+correct. The expected test XML is updated to match Rust's improved output.
+
+**Rationale:** The Marpa grammar is more powerful than Parse::RecDescent and can handle
+expressions that Perl gives up on. Matching Perl's *failure* modes is not a goal — matching
+Perl's *success* modes is. When Rust produces a better parse, that's an improvement.
+
+**Process:** When a test fails because Rust produces a parsed structure where Perl had flat
+unparsed tokens, the developer asks the user to confirm whether the Rust XML should be updated.
+
 ---
 
 ## Type System Improvements

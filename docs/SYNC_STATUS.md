@@ -2,7 +2,7 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-15. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-18. Only lists open gaps & TODOs; completed items live in git history.
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
@@ -142,7 +142,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 1. **`FontDef` parameter type** — Simplified to `FontToken`. Blocks `\fontdimen`, `\hyphenchar` per-font tracking.
 2. **SVG support** — Removed from glue/kern/box. Not critical for XML output.
 3. **`LoadFormat` machinery** — Not ported; plain/latex bootstrap loaded inline.
-4. **Font `computeBoxesSize`** — Single-pass only; missing word/line/stack decomposition.
+4. ~~**Font `computeBoxesSize`**~~ — DONE. Full 4-helper decomposition (words/lines/stack/box) matching Perl.
 5. **`DEFSIZE`** — Static 10.0; Perl reads `NOMINAL_FONT_SIZE` from state.
 6. **`.ltxml` file search** — NOT APPLICABLE. Rust compiles all package bindings at build time. Every Perl `.sty.ltxml` must be translated to a Rust `_sty.rs` file. No runtime `.ltxml` loading possible. For external packages, use `latexml_contrib` crate.
 
@@ -226,9 +226,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-15)
 
-**Current totals: 214 pass, 0 fail, 65 ignored test functions**
+**Current totals: 177 pass, 7 fail (22_fonts math-parser-related), 58+ ignored test functions**
 **Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 77% pass rate (214/279 non-permanent-ignore tests)**
+**Coverage: ~75% pass rate (177/242 non-permanent-ignore tests)**
 
 | Suite | Pass | Ignored | Notes |
 |-------|------|---------|-------|
@@ -240,7 +240,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 10_expansion | 36 | 0 | |
 | 12_grouping | 2 | 0 | |
 | 20_digestion | 10 | 0 | |
-| 22_fonts | 17 | 6 | fonts(156), plainfonts(66), sizes(393), ding(371), abxtest(crash), stmaryrd(1449) |
+| 22_fonts | 12 | 4 | acc(181), esint(257), mathaccents(422), mathbbol(168), fonts(98), plainfonts(78), mixed(69), wasysym(PASS). Ignored: sizes, ding, abxtest, stmaryrd |
 | 30_encoding | 26 | 0 | |
 | 32_keyval | 8 | 0 | |
 | 33_keyval_options | 11 | 0 | |
@@ -281,7 +281,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-15):** 218 pass, 0 fail, 61 ignored (78% pass rate). Full diff scan below.
+**Status (2026-03-18):** 177 pass, 7 fail (22_fonts math parser), 58+ ignored. wasysym_test newly passing. Gemini 3 math parser regressions reverted.
 
 ### Completed items
 

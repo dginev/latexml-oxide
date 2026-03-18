@@ -12,27 +12,25 @@ Rust now has full implementation matching Perl semantics.
 - [x] `computeBoxesSize_lines` (Perl L749-766, 18 lines) — multi-line stacking with linewidth
 - [x] `computeBoxesSize_stack` (Perl L769-801, 33 lines) — vertical stacking for vbox
 
-## 2. math_common.pool.ltxml (803 lines Perl → 37 lines Rust)
+## 2. math_common.pool.ltxml (803 lines Perl → ~1500 lines Rust in plain.rs)
 
-Nearly empty Rust translation. Most definitions missing entirely.
+Substantially ported (278 DefMath! definitions). Most core math symbols present.
 
-- [ ] Greek letters — DefMathI for α-ω, Γ-Ω (Perl L21-60, 40 lines)
-- [ ] Misc math symbols — \aleph through \clubsuit (Perl L62-107, 46 lines)
+- [x] Greek letters — DefMathI for α-ω, Γ-Ω
+- [x] Misc math symbols — \aleph through \clubsuit
+- [x] Variable-sized operators — \sum, \prod, \int, etc. with scriptpos
+- [x] Binary operations — \pm through \amalg
+- [x] Relation symbols — \leq through \propto
+- [x] Arrow symbols
+- [x] Ellipsis/dots — \ldots, \cdots, \vdots, \ddots, \dots
+- [x] Math accents — \hat through \widetilde
+- [x] Phantom/strut/smash — \phantom, \hphantom, \vphantom (with sizing afterDigest)
+- [x] Roots — \sqrt, \root
+- [x] Log-like functions — \log, \sin, \lim, etc.
 - [ ] Active prime — \active@math@prime + AssignMathcode (Perl L109-125, 17 lines)
-- [ ] \smallint (Perl L128-129)
-- [ ] Variable-sized operators — \sum, \prod, \int, etc. with scriptpos (Perl L134-171, 38 lines)
-- [ ] Binary operations — \pm through \amalg (Perl L205-248, 44 lines)
-- [ ] Relation symbols — \leq through \propto (Perl L253-301, 49 lines)
 - [ ] \not negation + DefRewrite (Perl L304-359, 56 lines)
 - [ ] \joinrel relation combining (Perl L363-404, 42 lines)
-- [ ] Arrow symbols (Perl L412-452, 41 lines)
-- [ ] Ellipsis/dots — \ldots, \cdots, \vdots, \ddots, \dots (Perl L458-505, 48 lines)
-- [ ] Math accents — \hat through \widetilde (Perl L513-546, 34 lines)
-- [ ] Delimiters — \{, \}, \langle, \rangle, \big variants (Perl L554-629, 76 lines)
-- [ ] Fraction-like — \choose, \brace, \brack (Perl L634-639, 6 lines)
-- [ ] Phantom/strut/smash — \phantom, \hphantom, \vphantom, \smash (Perl L641-677, 37 lines)
-- [ ] Roots — \sqrt, \root (Perl L683-704, 22 lines)
-- [ ] Log-like functions — \log, \sin, \lim, etc. (Perl L710-757, 48 lines)
+- [ ] Delimiters — \big/\Big/\bigg/\Bigg sized variants (Perl L554-629, 76 lines)
 - [ ] Modulo — \pmod, \bmod (Perl L762-763)
 - [ ] XMWrap cleanup rewrite (Perl L769-798, 30 lines)
 
