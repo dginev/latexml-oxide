@@ -1,27 +1,32 @@
-# Mini Plan: Round 2
+# Mini Plan: Round 3
+
+## Status: 217 pass, 0 fail, 62 ignored
 
 ## Three most connected work packets
 
 ### Selection rationale
-The **missing `tex=` attribute on Math elements inside MathFork** affects most Tier 2 tests (badeqnarray, eqnums, amsdisplay, matrix, sideset). Fixing this single issue could reduce diff counts across 5+ tests. The root cause is in the `add_body_TeX` afterClose hook not finding a `node_box` for Math elements that are inside equation arrays. Connected: the xml:id numbering (`.m1` vs `.m4`) is also a MathFork issue.
+Looking at the remaining 62 ignored tests, most are blocked by the math parser (text= diffs)
+or equation numbering (tags diffs). I'll focus on tests that have structural diffs fixable
+without math parser changes, and crashes that can be resolved.
 
-### Packet 1: Fix `tex=` attribute on MathFork Math elements
-- **Problem**: `ltx:Math` afterClose hook at tex_math.rs:188 gets `node_box` to call `body.untex()` for the `tex` attribute. Inside MathFork (equation arrays), Math elements don't have their `node_box` set.
-- **Debug approach**:
-  1. Create minimal TeX: `\begin{eqnarray} a &=& b \end{eqnarray}`
-  2. Compare Perl vs Rust: check if Perl's `add_body_TeX` fires for MathFork Math, when it fires, and what box it gets
-  3. Add debug prints in the afterClose hook to see what `node_box` returns
-- **Fix**: Ensure MathFork Math elements have their `node_box` set during rearrangement.
+### Packet 1: Fix `cd_test` — port amscd.sty binding (56_ams)
+- **Current state**: 199 diffs after panic fix. Most diffs are structural — missing `ltx:XMApp` elements from the CD (commutative diagram) environment.
+- **Root cause**: amscd.sty binding not ported. Perl has amscd.sty.ltxml.
+- **Approach**: Port the amscd.sty.ltxml binding. It's a small package (~100 lines) defining `\CD`, `\@>`, `\@<`, `\@A`, `\@V`, `\@=`.
+- **Expected**: Many diffs should resolve with the binding ported.
 
-### Packet 2: Fix xml:id numbering for MathFork Math (`.m1` vs `.m4`)
-- **Problem**: In Perl, equation array Math elements get id suffix `.m4` (after 3 alignment-related math elements). In Rust, they get `.m1`.
-- **Root cause**: The `generate_id` counter for Math inside equations doesn't account for alignment-related Math elements that Perl creates.
-- **Connected**: Same MathFork rearrangement code path.
+### Packet 2: Fix `mathtools_test` — port mathtools.sty binding (56_ams)
+- **Current state**: TooManyErrors (>100 undefined tokens like \radical, \ext@arrow, \arrowfill@).
+- **Root cause**: mathtools.sty.ltxml not ported. It redefines many amsmath commands.
+- **Approach**: Port mathtools.sty.ltxml. Focus on the core definitions — the package is moderate size.
+- **Expected**: Reduce errors, see actual test output.
 
-### Packet 3: badeqnarray_test math tree (Ex10)
-- **Problem**: Ex10 has flat XMath tree where Perl has nested XMApp. Math parser difference for `=e+f+g` without leading term.
-- **Connected**: Same test file, can be investigated together.
+### Packet 3: Fix `matrix_test` — afterConstruct + equation numbering (56_ams)
+- **Current state**: 176 diffs. afterConstruct is ported. Diffs likely from matrix environment structure.
+- **Root cause**: ams matrix/cases environments need proper MathFork generation.
+- **Expected**: Assess remaining diffs after tex= fix from previous round.
 
-### Expected outcome
-- badeqnarray_test: reduce from 158 to <20 diffs
-- Potentially unblock other MathFork tests
+### Execution order
+1. Port amscd.sty binding → cd_test structural fix
+2. Port mathtools.sty binding → mathtools_test error reduction
+3. Analyze matrix_test remaining diffs → targeted fixes

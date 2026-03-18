@@ -62,6 +62,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "ntheorem.sty" => package::ntheorem_sty::load_definitions(),
     "paralist.sty" => package::paralist_sty::load_definitions(),
     "amsbsy.sty" => package::amsbsy_sty::load_definitions(),
+    "amscd.sty" => package::amscd_sty::load_definitions(),
     "amsgen.sty" => package::amsgen_sty::load_definitions(),
     "amstext.sty" => package::amstext_sty::load_definitions(),
     "amsopn.sty" => package::amsopn_sty::load_definitions(),

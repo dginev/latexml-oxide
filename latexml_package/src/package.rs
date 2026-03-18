@@ -10,6 +10,7 @@ pub mod alltt_sty;
 pub mod array_sty;
 pub mod appendix_sty;
 pub mod amsbsy_sty;
+pub mod amscd_sty;
 pub mod ams_core_cls;
 pub mod ams_support_sty;
 pub mod amsart_cls;
