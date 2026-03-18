@@ -240,6 +240,32 @@ impl Document {
     Ok(())
   }
 
+  /// Remove xml:ids from XMTok elements that aren't referenced by any idref.
+  /// The Rust math parser generates xml:ids on XMTok nodes for internal XMRef linkage
+  /// during parsing. After finalization (which includes prune_xmduals), some ids
+  /// are no longer referenced. Perl's parser doesn't generate these ids.
+  pub fn cleanup_unreferenced_xmtok_ids(&mut self) {
+    use std::collections::HashSet;
+    let mut referenced_ids: HashSet<String> = HashSet::new();
+    for node in self.findnodes("descendant-or-self::*[@idref]", None) {
+      if let Some(idref) = node.get_attribute("idref") {
+        referenced_ids.insert(idref);
+      }
+    }
+    let xml_ns = "http://www.w3.org/XML/1998/namespace";
+    let toks = self.findnodes("descendant-or-self::ltx:XMTok[@xml:id]", None);
+    for mut tok in toks {
+      if let Some(id) = tok.get_attribute_ns("id", xml_ns) {
+        if !referenced_ids.contains(&id) {
+          self.unrecord_id(&id);
+          // Remove both the prefixed attribute and the ns attribute
+          let _ = tok.remove_attribute("xml:id");
+          let _ = tok.remove_attribute_ns("id", xml_ns);
+        }
+      }
+    }
+  }
+
   fn finalize_rec(&mut self, node: &mut Node) -> Result<()> {
     let qname = get_node_qname(node);
     let local_font = self.get_local_font().unwrap();

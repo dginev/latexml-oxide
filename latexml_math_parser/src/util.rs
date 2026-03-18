@@ -203,7 +203,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
         // let qname   = document::get_node_qname(node, state);
         // let nodebox     = document.get_node_box(node);
 
-        match node.get_attribute("id") {
+        match node.get_attribute("xml:id") {
           //  already has id, so refer to it.
           Some(id) => refs.push(XM::Ref(XProps {
             id: Some(Cow::Owned(id)),

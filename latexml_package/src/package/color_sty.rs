@@ -123,7 +123,9 @@ LoadDefinitions!({
     merge_font(fontmap!(bg => color));
 
     // TODO: Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
-    // Returning a Tbox here causes timeout in some tests (framed/colors) — needs investigation.
+    // Returning a Tbox here causes infinite loop when used inside \colorbox -> \hbox.
+    // The \hbox constructor re-expands the Tbox reversion, recursing into \pagecolor.
+    // Needs investigation: \color works with Tbox but \pagecolor doesn't.
     Ok(Vec::new())
   });
 

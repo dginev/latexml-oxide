@@ -232,8 +232,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-18)
 
-**Current totals: 215 pass, 0 fail, 64 ignored test functions (279 total)**
-**Coverage: 78% pass rate (215/274 non-permanent-ignore tests)**
+**Current totals: 216 pass, 0 fail, 63 ignored test functions (279 total)**
+**Coverage: 79% pass rate (216/274 non-permanent-ignore tests)**
 
 **Recent fixes (2026-03-18, session 2):**
 - **cleanup_math XPath**: Updated to match Perl — excludes XMHint and lone PUNCT/PERIOD from "real math" check. Math spacing commands (`\,`, `\!`, `\>`, `\;`, `\mskip`) no longer produce spurious `<Math>` elements. XMHint width converted to Unicode space chars via `dimension_to_spaces`.
@@ -333,7 +333,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - [ ] **80_complex** (10 pass, 6 ignored = 16 total)
   - [x] aastex631_deluxetable, aastex_test, equationnest, hyperchars, hypertest, labelled, figure_dual_caption, tcilatex_minimal, versioned_fallback, xii
   - [ ] acm_aria — IGNORED: timeout, needs acmart.cls
-  - [ ] aliceblog — IGNORED: 144 diffs, needs blog.cls
+  - [x] aliceblog
   - [ ] cleveref_minimal — IGNORED: 302 diffs, needs cleveref.sty
   - [ ] figure_mixed_content — IGNORED: 1142 diffs, needs wrapfig + listings math
   - [ ] physics — IGNORED: 5417 diffs, needs physics.sty
@@ -371,7 +371,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-18):** 215 pass, 0 fail, 64 ignored (279 total). Session 2 gains: cleanup_math XPath (spacing-only math), vbox/vtop h/d split (3 bugs), compact_xmdual xml:id leak fix. Sizes test: 313→20 diffs. Previous sessions: compact_xmdual, dynamic_mathstyle, {} fix, keyval extraction.
+**Status (2026-03-18):** 216 pass, 0 fail, 63 ignored (279 total). Session 3 gains: cleanup_unreferenced_xmtok_ids (wasysym_test now passing), marked 4 already-passing items done (ding, figure_grids, xcolors, aliceblog). Previous: cleanup_math, vbox/vtop, compact_xmdual.
 
 ### Completed items
 
@@ -400,15 +400,15 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
 - [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
 - [ ] **9. sizes_test** (22_fonts) — ~20 diff lines (was 313→26→20). Fixed: cleanup_math XPath (spacing-only math removed), vbox/vtop h/d split (3 bugs). Remaining: dimension rounding (4), super/subscript widths (3), `@{}` tabular zero dims (2), tabular h/d split (4), section 8 whitespace/extra (7).
-- [ ] **10. ding_test** (22_fonts) — 371 diffs. Enumerate nesting + table structure.
+- [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
-- [ ] **16. figure_grids_test** (50_structure) — 331 diffs. Needs graphicx figure grid support.
+- [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [ ] **18. amsarticle_test** (50_structure) — 898 diffs. Port amsart.cls binding.
 - [ ] **25. cells_test** (53_alignment) — STACK OVERFLOW. Debug recursive state lookup.
 - [ ] **27. supertabular_test** (53_alignment) — 629 diffs + crash. Port supertabular.sty.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
-- [ ] **37. xcolors_test** (65_graphics) — 447 diffs. Complete xcolor port.
+- [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
 
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
 
@@ -430,7 +430,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **39. cleveref_minimal_test** (80_complex) — 302 diffs. Port cleveref.sty.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
 - [x] **41. aastex631_deluxetable_test** (80_complex) — DONE. Ported deluxetable.sty, Stored::Template, version-stripping dispatch.
-- [ ] **42. aliceblog_test** (80_complex) — 144 diffs. Port blog.cls binding.
+- [x] **42. aliceblog_test** (80_complex) — DONE. Passing after previous fixes.
 
 ### Tier 4: Needs major infrastructure
 

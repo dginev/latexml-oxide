@@ -102,7 +102,6 @@ fn mathcolor_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn wasysym_test() {
   latexml_test_single("tests/fonts/wasysym.tex", "wasysym", DIR, None, None);
 }
