@@ -37,7 +37,6 @@ fn figure_dual_caption_test() { complex("figure_dual_caption"); }
 fn hyperchars_test() { complex("hyperchars"); }
 
 #[test]
-#[ignore] // 876 diffs — listings.sty issues + math parser
 fn figure_mixed_content_test() { complex("figure_mixed_content"); }
 
 #[test]

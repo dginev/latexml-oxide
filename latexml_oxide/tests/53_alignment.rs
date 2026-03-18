@@ -31,7 +31,6 @@ fn halignatt_test() {
 }
 
 #[test]
-#[ignore] // crash — alignment not active for supertabular
 fn supertabular_test() {
   latexml_test_single("tests/alignment/supertabular.tex", "supertabular", DIR, None, None);
 }
@@ -117,7 +116,6 @@ fn plainmath_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
 fn split_test() {
   latexml_test_single("tests/alignment/split.tex", "split", DIR, None, None);
 }
@@ -133,7 +131,6 @@ fn array_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (eqnarray)
 fn eqnarray_test() {
   latexml_test_single("tests/alignment/eqnarray.tex", "eqnarray", DIR, None, None);
 }
