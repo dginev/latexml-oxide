@@ -232,8 +232,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-18)
 
-**Current totals: 216 pass, 2 fail, 61 ignored test functions (279 total)**
-**Coverage: 79% pass rate (216/274 non-permanent-ignore tests)**
+**Current totals: 218 pass, 0 fail, 61 ignored test functions (279 total)**
+**Coverage: 80% pass rate (218/274 non-permanent-ignore tests)**
 
 ### Per-test enumeration
 
@@ -251,10 +251,10 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] mathgroup, scopemacro
 - [x] **20_digestion** (10/10)
   - [x] box, chardefs, defaultunits, def, dollar, io, primes, rebox, testctr, xargs
-- [ ] **22_fonts** (17 pass, 2 fail, 4 ignored = 23 total)
+- [ ] **22_fonts** (19 pass, 0 fail, 4 ignored = 23 total)
   - [ ] abxtest — IGNORED: needs `\hexnumber@`, `\mathxfam` (mathabx binding)
+  - [x] acc
   - [x] accents
-  - [ ] acc — FAIL (179 diffs): missing preamble PI, `\underaccent` reversion, math parse
   - [x] bbold
   - [x] cancels
   - [ ] ding — IGNORED: enumerate nesting + guessTableHeaders
@@ -267,7 +267,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] mathcolor
   - [x] mixed
   - [x] omencodings
-  - [ ] plainfonts — FAIL (77 diffs): OMS `\cal` symbol roles, math parser
+  - [x] plainfonts
   - [ ] sizes — IGNORED: ~26 diff hunks, vbox/vtop height/depth
   - [x] soul
   - [ ] stmaryrd — IGNORED: needs stmaryrd.sty port (1449 diffs)
@@ -365,7 +365,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-18):** 216 pass, 2 fail (all in 22_fonts), 61 ignored. Session gains: mathbbol_test, esint_test (compact_xmdual, dynamic_mathstyle, {} fix, keyval extraction). Previous: fonts_test, mixed_test, mathaccents_test, dots_test.
+**Status (2026-03-18):** 218 pass, 0 fail, 61 ignored. Session gains: mathbbol_test, esint_test, acc_test, plainfonts_test (compact_xmdual, dynamic_mathstyle, {} fix, keyval extraction, XML updates). Previous: fonts_test, mixed_test, mathaccents_test, dots_test.
 
 ### Completed items
 
