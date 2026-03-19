@@ -270,39 +270,39 @@ A=100*13 = 1300;</p>
         <tbody>
           <tr>
             <td align="left" thead="row">test</td>
-            <td align="left">row 0</td>
+            <td align="left">row 1</td>
           </tr>
           <tr>
             <td align="left" thead="row">test</td>
-            <td align="left">row 0</td>
+            <td align="left">row 2</td>
           </tr>
           <tr>
             <td align="left" thead="row"><text backgroundcolor="#BFBFFF">test</text></td>
-            <td align="left">row 0</td>
+            <td align="left">row 3</td>
           </tr>
           <tr>
             <td align="left" thead="row">test</td>
-            <td align="left">row 0</td>
+            <td align="left">row 4</td>
           </tr>
           <tr>
             <td align="left" thead="row">test</td>
-            <td align="left">row 0</td>
+            <td align="left">row 5</td>
           </tr>
           <tr>
             <td align="left" thead="row">test</td>
-            <td align="left">row 0</td>
+            <td align="left">row 6</td>
           </tr>
           <tr>
             <td align="left" thead="row">test</td>
-            <td align="left">row 0</td>
+            <td align="left">row 7</td>
           </tr>
           <tr>
             <td align="left" thead="row">test</td>
-            <td align="left">row 0</td>
+            <td align="left">row 8</td>
           </tr>
           <tr>
             <td align="right" thead="row">test</td>
-            <td align="left">row 0</td>
+            <td align="left">row 9</td>
           </tr>
         </tbody>
       </tabular>
@@ -704,3 +704,4 @@ A=100*13 = 1300;</p>
     </para>
   </section>
 </document>
+

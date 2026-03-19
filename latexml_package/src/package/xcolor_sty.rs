@@ -1052,8 +1052,28 @@ LoadDefinitions!({
   DefMacro!("\\showrowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorstrue}");
   DefMacro!("\\hiderowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorsfalse}");
 
-  // \rownum
-  DefMacro!("\\rownum", "0"); // stub — proper alignment row tracking TODO
+  // Perl xcolor L744-748: \rownum returns current row number from alignment
+  def_macro(
+    T_CS!("\\rownum"),
+    None,
+    Some(ExpansionBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
+      if let Some(alignment) = state::lookup_alignment() {
+        if let DigestedData::Alignment(cell) = alignment.data() {
+          let row_num = cell.borrow().current_row_number();
+          let num_str = row_num.to_string();
+          let toks: Vec<Token> = num_str.chars().map(|c| {
+            Token::new(&c.to_string(), Catcode::OTHER)
+          }).collect();
+          Ok(Tokens::new(toks))
+        } else {
+          Ok(Tokens!(T_OTHER!("0")))
+        }
+      } else {
+        Ok(Tokens!(T_OTHER!("0")))
+      }
+    }))),
+    None,
+  )?;
 
   // \rowcolor{color} — simplified stub
   DefPrimitive!("\\rowcolor[]{}", sub[(model_opt, spec)] {
