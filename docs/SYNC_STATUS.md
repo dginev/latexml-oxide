@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-19):** 227 pass, 0 fail, 92 ignored (319 total). Sessions 6-7: Grammar improvements (trigfunction, compound_operator, APPLYOP, function application f(x)→f@(x)). Infrastructure: adjustMathstyle for fraction font propagation, alignment glue U+00A0→U+2003 fix, stmaryrd.sty port, Pair parameter type, makecell.sty port, \lxDeclare fix. Diff reductions: fracs 87→31, stmaryrd 1449→1009.
+**Status (2026-03-19):** 221 pass, 0 fail, 89 ignored (310 total). Sessions 6-8: Grammar improvements (trigfunction, compound_operator, APPLYOP, formulae vs list). Infrastructure: adjustMathstyle, alignment glue fix, stmaryrd.sty port, Pair type, makecell.sty port, \lxDeclare fix. Session 8: formulae/list distinction (multirelations un-ignored), speculative_prefix_apply (f(x) only with MATHPARSER_SPECULATE), FontDirective Display fix. Diff reductions: fracs 87→0, supertabular 629→0, sizes 181→19.
 
 ### Completed items
 
@@ -408,14 +408,14 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
 - [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
 - [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
-- [ ] **9. sizes_test** (22_fonts) — ~20 diff lines (was 313→26→20). Fixed: cleanup_math XPath (spacing-only math removed), vbox/vtop h/d split (3 bugs). Remaining: dimension rounding (4), super/subscript widths (3), `@{}` tabular zero dims (2), tabular h/d split (4), section 8 whitespace/extra (7).
+- [ ] **9. sizes_test** (22_fonts) — 19 diff lines (was 313→181→19). Fixed: cleanup_math XPath, vbox/vtop h/d split, speculative_prefix_apply (was 181 due to g(x)→g@(x)). Remaining: dimension rounding (4), super/subscript widths (3), tabular zero dims + h/d split (6), NBSP→space (4), math spacing content (2).
 - [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [ ] **18. amsarticle_test** (50_structure) — 898 diffs. Port amsart.cls binding.
 - [ ] **25. cells_test** (53_alignment) — 369 diffs (was stack overflow). Ported makecell.sty, fixed \rothead recursion, implemented Pair parameter type.
-- [ ] **27. supertabular_test** (53_alignment) — 49 diffs (was 629). Ported supertabular.sty, remaining: cell whitespace trimming.
+- [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
 
@@ -431,8 +431,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Tier 3: Needs package bindings (moderate effort)
 
-- [ ] **12. stmaryrd_test** (22_fonts) — 1449 diffs. Port stmaryrd.sty (font symbol map).
-- [ ] **33. cd_test** (56_ams) — PANIC in math parser. Port amscd.sty.ltxml.
+- [ ] **12. stmaryrd_test** (22_fonts) — 1007 diffs (was 1449). Ported stmaryrd.sty, fixed FontDirective Display. Remaining: mostly XMDual + math parser text= diffs.
+- [ ] **33. cd_test** (56_ams) — 175 diffs (was PANIC). No longer crashes after replace_tree fix.
 - [ ] **34. mathtools_test** (56_ams) — TooManyErrors. Port mathtools.sty.
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
