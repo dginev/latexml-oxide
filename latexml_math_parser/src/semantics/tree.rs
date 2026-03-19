@@ -47,6 +47,8 @@ pub struct XProps {
   pub fontref:   Option<Cow<'static, str>>,
   /// stretchy attribute for delimiters (e.g. "false" to suppress MathML stretching)
   pub stretchy:  Option<Cow<'static, str>>,
+  /// marker for UNKNOWN tokens that may be used as functions (set by MATHPARSER_SPECULATE)
+  pub possible_function: Option<Cow<'static, str>>,
 }
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -91,6 +93,9 @@ impl XProps {
     }
     if let Some(stretchy) = self.stretchy.take() {
       attrs.insert(String::from("stretchy"), stretchy.into_owned());
+    }
+    if let Some(pf) = self.possible_function.take() {
+      attrs.insert(String::from("possibleFunction"), pf.into_owned());
     }
     let attrs_opt = if attrs.is_empty() { None } else { Some(attrs) };
     (self.content.take(), self.font.take(), attrs_opt)
@@ -903,6 +908,7 @@ impl From<&Node> for XProps {
     let fontref = attrs.remove("_font").map(Cow::Owned);
 
     let stretchy = attrs.remove("stretchy").map(Cow::Owned);
+    let possible_function = attrs.remove("possibleFunction").map(Cow::Owned);
     XProps {
       content,
       role,
@@ -912,9 +918,9 @@ impl From<&Node> for XProps {
       id,
       idref,
       fontref,
-      font: None,
-      xmkey: None,
       stretchy,
+      possible_function,
+      ..Default::default()
     }
   }
 }

@@ -21,6 +21,15 @@ LoadDefinitions!({
     AssignValue!("LEXEMATIZE_MATH" => true, Scope::Global);
   });
 
+  // Math parser speculation (e.g. possible function detection)
+  // Perl: DeclareOption('mathparserspeculate', sub { AssignValue('MATHPARSER_SPECULATE' => 1, 'global'); });
+  DeclareOption!("mathparserspeculate", {
+    AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
+  });
+  DeclareOption!("nomathparserspeculate", {
+    AssignValue!("MATHPARSER_SPECULATE" => false, Scope::Global);
+  });
+
   // Header guessing for tabular environments
   DeclareOption!("guesstabularheaders", {
     AssignValue!("GUESS_TABULAR_HEADERS" => true, Scope::Global);

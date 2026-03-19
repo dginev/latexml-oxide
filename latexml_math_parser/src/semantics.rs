@@ -632,10 +632,6 @@ pub fn new_script(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   if let XM::Lexeme(ref lex, _) = script {
-    // TODO: continue porting...
-    // let rbase = base.as_ref().map(|b| b.realize_xmnode(&ctxt).expect("if a script is to be built
-    // with a base, we expect it to have a Node.")).flatten(); let rscript =
-    // script.realize_xmnode(&ctxt)?;
     let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = node_role.starts_with("FLOAT");
@@ -645,12 +641,55 @@ pub fn new_script(
     } else {
       "SUBSCRIPTOP"
     });
-    // Read scriptpos from the script node (e.g. "post2"), following Perl's NewScript:
-    //   my ($sx, $sl) = (p_getAttribute($rscript, 'scriptpos') || 'post') =~ /^(pre|mid|post)?(\d+)?$/;
-    //   scriptpos => "$x$l"
+
+    // Perl: Extract base's scriptpos to determine binding level
+    // If base is an XMApp with a SCRIPTOP operator, read its scriptpos
+    let (bx, mut bl, base_wasfloat, base_bumplevel) = extract_base_scriptpos(&base);
+
+    // Read scriptpos from the script node
     let raw_sp = script_wrap.get_attribute("scriptpos").unwrap_or_default();
-    let (x, l) = parse_scriptpos(&raw_sp);
-    let x = if is_float { "pre" } else { x };
+    let (sx, mut sl) = parse_scriptpos(&raw_sp);
+    let sx_defined = !raw_sp.is_empty() && sx != "post";
+
+    // Perl: $bl = ($sl || 1) unless $bl; $sl = ($bl || 1) unless $sl;
+    if bl == 0 {
+      bl = if sl > 0 { sl } else { 1 };
+    }
+    if sl == 0 {
+      sl = if bl > 0 { bl } else { 1 };
+    }
+
+    // Perl: $sx = ($bl == $sl ? $bx : 'post') unless $sx;
+    let sx = if sx_defined {
+      sx
+    } else if bl == sl {
+      bx
+    } else {
+      "post"
+    };
+
+    // Perl: $x = ($pos ? $pos : ($mode eq 'FLOAT' ? 'pre' : ($bl == $sl ? $bx : $sx) || 'post'));
+    let x = if is_float {
+      "pre"
+    } else if bl == sl {
+      bx
+    } else {
+      if !sx.is_empty() { sx } else { "post" }
+    };
+
+    // Perl: $l = $sl || $bl || scriptlevel || 0
+    let mut l = if sl > 0 { sl } else if bl > 0 { bl } else { 0 };
+
+    // Perl: if (p_getAttribute($rbase, '_wasfloat')) { $l++; $bumped = 1 }
+    //       elsif (my $innerl = p_getAttribute($rbase, '_bumplevel')) { $l = $innerl; }
+    let mut bumped = false;
+    if base_wasfloat {
+      l += 1;
+      bumped = true;
+    } else if base_bumplevel > 0 {
+      l = base_bumplevel;
+    }
+
     let scriptpos: Cow<'static, str> = format!("{x}{l}").into();
     let op = new_props(
       None,
@@ -658,11 +697,16 @@ pub fn new_script(
       Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)),
     );
     let script_arg = obtain_arg(script, 0, ctxt)?;
+    // Record _wasfloat and _bumplevel for outer scripts to detect
+    let mut meta = if bumped { Meta::with_bumplevel(l) } else { Meta::default() };
+    if is_float {
+      meta.set_wasfloat();
+    }
     Ok(Some(XM::Apply(
       op.into(),
       Args(vec![base, script_arg]),
       XProps::default(),
-      Meta::default(),
+      meta,
     )))
   } else {
     panic!(
@@ -670,6 +714,28 @@ pub fn new_script(
 got {:?}",
       script
     );
+  }
+}
+
+/// Extract scriptpos info from the base of a script operation.
+/// Returns (position_string, level, was_float, bump_level)
+fn extract_base_scriptpos(base: &Option<XM>) -> (&'static str, u32, bool, u32) {
+  match base {
+    Some(XM::Apply(ref op, _, _props, ref meta)) => {
+      // Check if the operator is a SCRIPTOP
+      if let XM::Token(ref op_props, _) = *op.0 {
+        let role = op_props.role.as_deref().unwrap_or("");
+        if role.ends_with("SCRIPTOP") {
+          let sp = op_props.scriptpos.as_deref().unwrap_or("post");
+          let (bx, bl) = parse_scriptpos(sp);
+          let wasfloat = meta.wasfloat();
+          let bumplevel = meta.bumplevel();
+          return (bx, bl, wasfloat, bumplevel);
+        }
+      }
+      ("post", 0, false, 0)
+    },
+    _ => ("post", 0, false, 0),
   }
 }
 
@@ -700,10 +766,14 @@ pub fn apply_invisible_times(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, right);
   let mut left = left;
+  // Perl: MaybeFunction — mark UNKNOWN tokens as possibleFunction when MATHPARSER_SPECULATE is set
+  // and the right side is a delimited group (parenthesized)
+  maybe_mark_possible_function(&mut left, &right, ctxt.nodes);
+
   // left-to-right associative -- if "left" is already a "times", tuck "right" in:
   if let Some(XM::Apply(ref op, ref mut left_args, _, ref _m)) = left {
     if let XM::Token(xop, _xmeta) = &*op.0 {
@@ -777,8 +847,7 @@ pub fn new_props(
     idref,
     fontref,
     font: Some(font),
-    xmkey: None,
-    stretchy: None,
+    ..Default::default()
   }
 }
 
@@ -863,6 +932,59 @@ fn morph_vertbar(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
       XM::Token(props, meta)
     },
     xm => xm,
+  }
+}
+
+/// Perl: MaybeFunction — when MATHPARSER_SPECULATE is set and an UNKNOWN token
+/// is used as the left operand of invisible times with a delimited right side,
+/// mark the token with possibleFunction="yes".
+fn maybe_mark_possible_function(left: &mut Option<XM>, right: &Option<XM>, nodes: &[XMLNode]) {
+  // Only active when MATHPARSER_SPECULATE is set
+  if !matches!(
+    latexml_core::state::lookup_value("MATHPARSER_SPECULATE"),
+    Some(latexml_core::state::Stored::Bool(true))
+  ) {
+    return;
+  }
+  // Check if right side contains delimiters (parenthesized group)
+  let right_has_delimiters = match right {
+    Some(XM::Dual(..)) | Some(XM::Wrap(..)) => true,
+    _ => false,
+  };
+  if !right_has_delimiters {
+    return;
+  }
+  // Navigate through XMApp wrappers to find the innermost token (matching Perl's descent)
+  mark_inner_possible_function(left, nodes);
+}
+
+fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
+  match xm {
+    Some(XM::Token(ref mut props, _)) => {
+      if props.role.as_deref() == Some("UNKNOWN") {
+        props.possible_function = Some(Cow::Borrowed("yes"));
+      }
+    },
+    Some(XM::Lexeme(ref lex, _)) => {
+      // Lexemes are "ROLE:content:id" references to XML nodes.
+      // Set the attribute directly on the underlying XML node.
+      if lex.starts_with("UNKNOWN:") {
+        if let Some(id_str) = lex.split(':').next_back() {
+          if let Ok(id) = id_str.parse::<usize>() {
+            if id > 0 && id <= nodes.len() {
+              let mut node = nodes[id - 1].clone();
+              let _ = node.set_attribute("possibleFunction", "yes");
+            }
+          }
+        }
+      }
+    },
+    Some(XM::Apply(_, ref mut args, _, _)) => {
+      if let Some(first) = args.0.first_mut() {
+        mark_inner_possible_function(first, nodes);
+      }
+    },
+    _ => {},
   }
 }
 

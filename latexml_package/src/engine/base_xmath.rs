@@ -878,9 +878,41 @@ LoadDefinitions!({
         whatsit.set_property("needXMDual", "1");
         whatsit.set_property("xmkey", get_xmarg_id()?);
       }
-      // Store current alignment for reversion
       // Perl: $whatsit->setProperties(alignment => LookupValue('Alignment'));
+      if let Some(alignment) = state::lookup_alignment() {
+        whatsit.set_property("alignment", Stored::Digested(alignment));
+      }
       Ok(Vec::new())
+    },
+    reversion => sub[_whatsit, args] {
+      // Perl: reversion => sub { my ($whatsit, $kv, $body) = @_;
+      //   my $name = ToString($kv->getValue('name'));
+      //   my $alignment = $whatsit->getProperty('alignment');
+      //   (T_CS('\\' . $name), T_BEGIN, $alignment->revert, T_END); }
+      let mut name = String::new();
+      if let Some(d) = &args[0] {
+        if let DigestedData::KeyVals(ref kv) = d.data() {
+          name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
+        }
+      }
+      // Get alignment reversion from the whatsit property
+      let alignment_rev = {
+        let prop = _whatsit.get_property("alignment");
+        let mut rev = None;
+        if let Some(cow) = prop.as_ref() {
+          if let Stored::Digested(ref alignment) = &**cow {
+            if let DigestedData::Alignment(ref al) = alignment.data() {
+              rev = Some(al.borrow().revert()?);
+            }
+          }
+        }
+        rev.unwrap_or(match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() })
+      };
+      let cs_name = format!("\\{}", name);
+      let mut tks = vec![T_CS!(&cs_name), T_BEGIN!()];
+      tks.extend(alignment_rev.unlist());
+      tks.push(T_END!());
+      Ok(Tokens::new(tks))
     }
   );
 

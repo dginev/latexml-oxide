@@ -94,13 +94,11 @@ fn parens_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (2 diffs)
 fn parser_speculate_test() {
   latexml_test_single("tests/parse/parser_speculate.tex", "parser_speculate", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (2 diffs)
 fn prescripted_test() {
   latexml_test_single("tests/parse/prescripted.tex", "prescripted", DIR, None, None);
 }

@@ -10,7 +10,6 @@ fn ambiguous_relations_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (2 diffs)
 fn array_math_test() {
   latexml_test_single("tests/math/array.tex", "array", DIR, None, None);
 }
