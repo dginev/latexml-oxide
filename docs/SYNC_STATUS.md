@@ -411,8 +411,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [ ] **18. amsarticle_test** (50_structure) — 898 diffs. Port amsart.cls binding.
-- [ ] **25. cells_test** (53_alignment) — STACK OVERFLOW. Debug recursive state lookup.
-- [ ] **27. supertabular_test** (53_alignment) — 629 diffs + crash. Port supertabular.sty.
+- [ ] **25. cells_test** (53_alignment) — 369 diffs (was stack overflow). Ported makecell.sty, fixed \rothead recursion, implemented Pair parameter type.
+- [ ] **27. supertabular_test** (53_alignment) — 49 diffs (was 629). Ported supertabular.sty, remaining: cell whitespace trimming.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
 
