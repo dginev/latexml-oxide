@@ -202,6 +202,41 @@ pub fn list_apply(
   list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
 }
 
+/// Perl: within a Formula, comma-separated expressions after a relop form a list RHS.
+/// Like list_apply but rejects items that contain relations (those should go to statement level).
+/// This prevents `1<x<10,2<y<20` from being parsed as `1 < x < list(10,2) < y < ...`.
+pub fn formula_list_apply(
+  rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  p: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Check if ANY of the items contain relations — if so, reject this parse
+  // so Marpa falls back to the statement-level comma separation.
+  let has_relational = args.iter().any(|a| a.as_ref().map_or(false, is_relational_item));
+  if has_relational {
+    return Err("formula_list_apply: items contain relations, use statement-level list".into());
+  }
+  // Also check if the left side is already a list Dual containing relational items
+  if let Some(Some(XM::Dual(ref content, _, _, _))) = args.first() {
+    if let XM::Apply(ref op, ref op_args, _, _) = **content {
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some("list") {
+          // Check if any list item is relational
+          for arg in &op_args.0 {
+            if arg.as_ref().map_or(false, is_relational_item) {
+              return Err(
+                "formula_list_apply: list contains relational items".into(),
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+  list_apply(rule_id, args, p, ctxt)
+}
+
 /// Check if an XM tree is a relational formula (contains RELOP or multirelation).
 /// Used to distinguish Perl's "formulae" (comma-separated relations at top level)
 /// from "list" (comma-separated plain expressions).
@@ -311,6 +346,22 @@ pub fn infix_relation(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
+  // Reject list Dual as RHS when extending a multirelation chain.
+  // e.g. for `1<x<10,2<y<20`, prevent `< list(10,2) <` — commas should
+  // go to statement level, not be absorbed as a list within the multirelation.
+  if let Some(ref left_xm) = left {
+    if is_relational_item(left_xm) {
+      if let Some(XM::Dual(ref content, _, _, _)) = right {
+        if let XM::Apply(ref op, _, _, _) = **content {
+          if let XM::Token(ref props, _) = *op.0 {
+            if props.meaning.as_deref() == Some("list") {
+              return Err("infix_relation: rejecting list Dual as multirelation RHS".into());
+            }
+          }
+        }
+      }
+    }
+  }
   // if left has a "multirelation" already, add right in.
   // if left applies a relation, flatten it out to infix form.
   // base case - build a simple infix apply
