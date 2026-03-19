@@ -1,25 +1,26 @@
-# Mini Plan: Round 8 (revised)
+# Mini Plan: Round 9
 
-## Status: 224 pass, 0 fail, 95 ignored
+## Status: 225 pass, 0 fail, 94 ignored
+
+## Analysis
+All remaining tests need substantial work. The most impactful areas:
 
 ## Three most connected work packets
 
-### Packet 1: Fix \lx@ams@matrix@ reversion (matrix_test, cd_test)
-- **Root cause**: `\lx@ams@matrix@` tex= shows internal CS name instead of `\begin{matrix}...\end{matrix}`
-- **Fix**: Add reversion sub (same pattern as \lx@gen@plain@matrix@ fix from Round 7)
-- **Impact**: Fixes tex= for matrix_test, cd_test, and potentially other alignment tests
+### Packet 1: Implement adjustMathstyle for \over fractions
+- **Impact**: Fixes fracs_test (86 diffs), partially helps sizes_test
+- **Effort**: Port adjustMathstyle() from Perl — recursive walk of digested boxes
+- **Files**: tex_math.rs (add function), constructor afterDigest
 
-### Packet 2: Fix cd_test fontsize 16% vs 160%
-- **Root cause**: Arrow font scaling factor wrong (probably /10 instead of *10 or similar)
-- **Fix**: Find and fix the scaling calculation in amscd_sty.rs
-- **Impact**: Reduces cd_test diffs significantly
+### Packet 2: Implement rearrangeEqnarray afterConstruct
+- **Impact**: Fixes badeqnarray (151), eqnarray (727), split (2523), amsdisplay (1708)
+- **Effort**: Large — DOM manipulation converting _Capture_ to MathFork/MathBranch
+- **Files**: latex_ch7, base_xmath.rs, document.rs
 
-### Packet 3: Add \sideset macro definition (sideset_test)
-- **Root cause**: `\sideset` produces ERROR class="undefined"
-- **Fix**: Port \sideset from Perl amsmath.sty.ltxml
-- **Impact**: Unlocks sideset_test (currently entirely broken)
+### Packet 3: Implement \lxDeclare / math notation system
+- **Impact**: Fixes declare_test, simplemath_test, many parse tests (~20+)
+- **Effort**: Large — new math declaration infrastructure
+- **Files**: math_parser, latexml_sty.rs
 
 ### Expected outcome
-- matrix_test closer to passing (reversion fix)
-- cd_test diffs reduced
-- sideset_test partially working
+These are all multi-session tasks. Focus on Packet 1 first (most contained).

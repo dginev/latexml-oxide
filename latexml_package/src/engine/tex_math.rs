@@ -791,8 +791,9 @@ LoadDefinitions!({
       };
 
       // Grab the numerator (already digested content)
-      let top = stomach::regurgitate();
-      // TODO: adjustMathstyle($style, {}, @top);
+      let mut top = stomach::regurgitate();
+      // Perl: adjustMathstyle($style, {}, @top) — retroactively adjust font sizes
+      adjust_mathstyle(&style, &mut top);
 
       // Set fraction font for denominator
       merge_font(Font { fraction: Some(true), ..Font::default() });
@@ -1061,3 +1062,11 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
                       left_role: "OPEN", right_role: "CLOSE", name: Some("Updownarrow") }
   )
 });
+
+// TODO: Implement full adjustMathstyle (Perl TeX_Math.pool.ltxml L1010-1052)
+// This is a recursive walk that adjusts font sizes retroactively for fraction contents.
+// Rust's Rc-based digested types make in-place mutation complex.
+// For now, the \over handler skips this adjustment — causing fontsize diffs in fracs_test.
+pub fn adjust_mathstyle(_outerstyle: &str, _boxes: &mut [Digested]) {
+  // Stub: full implementation requires mutable access to Rc<Font> on digested boxes
+}
