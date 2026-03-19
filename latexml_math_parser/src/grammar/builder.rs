@@ -150,7 +150,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | singlevertbar expression singlevertbar => fenced
            // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
            | lbrace term punct term rbrace => fence
-           | lbrace term punct term punct term rbrace => fence;
+           | lbrace term punct term punct term rbrace => fence
+           // Perl: {a|b} conditional-set with VERTBAR separator
+           | lbrace expression singlevertbar expression rbrace => fence;
     factor += fenced_factor;
 
     // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
