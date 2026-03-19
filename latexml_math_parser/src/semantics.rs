@@ -499,6 +499,63 @@ pub fn speculative_prefix_apply(
     Meta::default(),
   )))
 }
+/// Perl IntFactor: diffd ATOM_OR_ID/UNKNOWN => Apply(DIFFOP(d), var)
+/// Matches `d` followed by a factor. The semantic action checks that the first
+/// token's text content is literally "d" (case-sensitive). If not, prunes the parse.
+/// When matched, annotates the `d` token with role=DIFFOP, meaning=differential-d.
+pub fn diffop_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Check that the first token is literally "d"
+  let is_d = args.first().and_then(|a| a.as_ref()).map_or(false, |xm| {
+    match xm {
+      XM::Token(props, _) => props.content.as_deref() == Some("d"),
+      XM::Lexeme(lex, _) => lex.split(':').nth(1).map_or(false, |v| v == "d"),
+      _ => false,
+    }
+  });
+  if !is_d {
+    return Err("diffop_apply: first token is not 'd', pruning parse".into());
+  }
+  // Perl: diffd is only recognized inside IntOpArgFactors (integral context).
+  // Check if there's an INTOP token in the lexeme stream.
+  let has_intop = ctxt.nodes.iter().any(|n| {
+    n.get_attribute("role").as_deref() == Some("INTOP")
+  });
+  if !has_intop {
+    return Err("diffop_apply: no INTOP in context, pruning parse".into());
+  }
+  unp!(args => diffd, arg1);
+  // Annotate the d token: role=DIFFOP, meaning=differential-d
+  let annotated = match diffd {
+    Some(XM::Token(mut props, meta)) => {
+      props.role = Some(Cow::Borrowed("DIFFOP"));
+      props.meaning = Some(Cow::Borrowed("differential-d"));
+      Some(XM::Token(props, meta))
+    },
+    Some(XM::Lexeme(lex, meta)) => {
+      // Lexeme from Marpa: create a new Token with DIFFOP annotation
+      // Preserve the original lexeme reference for into_xmath node lookup
+      let mut props = XProps::default();
+      props.content = Some(Cow::Borrowed("d"));
+      props.role = Some(Cow::Borrowed("DIFFOP"));
+      props.meaning = Some(Cow::Borrowed("differential-d"));
+      // Store original lexeme id in _xmkey for node reference
+      props.xmkey = lex.split(':').nth(2).map(|s| Cow::Owned(s.to_string()));
+      Some(XM::Token(props, meta))
+    },
+    other => other,
+  };
+  Ok(Some(XM::Apply(
+    annotated.into(),
+    Args(vec![arg1]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
 /// APPLYOP explicit application: operator APPLYOP term => Apply(operator, term)
 /// The APPLYOP token is consumed/discarded.
 pub fn prefix_apply_applyop(

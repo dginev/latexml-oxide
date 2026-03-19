@@ -162,6 +162,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // f(x) => f@(x), g(a+b) => g@(a+b). Only active when MATHPARSER_SPECULATE is set.
     // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
     tight_term += unknown fenced_factor => speculative_prefix_apply;
+    // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
+    // Uses existing `unknown` terminal; semantic action checks text is literally "d".
+    // At factor level so it can appear as right operand of invisible_times.
+    factor += unknown factor_base => diffop_apply;
 
     // Script content
     postsubarg = start_postsubscript expression end_postsubscript => faux_wrap;
