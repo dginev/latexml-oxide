@@ -7,6 +7,7 @@ pub mod def_parser;
 pub mod dimension;
 pub mod float;
 pub mod font;
+pub mod pair;
 pub mod glue;
 pub mod ligature;
 pub mod local_assignments;

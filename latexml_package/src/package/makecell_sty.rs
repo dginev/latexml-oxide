@@ -38,8 +38,8 @@ LoadDefinitions!({
   DefMacro!("\\lx@diag@head{}{}",
     "{\\theadfont\\shortstack[#1]{#2}}");
 
-  // Full \diaghead: Perl uses OptionalPair for (x,y) slope which we don't have.
-  // The raw TeX \diaghead is already loaded; \lx@diag@head handles the shortstack.
-  // We just define the helper used by the Perl version's simplified path.
-  // The raw TeX \diaghead handles the actual layout.
+  // Full \diaghead: overrides raw TeX with simplified Perl-style version
+  // OptionalPair parameter reads (x,y) slope if present
+  DefMacro!("\\diaghead OptionalPair {}{}{}",
+    "\\lx@diag@head{r}{#3}\\lx@diag@head{l}{#4}");
 });

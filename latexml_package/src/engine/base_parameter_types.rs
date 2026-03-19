@@ -168,6 +168,39 @@ LoadDefinitions!({
   // Read a MuGlue (math)
   DefParameterType!(MuGlue, sub[_inner, _extra] { gullet::read_mu_glue()? });
 
+  // Read a Pair (x,y) — parenthesized, comma-separated pair of Float values.
+  // Perl: ReadPair in latex_constructs.pool.ltxml
+  // Returns ArgWrap::Pair if ( is found, ArgWrap::None otherwise (for Optional).
+  DefParameterType!(Pair, sub[_inner, _extra] {
+    use latexml_core::common::pair::Pair;
+    gullet::skip_spaces();
+    if gullet::if_next(T_OTHER!("("))? {
+      gullet::read_token()?; // consume (
+      gullet::skip_spaces();
+      let x = gullet::read_float()?;
+      gullet::skip_spaces();
+      // Skip comma separator
+      if let Some(tok) = gullet::read_token()? {
+        if tok.to_string() != "," {
+          gullet::unread_one(tok);
+        }
+      }
+      gullet::skip_spaces();
+      let y = gullet::read_float()?;
+      gullet::skip_spaces();
+      // Skip closing )
+      if let Some(tok) = gullet::read_token()? {
+        if tok.to_string() != ")" {
+          gullet::unread_one(tok);
+        }
+      }
+      gullet::skip_spaces();
+      Ok(ArgWrap::Pair(Pair::new(x, y)))
+    } else {
+      Ok(ArgWrap::None)
+    }
+  });
+
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument
   DefParameterType!(UntilBrace, sub[_inner, _extra] {
