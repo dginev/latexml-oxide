@@ -952,6 +952,35 @@ LoadDefinitions!({
         whatsit.set_property("xmkey", get_xmarg_id()?);
       }
       Ok(Vec::new())
+    },
+    reversion => sub[_whatsit, args] {
+      // Perl: reversion => sub { my ($whatsit, $kv, $body) = @_;
+      //   my $name = $kv->getValue('name');
+      //   ($name ? (T_CS('\begin'), T_BEGIN, Revert($name), T_END) : ()),
+      //   Revert($body),
+      //   ($name ? (T_CS('\end'), T_BEGIN, Revert($name), T_END) : ())); }
+      let mut name = String::new();
+      if let Some(d) = &args[0] {
+        if let DigestedData::KeyVals(ref kv) = d.data() {
+          name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
+        }
+      }
+      let body_rev = match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() };
+      let mut tks = Vec::new();
+      if !name.is_empty() {
+        tks.push(T_CS!("\\begin"));
+        tks.push(T_BEGIN!());
+        tks.extend(Explode!(&name));
+        tks.push(T_END!());
+      }
+      tks.extend(body_rev.unlist());
+      if !name.is_empty() {
+        tks.push(T_CS!("\\end"));
+        tks.push(T_BEGIN!());
+        tks.extend(Explode!(&name));
+        tks.push(T_END!());
+      }
+      Ok(Tokens::new(tks))
     }
   );
 
