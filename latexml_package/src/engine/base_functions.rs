@@ -573,7 +573,20 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
             .split_once(" plus")
             .or_else(|| width_str.split_once(" minus"))
             .map_or(width_str.as_str(), |(base, _)| base);
-          if let Ok(dim) = Dimension::from_str(base_dim_str) {
+          // Try parsing as Dimension (pt). If that fails, handle mu units
+          // by converting mu→pt (1mu = font_size/18).
+          let dim_opt = Dimension::from_str(base_dim_str).ok().or_else(|| {
+            if base_dim_str.ends_with("mu") {
+              let mu_str = base_dim_str.trim_end_matches("mu").trim();
+              mu_str.parse::<f64>().ok().map(|mu_val| {
+                let fs = state::lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+                Dimension::from_str(&format!("{}pt", mu_val * fs / 18.0)).unwrap_or_default()
+              })
+            } else {
+              None
+            }
+          });
+          if let Some(dim) = dim_opt {
             let spaces = super::tex_glue::dimension_to_spaces(dim);
             if !spaces.is_empty() {
               if let Ok(text_node) = Node::new_text(&spaces, &document.document) {

@@ -891,6 +891,8 @@ LoadDefinitions!({
       stored_map!("width" => length, "isSpace" => true)) });
 
   // MuGlue registers; TeXBook p.274
+  // NOTE: Perl stores these as Glue with "mu" parsed to pt internally,
+  // NOT as MuGlue. Changing to MuGlue causes width computation regressions.
   DefRegister!("\\thinmuskip", Glue!("3mu"));
   DefRegister!("\\medmuskip", Glue!("4mu plus 2mu minus 4mu"));
   DefRegister!("\\thickmuskip", Glue!("5mu plus 5mu"));
