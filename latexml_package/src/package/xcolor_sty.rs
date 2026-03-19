@@ -153,17 +153,21 @@ fn decode_color(expression: &str) -> Color {
   // Parse the base: optional - prefix, name, optional !mix
   let (name_part, mix_part, postfix) = parse_standard_expr(base_expr);
 
+  // Perl L328-331: lookup name (WITHOUT complement — complement applied after mix)
+  // Count and strip dash prefixes for later complement application
+  let stripped_name = name_part.trim_start_matches('-');
+  let dash_count = name_part.len() - stripped_name.len();
+
   let mut color = if let Some(pf) = &postfix {
     if pf.starts_with("!![") {
-      // Index into color series: foo!![n]
       let n_str = pf.trim_start_matches("!![").trim_end_matches(']');
       let n: usize = n_str.parse().unwrap_or(0);
-      index_color_series(&name_part, n)
+      index_color_series(stripped_name, n)
     } else {
-      lookup_xcolor(&name_part)
+      lookup_color_obj(stripped_name)
     }
   } else {
-    lookup_xcolor(&name_part)
+    lookup_color_obj(stripped_name)
   };
 
   // Apply blend from state
@@ -181,6 +185,11 @@ fn decode_color(expression: &str) -> Color {
   // Apply mix expressions: !pct!name...
   if !full_mix.is_empty() {
     color = apply_mix_expr(color, &full_mix);
+  }
+
+  // Perl L343: complement applied AFTER mix, not before
+  if dash_count % 2 == 1 {
+    color = color.complement();
   }
 
   // Handle postfix stepping: !!+ or !!++
