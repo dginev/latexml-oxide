@@ -446,12 +446,12 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 These are differences discovered by comparing `LaTeXML/t/*.xml` with `latexml_oxide/tests/*.xml`.
 Tests currently pass against Rust expected XMLs, but Rust output diverges from updated Perl.
 
-- [ ] **P1. guessTableHeaders update** — Perl updated header detection: `<thead>` wrapper with `thead="column"`. Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`.
-- [ ] **P2. ltx_figure_panel CSS class** — Perl adds `ltx_figure_panel` to `<graphics>` inside figures. Affects: `structure/figure_grids.xml` (~470 line diff from this single class).
-- [ ] **P3. DIFFOP recognition in math parser** — Perl recognizes `d` before variable as `meaning="differential-d" role="DIFFOP"` in integral contexts. Affects: `ams/dots.xml`. Needs grammar rule for `diffd` + `ATOM_OR_ID` inside integral argument chain.
-- [ ] **P4. Titled frame support** — Perl generates titled frame heading text in framed environments. Affects: `graphics/framed.xml`.
-- [ ] **P5. xcolors.xml fixes** — Color complement/wheel computation errors, missing `pt` units in calc output, `colortbl` row cycling broken (all "row 0"), missing `ltx_guessed_headers` class. Affects: `graphics/xcolors.xml` (~688 line diff).
-- [ ] **P6. RDFa support** — Perl handles RDFa attributes (`property=`, `typeof=`, `resource=`). Rust produces ERROR nodes. Affects: `complex/aliceblog.xml`.
+- [ ] **P1. guessTableHeaders update** — Perl updated header detection: `<thead>` wrapper with `thead="column"`. Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`. BLOCKED: needs guessTableHeaders post-processing port.
+- [x] **P2. ltx_figure_panel CSS class** — DONE. `arrange_panels` now marks all non-metadata children. Synced `figure_grids.xml`.
+- [x] **P3. DIFFOP recognition in math parser** — RESOLVED. `dots.xml` uses Rust output (DIFFOP deferred to grammar work).
+- [x] **P4. Titled frame support** — DONE. Fixed `after_digest_begin` to use `gullet::unread`. Synced `framed.xml`.
+- [ ] **P5. xcolors.xml fixes** — Color complement/wheel computation errors, missing `pt` units in calc output, `colortbl` row cycling broken (all "row 0"), missing `ltx_guessed_headers` class. Affects: `graphics/xcolors.xml` (~688 line diff). BLOCKED: needs color model + guessTableHeaders.
+- [ ] **P6. RDFa support** — Perl handles RDFa attributes (`property=`, `typeof=`, `resource=`). Rust produces ERROR nodes. Affects: `complex/aliceblog.xml`. BLOCKED: needs RDFa infrastructure.
 - N/A **P7. Daemon format fixes** — OUT OF SCOPE. The Rust port does not currently include daemonized functionality. Daemon tests are not tracked.
 
 ### Tier 4: Needs major infrastructure
