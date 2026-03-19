@@ -147,6 +147,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbrace term punct term punct term rbrace => fence;
     factor += fenced_factor;
 
+    // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
+    // f(x) => f@(x), g(a+b) => g@(a+b). Ambiguous with invisible-times; Marpa resolves.
+    tight_term += unknown fenced_factor => prefix_apply;
 
     // Script content
     postsubarg = start_postsubscript expression end_postsubscript => faux_wrap;
