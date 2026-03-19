@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-19):** 221 pass, 0 fail, 89 ignored (310 total). Sessions 6-8: Grammar improvements (trigfunction, compound_operator, APPLYOP, formulae vs list). Infrastructure: adjustMathstyle, alignment glue fix, stmaryrd.sty port, Pair type, makecell.sty port, \lxDeclare fix. Session 8: formulae/list distinction (multirelations un-ignored), speculative_prefix_apply (f(x) only with MATHPARSER_SPECULATE), FontDirective Display fix. Diff reductions: fracs 87→0, supertabular 629→0, sizes 181→19.
+**Status (2026-03-19):** 230 pass, 0 fail, 89 ignored (319 total). Session 9: script_sizer proper font metrics (removed 0.8 hack, added \scriptspace, nominal fontinfo ratios), dimension_to_spaces floor() precedence fix, tabular strut fixes (isLaTeX flag, baselineskip not *1.5, Glue type handling, kround). Diff reductions: sizes 19→6.
 
 ### Completed items
 
@@ -408,7 +408,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
 - [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
 - [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
-- [ ] **9. sizes_test** (22_fonts) — 19 diff lines (was 313→181→19). Fixed: cleanup_math XPath, vbox/vtop h/d split, speculative_prefix_apply (was 181 due to g(x)→g@(x)). Remaining: dimension rounding (4), super/subscript widths (3), tabular zero dims + h/d split (6), NBSP→space (4), math spacing content (2).
+- [ ] **9. sizes_test** (22_fonts) — 6 diff lines (was 313→181→19→6). Fixed: script_sizer h/d (font metrics), dimension_to_spaces floor() bug, tabular strut (isLaTeX, baselineskip, Glue type, kround). Remaining: super/subscript widths (3), halign zero dims (2), vtop width overflow (1).
 - [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
