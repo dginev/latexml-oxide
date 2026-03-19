@@ -27,6 +27,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "eTeX.pool" => engine::etex::load_definitions(),
     "pdfTeX.pool" => engine::pdftex::load_definitions(),
     "latexml.sty" => package::latexml_sty::load_definitions(),
+    "lxRDFa.sty" => package::lxrdfa_sty::load_definitions(),
     "marvosym.sty" => package::marvosym_sty::load_definitions(),
     "mathbbol.sty" => package::mathbbol_sty::load_definitions(),
     "aastex.cls" => package::aastex_cls::load_definitions(),

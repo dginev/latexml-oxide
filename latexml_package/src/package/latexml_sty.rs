@@ -146,4 +146,19 @@ LoadDefinitions!({
     }))),
     PrimitiveOptions::default(),
   )?;
+
+  // Perl latexml.sty L106-108: \URL[text]{href}
+  DefConstructor!("\\URL[] Verbatim",
+    "<ltx:ref href='#href'>?#1(#1)(#href)</ltx:ref>",
+    enter_horizontal => true,
+    properties => sub[_args] {
+      let href_str = _args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      Ok(stored_map!("href" => href_str))
+    }
+  );
+
+  // Perl latexml.sty L109-111
+  DefMacro!("\\XML", "\\textsc{xml}");
+  DefMacro!("\\SGML", "\\textsc{sgml}");
+  DefMacro!("\\HTML", "\\textsc{html}");
 });

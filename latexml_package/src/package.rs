@@ -71,6 +71,7 @@ pub mod latexml_sty;
 pub mod latexsym_sty;
 pub mod listings_sty;
 pub mod longtable_sty;
+pub mod lxrdfa_sty;
 pub mod makecell_sty;
 pub mod marvosym_sty;
 pub mod supertabular_sty;
