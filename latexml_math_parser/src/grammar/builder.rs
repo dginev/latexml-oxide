@@ -99,6 +99,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     modifier_expression = modifierop expression => prefix_apply;
     formula = expression
       | formula relop expression => infix_relation
+      | formula relop => postfix_relop
       | formula arrow expression => infix_relation
       | arrow expression => prefix_arrow_apply
       | modifier_expression;

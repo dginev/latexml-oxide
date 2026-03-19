@@ -1023,6 +1023,54 @@ fn absent() -> XM {
 }
 
 /// Prefix arrow: `→ expr` becomes `Apply(→, absent, expr)` — matching Perl's `AnyOp Expression`
+/// Perl: formula relop (no right operand) — trailing relop with implied absent right
+/// e.g. `y < 2 <` → `multirelation(y, <, 2, <, absent)`
+pub fn postfix_relop(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, relop);
+  let right = Some(absent());
+  // Reuse infix_relation logic: if left is already a relation, convert to multirelation
+  let mut left = left;
+  if let Some(XM::Apply(ref op, ref mut left_args, _, _)) = left {
+    if let XM::Token(ref tok, _) = *op.0 {
+      if tok.meaning == Some(Cow::Borrowed("multirelation")) {
+        left_args.0.push(relop);
+        left_args.0.push(right);
+        return Ok(left);
+      }
+    }
+    if let XM::Lexeme(ref lex, _) = *op.0 {
+      if lex.split(':').next().unwrap().contains("RELOP") {
+        let multirel_tok = XProps {
+          meaning: Some(Cow::Borrowed("multirelation")),
+          ..XProps::default()
+        };
+        let mut drained = left_args.0.drain(..);
+        let l1 = drained.next().unwrap();
+        let l2 = drained.next().unwrap();
+        let moved_op = (*op.0).clone();
+        return Ok(Some(XM::Apply(
+          multirel_tok.into(),
+          Args(vec![l1, Some(moved_op), l2, relop, right]),
+          XProps::default(),
+          Meta::default(),
+        )));
+      }
+    }
+  }
+  // Simple case: just apply relop to left and absent
+  Ok(Some(XM::Apply(
+    relop.into(),
+    Args(vec![left, right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 /// Perl: METARELOP Formula — prefix metarelop with implied absent left operand
 /// e.g. `\vdash x = 0` → `absent proves (x = 0)`
 pub fn prefix_metarelop_apply(
