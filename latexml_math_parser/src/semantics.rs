@@ -515,6 +515,13 @@ pub fn fenced(
       XProps::default(),
       Meta::default(),
     )))
+  } else if op_name == "delimited-{}" {
+    // Perl enclose1: {expr} => set
+    let op = XProps {
+      meaning: Some(Cow::Borrowed("set")),
+      ..XProps::default()
+    };
+    interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
   } else if op_name == "delimited-||" {
     let op = XProps {
       meaning: Some(Cow::Borrowed("absolute-value")),

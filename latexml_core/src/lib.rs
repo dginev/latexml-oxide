@@ -334,49 +334,37 @@ pub trait BoxOps: Object {
       // _showsize($$props{width} || $$props{cached_width}, $$props{height}
       // || $$props{cached_height}, $$props{depth} || $$props{cached_depth})     . "\n   Of " .
       // ToString($self)) if $LaTeXML::DEBUG{size};
+      // Helper: extract a Dimension from a Stored value.
+      // Handles Dimension directly, plus Glue/MuGlue/MuDimension by extracting the base value.
+      // MuGlue/MuDimension values are in scaled mu (1mu = font_size/18);
+      // convert to scaled pt using the current font size.
+      fn stored_to_dim(s: Option<&Stored>) -> Option<Dimension> {
+        match s {
+          Some(Stored::Dimension(d)) => Some(*d),
+          Some(Stored::Glue(g)) => Some(Dimension::new(g.value_of())),
+          Some(Stored::MuGlue(g)) => {
+            // Convert mu to pt: 1mu = font_size / 18
+            let fs = crate::state::lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+            let mu_val = g.value_of() as f64;
+            let pt_scaled = mu_val * fs / 18.0;
+            Some(Dimension::new(pt_scaled as i64))
+          },
+          Some(Stored::MuDimension(d)) => {
+            let fs = crate::state::lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+            let mu_val = d.value_of() as f64;
+            let pt_scaled = mu_val * fs / 18.0;
+            Some(Dimension::new(pt_scaled as i64))
+          },
+          _ => None,
+        }
+      }
       Ok((
-        match width {
-          Some(Stored::Dimension(w)) => *w,
-          _ => match cached_width {
-            Some(Stored::Dimension(w)) => *w,
-            _ => Dimension::default(),
-          },
-        },
-        match height {
-          Some(Stored::Dimension(h)) => *h,
-          _ => match cached_height {
-            Some(Stored::Dimension(h)) => *h,
-            _ => Dimension::default(),
-          },
-        },
-        match depth {
-          Some(Stored::Dimension(d)) => *d,
-          _ => match cached_depth {
-            Some(Stored::Dimension(d)) => *d,
-            _ => Dimension::default(),
-          },
-        },
-        match cached_width {
-          Some(Stored::Dimension(w)) => *w,
-          _ => match width {
-            Some(Stored::Dimension(w)) => *w,
-            _ => Dimension::default(),
-          },
-        },
-        match cached_height {
-          Some(Stored::Dimension(h)) => *h,
-          _ => match height {
-            Some(Stored::Dimension(h)) => *h,
-            _ => Dimension::default(),
-          },
-        },
-        match cached_depth {
-          Some(Stored::Dimension(d)) => *d,
-          _ => match depth {
-            Some(Stored::Dimension(d)) => *d,
-            _ => Dimension::default(),
-          },
-        },
+        stored_to_dim(width).unwrap_or_else(|| stored_to_dim(cached_width).unwrap_or_default()),
+        stored_to_dim(height).unwrap_or_else(|| stored_to_dim(cached_height).unwrap_or_default()),
+        stored_to_dim(depth).unwrap_or_else(|| stored_to_dim(cached_depth).unwrap_or_default()),
+        stored_to_dim(cached_width).unwrap_or_else(|| stored_to_dim(width).unwrap_or_default()),
+        stored_to_dim(cached_height).unwrap_or_else(|| stored_to_dim(height).unwrap_or_default()),
+        stored_to_dim(cached_depth).unwrap_or_else(|| stored_to_dim(depth).unwrap_or_default()),
       ))
     })
   }
