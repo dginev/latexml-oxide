@@ -154,7 +154,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbrace term punct term rbrace => fence
            | lbrace term punct term punct term rbrace => fence
            // Perl: {a|b} conditional-set with VERTBAR separator
-           | lbrace expression singlevertbar expression rbrace => fence;
+           | lbrace formula singlevertbar formula rbrace => fence
+           | lbrace formula metarelop formula rbrace => fence;
     factor += fenced_factor;
 
     // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
