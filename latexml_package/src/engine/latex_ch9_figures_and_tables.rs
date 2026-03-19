@@ -48,9 +48,35 @@ pub fn after_float(whatsit: &mut Whatsit) {
 /// When a figure/table/float has 2+ child figure/table/float elements (panels),
 /// add the ltx_figure_panel class to each panel.
 fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Result<()> {
-  let figure_qname = arena::pin_static("ltx:figure");
-  let table_qname = arena::pin_static("ltx:table");
-  let float_qname = arena::pin_static("ltx:float");
+  // Perl: arrange_panels_and_breaks (latex_constructs L3286-3406)
+  // Simplified: we mark panel children with ltx_figure_panel class
+  // but skip the full break-insertion / width-based row-splitting logic.
+  //
+  // panel_break_names (Perl L3302-3307): elements that are NOT panels.
+  // Includes: ltx:break, Caption class (caption, toccaption),
+  // SectionalFrontMatter class (title, toctitle, subtitle, creator, contact, date,
+  // tags, classification, acknowledgements), Meta class (resource, navigation, etc.)
+  let is_panel_break = |qname: arena::SymStr| -> bool {
+    arena::with(qname, |name| {
+      matches!(
+        name,
+        "ltx:break"
+          | "ltx:caption"
+          | "ltx:toccaption"
+          | "ltx:title"
+          | "ltx:toctitle"
+          | "ltx:subtitle"
+          | "ltx:creator"
+          | "ltx:contact"
+          | "ltx:date"
+          | "ltx:tags"
+          | "ltx:classification"
+          | "ltx:acknowledgements"
+          | "ltx:resource"
+          | "ltx:navigation"
+      )
+    })
+  };
   let note_qname = arena::pin_static("ltx:note");
   let caption_qname = arena::pin_static("ltx:caption");
   let mut panels: Vec<libxml::tree::Node> = Vec::new();
@@ -58,12 +84,16 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
   let mut caption: Option<libxml::tree::Node> = None;
   for child in node.get_child_elements() {
     let qname = latexml_core::document::get_node_qname(&child);
-    if qname == figure_qname || qname == table_qname || qname == float_qname {
-      panels.push(child);
-    } else if qname == note_qname {
+    if qname == note_qname {
       notes.push(child);
-    } else if qname == caption_qname {
-      caption = Some(child);
+    } else if is_panel_break(qname) {
+      if qname == caption_qname {
+        caption = Some(child);
+      }
+    } else {
+      // Perl L3342-3390: non-break children are potential panels
+      // (Perl also checks child_width > 0 at L3390, but we skip width checks)
+      panels.push(child);
     }
   }
   // Perl BuildPanelsAndID L3317-3324: move top-level ltx:note to nearest caption
@@ -73,6 +103,7 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
       cap.add_child(&mut note).ok();
     }
   }
+  // Perl L3403-3405: only add class if >1 panel (complex figure)
   if panels.len() >= 2 {
     for mut panel in panels {
       document.add_class(&mut panel, "ltx_figure_panel")?;
