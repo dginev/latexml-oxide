@@ -976,10 +976,10 @@ pub fn dimension_to_spaces<T: NumericOps>(dimen: T) -> Cow<'static, str> {
   else if ems < 0.40 {
     Cow::Borrowed("\u{2004}")
   }
-  // 3em (same as nbsp?)
+  // 3em — Perl uses U+2003 (EM SPACE) for kern/hskip spacing
   else {
-    let n = (ems + 0.3 / 0.333).trunc() as usize; // 10pts per space...?
-    Cow::Owned("\u{00A0}".repeat(n))
+    let n = (ems + 0.3 / 0.333).trunc() as usize;
+    Cow::Owned("\u{2003}".repeat(n))
   }
 }
 
