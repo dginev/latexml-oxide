@@ -448,7 +448,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 
 - [ ] **P1. guessTableHeaders update** — Perl updated header detection: `<thead>` wrapper with `thead="column"`. Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`. BLOCKED: needs guessTableHeaders post-processing port.
 - [x] **P2. ltx_figure_panel CSS class** — DONE. `arrange_panels` now marks all non-metadata children. Synced `figure_grids.xml`.
-- [x] **P3. DIFFOP recognition in math parser** — RESOLVED. `dots.xml` uses Rust output (DIFFOP deferred to grammar work).
+- [x] **P3. DIFFOP recognition in math parser** — DONE. Grammar rule `factor += unknown factor_base => diffop_apply` with INTOP context check. Synced `dots.xml`.
 - [x] **P4. Titled frame support** — DONE. Fixed `after_digest_begin` to use `gullet::unread`. Synced `framed.xml`.
 - [ ] **P5. xcolors.xml fixes** — Color complement/wheel computation errors, missing `pt` units in calc output, `colortbl` row cycling broken (all "row 0"), missing `ltx_guessed_headers` class. Affects: `graphics/xcolors.xml` (~688 line diff). BLOCKED: needs color model + guessTableHeaders.
 - [ ] **P6. RDFa support** — Perl handles RDFa attributes (`property=`, `typeof=`, `resource=`). Rust produces ERROR nodes. Affects: `complex/aliceblog.xml`. BLOCKED: needs RDFa infrastructure.
