@@ -32,7 +32,6 @@ fn halignatt_test() {
 }
 
 #[test]
-#[ignore] // tags diffs: supertabular caption
 fn supertabular_test() {
   latexml_test_single("tests/alignment/supertabular.tex", "supertabular", DIR, None, None);
 }

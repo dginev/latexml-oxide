@@ -3508,9 +3508,12 @@ fn trim_node_right_whitespace(node: &Node) -> Result<()> {
     match last_child.get_type() {
       Some(NodeType::TextNode) => {
         let content = last_child.get_content();
-        // Trim trailing ASCII whitespace and nbsp (U+00A0).
-        let trimmed_content =
-          content.trim_end_matches(|c: char| c.is_ascii_whitespace() || c == '\u{00A0}');
+        // Perl: s/\s+$// — but we can't trim all Unicode whitespace because some
+        // tests have significant thin spaces (U+2009) from DimensionToSpaces.
+        // Trim: ASCII whitespace, nbsp (U+00A0), em-space (U+2003), en-space (U+2002).
+        let trimmed_content = content.trim_end_matches(|c: char| {
+          c.is_ascii_whitespace() || c == '\u{00A0}' || c == '\u{2003}' || c == '\u{2002}'
+        });
         if !content.is_empty() && (trimmed_content != content) {
           last_child.set_content(trimmed_content)?;
         }
