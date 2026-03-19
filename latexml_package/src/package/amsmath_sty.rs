@@ -285,7 +285,24 @@ LoadDefinitions!({
   // Perl: amsmath.sty.ltxml lines 921-950
   DefConstructor!(
     "\\lx@long@arrow DefToken {} OptionalInScriptStyle InScriptStyle",
-    r###"?#3(<ltx:XMApp role='ARROW'><ltx:XMWrap role='UNDERACCENT'>#3</ltx:XMWrap><ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp></ltx:XMApp>)(<ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp>)"###
+    r###"?#3(<ltx:XMApp role='ARROW'><ltx:XMWrap role='UNDERACCENT'>#3</ltx:XMWrap><ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp></ltx:XMApp>)(<ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp>)"###,
+    reversion => sub[_whatsit, args] {
+      // Perl: ($cs, ($under ? (T_OTHER('['), Revert($under), T_OTHER(']')) : ()), T_BEGIN, Revert($over), T_END)
+      let cs_rev = match &args[0] { Some(inner) => inner.revert()?, None => Tokens!() };
+      let under_rev = match &args[2] { Some(inner) => inner.revert()?, None => Tokens!() };
+      let over_rev = match &args[3] { Some(inner) => inner.revert()?, None => Tokens!() };
+      let mut tks = Vec::new();
+      tks.extend(cs_rev.unlist());
+      if !under_rev.is_empty() {
+        tks.push(T_OTHER!("["));
+        tks.extend(under_rev.unlist());
+        tks.push(T_OTHER!("]"));
+      }
+      tks.push(T_BEGIN!());
+      tks.extend(over_rev.unlist());
+      tks.push(T_END!());
+      Ok(Tokens::new(tks))
+    }
   );
   DefMacro!("\\xrightarrow", "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}");
   DefMacro!("\\xleftarrow", "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}");
