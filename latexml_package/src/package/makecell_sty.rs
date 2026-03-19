@@ -4,7 +4,7 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: makecell.sty.ltxml
   // Load raw TeX first
-  InputDefinitions!("makecell", noltxml => true);
+  InputDefinitions!("makecell", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Mark thead et.al as headers (row & column)
   DefPrimitive!("\\lx@makecell@head", sub[_args] {
@@ -25,10 +25,21 @@ LoadDefinitions!({
   // Since we use \thead, disable guessing
   AssignValue!("GUESS_TABULAR_HEADERS" => false, Scope::Global);
 
-  // \rothead: override to prevent infinite recursion from raw TeX
-  // Simplify: just delegate to \thead with the content
+  // \rothead: override to prevent infinite recursion from nested \thead
+  // in raw TeX definition. Simplified: delegate to \thead with content.
   DefMacro!("\\rothead[]{}",
     "\\thead[#1]{#2}");
   DefMacro!("\\rotcell[]{}",
     "\\makecell[#1]{#2}");
+
+  // \diaghead (slopex,slopey) {width}{item A}{item B}
+  // Perl: arranges args in a table with appropriate alignment based on slope.
+  // Simplified: uses \shortstack for each head item (matching Perl's lx@diag@head)
+  DefMacro!("\\lx@diag@head{}{}",
+    "{\\theadfont\\shortstack[#1]{#2}}");
+
+  // Full \diaghead: Perl uses OptionalPair for (x,y) slope which we don't have.
+  // The raw TeX \diaghead is already loaded; \lx@diag@head handles the shortstack.
+  // We just define the helper used by the Perl version's simplified path.
+  // The raw TeX \diaghead handles the actual layout.
 });
