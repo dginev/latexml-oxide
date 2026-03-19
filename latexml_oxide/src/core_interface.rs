@@ -255,6 +255,10 @@ impl DigestionAPI for Core {
       note_end("Rewriting");
     }
 
+    // Apply \lxDeclare declarations: set roles/names/meanings on matching XMTok elements.
+    // Must run BEFORE math parsing so the parser sees the updated roles.
+    apply_lx_declarations(&mut document);
+
     if !state::get_nomathparse_flag() {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
@@ -376,5 +380,55 @@ impl DigestionAPI for Core {
     let list = self.digest_internal()?;
     note_end(&s!("Digesting {} {}", mode, name));
     Ok(list)
+  }
+}
+
+/// Apply \lxDeclare declarations to the document.
+/// Simple fast-path: matches single-token patterns in XMTok elements
+/// and sets role/name/meaning attributes.
+fn apply_lx_declarations(document: &mut Document) {
+  let decls_str = match state::lookup_value("LATEXML_DECLARATIONS") {
+    Some(Stored::String(s)) => arena::with(s, |r| r.to_string()),
+    _ => return,
+  };
+  if decls_str.is_empty() {
+    return;
+  }
+
+  // Parse declarations: "token_text\trole\tname\tmeaning" per line
+  let declarations: Vec<(&str, &str, &str, &str)> = decls_str
+    .lines()
+    .filter_map(|line| {
+      let parts: Vec<&str> = line.splitn(4, '\t').collect();
+      if parts.len() == 4 {
+        Some((parts[0], parts[1], parts[2], parts[3]))
+      } else {
+        None
+      }
+    })
+    .collect();
+
+  if declarations.is_empty() {
+    return;
+  }
+
+  // Find all XMTok elements in the document and apply matching declarations
+  let xmtoks = document.findnodes("descendant-or-self::ltx:XMTok", None);
+  for mut tok in xmtoks {
+    let content = tok.get_content();
+    for &(pattern, role, name, meaning) in &declarations {
+      if content == pattern {
+        if !role.is_empty() {
+          let _ = tok.set_attribute("role", role);
+        }
+        if !name.is_empty() {
+          let _ = tok.set_attribute("name", name);
+        }
+        if !meaning.is_empty() {
+          let _ = tok.set_attribute("meaning", meaning);
+        }
+        break; // First matching declaration wins
+      }
+    }
   }
 }

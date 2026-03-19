@@ -62,6 +62,72 @@ LoadDefinitions!({
 
   DefConditional!("\\iflatexml", { true });
 
+  // ======================================================================
+  // Define the Declare keyval family for \lxDeclare
+  DefKeyVal!("Declare", "role", "");
+  DefKeyVal!("Declare", "name", "");
+  DefKeyVal!("Declare", "meaning", "");
+  DefKeyVal!("Declare", "tag", "");
+  DefKeyVal!("Declare", "scope", "");
+  DefKeyVal!("Declare", "description", "");
+  DefKeyVal!("Declare", "nowrap", "");
+  DefKeyVal!("Declare", "label", "");
+  DefKeyVal!("Declare", "trace", "");
+
+  // \lxDeclare — declare semantic roles for math tokens
+  // Perl: latexml.sty.ltxml lines 462-512
+  // Fast-path implementation: handles simple single-token patterns only.
+  // Complex patterns with \WildCard are NOT yet supported.
+  {
+    use latexml_core::common::def_parser::parse_parameters;
+    let lxdeclare_params = parse_parameters(
+      "OptionalKeyVals:Declare Undigested", &T_CS!("\\lxDeclare"), false)?;
+    def_primitive(
+    T_CS!("\\lxDeclare"),
+    lxdeclare_params,
+    Some(PrimitiveBody::Closure(Rc::new(|args| {
+      use latexml_core::definition::argument::ArgWrap;
+
+      // Extract role/name/meaning from KeyVals arg
+      let mut role = String::new();
+      let mut name_val = String::new();
+      let mut meaning = String::new();
+      if let ArgWrap::KV(ref kv) = args[0] {
+        if let Some(v) = kv.get_value("role") { role = v.to_string(); }
+        if let Some(v) = kv.get_value("name") { name_val = v.to_string(); }
+        if let Some(v) = kv.get_value("meaning") { meaning = v.to_string(); }
+      }
+
+      // Extract the token text from the body (arg[1] is Tokens)
+      let body_text = match &args[1] {
+        ArgWrap::Tokens(toks) => {
+          let s = toks.to_string();
+          s.trim_matches('$').trim().to_string()
+        },
+        _ => String::new(),
+      };
+
+      if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
+        // Store as "token_text\trole\tname\tmeaning" in LATEXML_DECLARATIONS
+        let decl = format!("{}\t{}\t{}\t{}", body_text, role, name_val, meaning);
+        let key = "LATEXML_DECLARATIONS";
+        let mut decls: Vec<String> = match lookup_value(key) {
+          Some(Stored::String(s)) => {
+            let s_str = arena::with(s, |r| r.to_string());
+            if s_str.is_empty() { Vec::new() } else { s_str.split('\n').map(String::from).collect() }
+          },
+          _ => Vec::new(),
+        };
+        decls.push(decl);
+        assign_value(key, Stored::String(arena::pin(decls.join("\n"))), Some(Scope::Global));
+      }
+
+      Ok(Vec::new())
+    }))),
+    PrimitiveOptions::default(),
+  )?;
+  }
+
   // Perl: DefMacroI('\lxTableRowHead', undef, sub { $alignment->currentColumn->{thead}{row} = 1 })
   // Marks the current column as a row header in alignment/tabular contexts.
   // Usage: >{\lxTableRowHead} in column spec with array.sty

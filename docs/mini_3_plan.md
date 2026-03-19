@@ -1,25 +1,23 @@
-# Mini Plan: Round 9
+# Mini Plan: Round 10
 
-## Status: 225 pass, 0 fail, 94 ignored
+## Status: 226 pass, 0 fail, 93 ignored
 
 ## Three most connected work packets
 
-### Packet 1: Fix CD arrow fontsize "16%" → "160%" (cd_test)
-- **Root cause**: fontsize calculation divides by 10 somewhere, producing "16%" instead of "160%"
-- **Fix**: Find the scaling factor in amscd_sty.rs and fix
-- **Impact**: Many of cd_test's 177 diffs trace to this
+### Packet 1: Implement \lxDeclare fast-path (simple token patterns)
+- **Impact**: Unblocks ~10 parse tests that use `\lxDeclare[role=X]{$token$}`
+- **Approach**: Parse the pattern, if it's a single math token, create a simple
+  document rewrite rule that sets attributes on matching XMTok elements
+- **Skip**: Complex wildcards, scope, domToXPath
+- **Files**: latexml_sty.rs (constructor), rewrite.rs (attributes operator)
 
-### Packet 2: Fix sizes_test thin/medium/thick spaces + rounding (19 diffs)
-- **Root cause**: Space characters not converting to Unicode, dimension rounding, tabular sizing
-- **Fix**: Known issue from prior sessions — check space char emission and dimension formatting
-- **Impact**: sizes_test very close to passing (19 diffs)
+### Packet 2: Apply rewrite rules during finalization
+- **Impact**: Makes Packet 1 actually work
+- **Files**: core_interface.rs (call rewrite rules after finalize)
 
-### Packet 3: Investigate subordinate_lists_test VERTBAR→MODIFIEROP (14 diffs)
-- **Root cause**: `|` not morphed to MODIFIEROP with meaning="conditional"
-- **Fix**: Grammar rule or morphing logic for VERTBAR in conditional context
-- **Impact**: subordinate_lists_test (14 diffs)
+### Packet 3: Sync test .tex files from Perl for unblocked tests
+- **Impact**: Several tests have modified .tex files; need to sync from Perl
+- **Files**: Various test .tex files
 
 ### Expected outcome
-- sizes_test close to passing if rounding/space fixes land
-- cd_test diffs reduced significantly
-- subordinate_lists_test may pass with VERTBAR morphing
+- +5-10 passing tests from parse suite
