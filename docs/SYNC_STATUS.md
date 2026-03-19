@@ -232,8 +232,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-18)
 
-**Current totals: 217 pass, 0 fail, 62 ignored test functions (279 total)**
-**Coverage: 79% pass rate (217/274 non-permanent-ignore tests)**
+**Current totals: 221 pass, 0 fail, 98 ignored test functions (319 total)**
+**Coverage: 70% pass rate (221/314 non-permanent-ignore tests)**
+*Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
 **Recent infrastructure fixes (2026-03-18, session 5):**
 - **Equation numbering tags**: Row properties changed from `HashMap<String, String>` to `HashMap<String, Stored>`, enabling `Stored::Digested` tags to propagate through alignment absorption. eqnarray equations now have `<tags>` elements matching Perl.
