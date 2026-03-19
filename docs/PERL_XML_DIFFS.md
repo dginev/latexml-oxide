@@ -73,7 +73,9 @@ Rust does not emit `%\n` (TeX comment-newline separator) in `tex=` attributes. D
 
 44. **`complex/aliceblog.xml`** — RDFa support missing. Perl has `<rdf>` elements, `property=`, `typeof=`, `resource=` attributes. Rust produces `<ERROR class="undefined"/>` nodes. (~88 line diff)
 
-## F. Daemon/format differences (low priority, post-processing)
+## F. Daemon/format differences (OUT OF SCOPE)
+
+The Rust port does not currently include daemonized functionality. Daemon tests are not tracked.
 
 45. **`daemon/fatals/fatal_100.xml`** — Dimension formatting: Rust "0.0pt" vs Perl "0".
 

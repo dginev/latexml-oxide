@@ -364,3 +364,14 @@ intentional design. See [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) for full 
 
 6. **`guessTableHeaders` heuristic** — Post-processing heuristic for table header
    detection can produce unexpected results on tables without intended headers.
+
+### 16. No Daemon Functionality
+
+**Decision:** The Rust port does not include daemonized (latexmls) functionality.
+
+**Rationale:** The daemon is a Perl-specific server architecture. The Rust port focuses on
+the core conversion pipeline (tokenizer → expander → digester → document builder → output).
+Daemon test XMLs in `LaTeXML/t/daemon/` are not tracked or synced.
+
+**Impact:** 7 daemon format test XMLs have known differences (lang attributes, MathML
+namespace declarations, Content-Type casing, logo styling) that are not being addressed.

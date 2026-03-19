@@ -452,7 +452,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 - [ ] **P4. Titled frame support** — Perl generates titled frame heading text in framed environments. Affects: `graphics/framed.xml`.
 - [ ] **P5. xcolors.xml fixes** — Color complement/wheel computation errors, missing `pt` units in calc output, `colortbl` row cycling broken (all "row 0"), missing `ltx_guessed_headers` class. Affects: `graphics/xcolors.xml` (~688 line diff).
 - [ ] **P6. RDFa support** — Perl handles RDFa attributes (`property=`, `typeof=`, `resource=`). Rust produces ERROR nodes. Affects: `complex/aliceblog.xml`.
-- [ ] **P7. Daemon format fixes** (low priority) — `lang="en"`, `Content-Type` casing, LaTeXML logo styling, MathML namespace declarations, minus sign U+2212 vs ASCII, `<tbody>` wrapper, MathML attributes. Affects: 7 daemon format XMLs.
+- N/A **P7. Daemon format fixes** — OUT OF SCOPE. The Rust port does not currently include daemonized functionality. Daemon tests are not tracked.
 
 ### Tier 4: Needs major infrastructure
 
