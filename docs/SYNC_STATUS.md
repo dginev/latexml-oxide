@@ -230,10 +230,10 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-18)
+## Test Suite Status (2026-03-19)
 
-**Current totals: 221 pass, 0 fail, 98 ignored test functions (319 total)**
-**Coverage: 70% pass rate (221/314 non-permanent-ignore tests)**
+**Current totals: 227 pass, 0 fail, 92 ignored test functions (319 total)**
+**Coverage: 72% pass rate (227/314 non-permanent-ignore tests)**
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
 **Recent infrastructure fixes (2026-03-18, session 5):**
@@ -377,7 +377,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-18):** 217 pass, 0 fail, 62 ignored (279 total). Session 4 gains: wasysym (unreferenced XMTok ids), colors (\pagecolor reversion), amscd.sty binding ported, MathFork tex= attribute, Box::get_body returns self, cd_test panic fix. Equation numbering (tags) for eqnarray: identified blocker — alignment Row properties use HashMap<String,String>, can't store Digested tags. Needs Row type change.
+**Status (2026-03-19):** 227 pass, 0 fail, 92 ignored (319 total). Session 6 gains: \lxDeclare parsing fix (init_flag), trigfunction grammar rule, compound_operator for OPERATOR composition, APPLYOP handling, factor_base applyop rule. Grammar: function/trigfunction now take tight_term arguments (not just factor) so \sin xy → sin(x*y).
 
 ### Completed items
 
