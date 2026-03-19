@@ -1063,10 +1063,151 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
   )
 });
 
-// TODO: Implement full adjustMathstyle (Perl TeX_Math.pool.ltxml L1010-1052)
-// This is a recursive walk that adjusts font sizes retroactively for fraction contents.
-// Rust's Rc-based digested types make in-place mutation complex.
-// For now, the \over handler skips this adjustment — causing fontsize diffs in fracs_test.
-pub fn adjust_mathstyle(_outerstyle: &str, _boxes: &mut [Digested]) {
-  // Stub: full implementation requires mutable access to Rc<Font> on digested boxes
+/// Perl TeX_Math.pool.ltxml L1010-1052: adjustMathstyle
+/// Recursively adjusts font mathstyle on already-digested boxes.
+/// Called from \over handler to retroactively adjust numerator font sizes.
+pub fn adjust_mathstyle(outerstyle: &str, boxes: &[Digested]) {
+  let mut adjusted: std::collections::HashSet<usize> = std::collections::HashSet::new();
+  adjust_mathstyle_rec(outerstyle, &mut adjusted, boxes);
+}
+
+fn adjust_mathstyle_rec(
+  outerstyle: &str,
+  adjusted: &mut std::collections::HashSet<usize>,
+  boxes: &[Digested],
+) {
+  for box_item in boxes {
+    // Use the data pointer as identity for dedup (Rc::as_ptr on inner)
+    let ptr = box_item.data() as *const DigestedData as usize;
+    if adjusted.contains(&ptr) {
+      continue; // don't adjust twice (args AND props may share references)
+    }
+    adjusted.insert(ptr);
+    match box_item.data() {
+      DigestedData::TBox(b) => {
+        adjust_mathstyle_internal(outerstyle, &mut b.borrow_mut());
+      },
+      DigestedData::List(l) => {
+        let children: Vec<Digested> = l.borrow().boxes.clone();
+        adjust_mathstyle_rec(outerstyle, adjusted, &children);
+      },
+      DigestedData::Whatsit(w) => {
+        // Check for explicit_mathstyle / own_mathstyle properties
+        {
+          let wb = w.borrow();
+          if wb.get_property("explicit_mathstyle").is_some() {
+            return; // stop recursion entirely for explicit mathstyle
+          }
+          if wb.get_property("own_mathstyle").is_some() {
+            continue; // skip this whatsit but continue others
+          }
+        }
+        // Adjust the whatsit's font and get the new style for recursion
+        let style = {
+          let mut wb = w.borrow_mut();
+          adjust_mathstyle_internal_whatsit(outerstyle, &mut wb)
+            .unwrap_or_else(|| outerstyle.to_string())
+        };
+        // Recurse on args
+        let args: Vec<Digested> = w
+          .borrow()
+          .get_args()
+          .iter()
+          .filter_map(|a| a.clone())
+          .collect();
+        adjust_mathstyle_rec(&style, adjusted, &args);
+        // Recurse on property values that are Digested
+        let prop_digested: Vec<Digested> = w
+          .borrow()
+          .properties
+          .iter()
+          .filter_map(|(_k, v)| {
+            if let Stored::Digested(d) = v {
+              Some(d.clone())
+            } else {
+              None
+            }
+          })
+          .collect();
+        adjust_mathstyle_rec(&style, adjusted, &prop_digested);
+      },
+      _ => {},
+    }
+  }
+}
+
+/// Perl mathstyle_adjust_map: maps (outerstyle, origstyle) → newstyle
+fn mathstyle_adjust(outerstyle: &str, origstyle: &str) -> &'static str {
+  match (outerstyle, origstyle) {
+    ("display", "display") => "text",
+    ("display", "text") => "script",
+    ("display", "script") => "script",
+    ("display", "scriptscript") => "scriptscript",
+    ("text", "display") => "text",
+    ("text", "text") => "script",
+    ("text", "script") => "scriptscript",
+    ("text", "scriptscript") => "scriptscript",
+    ("script", "display") => "display",
+    ("script", "text") => "text",
+    ("script", "script") => "scriptscript",
+    ("script", "scriptscript") => "scriptscript",
+    ("scriptscript", "display") => "display",
+    ("scriptscript", "text") => "text",
+    ("scriptscript", "script") => "scriptscript",
+    ("scriptscript", "scriptscript") => "scriptscript",
+    _ => "display",
+  }
+}
+
+/// Adjust a TBox's font mathstyle using Font::merge to trigger size recalculation
+fn adjust_mathstyle_internal(outerstyle: &str, tbox: &mut Tbox) {
+  let origstyle_owned = tbox
+    .font
+    .mathstyle
+    .as_deref()
+    .unwrap_or("display")
+    .to_string();
+  let newstyle = mathstyle_adjust(outerstyle, &origstyle_owned);
+  if newstyle != origstyle_owned {
+    // Use Font::merge to trigger size recalculation via STYLE_SIZE mapping
+    let merge_font = Font {
+      mathstyle: Some(Cow::Borrowed(newstyle)),
+      ..Font::default()
+    };
+    let merged = tbox.font.merge(merge_font);
+    tbox.font = Rc::new(merged);
+  }
+}
+
+/// Adjust a Whatsit's font mathstyle, returning the new style if it had a mathstyle property
+fn adjust_mathstyle_internal_whatsit(outerstyle: &str, whatsit: &mut Whatsit) -> Option<String> {
+  if let Some(Stored::Font(ref font)) = whatsit.properties.get("font") {
+    let origstyle = font
+      .mathstyle
+      .as_deref()
+      .unwrap_or("display")
+      .to_string();
+    let newstyle = mathstyle_adjust(outerstyle, &origstyle);
+    if newstyle != origstyle {
+      let merge_font = Font {
+        mathstyle: Some(Cow::Borrowed(newstyle)),
+        ..Font::default()
+      };
+      let merged = font.merge(merge_font);
+      whatsit
+        .properties
+        .insert("font", Stored::Font(Rc::new(merged)));
+    }
+  }
+  // If whatsit has a recorded mathstyle property, adjust it too
+  if let Some(Stored::String(ms)) = whatsit.properties.get("mathstyle") {
+    let ms_str = arena::to_string(*ms);
+    let newstyle = mathstyle_adjust(outerstyle, &ms_str);
+    whatsit
+      .properties
+      .insert("mathstyle", Stored::String(arena::pin(newstyle)));
+    Some(newstyle.to_string())
+  } else {
+    None
+  }
 }
