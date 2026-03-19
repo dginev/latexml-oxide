@@ -49,6 +49,8 @@ pub struct XProps {
   pub stretchy:  Option<Cow<'static, str>>,
   /// marker for UNKNOWN tokens that may be used as functions (set by MATHPARSER_SPECULATE)
   pub possible_function: Option<Cow<'static, str>>,
+  /// math style (display, text, script, scriptscript) — preserved from constructor
+  pub mathstyle: Option<Cow<'static, str>>,
 }
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -96,6 +98,9 @@ impl XProps {
     }
     if let Some(pf) = self.possible_function.take() {
       attrs.insert(String::from("possibleFunction"), pf.into_owned());
+    }
+    if let Some(ms) = self.mathstyle.take() {
+      attrs.insert(String::from("mathstyle"), ms.into_owned());
     }
     let attrs_opt = if attrs.is_empty() { None } else { Some(attrs) };
     (self.content.take(), self.font.take(), attrs_opt)
@@ -909,6 +914,7 @@ impl From<&Node> for XProps {
 
     let stretchy = attrs.remove("stretchy").map(Cow::Owned);
     let possible_function = attrs.remove("possibleFunction").map(Cow::Owned);
+    let mathstyle = attrs.remove("mathstyle").map(Cow::Owned);
     XProps {
       content,
       role,
@@ -920,6 +926,7 @@ impl From<&Node> for XProps {
       fontref,
       stretchy,
       possible_function,
+      mathstyle,
       ..Default::default()
     }
   }

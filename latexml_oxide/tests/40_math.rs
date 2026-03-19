@@ -43,7 +43,6 @@ fn declare_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn fracs_test() {
   latexml_test_single("tests/math/fracs.tex", "fracs", DIR, None, None);
 }

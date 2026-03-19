@@ -263,6 +263,7 @@ impl DigestionAPI for Core {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
     }
+
     note_begin("Finalizing");
     document.finalize()?;
     note_end("Finalizing");
