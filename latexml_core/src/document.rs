@@ -3508,8 +3508,9 @@ fn trim_node_right_whitespace(node: &Node) -> Result<()> {
     match last_child.get_type() {
       Some(NodeType::TextNode) => {
         let content = last_child.get_content();
-        // Perl: s/\s+$// — but Perl \s without /u only matches ASCII whitespace
-        let trimmed_content = content.trim_end_matches(|c: char| c.is_ascii_whitespace());
+        // Trim trailing ASCII whitespace and nbsp (U+00A0).
+        let trimmed_content =
+          content.trim_end_matches(|c: char| c.is_ascii_whitespace() || c == '\u{00A0}');
         if !content.is_empty() && (trimmed_content != content) {
           last_child.set_content(trimmed_content)?;
         }
