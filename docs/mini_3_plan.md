@@ -68,6 +68,9 @@ require `latexmlpost` or unported packages.
 - `FontDef` parameter type: simplified to FontToken, blocks per-font tracking
 - `adjustMathstyle`: stub exists, needs full implementation for fraction font propagation
 - Alignment cell whitespace: our glue renders as U+00A0, Perl uses U+2003
+- all of post-processing
+- advanced semantic pruning of ambiguous parses in the latexml_math_parser stage
+- tools, especially the Dumper tool for precompiling the plain and LaTeX 3 kernels.
 
 **Current test blockers by category:**
 - Math parser grammar (~35 tests): function application with fences, integral patterns,
@@ -117,7 +120,12 @@ These are declarative and used unchanged.
 for XSLT transforms. The MathML conversion is the most complex piece — it walks the
 XMath tree and generates parallel markup.
 
-### Phase 4: Production Readiness
+### Phase 4: 
+
+**Goal:** Port all `sty.ltxml` and `.cls.ltxml` bindings from `ar5iv-bindings/bindings` as 
+an extended set of contributed Rust bindings in `latexml_contrib`.
+
+### Phase 5: Production Readiness
 
 **Goal:** Feature-complete CLI tools, daemon mode, performance optimization.
 
