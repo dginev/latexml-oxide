@@ -206,6 +206,11 @@ LoadDefinitions!({
 
   // These to be used in presentation side
   DefMath!("\\lx@ApplyFunction", None, "\u{2061}", reversion => "", name => "", role =>"APPLYOP");
+  // Perl Base_Deprecated: deprecated aliases for invisible math operators
+  Let!("\\@APPLYFUNCTION", "\\lx@ApplyFunction");
+  Let!("\\@INVISIBLETIMES", "\\lx@InvisibleTimes");
+  Let!("\\@INVISIBLECOMMA", "\\lx@InvisibleComma");
+  Let!("\\@INVISIBLEPLUS", "\\lx@InvisiblePlus");
   DefMath!("\\lx@InvisibleTimes", None, "\u{2062}", reversion => "", name => "",
     meaning => "times", role => "MULOP");
   DefMath!("\\lx@InvisibleComma", None, "\u{2063}", reversion => "", name => "", role => "PUNCT");
