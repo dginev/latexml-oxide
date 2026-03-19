@@ -69,17 +69,15 @@
         </Math></p>
     </para>
     <para xml:id="S1.p4">
-      <p><Math mode="inline" tex="\int\dotsi dx" text="integral@(dotsi * differential-d@(x))" xml:id="S1.p4.m1">
+      <p><Math mode="inline" tex="\int\dotsi dx" text="integral@(dotsi * d * x)" xml:id="S1.p4.m1">
           <XMath>
             <XMApp>
               <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok name="dotsi" role="ID">⋯</XMTok>
-                <XMApp>
-                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -214,17 +212,15 @@
         </Math></p>
     </para>
     <para xml:id="S2.p7">
-      <p><Math mode="inline" tex="\int\dots dx" text="integral@(dots * differential-d@(x))" xml:id="S2.p7.m1">
+      <p><Math mode="inline" tex="\int\dots dx" text="integral@(dots * d * x)" xml:id="S2.p7.m1">
           <XMath>
             <XMApp>
               <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok name="dots" role="ID">…</XMTok>
-                <XMApp>
-                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                </XMApp>
+                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -276,3 +272,4 @@
     </para>
   </section>
 </document>
+
