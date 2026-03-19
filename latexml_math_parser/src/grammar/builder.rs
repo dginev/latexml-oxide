@@ -129,7 +129,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | metarelop formula => prefix_metarelop_apply
       | any_bigop | composed_bigop
       | operator | compound_operator
-      | function | trigfunction;
+      | function | trigfunction
+      // Bare operators can form comma-separated lists: +,-,×
+      | addop | mulop | relop | arrow;
 
     end_punct = punct | period;
     statements = statement

@@ -119,7 +119,6 @@ fn scripts_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn sequences_and_lists_test() {
   latexml_test_single("tests/parse/sequences_and_lists.tex", "sequences_and_lists", DIR, None, None);
 }
