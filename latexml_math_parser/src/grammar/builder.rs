@@ -86,12 +86,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     tight_term = factor
       | tight_term factor => apply_invisible_times
-      | function factor => prefix_apply
-      | trigfunction factor => prefix_apply
+      | function tight_term => prefix_apply
+      | trigfunction tight_term => prefix_apply
       | any_bigop tight_term => prefix_apply
       | composed_bigop tight_term => prefix_apply
       | compound_operator tight_term => prefix_apply
-      | operator factor => prefix_apply;
+      | operator factor => prefix_apply
+      | factor_base applyop tight_term => prefix_apply_applyop;
 
     term = tight_term
     | term mulop tight_term => infix_apply_nary
