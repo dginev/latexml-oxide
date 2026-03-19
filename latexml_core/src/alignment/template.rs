@@ -2,8 +2,10 @@
 use super::cell::Cell;
 use crate::Digested;
 use crate::common::dimension::Dimension;
+use crate::state::Stored;
 use crate::token::Token;
 use crate::tokens::Tokens;
+use std::collections::HashMap;
 
 use std::collections::VecDeque;
 use std::fmt::{self, Debug, Display};
@@ -203,7 +205,8 @@ pub struct Template {
   pub y:                Option<Dimension>,
   /// Per-row properties (e.g. xml:id, tags) set during digestion
   /// and consumed during construction. Perl: $$row{id}, $$row{tags}.
-  pub properties:       std::collections::HashMap<String, String>,
+  /// Uses Stored to preserve typed values (esp. Digested for tags).
+  pub properties:       HashMap<String, Stored>,
 }
 
 impl Display for Template {

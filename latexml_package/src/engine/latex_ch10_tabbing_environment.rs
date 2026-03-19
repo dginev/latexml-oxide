@@ -160,8 +160,11 @@ fn tabbing_bindings() -> Result<()> {
     }),
     close_container: Rc::new(|document| document.close_element("ltx:tabular")),
     open_row: Rc::new(|document, props| {
+      let str_props: HashMap<String, String> = props.into_iter()
+        .map(|(k, v)| (k, v.to_string()))
+        .collect();
       document
-        .open_element("ltx:tr", Some(props), None)
+        .open_element("ltx:tr", Some(str_props), None)
         .and(Ok(()))
     }),
     close_row: Rc::new(|document| document.close_element("ltx:tr")),

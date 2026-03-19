@@ -57,7 +57,7 @@ use std::rc::Rc;
 pub type OpenContainerFn =
   Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
 pub type CloseContainerFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
-pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<()>>;
+pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, Stored>) -> Result<()>>;
 pub type CloseRowFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
 pub type OpenColumnFn = Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
 pub type CloseColumnFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;

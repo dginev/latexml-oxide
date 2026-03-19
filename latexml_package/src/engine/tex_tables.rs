@@ -535,8 +535,11 @@ pub fn alignment_bindings(
     }),
     close_container: Rc::new(|document| document.close_element(container)),
     open_row: Rc::new(|document, props| {
+      let str_props: HashMap<String, String> = props.into_iter()
+        .map(|(k, v)| (k, v.to_string()))
+        .collect();
       document
-        .open_element(rowtype, Some(props), None)
+        .open_element(rowtype, Some(str_props), None)
         .and(Ok(()))
     }),
     close_row: Rc::new(|document| document.close_element(rowtype)),

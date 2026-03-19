@@ -160,7 +160,7 @@ fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
         let mut alignment = alignment_cell.borrow_mut();
         if let Some(row) = alignment.current_row_mut() {
           for (key, val) in &props {
-            row.properties.insert(arena::to_string(*key), val.to_string());
+            row.properties.insert(arena::to_string(*key), val.clone());
           }
         }
       }
@@ -280,11 +280,20 @@ pub fn eqnarray_bindings() -> Result<()> {
       // Perl: $$row{id} and $$row{tags} are passed via props from be_absorbed.
       // The id was stored on the row during after_equation.
       if let Some(id) = props.remove("id") {
-        props.insert(String::from("xml:id"), id);
+        props.insert(String::from("xml:id"), Stored::from(id.to_string()));
       }
+      // Extract tags (Digested) before converting to string props
+      let tags_digested = props.remove("tags");
+      let str_props: HashMap<String, String> = props.into_iter()
+        .map(|(k, v)| (k, v.to_string()))
+        .collect();
       document
-        .open_element("ltx:equation", Some(props), None)
-        .and(Ok(()))
+        .open_element("ltx:equation", Some(str_props), None)?;
+      // If we have digested tags, absorb them into the opened element
+      if let Some(Stored::Digested(d)) = tags_digested {
+        document.absorb(&d, None)?;
+      }
+      Ok(())
     }),
     close_row: Rc::new(|document| document.close_element("ltx:equation")),
     open_column: Rc::new(|document, props| {
