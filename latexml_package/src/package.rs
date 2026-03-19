@@ -72,6 +72,7 @@ pub mod latexsym_sty;
 pub mod listings_sty;
 pub mod longtable_sty;
 pub mod marvosym_sty;
+pub mod supertabular_sty;
 pub mod mathbbol_sty;
 pub mod multicol_sty;
 pub mod multido_sty;

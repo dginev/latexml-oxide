@@ -100,6 +100,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "textcomp.sty" => package::textcomp_sty::load_definitions(),
     "listings.sty" => package::listings_sty::load_definitions(),
     "longtable.sty" => package::longtable_sty::load_definitions(),
+    "supertabular.sty" => package::supertabular_sty::load_definitions(),
     "multicol.sty" => package::multicol_sty::load_definitions(),
     "multido.sty" => package::multido_sty::load_definitions(),
     "multirow.sty" => package::multirow_sty::load_definitions(),
