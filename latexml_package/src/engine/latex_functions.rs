@@ -240,15 +240,13 @@ pub fn tabular_bindings(
     }
   }
 
+  // Perl latex_constructs L3685-3687: set isLaTeX + strut for LaTeX tabulars
   if !properties.contains_key("strut") {
-    properties.insert(
-      "strut",
-      lookup_register("\\baselineskip", Vec::new())?
-        .unwrap()
-        .multiply(Float::new_f64(1.5))
-        .into(),
-    );
-  } // Account for html space
+    properties.insert("isLaTeX", Stored::Bool(true));
+    if let Ok(Some(bs)) = lookup_register("\\baselineskip", Vec::new()) {
+      properties.insert("strut", bs.into());
+    }
+  }
   alignment_bindings(template, String::from("text"), properties, xml_attributes);
   state::let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);
   // Perl latex_constructs L3689: Let('\lx@intercol', '\lx@text@intercol')

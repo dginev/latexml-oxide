@@ -584,13 +584,16 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
   let mut collefts: Vec<i64> = Vec::new();
   // Uses cell's cached_width,cached_height,cached_depth
   // Computes net row & column sizes & positions
-  let strut = if let Some(Stored::Dimension(ref d)) = alignment.get_property("strut").as_deref() {
-    *d
-  } else {
-    Dimension::new(0)
+  let strut = match alignment.get_property("strut").as_deref() {
+    Some(Stored::Dimension(ref d)) => *d,
+    Some(Stored::Glue(ref g)) => Dimension::new(g.value_of()),
+    Some(Stored::MuGlue(ref g)) => Dimension::new(g.value_of()),
+    _ => Dimension::new(0),
   };
-  let hs = strut.multiply(Float::new_f64(0.7));
-  let ds = strut.multiply(Float::new_f64(0.3));
+  // Perl: Glue->new($pts * 0.7) uses kround (adds 0.5 before int), not plain truncation
+  let strut_val = strut.value_of() as f64;
+  let hs = Dimension::new((strut_val * 0.7 + 0.5).floor() as i64);
+  let ds = Dimension::new((strut_val * 0.3 + 0.5).floor() as i64);
   let is_latex = alignment.properties.contains_key("isLaTeX");
   let nrows = alignment.rows.len();
 

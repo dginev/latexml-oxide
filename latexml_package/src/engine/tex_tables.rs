@@ -512,7 +512,7 @@ LoadDefinitions!({
 pub fn alignment_bindings(
   template: Template,
   mode: String,
-  properties: SymHashMap<Stored>,
+  mut properties: SymHashMap<Stored>,
   xml_attributes: HashMap<String, String>,
 ) {
   let mode = if mode.is_empty() {
@@ -526,6 +526,12 @@ pub fn alignment_bindings(
   } else {
     ("ltx:tabular", "ltx:tr", "ltx:td")
   };
+  // Perl alignmentBindings L254: $properties{strut} = LookupRegister('\baselineskip');
+  if !properties.contains_key("strut") {
+    if let Ok(Some(bs)) = state::lookup_register("\\baselineskip", Vec::new()) {
+      properties.insert("strut", bs.into());
+    }
+  }
   let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
     open_container: Rc::new(|document, props| {
