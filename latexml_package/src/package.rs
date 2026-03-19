@@ -68,6 +68,7 @@ pub mod ieeetran_cls;
 pub mod inputenc_sty;
 pub mod inst_support_sty;
 pub mod latexml_sty;
+pub mod latexsym_sty;
 pub mod listings_sty;
 pub mod longtable_sty;
 pub mod marvosym_sty;

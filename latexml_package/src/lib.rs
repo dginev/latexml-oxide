@@ -67,6 +67,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "amstext.sty" => package::amstext_sty::load_definitions(),
     "amsopn.sty" => package::amsopn_sty::load_definitions(),
     "fancyhdr.sty" => package::fancyhdr_sty::load_definitions(),
+    "latexsym.sty" => package::latexsym_sty::load_definitions(),
     "fullpage.sty" => package::fullpage_sty::load_definitions(),
     "comment.sty" => package::comment_sty::load_definitions(),
     "csquotes.sty" => package::csquotes_sty::load_definitions(),
