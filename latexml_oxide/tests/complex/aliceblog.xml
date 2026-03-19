@@ -5,14 +5,16 @@
 <?latexml package="url"?>
 <?latexml package="graphicx"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
-<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line">
+<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line" prefix="cc: http://creativecommons.org/ns# dcterms: http://purl.org/dc/terms/ foaf: http://xmlns.com/foaf/0.1/ schema: http://schema.org/ xsd: http://www.w3.org/2001/XMLSchema#">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
+  <rdf aboutlabelref="LABEL:blog:photos" property="cc:license" resourcelabelref="LABEL:license"/>
+  <rdf about="" property="foaf:neighbor" resourceidref="fredblog"/>
   <title>Alice’s Blog</title>
   <creator role="author">
     <personname>Alice</personname>
   </creator>
-  <section inlist="toc" labels="LABEL:sidebar" xml:id="S1">
+  <section inlist="toc" labels="LABEL:sidebar" resourceidref="me" typeof="foaf:Person" xml:id="S1">
     <tags>
       <tag>1</tag>
       <tag role="refnum">1</tag>
@@ -20,36 +22,36 @@
     </tags>
     <title><tag close=" ">1</tag>Sidebar</title>
     <para xml:id="S1.p1">
-      <p>Alice Birpemswick,<break/>Email: <ref href="mailto:alice@example.com">alice@example.com</ref>,<break/>Phone: <ref href="tel:+1-617-555-7332">+1 617.555.7332</ref>.</p>
+      <p><text property="foaf:name">Alice Birpemswick</text>,<break/>Email: <ref href="mailto:alice@example.com" property="foaf:mbox">alice@example.com</ref>,<break/>Phone: <ref href="tel:+1-617-555-7332" property="foaf:phone">+1 617.555.7332</ref>.</p>
     </para>
     <para xml:id="S1.p2">
       <p>My Buddies:</p>
       <itemize xml:id="S1.I1">
-        <item xml:id="S1.I1.i1">
+        <item property="foaf:knows" typeof="foaf:Person" xml:id="S1.I1.i1">
           <tags>
             <tag>•</tag>
             <tag role="typerefnum">1st item</tag>
           </tags>
           <para xml:id="S1.I1.i1.p1">
-            <p><ref href="http://example.com/bob/">Bob</ref></p>
+            <p><ref href="http://example.com/bob/" property="foaf:homepage"><text property="foaf:name">Bob</text></ref></p>
           </para>
         </item>
-        <item xml:id="S1.I1.i2">
+        <item property="foaf:knows" typeof="foaf:Person" xml:id="S1.I1.i2">
           <tags>
             <tag>•</tag>
             <tag role="typerefnum">2nd item</tag>
           </tags>
           <para xml:id="S1.I1.i2.p1">
-            <p><ref href="http://example.com/eve/">Eve</ref></p>
+            <p><ref href="http://example.com/eve/" property="foaf:homepage"><text property="foaf:name">Eve</text></ref></p>
           </para>
         </item>
-        <item xml:id="S1.I1.i3">
+        <item property="foaf:knows" typeof="foaf:Person" xml:id="S1.I1.i3">
           <tags>
             <tag>•</tag>
             <tag role="typerefnum">3rd item</tag>
           </tags>
           <para xml:id="S1.I1.i3.p1">
-            <p><ref href="http://example.com/manu/">Manu</ref></p>
+            <p><ref href="http://example.com/manu/" property="foaf:homepage"><text property="foaf:name">Manu</text></ref></p>
           </para>
         </item>
       </itemize>
@@ -62,43 +64,43 @@
       <tag role="typerefnum">§2</tag>
     </tags>
     <title><tag close=" ">2</tag>Blog Content</title>
-    <paragraph inlist="toc" labels="LABEL:blog:trouble" xml:id="S2.SS0.SSS0.Px1">
-      <title>The Trouble with Bob</title>
+    <paragraph inlist="toc" labels="LABEL:blog:trouble" resource="/alice/posts/trouble_with_bob" typeof="schema:BlogPosting" xml:id="S2.SS0.SSS0.Px1">
+      <title property="dcterms:title">The Trouble with Bob</title>
       <para xml:id="S2.SS0.SSS0.Px1.p1">
-        <p>Date: 10<sup><text font="italic">th</text></sup> of September, 2011.<break/>Alice.</p>
+        <p>Date: <text content="2011-09-10" datatype="xsd:date" property="dcterms:created">10<sup><text font="italic">th</text></sup> of September, 2011</text>.<break/><text property="dcterms:creator schema:creator">Alice</text>.</p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px1.p2">
-        <p>The trouble with Bob is that he takes much better photos than I do.</p>
+        <p property="schema:articleBody">The trouble with Bob is that he takes much better photos than I do.</p>
       </para>
-      <para xml:id="S2.SS0.SSS0.Px1.p3">
+      <para resource="http://examplecom/bob/photos/sunset.jpg" xml:id="S2.SS0.SSS0.Px1.p3">
         <graphics candidates="sunset.jpg" graphic="sunset.jpg" xml:id="S2.SS0.SSS0.Px1.p3.g1"/>
-        <p>Beautiful Sunset
+        <p><text property="dcterms:title">Beautiful Sunset</text>
 by
-Bob.</p>
+<text property="dcterms:creator">Bob</text>.</p>
       </para>
     </paragraph>
-    <paragraph inlist="toc" labels="LABEL:blog:josbbq" xml:id="S2.SS0.SSS0.Px2">
-      <title>Jo’s Barbeque</title>
+    <paragraph inlist="toc" labels="LABEL:blog:josbbq" resource="/alice/posts/jos_barbeque" typeof="schema:BlogPosting" xml:id="S2.SS0.SSS0.Px2">
+      <title property="dcterms:title">Jo’s Barbeque</title>
       <para xml:id="S2.SS0.SSS0.Px2.p1">
-        <p>Date: 14<sup><text font="italic">th</text></sup> of September, 2011.<break/></p>
+        <p>Date: <text content="2011-09-14" datatype="xsd:date" property="dcterms:created">14<sup><text font="italic">th</text></sup> of September, 2011</text>.<break/></p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px2.p2">
-        <p>Eve.</p>
+        <p><text property="dcterms:creator">Eve</text>.</p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px2.p3">
-        <p>…</p>
+        <p property="schema:articleBody">…</p>
       </para>
     </paragraph>
-    <paragraph inlist="toc" labels="LABEL:blog:photos" xml:id="S2.SS0.SSS0.Px3">
-      <title>I will post my photos nevertheless…</title>
+    <paragraph inlist="toc" labels="LABEL:blog:photos" resource="/alice/posts/my_photos" typeof="schema:BlogPosting" xml:id="S2.SS0.SSS0.Px3">
+      <title property="dcterms:title">I will post my photos nevertheless…</title>
       <para xml:id="S2.SS0.SSS0.Px3.p1">
-        <p>Date: 15<sup><text font="italic">th</text></sup> of September, 2011.<break/></p>
+        <p>Date: <text content="2011-09-15" datatype="xsd:date" property="dcterms:created">15<sup><text font="italic">th</text></sup> of September, 2011</text>.<break/></p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px3.p2">
-        <p>Alice.</p>
+        <p><text property="dcterms:creator" resourceidref="me">Alice</text>.</p>
       </para>
       <para xml:id="S2.SS0.SSS0.Px3.p3">
-        <p>…</p>
+        <p property="schema:articleBody">…</p>
       </para>
     </paragraph>
   </section>
@@ -111,7 +113,7 @@ Bob.</p>
     <title><tag close=" ">3</tag>License</title>
     <para xml:id="S3.p1">
       <p>All content on this site is licensed under
-<ref href="&#10;http://creativecommons.org/licenses/by/3.0/">a Creative Commons License</ref>.
+<ref href="http://creativecommons.org/licenses/by/3.0/" property="cc:license">a Creative Commons License</ref>.
 © Alice Birpemswick.</p>
     </para>
   </section>

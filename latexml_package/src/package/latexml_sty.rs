@@ -152,7 +152,9 @@ LoadDefinitions!({
     "<ltx:ref href='#href'>?#1(#1)(#href)</ltx:ref>",
     enter_horizontal => true,
     properties => sub[_args] {
-      let href_str = _args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let mut href_str = _args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      // Perl: CleanURL — strip whitespace/newlines from URLs
+      href_str = href_str.replace('\n', "").replace('\r', "").trim().to_string();
       Ok(stored_map!("href" => href_str))
     }
   );
