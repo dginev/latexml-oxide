@@ -257,12 +257,15 @@ LoadDefinitions!({
       Ok(())
     },
     after_digest_begin => sub[whatsit] {
+      // Perl: Digest(Invocation(\@titledframe@title, arg1)) — processes title in
+      // the current context so it becomes part of the environment body.
+      // Use gullet::unread to prepend title tokens to the input stream.
       if let Some(title_arg) = whatsit.get_arg(1) {
         let title_tokens = title_arg.revert()?;
         let mut inv = vec![T_CS!("\\@titledframe@title"), T_BEGIN!()];
         inv.extend(title_tokens.unlist());
         inv.push(T_END!());
-        stomach::digest(Tokens::new(inv))?;
+        gullet::unread(Tokens::new(inv));
       }
     },
     properties => sub[_args] {
