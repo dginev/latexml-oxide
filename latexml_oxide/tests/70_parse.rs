@@ -150,7 +150,6 @@ fn standalone_modifiers_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn subordinate_lists_test() {
   latexml_test_single("tests/parse/subordinate_lists.tex", "subordinate_lists", DIR, None, None);
 }

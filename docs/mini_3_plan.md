@@ -2,25 +2,24 @@
 
 ## Status: 225 pass, 0 fail, 94 ignored
 
-## Analysis
-All remaining tests need substantial work. The most impactful areas:
-
 ## Three most connected work packets
 
-### Packet 1: Implement adjustMathstyle for \over fractions
-- **Impact**: Fixes fracs_test (86 diffs), partially helps sizes_test
-- **Effort**: Port adjustMathstyle() from Perl — recursive walk of digested boxes
-- **Files**: tex_math.rs (add function), constructor afterDigest
+### Packet 1: Fix CD arrow fontsize "16%" → "160%" (cd_test)
+- **Root cause**: fontsize calculation divides by 10 somewhere, producing "16%" instead of "160%"
+- **Fix**: Find the scaling factor in amscd_sty.rs and fix
+- **Impact**: Many of cd_test's 177 diffs trace to this
 
-### Packet 2: Implement rearrangeEqnarray afterConstruct
-- **Impact**: Fixes badeqnarray (151), eqnarray (727), split (2523), amsdisplay (1708)
-- **Effort**: Large — DOM manipulation converting _Capture_ to MathFork/MathBranch
-- **Files**: latex_ch7, base_xmath.rs, document.rs
+### Packet 2: Fix sizes_test thin/medium/thick spaces + rounding (19 diffs)
+- **Root cause**: Space characters not converting to Unicode, dimension rounding, tabular sizing
+- **Fix**: Known issue from prior sessions — check space char emission and dimension formatting
+- **Impact**: sizes_test very close to passing (19 diffs)
 
-### Packet 3: Implement \lxDeclare / math notation system
-- **Impact**: Fixes declare_test, simplemath_test, many parse tests (~20+)
-- **Effort**: Large — new math declaration infrastructure
-- **Files**: math_parser, latexml_sty.rs
+### Packet 3: Investigate subordinate_lists_test VERTBAR→MODIFIEROP (14 diffs)
+- **Root cause**: `|` not morphed to MODIFIEROP with meaning="conditional"
+- **Fix**: Grammar rule or morphing logic for VERTBAR in conditional context
+- **Impact**: subordinate_lists_test (14 diffs)
 
 ### Expected outcome
-These are all multi-session tasks. Focus on Packet 1 first (most contained).
+- sizes_test close to passing if rounding/space fixes land
+- cd_test diffs reduced significantly
+- subordinate_lists_test may pass with VERTBAR morphing

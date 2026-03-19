@@ -114,7 +114,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     end_punct = punct | period;
     statements = statement
       | statement end_punct => postfix_embellished
-      | statements punct statement => list_apply;
+      | statements punct statement => list_apply
+      // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
+      | statement vertbar statements => vertbar_modifier;
 
     // Extensions, now that we have more category variables defined
     fenced_factor = lbrace expression rbrace    => fenced

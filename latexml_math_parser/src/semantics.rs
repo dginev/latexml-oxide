@@ -1023,6 +1023,33 @@ fn absent() -> XM {
 }
 
 /// Prefix arrow: `→ expr` becomes `Apply(→, absent, expr)` — matching Perl's `AnyOp Expression`
+/// Perl: MorphVertbar — expression VERTBAR expression treated as conditional/modifier
+/// e.g. `x | y,z,t` → `conditional@(x, list@(y,z,t))`
+pub fn vertbar_modifier(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, vertbar, right);
+  // Morph the VERTBAR to MODIFIEROP with meaning="conditional"
+  // Use text default font (not math italic) — Perl MorphVertbar produces unfonted |
+  let modop = XProps {
+    meaning: Some(Cow::Borrowed("conditional")),
+    role: Some(Cow::Borrowed("MODIFIEROP")),
+    stretchy: Some(Cow::Borrowed("false")),
+    content: Some(Cow::Borrowed("|")),
+    font: Some(font::FONT_TEXT_DEFAULT.specialize("|")),
+    ..XProps::default()
+  };
+  Ok(Some(XM::Apply(
+    modop.into(),
+    Args(vec![left, right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 /// Perl: formula relop (no right operand) — trailing relop with implied absent right
 /// e.g. `y < 2 <` → `multirelation(y, <, 2, <, absent)`
 pub fn postfix_relop(
