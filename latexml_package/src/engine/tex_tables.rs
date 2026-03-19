@@ -343,7 +343,7 @@ LoadDefinitions!({
     if let Some(width) = props.get("width") {
       let dim: Option<Dimension> = width.into();
       if let Some(d) = dim {
-        let s = dimension_to_spaces(d);
+        let s = crate::engine::tex_glue::dimension_to_spaces(d);
         if !s.is_empty() {
           document.absorb_string(&s, &SymHashMap::default())?;
         }
