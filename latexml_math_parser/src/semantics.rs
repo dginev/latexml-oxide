@@ -185,6 +185,9 @@ pub fn list_apply(
 }
 
 /// Perl: NewFormulae — comma-separated formulas at the top level use meaning="formulae"
+/// Smart list/formulae: use "formulae" for comma-separated statements, "list" otherwise.
+/// Perl: Formulae = Statement (',' Statement)* produces meaning="formulae"
+/// but \quad-separated items produce meaning="list".
 pub fn formulae_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -196,11 +199,19 @@ pub fn formulae_apply(
   let mut right = right.unwrap();
   let sep = sep.unwrap();
 
-  // If left is already a formulae Dual, extend it
+  // Determine meaning based on separator content: comma => formulae, else => list
+  let is_comma = match &sep {
+    XM::Lexeme(lex, _) => lex.contains(','),
+    XM::Token(props, _) => props.content.as_deref() == Some(","),
+    _ => false,
+  };
+  let meaning = if is_comma { "formulae" } else { "list" };
+
+  // If left is already a Dual with same meaning, extend it
   if let Some(XM::Dual(ref mut content, ref mut pres, _, _)) = left {
     if let XM::Apply(ref op, ref mut op_args, _, _) = **content {
       if let XM::Token(ref props, _) = *op.0 {
-        if props.meaning.as_deref() == Some("formulae") {
+        if props.meaning.as_deref() == Some(meaning) {
           let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
           op_args.0.extend(new_ref.into_iter().map(Option::Some));
           if let XM::Wrap(ref mut items, _, _) = **pres {
@@ -212,7 +223,7 @@ pub fn formulae_apply(
       }
     }
   }
-  list_or_formulae_create(left.unwrap(), sep, right, "formulae", ctxt)
+  list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
 }
 
 fn list_or_formulae_create(
