@@ -305,8 +305,15 @@ LoadDefinitions!({
     operator_role => "OVERACCENT", operator_stretchy => true);
   DefMath!("\\underleftrightarrow{}", "\u{2194}",
     operator_role => "UNDERACCENT", operator_stretchy => true);
-  // (overset/underset already in LaTeX core via latex_ch7)
-  // \overunderset is amsmath-specific
+  // Perl: amsmath.sty.ltxml Section 4.10 — Affixing symbols to other symbols
+  DefConstructor!(
+    "\\overset InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
+  DefConstructor!(
+    "\\underset InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
   DefConstructor!(
     "\\overunderset InScriptStyle InScriptStyle {}",
     r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#2</ltx:XMWrap><ltx:XMArg>#3</ltx:XMArg></ltx:XMApp></ltx:XMApp>"###
