@@ -1743,10 +1743,12 @@ LoadDefinitions!({
 
   // These originally had Token as parameter, rather than {}..... Why?
   // Note that in TeX, \big{((} will only enlarge the 1st paren!!!
-  DefConstructor!("\\big {}",  "#1", bounded => true, font => { size => 1.2 });
-  DefConstructor!("\\Big {}",  "#1", bounded => true, font => { size => 1.6 });
-  DefConstructor!("\\bigg {}", "#1", bounded => true, font => { size => 2.1 });
-  DefConstructor!("\\Bigg {}", "#1", bounded => true, font => { size => 2.6 });
+  // Perl: font => { size => 'big' } where 'big' maps to scale factor 1.2, etc.
+  // Use scale (not absolute size) so fontsize computes correctly as percentage.
+  DefConstructor!("\\big {}",  "#1", bounded => true, font => { scale => 1.2 });
+  DefConstructor!("\\Big {}",  "#1", bounded => true, font => { scale => 1.6 });
+  DefConstructor!("\\bigg {}", "#1", bounded => true, font => { scale => 2.1 });
+  DefConstructor!("\\Bigg {}", "#1", bounded => true, font => { scale => 2.6 });
 
   // sub addDelimiterRole {
   //   my ($document, $role) = @_;
