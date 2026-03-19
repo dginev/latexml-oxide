@@ -280,6 +280,43 @@ LoadDefinitions!({
 
   DefMacro!("\\hdotsfor Number", r"\hdots");
 
+  // Perl amsmath L848-860: Smart \dots — peek at following token's role.
+  // If ADDOP/BINOP/MULOP/RELOP → use ⋯ (cdots), else → … (ldots)
+  // Read the next token, digest it, check its role, then put it back.
+  def_primitive(
+    T_CS!("\\lx@math@dots"),
+    None,
+    Some(PrimitiveBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
+      // Read and digest the next box (like Perl's Digested parameter)
+      let mut after_boxes = Vec::new();
+      while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
+        after_boxes = stomach::invoke_token(&tok)?;
+        if !after_boxes.is_empty() {
+          break;
+        }
+      }
+      let after = after_boxes.first();
+      let role = after
+        .and_then(|d| d.get_property("role"))
+        .map(|r| r.to_string())
+        .unwrap_or_default();
+      let is_binop = matches!(role.as_str(), "ADDOP" | "BINOP" | "MULOP" | "RELOP");
+      let ch = if is_binop { "\u{22EF}" } else { "\u{2026}" };
+      let font = lookup_font().unwrap()
+        .merge(fontmap!(family => "serif", series => "medium", shape => "upright"))
+        .specialize(ch);
+      let tbox = Tbox::new(
+        arena::pin(ch), Some(Rc::new(font)), None, Tokens!(T_CS!("\\dots")),
+        stored_map!("mode" => "math", "name" => "dots", "role" => "ID", "isMath" => true)
+      );
+      let mut result: Vec<Digested> = vec![Digested::from(tbox)];
+      result.extend(after_boxes); // put back the digested token
+      Ok(result)
+    }))),
+    PrimitiveOptions { scope: Some(Scope::Global), ..PrimitiveOptions::default() },
+  )?;
+  DefMacro!("\\dots", r"\ifmmode\lx@math@dots\else\lx@ldots\fi", scope => Some(Scope::Global));
+
   //======================================================================
   // Section 4.9 Extensible arrows
   // Perl: amsmath.sty.ltxml lines 921-950
