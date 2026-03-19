@@ -856,16 +856,21 @@ pub fn extract_alignment_column(
   // Perl L487-489: lspaces to transfer to previous column when vrule found
   let mut prev_rspaces_transfer: Option<Vec<Digested>> = None;
 
-  // Perl L476-477: add tabskip as \hskip to lspaces
+  // Perl L476-477: add tabskip as spacing text to lspaces
+  // Create a Tbox with Unicode space characters directly, rather than
+  // going through \hskip digestion (which can produce nbsp via constructor).
   if let Some(skip) = &tabskip_clone {
     if skip.value_of() != 0 {
-      let hskip_toks = Tokens!(
-        T_CS!("\\hskip"),
-        ExplodeText!(&skip.to_string()),
-        T_CS!("\\relax")
-      );
-      let hskip_digested = stomach::digest(hskip_toks)?;
-      lspaces.push(hskip_digested);
+      let dim = Dimension::new(skip.value_of());
+      let spaces = crate::engine::tex_glue::dimension_to_spaces(dim);
+      if !spaces.is_empty() {
+        let tbox = Tbox {
+          text: arena::pin(&spaces),
+          font: lookup_font().unwrap_or_default(),
+          ..Tbox::default()
+        };
+        lspaces.push(Digested::from(tbox));
+      }
     }
   }
   // Determine expected alignment from template fills, as a fallback for when
