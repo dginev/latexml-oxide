@@ -77,15 +77,26 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     composed_bigop = any_bigop any_bigop => prefix_apply
       | any_bigop composed_bigop => prefix_apply;
 
+    // Compound operators: OPERATOR composed with functions/other operators (right-recursive)
+    // D sin => Apply(D, sin), D D sin => Apply(D, Apply(D, sin))
+    // Must end with a function/trigfunction (no bare operator-only compounds)
+    compound_operator = operator trigfunction => prefix_apply
+      | operator function => prefix_apply
+      | operator compound_operator => prefix_apply;
+
     tight_term = factor
       | tight_term factor => apply_invisible_times
       | function factor => prefix_apply
+      | trigfunction factor => prefix_apply
       | any_bigop tight_term => prefix_apply
-      | composed_bigop tight_term => prefix_apply;
+      | composed_bigop tight_term => prefix_apply
+      | compound_operator tight_term => prefix_apply
+      | operator factor => prefix_apply;
 
     term = tight_term
     | term mulop tight_term => infix_apply_nary
-    | term mulop tight_term elideop => infix_apply_and_elide;
+    | term mulop tight_term elideop => infix_apply_and_elide
+    | operator applyop term => prefix_apply_applyop;
 
     // Expressions
     expression = term

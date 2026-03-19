@@ -81,7 +81,7 @@ LoadDefinitions!({
   {
     use latexml_core::common::def_parser::parse_parameters;
     let lxdeclare_params = parse_parameters(
-      "OptionalKeyVals:Declare Undigested", &T_CS!("\\lxDeclare"), false)?;
+      "OptionalKeyVals:Declare Undigested", &T_CS!("\\lxDeclare"), true)?;
     def_primitive(
     T_CS!("\\lxDeclare"),
     lxdeclare_params,

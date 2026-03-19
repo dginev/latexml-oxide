@@ -381,6 +381,23 @@ pub fn prefix_apply(
     Meta::default(),
   )))
 }
+/// APPLYOP explicit application: operator APPLYOP term => Apply(operator, term)
+/// The APPLYOP token is consumed/discarded.
+pub fn prefix_apply_applyop(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => prefixop, _applyop, arg1);
+  Ok(Some(XM::Apply(
+    prefixop.into(),
+    Args(vec![arg1]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 pub fn postfix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,

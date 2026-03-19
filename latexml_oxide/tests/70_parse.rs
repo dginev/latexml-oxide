@@ -75,7 +75,6 @@ fn multirelations_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn nested_application_test() {
   latexml_test_single("tests/parse/nested_application.tex", "nested_application", DIR, None, None);
 }
