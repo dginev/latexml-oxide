@@ -51,6 +51,13 @@ pub struct XProps {
   pub possible_function: Option<Cow<'static, str>>,
   /// math style (display, text, script, scriptscript) — preserved from constructor
   pub mathstyle: Option<Cow<'static, str>>,
+  /// fraction line thickness (e.g. "0pt" for binomial)
+  pub thickness: Option<Cow<'static, str>>,
+  /// declaration id (from \lxDeclare)
+  pub decl_id:   Option<Cow<'static, str>>,
+  /// lpadding/rpadding from alignment spacing
+  pub lpadding:  Option<Cow<'static, str>>,
+  pub rpadding:  Option<Cow<'static, str>>,
 }
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -101,6 +108,18 @@ impl XProps {
     }
     if let Some(ms) = self.mathstyle.take() {
       attrs.insert(String::from("mathstyle"), ms.into_owned());
+    }
+    if let Some(th) = self.thickness.take() {
+      attrs.insert(String::from("thickness"), th.into_owned());
+    }
+    if let Some(di) = self.decl_id.take() {
+      attrs.insert(String::from("decl_id"), di.into_owned());
+    }
+    if let Some(lp) = self.lpadding.take() {
+      attrs.insert(String::from("lpadding"), lp.into_owned());
+    }
+    if let Some(rp) = self.rpadding.take() {
+      attrs.insert(String::from("rpadding"), rp.into_owned());
     }
     let attrs_opt = if attrs.is_empty() { None } else { Some(attrs) };
     (self.content.take(), self.font.take(), attrs_opt)
@@ -915,6 +934,10 @@ impl From<&Node> for XProps {
     let stretchy = attrs.remove("stretchy").map(Cow::Owned);
     let possible_function = attrs.remove("possibleFunction").map(Cow::Owned);
     let mathstyle = attrs.remove("mathstyle").map(Cow::Owned);
+    let thickness = attrs.remove("thickness").map(Cow::Owned);
+    let decl_id = attrs.remove("decl_id").map(Cow::Owned);
+    let lpadding = attrs.remove("lpadding").map(Cow::Owned);
+    let rpadding = attrs.remove("rpadding").map(Cow::Owned);
     XProps {
       content,
       role,
@@ -927,6 +950,10 @@ impl From<&Node> for XProps {
       stretchy,
       possible_function,
       mathstyle,
+      thickness,
+      decl_id,
+      lpadding,
+      rpadding,
       ..Default::default()
     }
   }
