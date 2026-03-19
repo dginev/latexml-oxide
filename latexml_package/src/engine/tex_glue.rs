@@ -22,7 +22,7 @@ pub(crate) fn dimension_to_spaces(dimen: Dimension) -> String {
       break;
     }
     if ems + 0.01 > w {
-      let n = ((ems + 0.01).floor() / w) as usize;
+      let n = ((ems + 0.01) / w).floor() as usize;
       ems -= n as f64 * w;
       for _ in 0..n {
         s.push(space_char);
