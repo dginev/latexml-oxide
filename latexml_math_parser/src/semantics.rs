@@ -181,15 +181,51 @@ pub fn list_apply(
   }
 
   // New list: create XMDual with list operator
-  let mut left = left.unwrap();
-  let list_op = XProps {
-    meaning: Some(Cow::Borrowed("list")),
+  list_or_formulae_create(left.unwrap(), sep, right, "list", ctxt)
+}
+
+/// Perl: NewFormulae — comma-separated formulas at the top level use meaning="formulae"
+pub fn formulae_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, sep, right);
+  let mut left = left;
+  let mut right = right.unwrap();
+  let sep = sep.unwrap();
+
+  // If left is already a formulae Dual, extend it
+  if let Some(XM::Dual(ref mut content, ref mut pres, _, _)) = left {
+    if let XM::Apply(ref op, ref mut op_args, _, _) = **content {
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some("formulae") {
+          let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
+          op_args.0.extend(new_ref.into_iter().map(Option::Some));
+          if let XM::Wrap(ref mut items, _, _) = **pres {
+            items.push(sep);
+            items.push(right);
+          }
+          return Ok(left);
+        }
+      }
+    }
+  }
+  list_or_formulae_create(left.unwrap(), sep, right, "formulae", ctxt)
+}
+
+fn list_or_formulae_create(
+  mut left: XM, sep: XM, mut right: XM, meaning: &'static str, ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let op = XProps {
+    meaning: Some(Cow::Borrowed(meaning)),
     ..XProps::default()
   };
   let ref_args = create_xmrefs(&mut [&mut left, &mut right], ctxt)?;
   Ok(Some(XM::Dual(
     Box::new(XM::Apply(
-      list_op.into(),
+      op.into(),
       Args(ref_args.into_iter().map(Option::Some).collect()),
       XProps::default(),
       Meta::default(),
