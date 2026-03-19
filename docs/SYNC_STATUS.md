@@ -235,6 +235,11 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Current totals: 217 pass, 0 fail, 62 ignored test functions (279 total)**
 **Coverage: 79% pass rate (217/274 non-permanent-ignore tests)**
 
+**Recent infrastructure fixes (2026-03-18, session 5):**
+- **Equation numbering tags**: Row properties changed from `HashMap<String, String>` to `HashMap<String, Stored>`, enabling `Stored::Digested` tags to propagate through alignment absorption. eqnarray equations now have `<tags>` elements matching Perl.
+- **Preamble PI**: `\lx@add@Preamble@PI` constructor now uses procedural body with `document.insert_pi()`. `\DeclareMathAccent` returns AddToPreamble result. acc_test: 169→96 diffs.
+- **\pagecolor reversion**: Both color.sty and xcolor.sty now return Tbox with reversion tokens.
+
 **Recent fixes (2026-03-18, session 2):**
 - **cleanup_math XPath**: Updated to match Perl — excludes XMHint and lone PUNCT/PERIOD from "real math" check. Math spacing commands (`\,`, `\!`, `\>`, `\;`, `\mskip`) no longer produce spurious `<Math>` elements. XMHint width converted to Unicode space chars via `dimension_to_spaces`.
 - **vbox/vtop height/depth**: Fixed 3 bugs — sizer closure now passes Whatsit properties (vattach etc.), `repack_horizontal` sets "mode" property string, removed extra `flat_map(unlist)` in `compute_boxes_size`.
