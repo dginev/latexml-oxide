@@ -121,7 +121,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     statement = formula
       | statement metarelop formula => infix_relation
       | metarelop formula => prefix_metarelop_apply
-      | any_bigop | composed_bigop;
+      | any_bigop | composed_bigop
+      | operator | compound_operator
+      | function | trigfunction;
 
     end_punct = punct | period;
     statements = statement
@@ -180,7 +182,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     anyop = addop | mulop | relop | arrow | metarelop
       | bigop | sumop | intop
       | limitop | diffop | vertbar | supop
-      | modifierop | composed_bigop;
+      | modifierop | composed_bigop | operator | compound_operator;
 
     anyscript = floatsuperscript | floatsubscript;
 
