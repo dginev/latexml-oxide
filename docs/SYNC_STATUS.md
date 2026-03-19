@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-19):** 227 pass, 0 fail, 92 ignored (319 total). Session 6 gains: \lxDeclare parsing fix (init_flag), trigfunction grammar rule, compound_operator for OPERATOR composition, APPLYOP handling, factor_base applyop rule. Grammar: function/trigfunction now take tight_term arguments (not just factor) so \sin xy → sin(x*y).
+**Status (2026-03-19):** 227 pass, 0 fail, 92 ignored (319 total). Sessions 6-7: Grammar improvements (trigfunction, compound_operator, APPLYOP, function application f(x)→f@(x)). Infrastructure: adjustMathstyle for fraction font propagation, alignment glue U+00A0→U+2003 fix, stmaryrd.sty port, Pair parameter type, makecell.sty port, \lxDeclare fix. Diff reductions: fracs 87→31, stmaryrd 1449→1009.
 
 ### Completed items
 
