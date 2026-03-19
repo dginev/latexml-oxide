@@ -1,5 +1,85 @@
+// Math tests — individually listed for per-test #[ignore] support.
 use latexml::util::test::*;
 
+const DIR: &str = "tests/math";
+
 #[test]
-#[ignore] // Note: defer math tests to the very end
-fn can_mathl() { latexml_tests("tests/math", None, None); }
+#[ignore] // text= attr diffs: math parser
+fn ambiguous_relations_test() {
+  latexml_test_single("tests/math/ambiguous_relations.tex", "ambiguous_relations", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser (2 diffs)
+fn array_math_test() {
+  latexml_test_single("tests/math/array.tex", "array", DIR, None, None);
+}
+
+#[test]
+fn array_newline_math_test() {
+  latexml_test_single("tests/math/array_newline_math.tex", "array_newline_math", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser
+fn arrows_test() {
+  latexml_test_single("tests/math/arrows.tex", "arrows", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser
+fn choose_test() {
+  latexml_test_single("tests/math/choose.tex", "choose", DIR, None, None);
+}
+
+#[test]
+fn compact_dual_test() {
+  latexml_test_single("tests/math/compact_dual.tex", "compact_dual", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: many undefined commands
+fn declare_test() {
+  latexml_test_single("tests/math/declare.tex", "declare", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser
+fn fracs_test() {
+  latexml_test_single("tests/math/fracs.tex", "fracs", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser
+fn niceunits_test() {
+  latexml_test_single("tests/math/niceunits.tex", "niceunits", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser
+fn not_test() {
+  latexml_test_single("tests/math/not.tex", "not", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser (many)
+fn sampler_test() {
+  latexml_test_single("tests/math/sampler.tex", "sampler", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser
+fn simplemath_test() {
+  latexml_test_single("tests/math/simplemath.tex", "simplemath", DIR, None, None);
+}
+
+#[test]
+fn testover_test() {
+  latexml_test_single("tests/math/testover.tex", "testover", DIR, None, None);
+}
+
+#[test]
+#[ignore] // text= attr diffs: math parser
+fn testscripts_test() {
+  latexml_test_single("tests/math/testscripts.tex", "testscripts", DIR, None, None);
+}
