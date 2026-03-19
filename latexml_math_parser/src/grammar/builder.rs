@@ -148,8 +148,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     factor += fenced_factor;
 
     // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
-    // f(x) => f@(x), g(a+b) => g@(a+b). Ambiguous with invisible-times; Marpa resolves.
-    tight_term += unknown fenced_factor => prefix_apply;
+    // f(x) => f@(x), g(a+b) => g@(a+b). Only active when MATHPARSER_SPECULATE is set.
+    // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
+    tight_term += unknown fenced_factor => speculative_prefix_apply;
 
     // Script content
     postsubarg = start_postsubscript expression end_postsubscript => faux_wrap;

@@ -424,6 +424,30 @@ pub fn prefix_apply(
     Meta::default(),
   )))
 }
+/// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
+/// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
+/// only parsed as function application when speculation is active. Without speculation,
+/// this parse is pruned and Marpa falls back to `tight_term factor => invisible_times`.
+pub fn speculative_prefix_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if !matches!(
+    latexml_core::state::lookup_value("MATHPARSER_SPECULATE"),
+    Some(latexml_core::state::Stored::Bool(true))
+  ) {
+    return Err("speculative_prefix_apply: MATHPARSER_SPECULATE not set, pruning parse".into());
+  }
+  unp!(args => prefixop, arg1);
+  Ok(Some(XM::Apply(
+    prefixop.into(),
+    Args(vec![arg1]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
 /// APPLYOP explicit application: operator APPLYOP term => Apply(operator, term)
 /// The APPLYOP token is consumed/discarded.
 pub fn prefix_apply_applyop(
