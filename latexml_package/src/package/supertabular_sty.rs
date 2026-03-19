@@ -75,11 +75,9 @@ LoadDefinitions!({
   DefMacro!("\\@supertabular@head", sub[_args] {
     let head = lookup_value("SUPERTABULAR_FIRSTHEAD")
       .or_else(|| lookup_value("SUPERTABULAR_HEAD"));
-    if let Some(Stored::Digested(ref d)) = head {
+    if let Some(Stored::Tokens(ref toks)) = head {
       let mut result = vec![T_CS!("\\lx@alignment@begin@heading")];
-      if let Ok(reverted) = d.revert() {
-        result.extend(reverted.unlist());
-      }
+      result.extend(toks.clone().unlist());
       result.push(T_CS!("\\lx@alignment@end@heading"));
       result
     } else {
@@ -90,11 +88,9 @@ LoadDefinitions!({
   DefMacro!("\\@supertabular@tail", sub[_args] {
     let tail = lookup_value("SUPERTABULAR_LASTTAIL")
       .or_else(|| lookup_value("SUPERTABULAR_TAIL"));
-    if let Some(Stored::Digested(ref d)) = tail {
+    if let Some(Stored::Tokens(ref toks)) = tail {
       let mut result = vec![T_CS!("\\lx@alignment@begin@heading")];
-      if let Ok(reverted) = d.revert() {
-        result.extend(reverted.unlist());
-      }
+      result.extend(toks.clone().unlist());
       result.push(T_CS!("\\lx@alignment@end@heading"));
       result
     } else {
@@ -124,22 +120,19 @@ LoadDefinitions!({
   DefMacro!("\\@supertabular@docaption", sub[_args] {
     let cap = lookup_value("SUPERTABULAR_CAPTION");
     let toccap = lookup_value("SUPERTABULAR_TOCCAPTION");
-    if let Some(Stored::Digested(ref c)) = cap {
-      let mut result: Vec<Token> = vec![T_CS!("\\@caption")];
+    if let Some(Stored::Tokens(ref c)) = cap {
+      let mut result: Vec<Token> = vec![T_CS!("\\@caption"), T_BEGIN!()];
       result.extend(Explode!("table"));
-      if let Some(Stored::Digested(ref tc)) = toccap {
-        if let Ok(tc_toks) = tc.revert() {
-          if !tc_toks.is_empty() {
-            result.push(T_OTHER!("["));
-            result.extend(tc_toks.unlist());
-            result.push(T_OTHER!("]"));
-          }
+      result.push(T_END!());
+      if let Some(Stored::Tokens(ref tc)) = toccap {
+        if !tc.is_empty() {
+          result.push(T_OTHER!("["));
+          result.extend(tc.clone().unlist());
+          result.push(T_OTHER!("]"));
         }
       }
       result.push(T_BEGIN!());
-      if let Ok(c_toks) = c.revert() {
-        result.extend(c_toks.unlist());
-      }
+      result.extend(c.clone().unlist());
       result.push(T_END!());
       result
     } else {
