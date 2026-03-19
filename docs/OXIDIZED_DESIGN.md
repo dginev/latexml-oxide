@@ -44,6 +44,19 @@ internal contributors resuming work.
 
 ## Architecture
 
+### System-Level View
+
+LaTeXML (Perl) has two main programs: `latexml` (TeX→XML) and `latexmlpost` (XML→HTML/MathML).
+The Rust port currently covers the `latexml` pipeline. The `latexmlpost` pipeline is planned
+for Phase 3 (see `mini_3_plan.md`).
+
+The `latexml` pipeline processes input through five stages:
+1. **Digestion** — Mouth (chars→tokens), Gullet (expansion), Stomach (digestion into boxes/whatsits)
+2. **Construction** — boxes/whatsits→XML DOM via Constructors, with auto-open/close from Model
+3. **Rewriting** — DOM mutation rules (ligatures, math token declarations)
+4. **Math Parsing** — grammar-based parse of flat XMath token sequences into expression trees
+5. **Serialization** — DOM→XML string output
+
 ### Workspace Structure
 
 Six crates mirror the Perl module hierarchy:
