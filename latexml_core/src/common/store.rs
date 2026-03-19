@@ -216,6 +216,7 @@ impl fmt::Display for Stored {
       MuGlue(ref v) => write!(f, "{v}"),
       MuDimension(ref v) => write!(f, "{v}"),
       Font(ref font) => write!(f, "{font}"),
+      FontDirective(ref font) => write!(f, "{font:?}"),
       String(ref s) => arena::with(*s, |str| write!(f, "{str}")),
       Int(ref s) => write!(f, "{s}"),
       Bool(ref s) => write!(f, "{s}"),

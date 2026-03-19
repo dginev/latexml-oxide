@@ -146,9 +146,11 @@ pub fn infix_apply(
 }
 
 /// Perl MathGrammar: Anything : Statement PUNCT <leftop: Statement PUNCT Statement>
-/// Creates a list@(...) XMDual: content arm is Apply(meaning=list, refs...),
+/// Creates a list@(...) or formulae@(...) XMDual: content arm is Apply(meaning=list/formulae, refs...),
 /// presentation arm is Wrap(items with separators).
 /// Left-recursive: first call creates a 2-item list, subsequent calls extend it.
+/// Perl distinction: comma-separated relational formulas at top level → "formulae",
+/// comma-separated plain expressions → "list".
 pub fn list_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -160,12 +162,13 @@ pub fn list_apply(
   let mut right = right.unwrap();
   let sep = sep.unwrap();
 
-  // If left is already a list Dual, extend it
+  // If left is already a list/formulae Dual, extend it
   if let Some(XM::Dual(ref mut content, ref mut pres, _, _)) = left {
     if let XM::Apply(ref op, ref mut op_args, _, _) = **content {
-      // Check if operator is the list token (meaning="list")
       if let XM::Token(ref props, _) = *op.0 {
-        if props.meaning.as_deref() == Some("list") {
+        if props.meaning.as_deref() == Some("list")
+          || props.meaning.as_deref() == Some("formulae")
+        {
           // Extend: add ref for new item to content args
           let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
           op_args.0.extend(new_ref.into_iter().map(Option::Some));
@@ -180,8 +183,37 @@ pub fn list_apply(
     }
   }
 
-  // New list: create XMDual with list operator
-  list_or_formulae_create(left.unwrap(), sep, right, "list", ctxt)
+  // Determine if separator is a comma
+  let is_comma = match &sep {
+    XM::Lexeme(lex, _) => lex.contains(','),
+    XM::Token(props, _) => props.content.as_deref() == Some(","),
+    _ => false,
+  };
+
+  // Perl: comma-separated relational formulas (containing RELOP/multirelation) → "formulae"
+  // Otherwise → "list"
+  let meaning = if is_comma {
+    let left_rel = left.as_ref().map_or(false, is_relational_item);
+    let right_rel = is_relational_item(&right);
+    if left_rel && right_rel { "formulae" } else { "list" }
+  } else {
+    "list"
+  };
+  list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
+}
+
+/// Check if an XM tree is a relational formula (contains RELOP or multirelation).
+/// Used to distinguish Perl's "formulae" (comma-separated relations at top level)
+/// from "list" (comma-separated plain expressions).
+fn is_relational_item(xm: &XM) -> bool {
+  match xm {
+    XM::Apply(ref op, _, _, _) => match &*op.0 {
+      XM::Token(ref props, _) => props.meaning.as_deref() == Some("multirelation"),
+      XM::Lexeme(ref lex, _) => lex.split(':').next().map_or(false, |r| r.contains("RELOP")),
+      _ => false,
+    },
+    _ => false,
+  }
 }
 
 /// Perl: NewFormulae — comma-separated formulas at the top level use meaning="formulae"

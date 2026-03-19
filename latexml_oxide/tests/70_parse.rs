@@ -69,7 +69,6 @@ fn mixedfrac_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn multirelations_test() {
   latexml_test_single("tests/parse/multirelations.tex", "multirelations", DIR, None, None);
 }
