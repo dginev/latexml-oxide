@@ -881,13 +881,13 @@ LoadDefinitions!({
   // \belowdisplayskip       pg is normal glue placed after a displayed equation.
   // \belowdisplayshortskip  pg is alternate glue placed after a displayed equation.
 
+  // Perl: Box(' ', undef, undef, Invocation(...), width => $length, isSpace => 1)
+  // Use regular space as content, matching Perl. Width is stored as MuGlue.
   DefPrimitive!("\\mkern MuGlue", sub[(length)] {
-    let s = dimension_to_spaces(length);
-    Tbox::new(arena::pin(s), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
+    Tbox::new(arena::pin_static(" "), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
       stored_map!("width" => length, "isSpace" => true)) });
   DefPrimitive!("\\mskip MuGlue", sub[(length)] {
-    let s = dimension_to_spaces(length);
-    Tbox::new(arena::pin(s), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
+    Tbox::new(arena::pin_static(" "), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
       stored_map!("width" => length, "isSpace" => true)) });
 
   // MuGlue registers; TeXBook p.274

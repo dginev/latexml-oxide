@@ -1142,9 +1142,10 @@ LoadDefinitions!({
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());
 
+  // Perl: \, in math mode => \mskip\thinmuskip => Box(' ', ..., width => thinmuskip)
   DefPrimitive!("\\lx@thinmuskip", {
     Tbox::new(
-      arena::pin_static("\u{2009}"),
+      arena::pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\,")),
@@ -1178,9 +1179,10 @@ LoadDefinitions!({
       "width" => lookup_dimension("\\thinmuskip").unwrap().negate()),
     )
   });
+  // Perl: \> and \; in math mode => Box(' ', ..., width => medmuskip/thickmuskip)
   DefPrimitive!("\\>", {
     Tbox::new(
-      arena::pin_static("\u{2005}"),
+      arena::pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\>")),
@@ -1190,7 +1192,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\;", {
     Tbox::new(
-      arena::pin_static("\u{2004}"),
+      arena::pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\;")),
