@@ -1023,6 +1023,23 @@ fn absent() -> XM {
 }
 
 /// Prefix arrow: `→ expr` becomes `Apply(→, absent, expr)` — matching Perl's `AnyOp Expression`
+/// Perl: METARELOP Formula — prefix metarelop with implied absent left operand
+/// e.g. `\vdash x = 0` → `absent proves (x = 0)`
+pub fn prefix_metarelop_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => metarelop, right);
+  Ok(Some(XM::Apply(
+    metarelop.into(),
+    Args(vec![Some(absent()), right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 pub fn prefix_arrow_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,

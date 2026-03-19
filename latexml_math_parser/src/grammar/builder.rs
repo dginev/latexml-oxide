@@ -107,6 +107,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
     statement = formula
       | statement metarelop formula => infix_relation
+      | metarelop formula => prefix_metarelop_apply
       | any_bigop | composed_bigop;
 
     end_punct = punct | period;

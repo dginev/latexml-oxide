@@ -58,7 +58,6 @@ fn kludge_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn metarelation_elision_test() {
   latexml_test_single("tests/parse/metarelation_elision.tex", "metarelation_elision", DIR, None, None);
 }
