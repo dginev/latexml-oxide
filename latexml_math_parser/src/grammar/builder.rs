@@ -87,6 +87,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     tight_term = factor
       | tight_term factor => apply_invisible_times
+      // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
+      | tight_term postfix => apply_postfix
       | function tight_term => prefix_apply
       | trigfunction tight_term => prefix_apply
       | any_bigop tight_term => prefix_apply

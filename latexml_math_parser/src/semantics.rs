@@ -595,6 +595,23 @@ pub fn postfix_apply(
   )))
 }
 
+/// Perl MathGrammar L423: POSTFIX operator (e.g. n! → factorial@(n))
+/// Takes (base, postfix_op) and produces Apply(op, base).
+pub fn apply_postfix(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => base, op);
+  Ok(Some(XM::Apply(
+    op.into(),
+    Args(vec![base]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 /// Perl MathGrammar L709-711: TwoPartRelop — combines two adjacent relops.
 /// E.g. `>=` → "greater-than-or-equals", `<<` → "much-less-than"
 pub fn two_part_relop_combine(
