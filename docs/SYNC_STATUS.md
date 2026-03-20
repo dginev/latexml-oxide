@@ -453,6 +453,12 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - **\\lx@begin@inmath@text mode fix**: Changed from 'text' to 'restricted_horizontal' matching Perl.
 - **\\subjclass Default: fix**: Handle Default: parameter spec in closure.
 
+### Math parser known limitations:
+
+- **`2\sin(x)` doesn't parse** — `tight_term factor` is left-recursive only; `\sin(x)` as a tight_term can't appear as right of invisible_times. Perl handles this. Pre-existing limitation.
+- **Division right-scoping** — `abc/de` = `(abc)/(de)` in Rust, `((abc)/d)*e` in Perl. Accepted as intentional: juxtaposition binds tighter than explicit `/`.
+- **`f∘sin x` composition scoping** — Rust: `compose(f, sin(x))`, Perl: `(compose(f, sin))(x)`. Both mathematically equivalent.
+
 ### Incomplete stubs requiring full implementation:
 
 - **\\sideset** (amsmath_sty.rs): Stub passes through base #3 only. Full Perl implementation (L1183-1234) needs sidesetWrap with individual pre/post sub/superscript handling, scriptpos calculation, and FLOATING detection.
