@@ -469,18 +469,36 @@ LoadDefinitions!({
             // Check if child XMTok has a font attribute to preserve
             // Perl: local $LaTeXML::BOX = $document->getNodeBox($xmarg[0]);
             // Check child XMTok font to preserve italic/bold styling (from math mode)
-            let font_attr = xmarg.get_child_nodes().into_iter()
-              .filter(|n| n.get_type() == Some(NodeType::ElementNode))
-              .find_map(|n| {
-                // Check XML font attribute first
-                let attr = n.get_attribute("font");
-                if attr.is_some() { return attr; }
-                // Check the stored node font for italic shape
-                let node_font = document.get_node_font(&n);
-                node_font.get_shape().and_then(|s|
-                  if s.as_ref() == "italic" { Some("italic".to_string()) } else { None }
-                )
-              });
+            // Perl: uses $document->getNodeBox($args[0])->getFont with openText,
+            // where $args[0] is the XMArg. The BOX font has family="math" for math
+            // content, which relativeTo maps to font="italic".
+            let font_attr = {
+              // First check XML font attribute on child XMTok elements
+              let from_attr = xmarg.get_child_nodes().into_iter()
+                .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+                .find_map(|n| {
+                  let attr = n.get_attribute("font");
+                  if attr.is_some() { return attr; }
+                  let node_font = document.get_node_font(&n);
+                  node_font.get_shape().and_then(|s|
+                    if s.as_ref() == "italic" { Some("italic".to_string()) } else { None }
+                  )
+                });
+              if from_attr.is_some() {
+                from_attr
+              } else {
+                // Check the XMArg's stored box font (pre-specialization)
+                document.get_node_box(xmarg).and_then(|tbox| {
+                  tbox.get_font().ok().flatten().and_then(|font| {
+                    if font.get_family().map(|f| f.as_ref() == "math").unwrap_or(false) {
+                      Some("italic".to_string())
+                    } else {
+                      None
+                    }
+                  })
+                })
+              }
+            };
             document.open_element(qname, None, None)?;
             if let Some(ref font) = font_attr {
               // Create ltx:text and set font attribute directly

@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-19):** 233 pass, 0 fail, 86 ignored (319 total). Session 11: is_script regex fix (Perl `\@@POST` → Rust `\lx@post@`), prefix_relop_apply grammar rule (absent token for leading relop), displaystyle tex= spacing fix. badeqnarray_test PASSES (148→0 diffs). eqnums_test 315→23 diffs. Whatsit default sizer unlist body fix. Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
+**Status (2026-03-19):** 234 pass, 0 fail, 85 ignored (319 total). Session 11: is_script regex fix (Perl `\@@POST` → Rust `\lx@post@`), prefix_relop_apply grammar rule (absent token for leading relop), displaystyle tex= spacing fix. badeqnarray_test PASSES (148→0 diffs). eqnums_test 315→23 diffs. Whatsit default sizer unlist body fix. Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
 
 ### Completed items
 
@@ -422,7 +422,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
 
 - [x] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. Done. Fixed _Capture_ XMArg wrapping issue (Perl model prevents XMArg inside _Capture_).
-- [ ] **2. eqnums_test** (50_structure) — 16 diffs (down from 598→416→316→23→16). MathFork works, xml:id numbering fixed, absent token fixed (prefix_relop_apply), tex= `\mbox{}` content fixed (text[@class='ltx_markedasmath'] synthesis). Remaining: tag font (prime ′ in `<sup>` needs `<text font="italic">` wrapping, 16 diffs).
+- [x] **2. eqnums_test** (50_structure) — DONE. MathFork xml:id, prefix_relop_apply, tex= mbox synthesis, tag font italic wrapping (XMArg box font family="math" detection in floating script rewrite). 0 diffs.
 - [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [ ] **30. amsdisplay_test** (56_ams) — 842 diffs. MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
