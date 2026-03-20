@@ -4,7 +4,6 @@ use latexml::util::test::*;
 const DIR: &str = "tests/parse";
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn algebraic_terms_test() {
   latexml_test_single("tests/parse/algebraic_terms.tex", "algebraic_terms", DIR, None, None);
 }

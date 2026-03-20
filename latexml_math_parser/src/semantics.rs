@@ -1029,10 +1029,40 @@ pub fn apply_invisible_times(
       }
     }
   }
-  // otherwise create a new one:
-  let times = invisible_times();
+  // Mixed number detection: NUMBER followed by FRACOP → invisible plus
+  // Perl: 2\frac{3}{4} = 2 + 3/4, not 2 × 3/4
+  let l_num = is_number(&left);
+  let mut r_frac = is_fracop(&right);
+  // Also check via nodes: if right is a Lexeme pointing to a DOM node with FRACOP inside
+  if l_num && !r_frac {
+    if let Some(XM::Lexeme(ref lex, ref meta)) = right {
+      // Use curry_level to find the node — it encodes the node position
+      if let Some(ref cv) = meta.curry_level {
+        let cv_str = cv.to_string();
+        // Extract index from ":N" format — node index is N-1 (lexeme counter is 1-based)
+        if let Some(idx_str) = cv_str.strip_prefix(':') {
+          if let Ok(lex_idx) = idx_str.parse::<usize>() {
+            let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
+            if idx < ctxt.nodes.len() {
+              let node = &ctxt.nodes[idx];
+              if node.get_name() == "XMApp" {
+                for child in node.get_child_elements() {
+                  if child.get_attribute("role").as_deref() == Some("FRACOP") {
+                    r_frac = true;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  let is_mixed_number = l_num && r_frac;
+  let op = if is_mixed_number { invisible_plus() } else { invisible_times() };
   Ok(Some(XM::Apply(
-    times.into(),
+    op.into(),
     Args(vec![left, right]),
     XProps::default(),
     Meta::default(),
@@ -1228,6 +1258,39 @@ fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
       }
     },
     _ => {},
+  }
+}
+
+fn is_number(xm: &Option<XM>) -> bool {
+  match xm {
+    Some(XM::Token(props, _)) => props.role.as_deref() == Some("NUMBER"),
+    Some(XM::Lexeme(lex, _)) => lex.starts_with("NUMBER:"),
+    _ => false,
+  }
+}
+
+fn is_fracop(xm: &Option<XM>) -> bool {
+  match xm {
+    Some(XM::Apply(op, _, _, _)) => {
+      if let XM::Token(props, _) = &*op.0 {
+        props.role.as_deref() == Some("FRACOP")
+      } else if let XM::Lexeme(lex, _) = &*op.0 {
+        lex.starts_with("FRACOP:")
+      } else {
+        false
+      }
+    },
+    _ => false,
+  }
+}
+
+fn invisible_plus() -> XProps {
+  XProps {
+    meaning: Some(Cow::Borrowed("plus")),
+    role: Some(Cow::Borrowed("ADDOP")),
+    content: Some(Cow::Borrowed("\u{2064}")), // INVISIBLE PLUS
+    font: Some(font::FONT_TEXT_DEFAULT.specialize("\u{2064}")),
+    ..XProps::default()
   }
 }
 
