@@ -106,10 +106,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator factor => prefix_apply
       | factor_base applyop factor => prefix_apply_applyop;
     // factor followed by a standalone function: `2 \sin` = `2 * sin`
-    tight_term += factor function => apply_invisible_times;
-    tight_term += factor trigfunction => apply_invisible_times;
-    tight_term += factor opfunction => apply_invisible_times;
     // Recursive extensions (tight_term + something):
+    // NOTE: `factor tight_term` is intentionally NOT here — it causes exponential
+    // ambiguity for `a b c` sequences. This means `2 \sin(x)` doesn't parse.
+    // TODO: find a targeted approach for factor * function-application.
     tight_term += tight_term factor => apply_invisible_times
       | tight_term postfix => apply_postfix
       | function tight_term => prefix_apply
@@ -133,6 +133,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // This is needed for (f*g)(x) where f and g are FUNCTION tokens
     // opfunction here allows standalone \operatorname{R} to parse
     term += function | trigfunction | opfunction;
+
+    // Higher-order operator terms: functions as standalone objects multiplied by factors
+    // `2\sin` = `2 * sin`, `2\sin\cos` = `2 * sin * cos`
+    // These are term-level (not tight_term) so they don't interfere with
+    // function application: `2\sin x` = `2 * sin(x)` (not `(2*sin) * x`)
+    tight_opterm = factor function => apply_invisible_times
+      | factor trigfunction => apply_invisible_times
+      | factor opfunction => apply_invisible_times
+      | tight_opterm function => apply_invisible_times
+      | tight_opterm trigfunction => apply_invisible_times
+      | tight_opterm opfunction => apply_invisible_times;
+    term += tight_opterm;
 
     // Expressions
     expression = term
