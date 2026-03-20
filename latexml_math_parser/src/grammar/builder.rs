@@ -208,6 +208,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | scripted_factor_r11 postsubarg => postfix_script;
     factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
+    // Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
+    // These are bigops with post-scripts that still act as prefix operators.
+    // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs
+    // Chain scripts: first sub then super, or vice versa (like scripted_factor_r1/r2)
+    scripted_bigop_r1 = any_bigop postsuperarg => postfix_script
+      | any_bigop postsubarg => postfix_script;
+    scripted_bigop = scripted_bigop_r1
+      | scripted_bigop_r1 postsuperarg => postfix_script
+      | scripted_bigop_r1 postsubarg => postfix_script;
+    tight_term += scripted_bigop tight_term => prefix_apply;
+    // Scripted bigops can also appear as standalone statements
+    statement += scripted_bigop;
+
     anyop = addop | mulop | relop | arrow | metarelop
       | bigop | sumop | intop
       | limitop | diffop | vertbar | supop

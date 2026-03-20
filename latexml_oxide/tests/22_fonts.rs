@@ -67,7 +67,6 @@ fn ding_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (integral expressions)
 fn esint_test() {
   latexml_test_single("tests/fonts/esint.tex", "esint", DIR, None, None);
 }
