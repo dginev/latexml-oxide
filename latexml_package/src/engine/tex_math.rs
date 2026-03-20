@@ -452,7 +452,8 @@ LoadDefinitions!({
     before_digest => {
       gullet::unread(Tokens::new(vec![T_CS!("\\lx@hidden@egroup@right"), T_CS!("\\lx@right")]));
     },
-    reversion => None);
+    // Empty reversion — \lx@right provides the actual \right reversion via alias
+    reversion => Tokens!());
 
   DefConstructor!("\\@left Token",
     "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
