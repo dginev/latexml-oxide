@@ -1144,9 +1144,23 @@ pub fn close_math_fork(
     let mut tex_parts: Vec<String> = Vec::new();
     let tds = document.findnodes("descendant::ltx:td", Some(branch));
     for td in &tds {
-      for math in document.findnodes("ltx:Math[@tex]", Some(td)) {
-        if let Some(tex) = math.get_attribute("tex") {
-          tex_parts.push(tex);
+      let maths = document.findnodes("ltx:Math[@tex]", Some(td));
+      if !maths.is_empty() {
+        for math in maths {
+          if let Some(tex) = math.get_attribute("tex") {
+            tex_parts.push(tex);
+          }
+        }
+      } else {
+        // No Math element — check for text content (from \mbox in eqnarray cells)
+        // Perl's MathWhatsit captures reversion of all cell content including \mbox
+        let texts = document.findnodes("ltx:text[@class='ltx_markedasmath']", Some(td));
+        for text in &texts {
+          let content = text.get_content();
+          let content = content.trim();
+          if !content.is_empty() {
+            tex_parts.push(format!("\\mbox{{{content}}}"));
+          }
         }
       }
     }

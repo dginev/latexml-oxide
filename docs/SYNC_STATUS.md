@@ -422,7 +422,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
 
 - [x] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. Done. Fixed _Capture_ XMArg wrapping issue (Perl model prevents XMArg inside _Capture_).
-- [ ] **2. eqnums_test** (50_structure) — 23 diffs (down from 598→416→316→23). MathFork works, xml:id numbering fixed, absent token fixed (prefix_relop_apply). Remaining: tag font (prime in `<sup>`, 16 diffs), tex= `\mbox{}` content missing (7 diffs).
+- [ ] **2. eqnums_test** (50_structure) — 16 diffs (down from 598→416→316→23→16). MathFork works, xml:id numbering fixed, absent token fixed (prefix_relop_apply), tex= `\mbox{}` content fixed (text[@class='ltx_markedasmath'] synthesis). Remaining: tag font (prime ′ in `<sup>` needs `<text font="italic">` wrapping, 16 diffs).
 - [ ] **3. algx_test** (53_alignment) — 163 diffs. BLOCKED: needs math parser XMDual + fontsize.
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [ ] **30. amsdisplay_test** (56_ams) — 842 diffs. MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
