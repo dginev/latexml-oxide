@@ -1006,7 +1006,7 @@ pub fn new_script(
 
     // Perl: Extract base's scriptpos to determine binding level
     // If base is an XMApp with a SCRIPTOP operator, read its scriptpos
-    let (bx, mut bl, base_wasfloat, base_bumplevel) = extract_base_scriptpos(&base);
+    let (bx, mut bl, base_wasfloat, base_bumplevel) = extract_base_scriptpos(&base, &ctxt);
 
     // Read scriptpos from the script node
     let raw_sp = script_wrap.get_attribute("scriptpos").unwrap_or_default();
@@ -1081,7 +1081,7 @@ got {:?}",
 
 /// Extract scriptpos info from the base of a script operation.
 /// Returns (position_string, level, was_float, bump_level)
-fn extract_base_scriptpos(base: &Option<XM>) -> (&'static str, u32, bool, u32) {
+fn extract_base_scriptpos(base: &Option<XM>, ctxt: &ActionContext) -> (&'static str, u32, bool, u32) {
   match base {
     Some(XM::Apply(ref op, _, _props, ref meta)) => {
       // Check if the operator is a SCRIPTOP
@@ -1096,6 +1096,23 @@ fn extract_base_scriptpos(base: &Option<XM>) -> (&'static str, u32, bool, u32) {
         }
       }
       ("post", 0, false, 0)
+    },
+    // For Lexeme bases (e.g., \sum with scriptpos="mid"),
+    // look up the XML node to get scriptpos
+    Some(XM::Lexeme(ref lex, _)) => {
+      if let Ok(node) = lookup_lex_node(lex, ctxt.nodes) {
+        let sp = node.get_attribute("scriptpos").unwrap_or_default();
+        if !sp.is_empty() {
+          let (bx, bl) = parse_scriptpos(&sp);
+          return (bx, bl, false, 0);
+        }
+      }
+      ("post", 0, false, 0)
+    },
+    Some(XM::Token(ref props, _)) => {
+      let sp = props.scriptpos.as_deref().unwrap_or("post");
+      let (bx, bl) = parse_scriptpos(sp);
+      (bx, bl, false, 0)
     },
     _ => ("post", 0, false, 0),
   }
