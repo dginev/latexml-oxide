@@ -144,7 +144,7 @@ fn acro_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: math parser + equation numbering
+#[ignore] // 12 diffs: lpadding from \quad, multline tex= attribute, multline +i parse structure
 fn amsarticle_test() {
   latexml_test_single("tests/structure/amsarticle.tex", "amsarticle", DIR, None, None);
 }
