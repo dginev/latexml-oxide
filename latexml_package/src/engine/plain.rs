@@ -1957,8 +1957,12 @@ LoadDefinitions!({
     r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"
   );
   // HACK the newly created border matrix to add columns for the (spanned) parentheses!!!
-  // Assume (for now) that there's no XMDual structure here.
-  // What is the semantics, anyway?
+  // TODO: Port the full DOM manipulation (adding paren columns, rowspans, etc.)
+  DefConstructor!("\\lx@hack@bordermatrix{}", sub[document, args, _props] {
+      let matrix = args[0].as_ref().unwrap();
+      document.absorb(matrix, None)?;
+    },
+    reversion => "#1");
   // DefConstructor('\lx@hack@bordermatrix{}', sub {
   //     my ($document, $matrix) = @_;
   //     $document->absorb($matrix);
@@ -2023,31 +2027,66 @@ LoadDefinitions!({
     "\\eqalign{}",
     r"\@@eqalign{\lx@begin@alignment#1\lx@end@alignment}"
   );
-  // DefConstructor('\@@eqalign{}',
-  //   '#1',
-  //   reversion    => '\eqalign{#1}', bounded => 1,
-  //   beforeDigest => sub { alignmentBindings('rl', 'math',
-  //       attributes => { vattach => 'baseline' }); });
+  DefConstructor!("\\@@eqalign{}", "#1",
+    reversion => "\\eqalign{#1}", bounded => true,
+    before_digest => {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::template::{Align, TemplateConfig};
+      use latexml_core::alignment::cell::Cell;
+      let template = Template::new(TemplateConfig {
+        columns: Some(vec![
+          Cell { align: Some(Align::Right), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+        ]),
+        ..TemplateConfig::default()
+      });
+      alignment_bindings(template, String::from("math"),
+        SymHashMap::default(), string_map!("vattach" => "baseline"));
+    });
 
   DefMacro!(
     "\\eqalignno{}",
     r"\@@eqalignno{\lx@begin@alignment#1\lx@end@alignment}"
   );
-  // DefConstructor('\@@eqalignno{}',
-  //   '#1',
-  //   reversion    => '\eqalignno{#1}', bounded => 1,
-  //   beforeDigest => sub { alignmentBindings('rll', 'math',
-  //       attributes => { vattach => 'baseline' }); });
+  DefConstructor!("\\@@eqalignno{}", "#1",
+    reversion => "\\eqalignno{#1}", bounded => true,
+    before_digest => {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::template::{Align, TemplateConfig};
+      use latexml_core::alignment::cell::Cell;
+      let template = Template::new(TemplateConfig {
+        columns: Some(vec![
+          Cell { align: Some(Align::Right), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+        ]),
+        ..TemplateConfig::default()
+      });
+      alignment_bindings(template, String::from("math"),
+        SymHashMap::default(), string_map!("vattach" => "baseline"));
+    });
 
   DefMacro!(
     "\\leqalignno{}",
     r"\@@leqalignno{\lx@begin@alignment#1\lx@end@alignment}"
   );
-  // DefConstructor('\@@leqalignno{}',
-  //   '#1',
-  //   reversion    => '\leqalignno{#1}', bounded => 1,
-  //   beforeDigest => sub { alignmentBindings('rll', 'math',
-  //       attributes => { vattach => 'baseline' }); });
+  DefConstructor!("\\@@leqalignno{}", "#1",
+    reversion => "\\leqalignno{#1}", bounded => true,
+    before_digest => {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::template::{Align, TemplateConfig};
+      use latexml_core::alignment::cell::Cell;
+      let template = Template::new(TemplateConfig {
+        columns: Some(vec![
+          Cell { align: Some(Align::Right), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+        ]),
+        ..TemplateConfig::default()
+      });
+      alignment_bindings(template, String::from("math"),
+        SymHashMap::default(), string_map!("vattach" => "baseline"));
+    });
 
   DefRegister!("\\pageno"   => Number::new(0));
   DefRegister!("\\headline" => Tokens!());
