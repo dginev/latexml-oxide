@@ -109,6 +109,14 @@ git config --local core.hooksPath .githooks/
 - **Follow the Work Plan in `docs/SYNC_STATUS.md`**: Always work on the first unchecked `[ ]` item in the "Work Plan — Ordered TODO List" section. Do not skip ahead or investigate what to do next until all preceding items are clearly completed. Mark items `[x]` when done.
 - When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 
+When a **session is completed**: continue working, until:
+- all tests pass
+- the plans in docs/ are fully completed
+- all edge cases are explored
+- no obvious improvements remain
+
+Do **not** stop early.
+
 ## Key Concepts Mapping (Perl → Rust)
 
 | LaTeXML Perl | latexml-oxide |
