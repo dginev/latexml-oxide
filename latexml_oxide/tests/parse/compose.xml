@@ -232,29 +232,29 @@
     <title><tag close=" ">3</tag>Different operators</title>
     <para xml:id="S3.p1">
       <equation xml:id="S3.Ex7">
-        <Math mode="display" tex="f\circ\sin x" text="compose@(f, sine@(x))" xml:id="S3.Ex7.m1">
+        <Math mode="display" tex="f\circ\sin x" text="(compose@(f, sine))@(x)" xml:id="S3.Ex7.m1">
           <XMath>
             <XMApp>
-              <XMTok meaning="compose" name="circ" role="COMPOSEOP">∘</XMTok>
-              <XMTok font="italic" role="FUNCTION">f</XMTok>
               <XMApp>
+                <XMTok meaning="compose" name="circ" role="COMPOSEOP">∘</XMTok>
+                <XMTok font="italic" role="FUNCTION">f</XMTok>
                 <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
-                <XMTok font="italic" role="ID">x</XMTok>
               </XMApp>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S3.Ex8">
-        <Math mode="display" tex="f\circ\log x" text="compose@(f, logarithm@(x))" xml:id="S3.Ex8.m1">
+        <Math mode="display" tex="f\circ\log x" text="(compose@(f, logarithm))@(x)" xml:id="S3.Ex8.m1">
           <XMath>
             <XMApp>
-              <XMTok meaning="compose" name="circ" role="COMPOSEOP">∘</XMTok>
-              <XMTok font="italic" role="FUNCTION">f</XMTok>
               <XMApp>
+                <XMTok meaning="compose" name="circ" role="COMPOSEOP">∘</XMTok>
+                <XMTok font="italic" role="FUNCTION">f</XMTok>
                 <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
-                <XMTok font="italic" role="ID">x</XMTok>
               </XMApp>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>

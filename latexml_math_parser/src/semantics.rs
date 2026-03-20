@@ -136,6 +136,17 @@ pub fn infix_apply(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2);
+  // Composition (meaning="compose") requires function-level operands.
+  // Prune parses where an operand is an applied function (ground term).
+  // f∘sin x → prefer (f∘sin)(x), not f∘(sin(x))
+  if let Some(XM::Lexeme(ref lex, _)) = infixop {
+    if lex.contains(":compose:") {
+      // Check that operands are function-level (not applied/ground)
+      if is_applied_function(&arg1) || is_applied_function(&arg2) {
+        return Err("infix_apply: compose requires function-level operands, not applied functions".into());
+      }
+    }
+  }
   let apply_tree = XM::Apply(
     infixop.into(),
     Args(vec![arg1, arg2]),
@@ -143,6 +154,23 @@ pub fn infix_apply(
     Meta::default(),
   );
   Ok(Some(apply_tree))
+}
+
+/// Check if an XM node is an applied function (curry level 1 / ground term).
+/// Applied functions are Apply(function, args...) — the function has been applied to arguments.
+fn is_applied_function(xm: &Option<XM>) -> bool {
+  if let Some(XM::Apply(ref op, ref args, _, _)) = xm {
+    // An Apply with a function/trigfunction/opfunction operator that has arguments
+    // is a ground-level application, not a function value.
+    if !args.0.is_empty() {
+      if let XM::Lexeme(ref lex, _) = *op.0 {
+        return lex.starts_with("TRIGFUNCTION:")
+          || lex.starts_with("OPFUNCTION:")
+          || lex.starts_with("FUNCTION:");
+      }
+    }
+  }
+  false
 }
 
 /// Perl MathGrammar: Anything : Statement PUNCT <leftop: Statement PUNCT Statement>

@@ -104,18 +104,35 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop;
 
+    // Composed functions: f∘g, sin∘cos — these can then be applied as functions
+    // COMPOSEOP operates on function-level operands (curry level 2)
+    composed_term = function composeop function => infix_apply
+      | function composeop trigfunction => infix_apply
+      | function composeop opfunction => infix_apply
+      | trigfunction composeop function => infix_apply
+      | trigfunction composeop trigfunction => infix_apply
+      | trigfunction composeop opfunction => infix_apply
+      | opfunction composeop function => infix_apply
+      | opfunction composeop trigfunction => infix_apply
+      | opfunction composeop opfunction => infix_apply
+      | composed_term composeop function => infix_apply
+      | composed_term composeop trigfunction => infix_apply
+      | composed_term composeop opfunction => infix_apply;
+
+    // Composed functions can be applied like regular functions
+    tight_term += composed_term tight_term => prefix_apply;
+
     term = tight_term
     | term mulop tight_term => infix_apply_nary
     | term mulop tight_term elideop => infix_apply_and_elide
-    // Perl: COMPOSEOP creates function composition (f∘g)
-    // Functions can participate as operands of composition
+    // Fallback: COMPOSEOP on general terms (for non-function-level composition)
     | term composeop term => infix_apply
     | operator applyop term => prefix_apply_applyop;
 
     // Allow standalone functions/trigfunctions/opfunctions as terms
     // This is needed for (f*g)(x) where f and g are FUNCTION tokens
     // opfunction here allows standalone \operatorname{R} to parse
-    term += function | trigfunction | opfunction;
+    term += function | trigfunction | opfunction | composed_term;
 
     // Higher-order operator terms: functions as standalone objects multiplied by factors
     // `2\sin` = `2 * sin`, `2\sin\cos` = `2 * sin * cos`
