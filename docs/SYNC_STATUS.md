@@ -422,10 +422,10 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
 
 - [x] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. Done. Fixed _Capture_ XMArg wrapping issue (Perl model prevents XMArg inside _Capture_).
-- [ ] **2. eqnums_test** (50_structure) — 416 diffs (down from 598). MathFork works, remaining: equation counter stepping, tag font propagation, tex attributes on MathFork Math.
+- [ ] **2. eqnums_test** (50_structure) — 316 diffs (down from 598→416→316). MathFork works, xml:id numbering fixed (pre-advance counter by cell count). Remaining: tex attributes on MathFork Math (\mbox content), absent token, tag font.
 - [ ] **3. algx_test** (53_alignment) — 163 diffs. BLOCKED: needs math parser XMDual + fontsize.
-- [ ] **28. badeqnarray_test** (53_alignment) — 507 diffs. BLOCKED: needs afterConstruct.
-- [ ] **30. amsdisplay_test** (56_ams) — 963 diffs. BLOCKED: needs afterConstruct + `\text{}`.
+- [ ] **28. badeqnarray_test** (53_alignment) — 149 diffs (down from 507). MathFork xml:id fixed. Remaining: absent token, tex= attributes.
+- [ ] **30. amsdisplay_test** (56_ams) — 769 diffs (down from 963). MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
 - [ ] **31. matrix_test** (56_ams) — 187 diffs. BLOCKED: needs afterConstruct + math parser.
 - [ ] **32. sideset_test** (56_ams) — 488 diffs. BLOCKED: needs afterConstruct.
 
