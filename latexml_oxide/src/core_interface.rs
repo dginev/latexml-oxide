@@ -417,8 +417,12 @@ fn apply_lx_declarations(document: &mut Document) {
   let xmtoks = document.findnodes("descendant-or-self::ltx:XMTok", None);
   for mut tok in xmtoks {
     let content = tok.get_content();
+    let tok_name = tok.get_attribute("name").unwrap_or_default();
     for &(pattern, role, name, meaning) in &declarations {
-      if content == pattern {
+      // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
+      let matches = content == pattern
+        || (!tok_name.is_empty() && pattern.starts_with('\\') && &pattern[1..] == tok_name);
+      if matches {
         if !role.is_empty() {
           let _ = tok.set_attribute("role", role);
         }
