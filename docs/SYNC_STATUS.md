@@ -441,7 +441,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [ ] **12. stmaryrd_test** (22_fonts) — 1007 diffs (was 1449). Ported stmaryrd.sty, fixed FontDirective Display. Remaining: mostly XMDual + math parser text= diffs.
 - [ ] **33. cd_test** (56_ams) — 175 diffs (was PANIC). No longer crashes after replace_tree fix.
-- [ ] **34. mathtools_test** (56_ams) — TooManyErrors. Port mathtools.sty.
+- [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
 - [x] **39. cleveref_minimal_test** (80_complex) — DONE. Ported cleveref.sty: \lx@cref constructor, crefMulti, type_tag_formatter mappings. 0 diffs.
