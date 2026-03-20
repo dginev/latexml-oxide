@@ -164,6 +164,7 @@ macro_rules! parameter_rust_type {
   (Expanded) => {Tokens};
   (ExpandedPartially) => {Tokens};
   (XToken) => {Token};
+  (Relation) => {Token};  // Perl: skip spaces + readXToken(0,1) — result is a Token
   (ExpandedIfToken) => {Token};
   (CSName) => {Token};
   (CSNameQuiet) => {Token};

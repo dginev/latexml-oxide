@@ -141,6 +141,20 @@ LoadDefinitions!({
     }
   });
 
+  // Perl (2026-03-18): Relation parameter type for numeric comparisons (<, =, >)
+  // Perl: $gullet->skipSpaces; return $gullet->readXToken(0, 1);
+  //   toplevel=0, for_conditional=1 => autoclose=0, fully_expand=0
+  // Skips spaces, then reads with expansion (but not full expansion).
+  DefParameterType!(Relation, sub[_inner, _extra] {
+    gullet::skip_spaces()?;
+    if let Some(t) = gullet::read_x_token(Some(false), true, None)? {
+      Ok(ArgWrap::Token(t))
+    } else {
+      Error!("expected","Relation", "Parameter <Relation> found None.");
+      Ok(ArgWrap::Tokens(Tokens!()))
+    }
+  });
+
   // Read a number
   DefParameterType!(Number, sub[_inner, _extra] {
     gullet::read_number()?
