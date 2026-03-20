@@ -510,7 +510,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 ### Overarching projects
 
 #### Critical engine gaps (blocks multiple tests, ~2500 lines):
-- [ ] **G. latex_ch7_math_common_delimiters.rs** — 0% ported. 19 sized delimiters (`\big`, `\Big`, `\bigg`, `\Bigg` variants l/r/m). ~500 lines. Blocks ~30 tests.
+- [ ] **G. latex_ch7_math_common_delimiters.rs** — File empty but `\big` etc. already work via plain.rs. May need LaTeX-specific sizing adjustments. Low priority.
 - [ ] **H. tex_box.rs SVG + vrule/hrule** — SVG collapse, `\vrule/\hrule` alignment, BoxSpecification for `\halign`. ~300 lines.
 - [ ] **I. tex_tables.rs \halign BoxSpecification** — Entirely commented-out section. ~200 lines.
 - [ ] **J. Rewrite system** — rewrite.rs at ~20% (Select/Replace only). Missing: `attributes`, `regexp`, `action`, `on_match` clauses. ~400 lines. Affects \lxDeclare, math decoration.
