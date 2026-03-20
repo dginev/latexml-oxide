@@ -941,7 +941,18 @@ LoadDefinitions!({
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(v.to_string())));
+            // Store 'left' and 'right' as Tokens so constructor template
+            // can absorb them as live TeX content (creates XMTok elements).
+            // Perl stores keyval values as Tokens objects that get expanded.
+            if k == "left" || k == "right" {
+              if let ArgWrap::Tokens(ref ts) = v {
+                props.insert(k, Stored::Tokens(ts.clone()));
+              } else {
+                props.insert(k, Stored::String(arena::pin(v.to_string())));
+              }
+            } else {
+              props.insert(k, Stored::String(arena::pin(v.to_string())));
+            }
           }
         }
       }
