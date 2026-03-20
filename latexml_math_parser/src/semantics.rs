@@ -573,6 +573,8 @@ pub fn prefix_apply_applyop(
   )))
 }
 
+/// Perl: moreTerms2 trailing-operator → Apply(New('limit-from'), term, addop)
+/// Handles `a+` (limit from above) and similar trailing operators.
 pub fn postfix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -580,9 +582,14 @@ pub fn postfix_apply(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg, op);
+  // Perl: Apply(New('limit-from'), $term, $addop)
+  let limit_from = XM::Token(XProps {
+    meaning: Some(Cow::Borrowed("limit-from")),
+    ..XProps::default()
+  }, Meta::default());
   Ok(Some(XM::Apply(
-    op.into(),
-    Args(vec![arg]),
+    limit_from.into(),
+    Args(vec![arg, op]),
     XProps::default(),
     Meta::default(),
   )))
