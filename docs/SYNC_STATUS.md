@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 240 pass, 0 fail, 79 ignored (319 total). Session 12: Per-size font metrics (cmm7/cmm5), matrix delimiter absorption (matrix_test 164→0, PASSES), \| delimiter fix, acc_test PASSES (\lx@if@isaccent), esint_test PASSES (scripted bigop grammar), \eqalign constructors, VBoxContents mode property fix, two-part relop grammar (>=, <=, <<, >>), COMPOSEOP grammar rule (compose_test 141→29), CI fix (texlive-science for algorithmicx). Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim.
+**Status (2026-03-20):** 241 pass, 0 fail, 78 ignored (319 total). Session 13: sizes_test PASSES (repackHorizontal in predigest_box_contents), mathabx.sty port (abxtest TooManyErrors→29), empty element self-closing fix. Session 12: Per-size font metrics (cmm7/cmm5), matrix delimiter absorption (matrix_test 164→0, PASSES), \| delimiter fix, acc_test PASSES (\lx@if@isaccent), esint_test PASSES (scripted bigop grammar), \eqalign constructors, VBoxContents mode property fix, two-part relop grammar (>=, <=, <<, >>), COMPOSEOP grammar rule (compose_test 141→29), CI fix (texlive-science for algorithmicx). Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim.
 
 ### Completed items
 
@@ -416,9 +416,9 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
 - [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
 - [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
-- [ ] **9. sizes_test** (22_fonts) — 1 diff line (was 313→181→19→6→4→1). Fixed: per-size font metrics, VBoxContents mode property fix (vtop+tabular now correct). Remaining: \vbox{hop} width needs paragraph wrapping at \hsize (5.55pt vs 469.75pt).
+- [x] **9. sizes_test** (22_fonts) — DONE (was 313→181→19→6→4→1→0). Fixed: per-size font metrics, VBoxContents mode property fix, repackHorizontal in predigest_box_contents (matching Perl's readBoxContents endMode → leaveHorizontal_internal flow). 0 diffs.
 - [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
-- [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
+- [ ] **11. abxtest_test** (22_fonts) — 29 diffs (was TooManyErrors). Ported mathabx.sty (465 DefMath defs). Fixed `<p></p>` → `<p/>` empty element serialization. Remaining: tex= reversion for astronomy symbols (\Sun→☉ etc.) and asterisk glyph.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [ ] **18. amsarticle_test** (50_structure) — 898 diffs. Port amsart.cls binding.

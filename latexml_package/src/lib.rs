@@ -147,6 +147,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "subfiles.sty" => package::subfiles_sty::load_definitions(),
     "soul.sty" => package::soul_sty::load_definitions(),
     "stmaryrd.sty" => package::stmaryrd_sty::load_definitions(),
+    "mathabx.sty" => package::mathabx_sty::load_definitions(),
     "wasysym.sty" => package::wasysym_sty::load_definitions(),
     "xkeyval.sty" => package::xkeyval_sty::load_definitions(),
     "xcolor.sty" => package::xcolor_sty::load_definitions(),

@@ -121,7 +121,6 @@ fn abxtest_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math spacing + sizing
 fn sizes_test() {
   latexml_test_single("tests/fonts/sizes.tex", "sizes", DIR, None, None);
 }

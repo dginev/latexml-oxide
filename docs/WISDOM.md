@@ -453,3 +453,15 @@ tokenizer should also be fixed to handle `*` in CS names without looping.
 **Fix:** Changed `METRIC_MAP` value from `"cmmi"` to `"cmm"` to match the `STDMETRICS` key. Now `get_metric_for_name("cmm")` finds the correct cmmi metrics.
 
 **Key insight:** The STDMETRICS key naming convention uses the base without the trailing 'i' (cmm, not cmmi), but METRIC_MAP was using the TFM filename convention (cmmi). Always ensure METRIC_MAP values match STDMETRICS keys.
+
+---
+
+## 19. enterHorizontal uses inplace assignment, NOT beginMode
+
+**Context:** Understanding why `\vbox{hop}` should produce width=\hsize (469.75pt) but Rust was producing the natural character width (5.55pt).
+
+**Root cause:** Perl's `enterHorizontal` (Stomach.pm line 418) uses `assignValue(MODE => 'horizontal', 'inplace')` — NOT `beginMode('horizontal')`. The comment says: "SAME frame as BOUND_MODE!" This means BOUND_MODE stays as 'internal_vertical' when MODE changes to 'horizontal'. When `endMode('internal_vertical')` calls `leaveHorizontal_internal`, the condition `MODE eq 'horizontal' AND BOUND_MODE =~ /vertical$/` PASSES because BOUND_MODE was never changed. This triggers `repackHorizontal`, which groups character boxes into a horizontal `List(@para, mode => 'horizontal')`. Perl's `List()` constructor (List.pm line 53-54) sets `width = \hsize` when `mode eq 'horizontal'`.
+
+**Fix:** `predigest_box_contents` now calls `begin_mode`/`end_mode` matching Perl's `readBoxContents` frame scope. After `invoke_token`, checks if MODE was changed to 'horizontal' inplace, and if so, calls `repack_horizontal_in_list` to group character boxes into a horizontal sub-List with width=\hsize. Guard: only repacks when body contains simple TBoxes (not Whatsits like tabular).
+
+**Key insight:** The distinction between `assignValue(MODE, 'inplace')` and `beginMode(mode)` (which calls `pushStackFrame` + `assignValue(MODE, 'local')`) is critical. The former modifies the SAME frame's BOUND_MODE scope; the latter creates a NEW scope that hides the parent's BOUND_MODE.
