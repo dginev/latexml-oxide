@@ -141,11 +141,12 @@ LoadDefinitions!({
     "<ltx:XMText>#body</ltx:XMText>",
     // alias => T_MATH ? do we support that ?
     alias => "$",
-    before_digest => sub { stomach::begin_mode("text")?; },
+    // Perl: beginMode('restricted_horizontal') — NOT 'text'
+    before_digest => sub { stomach::begin_mode("restricted_horizontal")?; },
     capture_body => true
   );
   DefConstructor!("\\lx@end@inmath@text", "", alias => "$",
-    before_digest => sub { stomach::end_mode("text")?; });
+    before_digest => sub { stomach::end_mode("restricted_horizontal")?; });
   //======================================================================
   // Effectively these are the math hooks, redefine these to do what you want with math?
   DefConstructor!("\\lx@begin@display@math",
