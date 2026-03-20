@@ -224,6 +224,7 @@ impl ArgWrap {
   pub fn try_to_dimension(self) -> Result<Dimension> {
     use ArgWrap::*;
     match self {
+      None => Ok(crate::common::dimension::Dimension::default()),
       Number(v) => Ok(v.into()),
       Dimension(v) => Ok(v),
       Token(t) => Ok(t.to_dimension()),
