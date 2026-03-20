@@ -1298,6 +1298,7 @@ LoadDefinitions!({
   assign_mathcode('.', 0x013Au16, None);
   assign_mathcode('/', 0x013Du16, None);
   assign_mathcode(':', 0x303Au16, None);
+  assign_mathcode('?', 0x503Fu16, None);  // class CLOSE (from plain.tex dump)
   assign_mathcode(';', 0x603Bu16, None);
   assign_mathcode('<', 0x313Cu16, None);
   assign_mathcode('=', 0x303Du16, None);

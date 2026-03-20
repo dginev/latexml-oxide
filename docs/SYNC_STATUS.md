@@ -421,7 +421,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **11. abxtest_test** (22_fonts) — DONE (was TooManyErrors→29→0). Ported mathabx.sty, fixed DefPrimitive literal reversion (empty Tokens!() → CS token), added missing * mathcode (0x2203), mathabx scriptpos=>dynamic_scriptpos, empty element self-closing. 0 diffs.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
-- [ ] **18. amsarticle_test** (50_structure) — 898 diffs. Port amsart.cls binding.
+- [ ] **18. amsarticle_test** (50_structure) — 807 diffs (was 898). Fixed \@add@frontmatter deferral (contact/creator association). Remaining: math parser text=, equation structure, other AMS features.
 - [ ] **25. cells_test** (53_alignment) — 369 diffs (was stack overflow). Ported makecell.sty, fixed \rothead recursion, implemented Pair parameter type.
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
@@ -483,7 +483,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 ### Tier 5: Math parser tests (active research, Marpa grammar)
 
 - [ ] **47. 40_math suite** (40_math) — not_test 226→77 (Unicode \not fix + child fix). arrows 69→73 (ARROW tokenization). choose 117 (XMDual now produced).
-- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES (postfix_apply + mixed number). terms 12. sets 15 (VERTBAR→MIDDLE).
+- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES (postfix_apply + mixed number). terms 11 (division scoping). compose 167 (regression from * mathcode fix — lxDeclare keyed by `*` but mathcode decodes to `∗`).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
 - [ ] **51. eqnarray_test** (53_alignment) — 575 diffs (down from 1176). prefix_relop_apply + displaystyle fix helped.
