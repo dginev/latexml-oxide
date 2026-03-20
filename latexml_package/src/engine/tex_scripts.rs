@@ -302,19 +302,17 @@ fn script_sizer(
   let font_scale = base_font_size * 65536.0; // font size in scaled points
   let xheight = font_scale * XHEIGHT_RATIO;
   // Fishing for the scriptpos on the base (if any)
-  let inferred_pos = if pos.is_empty() {
-    if let Some(Stored::Digested(ref base)) = base_opt {
-      let base_pos = base
-        .get_property("scriptpos")
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-      if base_pos.is_empty() {
-        Cow::Borrowed("post")
-      } else {
-        Cow::Owned(base_pos)
-      }
-    } else {
+  let inferred_pos = if let Some(Stored::Digested(ref base)) = base_opt {
+    let base_pos = base
+      .get_property("scriptpos")
+      .map(|s| s.to_string())
+      .unwrap_or_default();
+    if base_pos.is_empty() {
       Cow::Borrowed("post")
+    } else {
+      // Strip any existing level number to get just "mid" or "post"
+      let stripped: String = base_pos.chars().take_while(|c| !c.is_ascii_digit()).collect();
+      Cow::Owned(if stripped.is_empty() { base_pos } else { stripped })
     }
   } else {
     Cow::Borrowed("post")
@@ -399,7 +397,7 @@ LoadDefinitions!({
       Ok(Tokens!(T_SUPER!(), revert_script(arg)?)) },
     sizer => sub[w] {
       script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
-        w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "post") }
+        w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "") }
   );
 
   DefConstructor!("\\lx@post@subscript InScriptStyle",r###"
@@ -413,7 +411,7 @@ LoadDefinitions!({
       Ok(Tokens!(T_SUB!(), revert_script(arg)?)) },
     sizer => sub[w] {
       script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
-        w.get_property("prevscript").as_deref(), "SUBSCRIPT", "post") }
+        w.get_property("prevscript").as_deref(), "SUBSCRIPT", "") }
   );
 
   DefConstructor!("\\lx@floating@superscript InScriptStyle",r###"
