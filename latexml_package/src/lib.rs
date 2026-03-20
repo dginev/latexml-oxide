@@ -92,6 +92,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "etoolbox.sty" => package::etoolbox_sty::load_definitions(),
     "eurosym.sty" => package::eurosym_sty::load_definitions(),
     "hhline.sty" => package::hhline_sty::load_definitions(),
+    "cleveref.sty" => package::cleveref_sty::load_definitions(),
     "hyperref.sty" => package::hyperref_sty::load_definitions(),
     "hyperxmp.sty" => package::hyperxmp_sty::load_definitions(),
     "nameref.sty" => package::nameref_sty::load_definitions(),

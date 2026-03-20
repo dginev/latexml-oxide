@@ -50,7 +50,6 @@ fn labelled_test() { complex("labelled"); }
 fn versioned_fallback_test() { complex("versioned_fallback"); }
 
 #[test]
-#[ignore] // text= + tags diffs: cleveref + math parser
 fn cleveref_minimal_test() { complex("cleveref_minimal"); }
 
 #[test]
