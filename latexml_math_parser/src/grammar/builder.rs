@@ -85,21 +85,33 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator function => prefix_apply
       | operator compound_operator => prefix_apply;
 
-    tight_term = factor
-      | tight_term factor => apply_invisible_times
-      // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
+    // tight_term: ALWAYS compound (2+ atoms). Single atoms are `factor`.
+    // This prevents `\log x` from parsing as `(\log) * x` via invisible_times.
+    // Non-recursive base rules (factor + something):
+    tight_term = factor factor => apply_invisible_times
+      | factor postfix => apply_postfix
+      | function factor => prefix_apply
+      | trigfunction factor => prefix_apply
+      | any_bigop factor => prefix_apply
+      | composed_bigop factor => prefix_apply
+      | compound_operator factor => prefix_apply
+      | operator factor => prefix_apply
+      | factor_base applyop factor => prefix_apply_applyop;
+    // Recursive extensions (tight_term + something):
+    tight_term += tight_term factor => apply_invisible_times
       | tight_term postfix => apply_postfix
       | function tight_term => prefix_apply
       | trigfunction tight_term => prefix_apply
       | any_bigop tight_term => prefix_apply
       | composed_bigop tight_term => prefix_apply
       | compound_operator tight_term => prefix_apply
-      | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop;
 
-    term = tight_term
+    term = tight_term | factor
     | term mulop tight_term => infix_apply_nary
+    | term mulop factor => infix_apply_nary
     | term mulop tight_term elideop => infix_apply_and_elide
+    | term mulop factor elideop => infix_apply_and_elide
     // Perl: COMPOSEOP creates function composition (f∘g)
     // Functions can participate as operands of composition
     | term composeop term => infix_apply
@@ -114,6 +126,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | expression addop term => infix_apply_nary
       | expression addop term elideop => infix_apply_and_elide
       | addop tight_term => prefix_apply
+      | addop factor => prefix_apply
       | factor addop => postfix_apply
       // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
       // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
@@ -192,6 +205,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
     // \log x => log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
     tight_term += opfunction tight_term => prefix_apply;
+    tight_term += opfunction factor => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
     // Uses existing `unknown` terminal; semantic action checks text is literally "d".
     // At factor level so it can appear as right operand of invisible_times.
@@ -238,6 +252,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | scripted_bigop_r1 postsuperarg => postfix_script
       | scripted_bigop_r1 postsubarg => postfix_script;
     tight_term += scripted_bigop tight_term => prefix_apply;
+    tight_term += scripted_bigop factor => prefix_apply;
     // Scripted bigops can also appear as standalone statements
     statement += scripted_bigop;
 
