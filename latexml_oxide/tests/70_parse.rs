@@ -27,7 +27,6 @@ fn calculus_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn compose_test() {
   latexml_test_single("tests/parse/compose.tex", "compose", DIR, None, None);
 }
