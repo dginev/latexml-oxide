@@ -446,7 +446,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 These are differences discovered by comparing `LaTeXML/t/*.xml` with `latexml_oxide/tests/*.xml`.
 Tests currently pass against Rust expected XMLs, but Rust output diverges from updated Perl.
 
-- [ ] **P1. guessTableHeaders differences** — Row analysis finds fewer data lines in Rust (alignment_skip_data comparison threshold triggers earlier). Root cause: `alignment_compare` produces different diff values for adjacent rows, likely due to cell content differences (Rust ding fontmap produces `?` for unmapped positions while Perl leaves empty). Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`. NOTE: Perl's continuation-line logic (L1336-1339) is dead code — `scalar($::TABLINES[0])` evaluates to array ref address.
+- [ ] **P1. guessTableHeaders differences** — Fixed pifont empty cells (was `?`), reducing ding.xml diffs 435→31. Remaining 31: `<thead>` wrapper not detected due to `is_numeric()` classifying circled digits (①-⑧) as Integer, causing row 21-22 comparison to exceed threshold. Cannot use `is_ascii_digit` because bbold header detection requires `is_numeric` for mathematical digits (𝟘-𝟟). Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`. NOTE: Perl's continuation-line logic (L1336-1339) is dead code.
 - [x] **P2. ltx_figure_panel CSS class** — DONE. `arrange_panels` now marks all non-metadata children. Synced `figure_grids.xml`.
 - [x] **P3. DIFFOP recognition in math parser** — DONE. Grammar rule `factor += unknown factor_base => diffop_apply` with INTOP context check. Synced `dots.xml`.
 - [x] **P4. Titled frame support** — DONE. Fixed `after_digest_begin` to use `gullet::unread`. Synced `framed.xml`.
