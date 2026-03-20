@@ -1349,6 +1349,23 @@ pub fn equationgroup_join_rows(
     t.unlink_node();
     equation.add_child(&mut t).ok();
   }
+  // Perl: cell Math elements are created (with xml:ids m1,m2,...) BEFORE openMathFork,
+  // so the main MathFork Math gets the next id (e.g. m4 for 3-cell eqnarray).
+  // In Rust, we need to pre-advance the id counter to match this ordering.
+  // Count _Capture_ cells (each initially creates a Math element during construction,
+  // even if some are later converted to <text> by afterConstruct hooks).
+  let mut cell_count = 0;
+  for eq in equations.iter() {
+    let captures = document.findnodes("ltx:_Capture_", Some(eq));
+    cell_count += captures.len();
+  }
+  // Pre-advance the id counter so the main MathFork Math gets the correct offset
+  if cell_count > 0 {
+    let ctrkey = s!("_ID_counter_m_");
+    let current = equation.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
+    let new_val = current.parse::<u32>().unwrap_or(0) + cell_count as u32;
+    equation.set_attribute(&ctrkey, &new_val.to_string())?;
+  }
   // Create MathFork
   let (mut mainfork, mut branch_node) = open_math_fork(document, &mut equation)?;
   for eq in equations {
