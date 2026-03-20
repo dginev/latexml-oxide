@@ -127,11 +127,11 @@ LoadDefinitions!({
   // Perl: plain_constructs.pool.ltxml
   DefMath!("\\cdotp", None, "\u{22C5}", role => "MULOP");
   DefMath!("\\ldotp", None, ".", role => "MULOP");
-  // intop/ointop need scriptpos/mathstyle closures — deferred
-  // DefMathI('\intop', undef, "\u{222B}", role => 'INTOP', meaning => 'integral',
-  //   scriptpos => \&doScriptpos, mathstyle => \&doVariablesizeOp);
-  // DefMathI('\ointop', undef, "\u{222E}", role => 'INTOP', meaning => 'contour-integral',
-  //   scriptpos => \&doScriptpos, mathstyle => \&doVariablesizeOp);
+  // Perl: latex_constructs.pool.ltxml — intop/ointop with dynamic scriptpos/mathstyle
+  DefMath!("\\intop", None, "\u{222B}", role => "INTOP", meaning => "integral",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
+  DefMath!("\\ointop", None, "\u{222E}", role => "INTOP", meaning => "contour-integral",
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
 
   // WHat are these? They look like superscripted parentheses, or combining accents!
   // \lhook

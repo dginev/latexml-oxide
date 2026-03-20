@@ -6,10 +6,10 @@ use std::rc::Rc;
 use regex::Regex;
 
 // use crate::common::error::*;
-use crate::Digested;
+use crate::{BoxOps, Digested};
 use crate::binding::content::merge_font;
 use crate::binding::counter::dialect::step_counter;
-use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
+use crate::binding::def::traits::IntoDigestedResult;
 use crate::common::arena;
 use crate::common::arena::SymHashMap;
 use crate::common::error::*;
@@ -478,26 +478,23 @@ pub fn def_math_dual(
           dtks.push(T_OTHER!("]"));
         }
         // end optional keyval arg
+        // Perl: Invocation($content_cs, @content_args) wraps each arg in braces.
+        // If no args (no params), just emit the CS without braces.
         dtks.push(T_BEGIN!());
         dtks.push(captured_cont_cs);
-        dtks.push(T_BEGIN!());
         for carg in cargs.into_iter().flatten() {
-          // if let Some(carg) = carg_opt {
+          dtks.push(T_BEGIN!());
           dtks.extend(carg.unlist());
-          //} else {}
-          // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
+          dtks.push(T_END!());
         }
-        dtks.push(T_END!());
         dtks.push(T_END!());
         dtks.push(T_BEGIN!());
         dtks.push(captured_pres_cs);
-        dtks.push(T_BEGIN!());
         for parg in pargs.into_iter().flatten() {
-          // if let Some(parg) = parg_opt {
+          dtks.push(T_BEGIN!());
           dtks.extend(parg.unlist());
-          //} else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
+          dtks.push(T_END!());
         }
-        dtks.push(T_END!());
         dtks.push(T_END!());
 
         Ok(Tokens::new(dtks))
@@ -619,7 +616,7 @@ pub fn def_math_primitive(
         if properties.dynamic_mathstyle {
           let is_display = state_font
             .get_mathstyle()
-            .map_or(false, |s| s.as_ref() == "display");
+            .is_some_and(|s| s.as_ref() == "display");
           properties.mathstyle =
             Some(if is_display { "display" } else { "text" }.to_string());
         }
@@ -627,7 +624,7 @@ pub fn def_math_primitive(
         if properties.dynamic_scriptpos {
           let is_display = state_font
             .get_mathstyle()
-            .map_or(false, |s| s.as_ref() == "display");
+            .is_some_and(|s| s.as_ref() == "display");
           properties.scriptpos =
             Some(if is_display { "mid" } else { "post" }.to_string());
         }
@@ -831,15 +828,13 @@ pub fn def_math_constructor(
 
 fn infer_sizer(
   sizer: Option<&SizingClosure>,
-  reversion: Option<&Reversion>,
+  _reversion: Option<&Reversion>,
 ) -> Option<SizingClosure> {
-  match sizer {
-    Some(closure) => Some(Rc::clone(closure)),
-    None => match reversion {
-      Some(Reversion::Tokens(tks)) => (*tks).to_string().as_str().into_option(),
-      _ => None,
-    },
-  }
+  // Perl: sizer is only set if explicitly provided. Never infer from reversion.
+  // Previously this inferred from reversion text, but that's wrong for body-capturing
+  // constructors (e.g. \lx@begin@inline@math with reversion "$" would measure the "$"
+  // character instead of the math body content).
+  sizer.map(Rc::clone)
 }
 
 fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token> {
@@ -1535,6 +1530,17 @@ fn transfer_common_constructor_options(
   // after_digest
   //
   let mut after_digest_closures = options.after_digest;
+  // Perl: mathstyle => \&doVariablesizeOp — compute mathstyle at digest time
+  if options.dynamic_mathstyle {
+    after_digest_closures.push(after_digest_simple!(_args, {
+      let state_font = lookup_font().unwrap();
+      let is_display = state_font
+        .get_mathstyle()
+        .is_some_and(|s| s.as_ref() == "display");
+      let mathstyle = if is_display { "display" } else { "text" };
+      _args.set_property("mathstyle", Stored::from(mathstyle.to_string()));
+    }));
+  }
   if !options.nogroup {
     after_digest_closures.push(after_digest_simple!(_args, {
       egroup()?;

@@ -173,7 +173,7 @@ LoadDefinitions!({
 
   // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)
   DefPrimitive!("\\DeclareMathAccent DefToken {}{} {Number}",
-  sub[(cs, _kind, class, code)] {
+  sub[(cs, kind, class, code)] {
     let class_str = class.to_string();
     let encoding = lookup_value(&s!("fontdeclaration@{}", class_str))
       .and_then(|v| if let Stored::Font(ref f) = v { f.get_encoding().map(|e| e.to_string()) } else { None })
@@ -182,10 +182,21 @@ LoadDefinitions!({
     if let Some(ch) = glyph {
       let presentation = ch.to_string();
       let paramlist = parse_parameters("Digested", &cs, true)?;
-      let mut opts = MathPrimitiveOptions::default();
-      opts.operator_role = Some("OVERACCENT".to_string());
+      let opts = MathPrimitiveOptions{
+        operator_role: Some("OVERACCENT".to_string()),
+        ..Default::default()};
       def_math(cs.clone(), paramlist, presentation, opts)?;
     }
+    // Perl: return AddToPreamble('\DeclareMathAccent', $cs, $kind, $class, $code);
+    // AddToPreamble returns Digest(Invocation(\lx@add@Preamble@PI, Invocation(\DeclareMathAccent, ...)))
+    // The primitive must RETURN this digested result so it gets absorbed by the document.
+    let preamble_text = format!("\\DeclareMathAccent{}{{{}}}{{{}}}{{{}}}",
+      cs.with_str(|s| s.to_string()), kind.to_string(), class.to_string(), code.value_of());
+    let preamble_toks = build_invocation(
+      T_CS!("\\lx@add@Preamble@PI"),
+      vec![Some(Tokens::new(Explode!(preamble_text)))])?;
+    let digested = stomach::digest(preamble_toks)?;
+    Ok(vec![digested])
   });
 
   // Perl: DefPrimitive('\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}', ...)
@@ -216,7 +227,7 @@ LoadDefinitions!({
       if let Some(r) = role {
         opts.role = Some(r.to_string());
       }
-      def_math(cs.clone(), None, presentation, opts)?;
+      def_math(cs, None, presentation, opts)?;
     }
   });
 

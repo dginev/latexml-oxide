@@ -134,7 +134,7 @@ vs. <text color="#E6E6E6">Light</text></p>
     </para>
     <para xml:id="S6.p2">
       <equation xml:id="S6.Ex2">
-        <Math mode="display" tex="\hbox{R}+\hbox{G}+\hbox{B}" text="[R] + [G] + [B]" xml:id="S6.Ex2.m1">
+        <Math mode="display" tex="\hbox{\pagecolor{red}R}+\hbox{\pagecolor{green}G}+\hbox{\pagecolor{blue}B}" text="[R] + [G] + [B]" xml:id="S6.Ex2.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>

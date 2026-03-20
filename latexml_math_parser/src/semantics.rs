@@ -145,6 +145,179 @@ pub fn infix_apply(
   Ok(Some(apply_tree))
 }
 
+/// Perl MathGrammar: Anything : Statement PUNCT <leftop: Statement PUNCT Statement>
+/// Creates a list@(...) or formulae@(...) XMDual: content arm is Apply(meaning=list/formulae, refs...),
+/// presentation arm is Wrap(items with separators).
+/// Left-recursive: first call creates a 2-item list, subsequent calls extend it.
+/// Perl distinction: comma-separated relational formulas at top level → "formulae",
+/// comma-separated plain expressions → "list".
+pub fn list_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, sep, right);
+  let mut left = left;
+  let mut right = right.unwrap();
+  let sep = sep.unwrap();
+
+  // If left is already a list/formulae Dual, extend it
+  if let Some(XM::Dual(ref mut content, ref mut pres, _, _)) = left {
+    if let XM::Apply(ref op, ref mut op_args, _, _) = **content {
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some("list")
+          || props.meaning.as_deref() == Some("formulae")
+        {
+          // Extend: add ref for new item to content args
+          let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
+          op_args.0.extend(new_ref.into_iter().map(Option::Some));
+          // Add separator and new item to presentation wrap
+          if let XM::Wrap(ref mut items, _, _) = **pres {
+            items.push(sep);
+            items.push(right);
+          }
+          return Ok(left);
+        }
+      }
+    }
+  }
+
+  // Determine if separator is a comma
+  let is_comma = match &sep {
+    XM::Lexeme(lex, _) => lex.contains(','),
+    XM::Token(props, _) => props.content.as_deref() == Some(","),
+    _ => false,
+  };
+
+  // Perl: comma-separated relational formulas (containing RELOP/multirelation) → "formulae"
+  // Otherwise → "list"
+  let meaning = if is_comma {
+    let left_rel = left.as_ref().map_or(false, is_relational_item);
+    let right_rel = is_relational_item(&right);
+    if left_rel && right_rel { "formulae" } else { "list" }
+  } else {
+    "list"
+  };
+  list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
+}
+
+/// Perl: within a Formula, comma-separated expressions after a relop form a list RHS.
+/// Like list_apply but rejects items that contain relations (those should go to statement level).
+/// This prevents `1<x<10,2<y<20` from being parsed as `1 < x < list(10,2) < y < ...`.
+pub fn formula_list_apply(
+  rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  p: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Check if ANY of the items contain relations — if so, reject this parse
+  // so Marpa falls back to the statement-level comma separation.
+  let has_relational = args.iter().any(|a| a.as_ref().map_or(false, is_relational_item));
+  if has_relational {
+    return Err("formula_list_apply: items contain relations, use statement-level list".into());
+  }
+  // Also check if the left side is already a list Dual containing relational items
+  if let Some(Some(XM::Dual(ref content, _, _, _))) = args.first() {
+    if let XM::Apply(ref op, ref op_args, _, _) = **content {
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some("list") {
+          // Check if any list item is relational
+          for arg in &op_args.0 {
+            if arg.as_ref().map_or(false, is_relational_item) {
+              return Err(
+                "formula_list_apply: list contains relational items".into(),
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+  list_apply(rule_id, args, p, ctxt)
+}
+
+/// Check if an XM tree is a relational formula (contains RELOP or multirelation).
+/// Used to distinguish Perl's "formulae" (comma-separated relations at top level)
+/// from "list" (comma-separated plain expressions).
+fn is_relational_item(xm: &XM) -> bool {
+  match xm {
+    XM::Apply(ref op, _, _, _) => match &*op.0 {
+      XM::Token(ref props, _) => props.meaning.as_deref() == Some("multirelation"),
+      XM::Lexeme(ref lex, _) => lex.split(':').next().map_or(false, |r| r.contains("RELOP")),
+      _ => false,
+    },
+    _ => false,
+  }
+}
+
+/// Perl: NewFormulae — comma-separated formulas at the top level use meaning="formulae"
+/// Smart list/formulae: use "formulae" for comma-separated statements, "list" otherwise.
+/// Perl: Formulae = Statement (',' Statement)* produces meaning="formulae"
+/// but \quad-separated items produce meaning="list".
+pub fn formulae_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, sep, right);
+  let mut left = left;
+  let mut right = right.unwrap();
+  let sep = sep.unwrap();
+
+  // Determine meaning based on separator content: comma => formulae, else => list
+  let is_comma = match &sep {
+    XM::Lexeme(lex, _) => lex.contains(','),
+    XM::Token(props, _) => props.content.as_deref() == Some(","),
+    _ => false,
+  };
+  let meaning = if is_comma { "formulae" } else { "list" };
+
+  // If left is already a Dual with same meaning, extend it
+  if let Some(XM::Dual(ref mut content, ref mut pres, _, _)) = left {
+    if let XM::Apply(ref op, ref mut op_args, _, _) = **content {
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some(meaning) {
+          let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
+          op_args.0.extend(new_ref.into_iter().map(Option::Some));
+          if let XM::Wrap(ref mut items, _, _) = **pres {
+            items.push(sep);
+            items.push(right);
+          }
+          return Ok(left);
+        }
+      }
+    }
+  }
+  list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
+}
+
+fn list_or_formulae_create(
+  mut left: XM, sep: XM, mut right: XM, meaning: &'static str, ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let op = XProps {
+    meaning: Some(Cow::Borrowed(meaning)),
+    ..XProps::default()
+  };
+  let ref_args = create_xmrefs(&mut [&mut left, &mut right], ctxt)?;
+  Ok(Some(XM::Dual(
+    Box::new(XM::Apply(
+      op.into(),
+      Args(ref_args.into_iter().map(Option::Some).collect()),
+      XProps::default(),
+      Meta::default(),
+    )),
+    Box::new(XM::Wrap(
+      vec![left, sep, right],
+      XProps::default(),
+      Meta::default(),
+    )),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 /// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
 pub fn infix_apply_and_elide(
   rule_id: i32,
@@ -173,6 +346,22 @@ pub fn infix_relation(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
+  // Reject list Dual as RHS when extending a multirelation chain.
+  // e.g. for `1<x<10,2<y<20`, prevent `< list(10,2) <` — commas should
+  // go to statement level, not be absorbed as a list within the multirelation.
+  if let Some(ref left_xm) = left {
+    if is_relational_item(left_xm) {
+      if let Some(XM::Dual(ref content, _, _, _)) = right {
+        if let XM::Apply(ref op, _, _, _) = **content {
+          if let XM::Token(ref props, _) = *op.0 {
+            if props.meaning.as_deref() == Some("list") {
+              return Err("infix_relation: rejecting list Dual as multirelation RHS".into());
+            }
+          }
+        }
+      }
+    }
+  }
   // if left has a "multirelation" already, add right in.
   // if left applies a relation, flatten it out to infix form.
   // base case - build a simple infix apply
@@ -286,6 +475,106 @@ pub fn prefix_apply(
     Meta::default(),
   )))
 }
+/// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
+/// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
+/// only parsed as function application when speculation is active. Without speculation,
+/// this parse is pruned and Marpa falls back to `tight_term factor => invisible_times`.
+pub fn speculative_prefix_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if !matches!(
+    latexml_core::state::lookup_value("MATHPARSER_SPECULATE"),
+    Some(latexml_core::state::Stored::Bool(true))
+  ) {
+    return Err("speculative_prefix_apply: MATHPARSER_SPECULATE not set, pruning parse".into());
+  }
+  unp!(args => prefixop, arg1);
+  Ok(Some(XM::Apply(
+    prefixop.into(),
+    Args(vec![arg1]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+/// Perl IntFactor: diffd ATOM_OR_ID/UNKNOWN => Apply(DIFFOP(d), var)
+/// Matches `d` followed by a factor. The semantic action checks that the first
+/// token's text content is literally "d" (case-sensitive). If not, prunes the parse.
+/// When matched, annotates the `d` token with role=DIFFOP, meaning=differential-d.
+pub fn diffop_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Check that the first token is literally "d"
+  let is_d = args.first().and_then(|a| a.as_ref()).map_or(false, |xm| {
+    match xm {
+      XM::Token(props, _) => props.content.as_deref() == Some("d"),
+      XM::Lexeme(lex, _) => lex.split(':').nth(1).map_or(false, |v| v == "d"),
+      _ => false,
+    }
+  });
+  if !is_d {
+    return Err("diffop_apply: first token is not 'd', pruning parse".into());
+  }
+  // Perl: diffd is only recognized inside IntOpArgFactors (integral context).
+  // Check if there's an INTOP token in the lexeme stream.
+  let has_intop = ctxt.nodes.iter().any(|n| {
+    n.get_attribute("role").as_deref() == Some("INTOP")
+  });
+  if !has_intop {
+    return Err("diffop_apply: no INTOP in context, pruning parse".into());
+  }
+  unp!(args => diffd, arg1);
+  // Annotate the d token: role=DIFFOP, meaning=differential-d
+  let annotated = match diffd {
+    Some(XM::Token(mut props, meta)) => {
+      props.role = Some(Cow::Borrowed("DIFFOP"));
+      props.meaning = Some(Cow::Borrowed("differential-d"));
+      Some(XM::Token(props, meta))
+    },
+    Some(XM::Lexeme(lex, meta)) => {
+      // Lexeme from Marpa: create a new Token with DIFFOP annotation
+      // Preserve the original lexeme reference for into_xmath node lookup
+      let mut props = XProps::default();
+      props.content = Some(Cow::Borrowed("d"));
+      props.role = Some(Cow::Borrowed("DIFFOP"));
+      props.meaning = Some(Cow::Borrowed("differential-d"));
+      // Store original lexeme id in _xmkey for node reference
+      props.xmkey = lex.split(':').nth(2).map(|s| Cow::Owned(s.to_string()));
+      Some(XM::Token(props, meta))
+    },
+    other => other,
+  };
+  Ok(Some(XM::Apply(
+    annotated.into(),
+    Args(vec![arg1]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+/// APPLYOP explicit application: operator APPLYOP term => Apply(operator, term)
+/// The APPLYOP token is consumed/discarded.
+pub fn prefix_apply_applyop(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => prefixop, _applyop, arg1);
+  Ok(Some(XM::Apply(
+    prefixop.into(),
+    Args(vec![arg1]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Perl: moreTerms2 trailing-operator → Apply(New('limit-from'), term, addop)
+/// Handles `a+` (limit from above) and similar trailing operators.
 pub fn postfix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -293,10 +582,76 @@ pub fn postfix_apply(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg, op);
+  // Perl: Apply(New('limit-from'), $term, $addop)
+  let limit_from = XM::Token(XProps {
+    meaning: Some(Cow::Borrowed("limit-from")),
+    ..XProps::default()
+  }, Meta::default());
+  Ok(Some(XM::Apply(
+    limit_from.into(),
+    Args(vec![arg, op]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Perl MathGrammar L423: POSTFIX operator (e.g. n! → factorial@(n))
+/// Takes (base, postfix_op) and produces Apply(op, base).
+pub fn apply_postfix(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => base, op);
   Ok(Some(XM::Apply(
     op.into(),
-    Args(vec![arg]),
+    Args(vec![base]),
     XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Perl MathGrammar L709-711: TwoPartRelop — combines two adjacent relops.
+/// E.g. `>=` → "greater-than-or-equals", `<<` → "much-less-than"
+pub fn two_part_relop_combine(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => op1, op2);
+  // Extract meanings from the lexeme nodes
+  let (m1, content1) = if let Some(XM::Lexeme(ref lex, _)) = op1 {
+    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let m = node.get_attribute("meaning").unwrap_or_default();
+    let c = node.get_content();
+    (m, c)
+  } else {
+    (String::new(), String::new())
+  };
+  let (m2, content2) = if let Some(XM::Lexeme(ref lex, _)) = op2 {
+    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let m = node.get_attribute("meaning").unwrap_or_default();
+    let c = node.get_content();
+    (m, c)
+  } else {
+    (String::new(), String::new())
+  };
+  // Perl: TwoPartRelop logic
+  let meaning = if m1 == m2 {
+    format!("much-{m1}")
+  } else {
+    format!("{m1}-or-{m2}")
+  };
+  let content = format!("{content1}{content2}");
+  Ok(Some(XM::Token(
+    XProps {
+      role: Some(Cow::Borrowed("RELOP")),
+      meaning: Some(Cow::Owned(meaning)),
+      content: Some(Cow::Owned(content)),
+      ..XProps::default()
+    },
     Meta::default(),
   )))
 }
@@ -336,6 +691,13 @@ pub fn fenced(
       XProps::default(),
       Meta::default(),
     )))
+  } else if op_name == "delimited-{}" {
+    // Perl enclose1: {expr} => set
+    let op = XProps {
+      meaning: Some(Cow::Borrowed("set")),
+      ..XProps::default()
+    };
+    interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
   } else if op_name == "delimited-||" {
     let op = XProps {
       meaning: Some(Cow::Borrowed("absolute-value")),
@@ -437,6 +799,7 @@ pub fn fence(
     },
     2 => match (o.as_ref(), p_str, c.as_ref()) {
       ("{", ",", "}") => "set",
+      ("{", ":", "}") | ("{", "|", "}") => "conditional-set",
       ("(", ",", ")") => "open-interval",
       ("[", ",", "]") => "closed-interval",
       ("(", ",", "]") => "open-closed-interval",
@@ -455,6 +818,33 @@ pub fn fence(
     ..XProps::default()
   }
   .into();
+  // Change VERTBAR separators inside fences to MIDDLE role
+  // (Perl: Fence sets middle delimiter role to MIDDLE)
+  // Separators are at odd indices in [open, item, sep, item, ..., close]
+  let mut stuff = stuff;
+  for i in (2..stuff.len().saturating_sub(1)).step_by(2) {
+    match &mut stuff[i] {
+      XM::Token(ref mut props, _) if props.role.as_deref() == Some("VERTBAR") => {
+        props.role = Some(Cow::Borrowed("MIDDLE"));
+      },
+      XM::Lexeme(ref lex, ref meta) if lex.starts_with("VERTBAR:") => {
+        // For lexemes, change the role on the underlying DOM node
+        if let Some(ref cv) = meta.curry_level {
+          let cv_str = cv.to_string();
+          if let Some(idx_str) = cv_str.strip_prefix(':') {
+            if let Ok(lex_idx) = idx_str.parse::<usize>() {
+              let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
+              if idx < ctxt.nodes.len() {
+                let mut node = ctxt.nodes[idx].clone();
+                let _ = node.set_attribute("role", "MIDDLE");
+              }
+            }
+          }
+        }
+      },
+      _ => {},
+    }
+  }
   interpret_delimited(op, stuff, ctxt).map(Option::Some)
 }
 
@@ -573,10 +963,6 @@ pub fn new_script(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   if let XM::Lexeme(ref lex, _) = script {
-    // TODO: continue porting...
-    // let rbase = base.as_ref().map(|b| b.realize_xmnode(&ctxt).expect("if a script is to be built
-    // with a base, we expect it to have a Node.")).flatten(); let rscript =
-    // script.realize_xmnode(&ctxt)?;
     let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = node_role.starts_with("FLOAT");
@@ -586,12 +972,55 @@ pub fn new_script(
     } else {
       "SUBSCRIPTOP"
     });
-    // Read scriptpos from the script node (e.g. "post2"), following Perl's NewScript:
-    //   my ($sx, $sl) = (p_getAttribute($rscript, 'scriptpos') || 'post') =~ /^(pre|mid|post)?(\d+)?$/;
-    //   scriptpos => "$x$l"
+
+    // Perl: Extract base's scriptpos to determine binding level
+    // If base is an XMApp with a SCRIPTOP operator, read its scriptpos
+    let (bx, mut bl, base_wasfloat, base_bumplevel) = extract_base_scriptpos(&base);
+
+    // Read scriptpos from the script node
     let raw_sp = script_wrap.get_attribute("scriptpos").unwrap_or_default();
-    let (x, l) = parse_scriptpos(&raw_sp);
-    let x = if is_float { "pre" } else { x };
+    let (sx, mut sl) = parse_scriptpos(&raw_sp);
+    let sx_defined = !raw_sp.is_empty() && sx != "post";
+
+    // Perl: $bl = ($sl || 1) unless $bl; $sl = ($bl || 1) unless $sl;
+    if bl == 0 {
+      bl = if sl > 0 { sl } else { 1 };
+    }
+    if sl == 0 {
+      sl = if bl > 0 { bl } else { 1 };
+    }
+
+    // Perl: $sx = ($bl == $sl ? $bx : 'post') unless $sx;
+    let sx = if sx_defined {
+      sx
+    } else if bl == sl {
+      bx
+    } else {
+      "post"
+    };
+
+    // Perl: $x = ($pos ? $pos : ($mode eq 'FLOAT' ? 'pre' : ($bl == $sl ? $bx : $sx) || 'post'));
+    let x = if is_float {
+      "pre"
+    } else if bl == sl {
+      bx
+    } else {
+      if !sx.is_empty() { sx } else { "post" }
+    };
+
+    // Perl: $l = $sl || $bl || scriptlevel || 0
+    let mut l = if sl > 0 { sl } else if bl > 0 { bl } else { 0 };
+
+    // Perl: if (p_getAttribute($rbase, '_wasfloat')) { $l++; $bumped = 1 }
+    //       elsif (my $innerl = p_getAttribute($rbase, '_bumplevel')) { $l = $innerl; }
+    let mut bumped = false;
+    if base_wasfloat {
+      l += 1;
+      bumped = true;
+    } else if base_bumplevel > 0 {
+      l = base_bumplevel;
+    }
+
     let scriptpos: Cow<'static, str> = format!("{x}{l}").into();
     let op = new_props(
       None,
@@ -599,11 +1028,16 @@ pub fn new_script(
       Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)),
     );
     let script_arg = obtain_arg(script, 0, ctxt)?;
+    // Record _wasfloat and _bumplevel for outer scripts to detect
+    let mut meta = if bumped { Meta::with_bumplevel(l) } else { Meta::default() };
+    if is_float {
+      meta.set_wasfloat();
+    }
     Ok(Some(XM::Apply(
       op.into(),
       Args(vec![base, script_arg]),
       XProps::default(),
-      Meta::default(),
+      meta,
     )))
   } else {
     panic!(
@@ -611,6 +1045,28 @@ pub fn new_script(
 got {:?}",
       script
     );
+  }
+}
+
+/// Extract scriptpos info from the base of a script operation.
+/// Returns (position_string, level, was_float, bump_level)
+fn extract_base_scriptpos(base: &Option<XM>) -> (&'static str, u32, bool, u32) {
+  match base {
+    Some(XM::Apply(ref op, _, _props, ref meta)) => {
+      // Check if the operator is a SCRIPTOP
+      if let XM::Token(ref op_props, _) = *op.0 {
+        let role = op_props.role.as_deref().unwrap_or("");
+        if role.ends_with("SCRIPTOP") {
+          let sp = op_props.scriptpos.as_deref().unwrap_or("post");
+          let (bx, bl) = parse_scriptpos(sp);
+          let wasfloat = meta.wasfloat();
+          let bumplevel = meta.bumplevel();
+          return (bx, bl, wasfloat, bumplevel);
+        }
+      }
+      ("post", 0, false, 0)
+    },
+    _ => ("post", 0, false, 0),
   }
 }
 
@@ -641,10 +1097,14 @@ pub fn apply_invisible_times(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, right);
   let mut left = left;
+  // Perl: MaybeFunction — mark UNKNOWN tokens as possibleFunction when MATHPARSER_SPECULATE is set
+  // and the right side is a delimited group (parenthesized)
+  maybe_mark_possible_function(&mut left, &right, ctxt.nodes);
+
   // left-to-right associative -- if "left" is already a "times", tuck "right" in:
   if let Some(XM::Apply(ref op, ref mut left_args, _, ref _m)) = left {
     if let XM::Token(xop, _xmeta) = &*op.0 {
@@ -657,10 +1117,41 @@ pub fn apply_invisible_times(
       }
     }
   }
-  // otherwise create a new one:
-  let times = invisible_times();
+  // Mixed number detection: NUMBER followed by FRACOP → invisible plus
+  // Perl: 2\frac{3}{4} = 2 + 3/4; 123\frac{12}{34} = 123 + 12/34 (all-integer)
+  // But 123\frac{12.0}{34} = 123 × 12.0/34 (decimal → not mixed number)
+  let l_num = is_number(&left);
+  let mut r_frac = is_fracop(&right);
+  // Also check via nodes: if right is a Lexeme pointing to a DOM node with FRACOP inside
+  if l_num && !r_frac {
+    if let Some(XM::Lexeme(ref lex, ref meta)) = right {
+      // Use curry_level to find the node — it encodes the node position
+      if let Some(ref cv) = meta.curry_level {
+        let cv_str = cv.to_string();
+        // Extract index from ":N" format — node index is N-1 (lexeme counter is 1-based)
+        if let Some(idx_str) = cv_str.strip_prefix(':') {
+          if let Ok(lex_idx) = idx_str.parse::<usize>() {
+            let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
+            if idx < ctxt.nodes.len() {
+              let node = &ctxt.nodes[idx];
+              if node.get_name() == "XMApp" {
+                for child in node.get_child_elements() {
+                  if child.get_attribute("role").as_deref() == Some("FRACOP") {
+                    r_frac = true;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  let is_mixed_number = l_num && r_frac;
+  let op = if is_mixed_number { invisible_plus() } else { invisible_times() };
   Ok(Some(XM::Apply(
-    times.into(),
+    op.into(),
     Args(vec![left, right]),
     XProps::default(),
     Meta::default(),
@@ -718,8 +1209,7 @@ pub fn new_props(
     idref,
     fontref,
     font: Some(font),
-    xmkey: None,
-    stretchy: None,
+    ..Default::default()
   }
 }
 
@@ -807,6 +1297,92 @@ fn morph_vertbar(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
   }
 }
 
+/// Perl: MaybeFunction — when MATHPARSER_SPECULATE is set and an UNKNOWN token
+/// is used as the left operand of invisible times with a delimited right side,
+/// mark the token with possibleFunction="yes".
+fn maybe_mark_possible_function(left: &mut Option<XM>, right: &Option<XM>, nodes: &[XMLNode]) {
+  // Only active when MATHPARSER_SPECULATE is set
+  if !matches!(
+    latexml_core::state::lookup_value("MATHPARSER_SPECULATE"),
+    Some(latexml_core::state::Stored::Bool(true))
+  ) {
+    return;
+  }
+  // Check if right side contains delimiters (parenthesized group)
+  let right_has_delimiters = match right {
+    Some(XM::Dual(..)) | Some(XM::Wrap(..)) => true,
+    _ => false,
+  };
+  if !right_has_delimiters {
+    return;
+  }
+  // Navigate through XMApp wrappers to find the innermost token (matching Perl's descent)
+  mark_inner_possible_function(left, nodes);
+}
+
+fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
+  match xm {
+    Some(XM::Token(ref mut props, _)) => {
+      if props.role.as_deref() == Some("UNKNOWN") {
+        props.possible_function = Some(Cow::Borrowed("yes"));
+      }
+    },
+    Some(XM::Lexeme(ref lex, _)) => {
+      // Lexemes are "ROLE:content:id" references to XML nodes.
+      // Set the attribute directly on the underlying XML node.
+      if lex.starts_with("UNKNOWN:") {
+        if let Some(id_str) = lex.split(':').next_back() {
+          if let Ok(id) = id_str.parse::<usize>() {
+            if id > 0 && id <= nodes.len() {
+              let mut node = nodes[id - 1].clone();
+              let _ = node.set_attribute("possibleFunction", "yes");
+            }
+          }
+        }
+      }
+    },
+    Some(XM::Apply(_, ref mut args, _, _)) => {
+      if let Some(first) = args.0.first_mut() {
+        mark_inner_possible_function(first, nodes);
+      }
+    },
+    _ => {},
+  }
+}
+
+fn is_number(xm: &Option<XM>) -> bool {
+  match xm {
+    Some(XM::Token(props, _)) => props.role.as_deref() == Some("NUMBER"),
+    Some(XM::Lexeme(lex, _)) => lex.starts_with("NUMBER:"),
+    _ => false,
+  }
+}
+
+fn is_fracop(xm: &Option<XM>) -> bool {
+  match xm {
+    Some(XM::Apply(op, _, _, _)) => {
+      if let XM::Token(props, _) = &*op.0 {
+        props.role.as_deref() == Some("FRACOP")
+      } else if let XM::Lexeme(lex, _) = &*op.0 {
+        lex.starts_with("FRACOP:")
+      } else {
+        false
+      }
+    },
+    _ => false,
+  }
+}
+
+fn invisible_plus() -> XProps {
+  XProps {
+    meaning: Some(Cow::Borrowed("plus")),
+    role: Some(Cow::Borrowed("ADDOP")),
+    content: Some(Cow::Borrowed("\u{2064}")), // INVISIBLE PLUS
+    font: Some(font::FONT_TEXT_DEFAULT.specialize("\u{2064}")),
+    ..XProps::default()
+  }
+}
+
 fn invisible_times() -> XProps {
   XProps {
     meaning: Some(Cow::Borrowed("times")),
@@ -828,7 +1404,7 @@ fn invisible_comma() -> XProps {
 
 fn xnew(text: String) -> XProps {
   XProps {
-    content: Some(Cow::Owned(text)),
+    meaning: Some(Cow::Owned(text)),
     ..XProps::default()
   }
 }
@@ -842,6 +1418,115 @@ fn absent() -> XM {
 }
 
 /// Prefix arrow: `→ expr` becomes `Apply(→, absent, expr)` — matching Perl's `AnyOp Expression`
+/// Perl: MorphVertbar — expression VERTBAR expression treated as conditional/modifier
+/// e.g. `x | y,z,t` → `conditional@(x, list@(y,z,t))`
+pub fn vertbar_modifier(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, vertbar, right);
+  // Morph the VERTBAR to MODIFIEROP with meaning="conditional"
+  // Use text default font (not math italic) — Perl MorphVertbar produces unfonted |
+  let modop = XProps {
+    meaning: Some(Cow::Borrowed("conditional")),
+    role: Some(Cow::Borrowed("MODIFIEROP")),
+    stretchy: Some(Cow::Borrowed("false")),
+    content: Some(Cow::Borrowed("|")),
+    font: Some(font::FONT_TEXT_DEFAULT.specialize("|")),
+    ..XProps::default()
+  };
+  Ok(Some(XM::Apply(
+    modop.into(),
+    Args(vec![left, right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Perl: formula relop (no right operand) — trailing relop with implied absent right
+/// e.g. `y < 2 <` → `multirelation(y, <, 2, <, absent)`
+pub fn postfix_relop(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, relop);
+  let right = Some(absent());
+  // Reuse infix_relation logic: if left is already a relation, convert to multirelation
+  let mut left = left;
+  if let Some(XM::Apply(ref op, ref mut left_args, _, _)) = left {
+    if let XM::Token(ref tok, _) = *op.0 {
+      if tok.meaning == Some(Cow::Borrowed("multirelation")) {
+        left_args.0.push(relop);
+        left_args.0.push(right);
+        return Ok(left);
+      }
+    }
+    if let XM::Lexeme(ref lex, _) = *op.0 {
+      if lex.split(':').next().unwrap().contains("RELOP") {
+        let multirel_tok = XProps {
+          meaning: Some(Cow::Borrowed("multirelation")),
+          ..XProps::default()
+        };
+        let mut drained = left_args.0.drain(..);
+        let l1 = drained.next().unwrap();
+        let l2 = drained.next().unwrap();
+        let moved_op = (*op.0).clone();
+        return Ok(Some(XM::Apply(
+          multirel_tok.into(),
+          Args(vec![l1, Some(moved_op), l2, relop, right]),
+          XProps::default(),
+          Meta::default(),
+        )));
+      }
+    }
+  }
+  // Simple case: just apply relop to left and absent
+  Ok(Some(XM::Apply(
+    relop.into(),
+    Args(vec![left, right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Perl: METARELOP Formula — prefix metarelop with implied absent left operand
+/// e.g. `\vdash x = 0` → `absent proves (x = 0)`
+pub fn prefix_metarelop_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => metarelop, right);
+  Ok(Some(XM::Apply(
+    metarelop.into(),
+    Args(vec![Some(absent()), right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Perl: AnyOp Expression => Apply(AnyOp, Absent(), Expression)
+/// Leading relop with implied absent left operand (e.g. `= e + f + g` in eqnarray)
+pub fn prefix_relop_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => relop, right);
+  Ok(Some(XM::Apply(
+    relop.into(),
+    Args(vec![Some(absent()), right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 pub fn prefix_arrow_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,

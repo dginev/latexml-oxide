@@ -429,3 +429,27 @@ Let!("\\csname endIEEEeqnarray*\\endcsname", "\\csname endeqnarray*\\endcsname")
 **Refactoring needed:** `DefMacro!` and `Let!` should accept `T_CS!("\\foo*")`
 as the first argument, bypassing string tokenization entirely. The internal
 tokenizer should also be fixed to handle `*` in CS names without looping.
+
+---
+
+## 17. Sizer inference from reversion: silent incorrect sizing
+
+**Symptom:** All math boxes (`\hbox{$...$}`) return identical size `5.00002pt x 7.5pt + 0.55554pt` regardless of math content.
+
+**Root cause:** `dialect.rs::infer_sizer()` inferred a sizer from the Constructor's reversion tokens when no explicit sizer was specified. For body-capturing constructors like `\lx@begin@inline@math`, the reversion is `$` (T_MATH). The inferred sizer measured the literal string `"$"` with the current font, producing the `$` character's glyph size instead of the math body content size.
+
+**Fix:** `infer_sizer()` now returns `None` when no explicit sizer is set, matching Perl's behavior where sizer is never inferred from reversion. The Whatsit's default `compute_size()` then correctly uses the "body" property.
+
+**Key insight:** In Perl, `Whatsit::computeSize()` has explicit fallback: use body if available, else sum all args, else use reversion. The reversion is only consulted as a last resort. Rust's `infer_sizer` was short-circuiting this cascade.
+
+---
+
+## 18. METRIC_MAP vs STDMETRICS key mismatch: math fonts fall back to cmr
+
+**Symptom:** Math character widths (e.g., italic 'a') don't include italic correction. All math characters use cmr (serif) metrics instead of cmmi (math italic) metrics.
+
+**Root cause:** `METRIC_MAP` mapped `"math_medium_italic"` → `"cmmi"` but `STDMETRICS` used `"cmm"` as the key for cmmi10 data. The `get_metric()` function tried `"cmmi10"` → not found, then `get_metric_for_name("cmmi")` → not found, then fell back to `"cmr"`.
+
+**Fix:** Changed `METRIC_MAP` value from `"cmmi"` to `"cmm"` to match the `STDMETRICS` key. Now `get_metric_for_name("cmm")` finds the correct cmmi metrics.
+
+**Key insight:** The STDMETRICS key naming convention uses the base without the trailing 'i' (cmm, not cmmi), but METRIC_MAP was using the TFM filename convention (cmmi). Always ensure METRIC_MAP values match STDMETRICS keys.

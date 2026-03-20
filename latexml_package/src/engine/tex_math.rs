@@ -4,6 +4,7 @@
 
 use crate::prelude::*;
 use crate::engine::tex_character;
+use latexml_core::common::mathchar::decode_math_char;
 
 /// Perl's mergeLimits (TeX_Math.pool.ltxml): walks backward through the
 /// digest list, extracts any existing script level from the previous
@@ -140,11 +141,12 @@ LoadDefinitions!({
     "<ltx:XMText>#body</ltx:XMText>",
     // alias => T_MATH ? do we support that ?
     alias => "$",
-    before_digest => sub { stomach::begin_mode("text")?; },
+    // Perl: beginMode('restricted_horizontal') — NOT 'text'
+    before_digest => sub { stomach::begin_mode("restricted_horizontal")?; },
     capture_body => true
   );
   DefConstructor!("\\lx@end@inmath@text", "", alias => "$",
-    before_digest => sub { stomach::end_mode("text")?; });
+    before_digest => sub { stomach::end_mode("restricted_horizontal")?; });
   //======================================================================
   // Effectively these are the math hooks, redefine these to do what you want with math?
   DefConstructor!("\\lx@begin@display@math",
@@ -234,7 +236,7 @@ LoadDefinitions!({
     sizer       => "#1",
     after_digest => sub[whatsit] {
       let n = whatsit.get_arg(1).unwrap().value_of();
-      let props = decode_math_char(n as u16)?;
+      let props = decode_math_char(n as u16, None)?;
       if let Some(glyph) = props.glyph {
         whatsit.set_property("glyph", glyph);
         whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
@@ -268,7 +270,7 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     let mut n = whatsit.get_arg(1).unwrap().value_of();
     n >>= 12;    // Ignore 3 rightmost digits and treat as \mathchar
-    let props = decode_math_char(n as u16)?;
+    let props = decode_math_char(n as u16, None)?;
     if let Some(glyph) = props.glyph {
       whatsit.set_property("glyph", glyph);
       whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
@@ -291,20 +293,21 @@ LoadDefinitions!({
     let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, means_relax, None);
     let value = gullet::read_number().unwrap_or_default();
-    let props = decode_math_char(value.value_of() as u16)?;
+    let props = decode_math_char(value.value_of() as u16, None)?;
     state::install_definition(
       Register::new_math_chardef(
         newcs,
         Some(value.into()),
         props.glyph,
         props.role.as_deref().map(arena::pin),
-        props.meaning.as_deref().map(arena::pin),
-        None, // chardef_name: synthesized at invoke time from CS name
-        props.stretchy.as_deref().map(arena::pin),
-        props.scriptpos.as_deref().map(arena::pin),
-        props.mathstyle.as_deref().map(arena::pin),
-        props.need_scriptpos,
-        props.need_mathstyle,
+        CharDefProps {
+          meaning: props.meaning.as_deref().map(arena::pin),
+          // chardef_name: synthesized at invoke time from CS name
+          stretchy: props.stretchy.as_deref().map(arena::pin),
+          scriptpos: props.scriptpos.as_deref().map(arena::pin),
+          mathstyle: props.mathstyle.as_deref().map(arena::pin),
+          need_scriptpos: props.need_scriptpos,
+          need_mathstyle: props.need_mathstyle }
       ), None);
     state::after_assignment();
   });
@@ -315,7 +318,7 @@ LoadDefinitions!({
   sizer => "#2",    // Close enough?
   after_digest => sub[whatsit] {
     let n = whatsit.get_arg(1).unwrap().value_of();
-    let props = decode_math_char(n as u16)?;
+    let props = decode_math_char(n as u16, None)?;
     if let Some(glyph) = props.glyph {
       let glyph_string = glyph.to_string();
       let acc_props = tex_character::unicode_accent(&glyph_string);
@@ -449,7 +452,8 @@ LoadDefinitions!({
     before_digest => {
       gullet::unread(Tokens::new(vec![T_CS!("\\lx@hidden@egroup@right"), T_CS!("\\lx@right")]));
     },
-    reversion => None);
+    // Empty reversion — \lx@right provides the actual \right reversion via alias
+    reversion => Tokens!());
 
   DefConstructor!("\\@left Token",
     "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
@@ -545,7 +549,7 @@ LoadDefinitions!({
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
+    lookup_token(&s!("textfont_{fam}")).unwrap_or_else(|| T_CS!("\\tenrm"))
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
@@ -555,7 +559,7 @@ LoadDefinitions!({
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
+    lookup_token(&s!("scriptfont_{fam}")).unwrap_or_else(|| T_CS!("\\sevenrm"))
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
@@ -565,7 +569,7 @@ LoadDefinitions!({
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
+    lookup_token(&s!("scriptscriptfont_{fam}")).unwrap_or_else(|| T_CS!("\\fiverm"))
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
@@ -752,7 +756,8 @@ LoadDefinitions!({
       use latexml_core::binding::def::dialect::get_xmarg_id;
 
       // Extract key-value pairs from arg 2
-      let (role_kv, meaning_kv, thickness_kv, has_left, has_right) = {
+      // Store left/right as Stored::Tokens so template #left/#right can absorb them
+      let (role_kv, meaning_kv, thickness_kv, has_left, has_right, left_val, right_val) = {
         let arg2 = whatsit.get_arg(2);
         if let Some(d) = arg2 {
           use latexml_core::digested::DigestedData;
@@ -760,16 +765,33 @@ LoadDefinitions!({
             let role = kv.get_value("role").map(ToString::to_string);
             let meaning = kv.get_value("meaning").map(ToString::to_string);
             let thickness = kv.get_value("thickness").map(ToString::to_string);
-            let has_left = kv.get_value("left").is_some();
-            let has_right = kv.get_value("right").is_some();
-            (role, meaning, thickness, has_left, has_right)
+            let left_val = kv.get_value("left").map(|v| v.clone());
+            let right_val = kv.get_value("right").map(|v| v.clone());
+            let has_left = left_val.is_some();
+            let has_right = right_val.is_some();
+            (role, meaning, thickness, has_left, has_right, left_val, right_val)
           } else {
-            (None, None, None, false, false)
+            (None, None, None, false, false, None::<ArgWrap>, None::<ArgWrap>)
           }
         } else {
-          (None, None, None, false, false)
+          (None, None, None, false, false, None, None)
         }
       };
+      // Store left/right as pre-digested Stored::Digested for template #left/#right.
+      // The template's #prop lookup converts Stored→Option<Digested> for absorption.
+      // Stored::Tokens doesn't convert, but Stored::Digested does.
+      use latexml_core::definition::argument::ArgWrap;
+      for (key, val_opt) in [("left", &left_val), ("right", &right_val)] {
+        if let Some(val) = val_opt {
+          if let ArgWrap::Tokens(ref ts) = val {
+            // Digest the tokens now (during after_digest phase) to get a Digested value
+            let d = stomach::digest(ts.clone())?;
+            whatsit.set_property(key, Stored::Digested(d));
+          } else {
+            whatsit.set_property(key, Stored::String(arena::pin(val.to_string())));
+          }
+        }
+      }
 
       // Determine mathstyle from current font
       let style = lookup_font()
@@ -789,8 +811,9 @@ LoadDefinitions!({
       };
 
       // Grab the numerator (already digested content)
-      let top = stomach::regurgitate();
-      // TODO: adjustMathstyle($style, {}, @top);
+      let mut top = stomach::regurgitate();
+      // Perl: adjustMathstyle($style, {}, @top) — retroactively adjust font sizes
+      adjust_mathstyle(&style, &mut top);
 
       // Set fraction font for denominator
       merge_font(Font { fraction: Some(true), ..Font::default() });
@@ -817,7 +840,7 @@ LoadDefinitions!({
 
       // For delimited variants, set up XMDual keys
       if has_left || has_right {
-        whatsit.set_property("needXMDual", true);
+        whatsit.set_property("needXMDual", "1");
         let key0 = get_xmarg_id()?;
         let key1 = get_xmarg_id()?;
         let key2 = get_xmarg_id()?;
@@ -878,16 +901,18 @@ LoadDefinitions!({
   // \belowdisplayskip       pg is normal glue placed after a displayed equation.
   // \belowdisplayshortskip  pg is alternate glue placed after a displayed equation.
 
+  // Perl: Box(' ', undef, undef, Invocation(...), width => $length, isSpace => 1)
+  // Use regular space as content, matching Perl. Width is stored as MuGlue.
   DefPrimitive!("\\mkern MuGlue", sub[(length)] {
-    let s = dimension_to_spaces(length);
-    Tbox::new(arena::pin(s), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
+    Tbox::new(arena::pin_static(" "), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
       stored_map!("width" => length, "isSpace" => true)) });
   DefPrimitive!("\\mskip MuGlue", sub[(length)] {
-    let s = dimension_to_spaces(length);
-    Tbox::new(arena::pin(s), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
+    Tbox::new(arena::pin_static(" "), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
       stored_map!("width" => length, "isSpace" => true)) });
 
   // MuGlue registers; TeXBook p.274
+  // NOTE: Perl stores these as Glue with "mu" parsed to pt internally,
+  // NOT as MuGlue. Changing to MuGlue causes width computation regressions.
   DefRegister!("\\thinmuskip", Glue!("3mu"));
   DefRegister!("\\medmuskip", Glue!("4mu plus 2mu minus 4mu"));
   DefRegister!("\\thickmuskip", Glue!("5mu plus 5mu"));
@@ -1043,8 +1068,10 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
                   left_role: "MULOP",   right_role: "MULOP", name: Some("backslash") },
     "|"      => DelimiterMeta{ char: '|',
                   left_role: "VERTBAR", right_role: "VERTBAR", name: None },
-    "\\|"     => DelimiterMeta{ char: '\u{2225}',
-                  left_role: "VERTBAR", right_role: "VERTBAR", name: None },
+    "\\|"     => DelimiterMeta{ char: '\u{2016}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
+    "\u{2225}" => DelimiterMeta{ char: '\u{2016}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
     "\\uparrow"   => DelimiterMeta{ char: '\u{2191}',
                       left_role: "OPEN", right_role: "CLOSE", name: Some("uparrow") },
     "\\Uparrow"   => DelimiterMeta{ char: '\u{21D1}',
@@ -1059,3 +1086,152 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
                       left_role: "OPEN", right_role: "CLOSE", name: Some("Updownarrow") }
   )
 });
+
+/// Perl TeX_Math.pool.ltxml L1010-1052: adjustMathstyle
+/// Recursively adjusts font mathstyle on already-digested boxes.
+/// Called from \over handler to retroactively adjust numerator font sizes.
+pub fn adjust_mathstyle(outerstyle: &str, boxes: &[Digested]) {
+  let mut adjusted: std::collections::HashSet<usize> = std::collections::HashSet::new();
+  adjust_mathstyle_rec(outerstyle, &mut adjusted, boxes);
+}
+
+fn adjust_mathstyle_rec(
+  outerstyle: &str,
+  adjusted: &mut std::collections::HashSet<usize>,
+  boxes: &[Digested],
+) {
+  for box_item in boxes {
+    // Use the data pointer as identity for dedup (Rc::as_ptr on inner)
+    let ptr = box_item.data() as *const DigestedData as usize;
+    if adjusted.contains(&ptr) {
+      continue; // don't adjust twice (args AND props may share references)
+    }
+    adjusted.insert(ptr);
+    match box_item.data() {
+      DigestedData::TBox(b) => {
+        adjust_mathstyle_internal(outerstyle, &mut b.borrow_mut());
+      },
+      DigestedData::List(l) => {
+        let children: Vec<Digested> = l.borrow().boxes.clone();
+        adjust_mathstyle_rec(outerstyle, adjusted, &children);
+      },
+      DigestedData::Whatsit(w) => {
+        // Check for explicit_mathstyle / own_mathstyle properties
+        {
+          let wb = w.borrow();
+          if wb.get_property("explicit_mathstyle").is_some() {
+            return; // stop recursion entirely for explicit mathstyle
+          }
+          if wb.get_property("own_mathstyle").is_some() {
+            continue; // skip this whatsit but continue others
+          }
+        }
+        // Adjust the whatsit's font and get the new style for recursion
+        let style = {
+          let mut wb = w.borrow_mut();
+          adjust_mathstyle_internal_whatsit(outerstyle, &mut wb)
+            .unwrap_or_else(|| outerstyle.to_string())
+        };
+        // Recurse on args
+        let args: Vec<Digested> = w
+          .borrow()
+          .get_args()
+          .iter()
+          .filter_map(|a| a.clone())
+          .collect();
+        adjust_mathstyle_rec(&style, adjusted, &args);
+        // Recurse on property values that are Digested
+        let prop_digested: Vec<Digested> = w
+          .borrow()
+          .properties
+          .iter()
+          .filter_map(|(_k, v)| {
+            if let Stored::Digested(d) = v {
+              Some(d.clone())
+            } else {
+              None
+            }
+          })
+          .collect();
+        adjust_mathstyle_rec(&style, adjusted, &prop_digested);
+      },
+      _ => {},
+    }
+  }
+}
+
+/// Perl mathstyle_adjust_map: maps (outerstyle, origstyle) → newstyle
+fn mathstyle_adjust(outerstyle: &str, origstyle: &str) -> &'static str {
+  match (outerstyle, origstyle) {
+    ("display", "display") => "text",
+    ("display", "text") => "script",
+    ("display", "script") => "script",
+    ("display", "scriptscript") => "scriptscript",
+    ("text", "display") => "text",
+    ("text", "text") => "script",
+    ("text", "script") => "scriptscript",
+    ("text", "scriptscript") => "scriptscript",
+    ("script", "display") => "display",
+    ("script", "text") => "text",
+    ("script", "script") => "scriptscript",
+    ("script", "scriptscript") => "scriptscript",
+    ("scriptscript", "display") => "display",
+    ("scriptscript", "text") => "text",
+    ("scriptscript", "script") => "scriptscript",
+    ("scriptscript", "scriptscript") => "scriptscript",
+    _ => "display",
+  }
+}
+
+/// Adjust a TBox's font mathstyle using Font::merge to trigger size recalculation
+fn adjust_mathstyle_internal(outerstyle: &str, tbox: &mut Tbox) {
+  let origstyle_owned = tbox
+    .font
+    .mathstyle
+    .as_deref()
+    .unwrap_or("display")
+    .to_string();
+  let newstyle = mathstyle_adjust(outerstyle, &origstyle_owned);
+  if newstyle != origstyle_owned {
+    // Use Font::merge to trigger size recalculation via STYLE_SIZE mapping
+    let merge_font = Font {
+      mathstyle: Some(Cow::Borrowed(newstyle)),
+      ..Font::default()
+    };
+    let merged = tbox.font.merge(merge_font);
+    tbox.font = Rc::new(merged);
+  }
+}
+
+/// Adjust a Whatsit's font mathstyle, returning the new style if it had a mathstyle property
+fn adjust_mathstyle_internal_whatsit(outerstyle: &str, whatsit: &mut Whatsit) -> Option<String> {
+  if let Some(Stored::Font(ref font)) = whatsit.properties.get("font") {
+    let origstyle = font
+      .mathstyle
+      .as_deref()
+      .unwrap_or("display")
+      .to_string();
+    let newstyle = mathstyle_adjust(outerstyle, &origstyle);
+    if newstyle != origstyle {
+      let merge_font = Font {
+        mathstyle: Some(Cow::Borrowed(newstyle)),
+        ..Font::default()
+      };
+      let merged = font.merge(merge_font);
+      whatsit
+        .properties
+        .insert("font", Stored::Font(Rc::new(merged)));
+    }
+  }
+  // If whatsit has a recorded mathstyle property, adjust it too
+  if let Some(Stored::String(ms)) = whatsit.properties.get("mathstyle") {
+    let ms_str = arena::to_string(*ms);
+    let newstyle = mathstyle_adjust(outerstyle, &ms_str);
+    whatsit
+      .properties
+      .insert("mathstyle", Stored::String(arena::pin(newstyle)));
+    Some(newstyle.to_string())
+  } else {
+    None
+  }
+}

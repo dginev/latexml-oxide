@@ -37,20 +37,21 @@
   </para>
   <para xml:id="p2">
     <equation xml:id="S0.Ex2">
-      <Math mode="display" tex="\int\iint\iiint\oint\oiint" text="list@(integral, double-integral)" xml:id="S0.Ex2.m1">
+      <Math mode="display" tex="\int\iint\iiint\oint\oiint" text="integral@(double-integral@(triple-integral@(contour-integral@(surface-integral))))" xml:id="S0.Ex2.m1">
         <XMath>
-          <XMDual>
+          <XMApp>
+            <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
             <XMApp>
-              <XMTok meaning="list"/>
-              <XMRef idref="S0.Ex2.m1.1"/>
-              <XMRef idref="S0.Ex2.m1.2"/>
+              <XMTok mathstyle="display" meaning="double-integral" name="iint" role="INTOP">∬</XMTok>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="triple-integral" name="iiint" role="INTOP">∭</XMTok>
+                <XMApp>
+                  <XMTok mathstyle="display" meaning="contour-integral" name="oint" role="INTOP">∮</XMTok>
+                  <XMTok mathstyle="display" meaning="surface-integral" name="oiint" role="INTOP">∯</XMTok>
+                </XMApp>
+              </XMApp>
             </XMApp>
-            <XMWrap>
-              <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP" xml:id="S0.Ex2.m1.1">∫</XMTok>
-              <XMTok role="PUNCT">⁣</XMTok>
-              <XMTok mathstyle="display" meaning="double-integral" name="iint" role="INTOP" xml:id="S0.Ex2.m1.2">∬</XMTok>
-            </XMWrap>
-          </XMDual>
+          </XMApp>
         </XMath>
       </Math>
     </equation>

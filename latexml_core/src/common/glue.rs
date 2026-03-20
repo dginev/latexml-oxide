@@ -166,7 +166,7 @@ impl NumericOps for Glue {
   where Self: Sized {
     let mut divisor = other.value_f64();
     if divisor == 0.0 {
-      divisor = EPSILON as f64;
+      divisor = EPSILON;
     }
     Glue {
       skip:  (self.skip as f64 / divisor).trunc() as i64,

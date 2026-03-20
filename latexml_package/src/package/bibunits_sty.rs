@@ -26,7 +26,7 @@ LoadDefinitions!({
     after_digest => {
       if !lookup_bool("CITE_UNIT_GLOBAL") {
         let unit = Digest!("\\bu@unitname")?.to_string();
-        assign_value("CITE_UNIT", arena::pin(&s!("bibliography {unit}")), None);
+        assign_value("CITE_UNIT", arena::pin(s!("bibliography {unit}")), None);
       }
     });
   // Perl: sets CITE_UNIT to "buN" if not global

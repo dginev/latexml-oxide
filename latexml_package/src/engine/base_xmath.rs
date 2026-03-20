@@ -206,6 +206,11 @@ LoadDefinitions!({
 
   // These to be used in presentation side
   DefMath!("\\lx@ApplyFunction", None, "\u{2061}", reversion => "", name => "", role =>"APPLYOP");
+  // Perl Base_Deprecated: deprecated aliases for invisible math operators
+  Let!("\\@APPLYFUNCTION", "\\lx@ApplyFunction");
+  Let!("\\@INVISIBLETIMES", "\\lx@InvisibleTimes");
+  Let!("\\@INVISIBLECOMMA", "\\lx@InvisibleComma");
+  Let!("\\@INVISIBLEPLUS", "\\lx@InvisiblePlus");
   DefMath!("\\lx@InvisibleTimes", None, "\u{2062}", reversion => "", name => "",
     meaning => "times", role => "MULOP");
   DefMath!("\\lx@InvisibleComma", None, "\u{2063}", reversion => "", name => "", role => "PUNCT");
@@ -263,8 +268,16 @@ LoadDefinitions!({
     if let Some(Stored::HashStored(xmargs)) = pop_value("PENDING_DUAL_XMARGS")? { // Really SHOULD be a hash
       whatsit.set_properties(xmargs);  // Hopefully no name class with XM<digits>
     }
-    // TODO:
-    // whatsit.set_properties($kv->getPairs) if $kv;
+    // Perl: whatsit.set_properties($kv->getPairs) if $kv;
+    // Extract key-value pairs from the OptionalKeyVals argument and set as properties.
+    // This makes #role, #name, #meaning etc. available in the constructor template.
+    if let Some(kv_arg) = whatsit.get_arg(1) {
+      if let DigestedData::KeyVals(kv) = kv_arg.data() {
+        for (k, v) in kv.get_hash() {
+          whatsit.set_property(&k, Stored::from(v));
+        }
+      }
+    }
 
     let props = whatsit.get_properties();
     let cr    = props.get("content_reversion").cloned();
@@ -852,8 +865,16 @@ LoadDefinitions!({
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
+          // Store left/right as Digested directly from digested keyvals.
+          for prop_key in &["left", "right"] {
+            if let Some(digested) = kv.get_value_digested(prop_key) {
+              props.insert(*prop_key, Stored::Digested(digested.clone()));
+            }
+          }
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+            if k != "left" && k != "right" {
+              props.insert(k, Stored::String(arena::pin(v.to_string())));
+            }
           }
         }
       }
@@ -863,16 +884,48 @@ LoadDefinitions!({
       // Perl: afterDigest — check if XMDual is needed, store alignment
       // Check if datameaning or delimitermeaning is set
       let has_datameaning = whatsit.get_property("datameaning")
-        .map_or(false, |v| !v.to_string().is_empty());
+        .is_some_and(|v| !v.to_string().is_empty());
       let has_delimmeaning = whatsit.get_property("delimitermeaning")
-        .map_or(false, |v| !v.to_string().is_empty());
+        .is_some_and(|v| !v.to_string().is_empty());
       if has_datameaning || has_delimmeaning {
         whatsit.set_property("needXMDual", "1");
         whatsit.set_property("xmkey", get_xmarg_id()?);
       }
-      // Store current alignment for reversion
       // Perl: $whatsit->setProperties(alignment => LookupValue('Alignment'));
+      if let Some(alignment) = state::lookup_alignment() {
+        whatsit.set_property("alignment", Stored::Digested(alignment));
+      }
       Ok(Vec::new())
+    },
+    reversion => sub[_whatsit, args] {
+      // Perl: reversion => sub { my ($whatsit, $kv, $body) = @_;
+      //   my $name = ToString($kv->getValue('name'));
+      //   my $alignment = $whatsit->getProperty('alignment');
+      //   (T_CS('\\' . $name), T_BEGIN, $alignment->revert, T_END); }
+      let mut name = String::new();
+      if let Some(d) = &args[0] {
+        if let DigestedData::KeyVals(ref kv) = d.data() {
+          name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
+        }
+      }
+      // Get alignment reversion from the whatsit property
+      let alignment_rev = {
+        let prop = _whatsit.get_property("alignment");
+        let mut rev = None;
+        if let Some(cow) = prop.as_ref() {
+          if let Stored::Digested(ref alignment) = &**cow {
+            if let DigestedData::Alignment(ref al) = alignment.data() {
+              rev = Some(al.borrow().revert()?);
+            }
+          }
+        }
+        rev.unwrap_or(match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() })
+      };
+      let cs_name = format!("\\{}", name);
+      let mut tks = vec![T_CS!(&cs_name), T_BEGIN!()];
+      tks.extend(alignment_rev.unlist());
+      tks.push(T_END!());
+      Ok(Tokens::new(tks))
     }
   );
 
@@ -895,8 +948,19 @@ LoadDefinitions!({
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
+          // Store left/right as Digested directly from digested keyvals.
+          // Perl's absorb() handles Tokens natively; Rust constructor templates
+          // only absorb Digested. Using get_value_digested avoids the revert->re-digest
+          // round-trip that loses the original \lx@left CS (alias resolves to \left on revert).
+          for prop_key in &["left", "right"] {
+            if let Some(digested) = kv.get_value_digested(prop_key) {
+              props.insert(*prop_key, Stored::Digested(digested.clone()));
+            }
+          }
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+            if k != "left" && k != "right" {
+              props.insert(k, Stored::String(arena::pin(v.to_string())));
+            }
           }
         }
       }
@@ -904,14 +968,43 @@ LoadDefinitions!({
     },
     after_digest => sub[whatsit] {
       let has_datameaning = whatsit.get_property("datameaning")
-        .map_or(false, |v| !v.to_string().is_empty());
+        .is_some_and(|v| !v.to_string().is_empty());
       let has_delimmeaning = whatsit.get_property("delimitermeaning")
-        .map_or(false, |v| !v.to_string().is_empty());
+        .is_some_and(|v| !v.to_string().is_empty());
       if has_datameaning || has_delimmeaning {
         whatsit.set_property("needXMDual", "1");
         whatsit.set_property("xmkey", get_xmarg_id()?);
       }
       Ok(Vec::new())
+    },
+    reversion => sub[_whatsit, args] {
+      // Perl: reversion => sub { my ($whatsit, $kv, $body) = @_;
+      //   my $name = $kv->getValue('name');
+      //   ($name ? (T_CS('\begin'), T_BEGIN, Revert($name), T_END) : ()),
+      //   Revert($body),
+      //   ($name ? (T_CS('\end'), T_BEGIN, Revert($name), T_END) : ())); }
+      let mut name = String::new();
+      if let Some(d) = &args[0] {
+        if let DigestedData::KeyVals(ref kv) = d.data() {
+          name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
+        }
+      }
+      let body_rev = match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() };
+      let mut tks = Vec::new();
+      if !name.is_empty() {
+        tks.push(T_CS!("\\begin"));
+        tks.push(T_BEGIN!());
+        tks.extend(Explode!(&name));
+        tks.push(T_END!());
+      }
+      tks.extend(body_rev.unlist());
+      if !name.is_empty() {
+        tks.push(T_CS!("\\end"));
+        tks.push(T_BEGIN!());
+        tks.extend(Explode!(&name));
+        tks.push(T_END!());
+      }
+      Ok(Tokens::new(tks))
     }
   );
 
@@ -951,7 +1044,7 @@ LoadDefinitions!({
 
     // Column 1: value (style + \hfil after)
     let col1 = Cell {
-      before: Some(Tokens::new(vec![style_tok.clone()])),
+      before: Some(Tokens::new(vec![style_tok])),
       after: Some(Tokens::new(vec![T_CS!("\\hfil")])),
       empty: true,
       ..Cell::default()
@@ -1007,8 +1100,16 @@ LoadDefinitions!({
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
+          // Store left/right as Digested directly from digested keyvals.
+          for prop_key in &["left", "right"] {
+            if let Some(digested) = kv.get_value_digested(prop_key) {
+              props.insert(*prop_key, Stored::Digested(digested.clone()));
+            }
+          }
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+            if k != "left" && k != "right" {
+              props.insert(k, Stored::String(arena::pin(v.to_string())));
+            }
           }
         }
       }
@@ -1025,8 +1126,16 @@ LoadDefinitions!({
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
+          // Store left/right as Digested directly from digested keyvals.
+          for prop_key in &["left", "right"] {
+            if let Some(digested) = kv.get_value_digested(prop_key) {
+              props.insert(*prop_key, Stored::Digested(digested.clone()));
+            }
+          }
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(&v.to_string())));
+            if k != "left" && k != "right" {
+              props.insert(k, Stored::String(arena::pin(v.to_string())));
+            }
           }
         }
       }
@@ -1034,8 +1143,308 @@ LoadDefinitions!({
     }
   );
 
-  // TODO: Continue MathFork and equationgroup
 });
+
+/// Helper: get first child element node
+fn first_child_element(node: &Node) -> Option<Node> {
+  node.get_child_elements().into_iter().next()
+}
+
+/// Perl: openMathFork (Base_XMath.pool.ltxml L780-786)
+/// Creates a MathFork structure with two branches: main (semantic) and presentation.
+/// Returns (mainfork_math_node, branch_node).
+pub fn open_math_fork(
+  document: &mut Document,
+  equation: &mut Node,
+) -> Result<(Node, Node)> {
+  let mut fork = document.open_element_at(equation, "ltx:MathFork", None, None)?;
+  let mut mainfork = document.open_element_at(&mut fork, "ltx:Math", None, None)?;
+  let _xmath = document.open_element_at(&mut mainfork, "ltx:XMath", None, None)?;
+  let branch = document.open_element_at(&mut fork, "ltx:MathBranch", None, None)?;
+  Ok((mainfork, branch))
+}
+
+/// Perl: closeMathFork (Base_XMath.pool.ltxml L789-803)
+/// Closes all elements of an ltx:MathFork.
+pub fn close_math_fork(
+  document: &mut Document,
+  equation: &mut Node,
+  mainfork: &mut Node,
+  branch: &mut Node,
+) -> Result<()> {
+  // Synthesize tex= attribute on mainfork Math from MathBranch cell tex attributes.
+  // Perl does this via MathWhatsit box accumulation + add_body_TeX afterClose,
+  // but Rust doesn't have MathWhatsit. Instead, we compose the tex attribute here.
+  if !mainfork.has_attribute("tex") {
+    let mut tex_parts: Vec<String> = Vec::new();
+    let tds = document.findnodes("descendant::ltx:td", Some(branch));
+    for td in &tds {
+      let maths = document.findnodes("ltx:Math[@tex]", Some(td));
+      if !maths.is_empty() {
+        for math in maths {
+          if let Some(tex) = math.get_attribute("tex") {
+            tex_parts.push(tex);
+          }
+        }
+      } else {
+        // No Math element — check for text content (from \mbox in eqnarray cells)
+        // Perl's MathWhatsit captures reversion of all cell content including \mbox
+        let texts = document.findnodes("ltx:text[@class='ltx_markedasmath']", Some(td));
+        for text in &texts {
+          let content = text.get_content();
+          let content = content.trim();
+          if !content.is_empty() {
+            tex_parts.push(format!("\\mbox{{{content}}}"));
+          }
+        }
+      }
+    }
+    if !tex_parts.is_empty() {
+      // Normalize: Perl's MathWhatsit extracts \displaystyle to the front.
+      // Each cell's tex starts with "\displaystyle"; strip and prepend once.
+      let has_displaystyle = tex_parts.iter().any(|t| t.starts_with("\\displaystyle"));
+      let stripped: Vec<&str> = tex_parts
+        .iter()
+        .map(|t| t.strip_prefix("\\displaystyle").unwrap_or(t).trim_start())
+        .collect();
+      let body = stripped.join("");
+      let combined_tex = if has_displaystyle {
+        // Add space after \displaystyle only if body starts with a letter
+        // (TeX CS needs space termination before letters, not before operators)
+        if body.starts_with(|c: char| c.is_ascii_alphabetic()) {
+          format!("\\displaystyle {body}")
+        } else {
+          format!("\\displaystyle{body}")
+        }
+      } else {
+        body
+      };
+      document.set_attribute(mainfork, "tex", &combined_tex)?;
+    }
+  }
+
+  document.close_element_at(branch)?;
+  // Close XMath (first child of mainfork)
+  if let Some(mut xmath) = first_child_element(mainfork) {
+    document.close_element_at(&mut xmath)?;
+  }
+  document.close_element_at(mainfork)?;
+  // Close the MathFork — find it defensively via xpath
+  let mfs = document.findnodes("ltx:MathFork", Some(equation));
+  if let Some(mut last_mf) = mfs.into_iter().last() {
+    document.close_element_at(&mut last_mf)?;
+  }
+  // Check if branch came up empty (only 1 child = just the Math)
+  let mut fork = branch.get_parent().unwrap();
+  let branches: Vec<Node> = fork.get_child_nodes();
+  if branches.len() == 1 {
+    // Whoops, came up empty! Remove the fork
+    fork.unlink_node();
+  }
+  Ok(())
+}
+
+/// Perl: addColumnToMathFork (Base_XMath.pool.ltxml L839-899)
+/// Distributes content from an ltx:_Capture_ cell into both the presentation branch
+/// (as ltx:td) AND the semantic main branch (cloned into XMath).
+pub fn add_column_to_math_fork(
+  document: &mut Document,
+  mainfork: &mut Node,
+  inbranch: &mut Node,
+  cell: &mut Node,
+) -> Result<()> {
+  let mut td = document.open_element_at(inbranch, "ltx:td", None, None)?;
+  // Copy align and colspan attributes
+  if let Some(align) = cell.get_attribute("align") {
+    document.set_attribute(&mut td, "align", &align)?;
+  }
+  if let Some(colspan) = cell.get_attribute("colspan") {
+    document.set_attribute(&mut td, "colspan", &colspan)?;
+  }
+  // Remove the _Capture_ from the document
+  cell.unlink_node();
+  // Process each child of _Capture_
+  let children: Vec<Node> = cell.get_child_nodes();
+  let math_qname = arena::pin_static("ltx:Math");
+  let text_qname = arena::pin_static("ltx:text");
+  let p_qname = arena::pin_static("ltx:p");
+  for node in children {
+    let qname = document::get_node_qname(&node);
+    if qname == math_qname {
+      // Clone XMath children to the main branch
+      if let Some(xmath) = first_child_element(&node) {
+        let xmath_children: Vec<Node> = xmath.get_child_elements();
+        if !xmath_children.is_empty() {
+          state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
+          if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+            document.append_clone(&mut mainfork_xmath, xmath_children)?;
+          }
+          state::assign_value("ID_SUFFIX", Stored::None, None);
+        }
+      }
+    } else if qname == text_qname || qname == p_qname {
+      let text_content = node.get_content();
+      if !text_content.is_empty() {
+        if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+          state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
+          let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
+          document.append_clone(&mut txt, vec![node.clone()])?;
+          document.close_element_at(&mut txt)?;
+          state::assign_value("ID_SUFFIX", Stored::None, None);
+        }
+      }
+    } else if node.get_type() == Some(libxml::tree::NodeType::TextNode) {
+      let string = node.get_content();
+      if !string.trim().is_empty() {
+        if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+          let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
+          let _ = txt.set_content(&string);
+          document.close_element_at(&mut txt)?;
+        }
+      }
+    } else if node.get_type() == Some(libxml::tree::NodeType::CommentNode) {
+      // Skip comments
+    } else {
+      if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+        state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
+        let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
+        document.append_clone(&mut txt, vec![node.clone()])?;
+        document.close_element_at(&mut txt)?;
+        state::assign_value("ID_SUFFIX", Stored::None, None);
+      }
+    }
+    // Move the original node to the td (presentation side)
+    document.unrecord_node_ids(&node);
+    document.append_tree(&mut td, vec![node])?;
+  }
+  document.close_element_at(&mut td)?;
+  Ok(())
+}
+
+/// Perl: equationgroupJoinCols (Base_XMath.pool.ltxml L970-980)
+/// Groups every $ncols columns into a MathFork structure within an equation.
+pub fn equationgroup_join_cols(
+  document: &mut Document,
+  ncols: usize,
+  equation: &mut Node,
+) -> Result<()> {
+  let mut col = 0usize;
+  let mut mainfork: Option<Node> = None;
+  let mut branch: Option<Node> = None;
+  let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(equation));
+  for mut cell in cells {
+    let qname_str = arena::to_string(document::get_node_qname(&cell));
+    if !qname_str.ends_with("_Capture_") {
+      continue;
+    }
+    if col.is_multiple_of(ncols) {
+      if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+        close_math_fork(document, equation, mf, br)?;
+      }
+      let (mf, br) = open_math_fork(document, equation)?;
+      mainfork = Some(mf);
+      branch = Some(br);
+    }
+    if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+      add_column_to_math_fork(document, mf, br, &mut cell)?;
+    }
+    col += 1;
+  }
+  if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+    close_math_fork(document, equation, mf, br)?;
+  }
+  Ok(())
+}
+
+/// Perl: equationgroupJoinRows (Base_XMath.pool.ltxml L926-963)
+/// Combines multiple row equations into a single semantic equation with a MathFork structure.
+pub fn equationgroup_join_rows(
+  document: &mut Document,
+  equationgroup: &mut Node,
+  mut equations: Vec<Node>,
+) -> Result<()> {
+  if equations.is_empty() {
+    return Ok(());
+  }
+  // Create new equation at the position of the first input equation
+  let mut equation = document.open_element_at(equationgroup, "ltx:equation", None, None)?;
+  // Move it before the first input equation
+  equations[0].add_prev_sibling(&mut equation).ok();
+  // Consolidate labels, id, refnum, tags from the input equations
+  let mut labels: Option<String> = None;
+  let mut id: Option<String> = None;
+  let mut tags: Option<Node> = None;
+  for eq in equations.iter() {
+    if let Some(l) = eq.get_attribute("labels") {
+      labels = Some(match labels {
+        Some(existing) => s!("{existing} {l}"),
+        None => l,
+      });
+    }
+    if let Some(eq_id) = eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .or_else(|| eq.get_attribute("xml:id"))
+    {
+      id = Some(eq_id);
+    }
+    let found_tags = document.findnodes("ltx:tags", Some(eq));
+    if let Some(t) = found_tags.into_iter().last() {
+      tags = Some(t);
+    }
+  }
+  if let Some(ref id_str) = id {
+    document.unrecord_id(id_str);
+  }
+  if let Some(ref l) = labels {
+    document.set_attribute(&mut equation, "labels", l)?;
+  }
+  if let Some(ref id_str) = id {
+    document.set_attribute(&mut equation, "xml:id", id_str)?;
+  }
+  if let Some(mut t) = tags {
+    t.unlink_node();
+    equation.add_child(&mut t).ok();
+  }
+  // Perl: cell Math elements are created (with xml:ids m1,m2,...) BEFORE openMathFork,
+  // so the main MathFork Math gets the next id (e.g. m4 for 3-cell eqnarray).
+  // In Rust, we need to pre-advance the id counter to match this ordering.
+  // Count _Capture_ cells (each initially creates a Math element during construction,
+  // even if some are later converted to <text> by afterConstruct hooks).
+  let mut cell_count = 0;
+  for eq in equations.iter() {
+    let captures = document.findnodes("ltx:_Capture_", Some(eq));
+    cell_count += captures.len();
+  }
+  // Pre-advance the id counter so the main MathFork Math gets the correct offset
+  if cell_count > 0 {
+    let ctrkey = s!("_ID_counter_m_");
+    let current = equation.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
+    let new_val = current.parse::<u32>().unwrap_or(0) + cell_count as u32;
+    equation.set_attribute(&ctrkey, &new_val.to_string())?;
+  }
+  // Create MathFork
+  let (mut mainfork, mut branch_node) = open_math_fork(document, &mut equation)?;
+  for eq in equations {
+    let mut eq = eq;
+    eq.unlink_node();
+    let mut tr = document.open_element_at(&mut branch_node, "ltx:tr", None, None)?;
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
+    if let Some(first_cell) = cells.first() {
+      if let Some(class) = first_cell.get_attribute("class") {
+        if class.contains("lefteqn") {
+          document.set_attribute(&mut tr, "class", "ltx_eqn_lefteqn")?;
+        }
+      }
+    }
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
+    for mut cell in cells {
+      add_column_to_math_fork(document, &mut mainfork, &mut tr, &mut cell)?;
+    }
+    document.close_element_at(&mut tr)?;
+  }
+  close_math_fork(document, &mut equation, &mut mainfork, &mut branch_node)?;
+  document.close_element_at(&mut equation)?;
+  Ok(())
+}
 
 /// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
 pub fn add_meaning_rec(document: &mut Document, node: Node, meaning: &str) -> Result<()> {

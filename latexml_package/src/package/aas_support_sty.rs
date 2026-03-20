@@ -130,7 +130,16 @@ LoadDefinitions!({
   DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
 
   // 2.15 Tables
-  // RequirePackage!("deluxetable"); // not yet ported
+  RequirePackage!("deluxetable");
+  Let!("\\planotable", "\\deluxetable");
+  Let!("\\endplanotable", "\\enddeluxetable");
+
+  // Perl: aas_support.sty.ltxml L380-383
+  Let!("\\splitdeluxetable", "\\deluxetable");
+  Let!("\\endsplitdeluxetable", "\\enddeluxetable");
+  state::let_i(&T_CS!("\\splitdeluxetable*"), &T_CS!("\\deluxetable*"), None);
+  state::let_i(&T_CS!("\\endsplitdeluxetable*"), &T_CS!("\\enddeluxetable*"), None);
+
   DefMacro!("\\phn", "\\phantom{0}");
   DefMacro!("\\phd", "\\phantom{.}");
   DefMacro!("\\phs", "\\phantom{+}");

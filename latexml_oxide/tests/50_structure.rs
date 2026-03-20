@@ -144,7 +144,7 @@ fn acro_test() {
 }
 
 #[test]
-#[ignore] // 825 diffs — needs \@add@to@frontmatter, MathFork
+#[ignore] // text= + tags diffs: math parser + equation numbering
 fn amsarticle_test() {
   latexml_test_single("tests/structure/amsarticle.tex", "amsarticle", DIR, None, None);
 }
@@ -170,13 +170,11 @@ fn enum_test() {
 }
 
 #[test]
-#[ignore] // 362 diffs — needs MathFork infrastructure (afterConstruct rearrangement)
 fn eqnums_test() {
   latexml_test_single("tests/structure/eqnums.tex", "eqnums", DIR, None, None);
 }
 
 #[test]
-#[ignore] // needs graphicx figure grid support
 fn figure_grids_test() {
   latexml_test_single("tests/structure/figure_grids.tex", "figure_grids", DIR, None, None);
 }
@@ -192,7 +190,7 @@ fn glossary_test() {
 }
 
 #[test]
-#[ignore] // 979 diffs — eqnarray MathFork/MathBranch structure (math parser), QED symbol, equation numbering
+#[ignore] // text= + tags diffs: math parser + equation numbering (977 diffs)
 fn ieee_test() {
   latexml_test_single("tests/structure/IEEE.tex", "IEEE", DIR, None, None);
 }

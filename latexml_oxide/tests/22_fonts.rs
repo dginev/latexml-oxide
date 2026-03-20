@@ -21,7 +21,6 @@ fn accents_test() {
 }
 
 #[test]
-#[ignore] // diffs — \fontname not implemented (shows "fontname not implemented" instead of cmr10)
 fn fonts_test() {
   latexml_test_single("tests/fonts/fonts.tex", "fonts", DIR, None, None);
 }
@@ -32,7 +31,7 @@ fn mixed_test() {
 }
 
 #[test]
-#[ignore] // diffs — \fontname not implemented (shows "fontname not implemented" instead of cmr10)
+#[ignore] // text= attr diffs: \cal OMS symbols
 fn plainfonts_test() {
   latexml_test_single("tests/fonts/plainfonts.tex", "plainfonts", DIR, None, None);
 }
@@ -63,7 +62,6 @@ fn bbold_test() {
 }
 
 #[test]
-#[ignore] // 401 diffs — pifont works but enumerate nesting + table structure issues
 fn ding_test() {
   latexml_test_single("tests/fonts/ding.tex", "ding", DIR, None, None);
 }
@@ -123,7 +121,7 @@ fn abxtest_test() {
 }
 
 #[test]
-#[ignore] // 376 diffs — font size propagation from \font defs
+#[ignore] // text= attr diffs: math spacing + sizing
 fn sizes_test() {
   latexml_test_single("tests/fonts/sizes.tex", "sizes", DIR, None, None);
 }

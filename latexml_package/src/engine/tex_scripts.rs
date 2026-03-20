@@ -1,6 +1,6 @@
 use crate::prelude::*;
 static SCRIPT_NAME_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap());
+  Lazy::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
 
 //======================================================================
 // Scripts are a bit of a strange beast, with respect to when the arguments
@@ -41,8 +41,8 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
       obj.borrow().get_definition().get_cs().with_cs_name(|name| {
         SCRIPT_NAME_RE.captures(name).map(|cap| {
           (
-            cap.get(1).map_or("", |m| m.as_str()).to_owned(),
-            if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {
+            cap.get(1).map_or("", |m| m.as_str()).to_uppercase(),
+            if cap.get(2).map_or("", |m| m.as_str()) == "subscript" {
               Catcode::SUB
             } else {
               Catcode::SUPER
@@ -247,19 +247,34 @@ fn script_sizer(
   op: &str,
   pos: &str,
 ) -> Result<(Dimension, Dimension, Dimension)> {
-  // NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
-  // Or is it now ?????
-  // [unless it's different from the 'expected' style!!!]
+  // Perl: scriptSizer in TeX_Math.pool.ltxml
+  // Uses font metrics for proper positioning of super/subscripts.
   let script_size = script.clone().get_size(None)?;
-  let (mut ws, mut hs, mut ds) = (
+  let (mut ws, hs, ds) = (
     script_size.0.value_of() as f64,
     script_size.1.value_of() as f64,
     script_size.2.value_of() as f64,
   );
-  ws *= 0.8;
-  hs *= 0.8;
-  ds *= 0.8; // HACK!@!!
-  let (wb, hb, db) = if let Some(Stored::Digested(ref base)) = base_opt {
+  // Get base font info for mathstyle and font size
+  let (base_font_size, mathstyle) = if let Some(Stored::Digested(ref base)) = base_opt {
+    let bfont = base.get_font()?.map(|f| f.into_owned());
+    let fs = bfont.as_ref().and_then(|f| f.get_size()).unwrap_or(10.0);
+    let ms = bfont
+      .as_ref()
+      .and_then(|f| f.mathstyle.as_deref().map(|s| s.to_string()))
+      .unwrap_or_else(|| "text".to_string());
+    (fs, ms)
+  } else {
+    let f = lookup_font().unwrap();
+    let fs = f.get_size().unwrap_or(10.0);
+    let ms = f
+      .mathstyle
+      .as_deref()
+      .map(|s| s.to_string())
+      .unwrap_or_else(|| "text".to_string());
+    (fs, ms)
+  };
+  let (_wb, hb, db) = if let Some(Stored::Digested(ref base)) = base_opt {
     let base_size = base.clone().get_size(None)?;
     (
       base_size.0.value_of() as f64,
@@ -276,6 +291,16 @@ fn script_sizer(
   };
   let w;
   let (mut h, mut d) = (0.0, 0.0);
+  // Nominal font info ratios (from Perl's TeX_Fonts.pool.ltxml $nominal_fontinfo)
+  // These are ratios of font design size, used for cmsy font dimens.
+  const XHEIGHT_RATIO: f64 = 0.430555; // param #5
+  const SUPERSCRIPT1_RATIO: f64 = 0.412892; // param #13 (displaystyle)
+  const SUPERSCRIPT2_RATIO: f64 = 0.362892; // param #14 (text/scriptstyle)
+  const SUPERSCRIPT3_RATIO: f64 = 0.288889; // param #15 (scriptscriptstyle)
+  const SUBSCRIPT1_RATIO: f64 = 0.15; // param #16
+  // Font dimen values: font_size_sp * ratio
+  let font_scale = base_font_size * 65536.0; // font size in scaled points
+  let xheight = font_scale * XHEIGHT_RATIO;
   // Fishing for the scriptpos on the base (if any)
   let inferred_pos = if pos.is_empty() {
     if let Some(Stored::Digested(ref base)) = base_opt {
@@ -295,7 +320,7 @@ fn script_sizer(
     Cow::Borrowed("post")
   };
   if inferred_pos == "mid" {
-    w = (ws - wb).max(0.0); // as if max width of base & script
+    w = (ws - _wb).max(0.0); // as if max width of base & script
     if op == "SUPERSCRIPT" {
       h = hb + ds + hs;
     } else {
@@ -308,11 +333,32 @@ fn script_sizer(
     } else {
       0.0
     };
+    // Perl: $ws += $space (scriptspace register, default 0.5pt)
+    let scriptspace = state::lookup_register("\\scriptspace", Vec::new())
+      .ok()
+      .flatten()
+      .map(|rv| match rv {
+        RegisterValue::Dimension(d) => d.value_of() as f64,
+        _ => 32768.0, // 0.5pt fallback
+      })
+      .unwrap_or(32768.0);
+    ws += scriptspace;
     w = (ws - wp).max(0.0);
     if op == "SUPERSCRIPT" {
-      h = hb + hs / 2.0;
+      // Perl: $supshift = getFontDimen($syfont, display:13, scriptscript:15, else:14)
+      //       $h = max($hb, $hs + max($ds + $xheight / 4, $supshift))
+      let supshift = font_scale
+        * match mathstyle.as_str() {
+          "display" => SUPERSCRIPT1_RATIO,
+          "scriptscript" => SUPERSCRIPT3_RATIO,
+          _ => SUPERSCRIPT2_RATIO,
+        };
+      h = hb.max(hs + (ds + xheight / 4.0).max(supshift));
     } else {
-      d = hs / 2.0 + ds;
+      // Perl: $subshift = getFontDimen($syfont, 16)
+      //       $d = max($db, $ds + max($hs - $xheight * 0.8, $subshift))
+      let subshift = font_scale * SUBSCRIPT1_RATIO;
+      d = db.max(ds + (hs - xheight * 0.8).max(subshift));
     }
   }
   Ok((
@@ -423,18 +469,36 @@ LoadDefinitions!({
             // Check if child XMTok has a font attribute to preserve
             // Perl: local $LaTeXML::BOX = $document->getNodeBox($xmarg[0]);
             // Check child XMTok font to preserve italic/bold styling (from math mode)
-            let font_attr = xmarg.get_child_nodes().into_iter()
-              .filter(|n| n.get_type() == Some(NodeType::ElementNode))
-              .find_map(|n| {
-                // Check XML font attribute first
-                let attr = n.get_attribute("font");
-                if attr.is_some() { return attr; }
-                // Check the stored node font for italic shape
-                let node_font = document.get_node_font(&n);
-                node_font.get_shape().and_then(|s|
-                  if s.as_ref() == "italic" { Some("italic".to_string()) } else { None }
-                )
-              });
+            // Perl: uses $document->getNodeBox($args[0])->getFont with openText,
+            // where $args[0] is the XMArg. The BOX font has family="math" for math
+            // content, which relativeTo maps to font="italic".
+            let font_attr = {
+              // First check XML font attribute on child XMTok elements
+              let from_attr = xmarg.get_child_nodes().into_iter()
+                .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+                .find_map(|n| {
+                  let attr = n.get_attribute("font");
+                  if attr.is_some() { return attr; }
+                  let node_font = document.get_node_font(&n);
+                  node_font.get_shape().and_then(|s|
+                    if s.as_ref() == "italic" { Some("italic".to_string()) } else { None }
+                  )
+                });
+              if from_attr.is_some() {
+                from_attr
+              } else {
+                // Check the XMArg's stored box font (pre-specialization)
+                document.get_node_box(xmarg).and_then(|tbox| {
+                  tbox.get_font().ok().flatten().and_then(|font| {
+                    if font.get_family().map(|f| f.as_ref() == "math").unwrap_or(false) {
+                      Some("italic".to_string())
+                    } else {
+                      None
+                    }
+                  })
+                })
+              }
+            };
             document.open_element(qname, None, None)?;
             if let Some(ref font) = font_attr {
               // Create ltx:text and set font attribute directly

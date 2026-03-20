@@ -57,7 +57,7 @@ use std::rc::Rc;
 pub type OpenContainerFn =
   Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
 pub type CloseContainerFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
-pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<()>>;
+pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, Stored>) -> Result<()>>;
 pub type CloseRowFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
 pub type OpenColumnFn = Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
 pub type CloseColumnFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
@@ -433,11 +433,14 @@ impl BoxOps for Alignment {
     _options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     normalize_alignment(self)?;
-    Ok((
-      self.cached_width.unwrap(),
-      self.cached_height.unwrap(),
-      self.cached_depth.unwrap(),
-    ))
+    let w = self.cached_width.unwrap();
+    let h = self.cached_height.unwrap();
+    let d = self.cached_depth.unwrap();
+    // Store in properties so get_size()'s has_property("cached_width") check works
+    self.properties.insert("cached_width", Stored::Dimension(w));
+    self.properties.insert("cached_height", Stored::Dimension(h));
+    self.properties.insert("cached_depth", Stored::Dimension(d));
+    Ok((w, h, d))
   }
 
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
@@ -480,11 +483,11 @@ impl BoxOps for Alignment {
     for row in rows {
       let vpad_opt = row.get_padding().copied();
       //     # Which properties do we expose to the constructor?
-      let open_row_attrs = HashMap::default();
-      //     "xml:id" => $$row{id}, tags => $$row{tags},
-      //     x      => $$row{x}, y => $$row{y},
-      //     cached_width => $$row{cached_width}, cached_height => $$row{cached_height},
-      // cached_depth => $$row{cached_depth},   );
+      // Perl: pass $$row{id}, $$row{tags} to openRow
+      let mut open_row_attrs = HashMap::default();
+      for (k, v) in &row.properties {
+        open_row_attrs.insert(k.clone(), v.clone());
+      }
       let open_row_fn = &self.open_row;
       open_row_fn(document, open_row_attrs)?;
       for before in row.before.iter() {
@@ -615,7 +618,12 @@ impl BoxOps for Alignment {
           let box_ref = cell.boxes.as_ref().unwrap();
           // local $LaTeXML::BOX
           document.set_box_to_absorb(Some(box_ref.clone()));
-          if ismath {
+          // Perl wraps cell content in XMArg for math alignments, but NOT for _Capture_ columns
+          // (_Capture_ is not in the schema, so Perl's openElement validation prevents XMArg there)
+          let cur_qname = crate::document::get_node_qname(document.get_node());
+          let wrap_xmarg = ismath
+            && !crate::common::arena::to_string(cur_qname).ends_with("_Capture_");
+          if wrap_xmarg {
             // Hacky!
             document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None)?;
           }
@@ -628,7 +636,7 @@ impl BoxOps for Alignment {
           if let Some(ref post) = post_absorb {
             document.absorb(post, None)?;
           }
-          if ismath {
+          if wrap_xmarg {
             // Hacky!
             document.close_element("ltx:XMArg")?;
           }
@@ -962,11 +970,11 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   }
   // eprintln!("classify_alignment_rows: {} rows, max {} cols", alignment.rows.len(), ncols);
   let (mut h, mut v) = (false, false);
-  for (_ri, arow) in alignment.rows.iter_mut().enumerate() {
+  for arow in alignment.rows.iter_mut() {
     let cols = arow.get_columns_mut();
     let this_row_len = cols.len();
     // eprintln!("  row {_ri}: {this_row_len} cols");
-    for (_ci, col) in cols.iter_mut().enumerate() {
+    for col in cols.iter_mut() {
       col.cell_type = Some('d');
       col.content_class = Some(
         // Assume mixed content for any justified cell???
@@ -1187,6 +1195,11 @@ fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   let content = xcell.get_content();
   let mut inferred_classes: Vec<ColumnSpec> = Vec::new();
+  // Perl: /^[\s\d]+$/ — \d matches ASCII digits only in Perl 5.
+  // Use is_numeric() which also matches mathematical digits (𝟘-𝟟) and superscript/subscript digits.
+  // This enables header detection for bbold fontmaps where double-struck digits differ from symbols.
+  // Note: circled digits (①-⑳ etc.) also match; this differs from Perl but the effect is benign
+  // for most tables since circled digits appear only in specialized fontmaps.
   if !content.is_empty() && content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
     inferred_classes.push(ColumnSpec::Integer);
   } else {
@@ -1334,16 +1347,13 @@ fn alignment_characterize_lines(
   // avg_diff = avg_diff / (n - 1) as f64;
   if max_diff < 0.05 {
     // virtually no differences.
-    // eprintln!("Lines are almost identical => Fail (max_diff={max_diff})");
     return Ok(());
   }
   if (n > 2) && ((max_diff - min_diff) < max_diff * 0.5) {
     // differences too similar to establish pattern
-    // eprintln!("Differences between lines are almost identical => Fail (max={max_diff}, min={min_diff})");
     return Ok(());
   }
   let tab_threshold = min_diff + 0.3 * (max_diff - min_diff);
-  // eprintln!("Differences {min_diff} -- {max_diff} => threshold = {tab_threshold}");
 
   // eprintln!("Differences {min_diff} -- {max_diff} => threshold = {tab_threshold}");
   // Find the first hump in differences. These are candidates for header lines.
@@ -1561,10 +1571,11 @@ fn alignment_match_lines(
 /// lines. We'll assume the 1st line is data, compare it to following lines,
 /// but also accept `continuation' data lines.
 ///
-/// Note: Perl's continuation-line logic (accepting mostly-empty outlier rows) is effectively
-/// dead code due to `scalar($::TABLINES[0])` evaluating to a memory address instead of an
-/// array length. We match that behavior: break on any diff >= threshold.
-/// See KNOWN_PERL_ERRORS.md for details.
+/// Note: Perl's continuation-line logic (L1336-1339) is effectively dead code:
+/// `scalar($::TABLINES[0])` evaluates to an array ref's memory address (huge number),
+/// making `0.4 * huge` very large, so `count_empty <= huge` is always true.
+/// The condition `($n < 2) || true` = true, so the `last if` simplifies to just
+/// `last if diff >= threshold`. We match this behavior.
 fn alignment_skip_data(
   i: usize,
   tab_threshold: f64,
@@ -1575,7 +1586,6 @@ fn alignment_skip_data(
   if i >= tab_lines_length {
     return 0;
   }
-  // eprintln!("Scanning for data at {i}");
   let mut n = 1;
   while i + n < tab_lines_length {
     if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold {
@@ -1583,7 +1593,6 @@ fn alignment_skip_data(
     }
     n += 1;
   }
-  // eprintln!("Found {n} data lines at {i}");
   if n >= MIN_ALIGNMENT_DATA_LINES { n } else { 0 }
 }
 

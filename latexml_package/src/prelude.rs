@@ -39,7 +39,7 @@ pub use latexml_core::definition::constructor::ConstructorOptions;
 pub use latexml_core::definition::expandable::{Expandable, ExpandableOptions};
 pub use latexml_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 pub use latexml_core::definition::primitive::{Primitive, PrimitiveOptions};
-pub use latexml_core::definition::register::{Register, RegisterType, RegisterValue};
+pub use latexml_core::definition::register::{Register, RegisterType, RegisterValue, CharDefProps};
 pub use latexml_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
   ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveBody, PrimitiveClosure,

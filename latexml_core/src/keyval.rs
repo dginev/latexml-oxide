@@ -413,9 +413,8 @@ fn define_choice(
       )?;
     }
     // iterate over the possible choices and store them
-    let mut index = 0;
     let mut valid = false;
-    for choice_str in choices.iter() {
+    for (index, choice_str) in choices.iter().enumerate() {
       if (normalize && (choice_str.to_lowercase() == nvalue)) || *choice_str == nvalue {
         valid = true;
         if let Some(idxmacro) = idxmacro_opt {
@@ -427,7 +426,6 @@ fn define_choice(
           )?;
         }
       }
-      index += 1;
     }
     // find a name for the original macro to store in
     let mut tokens = Vec::new();

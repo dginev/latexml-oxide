@@ -544,9 +544,19 @@ LoadDefinitions!({
   //   return Digest(Invocation(T_CS('\lx@add@Preamble@PI'), Invocation((ref $cs ? $cs : T_CS($cs)),
   // @args))); }
 
-  DefConstructor!(
-    "\\lx@add@Preamble@PI Undigested",
-    "<?latexml preamble='#1'?>"
+  // Perl: DefConstructor('\lx@add@Preamble@PI Undigested', "<?latexml preamble='#1'?>");
+  // PI syntax not supported in constructor templates, so use procedural body.
+  DefConstructor!("\\lx@add@Preamble@PI Undigested",
+    sub[document, args, _props] {
+      if let Some(Some(preamble_arg)) = args.get(0) {
+        let preamble_text = preamble_arg.untex()?;
+        if !preamble_text.is_empty() {
+          let mut attrs = HashMap::default();
+          attrs.insert(String::from("preamble"), preamble_text);
+          document.insert_pi("latexml", Some(attrs))?;
+        }
+      }
+    }
   );
 });
 

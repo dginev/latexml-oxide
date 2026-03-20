@@ -83,10 +83,9 @@ git config --local core.hooksPath .githooks/
 
 ## Architecture Notes
 
-**Important:** The one novelty in the Rust rewrite is the math parser engine, which now uses a highly ambiguous Marpa grammar.
-  - the new goal is to be highly ambiguous in parsing,
-  - but aggressively prune in the semantics rules, so as to minimize the final parses
-  - this is active ongoing research. So be very cautious when porting math tests, ideally do them after everything else is solid.
+**Math parser:** The Rust rewrite uses a highly ambiguous Marpa grammar (replacing Perl's Parse::RecDescent).
+  - The new goal is to be highly ambiguous in parsing, but aggressively prune in the semantics rules, so as to minimize the final parses.
+  - Math-related details (XMDual, delimited expressions, etc.) should be translated faithfully, keeping in mind the difference between Parse::RecDescent and the Marpa approach.
 
 - **State** is a thread-local, global, mutable singleton (see CHANGELOG 0.3.2 decision)
 - Uses a **string interner** for efficient symbol handling
@@ -109,6 +108,14 @@ git config --local core.hooksPath .githooks/
 - The Perl LaTeXML directory gets updated at times, as the original project is still active. Before doing new work, always revise the current Rust against the current Perl, and update the Rust when outdated.
 - **Follow the Work Plan in `docs/SYNC_STATUS.md`**: Always work on the first unchecked `[ ]` item in the "Work Plan — Ordered TODO List" section. Do not skip ahead or investigate what to do next until all preceding items are clearly completed. Mark items `[x]` when done.
 - When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
+
+When a **session is completed**: continue working, until:
+- all tests pass
+- the plans in docs/ are fully completed
+- all edge cases are explored
+- no obvious improvements remain
+
+Do **not** stop early.
 
 ## Key Concepts Mapping (Perl → Rust)
 

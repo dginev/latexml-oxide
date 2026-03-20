@@ -341,9 +341,9 @@ LoadDefinitions!({
   // Perl: Candidates for binding \lx@intercol for LaTeX tabular or math arrays
   DefConstructor!("\\lx@text@intercol", sub[document, _args, props] {
     if let Some(width) = props.get("width") {
-      let dim: Option<Dimension> = (&*width).into();
+      let dim: Option<Dimension> = width.into();
       if let Some(d) = dim {
-        let s = dimension_to_spaces(d);
+        let s = crate::engine::tex_glue::dimension_to_spaces(d);
         if !s.is_empty() {
           document.absorb_string(&s, &SymHashMap::default())?;
         }
@@ -398,7 +398,8 @@ LoadDefinitions!({
     properties =>  { Ok(stored_map!("isHorizontalRule" => true))},
     sizer      => 0, alias => "\\hline");
 
-  DefMacro!("\\@tabular@begin@heading", {
+  // Perl: DefMacroI('\lx@alignment@begin@heading', undef, sub { ... in_tabular_head = 1 })
+  DefMacro!("\\lx@alignment@begin@heading", {
     if let Some(alignment_stored) = lookup_alignment() {
       alignment_stored
         .alignment_cell()
@@ -407,7 +408,8 @@ LoadDefinitions!({
         .set_in_tabular_head();
     }
   });
-  DefMacro!("\\@tabular@end@heading", {
+  // Perl: DefMacroI('\lx@alignment@end@heading', undef, sub { ... in_tabular_head = 0 })
+  DefMacro!("\\lx@alignment@end@heading", {
     if let Some(alignment_stored) = lookup_alignment() {
       alignment_stored
         .alignment_cell()
@@ -416,19 +418,36 @@ LoadDefinitions!({
         .unset_in_tabular_head();
     }
   });
+  // Deprecated aliases (Base_Deprecated.pool.ltxml)
+  Let!("\\@tabular@begin@heading", "\\lx@alignment@begin@heading");
+  Let!("\\@tabular@end@heading", "\\lx@alignment@end@heading");
 
   //======================================================================
   // Multicolumn support
-  // DefRegisterI('\@alignment@ncolumns', undef, Dimension(0),
-  //   getter => sub {
-  //     if (my $alignment = LookupValue('Alignment')) {
-  //       Number(scalar($alignment->getTemplate->columns)); }
-  //     else { Number(0); } });
-  // DefRegisterI('\@alignment@column', undef, Dimension(0),
-  //   getter => sub {
-  //     if (my $alignment = LookupValue('Alignment')) {
-  //       Number($alignment->currentColumnNumber); }
-  //     else { Number(0); } });
+  // Perl: DefRegisterI('\lx@alignment@ncolumns', undef, Dimension(0), getter => sub { ... })
+  DefRegister!("\\lx@alignment@ncolumns", Number::new(0),
+    getter => {
+      if let Some(alignment_stored) = lookup_alignment() {
+        let data = alignment_stored.alignment_cell().unwrap();
+        let borrowed = data.borrow();
+        Number::new(borrowed.get_template().get_columns().len() as i64)
+      } else {
+        Number::new(0)
+      }
+    }
+  );
+  // Perl: DefRegisterI('\lx@alignment@column', undef, Dimension(0), getter => sub { ... })
+  DefRegister!("\\lx@alignment@column", Number::new(0),
+    getter => {
+      if let Some(alignment_stored) = lookup_alignment() {
+        let data = alignment_stored.alignment_cell().unwrap();
+        let borrowed = data.borrow();
+        Number::new(borrowed.current_column_number() as i64)
+      } else {
+        Number::new(0)
+      }
+    }
+  );
 
   // Perl: DefMacro('\lx@alignment@multicolumn {Number} AlignmentTemplate {}', sub { ... })
   // Expands to \omit + (span-1) × (\span \omit) + before_cell_tokens + body + after_cell_tokens
@@ -493,7 +512,7 @@ LoadDefinitions!({
 pub fn alignment_bindings(
   template: Template,
   mode: String,
-  properties: SymHashMap<Stored>,
+  mut properties: SymHashMap<Stored>,
   xml_attributes: HashMap<String, String>,
 ) {
   let mode = if mode.is_empty() {
@@ -507,6 +526,12 @@ pub fn alignment_bindings(
   } else {
     ("ltx:tabular", "ltx:tr", "ltx:td")
   };
+  // Perl alignmentBindings L254: $properties{strut} = LookupRegister('\baselineskip');
+  if !properties.contains_key("strut") {
+    if let Ok(Some(bs)) = state::lookup_register("\\baselineskip", Vec::new()) {
+      properties.insert("strut", bs.into());
+    }
+  }
   let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
     open_container: Rc::new(|document, props| {
@@ -516,8 +541,11 @@ pub fn alignment_bindings(
     }),
     close_container: Rc::new(|document| document.close_element(container)),
     open_row: Rc::new(|document, props| {
+      let str_props: HashMap<String, String> = props.into_iter()
+        .map(|(k, v)| (k, v.to_string()))
+        .collect();
       document
-        .open_element(rowtype, Some(props), None)
+        .open_element(rowtype, Some(str_props), None)
         .and(Ok(()))
     }),
     close_row: Rc::new(|document| document.close_element(rowtype)),
@@ -810,7 +838,7 @@ pub fn extract_alignment_column(
       }
     };
     initial_align = colspec.align.unwrap_or(Align::Left);
-    tabskip_clone = colspec.tabskip.clone();
+    tabskip_clone = colspec.tabskip;
     is_omitted = colspec.omitted;
     old_border = colspec.border.clone();
     has_before_fill = colspec
@@ -834,16 +862,21 @@ pub fn extract_alignment_column(
   // Perl L487-489: lspaces to transfer to previous column when vrule found
   let mut prev_rspaces_transfer: Option<Vec<Digested>> = None;
 
-  // Perl L476-477: add tabskip as \hskip to lspaces
+  // Perl L476-477: add tabskip as spacing text to lspaces
+  // Create a Tbox with Unicode space characters directly, rather than
+  // going through \hskip digestion (which can produce nbsp via constructor).
   if let Some(skip) = &tabskip_clone {
     if skip.value_of() != 0 {
-      let hskip_toks = Tokens!(
-        T_CS!("\\hskip"),
-        ExplodeText!(&skip.to_string()),
-        T_CS!("\\relax")
-      );
-      let hskip_digested = stomach::digest(hskip_toks)?;
-      lspaces.push(hskip_digested);
+      let dim = Dimension::new(skip.value_of());
+      let spaces = crate::engine::tex_glue::dimension_to_spaces(dim);
+      if !spaces.is_empty() {
+        let tbox = Tbox {
+          text: arena::pin(&spaces),
+          font: lookup_font().unwrap_or_default(),
+          ..Tbox::default()
+        };
+        lspaces.push(Digested::from(tbox));
+      }
     }
   }
   // Determine expected alignment from template fills, as a fallback for when
@@ -1107,13 +1140,13 @@ fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
     } else if before {
       // Other random tokens go into the column's pre-template
       if !pre.is_empty() || cc != Catcode::SPACE {
-        pre.push(t.clone());
+        pre.push(t);
       }
       tokens.push(t);
     } else {
       // Or the post-template
       if !post.is_empty() || cc != Catcode::SPACE {
-        post.push(t.clone());
+        post.push(t);
       }
       tokens.push(t);
     }

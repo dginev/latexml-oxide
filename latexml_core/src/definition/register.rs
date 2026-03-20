@@ -747,36 +747,9 @@ impl Register {
     value: Option<RegisterValue>,
     mathglyph: Option<char>,
     role: Option<SymStr>,
-    meaning: Option<SymStr>,
-    chardef_name: Option<SymStr>,
-    stretchy: Option<SymStr>,
-    scriptpos: Option<SymStr>,
-    mathstyle: Option<SymStr>,
-    need_scriptpos: bool,
-    need_mathstyle: bool,
+    props: CharDefProps
   ) -> Self {
-    let mut chardef_props = HashMap::default();
-    if let Some(m) = meaning {
-      chardef_props.insert("meaning", Stored::String(m));
-    }
-    if let Some(n) = chardef_name {
-      chardef_props.insert("name", Stored::String(n));
-    }
-    if let Some(s) = stretchy {
-      chardef_props.insert("stretchy", Stored::String(s));
-    }
-    if let Some(sp) = scriptpos {
-      chardef_props.insert("scriptpos", Stored::String(sp));
-    }
-    if let Some(ms) = mathstyle {
-      chardef_props.insert("mathstyle", Stored::String(ms));
-    }
-    if need_scriptpos {
-      chardef_props.insert("need_scriptpos", Stored::Bool(true));
-    }
-    if need_mathstyle {
-      chardef_props.insert("need_mathstyle", Stored::Bool(true));
-    }
+    let chardef_props = props.to_hashmap();
     Register {
       cs,
       parameters: None,
@@ -797,6 +770,43 @@ impl Register {
     } else {
       Cow::Borrowed(&self.address)
     }
+  }
+}
+
+pub struct CharDefProps {
+  pub meaning: Option<SymStr>,
+  // pub name: Option<SymStr>,  // chardef_name: synthesized at invoke time from CS name
+  pub stretchy: Option<SymStr>,
+  pub scriptpos: Option<SymStr>,
+  pub mathstyle: Option<SymStr>,
+  pub need_scriptpos: bool,
+  pub need_mathstyle: bool
+}
+impl CharDefProps {
+  fn to_hashmap(&self) -> HashMap<Stored> {
+    let mut chardef_props = HashMap::default();
+    if let Some(m) = self.meaning {
+      chardef_props.insert("meaning", Stored::String(m));
+    }
+    // if let Some(n) = self.name {
+    //   chardef_props.insert("name", Stored::String(n));
+    // }
+    if let Some(s) = self.stretchy {
+      chardef_props.insert("stretchy", Stored::String(s));
+    }
+    if let Some(sp) = self.scriptpos {
+      chardef_props.insert("scriptpos", Stored::String(sp));
+    }
+    if let Some(ms) = self.mathstyle {
+      chardef_props.insert("mathstyle", Stored::String(ms));
+    }
+    if self.need_scriptpos {
+      chardef_props.insert("need_scriptpos", Stored::Bool(true));
+    }
+    if self.need_mathstyle {
+      chardef_props.insert("need_mathstyle", Stored::Bool(true));
+    }
+    chardef_props
   }
 }
 

@@ -41,7 +41,7 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
   match model {
     "RGB" => {
       let l = 255.0; // default \rangeRGB
-      Color::Rgb(delta(comps.get(0).copied().unwrap_or(0.0), l),
+      Color::Rgb(delta(comps.first().copied().unwrap_or(0.0), l),
                  delta(comps.get(1).copied().unwrap_or(0.0), l),
                  delta(comps.get(2).copied().unwrap_or(0.0), l))
     },
@@ -59,22 +59,22 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
     },
     "Hsb" => {
       let h_range = 360.0; // default \rangeHsb
-      Color::Hsb(comps.get(0).copied().unwrap_or(0.0) / h_range,
+      Color::Hsb(comps.first().copied().unwrap_or(0.0) / h_range,
                  comps.get(1).copied().unwrap_or(0.0),
                  comps.get(2).copied().unwrap_or(0.0))
     },
     "HSB" => {
       let m = 240.0;
-      Color::Hsb(delta(comps.get(0).copied().unwrap_or(0.0), m),
+      Color::Hsb(delta(comps.first().copied().unwrap_or(0.0), m),
                  delta(comps.get(1).copied().unwrap_or(0.0), m),
                  delta(comps.get(2).copied().unwrap_or(0.0), m))
     },
     "Gray" => {
       let n = 15.0;
-      Color::Gray(delta(comps.get(0).copied().unwrap_or(0.0), n))
+      Color::Gray(delta(comps.first().copied().unwrap_or(0.0), n))
     },
     "wave" => {
-      let lambda = comps.get(0).copied().unwrap_or(500.0);
+      let lambda = comps.first().copied().unwrap_or(500.0);
       let h;
       let bb;
       if lambda < 440.0 { h = 4.0 + ((lambda - 440.0) / (-60.0)).clamp(0.0, 1.0); }
@@ -153,17 +153,21 @@ fn decode_color(expression: &str) -> Color {
   // Parse the base: optional - prefix, name, optional !mix
   let (name_part, mix_part, postfix) = parse_standard_expr(base_expr);
 
+  // Perl L328-331: lookup name (WITHOUT complement — complement applied after mix)
+  // Count and strip dash prefixes for later complement application
+  let stripped_name = name_part.trim_start_matches('-');
+  let dash_count = name_part.len() - stripped_name.len();
+
   let mut color = if let Some(pf) = &postfix {
     if pf.starts_with("!![") {
-      // Index into color series: foo!![n]
       let n_str = pf.trim_start_matches("!![").trim_end_matches(']');
       let n: usize = n_str.parse().unwrap_or(0);
-      index_color_series(&name_part, n)
+      index_color_series(stripped_name, n)
     } else {
-      lookup_xcolor(&name_part)
+      lookup_color_obj(stripped_name)
     }
   } else {
-    lookup_xcolor(&name_part)
+    lookup_color_obj(stripped_name)
   };
 
   // Apply blend from state
@@ -181,6 +185,11 @@ fn decode_color(expression: &str) -> Color {
   // Apply mix expressions: !pct!name...
   if !full_mix.is_empty() {
     color = apply_mix_expr(color, &full_mix);
+  }
+
+  // Perl L343: complement applied AFTER mix, not before
+  if dash_count % 2 == 1 {
+    color = color.complement();
   }
 
   // Handle postfix stepping: !!+ or !!++
@@ -237,10 +246,10 @@ fn apply_mix_expr(mut color: Color, mix_str: &str) -> Color {
       break;
     }
     // Skip the ! before the name
-    let after_bang = if rest.starts_with('!') { &rest[1..] } else { rest };
+    let after_bang = if let Some(stripped) = rest.strip_prefix('!') { stripped } else { rest };
     // Read the name (up to next !)
     let (name, next_rest) = split_at_bang(after_bang);
-    let other = if name.is_empty() { WHITE } else { lookup_xcolor(&name) };
+    let other = if name.is_empty() { WHITE } else { lookup_xcolor(name) };
     color = color.mix(&other, pct.clamp(0.0, 100.0) / 100.0);
     remaining = next_rest;
   }
@@ -689,11 +698,16 @@ LoadDefinitions!({
 
   // \pagecolor[model]{spec}
   DefPrimitive!("\\pagecolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.map(|m| do_expand(m).ok()).flatten().map(|t| t.to_string());
+    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     let spec_str = do_expand(spec)?.to_string();
     let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
     merge_font(fontmap!(bg => color));
-    Ok(Vec::new())
+    // Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
+    let reversion_tokens = Invocation!("\\pagecolor",
+      vec![model_str.as_deref().map(|s| Tokens::from(T_OTHER!(s))),
+           Some(Tokens::from(T_OTHER!(&*spec_str)))]);
+    Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
+      reversion_tokens, arena::SymHashMap::default()))])
   });
 
   // \boxframe{width}{height}{depth}
@@ -742,7 +756,7 @@ LoadDefinitions!({
     let model_str = do_expand(model)?.to_string();
     let method_str = do_expand(method)?.to_string();
     let bspec_str = do_expand(bspec)?.to_string();
-    let bmodel_str = bmodel_opt.map(|m| do_expand(m).ok()).flatten().map(|t| t.to_string());
+    let bmodel_str = bmodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     let base = parse_xcolor(bmodel_str.as_deref(), &bspec_str, Some(&model_str));
     // Store base and method
     assign_value(&s!("color_series_{name_str}_base"), Stored::String(arena::pin(base.to_stored())), Some(Scope::Global));
@@ -757,9 +771,10 @@ LoadDefinitions!({
   // For now the 5-arg form handles the test cases (which use {last}{.}{-.})
 
   // \resetcolorseries[div]{name}
+  // reset/initialize the color series <name> for <div> steps.
   DefPrimitive!("\\resetcolorseries[]{}", sub[(div_opt, name)] {
     let name_str = do_expand(name)?.to_string();
-    let div_str = div_opt.map(|d| do_expand(d).ok()).flatten().map(|t| t.to_string())
+    let div_str = div_opt.and_then(|d| do_expand(d).ok()).map(|t| t.to_string())
       .unwrap_or_else(|| "16".to_string());
     let div: f64 = div_str.parse().unwrap_or(16.0);
 
@@ -793,7 +808,7 @@ LoadDefinitions!({
             Color::from_stored(&arena::to_string(d_sym)).unwrap_or(BLACK).scale(1.0 / div)
           } else { BLACK }
         },
-        "last" | _ => {
+        "last" => {
           // For "last": step = (last - base) / div
           if let Some(Stored::String(d_sym)) = state::lookup_value(&delta_key) {
             let last = Color::from_stored(&arena::to_string(d_sym)).unwrap_or(BLACK);
@@ -805,6 +820,10 @@ LoadDefinitions!({
             from_model_components(base.model(), &step_comps)
           } else { BLACK }
         },
+        other => {
+          Warn!("unknown","xcolor_step",format!("the step '{other}' was not step/grad/last"));
+          BLACK
+        }
       };
 
       // Reset color to base
@@ -975,7 +994,7 @@ LoadDefinitions!({
 
       if let Some(tokens) = text_tokens {
         let digested = digest(tokens)?;
-        whatsit.set_property("text", Stored::Digested(digested.into()));
+        whatsit.set_property("text", Stored::Digested(digested));
       }
     }
   );
@@ -1042,12 +1061,32 @@ LoadDefinitions!({
   DefMacro!("\\showrowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorstrue}");
   DefMacro!("\\hiderowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorsfalse}");
 
-  // \rownum
-  DefMacro!("\\rownum", "0"); // stub — proper alignment row tracking TODO
+  // Perl xcolor L744-748: \rownum returns current row number from alignment
+  def_macro(
+    T_CS!("\\rownum"),
+    None,
+    Some(ExpansionBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
+      if let Some(alignment) = state::lookup_alignment() {
+        if let DigestedData::Alignment(cell) = alignment.data() {
+          let row_num = cell.borrow().current_row_number();
+          let num_str = row_num.to_string();
+          let toks: Vec<Token> = num_str.chars().map(|c| {
+            Token::new(&c.to_string(), Catcode::OTHER)
+          }).collect();
+          Ok(Tokens::new(toks))
+        } else {
+          Ok(Tokens!(T_OTHER!("0")))
+        }
+      } else {
+        Ok(Tokens!(T_OTHER!("0")))
+      }
+    }))),
+    None,
+  )?;
 
   // \rowcolor{color} — simplified stub
   DefPrimitive!("\\rowcolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.map(|m| do_expand(m).ok()).flatten().map(|t| t.to_string());
+    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     let spec_str = do_expand(spec)?.to_string();
     let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
     merge_font(fontmap!(bg => color));
@@ -1056,7 +1095,7 @@ LoadDefinitions!({
 
   // \columncolor — stub
   DefPrimitive!("\\columncolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.map(|m| do_expand(m).ok()).flatten().map(|t| t.to_string());
+    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     let spec_str = do_expand(spec)?.to_string();
     let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
     merge_font(fontmap!(bg => color));

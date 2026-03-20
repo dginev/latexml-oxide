@@ -37,7 +37,7 @@ fn figure_dual_caption_test() { complex("figure_dual_caption"); }
 fn hyperchars_test() { complex("hyperchars"); }
 
 #[test]
-#[ignore] // 876 diffs — listings.sty issues + math parser
+#[ignore] // tags diffs: figure caption + listings math
 fn figure_mixed_content_test() { complex("figure_mixed_content"); }
 
 #[test]
@@ -50,7 +50,6 @@ fn labelled_test() { complex("labelled"); }
 fn versioned_fallback_test() { complex("versioned_fallback"); }
 
 #[test]
-#[ignore] // 125 diffs — needs cleveref + MathFork
 fn cleveref_minimal_test() { complex("cleveref_minimal"); }
 
 #[test]
@@ -59,7 +58,6 @@ fn equationnest_test() { complex("equationnest"); }
 // Tests that need missing packages or have significant diffs
 
 #[test]
-#[ignore] // needs aastex631.cls binding
 fn aastex631_deluxetable_test() { complex("aastex631_deluxetable"); }
 
 #[test]
@@ -70,7 +68,6 @@ fn acm_aria_test() { complex("acm_aria"); }
 fn aastex_test_test() { complex("aastex_test"); }
 
 #[test]
-#[ignore] // needs blog.cls binding
 fn aliceblog_test() { complex("aliceblog"); }
 
 #[test]

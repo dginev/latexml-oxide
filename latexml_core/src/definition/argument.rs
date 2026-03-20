@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::{self, Display};
+use std::rc::Rc;
 
 use crate::Locator;
 use crate::alignment::template::Template;
@@ -31,6 +32,7 @@ pub enum ArgWrap {
   MuDimension(MuDimension),
   KV(Box<KeyVals>),
   AlignmentTemplate(Box<Template>),
+  Pair(crate::common::pair::Pair),
   // TODO: what do we do with this custom case? feels iffy
   RegisterDefinition(Box<(Token, Vec<ArgWrap>)>),
   #[default]
@@ -50,6 +52,7 @@ impl Display for ArgWrap {
       ArgWrap::MuDimension(mudim) => write!(f, "{mudim}"),
       ArgWrap::KV(kv) => write!(f, "{kv}"),
       ArgWrap::AlignmentTemplate(at) => write!(f, "{at}"),
+      ArgWrap::Pair(p) => write!(f, "{p}"),
       ArgWrap::RegisterDefinition(dbox) => write!(f, "({},{:?})", dbox.0, dbox.1),
       ArgWrap::None => write!(f, "None"),
     }
@@ -60,9 +63,8 @@ impl Object for ArgWrap {
   fn get_locator(&self) -> Locator {
     use ArgWrap::*;
     match self {
-      Token(_) | Tokens(_) | Number(_) | Float(_) | Dimension(_) | AlignmentTemplate(_) => {
-        Locator::default()
-      },
+      Token(_) | Tokens(_) | Number(_) | Float(_) | Dimension(_) | AlignmentTemplate(_)
+      | Pair(_) => Locator::default(),
       Glue(t) => t.get_locator(),
       MuGlue(t) => t.get_locator(),
       MuDimension(t) => t.get_locator(),
@@ -83,6 +85,7 @@ impl Object for ArgWrap {
       MuGlue(t) => t.be_digested(),
       MuDimension(t) => t.be_digested(),
       KV(kv) => kv.be_digested(),
+      Pair(p) => p.be_digested(),
       None => Ok(Digested::default()),
       AlignmentTemplate(_) => todo!(),
       RegisterDefinition(_) => todo!(), // ??? not meant for direct digestion I think
@@ -100,6 +103,7 @@ impl Object for ArgWrap {
       MuGlue(t) => t.revert(),
       MuDimension(t) => t.revert(),
       KV(kv) => kv.revert(),
+      Pair(p) => p.revert(),
       None => Ok(Tokens!()),
       AlignmentTemplate(_) => todo!(),
       RegisterDefinition(_) => todo!(), // ??? not meant for direct reversion I think
@@ -164,9 +168,8 @@ impl ArgWrap {
     let result = match self {
       Token(t) => Some(Cow::Owned(Tokens!(*t))),
       Tokens(tks) => Some(Cow::Borrowed(tks)),
-      Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_) | KV(_) => {
-        Some(Cow::Owned(self.revert()?))
-      },
+      Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_) | KV(_)
+      | Pair(_) => Some(Cow::Owned(self.revert()?)),
       None => Some(Cow::Borrowed(NO_BORROWED_TOKENS)),
       AlignmentTemplate(_) => todo!(),
       RegisterDefinition(_) => todo!(), // ??? not meant for such use
@@ -441,7 +444,8 @@ impl From<Stored> for Result<ArgWrap> {
       | Stored::VecDigested(_)
       | Stored::Chars(_)
       | Stored::KeyVal(_)
-      | Stored::KeyVals(_) => {
+      | Stored::KeyVals(_)
+      | Stored::Template(_) => {
         Error!(
           "stored",
           "type",
@@ -466,7 +470,9 @@ impl From<ArgWrap> for Result<Stored> {
       ArgWrap::MuGlue(v) => Stored::MuGlue(v),
       ArgWrap::Float(v) => Stored::Float(v),
       ArgWrap::None => Stored::None,
-      ArgWrap::KV(_) | ArgWrap::RegisterDefinition(_) | ArgWrap::AlignmentTemplate(_) => {
+      ArgWrap::AlignmentTemplate(t) => Stored::Template(Rc::new(*t)),
+      ArgWrap::Pair(_) => Stored::None, // TODO: add Stored::Pair
+      ArgWrap::KV(_) | ArgWrap::RegisterDefinition(_) => {
         Error!(
           "stored",
           "type",

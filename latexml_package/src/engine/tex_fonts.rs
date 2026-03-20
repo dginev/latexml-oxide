@@ -117,10 +117,10 @@ LoadDefinitions!({
     }
     // Perl: installDefinition(FontDef->new($cs, $key))
     // When the font switch CS is invoked, set current_FontDef so \fontname\font works
-    let cs_for_fontdef = cs.clone();
+    let cs_for_fontdef = cs;
     DefPrimitive!(cs, None, None, font => props_opt,
       before_digest => sub {
-        AssignValue!("current_FontDef", cs_for_fontdef.clone(), None);
+        AssignValue!("current_FontDef", cs_for_fontdef, None);
       }
     );
   });
@@ -335,6 +335,11 @@ LoadDefinitions!({
     '\u{00A7}', '\u{2020}', '\u{2021}', '\u{00B6}', '\u{2663}', '\u{2662}', '\u{2661}', '\u{2660}'
     ]
   );
+
+  let cal_font = Font {
+    family: Some(std::borrow::Cow::Borrowed("caligraphic")),
+    ..Default::default() };
+  latexml_core::state::assign_value("OMS_uppercase_mathstyle", latexml_core::state::Stored::Font(std::rc::Rc::new(cal_font)), Some(latexml_core::state::Scope::Global));
 
   #[rustfmt::skip]
   DeclareFontMap!(

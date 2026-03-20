@@ -113,7 +113,7 @@ LoadDefinitions!({
       if mode == "horizontal" && bound.ends_with("vertical") {
         // Perl: $stomach->repackHorizontal;
         repack_horizontal();
-        assign_value_inplace("MODE", &bound.to_string()); // Resume vertical/internal_vertical
+        assign_value_inplace("MODE", bound.to_string()); // Resume vertical/internal_vertical
       }
       state::assign_value("parshape", Stored::None, None);
       state::assign_value("interlinepenalties", Stored::None, None);

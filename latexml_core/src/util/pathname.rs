@@ -174,8 +174,8 @@ pub fn canonical(pathname: &str) -> String {
           } else if prefix != ".." {
             // No leading slash, e.g. "foo/.."
             let trail = &pathname[after..];
-            pathname = if trail.starts_with('/') {
-              trail[1..].to_string()
+            pathname = if let Some(stripped) = trail.strip_prefix('/') {
+              stripped.to_string()
             } else {
               trail.to_string()
             };

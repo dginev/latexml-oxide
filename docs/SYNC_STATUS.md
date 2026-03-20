@@ -2,7 +2,10 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-15. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-19. Only lists open gaps & TODOs; completed items live in git history.
+
+**High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
+(Engine Parity → Package Bindings → Post-Processing → Production).
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
@@ -20,7 +23,7 @@ Updated 2026-03-15. Only lists open gaps & TODOs; completed items live in git hi
 | base_schema.rs | OK | Complete (15/15 defs, verified 2026-03-12) |
 | base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
 | base_utilities.rs | MINOR | Audit 2026-03-12: ~90% complete. `\lx@endash/emdash/NBSP/nobreakspace` present. Reference formatting macros (`lx@the@@`, `lx@fnum@@`, `lx@therefnum@@`, `lx@typerefnum@@`, `lx@format@title@@`) all present. Stubs: `\@add@to@frontmatter@now` (unported), `\lx@frontmatter@fallback` (returns None). Missing Perl helpers: `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()`. |
-| base_xmath.rs | GAPS | ~24 commented-out defs (matrix/cases systems, `\lx@padded`, tweaked). Done: `\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript/subscript`. Missing: `openMathFork()`, `closeMathFork()`, `MathWhatsit()`, equation group helpers |
+| base_xmath.rs | GAPS | ~24 commented-out defs (matrix/cases systems, `\lx@padded`, tweaked). Done: `\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript/subscript`, `openMathFork()`, `closeMathFork()`, `addColumnToMathFork()`, `equationgroupJoinCols()`, `equationgroupJoinRows()`. Missing: `MathWhatsit()` |
 | base_functions.rs | MINOR | — |
 
 ### Phase 1: TeX Primitives (High-Gap)
@@ -134,6 +137,12 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 1. **`DefMacro!` double-packing** — Compile-time `DefMacro!` used `compile_expansion!` (which calls `pack_parameters` at build time) but `Expandable::new()` called `pack_parameters` again at runtime. The double-packing caused spurious `Error:misdefined:expansion` warnings for macros with alignment templates (e.g. `\displaylines`). **Fix:** All `DefMacro!` branches with `compile_expansion!` now set `nopack_parameters: true`. See KNOWN_PERL_ERRORS.md §1 for the underlying Perl issue.
 2. **`Font::merge()` specialize bug** — Rust's `merge()` incorrectly called `specialize(font_name)` with the font filename (e.g. "cmb10") instead of text. The "Other Symbol" Unicode case in `specialize` reset `series="bold"` to `series="medium"`. **Fix:** Removed `specialize` from `merge()` — only called at TBox creation with actual text. See KNOWN_PERL_ERRORS.md §4.
 3. **`%\n` line-break separator not emitted** — Perl preserves `%\n` (TeX comment-newline used for line breaking) in `tex` attributes. Rust does not emit this separator. **Decision:** Intentional divergence — the `%\n` is a TeX formatting artifact with no semantic content. All 146 occurrences of `%&#10;` removed from 26 test XML files.
+4. **`infer_sizer` reversion inference removed** — `dialect.rs::infer_sizer()` was inferring a sizer closure from the Constructor's reversion text when no explicit sizer was specified. For body-capturing constructors like `\lx@begin@inline@math` (reversion=`$`), this measured the `$` character instead of the math body content, producing constant `5.00002pt x 7.5pt + 0.55554pt` for all math boxes. **Fix:** `infer_sizer()` now only returns an explicit sizer or None, matching Perl where sizer is never inferred from reversion.
+5. **`METRIC_MAP` math italic lookup** — `METRIC_MAP` mapped `"math_medium_italic"` to `"cmmi"` but `STDMETRICS` used key `"cmm"` for cmmi10 data. The metric lookup failed and fell back to cmr (serif) metrics, losing italic corrections and using wrong character widths for all math content. **Fix:** Changed METRIC_MAP value to `"cmm"` to match STDMETRICS key.
+6. **`compact_xmdual` implemented** — Perl's `pruneXMDuals` → `compactXMDual` merges XMDual elements when content and presentation are compatible. Case 1 (XMTok+XMTok) transfers `name`/`meaning` from content and `xml:id`/`role` from dual to the presentation token, replacing the XMDual. Case 2 (mirrored XMApp nodes) walks children, matching XMRef↔xml:id pairs, and creates a compact XMApp. Previously the function was a no-op stub.
+7. **`\lx@dual` keyval extraction** — The `\lx@dual` constructor's after_digest callback had a TODO for extracting keyval pairs from its OptionalKeyVals argument. Without this, properties like `role`, `name`, `meaning` from DefMath were not available as `#property` references in the constructor template. **Fix:** Added keyval extraction via `kv.get_hash()` → `whatsit.set_property()`.
+8. **DefMath empty `{}` in tex attributes** — `def_math_dual()` always wrapped presentation/content macro arguments in `{}`  even when no arguments existed, producing `\Langle{}` instead of `\Langle` in tex attributes. **Fix:** Only add `{arg}` braces for actual arguments; omit for parameterless macros.
+9. **`dynamic_mathstyle` in constructors/duals** — The `dynamic_mathstyle => true` flag (used by esint integrals via `doVariablesizeOp`) was only handled in `def_math_primitive()`. Constructors and dual definitions ignored it, so `mathstyle="text"/"display"` was missing from content tokens. **Fix:** Added mathstyle computation in `transfer_common_constructor_options` after_digest.
 
 ---
 
@@ -142,7 +151,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 1. **`FontDef` parameter type** — Simplified to `FontToken`. Blocks `\fontdimen`, `\hyphenchar` per-font tracking.
 2. **SVG support** — Removed from glue/kern/box. Not critical for XML output.
 3. **`LoadFormat` machinery** — Not ported; plain/latex bootstrap loaded inline.
-4. **Font `computeBoxesSize`** — Single-pass only; missing word/line/stack decomposition.
+4. ~~**Font `computeBoxesSize`**~~ — DONE. Full 4-helper decomposition (words/lines/stack/box) matching Perl.
 5. **`DEFSIZE`** — Static 10.0; Perl reads `NOMINAL_FONT_SIZE` from state.
 6. **`.ltxml` file search** — NOT APPLICABLE. Rust compiles all package bindings at build time. Every Perl `.sty.ltxml` must be translated to a Rust `_sty.rs` file. No runtime `.ltxml` loading possible. For external packages, use `latexml_contrib` crate.
 
@@ -171,7 +180,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | gullet.rs | MINOR | `readArg` isolation via `readingFromMouth`; `read_register_value` coercions |
 | stomach.rs | MINOR | Mathcode char decoding (ADDOP vs BINOP). `execute_before_after_group` extracted. `begin_mode_opt`/`end_mode_opt` with `noframe` parameter synced with Perl Grouplevel commit (acaab773). `everymath/everydisplay` injection now centralized in `begin_mode_opt`. `push_stack_frame` now tolerates missing current_token (uses `\relax` fallback) for absorption-phase group operations. |
 | state.rs | OK | `Stored::KeyVals` now wraps `Rc<KeyVals>` for pointer-based equality (`Rc::ptr_eq`) |
-| document.rs | MINOR | `compact_xmdual()`, `insertElementBefore()`, comment creation (needs libxml). Fixed: `close_to_node` ifopen parameter now suppresses error (was ignored). `close_node_with_strictness` walker now tracks `n.get_type()` (was `node.get_type()`). `mergeAttributes` now uses `add_ss_values` for space-joined attrs (class/lists/inlist/labels), matching Perl's sort+dedup. `finalize_rec` class merge also sorts. |
+| document.rs | MINOR | `insertElementBefore()`, comment creation (needs libxml). Fixed: `close_to_node` ifopen parameter now suppresses error (was ignored). `close_node_with_strictness` walker now tracks `n.get_type()` (was `node.get_type()`). `mergeAttributes` now uses `add_ss_values` for space-joined attrs (class/lists/inlist/labels), matching Perl's sort+dedup. `finalize_rec` class merge also sorts. `compact_xmdual` implemented (Case 1: XMTok merge, Case 2: mirrored XMApp). `mergeAttributes` now supports `force` override parameter. |
 | register.rs | MINOR | — |
 | pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_is_contained`, `pathname_findall`, `pathname_timestamp/copy/mkdir`. `canonical` now handles `./`, `/../`. Dir-listing approach in `candidate_pathnames` not ported (uses `Path::exists` instead). |
 | alignment.rs | MINOR | normalize.rs deep refactored (2026-03-14): per-column-index arrays, vattach height/depth split, lspaces/rspaces padding, border padding (0.4*UNITY), first/last row strut, rowspan redirect. Remaining: padding CSS classes, ABSORB_LIMIT guard |
@@ -224,42 +233,140 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-15)
+## Test Suite Status (2026-03-20)
 
-**Current totals: 214 pass, 0 fail, 65 ignored test functions**
-**Perl total: ~315 test cases across 26 latexml_tests() suites + ~9 special tests**
-**Coverage: 77% pass rate (214/279 non-permanent-ignore tests)**
+**Current totals: 237 pass, 0 fail, 82 ignored test functions (319 total)**
+**Coverage: 75% pass rate (237/314 non-permanent-ignore tests)**
+*Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
-| Suite | Pass | Ignored | Notes |
-|-------|------|---------|-------|
-| 000_hello | 1 | 0 | |
-| 00_tokenize | 14 | 0 | |
-| 00_contrib | 1 | 0 | |
-| 01_unit_tokens | 1 | 0 | |
-| 01_unit_state | 9 | 0 | |
-| 10_expansion | 36 | 0 | |
-| 12_grouping | 2 | 0 | |
-| 20_digestion | 10 | 0 | |
-| 22_fonts | 17 | 6 | fonts(156), plainfonts(66), sizes(393), ding(371), abxtest(crash), stmaryrd(1449) |
-| 30_encoding | 26 | 0 | |
-| 32_keyval | 8 | 0 | |
-| 33_keyval_options | 11 | 0 | |
-| 40_math | 0 | 1 | batch 149 diffs (math parser) |
-| 50_structure | 31 | 5 | eqnums(598), enum(543), figure_grids(331), amsarticle(898), ieee(979) |
-| 52_namespace | 0 | 5 | DTD not supported (permanent) |
-| 53_alignment | 18 | 11 | cells(overflow), colortbls(crash), supertabular(629), algx(163), plainmath(351), split(2228), badeqnarray(507), eqnarray(1176), diagbox(timeout), ncases(timeout), vmode(segfault) |
-| 55_theorem | 4 | 1 | ntheorem(1479) |
-| 56_ams | 2 | 5 | amsdisplay(963), matrix(187), sideset(488), cd(crash), mathtools(crash) |
-| 65_graphics | 5 | 4 | graphrot(596), picture(3125), xcolors(447), xytest(crash) |
-| 70_parse | 0 | 1 | batch 120 diffs |
-| 700_unit_parse | 3 | 0 | |
-| 80_complex | 8 | 8 | deluxetable(35), aliceblog(144), cleveref(302), mixed_content(1142), physics(5417), si(9024), acm_aria(timeout), revtex(missing) |
-| 81_babel | 0 | 1 | memory leak timeout |
-| 82_moderncv | 0 | 2 | needs moderncv.cls binding |
-| 83_expl3 | 0 | 2 | needs \ExplSyntaxOn |
-| 84_slides | 0 | 2 | needs beamer.cls/slides.cls |
-| 85_pgf | 0 | 2 | needs pgf.sty |
-| 86_tikz | 0 | 10 | needs tikz.sty |
+**Recent fixes (2026-03-20, session 12):**
+- **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
+- **Matrix delimiter absorption**: `get_value_digested()` for left/right keyvals in matrix/cases properties. matrix_test: 164→2 diffs.
+- **Smallmatrix Perl typo**: Matched Perl's `atameaning` typo (not `datameaning`) to avoid XMDual wrapping.
+- **\framebox math mode**: Added `?#mathframe` conditional template, IN_MATH detection, isMath child walk. terms_test: 12→11 diffs.
+- **\boxed**: Ported from amsmath (boxed@math → XMArg enclose='box', boxed@text → Math framed='rectangle').
+- **DefMath parity audit**: Ported `\And`, `\varlimsup/inf`, `\varinjlim`, `\varprojlim`, `\intop`, `\ointop`, `\iint/iiint/iiiint/idotsint`, `\varGamma...\varOmega` (11 italic Greeks), `\implies/\impliedby`, `\mod/\pod/\pmod/\bmod`, misc stubs.
+
+**Recent infrastructure fixes (2026-03-18, session 5):**
+- **Equation numbering tags**: Row properties changed from `HashMap<String, String>` to `HashMap<String, Stored>`, enabling `Stored::Digested` tags to propagate through alignment absorption. eqnarray equations now have `<tags>` elements matching Perl.
+- **Preamble PI**: `\lx@add@Preamble@PI` constructor now uses procedural body with `document.insert_pi()`. `\DeclareMathAccent` returns AddToPreamble result. acc_test: 169→96 diffs.
+- **\pagecolor reversion**: Both color.sty and xcolor.sty now return Tbox with reversion tokens.
+
+**Recent fixes (2026-03-18, session 2):**
+- **cleanup_math XPath**: Updated to match Perl — excludes XMHint and lone PUNCT/PERIOD from "real math" check. Math spacing commands (`\,`, `\!`, `\>`, `\;`, `\mskip`) no longer produce spurious `<Math>` elements. XMHint width converted to Unicode space chars via `dimension_to_spaces`.
+- **vbox/vtop height/depth**: Fixed 3 bugs — sizer closure now passes Whatsit properties (vattach etc.), `repack_horizontal` sets "mode" property string, removed extra `flat_map(unlist)` in `compute_boxes_size`.
+- **compact_xmdual xml:id leak**: Fixed content token xml:id leaking to presentation token when dual has no xml:id (Case 1).
+- **Sizes test progress**: Down from 313 to 20 diff lines. Remaining: dimension rounding (4), super/subscript widths (3), table sizing (6+), section 8 (7).
+
+### Per-test enumeration
+
+- [x] **000_hello** (1/1)
+  - [x] hello
+- [x] **00_contrib** (1/1)
+  - [x] contrib
+- [x] **00_tokenize** (14/14)
+  - [x] alltt, comment, equality, file_read, hashes, ligatures, mathtokens, newlines, par, percent, trailingspaces, url, verbata, verb
+- [x] **01_unit_tokens** (1/1)
+- [x] **01_unit_state** (9/9)
+- [x] **10_expansion** (36/36)
+  - [x] aftergroup, definedness, endinput, environments, env, escapechar, etex, etoolbox, for, hyperurls, ifthen, inin, keywords, lettercase, meaning, multi_escaped_param, noexpand, noexpand_conditional, numexpr, parindent, partial, pass_param_toks_in_gen_macros, pdftex_expanded, romannumeral, simple_dimen, testchar, testexpand, testif, testinput, testmultido, textcase, toks, urls, utflettercase, whichcache, whichinput
+- [x] **12_grouping** (2/2)
+  - [x] mathgroup, scopemacro
+- [x] **20_digestion** (10/10)
+  - [x] box, chardefs, defaultunits, def, dollar, io, primes, rebox, testctr, xargs
+- [ ] **22_fonts** (19 pass, 0 fail, 4 ignored = 23 total)
+  - [ ] abxtest — IGNORED: needs `\hexnumber@`, `\mathxfam` (mathabx binding)
+  - [x] acc
+  - [x] accents
+  - [x] bbold
+  - [x] cancels
+  - [ ] ding — IGNORED: enumerate nesting + guessTableHeaders
+  - [x] emph
+  - [x] esint
+  - [x] fonts
+  - [x] marvosym
+  - [x] mathaccents
+  - [x] mathbbol
+  - [x] mathcolor
+  - [x] mixed
+  - [x] omencodings
+  - [x] plainfonts
+  - [ ] sizes — IGNORED: ~26 diff hunks, vbox/vtop height/depth
+  - [x] soul
+  - [ ] stmaryrd — IGNORED: needs stmaryrd.sty port (1449 diffs)
+  - [x] textcomp
+  - [x] textsymbols
+  - [x] ulem
+  - [x] wasysym
+- [x] **30_encoding** (26/26)
+  - [x] ansinew, applemac, cp1250, cp1252, cp437, cp437de, cp850, cp852, cp858, cp865, decmulti, latin1, latin2, latin3, latin4, latin5, latin9, latin10, ly1, ot1, t1, t2a, t2b, t2c, ts1, utf8
+- [x] **32_keyval** (8/8)
+  - [x] keyvalemptyvalue, keyvalinline, keyvalstyle, xkeyvaladv, xkeyvalbasic, xkeyvalkvcompat, xkeyvalstyle, xkeyvalview
+- [x] **33_keyval_options** (11/11)
+  - [x] xkvdop1a, xkvdop1b, xkvdop2a, xkvdop2b, xkvdop3a, xkvdop3b, xkvdop4a, xkvdop5a, xkvdop5b, xkvdop6a, xkvdop6b
+- [ ] **40_math** (0 pass, 1 ignored = batch)
+  - [ ] batch — IGNORED: 149 diffs (math parser)
+- [ ] **50_structure** (38 pass, 4 ignored = 42 total)
+  - [x] abstract, acro, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, epitest, faketitlepage, fancyhdr, figures, filelist, floatnames, footnote, glossary, hyperref, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
+  - [ ] amsarticle — IGNORED: needs amsart.cls binding (898 diffs)
+  - [ ] eqnums — IGNORED: equation counter stepping + tag font (416 diffs)
+  - [ ] figure_grids — IGNORED: needs BuildPanelsAndID (331 diffs)
+  - [ ] IEEE — IGNORED: math parser diffs (979 diffs)
+- [ ] **52_namespace** (0 pass, 5 ignored = permanent)
+  - [ ] ns1–ns5 — DTD not supported in Rust port
+- [ ] **53_alignment** (18 pass, 11 ignored = 29 total)
+  - [x] array, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, tabtab, tabbing, tabular, tabularstar
+  - [ ] algx — IGNORED: 163 diffs, needs math parser XMDual
+  - [ ] badeqnarray — IGNORED: 182 diffs, needs afterConstruct
+  - [ ] cells — IGNORED: stack overflow
+  - [ ] colortbls — IGNORED: crash
+  - [ ] diagboxtest — IGNORED: infinite loop timeout
+  - [ ] eqnarray — IGNORED: 1176 diffs, needs afterConstruct + math parser
+  - [ ] ncases — IGNORED: infinite loop timeout
+  - [ ] plainmath — IGNORED: 351 diffs, math parser XMDual
+  - [ ] split — IGNORED: 2228 diffs, amsmath split + math parser
+  - [ ] supertabular — IGNORED: 629 diffs, needs supertabular.sty
+  - [ ] vmode — IGNORED: segfault
+- [ ] **55_theorem** (4 pass, 1 ignored = 5 total)
+  - [x] amstheorem, latextheorem, ntheoremstyle, theorem
+  - [ ] ntheorem — IGNORED: 1479 diffs, math parser + eqnarray
+- [ ] **56_ams** (2 pass, 5 ignored = 7 total)
+  - [x] dots, genfracs
+  - [ ] amsdisplay — IGNORED: 963 diffs, needs afterConstruct + `\text{}`
+  - [ ] cd — IGNORED: panic in math parser, needs amscd.sty
+  - [ ] mathtools — IGNORED: TooManyErrors, needs mathtools.sty
+  - [ ] matrix — IGNORED: 187 diffs, needs afterConstruct + math parser
+  - [ ] sideset — IGNORED: 488 diffs, needs afterConstruct
+- [ ] **65_graphics** (5 pass, 4 ignored = 9 total)
+  - [x] calc, colors, framed, keyval, simplekv
+  - [ ] graphrot — IGNORED: 596 diffs, `\begingroup` in `\csname..\endcsname`
+  - [ ] picture — IGNORED: 3125 diffs, needs picture env
+  - [ ] xcolors — IGNORED: 447 diffs, complete xcolor port
+  - [ ] xytest — IGNORED: crash, needs xy.sty
+- [ ] **70_parse** (0 pass, 1 ignored = batch)
+  - [ ] batch — IGNORED: 120 diffs (math parser)
+- [x] **700_unit_parse** (3/3)
+  - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
+- [ ] **80_complex** (10 pass, 6 ignored = 16 total)
+  - [x] aastex631_deluxetable, aastex_test, equationnest, hyperchars, hypertest, labelled, figure_dual_caption, tcilatex_minimal, versioned_fallback, xii
+  - [ ] acm_aria — IGNORED: timeout, needs acmart.cls
+  - [x] aliceblog
+  - [ ] cleveref_minimal — IGNORED: 302 diffs, needs cleveref.sty
+  - [ ] figure_mixed_content — IGNORED: 1142 diffs, needs wrapfig + listings math
+  - [ ] physics — IGNORED: 5417 diffs, needs physics.sty
+  - [ ] si — IGNORED: 9024 diffs, needs siunitx.sty
+- [ ] **81_babel** (0 pass, 1 ignored)
+  - [ ] batch — IGNORED: unbounded memory leak timeout
+- [ ] **82_moderncv** (0 pass, 2 ignored)
+  - [ ] cs_cv, orc — needs moderncv.cls binding
+- [ ] **83_expl3** (0 pass, 2 ignored)
+  - [ ] tilde_tricks, xparse — needs `\ExplSyntaxOn`
+- [ ] **84_slides** (0 pass, 2 ignored)
+  - [ ] beamer, slides — needs beamer.cls/slides.cls
+- [ ] **85_pgf** (0 pass, 2 ignored)
+  - [ ] stress_pgfmath, stress_pgfplots — needs pgf.sty
+- [ ] **86_tikz** (0 pass, 10 ignored)
+  - [ ] ac_drive_components, ac_drive_voltage, atoms_and_orbitals, consort_flowchart, cycle, dominoes, tikz_3d_cone, tikz_figure, unit_tests_by_silviu, various_colors — needs tikz.sty
 
 ### Perl-only test infrastructure (not applicable to Rust)
 - `00_unittest.t` — Perl module unit tests (Perl-specific)
@@ -281,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-15):** 214 pass, 0 fail, 65 ignored (77% pass rate). Full diff scan below.
+**Status (2026-03-20):** 240 pass, 0 fail, 79 ignored (319 total). Session 12: Per-size font metrics (cmm7/cmm5), matrix delimiter absorption (matrix_test 164→0, PASSES), \| delimiter fix, acc_test PASSES (\lx@if@isaccent), esint_test PASSES (scripted bigop grammar), \eqalign constructors, VBoxContents mode property fix, two-part relop grammar (>=, <=, <<, >>), COMPOSEOP grammar rule (compose_test 141→29), CI fix (texlive-science for algorithmicx). Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim.
 
 ### Completed items
 
@@ -305,40 +412,62 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Tier 1: Actionable items (no infrastructure blockers)
 
-- [ ] **8. fonts_test** (22_fonts) — 156 diffs. Math font map character lookup for `\cal`/`\it` in math mode. `\fontname` returns placeholder.
-- [ ] **8b. plainfonts_test** (22_fonts) — 66 diffs. Same font map issues + `\fontname` + cmsy10 glyph mapping.
-- [ ] **9. sizes_test** (22_fonts) — 393 diffs. Font size from `\font` definitions not propagated.
-- [ ] **10. ding_test** (22_fonts) — 371 diffs. Enumerate nesting + table structure.
+- [x] **8. fonts_test** (22_fonts) — DONE. Fixed delimited-[] meaning attr (was content). Updated expected XML.
+- [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
+- [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
+- [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
+- [ ] **9. sizes_test** (22_fonts) — 1 diff line (was 313→181→19→6→4→1). Fixed: per-size font metrics, VBoxContents mode property fix (vtop+tabular now correct). Remaining: \vbox{hop} width needs paragraph wrapping at \hsize (5.55pt vs 469.75pt).
+- [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
-- [ ] **13. enum_test** (50_structure) — 543 diffs. Port enumitem.sty binding.
-- [ ] **16. figure_grids_test** (50_structure) — 331 diffs. Needs graphicx figure grid support.
+- [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
+- [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [ ] **18. amsarticle_test** (50_structure) — 898 diffs. Port amsart.cls binding.
-- [ ] **25. cells_test** (53_alignment) — STACK OVERFLOW. Debug recursive state lookup.
-- [ ] **27. supertabular_test** (53_alignment) — 629 diffs + crash. Port supertabular.sty.
+- [ ] **25. cells_test** (53_alignment) — 369 diffs (was stack overflow). Ported makecell.sty, fixed \rothead recursion, implemented Pair parameter type.
+- [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
-- [ ] **37. xcolors_test** (65_graphics) — 447 diffs. Complete xcolor port.
+- [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
 
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
 
-- [ ] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. ~200 lines Perl. Unlocks items 2, 3, 28, 30–32.
-- [ ] **2. eqnums_test** (50_structure) — 598 diffs. BLOCKED: needs afterConstruct MathFork.
-- [ ] **3. algx_test** (53_alignment) — 163 diffs. BLOCKED: needs math parser XMDual + fontsize.
-- [ ] **28. badeqnarray_test** (53_alignment) — 507 diffs. BLOCKED: needs afterConstruct.
-- [ ] **30. amsdisplay_test** (56_ams) — 963 diffs. BLOCKED: needs afterConstruct + `\text{}`.
-- [ ] **31. matrix_test** (56_ams) — 187 diffs. BLOCKED: needs afterConstruct + math parser.
+- [x] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. Done. Fixed _Capture_ XMArg wrapping issue (Perl model prevents XMArg inside _Capture_).
+- [x] **2. eqnums_test** (50_structure) — DONE. MathFork xml:id, prefix_relop_apply, tex= mbox synthesis, tag font italic wrapping (XMArg box font family="math" detection in floating script rewrite). 0 diffs.
+- [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
+- [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
+- [ ] **30. amsdisplay_test** (56_ams) — 842 diffs. MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
+- [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
 - [ ] **32. sideset_test** (56_ams) — 488 diffs. BLOCKED: needs afterConstruct.
 
 ### Tier 3: Needs package bindings (moderate effort)
 
-- [ ] **12. stmaryrd_test** (22_fonts) — 1449 diffs. Port stmaryrd.sty (font symbol map).
-- [ ] **33. cd_test** (56_ams) — PANIC in math parser. Port amscd.sty.ltxml.
+- [ ] **12. stmaryrd_test** (22_fonts) — 1007 diffs (was 1449). Ported stmaryrd.sty, fixed FontDirective Display. Remaining: mostly XMDual + math parser text= diffs.
+- [ ] **33. cd_test** (56_ams) — 175 diffs (was PANIC). No longer crashes after replace_tree fix.
 - [ ] **34. mathtools_test** (56_ams) — TooManyErrors. Port mathtools.sty.
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
-- [ ] **39. cleveref_minimal_test** (80_complex) — 302 diffs. Port cleveref.sty.
+- [x] **39. cleveref_minimal_test** (80_complex) — DONE. Ported cleveref.sty: \lx@cref constructor, crefMulti, type_tag_formatter mappings. 0 diffs.
+
+### Infrastructure fixes (no test flip, but improve structure):
+
+- **XMDual for \\choose/\\brace/\\brack**: Pre-digest left/right delimiter tokens during after_digest, store as Stored::Digested. Template `?#needXMDual` conditional now produces proper XMDual + XMWrap + OPEN/CLOSE structure.
+- **Matrix delimiter Tokens**: left/right keyvals stored as Stored::Tokens for proper absorption in matrix template (matrix_test 173→164).
+- **\\lx@begin@inmath@text mode fix**: Changed from 'text' to 'restricted_horizontal' matching Perl.
+- **\\subjclass Default: fix**: Handle Default: parameter spec in closure.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **41. aastex631_deluxetable_test** (80_complex) — 35 diffs. Port aastex631.cls binding.
-- [ ] **42. aliceblog_test** (80_complex) — 144 diffs. Port blog.cls binding.
+- [x] **41. aastex631_deluxetable_test** (80_complex) — DONE. Ported deluxetable.sty, Stored::Template, version-stripping dispatch.
+- [x] **42. aliceblog_test** (80_complex) — DONE. Passing after previous fixes.
+
+### Tier 3b: Perl XML sync — code fixes needed (see docs/PERL_XML_DIFFS.md)
+
+These are differences discovered by comparing `LaTeXML/t/*.xml` with `latexml_oxide/tests/*.xml`.
+Tests currently pass against Rust expected XMLs, but Rust output diverges from updated Perl.
+
+- [ ] **P1. guessTableHeaders differences** — Fixed pifont empty cells (was `?`), reducing ding.xml diffs 435→31. Remaining 31: `<thead>` wrapper not detected due to `is_numeric()` classifying circled digits (①-⑧) as Integer, causing row 21-22 comparison to exceed threshold. Cannot use `is_ascii_digit` because bbold header detection requires `is_numeric` for mathematical digits (𝟘-𝟟). Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`. NOTE: Perl's continuation-line logic (L1336-1339) is dead code.
+- [x] **P2. ltx_figure_panel CSS class** — DONE. `arrange_panels` now marks all non-metadata children. Synced `figure_grids.xml`.
+- [x] **P3. DIFFOP recognition in math parser** — DONE. Grammar rule `factor += unknown factor_base => diffop_apply` with INTOP context check. Synced `dots.xml`.
+- [x] **P4. Titled frame support** — DONE. Fixed `after_digest_begin` to use `gullet::unread`. Synced `framed.xml`.
+- [ ] **P5. xcolors.xml fixes** — Color complement/wheel computation errors, missing `pt` units in calc output, `colortbl` row cycling broken (all "row 0"), missing `ltx_guessed_headers` class. Affects: `graphics/xcolors.xml` (~688 line diff). BLOCKED: needs color model + guessTableHeaders.
+- [x] **P6. RDFa support** — DONE. Full lxRDFa.sty binding: DefKeyVal for RDFa family, `\lxRDFa`, `\lxRDFAnnotate`, `\lxRDF` preamble/body, `\lxRDFaPrefix`, `\ref` detection. aliceblog_test passes.
+- N/A **P7. Daemon format fixes** — OUT OF SCOPE. The Rust port does not currently include daemonized functionality. Daemon tests are not tracked.
 
 ### Tier 4: Needs major infrastructure
 
@@ -353,11 +482,11 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Tier 5: Math parser tests (active research, Marpa grammar)
 
-- [ ] **47. 40_math suite** (40_math) — 149 diffs across batch. Parser bugs vs intentional Marpa divergence.
-- [ ] **48. 70_parse suite** (70_parse) — 120 diffs across batch. Generate Rust-specific expected XMLs.
+- [ ] **47. 40_math suite** (40_math) — not_test 226→77 (Unicode \not fix + child fix). arrows 69→73 (ARROW tokenization). choose 117 (XMDual now produced).
+- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES (postfix_apply + mixed number). terms 12. sets 15 (VERTBAR→MIDDLE).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
-- [ ] **50. split_test** (53_alignment) — 2228 diffs. Amsmath split + math parser.
-- [ ] **51. eqnarray_test** (53_alignment) — 1176 diffs. afterConstruct + math parser.
+- [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
+- [ ] **51. eqnarray_test** (53_alignment) — 575 diffs (down from 1176). prefix_relop_apply + displaystyle fix helped.
 - [ ] **52. ntheorem_test** (55_theorem) — 1479 diffs. Math parser tree + eqnarray.
 
 ### Tier 6: Heavy package bindings (distant future)
@@ -381,7 +510,11 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Overarching projects
 
 - [ ] **E. Translate ALL Perl binding files** — Every `.sty.ltxml`, `.tex.ltxml`, `.cls.ltxml`, `.def.ltxml` in `LaTeXML/lib/LaTeXML/Package/` must have a corresponding `_sty.rs`, `_tex.rs`, `_cls.rs`, `_def.rs` in the Rust codebase. No file should be missed. This is the full package binding parity goal.
-- [ ] **F. Port Post-processing pipeline** — Translate `LaTeXML/lib/LaTeXML/Post/` to Rust. Copy XSLT and CSS from Perl and use them exactly as-is. This includes `LaTeXML::Post::MathML`, `LaTeXML::Post::OpenMath`, `LaTeXML::Post::CrossRef`, `LaTeXML::Post::MakeBibliography`, etc.
+- [ ] **F. Port Post-processing pipeline** — Fully translate `LaTeXML/lib/LaTeXML/Post/` to Rust. This is the second major subsystem (after the TeX engine) and converts LaTeXML XML into final output (HTML5, XHTML, EPUB, JATS).
+  - **Resources (copy as-is):** XSLT stylesheets (`LaTeXML/lib/LaTeXML/resources/XSLT/`), CSS (`resources/CSS/`), JavaScript, RelaxNG schemas, Profiles. These are declarative and used unchanged.
+  - **Core modules to port:** `Post.pm` (pipeline orchestrator), `Post::Scan` (cross-ref scanning), `Post::CrossRef` (cross-references + navigation), `Post::MathML` (content/presentation MathML), `Post::OpenMath`, `Post::MathImages` (math-to-image fallback), `Post::Graphics` (image conversion), `Post::SVG`, `Post::XSLT` (apply XSLT transforms), `Post::Writer` (serialize to file), `Post::Split` (multi-page split), `Post::MakeBibliography`, `Post::MakeIndex`.
+  - **Approach:** Port each Post module as a Rust crate or module. Use `libxslt` (already a system dep) for XSLT transforms. Use existing `resources/` directory structure.
+  - **Testing:** Post-processing tests compare final HTML/MathML output. Start with `latexmlpost` CLI equivalent.
 
 ### Permanent ignores (not counted)
 

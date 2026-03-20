@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use std::borrow::Cow;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
@@ -21,18 +21,7 @@ use crate::tokens::Tokens;
 use crate::definition::register::RegisterValue;
 use crate::{BoxOps, Digested, TexMode, gullet};
 
-/// Hook for decoding math characters (Perl: decodeMathChar).
-/// Set by latexml_package during initialization, since the full implementation
-/// depends on Package-level utilities (unicode_math_properties, etc.)
-pub type DecodeMathCharFn = fn(u16, Token) -> Result<Digested>;
 
-#[thread_local]
-static DECODE_MATH_CHAR_HOOK: Cell<Option<DecodeMathCharFn>> = Cell::new(None);
-
-/// Register the decode_math_char hook from latexml_package
-pub fn set_decode_math_char_hook(hook: DecodeMathCharFn) {
-  DECODE_MATH_CHAR_HOOK.set(Some(hook));
-}
 
 static MAXSTACK: usize = 200;
 
@@ -303,9 +292,10 @@ pub fn set_mode(mode: &str) -> Result<()> {
     // see get_script_level()
     assign_value("script_base_level", stomach!().boxing.len(), None);
     let isdisplay = mode.starts_with("display");
-    let new_font = lookup_mathfont().unwrap().merge(Font {
-      color: curfont.color.clone(),
-      bg: curfont.bg.clone(),
+    assign_value("IN_MATH_DISPLAY", isdisplay, Some(Scope::Local));
+    let new_font = Rc::new(lookup_mathfont().unwrap().merge(Font {
+      color: curfont.color,
+      bg: curfont.bg,
       size: curfont.size,
       mathstyle: if isdisplay {
         Some("display".into())
@@ -313,8 +303,9 @@ pub fn set_mode(mode: &str) -> Result<()> {
         Some("text".into())
       },
       ..Font::default()
-    });
-    assign_font(Rc::new(new_font), Some(Scope::Local));
+    }));
+    assign_value("initial_math_font", Stored::Font(new_font.clone()), Some(Scope::Local));
+    assign_font(new_font, Some(Scope::Local));
   } else {
     let curfont = lookup_font().unwrap();
     // When entering text mode, we should set the font to the text font in use before the math
@@ -323,8 +314,8 @@ pub fn set_mode(mode: &str) -> Result<()> {
     if let Some(Stored::Font(saved_font)) = saved_opt {
       assign_font(
         Rc::new(saved_font.merge(Font {
-          color: curfont.color.clone(),
-          bg: curfont.bg.clone(),
+          color: curfont.color,
+          bg: curfont.bg,
           size: curfont.size,
           ..Font::default()
         })),
@@ -461,7 +452,7 @@ pub fn leave_horizontal_internal() {
   let bound = lookup_string("BOUND_MODE");
   if mode == "horizontal" && bound.ends_with("vertical") {
     repack_horizontal();
-    assign_value_inplace("MODE", arena::pin(&bound.to_string()));
+    assign_value_inplace("MODE", arena::pin(&bound));
   }
 }
 
@@ -509,6 +500,13 @@ pub fn repack_horizontal() {
   if keep {
     let mut list = List::new(para);
     list.mode = Some(TexMode::Text); // "horizontal" in Perl
+    // Perl: List(@para, mode => 'horizontal') — set mode property string
+    // This is needed for compute_boxes_size vertical layout to detect paragraph Lists
+    list.set_property("mode", Stored::String(arena::pin_static("horizontal")));
+    // Perl: $list->setProperty(width => LookupRegister('\hsize')) if $mode eq 'horizontal';
+    if let Some(hsize) = lookup_dimension("\\hsize") {
+      list.set_property("width", hsize);
+    }
     stomach.box_list.push(Digested::from(list));
   }
 }
@@ -923,9 +921,13 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // the font encoding. In Rust, Tbox::new already handles IN_MATH:
       // it sets mode="math", looks up math_token_attributes for role/meaning/name,
       // and specializes the font. This produces the correct LaTeXML-level properties.
-      // The DECODE_MATH_CHAR_HOOK is available for cases where TeX-level mathcode
-      // font decoding is needed (e.g., non-ASCII chars needing font map lookup).
-      // TODO: Use hook for chars where font-encoding glyph differs from input.
+      // The mathchar parsing handles non-ASCII chars needing font map lookup.
+      // TODO: Use for chars where font-encoding glyph differs from input.
+      if lookup_bool("IN_MATH") {
+        if let Some(mathcode) = lookup_mathcode_sym(&meaning.get_sym()) {
+          return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning.clone());
+        }
+      }
       if !lookup_bool("IN_MATH") {
         enter_horizontal();
       }

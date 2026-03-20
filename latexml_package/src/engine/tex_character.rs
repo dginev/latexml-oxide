@@ -226,7 +226,7 @@ pub fn apply_accent(
   string = SPACE_RE.replace_all(&string, " ").into_owned();
 
   // Perl: applying combining dot above (U+0307) to i or j is redundant — remove it.
-  let effective_combiner = if combiningchar == '\u{0307}' && string.contains(|c| c == 'i' || c == 'j') {
+  let effective_combiner = if combiningchar == '\u{0307}' && string.contains(['i', 'j']) {
     '\0'  // sentinel for "no combining char"
   } else {
     combiningchar

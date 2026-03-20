@@ -1633,39 +1633,44 @@ macro_rules! AddToMacro {
   }};
   ($cs:ident, $tokens:ident) => {{
     // Needs error checking!
-    let defn = state::lookup_definition(&$cs)?;
-    if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {
-      let message = s!("{} is not an expandable control sequence", $cs);
-      let message2 = "Ignoring addition";
-      Warn!("unexpected", $cs, message, message2);
-    } else {
-      let mut expansion = match defn.unwrap().get_expansion() {
-        // the .clone() call is again avoidable with a careful refactor via e.g. using
-        // `.remove_definition` from state (as we're redefining the macro again), and then
-        // use a `.remove_expansion` call on defn?
-        Some(ExpansionBody::Tokens(tokens)) => tokens.clone().unlist(),
-        Some(ExpansionBody::Closure(_)) => {
-          let message = s!(
-            "{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! \
-             This is usually in error!",
-            $cs
-          );
-          Warn!("unexpected", "ExpandableBody::Closure", message);
-          Vec::new()
-        },
-        None => Vec::new(),
-      };
-      expansion.extend($tokens.unlist());
-      def_macro(
-        $cs,
-        None,
-        ExpansionBody::Tokens(Tokens!(expansion)),
-        Some(ExpandableOptions {
-          scope: Some(Scope::Global),
-          nopack_parameters: true,
-          ..ExpandableOptions::default()
-        }),
-      )?;
+    match state::lookup_definition(&$cs)? {
+      None => {
+        let message = s!("{} is not an expandable control sequence", $cs);
+        let message2 = "Ignoring addition";
+        Warn!("unexpected", $cs, message, message2); },
+      Some(defn) if !defn.is_expandable() => {
+        let message = s!("{} is not an expandable control sequence", $cs);
+        let message2 = "Ignoring addition";
+        Warn!("unexpected", $cs, message, message2); },
+      Some(defn) => {
+        let mut expansion = match defn.get_expansion() {
+          // the .clone() call is again avoidable with a careful refactor via e.g. using
+          // `.remove_definition` from state (as we're redefining the macro again), and then
+          // use a `.remove_expansion` call on defn?
+          Some(ExpansionBody::Tokens(tokens)) => tokens.clone().unlist(),
+          Some(ExpansionBody::Closure(_)) => {
+            let message = s!(
+              "{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! \
+              This is usually in error!",
+              $cs
+            );
+            Warn!("unexpected", "ExpandableBody::Closure", message);
+            Vec::new()
+          },
+          None => Vec::new(),
+        };
+        expansion.extend($tokens.unlist());
+        def_macro(
+          $cs,
+          None,
+          ExpansionBody::Tokens(Tokens!(expansion)),
+          Some(ExpandableOptions {
+            scope: Some(Scope::Global),
+            nopack_parameters: true,
+            ..ExpandableOptions::default()
+          }),
+        )?;
+      }
     }
   }};
 }

@@ -19,6 +19,10 @@ pub struct Meta {
   pub specialize:        Option<String>,
   pub curry_level:       Option<CurryTerm>,
   pub curry_constraints: CurryConstraints,
+  /// Perl: _bumplevel — tracks nested float script level for proper scriptpos indexing
+  bumplevel:             u32,
+  /// Perl: _wasfloat — marks XMApp as result of a float (prescript) script
+  wasfloat:              bool,
 }
 
 impl PartialEq for Meta {
@@ -34,6 +38,13 @@ impl Display for Meta {
 }
 
 impl Meta {
+  pub fn with_bumplevel(level: u32) -> Self {
+    Meta { bumplevel: level, ..Meta::default() }
+  }
+  pub fn bumplevel(&self) -> u32 { self.bumplevel }
+  pub fn wasfloat(&self) -> bool { self.wasfloat }
+  pub fn set_wasfloat(&mut self) { self.wasfloat = true; }
+
   /// Instatiate a default Meta object for a given rule name
   pub fn from_rule(rule_name: &str) -> Self {
     if rule_name.is_empty() {
@@ -145,6 +156,7 @@ impl Meta {
       specialize,
       curry_level,
       curry_constraints,
+      ..Meta::default()
     })
   }
 

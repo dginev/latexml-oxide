@@ -10,8 +10,11 @@ LoadDefinitions!({
     let font_name = pifont.unwrap().to_string();
     let code_val = code.value_of();
     let (glyph, font) = font_decode(code_val as i32, Some(&font_name), None);
-    let ch = glyph.unwrap_or('?');
-    let sym = arena::pin(ch.to_string());
+    // Perl: Box($glyph, $font, ...) — undef glyph produces empty box
+    let sym = match glyph {
+      Some(ch) => arena::pin(ch.to_string()),
+      None => arena::pin_static(""),
+    };
     Ok(Digested::from(Tbox::new(
       sym,
       font,
@@ -31,8 +34,11 @@ LoadDefinitions!({
       .unwrap_or(0);
     let code = base + counter_val - 1;
     let (glyph, font) = font_decode(code as i32, Some(&font_name), None);
-    let ch = glyph.unwrap_or('?');
-    let sym = arena::pin(ch.to_string());
+    // Perl: Box($glyph, $font, ...) — undef glyph produces empty box
+    let sym = match glyph {
+      Some(ch) => arena::pin(ch.to_string()),
+      None => arena::pin_static(""),
+    };
     Ok(Digested::from(Tbox::new(
       sym,
       font,

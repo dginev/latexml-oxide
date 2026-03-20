@@ -2,8 +2,10 @@
 use super::cell::Cell;
 use crate::Digested;
 use crate::common::dimension::Dimension;
+use crate::state::Stored;
 use crate::token::Token;
 use crate::tokens::Tokens;
+use std::collections::HashMap;
 
 use std::collections::VecDeque;
 use std::fmt::{self, Debug, Display};
@@ -201,6 +203,10 @@ pub struct Template {
   pub cached_depth:     Option<Dimension>,
   pub x:                Option<Dimension>,
   pub y:                Option<Dimension>,
+  /// Per-row properties (e.g. xml:id, tags) set during digestion
+  /// and consumed during construction. Perl: $$row{id}, $$row{tags}.
+  /// Uses Stored to preserve typed values (esp. Digested for tags).
+  pub properties:       HashMap<String, Stored>,
 }
 
 impl Display for Template {
@@ -243,6 +249,7 @@ impl Template {
       y: None,
       reversion: config.reversion,
       tokens: config.tokens.unwrap_or_default(),
+      properties: std::collections::HashMap::new(),
     }
   }
   pub fn set_reversion(&mut self, tks: Tokens) { self.reversion = Some(tks); }

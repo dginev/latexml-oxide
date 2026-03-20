@@ -149,6 +149,8 @@ pub enum Stored {
   KeyVal(KeyVal),
   /// latexml keyvals collection
   KeyVals(Rc<KeyVals>),
+  /// alignment template (for storing between macros, e.g. deluxetable)
+  Template(Rc<crate::alignment::template::Template>),
 }
 
 impl fmt::Debug for Stored {
@@ -197,7 +199,8 @@ impl fmt::Debug for Stored {
       HashString(ref hstr) => write!(f, "HashStr[{hstr:?}]"),
       Ligature(ref lig) => write!(f, "Ligature[{lig:?}]"),
       KeyVal(ref kv) => write!(f, "KeyVal[{kv:?}]"),
-      KeyVals(ref kvs) => write!(f, "KeyVals[{kvs:?}]")
+      KeyVals(ref kvs) => write!(f, "KeyVals[{kvs:?}]"),
+      Template(ref t) => write!(f, "Template[{t}]"),
     }
   }
 }
@@ -213,6 +216,7 @@ impl fmt::Display for Stored {
       MuGlue(ref v) => write!(f, "{v}"),
       MuDimension(ref v) => write!(f, "{v}"),
       Font(ref font) => write!(f, "{font}"),
+      FontDirective(ref font) => write!(f, "{font:?}"),
       String(ref s) => arena::with(*s, |str| write!(f, "{str}")),
       Int(ref s) => write!(f, "{s}"),
       Bool(ref s) => write!(f, "{s}"),
@@ -222,6 +226,7 @@ impl fmt::Display for Stored {
       Constructor(ref c) => write!(f, "Constructor[{}]", c.get_cs_name()),
       Strings(ref vs) => write!(f, "{}", arena::join(vs, ",")),
       KeyVals(ref kvs) => write!(f, "{kvs}"),
+      Template(ref t) => write!(f, "{t}"),
       None => write!(f, "Stored::None"),
       ref variant => {
         panic!("TODO: implement Display for Stored variant {variant:?}");
@@ -527,6 +532,13 @@ impl PartialEq for Stored {
       KeyVals(ref kvs) => {
         if let KeyVals(kvs2) = other {
           Rc::ptr_eq(kvs, kvs2)
+        } else {
+          false
+        }
+      },
+      Template(ref t) => {
+        if let Template(t2) = other {
+          Rc::ptr_eq(t, t2)
         } else {
           false
         }
@@ -872,6 +884,12 @@ impl From<KeyVal> for Stored {
 
 impl From<KeyVals> for Stored {
   fn from(kvs: KeyVals) -> Stored { Stored::KeyVals(Rc::new(kvs)) }
+}
+
+impl From<crate::alignment::template::Template> for Stored {
+  fn from(t: crate::alignment::template::Template) -> Stored {
+    Stored::Template(Rc::new(t))
+  }
 }
 
 impl From<Option<&Stored>> for Stored {

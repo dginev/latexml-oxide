@@ -44,6 +44,19 @@ internal contributors resuming work.
 
 ## Architecture
 
+### System-Level View
+
+LaTeXML (Perl) has two main programs: `latexml` (TeX→XML) and `latexmlpost` (XML→HTML/MathML).
+The Rust port currently covers the `latexml` pipeline. The `latexmlpost` pipeline is planned
+for Phase 3 (see `mini_3_plan.md`).
+
+The `latexml` pipeline processes input through five stages:
+1. **Digestion** — Mouth (chars→tokens), Gullet (expansion), Stomach (digestion into boxes/whatsits)
+2. **Construction** — boxes/whatsits→XML DOM via Constructors, with auto-open/close from Model
+3. **Rewriting** — DOM mutation rules (ligatures, math token declarations)
+4. **Math Parsing** — grammar-based parse of flat XMath token sequences into expression trees
+5. **Serialization** — DOM→XML string output
+
 ### Workspace Structure
 
 Six crates mirror the Perl module hierarchy:
@@ -243,6 +256,19 @@ ACCENT) and U+02DC (SMALL TILDE) respectively. When the font is typewriter or AS
 **Rationale:** Matches Perl behavior. The typewriter font hack ensures that accents
 in monospace contexts produce the expected ASCII-compatible output.
 
+### 15. Improved Math Parses Over Perl
+
+**Decision:** When the Rust Marpa grammar successfully parses an expression that Perl's
+Parse::RecDescent left unparsed, the Rust output is preferred if the parse is mathematically
+correct. The expected test XML is updated to match Rust's improved output.
+
+**Rationale:** The Marpa grammar is more powerful than Parse::RecDescent and can handle
+expressions that Perl gives up on. Matching Perl's *failure* modes is not a goal — matching
+Perl's *success* modes is. When Rust produces a better parse, that's an improvement.
+
+**Process:** When a test fails because Rust produces a parsed structure where Perl had flat
+unparsed tokens, the developer asks the user to confirm whether the Rust XML should be updated.
+
 ---
 
 ## Type System Improvements
@@ -338,3 +364,22 @@ intentional design. See [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) for full 
 
 6. **`guessTableHeaders` heuristic** — Post-processing heuristic for table header
    detection can produce unexpected results on tables without intended headers.
+
+### 16. Math Parser Design Rules
+
+**Rule 1: Prefer grammar rules over post-parse rewrites.** Do not create rewrite rules in `semantics.rs` if the behavior can be expressed as a token rule or grammar rule in Marpa. If Perl's `MathGrammar` hints a grammar-level rule, implement it as a grammar rule.
+
+**Rule 2: Aggressive intermediate pruning.** Ambiguous parses should be pruned early via pragmatic semantic actions. The same atoms and sub-expressions must coordinate their meanings — a given subexpression should always produce the same parse and use the same meaning within a single expression.
+
+**Rule 3: Value-specific tokens via Marpa terminals.** When matching specific token values (like `d` for DIFFOP), prefer value-specific terminal definitions (e.g., `token!(diffd = "UNKNOWN:d")`) over runtime string checks in semantic actions. Note: the current Marpa tree builder has a limitation where one lexeme cannot match two terminals simultaneously, so value-specific terminals that overlap with role-based terminals (e.g., `diffd` overlapping `unknown`) require workarounds until the tree builder is fixed.
+
+### 17. No Daemon Functionality
+
+**Decision:** The Rust port does not include daemonized (latexmls) functionality.
+
+**Rationale:** The daemon is a Perl-specific server architecture. The Rust port focuses on
+the core conversion pipeline (tokenizer → expander → digester → document builder → output).
+Daemon test XMLs in `LaTeXML/t/daemon/` are not tracked or synced.
+
+**Impact:** 7 daemon format test XMLs have known differences (lang attributes, MathML
+namespace declarations, Content-Type casing, logo styling) that are not being addressed.

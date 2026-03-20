@@ -22,7 +22,7 @@ fn latextheorem_test() {
 }
 
 #[test]
-#[ignore] // ntheorem: 897 math parser tree diffs (known Marpa-based divergence)
+#[ignore] // text= + tags diffs: math parser + equation numbering
 fn ntheorem_test() {
   latexml_test_single("tests/theorem/ntheorem.tex", "ntheorem", DIR, Some(&REQUIRES), None);
 }

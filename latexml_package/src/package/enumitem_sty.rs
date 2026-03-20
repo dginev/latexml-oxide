@@ -114,7 +114,7 @@ fn replace_star(tokens: &Tokens, replacement: &Token) -> Tokens {
   let mut out = Vec::new();
   for t in tokens.clone().unlist() {
     if t.with_str(|s| s == "*") && t.get_catcode() == Catcode::OTHER {
-      out.push(replacement.clone());
+      out.push(*replacement);
     } else {
       out.push(t);
     }
@@ -166,7 +166,7 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
         state::assign_value(&val_key, Stored::None, Some(Scope::Global));
       }
       _ => {
-        state::assign_value(&val_key, Stored::String(arena::pin(&val.to_string())), Some(Scope::Global));
+        state::assign_value(&val_key, Stored::String(arena::pin(val.to_string())), Some(Scope::Global));
       }
     }
     if !keys.contains(key) {
@@ -175,7 +175,7 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
   }
   state::assign_value(
     &s!("{name}@keys"),
-    Stored::String(arena::pin(&keys.join(","))),
+    Stored::String(arena::pin(keys.join(","))),
     Some(Scope::Global),
   );
 }
@@ -304,13 +304,13 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
     end_enum_itemize(whatsit)
   });
 
-  let mut options = ConstructorOptions::default();
-  options.mode = Some("internal_vertical".into());
-  options.locked = true;
-  options.properties = properties;
-  options.before_digest_end.push(before_digest_end);
-  options.after_digest_body.push(after_digest_body);
-
+  let options = ConstructorOptions { 
+    mode: Some("internal_vertical".into()), 
+    locked: true,
+    properties,
+    before_digest_end: vec![before_digest_end],
+    after_digest_body: vec![after_digest_body],
+    ..Default::default() };
   def_environment(listname.to_string(), paramlist, Some(replacement), options);
   Ok(())
 }

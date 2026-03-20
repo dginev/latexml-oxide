@@ -6,10 +6,10 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
     let text_str = text.to_string();
     let has_star = star.is_some();
-    let mut opts = MathPrimitiveOptions::default();
-    opts.role = Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string());
-    opts.font = Some(
-      fontmap!(family => "serif", series => "medium", shape => "upright").into());
+    let opts = MathPrimitiveOptions {
+      role: Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string()),
+      font: Some(fontmap!(family => "serif", series => "medium", shape => "upright").into()),
+      ..Default::default()};
     def_math(cs, None, text_str, opts)?;
   });
 
@@ -34,6 +34,16 @@ LoadDefinitions!({
   DefMath!("\\injlim", "inj lim",
     role => "LIMITOP", meaning => "injective-limit");
   DefMath!("\\projlim", "proj lim",
+    role => "LIMITOP", meaning => "projective-limit");
+
+  // Perl: amsopn.sty.ltxml — var limit operators
+  DefMath!("\\varlimsup", "\\overline{\\operatorname{lim}}",
+    role => "LIMITOP", meaning => "limit-supremum");
+  DefMath!("\\varliminf", "\\underline{\\operatorname{lim}}",
+    role => "LIMITOP", meaning => "limit-infimum");
+  DefMath!("\\varinjlim", "\\underrightarrow{\\operatorname{lim}}",
+    role => "LIMITOP", meaning => "injective-limit");
+  DefMath!("\\varprojlim", "\\underleftarrow{\\operatorname{lim}}",
     role => "LIMITOP", meaning => "projective-limit");
 
   DefMacro!("\\nolimits@", "\\nolimits");

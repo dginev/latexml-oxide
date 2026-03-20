@@ -53,12 +53,21 @@ fn ams_rearrangeable_bindings(
         state::remove_value("EQUATIONROW_PROPS")
       {
         if let Some(id) = eq_props.get("id") {
-          props.insert(String::from("xml:id"), id.to_string());
+          props.insert(String::from("xml:id"), Stored::from(id.to_string()));
         }
       }
+      // Extract tags (Digested) before converting to string props
+      let tags_digested = props.remove("tags");
+      let str_props: HashMap<String, String> = props.into_iter()
+        .map(|(k, v)| (k, v.to_string()))
+        .collect();
       document
-        .open_element("ltx:equation", Some(props), None)
-        .and(Ok(()))
+        .open_element("ltx:equation", Some(str_props), None)?;
+      // If we have digested tags, absorb them into the opened element
+      if let Some(Stored::Digested(d)) = tags_digested {
+        document.absorb(&d, None)?;
+      }
+      Ok(())
     }),
     close_row: Rc::new(|document| document.close_element("ltx:equation")),
     open_column: Rc::new(|document, props| {
@@ -205,7 +214,8 @@ LoadDefinitions!({
   DefMacro!("\\endvmatrix", "\\lx@end@ams@matrix");
   DefMacro!("\\Vmatrix", "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}");
   DefMacro!("\\endVmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\smallmatrix", "\\lx@ams@matrix{name=smallmatrix,datameaning=matrix,style=\\scriptsize}");
+  // Perl has a typo: "atameaning" instead of "datameaning". Match Perl to avoid XMDual wrapping.
+  DefMacro!("\\smallmatrix", "\\lx@ams@matrix{name=smallmatrix,atameaning=matrix,style=\\scriptsize}");
   DefMacro!("\\endsmallmatrix", "\\lx@end@ams@matrix");
   DefMacro!("\\matrix@check{}", None);
 
@@ -271,12 +281,66 @@ LoadDefinitions!({
 
   DefMacro!("\\hdotsfor Number", r"\hdots");
 
+  // Perl amsmath L848-860: Smart \dots — peek at following token's role.
+  // If ADDOP/BINOP/MULOP/RELOP → use ⋯ (cdots), else → … (ldots)
+  // Read the next token, digest it, check its role, then put it back.
+  def_primitive(
+    T_CS!("\\lx@math@dots"),
+    None,
+    Some(PrimitiveBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
+      // Read and digest the next box (like Perl's Digested parameter)
+      let mut after_boxes = Vec::new();
+      while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
+        after_boxes = stomach::invoke_token(&tok)?;
+        if !after_boxes.is_empty() {
+          break;
+        }
+      }
+      let after = after_boxes.first();
+      let role = after
+        .and_then(|d| d.get_property("role"))
+        .map(|r| r.to_string())
+        .unwrap_or_default();
+      let is_binop = matches!(role.as_str(), "ADDOP" | "BINOP" | "MULOP" | "RELOP");
+      let ch = if is_binop { "\u{22EF}" } else { "\u{2026}" };
+      let font = lookup_font().unwrap()
+        .merge(fontmap!(family => "serif", series => "medium", shape => "upright"))
+        .specialize(ch);
+      let tbox = Tbox::new(
+        arena::pin(ch), Some(Rc::new(font)), None, Tokens!(T_CS!("\\dots")),
+        stored_map!("mode" => "math", "name" => "dots", "role" => "ID", "isMath" => true)
+      );
+      let mut result: Vec<Digested> = vec![Digested::from(tbox)];
+      result.extend(after_boxes); // put back the digested token
+      Ok(result)
+    }))),
+    PrimitiveOptions { scope: Some(Scope::Global), ..PrimitiveOptions::default() },
+  )?;
+  DefMacro!("\\dots", r"\ifmmode\lx@math@dots\else\lx@ldots\fi", scope => Some(Scope::Global));
+
   //======================================================================
   // Section 4.9 Extensible arrows
   // Perl: amsmath.sty.ltxml lines 921-950
   DefConstructor!(
     "\\lx@long@arrow DefToken {} OptionalInScriptStyle InScriptStyle",
-    r###"?#3(<ltx:XMApp role='ARROW'><ltx:XMWrap role='UNDERACCENT'>#3</ltx:XMWrap><ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp></ltx:XMApp>)(<ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp>)"###
+    r###"?#3(<ltx:XMApp role='ARROW'><ltx:XMWrap role='UNDERACCENT'>#3</ltx:XMWrap><ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp></ltx:XMApp>)(<ltx:XMApp role='ARROW'><ltx:XMWrap role='OVERACCENT'>#4</ltx:XMWrap>#2</ltx:XMApp>)"###,
+    reversion => sub[_whatsit, args] {
+      // Perl: ($cs, ($under ? (T_OTHER('['), Revert($under), T_OTHER(']')) : ()), T_BEGIN, Revert($over), T_END)
+      let cs_rev = match &args[0] { Some(inner) => inner.revert()?, None => Tokens!() };
+      let under_rev = match &args[2] { Some(inner) => inner.revert()?, None => Tokens!() };
+      let over_rev = match &args[3] { Some(inner) => inner.revert()?, None => Tokens!() };
+      let mut tks = Vec::new();
+      tks.extend(cs_rev.unlist());
+      if !under_rev.is_empty() {
+        tks.push(T_OTHER!("["));
+        tks.extend(under_rev.unlist());
+        tks.push(T_OTHER!("]"));
+      }
+      tks.push(T_BEGIN!());
+      tks.extend(over_rev.unlist());
+      tks.push(T_END!());
+      Ok(Tokens::new(tks))
+    }
   );
   DefMacro!("\\xrightarrow", "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}");
   DefMacro!("\\xleftarrow", "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}");
@@ -296,8 +360,15 @@ LoadDefinitions!({
     operator_role => "OVERACCENT", operator_stretchy => true);
   DefMath!("\\underleftrightarrow{}", "\u{2194}",
     operator_role => "UNDERACCENT", operator_stretchy => true);
-  // (overset/underset already in LaTeX core via latex_ch7)
-  // \overunderset is amsmath-specific
+  // Perl: amsmath.sty.ltxml Section 4.10 — Affixing symbols to other symbols
+  DefConstructor!(
+    "\\overset InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
+  DefConstructor!(
+    "\\underset InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
   DefConstructor!(
     "\\overunderset InScriptStyle InScriptStyle {}",
     r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#2</ltx:XMWrap><ltx:XMArg>#3</ltx:XMArg></ltx:XMApp></ltx:XMApp>"###
@@ -378,8 +449,8 @@ LoadDefinitions!({
         "divide".to_string()
       };
 
-      let has_open = open.as_ref().map_or(false, |o| !o.to_string().trim().is_empty());
-      let has_close = close.as_ref().map_or(false, |c| !c.to_string().trim().is_empty());
+      let has_open = open.as_ref().is_some_and(|o| !o.to_string().trim().is_empty());
+      let has_close = close.as_ref().is_some_and(|c| !c.to_string().trim().is_empty());
 
       if has_open || has_close {
         whatsit.set_property("needXMDual", "1");
@@ -494,7 +565,12 @@ LoadDefinitions!({
 
   DefConstructor!("\\@@amsgather SkipSpaces DigestedBody",
     "#1",
-    before_digest => { bgroup(); });
+    before_digest => { bgroup(); },
+    after_construct => sub[document, _whatsit] {
+      if let Some(mut last) = document.get_node().get_last_child() {
+        rearrange_ams_gather(document, &mut last)?;
+      }
+    });
   DefPrimitive!("\\end@amsgather", { egroup()?; });
 
   DefMacro!("\\gather",
@@ -522,7 +598,12 @@ LoadDefinitions!({
 
   DefConstructor!("\\@@amsalign SkipSpaces DigestedBody",
     "#1",
-    before_digest => { bgroup(); });
+    before_digest => { bgroup(); },
+    after_construct => sub[document, _whatsit] {
+      if let Some(mut last) = document.get_node().get_last_child() {
+        rearrange_ams_align(document, &mut last)?;
+      }
+    });
   DefPrimitive!("\\end@amsalign", { egroup()?; });
 
   DefMacro!("\\align",
@@ -671,8 +752,11 @@ LoadDefinitions!({
   DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
 
   //======================================================================
-  // subequations environment
-  // Perl: amsmath.sty.ltxml lines 93-95
+  // subequations environment — TODO: port when subnumbering constructors are ready
+  // Perl: amsmath.sty.ltxml lines 757-758
+  // DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin");
+  // DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end");
+
   DefMacro!("\\DOTSB", None);
   DefMacro!("\\DOTSI", None);
   DefMacro!("\\DOTSX", None);
@@ -681,7 +765,7 @@ LoadDefinitions!({
   // Section 3.11.1 \numberwithin
   // Perl: amsmath.sty.ltxml line 741
   DefPrimitive!("\\numberwithin[]{}{}", sub[(format, counter, within)] {
-    let format_str = if format.as_ref().map_or(true, |f| f.is_empty()) {
+    let format_str = if format.as_ref().is_none_or(|f| f.is_empty()) {
       s!("\\arabic")
     } else {
       format.unwrap().to_string()
@@ -709,4 +793,143 @@ LoadDefinitions!({
       Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
+
+  // Perl: amsmath.sty.ltxml L882-896
+  DefMacro!("\\boxed{}", "\\ifmmode\\boxed@math{#1}\\else\\boxed@text{#1}\\fi");
+  DefConstructor!("\\boxed@math{}",
+    "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
+    alias => "\\boxed");
+  DefConstructor!("\\boxed@text{}",
+    "<ltx:Math mode='display' framed='rectangle'><ltx:XMath>#1</ltx:XMath></ltx:Math>",
+    mode => "math",
+    bounded => true,
+    before_digest => { Let!("\\\\", "\\lx@newline"); },
+    alias => "\\boxed");
+
+  // Perl: amsmath.sty.ltxml L899-900
+  DefMath!("\\implies", "\u{27F9}", role => "ARROW", meaning => "implies");
+  DefMath!("\\impliedby", "\u{27F8}", role => "ARROW", meaning => "implied-by");
+
+  // Perl: amsmath.sty.ltxml L1155 — \And for multi-author
+  DefMath!("\\And", "&", role => "ADDOP", meaning => "and");
+
+  // Perl: amsmath.sty.ltxml L1156-1157 — modular arithmetic
+  DefMath!("\\mod", "mod", role => "MODIFIEROP", meaning => "modulo");
+  DefMath!("\\pod{}", "(#1)", role => "MODIFIER", meaning => "modulo");
+  DefMath!("\\pmod{}", "(mod\u{2062}#1)", role => "MODIFIER", meaning => "modulo");
+  DefMath!("\\bmod", "mod", role => "MODIFIEROP", meaning => "modulo");
+
+  // Perl: amsmath.sty.ltxml L1243-1250 — multiple integrals
+  DefMath!("\\iint", "\u{222C}", role => "INTOP", meaning => "double-integral",
+    mathstyle => "\\displaystyle");
+  DefMath!("\\iiint", "\u{222D}", role => "INTOP", meaning => "triple-integral",
+    mathstyle => "\\displaystyle");
+  DefMath!("\\iiiint", "\u{2A0C}", role => "INTOP", meaning => "quadruple-integral",
+    mathstyle => "\\displaystyle");
+  DefMath!("\\idotsint", "\u{222B}\u{22EF}\u{222B}", role => "INTOP",
+    meaning => "multiple-integral", mathstyle => "\\displaystyle");
+
+  // Perl: amsmath.sty.ltxml L1283-1293 — italic Greek capitals
+  DefMath!("\\varGamma", "\u{0393}", font => { shape => "italic" });
+  DefMath!("\\varDelta", "\u{0394}", font => { shape => "italic" });
+  DefMath!("\\varTheta", "\u{0398}", font => { shape => "italic" });
+  DefMath!("\\varLambda", "\u{039B}", font => { shape => "italic" });
+  DefMath!("\\varXi", "\u{039E}", font => { shape => "italic" });
+  DefMath!("\\varPi", "\u{03A0}", font => { shape => "italic" });
+  DefMath!("\\varSigma", "\u{03A3}", font => { shape => "italic" });
+  DefMath!("\\varUpsilon", "\u{03A5}", font => { shape => "italic" });
+  DefMath!("\\varPhi", "\u{03A6}", font => { shape => "italic" });
+  DefMath!("\\varPsi", "\u{03A8}", font => { shape => "italic" });
+  DefMath!("\\varOmega", "\u{03A9}", font => { shape => "italic" });
+
+  // Perl: amsmath.sty.ltxml L1311-1319 — misc stubs
+  DefMacro!("\\mintagsep", None);
+  DefMacro!("\\minalignsep", "10pt");
+  DefMacro!("\\primfrac{}", None);
+  DefMacro!("\\shoveleft{}", "#1");
+  DefMacro!("\\shoveright{}", "#1");
 });
+
+use latexml_core::document;
+
+/// Perl: rearrangeAMSGather (amsmath.sty.ltxml L400-415)
+/// Each equation row consists of single equation. Pull math content up past _Capture_.
+pub fn rearrange_ams_gather(
+  document: &mut Document,
+  equationgroup: &mut Node,
+) -> Result<()> {
+  let equations: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
+  for mut equation in equations {
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&equation));
+    if cells.is_empty() {
+      continue;
+    }
+    let cell1_children: Vec<Node> = cells[0].get_child_elements();
+    // Check if this equation is really an intertext
+    if cells.len() == 1 && cell1_children.len() == 1 {
+      let class = cell1_children[0].get_attribute("class").unwrap_or_default();
+      if class.contains("ltx_intertext") {
+        // Replace equation with the block
+        let mut block = cell1_children[0].clone();
+        block.unlink_node();
+        equation.add_prev_sibling(&mut block).ok();
+        equation.unlink_node();
+        continue;
+      }
+    }
+    if cells.len() == 1 && cell1_children.is_empty() {
+      // Empty row — remove it
+      equation.unlink_node();
+      continue;
+    }
+    // Unwrap _Capture_ elements, set Math mode to display
+    let children: Vec<Node> = equation.get_child_elements();
+    for child in children {
+      let qname = document::get_node_qname(&child);
+      if qname == arena::pin_static("ltx:_Capture_") {
+        document.unwrap_nodes(child)?;
+      }
+    }
+    // Set mode='display' on Math elements
+    let maths: Vec<Node> = document.findnodes("ltx:Math", Some(&equation));
+    for mut math in maths {
+      document.set_attribute(&mut math, "mode", "display")?;
+    }
+  }
+  Ok(())
+}
+
+/// Perl: rearrangeAMSAlign (amsmath.sty.ltxml L460-473)
+/// Each equation row consists of pairs (LHS, =RHS); group accordingly.
+pub fn rearrange_ams_align(
+  document: &mut Document,
+  equationgroup: &mut Node,
+) -> Result<()> {
+  use crate::engine::base_xmath::equationgroup_join_cols;
+  let equations: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
+  for mut equation in equations {
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&equation));
+    if cells.is_empty() {
+      continue;
+    }
+    let cell1_children: Vec<Node> = cells[0].get_child_elements();
+    // Check if this equation is really an intertext
+    if cells.len() == 1 && cell1_children.len() == 1 {
+      let class = cell1_children[0].get_attribute("class").unwrap_or_default();
+      if class.contains("ltx_intertext") {
+        let mut block = cell1_children[0].clone();
+        block.unlink_node();
+        equation.add_prev_sibling(&mut block).ok();
+        equation.unlink_node();
+        continue;
+      }
+    }
+    if cells.len() == 1 && cell1_children.is_empty() {
+      equation.unlink_node();
+      continue;
+    }
+    // Group every 2 columns into a MathFork
+    equationgroup_join_cols(document, 2, &mut equation)?;
+  }
+  Ok(())
+}

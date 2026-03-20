@@ -145,12 +145,19 @@ LoadDefinitions!({
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   {
+    for digit in 0..10 {
+      assign_mathcode((b'0' + digit) as char, 0x7030 + (digit as u16), Some(Scope::Global));
+    }
     for letter in b'A'..=b'Z' {
       //FYI: 0x20 == 32
       assign_lccode(letter, letter + 32, Some(Scope::Global));
       assign_uccode(letter, letter, Some(Scope::Global));
+      assign_mathcode(letter as char, 0x7100 + (letter as u16), Some(Scope::Global));
+      assign_sfcode(letter as char, 999u16, Some(Scope::Global));
+
       assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
       assign_uccode(letter + 32, letter, Some(Scope::Global));
+      assign_mathcode((letter + 32) as char, 0x7100 + ((letter + 32) as u16), Some(Scope::Global));
     }
   }
   DefRegister!("\\magnification", Number!(1000));
@@ -170,12 +177,13 @@ LoadDefinitions!({
   //======================================================================
   // \choose & friends, also need VERY special argument handling
 
+  // Perl: math_common.pool.ltxml L634-642 — no braces around left/right values
   DefMacro!("\\choose",
-    "\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left={\\lx@left(},right={\\lx@right)}}");
+    "\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left=\\lx@left(,right=\\lx@right)}");
   DefMacro!("\\brace",
-    "\\lx@generalized@over{\\brace}{thickness=0pt,left={\\lx@left\\{},right={\\lx@right\\}}}");
+    "\\lx@generalized@over{\\brace}{thickness=0pt,left=\\lx@left\\{,right=\\lx@right\\}}");
   DefMacro!("\\brack",
-    "\\lx@generalized@over{\\brack}{thickness=0pt,left={\\lx@left[},right={\\lx@right]}}");
+    "\\lx@generalized@over{\\brack}{thickness=0pt,left=\\lx@left[,right=\\lx@right]}");
 
 
   //======================================================================
@@ -592,8 +600,18 @@ LoadDefinitions!({
     font => {shape => "slanted", family => "serif", series => "medium" });
   DefPrimitive!("\\sc", None,
     font => {shape => "smallcaps", family => "serif", series => "medium" });
-  DefPrimitive!("\\cal", None,
-    font => {family => "caligraphic", series => "medium", shape => "upright" });
+  // Perl: DefPrimitiveI('\cal', undef, sub {
+  //   if (LookupValue('IN_MATH')) {
+  //     MergeFont(family=>'caligraphic', series=>'medium', shape=>'upright', encoding=>'OMS');
+  //     return Box(undef, undef, undef, T_CS('\cal')); } return; });
+  DefPrimitive!("\\cal", {
+    if state::lookup_bool("IN_MATH") {
+      merge_font(fontmap!(family => "caligraphic", series => "medium",
+        shape => "upright", encoding => "OMS"));
+    }
+    Tbox::new(arena::pin_static(""), None, None, Tokens::from(T_CS!("\\cal")),
+      SymHashMap::default())
+  });
 
   // Ideally, we should set these sizes from class files
   AssignValue!("NOMINAL_FONT_SIZE", 10);
@@ -695,7 +713,7 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\qquad")),
       stored_map!("name" => "qquad", "width" => Dimension::from_str("2em")?,
-        "isSpace"=>true, "asHint" => true),
+        "isSpace"=>true),
     )
   });
 
@@ -988,10 +1006,8 @@ LoadDefinitions!({
       // Perl: isPrefix || isFontDef || (isRegister && !isCharDef)
       //       || token matches \def|\edef|\gdef|\xdef
       let is_assignment = if let Some(ref d) = defn {
-        if d.is_prefix() {
-          true
-        } else if d.is_register()
-          && !matches!(d.register_type(), Some(RegisterType::CharDef)) {
+        if d.is_prefix() || (
+          d.is_register() && !matches!(d.register_type(), Some(RegisterType::CharDef))) {
           true
         } else {
           // Check isFontDef: lookupValue("fontinfo_<cs>")
@@ -1046,7 +1062,7 @@ LoadDefinitions!({
         let mut rev_toks = vec![T_CS!("\\accent")];
         rev_toks.extend(ExplodeText!(&num.to_string()));
         rev_toks.push(T_OTHER!(" "));
-        rev_toks.extend(letter.unlist_ref().iter().map(|t| (*t).clone()));
+        rev_toks.extend(letter.unlist_ref().iter().copied());
         let reversion = Tokens::new(rev_toks);
         let tbox = tex_character::apply_accent(
           letter, entry.combiner, entry.standalone, Some(reversion))?;
@@ -1127,9 +1143,10 @@ LoadDefinitions!({
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());
 
+  // Perl: \, in math mode => \mskip\thinmuskip => Box(' ', ..., width => thinmuskip)
   DefPrimitive!("\\lx@thinmuskip", {
     Tbox::new(
-      arena::pin_static("\u{2009}"),
+      arena::pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\,")),
@@ -1163,9 +1180,10 @@ LoadDefinitions!({
       "width" => lookup_dimension("\\thinmuskip").unwrap().negate()),
     )
   });
+  // Perl: \> and \; in math mode => Box(' ', ..., width => medmuskip/thickmuskip)
   DefPrimitive!("\\>", {
     Tbox::new(
-      arena::pin_static("\u{2005}"),
+      arena::pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\>")),
@@ -1175,7 +1193,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\;", {
     Tbox::new(
-      arena::pin_static("\u{2004}"),
+      arena::pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\;")),
@@ -1456,7 +1474,7 @@ LoadDefinitions!({
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
     });
-    if text.len() != 1 { // Not simple char token.
+    if text.chars().count() != 1 { // Not simple char token.
       // Wrap with a cancel op
       document.open_element("ltx:XMApp",
         Some(map!("_box" => not_node.to_hashable().to_string())), None)?;
@@ -1467,9 +1485,9 @@ LoadDefinitions!({
         not_node.remove_attribute("xml:id")?;
         document.unrecord_id(&id);
         document.set_attribute(&mut strike, "xml:id", &id)?;
-        document.get_node_mut().add_child(thing)?;
-        document.close_element("ltx:XMApp")?;
       }
+      document.get_node_mut().add_child(thing)?;
+      document.close_element("ltx:XMApp")?;
     } else {
       // For simple tokens, we'll modify the relevant content & attributes
       // [children removed, id's presumably ignorable]
@@ -1728,10 +1746,12 @@ LoadDefinitions!({
 
   // These originally had Token as parameter, rather than {}..... Why?
   // Note that in TeX, \big{((} will only enlarge the 1st paren!!!
-  DefConstructor!("\\big {}",  "#1", bounded => true, font => { size => 1.2 });
-  DefConstructor!("\\Big {}",  "#1", bounded => true, font => { size => 1.6 });
-  DefConstructor!("\\bigg {}", "#1", bounded => true, font => { size => 2.1 });
-  DefConstructor!("\\Bigg {}", "#1", bounded => true, font => { size => 2.6 });
+  // Perl: font => { size => 'big' } where 'big' maps to scale factor 1.2, etc.
+  // Use scale (not absolute size) so fontsize computes correctly as percentage.
+  DefConstructor!("\\big {}",  "#1", bounded => true, font => { scale => 1.2 });
+  DefConstructor!("\\Big {}",  "#1", bounded => true, font => { scale => 1.6 });
+  DefConstructor!("\\bigg {}", "#1", bounded => true, font => { scale => 2.1 });
+  DefConstructor!("\\Bigg {}", "#1", bounded => true, font => { scale => 2.6 });
 
   // sub addDelimiterRole {
   //   my ($document, $role) = @_;
@@ -1937,8 +1957,12 @@ LoadDefinitions!({
     r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"
   );
   // HACK the newly created border matrix to add columns for the (spanned) parentheses!!!
-  // Assume (for now) that there's no XMDual structure here.
-  // What is the semantics, anyway?
+  // TODO: Port the full DOM manipulation (adding paren columns, rowspans, etc.)
+  DefConstructor!("\\lx@hack@bordermatrix{}", sub[document, args, _props] {
+      let matrix = args[0].as_ref().unwrap();
+      document.absorb(matrix, None)?;
+    },
+    reversion => "#1");
   // DefConstructor('\lx@hack@bordermatrix{}', sub {
   //     my ($document, $matrix) = @_;
   //     $document->absorb($matrix);
@@ -2003,31 +2027,66 @@ LoadDefinitions!({
     "\\eqalign{}",
     r"\@@eqalign{\lx@begin@alignment#1\lx@end@alignment}"
   );
-  // DefConstructor('\@@eqalign{}',
-  //   '#1',
-  //   reversion    => '\eqalign{#1}', bounded => 1,
-  //   beforeDigest => sub { alignmentBindings('rl', 'math',
-  //       attributes => { vattach => 'baseline' }); });
+  DefConstructor!("\\@@eqalign{}", "#1",
+    reversion => "\\eqalign{#1}", bounded => true,
+    before_digest => {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::template::{Align, TemplateConfig};
+      use latexml_core::alignment::cell::Cell;
+      let template = Template::new(TemplateConfig {
+        columns: Some(vec![
+          Cell { align: Some(Align::Right), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+        ]),
+        ..TemplateConfig::default()
+      });
+      alignment_bindings(template, String::from("math"),
+        SymHashMap::default(), string_map!("vattach" => "baseline"));
+    });
 
   DefMacro!(
     "\\eqalignno{}",
     r"\@@eqalignno{\lx@begin@alignment#1\lx@end@alignment}"
   );
-  // DefConstructor('\@@eqalignno{}',
-  //   '#1',
-  //   reversion    => '\eqalignno{#1}', bounded => 1,
-  //   beforeDigest => sub { alignmentBindings('rll', 'math',
-  //       attributes => { vattach => 'baseline' }); });
+  DefConstructor!("\\@@eqalignno{}", "#1",
+    reversion => "\\eqalignno{#1}", bounded => true,
+    before_digest => {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::template::{Align, TemplateConfig};
+      use latexml_core::alignment::cell::Cell;
+      let template = Template::new(TemplateConfig {
+        columns: Some(vec![
+          Cell { align: Some(Align::Right), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+        ]),
+        ..TemplateConfig::default()
+      });
+      alignment_bindings(template, String::from("math"),
+        SymHashMap::default(), string_map!("vattach" => "baseline"));
+    });
 
   DefMacro!(
     "\\leqalignno{}",
     r"\@@leqalignno{\lx@begin@alignment#1\lx@end@alignment}"
   );
-  // DefConstructor('\@@leqalignno{}',
-  //   '#1',
-  //   reversion    => '\leqalignno{#1}', bounded => 1,
-  //   beforeDigest => sub { alignmentBindings('rll', 'math',
-  //       attributes => { vattach => 'baseline' }); });
+  DefConstructor!("\\@@leqalignno{}", "#1",
+    reversion => "\\leqalignno{#1}", bounded => true,
+    before_digest => {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::template::{Align, TemplateConfig};
+      use latexml_core::alignment::cell::Cell;
+      let template = Template::new(TemplateConfig {
+        columns: Some(vec![
+          Cell { align: Some(Align::Right), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+          Cell { align: Some(Align::Left), ..Cell::default() },
+        ]),
+        ..TemplateConfig::default()
+      });
+      alignment_bindings(template, String::from("math"),
+        SymHashMap::default(), string_map!("vattach" => "baseline"));
+    });
 
   DefRegister!("\\pageno"   => Number::new(0));
   DefRegister!("\\headline" => Tokens!());
@@ -2114,13 +2173,22 @@ LoadDefinitions!({
   });
 
   // Change math font while still in text!
-  DefPrimitive!("\\boldmath", None);
-  //  beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 1),
-  // 'local'); }, forbidMath => 1);
-  DefPrimitive!("\\unboldmath", None);
-  // TODO:
-  // beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0),
-  // 'local'); }, forbidMath => 1);
+  // Perl: AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 1), 'local')
+  DefPrimitive!("\\boldmath", None,
+    before_digest => {
+      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let merged = mf.merge(Font { forcebold: Some(true), ..Font::default() });
+      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+    },
+    forbid_math => true);
+  // Perl: AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0), 'local')
+  DefPrimitive!("\\unboldmath", None,
+    before_digest => {
+      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let merged = mf.merge(Font { forcebold: Some(false), ..Font::default() });
+      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+    },
+    forbid_math => true);
 });
 
 fn non_typewriter(font: &Font) -> bool {

@@ -35,6 +35,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rparen = "CLOSE:)");
   token!(lbracket = "OPEN:[");
   token!(rbracket = "CLOSE:]");
+  token!(relop_equals = "RELOP:equals");
   token!(metarelop ~ "METARELOP");
   token!(modifierop ~ "MODIFIEROP");
   token!(modifier ~ "MODIFIER");
@@ -70,36 +71,97 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     factor_base = unknown | number | id | atom | opfunction;
     factor = factor_base;
     // Terms
+    // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
+    any_bigop = bigop | sumop | intop | limitop | diffop;
+    // Adjacent bigops compose like higher-order functions:
+    // \int\iint => integral(double-integral), itself a compound operator
+    composed_bigop = any_bigop any_bigop => prefix_apply
+      | any_bigop composed_bigop => prefix_apply;
+
+    // Compound operators: OPERATOR composed with functions/other operators (right-recursive)
+    // D sin => Apply(D, sin), D D sin => Apply(D, Apply(D, sin))
+    // Must end with a function/trigfunction (no bare operator-only compounds)
+    compound_operator = operator trigfunction => prefix_apply
+      | operator function => prefix_apply
+      | operator compound_operator => prefix_apply;
+
     tight_term = factor
       | tight_term factor => apply_invisible_times
-      // TODO: develop this further
-      | function factor => prefix_apply;
+      // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
+      | tight_term postfix => apply_postfix
+      | function tight_term => prefix_apply
+      | trigfunction tight_term => prefix_apply
+      | any_bigop tight_term => prefix_apply
+      | composed_bigop tight_term => prefix_apply
+      | compound_operator tight_term => prefix_apply
+      | operator factor => prefix_apply
+      | factor_base applyop tight_term => prefix_apply_applyop;
 
     term = tight_term
     | term mulop tight_term => infix_apply_nary
     | term mulop tight_term elideop => infix_apply_and_elide
-    | bigop tight_term => prefix_apply;
+    // Perl: COMPOSEOP creates function composition (f∘g)
+    // Functions can participate as operands of composition
+    | term composeop term => infix_apply
+    | operator applyop term => prefix_apply_applyop;
+
+    // Allow standalone functions/trigfunctions as terms for composition
+    // This is needed for (f*g)(x) where f and g are FUNCTION tokens
+    term += function | trigfunction;
 
     // Expressions
     expression = term
       | expression addop term => infix_apply_nary
       | expression addop term elideop => infix_apply_and_elide
       | addop tight_term => prefix_apply
-      | factor addop => postfix_apply;
+      | factor addop => postfix_apply
+      // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
+      // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
+      | expression modifierop expression => infix_apply;
 
     // Formula
+    // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
+    modifier_expression = modifierop expression => prefix_apply;
+    // Perl: within a Formula, comma-separated expressions after a relop form a list RHS.
+    // e.g. a=b,c,d → a = list(b,c,d), not list(a=b, c, d).
+    // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
+    formula_list = expression punct expression => formula_list_apply
+      | formula_list punct expression => formula_list_apply;
+    // Perl MathGrammar L709-711: Two-part relops (>=, <=, <<, >>)
+    two_part_relop = langle_rel langle_rel => two_part_relop_combine
+      | rangle_rel rangle_rel => two_part_relop_combine
+      | langle_rel relop_equals => two_part_relop_combine
+      | rangle_rel relop_equals => two_part_relop_combine;
+
     formula = expression
       | formula relop expression => infix_relation
+      | formula two_part_relop expression => infix_relation
+      | formula relop formula_list => infix_relation
+      | formula relop => postfix_relop
       | formula arrow expression => infix_relation
-      | arrow expression => prefix_arrow_apply;
+      | arrow expression => prefix_arrow_apply
+      // Perl MathGrammar L81: AnyOp Expression => Apply(AnyOp, Absent(), Expression)
+      // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
+      | relop expression => prefix_relop_apply
+      | modifier_expression;
 
+    // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
+    // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
     statement = formula
-      | statement metarelop formula => infix_relation;
+      | statement metarelop formula => infix_relation
+      | metarelop formula => prefix_metarelop_apply
+      | any_bigop | composed_bigop
+      | operator | compound_operator
+      | function | trigfunction
+      // Bare operators can form comma-separated lists: +,-,×
+      | addop | mulop | relop | arrow;
 
     end_punct = punct | period;
     statements = statement
       | statement end_punct => postfix_embellished
-      | statement punct statement => infix_apply;
+      | statements punct statement => list_apply
+      // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
+      | statement vertbar statements => vertbar_modifier;
 
     // Extensions, now that we have more category variables defined
     fenced_factor = lbrace expression rbrace    => fenced
@@ -113,9 +175,24 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | singlevertbar expression singlevertbar => fenced
            // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
            | lbrace term punct term rbrace => fence
-           | lbrace term punct term punct term rbrace => fence;
+           | lbrace term punct term punct term rbrace => fence
+           // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
+           | lbrace formula singlevertbar formula rbrace => fence
+           | lbrace formula middle_bar formula rbrace => fence
+           | lbrace formula metarelop formula rbrace => fence;
     factor += fenced_factor;
 
+    // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
+    // f(x) => f@(x), g(a+b) => g@(a+b). Only active when MATHPARSER_SPECULATE is set.
+    // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
+    tight_term += unknown fenced_factor => speculative_prefix_apply;
+    // OPFUNCTION followed by fenced args => function application
+    // \operatorname{cov}(L) => cov@(L). Always treated as application, not multiplication.
+    tight_term += opfunction fenced_factor => prefix_apply;
+    // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
+    // Uses existing `unknown` terminal; semantic action checks text is literally "d".
+    // At factor level so it can appear as right operand of invisible_times.
+    factor += unknown factor_base => diffop_apply;
 
     // Script content
     postsubarg = start_postsubscript expression end_postsubscript => faux_wrap;
@@ -148,9 +225,23 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | scripted_factor_r11 postsubarg => postfix_script;
     factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
+    // Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
+    // These are bigops with post-scripts that still act as prefix operators.
+    // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs
+    // Chain scripts: first sub then super, or vice versa (like scripted_factor_r1/r2)
+    scripted_bigop_r1 = any_bigop postsuperarg => postfix_script
+      | any_bigop postsubarg => postfix_script;
+    scripted_bigop = scripted_bigop_r1
+      | scripted_bigop_r1 postsuperarg => postfix_script
+      | scripted_bigop_r1 postsubarg => postfix_script;
+    tight_term += scripted_bigop tight_term => prefix_apply;
+    // Scripted bigops can also appear as standalone statements
+    statement += scripted_bigop;
+
     anyop = addop | mulop | relop | arrow | metarelop
       | bigop | sumop | intop
-      | limitop | diffop | vertbar | supop;
+      | limitop | diffop | vertbar | supop
+      | modifierop | composed_bigop | operator | compound_operator;
 
     anyscript = floatsuperscript | floatsubscript;
 

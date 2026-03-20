@@ -152,14 +152,19 @@ fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
     _ => SymHashMap::default(),
   };
   if is_aligned {
-    // Perl: propagate id/tags to current alignment row properties.
-    // In Perl, these get stored as $$row{id}, $$row{tags} and later passed to
-    // the openRow hook. We store them in EQUATIONROW_PROPS for the open_row hook.
-    state::assign_value(
-      "EQUATIONROW_PROPS",
-      Stored::HashStored(props),
-      Some(Scope::Global),
-    );
+    // Perl: propagate id/tags to current alignment row.
+    // In Perl, these get stored as $$row{id}, $$row{tags} on the row object.
+    // Store on the current alignment row so each row retains its own props.
+    if let Some(alignment_digested) = lookup_alignment() {
+      if let Some(alignment_cell) = alignment_digested.alignment_cell() {
+        let mut alignment = alignment_cell.borrow_mut();
+        if let Some(row) = alignment.current_row_mut() {
+          for (key, val) in &props {
+            row.properties.insert(arena::to_string(*key), val.clone());
+          }
+        }
+      }
+    }
   } else if let Some(w) = whatsit {
     w.set_properties(props);
   }
@@ -272,19 +277,23 @@ pub fn eqnarray_bindings() -> Result<()> {
     }),
     close_container: Rc::new(|document| document.close_element("ltx:equationgroup")),
     open_row: Rc::new(|document, mut props| {
-      // Perl: my $tags = $props{tags}; $doc->openElement('ltx:equation', %props);
-      //       $doc->absorb($tags) if $tags;
-      // Read equation props from state (set by after_equation in aligned mode)
-      if let Some(Stored::HashStored(eq_props)) =
-        state::remove_value("EQUATIONROW_PROPS")
-      {
-        if let Some(id) = eq_props.get("id") {
-          props.insert(String::from("xml:id"), id.to_string());
-        }
+      // Perl: $$row{id} and $$row{tags} are passed via props from be_absorbed.
+      // The id was stored on the row during after_equation.
+      if let Some(id) = props.remove("id") {
+        props.insert(String::from("xml:id"), Stored::from(id.to_string()));
       }
+      // Extract tags (Digested) before converting to string props
+      let tags_digested = props.remove("tags");
+      let str_props: HashMap<String, String> = props.into_iter()
+        .map(|(k, v)| (k, v.to_string()))
+        .collect();
       document
-        .open_element("ltx:equation", Some(props), None)
-        .and(Ok(()))
+        .open_element("ltx:equation", Some(str_props), None)?;
+      // If we have digested tags, absorb them into the opened element
+      if let Some(Stored::Digested(d)) = tags_digested {
+        document.absorb(&d, None)?;
+      }
+      Ok(())
     }),
     close_row: Rc::new(|document| document.close_element("ltx:equation")),
     open_column: Rc::new(|document, props| {
@@ -533,6 +542,11 @@ LoadDefinitions!({
     before_digest => {
       bgroup();
     },
+    after_construct => sub[document, _whatsit] {
+      if let Some(mut last) = document.get_node().get_last_child() {
+        rearrange_eqnarray(document, &mut last)?;
+      }
+    },
     mode => "restricted_horizontal",
     enter_horizontal => true);
   DefPrimitive!("\\end@eqnarray", {
@@ -566,8 +580,142 @@ LoadDefinitions!({
 
   Tag!("ltx:equationgroup", auto_close => true);
 
+  // TODO: Port \lx@equationgroup@subnumbering@begin/end (subequations)
+  // Perl: latex_constructs.pool.ltxml L2174-2191
+  // Needs careful testing — initial port increased diffs in amsdisplay_test.
+
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => sub[document, node] {
     document.generate_id(node, "m")?;
   });
 });
+
+/// Perl: rearrangeEqnarray (latex_constructs.pool.ltxml L2356-2445)
+/// Analyzes column patterns in eqnarray and rearranges into MathFork structures.
+fn rearrange_eqnarray(
+  document: &mut Document,
+  equationgroup: &mut Node,
+) -> Result<()> {
+  use crate::engine::base_xmath::{equationgroup_join_cols, equationgroup_join_rows};
+
+  struct EqRow {
+    node: Node,
+    cols: Vec<Node>,
+    has_l: bool,
+    has_m: bool,
+    has_r: bool,
+    numbered: bool,
+    _labelled: bool,
+  }
+
+  // Scan the equations (rows)
+  let mut rows: Vec<EqRow> = Vec::new();
+  let equation_nodes: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
+  for rownode in equation_nodes {
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&rownode));
+    let has_l = cells.first().is_some_and(|c| !c.get_child_nodes().is_empty());
+    let has_m = cells.get(1).is_some_and(|c| !c.get_child_nodes().is_empty());
+    let has_r = cells.get(2).is_some_and(|c| !c.get_child_nodes().is_empty());
+    let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
+    let labelled = rownode.get_attribute("label").is_some();
+    rows.push(EqRow {
+      node: rownode,
+      cols: cells,
+      has_l,
+      has_m,
+      has_r,
+      numbered,
+      _labelled: labelled,
+    });
+  }
+
+  let n_l = rows.iter().filter(|r| r.has_l).count();
+  let n_m = rows.iter().filter(|r| r.has_m).count();
+  let n_r = rows.iter().filter(|r| r.has_r).count();
+
+  // Only a single column was used
+  if (n_l > 0 && n_m == 0 && n_r == 0)
+    || (n_l == 0 && n_m > 0 && n_r == 0)
+    || (n_l == 0 && n_m == 0 && n_r > 0)
+  {
+    let keepcol = if n_l > 0 { 0 } else if n_m > 0 { 1 } else { 2 };
+    // Remove empty columns (in reverse order to preserve indices)
+    for c in (0..3).rev() {
+      if c == keepcol {
+        continue;
+      }
+      for row in rows.iter() {
+        if let Some(col) = row.cols.get(c) {
+          let mut col_clone = col.clone();
+          col_clone.unlink_node();
+        }
+      }
+    }
+    // Check if any column begins with a RELOP → join rows
+    let begins_with_relop = rows.iter().any(|row| {
+      row.cols.get(keepcol).and_then(|c| {
+        c.get_child_elements().into_iter().next().and_then(|first| {
+          first.get_attribute("role").map(|r| r == "RELOP")
+        })
+      }).unwrap_or(false)
+    });
+
+    if begins_with_relop {
+      let nodes: Vec<Node> = rows.into_iter().map(|r| r.node).collect();
+      equationgroup_join_rows(document, equationgroup, nodes)?;
+    } else {
+      for mut row in rows {
+        equationgroup_join_cols(document, 1, &mut row.node)?;
+      }
+    }
+    return Ok(());
+  }
+
+  // All 3 columns case — analyze continuation patterns
+  let mut eqs: Vec<Vec<Node>> = Vec::new();
+  let mut numbered = false;
+
+  for row in &rows {
+    let class;
+    if row.has_l {
+      class = "new";
+    } else if row.has_m {
+      if eqs.is_empty() {
+        class = "odd";
+      } else if numbered && row.numbered {
+        class = "new";
+      } else {
+        class = "continue";
+      }
+    } else if row.has_r {
+      if eqs.is_empty() || (numbered && row.numbered && row._labelled) {
+        class = "odd";
+      } else {
+        class = "continue";
+      }
+    } else {
+      // All columns empty
+      class = "remove";
+    }
+
+    if class == "remove" {
+      let mut node = row.node.clone();
+      node.unlink_node();
+    } else if class == "new" || class == "odd" {
+      numbered = row.numbered;
+      eqs.push(vec![row.node.clone()]);
+    } else {
+      // "continue"
+      numbered |= row.numbered;
+      if let Some(last) = eqs.last_mut() {
+        last.push(row.node.clone());
+      }
+    }
+  }
+
+  // Now rearrange
+  for eqset in eqs {
+    equationgroup_join_rows(document, equationgroup, eqset)?;
+  }
+  Ok(())
+}

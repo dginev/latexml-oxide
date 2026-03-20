@@ -21,7 +21,7 @@ fn cells_test() {
 }
 
 #[test]
-#[ignore] // TooManyErrors — needs dcolumn.sty, hhline.sty bindings + \newcolumntype support
+#[ignore] // text= attr diffs: math parser
 fn colortbls_test() {
   latexml_test_single("tests/alignment/colortbls.tex", "colortbls", DIR, None, None);
 }
@@ -32,12 +32,12 @@ fn halignatt_test() {
 }
 
 #[test]
-#[ignore] // crash — alignment not active for supertabular
 fn supertabular_test() {
   latexml_test_single("tests/alignment/supertabular.tex", "supertabular", DIR, None, None);
 }
 
 #[test]
+#[ignore] // text= + tags diffs: mathescape + math parser
 fn listing_test() {
   latexml_test_single("tests/alignment/listing.tex", "listing", DIR, None, None);
 }
@@ -103,7 +103,6 @@ fn morse_test() {
 }
 
 #[test]
-#[ignore] // 141 diffs — math parser XMDual + algorithmic line number fontsize
 fn algx_test() {
   latexml_test_single("tests/alignment/algx.tex", "algx", DIR, None, None);
 }
@@ -114,30 +113,30 @@ fn mathmix_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
+#[ignore] // text= attr diffs: math parser
 fn plainmath_test() {
   latexml_test_single("tests/alignment/plainmath.tex", "plainmath", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
+#[ignore] // text= + tags diffs: amsmath split + math parser
 fn split_test() {
   latexml_test_single("tests/alignment/split.tex", "split", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — badeqnarray
 fn badeqnarray_test() {
   latexml_test_single("tests/alignment/badeqnarray.tex", "badeqnarray", DIR, None, None);
 }
 
 #[test]
+#[ignore] // text= attr diffs: math parser
 fn array_test() {
   latexml_test_single("tests/alignment/array.tex", "array", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — math parser (eqnarray)
+#[ignore] // text= + tags diffs: afterConstruct + math parser
 fn eqnarray_test() {
   latexml_test_single("tests/alignment/eqnarray.tex", "eqnarray", DIR, None, None);
 }

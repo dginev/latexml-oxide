@@ -11,15 +11,8 @@ LoadDefinitions!({
   //
 
   // \setkeys[*][+][prefix]{keyset}[na]{keyvals}
-  DefMacro!("\\setkeys OptionalMatch:* OptionalMatch:+ []{}[]", sub[args] {
-    let [star, plus, prefix_arg, keysets_arg, skip_arg] :
-      [ArgWrap; 5] = args.try_into().unwrap();
-    let star: Option<Tokens> = star.try_into().unwrap_or(None);
-    let plus: Option<Tokens> = plus.try_into().unwrap_or(None);
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let keysets_tks: Tokens = keysets_arg.try_into().unwrap_or_default();
-    let skip_opt: Option<Tokens> = skip_arg.try_into().unwrap_or(None);
-
+  DefMacro!("\\setkeys OptionalMatch:* OptionalMatch:+ []{}[]", 
+    sub[(star, plus, prefix_opt, keysets_tks, skip_opt)] {
     let prefix = prefix_opt.map(|p| gullet::do_expand(p).map(|t| t.to_string()))
       .transpose()?;
     let keysets_str = gullet::do_expand(keysets_tks)?.to_string();
@@ -54,14 +47,7 @@ LoadDefinitions!({
   });
 
   // \setrmkeys[*][prefix]{keyset}[na]
-  DefMacro!("\\setrmkeys OptionalMatch:* []{}[]", sub[args] {
-    let [star, prefix_arg, keysets_arg, na_arg] :
-      [ArgWrap; 4] = args.try_into().unwrap();
-    let star: Option<Tokens> = star.try_into().unwrap_or(None);
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let keysets_tks: Tokens = keysets_arg.try_into().unwrap_or_default();
-    let na_opt: Option<Tokens> = na_arg.try_into().unwrap_or(None);
-
+  DefMacro!("\\setrmkeys OptionalMatch:* []{}[]", sub[(star, prefix_opt, keysets_tks, na_opt)] {    
     // expand and delete the list of tokens we need to work on
     let rm_tokens = gullet::do_expand(Tokens!(T_CS!("\\XKV@rm")))?;
     DefMacro!(T_CS!("\\XKV@rm"), None, Some(ExpansionBody::Tokens(Tokens!())));
@@ -179,19 +165,8 @@ LoadDefinitions!({
 
   // \define@choicekey*+[prefix]{keyset}{key}[bin]{choices}[default]{code}{mismatch}
   // Two-phase: macro collects args, then calls internal primitive
-  DefMacro!("\\define@choicekey OptionalMatch:* OptionalMatch:+ []{}{}[]{}[]{}", sub[args] {
-    let [star, plus, prefix_arg, keyset, key, bin_arg, choices, default_arg, code] :
-      [ArgWrap; 9] = args.try_into().unwrap();
-    let star: Option<Tokens> = star.try_into().unwrap_or(None);
-    let plus: Option<Tokens> = plus.try_into().unwrap_or(None);
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let bin_opt: Option<Tokens> = bin_arg.try_into().unwrap_or(None);
-    let default_opt: Option<Tokens> = default_arg.try_into().unwrap_or(None);
-    let keyset_tks: Tokens = keyset.try_into().unwrap_or_default();
-    let key_tks: Tokens = key.try_into().unwrap_or_default();
-    let choices_tks: Tokens = choices.try_into().unwrap_or_default();
-    let code_tks: Tokens = code.try_into().unwrap_or_default();
-
+  DefMacro!("\\define@choicekey OptionalMatch:* OptionalMatch:+ []{}{}[]{}[]{}", 
+  sub[(star, plus, prefix_opt, keyset_tks, key_tks, bin_opt, choices_tks, default_opt, code_tks)] {
     let mut tokens = Vec::new();
     tokens.push(T_CS!("\\ltx@define@choicekey@int"));
     if star.is_some() { tokens.push(T_OTHER!("*")); }
@@ -278,17 +253,9 @@ LoadDefinitions!({
 
   // \define@boolkey[+][prefix]{keyset}[macroprefix]{key}[default]{code}{mismatch}
   // Two-phase: macro collects args, then calls internal primitive
-  DefMacro!("\\define@boolkey OptionalMatch:+ []{}[]{}[]{}", sub[args] {
-    let [plus, prefix_arg, keyset, macroprefix_arg, key, default_arg, code] :
-      [ArgWrap; 7] = args.try_into().unwrap();
-    let plus: Option<Tokens> = plus.try_into().unwrap_or(None);
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let macroprefix_opt: Option<Tokens> = macroprefix_arg.try_into().unwrap_or(None);
-    let default_opt: Option<Tokens> = default_arg.try_into().unwrap_or(None);
-    let keyset_tks: Tokens = keyset.try_into().unwrap_or_default();
-    let key_tks: Tokens = key.try_into().unwrap_or_default();
-    let code_tks: Tokens = code.try_into().unwrap_or_default();
-
+  DefMacro!("\\define@boolkey OptionalMatch:+ []{}[]{}[]{}", 
+    sub[(plus, prefix_opt, keyset_tks, macroprefix_opt, key_tks, default_opt, code_tks)] {
+    
     let mut tokens = Vec::new();
     tokens.push(T_CS!("\\define@boolkey@int"));
     if plus.is_some() { tokens.push(T_OTHER!("+")); }
@@ -393,15 +360,7 @@ LoadDefinitions!({
 
   // \key@ifundefined[prefix]{keyset}{key}{undefined}{defined}
   DefMacro!("\\key@ifundefined[]{}{}{}{}",
-    sub[args] {
-    let [prefix_arg, keysets_arg, key_arg, undefined_arg, defined_arg] :
-      [ArgWrap; 5] = args.try_into().unwrap();
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let keysets_tks: Tokens = keysets_arg.try_into().unwrap_or_default();
-    let key_tks: Tokens = key_arg.try_into().unwrap_or_default();
-    let undefined: Tokens = undefined_arg.try_into().unwrap_or_default();
-    let defined: Tokens = defined_arg.try_into().unwrap_or_default();
-
+    sub[(prefix_opt, keysets_tks, key_tks, undefined, defined)] {
     let sprefix = prefix_opt
       .map(|p| gullet::do_expand(p).map(|t| t.to_string()))
       .transpose()?
@@ -427,13 +386,7 @@ LoadDefinitions!({
   //
 
   // \disable@keys[prefix]{keyset}{keys}
-  DefMacro!("\\disable@keys[]{}{}", sub[args] {
-    let [prefix_arg, keyset_arg, keys_arg] :
-      [ArgWrap; 3] = args.try_into().unwrap();
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let keyset_tks: Tokens = keyset_arg.try_into().unwrap_or_default();
-    let keys_tks: Tokens = keys_arg.try_into().unwrap_or_default();
-
+  DefMacro!("\\disable@keys[]{}{}", sub[(prefix_opt, keyset_tks, keys_tks)] {
     let sprefix = prefix_opt
       .map(|p| gullet::do_expand(p).map(|t| t.to_string()))
       .transpose()?
@@ -469,9 +422,7 @@ LoadDefinitions!({
   //
 
   // \DeclareOptionX[*]
-  DefMacro!("\\DeclareOptionX OptionalMatch:*", sub[args] {
-    let [star] : [ArgWrap; 1] = args.try_into().unwrap();
-    let star: Option<Tokens> = star.try_into().unwrap_or(None);
+  DefMacro!("\\DeclareOptionX OptionalMatch:*", sub[(star)] {
     if star.is_some() {
       Ok(Tokens!(T_CS!("\\DeclareOptionX@int@star")))
     } else {
@@ -480,9 +431,7 @@ LoadDefinitions!({
   });
 
   // \DeclareOptionX*{code}
-  DefMacro!("\\DeclareOptionX@int@star {}", sub[args] {
-    let [code_arg] : [ArgWrap; 1] = args.try_into().unwrap();
-    let code: Tokens = code_arg.try_into().unwrap_or_default();
+  DefMacro!("\\DeclareOptionX@int@star {}", sub[(code)] {
     DefMacro!(T_CS!("\\XKV@doxs@int"), None,
       Some(ExpansionBody::Tokens(code)));
     DefMacro!("\\XKV@doxs {}", "\\edef\\CurrentOption{#1}\\XKV@doxs@int");
@@ -493,11 +442,11 @@ LoadDefinitions!({
   DefMacro!("\\DeclareOptionX@int@normal [] OptionalAngle {}[]{}", sub[args] {
     let [prefix_arg, keyset_arg, key_arg, default_arg, code_arg] :
       [ArgWrap; 5] = args.try_into().unwrap();
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let keyset_opt: Option<Tokens> = keyset_arg.try_into().unwrap_or(None);
-    let key_tks: Tokens = key_arg.try_into().unwrap_or_default();
-    let default_opt: Option<Tokens> = default_arg.try_into().unwrap_or(None);
-    let code: Tokens = code_arg.try_into().unwrap_or_default();
+    let prefix_opt: Option<Tokens> = prefix_arg.owned_tokens();
+    let keyset_opt: Option<Tokens> = keyset_arg.owned_tokens();
+    let key_tks: Tokens = key_arg.owned_tokens().unwrap_or_default();
+    let default_opt: Option<Tokens> = default_arg.owned_tokens();
+    let code: Tokens = code_arg.owned_tokens().unwrap_or_default();
 
     // defaults may be passed with an empty argument
     let mut tokens = Vec::new();
@@ -539,9 +488,9 @@ LoadDefinitions!({
   DefMacro!("\\ExecuteOptionsX [] OptionalAngle []", sub[args] {
     let [prefix_arg, keyset_arg, na_arg] :
       [ArgWrap; 3] = args.try_into().unwrap();
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let keyset_opt: Option<Tokens> = keyset_arg.try_into().unwrap_or(None);
-    let na_opt: Option<Tokens> = na_arg.try_into().unwrap_or(None);
+    let prefix_opt: Option<Tokens> = prefix_arg.owned_tokens();
+    let keyset_opt: Option<Tokens> = keyset_arg.owned_tokens();
+    let na_opt: Option<Tokens> = na_arg.owned_tokens();
 
     let mut tokens = Vec::new();
     tokens.push(T_CS!("\\setkeys"));
@@ -575,10 +524,10 @@ LoadDefinitions!({
   DefMacro!("\\ProcessOptionsX OptionalMatch:* [] OptionalAngle []", sub[args] {
     let [star_arg, prefix_arg, keysets_arg, skip_arg] :
       [ArgWrap; 4] = args.try_into().unwrap();
-    let star: Option<Tokens> = star_arg.try_into().unwrap_or(None);
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let keysets_opt: Option<Tokens> = keysets_arg.try_into().unwrap_or(None);
-    let skip_opt: Option<Tokens> = skip_arg.try_into().unwrap_or(None);
+    let star: Option<Tokens> = star_arg.owned_tokens();
+    let prefix_opt: Option<Tokens> = prefix_arg.owned_tokens();
+    let keysets_opt: Option<Tokens> = keysets_arg.owned_tokens();
+    let skip_opt: Option<Tokens> = skip_arg.owned_tokens();
 
     let file_name = xkeyval_get_file_name();
     let keysets = if let Some(ks) = keysets_opt.filter(|t| !t.is_empty()) {
@@ -623,14 +572,7 @@ LoadDefinitions!({
   });
 
   // \ProcessOptionsX@int [*] [prefix]{keysets}[na]
-  DefMacro!("\\ProcessOptionsX@int OptionalMatch:* [] {} []", sub[args] {
-    let [star_arg, prefix_arg, keysets_arg, skip_arg] :
-      [ArgWrap; 4] = args.try_into().unwrap();
-    let star: Option<Tokens> = star_arg.try_into().unwrap_or(None);
-    let prefix_opt: Option<Tokens> = prefix_arg.try_into().unwrap_or(None);
-    let keysets_tks: Tokens = keysets_arg.try_into().unwrap_or_default();
-    let skip_opt: Option<Tokens> = skip_arg.try_into().unwrap_or(None);
-
+  DefMacro!("\\ProcessOptionsX@int OptionalMatch:* [] {} []", sub[(star, prefix_opt, keysets_tks, skip_opt)] {
     // store the missing macros if defined
     let hook_missing = if star.is_some() && state::has_meaning(&T_CS!("\\XKV@doxs")) {
       Some(T_CS!("\\XKV@doxs"))
@@ -711,7 +653,7 @@ LoadDefinitions!({
     Warn!("unexpected", "\\gsavevalue",
       "The xkeyval pointer system is currently not supported. ");
     let [key] : [ArgWrap; 1] = args.try_into().unwrap();
-    let key_tks: Tokens = key.try_into().unwrap_or_default();
+    let key_tks: Tokens = key.owned_tokens().unwrap_or_default();
     Ok(key_tks)
   });
 
@@ -802,26 +744,26 @@ LoadDefinitions!({
   //
   RawTeX!(r"\newtoks\XKV@tempa@toks");
   RawTeX!(concat!(
-    r"\long\def\XKV@for@n#1#2#3{%",
-    r"\XKV@tempa@toks{#1}\edef#2{\the\XKV@tempa@toks}%",
-    r"\ifx#2\@empty",
-    r"\XKV@for@break",
-    r"\else",
-    r"\expandafter\XKV@f@r",
-    r"\fi",
-    r"#2{#3}#1,\@nil,%",
-    r"}"
+    "\\long\\def\\XKV@for@n#1#2#3{%\n",
+    "\\XKV@tempa@toks{#1}\\edef#2{\\the\\XKV@tempa@toks}%\n",
+    "\\ifx#2\\@empty\n",
+    "\\XKV@for@break\n",
+    "\\else\n",
+    "\\expandafter\\XKV@f@r\n",
+    "\\fi\n",
+    "#2{#3}#1,\\@nil,%\n",
+    "}"
   ));
   RawTeX!(concat!(
-    r"\long\def\XKV@f@r#1#2#3,{%",
-    r"\XKV@tempa@toks{#3}\edef#1{\the\XKV@tempa@toks}%",
-    r"\ifx#1\@nnil",
-    r"\expandafter\@gobbletwo",
-    r"\else",
-    r"#2\expandafter\XKV@f@r",
-    r"\fi",
-    r"#1{#2}%",
-    r"}"
+    "\\long\\def\\XKV@f@r#1#2#3,{%\n",
+    "\\XKV@tempa@toks{#3}\\edef#1{\\the\\XKV@tempa@toks}%\n",
+    "\\ifx#1\\@nnil\n",
+    "\\expandafter\\@gobbletwo\n",
+    "\\else\n",
+    "#2\\expandafter\\XKV@f@r\n",
+    "\\fi\n",
+    "#1{#2}%\n",
+    "}"
   ));
   RawTeX!(r"\long\def\XKV@for@break #1\@nil,{\fi}");
 });

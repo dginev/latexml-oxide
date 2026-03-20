@@ -6,7 +6,7 @@ use latexml::util::test::*;
 const DIR: &str = "tests/ams";
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure, text= attribute)
+#[ignore] // text= + tags diffs: afterConstruct + math parser
 fn amsdisplay_test() {
   latexml_test_single("tests/ams/amsdisplay.tex", "amsdisplay", DIR, None, None);
 }
@@ -34,13 +34,12 @@ fn mathtools_test() {
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
 fn matrix_test() {
   latexml_test_single("tests/ams/matrix.tex", "matrix", DIR, None, None);
 }
 
 #[test]
-#[ignore] // diffs — math parser (XMDual structure)
+#[ignore] // text= attr diffs: math parser
 fn sideset_test() {
   latexml_test_single("tests/ams/sideset.tex", "sideset", DIR, None, None);
 }

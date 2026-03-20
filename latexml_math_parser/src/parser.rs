@@ -14,7 +14,7 @@ use latexml_core::{Error, Fatal, fatal, map, s, static_map, sym_map};
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
 use crate::semantics::*;
-use crate::util::{filter_hints, node_to_grammar_lexemes};
+use crate::util::{filter_hints, node_to_grammar_lexemes_from};
 use marpa::lexer::byte_scanner::*;
 use marpa::parser::*;
 use marpa::thin::Grammar as ThinGrammar;
@@ -450,9 +450,10 @@ impl MathParser {
           document.set_attribute(&mut result, &key, &value)?;
           // }
         }
-        result = document
-          .replace_tree(result, node)?
-          .expect("replacing the tree should always work.");
+        if let Some(r) = document.replace_tree(result.clone(), node)? {
+          result = r;
+        }
+        // If replace_tree returns None, node was already detached; keep result as-is.
         // Danger: the above code replaced the id on the parsed result with the one from XMArg,..
         // If there are any references to `resultid`, we need to point them to `newid`!
         if let Some(rid) = resultid {
@@ -537,7 +538,13 @@ impl MathParser {
     }
 
     if content_nodes.is_empty() {
-      Ok(None) // nothing to parse
+      // Perl MathParser.pm L683: $result = $nodes[0] || Absent()
+      // Empty XMArg/XMWrap: create <XMTok meaning="absent"/>
+      let mut absent_tok = document.open_element_at(mathnode, "ltx:XMTok", None, None)?;
+      document.set_attribute(&mut absent_tok, "meaning", "absent")?;
+      document.close_element_at(&mut absent_tok)?;
+      absent_tok.unlink();
+      Ok(Some(absent_tok))
     } else if content_nodes.len() == 1 && punct_nodes.is_empty() {
       // single node, nothing to wrap
       Ok(Some(content_nodes.remove(0)))
@@ -546,7 +553,8 @@ impl MathParser {
       let result = content_nodes.remove(0);
       Ok(Some(self.wrap_with_punct(result, punct_nodes, mathnode, document)?))
     } else {
-      let (lexemes, mut nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
+      // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called above)
+      let (lexemes, mut nodes) = node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
       if let Ok(Some(parse_tree)) = self.parse_lexemes(lexemes, &nodes, document) {
         //START reparent: the reparenting used to be in `parse_rec` in Perl. Is this a good place?
         // Replace the content of XMath with parsed result

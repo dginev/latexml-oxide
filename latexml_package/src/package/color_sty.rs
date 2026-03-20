@@ -88,7 +88,7 @@ LoadDefinitions!({
   // \color[model]{spec} or \color{name}
   // Perl: returns Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(components)))
   DefPrimitive!("\\color[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.map(|m| do_expand(m).ok()).flatten().map(|t| t.to_string());
+    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     let spec_str = do_expand(spec)?.to_string();
     let color = parse_color(model_str.as_deref(), &spec_str);
 
@@ -96,7 +96,7 @@ LoadDefinitions!({
     if lookup_bool("inPreamble") {
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
-    merge_font(fontmap!(color => color.clone()));
+    merge_font(fontmap!(color => color));
 
     // Perl: Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
     // Return an empty Tbox whose reversion produces \color[rgb]{r,g,b} for the tex attribute.
@@ -108,7 +108,7 @@ LoadDefinitions!({
       })
       .collect::<Vec<_>>().join(",");
     let reversion_tokens = Invocation!("\\color",
-      vec![Some(Tokens::from(T_OTHER!(&*"rgb"))),
+      vec![Some(Tokens::from(T_OTHER!("rgb"))),
            Some(Tokens::from(T_OTHER!(&*comps)))]);
     Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
       reversion_tokens, arena::SymHashMap::default()))])
@@ -117,14 +117,17 @@ LoadDefinitions!({
   // \pagecolor[model]{spec}
   // Perl: returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
   DefPrimitive!("\\pagecolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.map(|m| do_expand(m).ok()).flatten().map(|t| t.to_string());
+    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     let spec_str = do_expand(spec)?.to_string();
     let color = parse_color(model_str.as_deref(), &spec_str);
     merge_font(fontmap!(bg => color));
 
-    // TODO: Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
-    // Returning a Tbox here breaks framed.xml — needs investigation into Tbox absorption path.
-    Ok(Vec::new())
+    // Perl returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))
+    let reversion_tokens = Invocation!("\\pagecolor",
+      vec![model_str.as_deref().map(|s| Tokens::from(T_OTHER!(s))),
+           Some(Tokens::from(T_OTHER!(&*spec_str)))]);
+    Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
+      reversion_tokens, arena::SymHashMap::default()))])
   });
 
   // \normalcolor — restores color from preamble
@@ -163,7 +166,7 @@ LoadDefinitions!({
 
       if let Some(tokens) = text_tokens {
         let digested = digest(tokens)?;
-        whatsit.set_property("text", Stored::Digested(digested.into()));
+        whatsit.set_property("text", Stored::Digested(digested));
       }
     }
   );

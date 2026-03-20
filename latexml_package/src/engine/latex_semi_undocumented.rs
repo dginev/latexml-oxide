@@ -4,6 +4,11 @@ use crate::prelude::*;
 //**********************************************************************
 
 LoadDefinitions!({
+  // From latex_base.pool.ltxml: standard LaTeX internal list processing
+  RawTeX!(r"\def\@car#1#2\@nil{#1}");
+  RawTeX!(r"\def\@cdr#1#2\@nil{#2}");
+  RawTeX!(r"\def\@carcube#1#2#3#4\@nil{#1#2#3}");
+
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
     let next = gullet::read_non_space()?;
     // NOTE: Not actually substituting, but collapsing ## pairs!!!!
