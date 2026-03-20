@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 235 pass, 0 fail, 84 ignored (319 total). Session 11+: is_script regex fix (Perl `\@@POST` → Rust `\lx@post@`), prefix_relop_apply grammar rule (absent token for leading relop), displaystyle tex= spacing fix. badeqnarray_test PASSES (148→0 diffs). eqnums_test 315→23 diffs. Whatsit default sizer unlist body fix. Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
+**Status (2026-03-20):** 236 pass, 0 fail, 83 ignored (319 total). Session 11+: is_script regex fix (Perl `\@@POST` → Rust `\lx@post@`), prefix_relop_apply grammar rule (absent token for leading relop), displaystyle tex= spacing fix. badeqnarray_test PASSES (148→0 diffs). eqnums_test 315→23 diffs. Whatsit default sizer unlist body fix. Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
 
 ### Completed items
 
@@ -474,8 +474,8 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 
 ### Tier 5: Math parser tests (active research, Marpa grammar)
 
-- [ ] **47. 40_math suite** (40_math) — 149 diffs across batch. Parser bugs vs intentional Marpa divergence.
-- [ ] **48. 70_parse suite** (70_parse) — 120 diffs across batch. Generate Rust-specific expected XMLs.
+- [ ] **47. 40_math suite** (40_math) — Parser bugs vs intentional Marpa divergence. postfix_apply fixed (limit-from).
+- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES (postfix_apply + mixed number detection).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
 - [ ] **51. eqnarray_test** (53_alignment) — 575 diffs (down from 1176). prefix_relop_apply + displaystyle fix helped.
