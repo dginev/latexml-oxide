@@ -112,6 +112,7 @@ LoadDefinitions!({
     \def\@cons#1#2{\begingroup\let\@elt\relax\xdef#1{#1\@elt #2}\endgroup}
     \let\@nil\relax
     \let\@nnil\relax
+    \let\@arrayparboxrestore\relax
     \def\@car#1#2\@nil{#1}
     \def\@cdr#1#2\@nil{#2}
     \def\@carcube#1#2#3#4\@nil{#1#2#3}
