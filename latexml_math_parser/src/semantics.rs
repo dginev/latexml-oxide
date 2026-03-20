@@ -444,6 +444,9 @@ pub fn infix_apply_nary(
           && infix_op_pieces.len() == 3
           && left_op_pieces[0] == infix_op_pieces[0]
           && left_op_pieces[1] == infix_op_pieces[1]
+          // Perl's LeftRec doesn't flatten prefix applications (1 arg = unary prefix)
+          // Only flatten when left already has 2+ args (binary or n-ary)
+          && left_args.0.len() >= 2
         {
           left_args.0.push(right);
           return Ok(left);
