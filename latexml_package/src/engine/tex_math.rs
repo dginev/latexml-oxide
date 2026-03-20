@@ -10,6 +10,7 @@ use latexml_core::common::mathchar::decode_math_char;
 /// digest list, extracts any existing script level from the previous
 /// `scriptpos` value, and sets `scriptpos` to `pos` + level.
 fn merge_limits(pos: &str) {
+  use crate::engine::tex_scripts::is_script;
   // Compute script level before borrowing the box list mutably,
   // since get_script_level() also borrows the stomach.
   let default_level = get_script_level().to_string();
@@ -21,7 +22,9 @@ fn merge_limits(pos: &str) {
         .into_iter().rev().collect();
       let level = if level.is_empty() { &default_level } else { &level };
       b.set_property("scriptpos", format!("{pos}{level}"));
-      if !b.is_empty().unwrap_or(false) {
+      // Perl: last unless IsEmpty($box) || IsScript($box)
+      // Continue past empty boxes AND script boxes
+      if !b.is_empty().unwrap_or(false) && is_script(b).is_none() {
         break;
       }
     }

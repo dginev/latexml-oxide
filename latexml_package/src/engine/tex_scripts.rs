@@ -174,6 +174,21 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       if let Some(pvs) = prevscript {
         properties.insert("prevscript", pvs.into());
       }
+      // Propagate scriptpos from base to script whatsit
+      // Propagate scriptpos from base to script whatsit
+      // Perl: scriptHandler doesn't explicitly set scriptpos, but merge_limits
+      // (from \limits/\nolimits) sets it on the script whatsit later.
+      // We propagate from the base's scriptpos instead.
+      if let Some(Stored::Digested(ref b)) = properties.get("base") {
+        if let Some(bsp) = b.get_property("scriptpos") {
+          let bsp_str = bsp.to_string();
+          if !bsp_str.is_empty() {
+            let base_prefix: String = bsp_str.chars().take_while(|c| !c.is_ascii_digit()).collect();
+            let sl = get_script_level();
+            properties.insert("scriptpos", Stored::from(format!("{base_prefix}{sl}")));
+          }
+        }
+      }
       if let Some(font) = script.get_font()? {
         properties.insert("font", font.into());
       }
