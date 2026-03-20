@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/framed_sty.rs`."><title>framed_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (1e2183119 2026-03-15)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>framed_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/framed_sty.rs`."><title>framed_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (bcf3d36c9 2026-03-19)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>framed_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>latexml_core::common::color::{<span class="self">self</span>, Color};
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="doccomment">/// Get the current font's background color as a hex attribute string.
@@ -257,38 +257,41 @@
 <a href=#257 id=257 data-nosnippet>257</a>      <span class="prelude-val">Ok</span>(())
 <a href=#258 id=258 data-nosnippet>258</a>    },
 <a href=#259 id=259 data-nosnippet>259</a>    after_digest_begin =&gt; sub[whatsit] {
-<a href=#260 id=260 data-nosnippet>260</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(title_arg) = whatsit.get_arg(<span class="number">1</span>) {
-<a href=#261 id=261 data-nosnippet>261</a>        <span class="kw">let </span>title_tokens = title_arg.revert()<span class="question-mark">?</span>;
-<a href=#262 id=262 data-nosnippet>262</a>        <span class="kw">let </span><span class="kw-2">mut </span>inv = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@titledframe@title"</span>), <span class="macro">T_BEGIN!</span>()];
-<a href=#263 id=263 data-nosnippet>263</a>        inv.extend(title_tokens.unlist());
-<a href=#264 id=264 data-nosnippet>264</a>        inv.push(<span class="macro">T_END!</span>());
-<a href=#265 id=265 data-nosnippet>265</a>        stomach::digest(Tokens::new(inv))<span class="question-mark">?</span>;
-<a href=#266 id=266 data-nosnippet>266</a>      }
-<a href=#267 id=267 data-nosnippet>267</a>    },
-<a href=#268 id=268 data-nosnippet>268</a>    properties =&gt; sub[_args] {
-<a href=#269 id=269 data-nosnippet>269</a>      <span class="kw">let </span>framecolor = lookup_color_hex(<span class="string">"TFFrameColor"</span>);
-<a href=#270 id=270 data-nosnippet>270</a>      <span class="kw">let </span>bg = current_background_hex();
-<a href=#271 id=271 data-nosnippet>271</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"framecolor" </span>=&gt; framecolor, <span class="string">"backgroundcolor" </span>=&gt; bg))
-<a href=#272 id=272 data-nosnippet>272</a>    }
-<a href=#273 id=273 data-nosnippet>273</a>  );
-<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@titledframe@title{}"</span>,
-<a href=#275 id=275 data-nosnippet>275</a>    <span class="string">"\\@@titledframe@title{{\\fboxsep8pt\\fboxrule2pt\\pagecolor{TFFrameColor}\\textcolor{TFTitleColor} {#1}}}"</span>);
-<a href=#276 id=276 data-nosnippet>276</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@titledframe@title{}"</span>,
-<a href=#277 id=277 data-nosnippet>277</a>    <span class="string">"&lt;ltx:text cssstyle='display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt'&gt;#1&lt;/ltx:text&gt;"</span>);
-<a href=#278 id=278 data-nosnippet>278</a>
-<a href=#279 id=279 data-nosnippet>279</a>  <span class="comment">//======================================================================
-<a href=#280 id=280 data-nosnippet>280</a>  // Customization macros
-<a href=#281 id=281 data-nosnippet>281</a>  // Perl: framed.sty.ltxml lines 126-130
-<a href=#282 id=282 data-nosnippet>282</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\FrameCommand"</span>,
-<a href=#283 id=283 data-nosnippet>283</a>    <span class="string">"\\setlength\\fboxrule{\\FrameRule}\\setlength\\fboxsep{\\FrameSep}\\fbox"</span>);
-<a href=#284 id=284 data-nosnippet>284</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\FirstFrameCommand"</span>, <span class="string">"\\FrameCommand"</span>);
-<a href=#285 id=285 data-nosnippet>285</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MidFrameCommand"</span>, <span class="string">"\\FrameCommand"</span>);
-<a href=#286 id=286 data-nosnippet>286</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\LastFrameCommand"</span>, <span class="string">"\\FrameCommand"</span>);
-<a href=#287 id=287 data-nosnippet>287</a>
-<a href=#288 id=288 data-nosnippet>288</a>  <span class="comment">// Registers
-<a href=#289 id=289 data-nosnippet>289</a>  // Perl: framed.sty.ltxml lines 134-142
-<a href=#290 id=290 data-nosnippet>290</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\FrameRule"</span>, <span class="macro">Dimension!</span>(<span class="string">".4pt"</span>));
-<a href=#291 id=291 data-nosnippet>291</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\FrameSep"</span>, <span class="macro">Dimension!</span>(<span class="string">"9pt"</span>));
-<a href=#292 id=292 data-nosnippet>292</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\OuterFrameSep"</span>, <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
-<a href=#293 id=293 data-nosnippet>293</a>});
+<a href=#260 id=260 data-nosnippet>260</a>      <span class="comment">// Perl: Digest(Invocation(\@titledframe@title, arg1)) — processes title in
+<a href=#261 id=261 data-nosnippet>261</a>      // the current context so it becomes part of the environment body.
+<a href=#262 id=262 data-nosnippet>262</a>      // Use gullet::unread to prepend title tokens to the input stream.
+<a href=#263 id=263 data-nosnippet>263</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(title_arg) = whatsit.get_arg(<span class="number">1</span>) {
+<a href=#264 id=264 data-nosnippet>264</a>        <span class="kw">let </span>title_tokens = title_arg.revert()<span class="question-mark">?</span>;
+<a href=#265 id=265 data-nosnippet>265</a>        <span class="kw">let </span><span class="kw-2">mut </span>inv = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@titledframe@title"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#266 id=266 data-nosnippet>266</a>        inv.extend(title_tokens.unlist());
+<a href=#267 id=267 data-nosnippet>267</a>        inv.push(<span class="macro">T_END!</span>());
+<a href=#268 id=268 data-nosnippet>268</a>        gullet::unread(Tokens::new(inv));
+<a href=#269 id=269 data-nosnippet>269</a>      }
+<a href=#270 id=270 data-nosnippet>270</a>    },
+<a href=#271 id=271 data-nosnippet>271</a>    properties =&gt; sub[_args] {
+<a href=#272 id=272 data-nosnippet>272</a>      <span class="kw">let </span>framecolor = lookup_color_hex(<span class="string">"TFFrameColor"</span>);
+<a href=#273 id=273 data-nosnippet>273</a>      <span class="kw">let </span>bg = current_background_hex();
+<a href=#274 id=274 data-nosnippet>274</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"framecolor" </span>=&gt; framecolor, <span class="string">"backgroundcolor" </span>=&gt; bg))
+<a href=#275 id=275 data-nosnippet>275</a>    }
+<a href=#276 id=276 data-nosnippet>276</a>  );
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@titledframe@title{}"</span>,
+<a href=#278 id=278 data-nosnippet>278</a>    <span class="string">"\\@@titledframe@title{{\\fboxsep8pt\\fboxrule2pt\\pagecolor{TFFrameColor}\\textcolor{TFTitleColor} {#1}}}"</span>);
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@titledframe@title{}"</span>,
+<a href=#280 id=280 data-nosnippet>280</a>    <span class="string">"&lt;ltx:text cssstyle='display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt'&gt;#1&lt;/ltx:text&gt;"</span>);
+<a href=#281 id=281 data-nosnippet>281</a>
+<a href=#282 id=282 data-nosnippet>282</a>  <span class="comment">//======================================================================
+<a href=#283 id=283 data-nosnippet>283</a>  // Customization macros
+<a href=#284 id=284 data-nosnippet>284</a>  // Perl: framed.sty.ltxml lines 126-130
+<a href=#285 id=285 data-nosnippet>285</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\FrameCommand"</span>,
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="string">"\\setlength\\fboxrule{\\FrameRule}\\setlength\\fboxsep{\\FrameSep}\\fbox"</span>);
+<a href=#287 id=287 data-nosnippet>287</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\FirstFrameCommand"</span>, <span class="string">"\\FrameCommand"</span>);
+<a href=#288 id=288 data-nosnippet>288</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MidFrameCommand"</span>, <span class="string">"\\FrameCommand"</span>);
+<a href=#289 id=289 data-nosnippet>289</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\LastFrameCommand"</span>, <span class="string">"\\FrameCommand"</span>);
+<a href=#290 id=290 data-nosnippet>290</a>
+<a href=#291 id=291 data-nosnippet>291</a>  <span class="comment">// Registers
+<a href=#292 id=292 data-nosnippet>292</a>  // Perl: framed.sty.ltxml lines 134-142
+<a href=#293 id=293 data-nosnippet>293</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\FrameRule"</span>, <span class="macro">Dimension!</span>(<span class="string">".4pt"</span>));
+<a href=#294 id=294 data-nosnippet>294</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\FrameSep"</span>, <span class="macro">Dimension!</span>(<span class="string">"9pt"</span>));
+<a href=#295 id=295 data-nosnippet>295</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\OuterFrameSep"</span>, <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+<a href=#296 id=296 data-nosnippet>296</a>});
 </code></pre></div></section></main></body></html>

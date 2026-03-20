@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["decode_math_char","decode_math_char_for_stomach","unicode_math_properties"],"struct":["MathCharProps"]};

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/whatsit.rs`."><title>whatsit.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (1e2183119 2026-03-15)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>whatsit.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::borrow::Cow;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/whatsit.rs`."><title>whatsit.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (bcf3d36c9 2026-03-19)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>whatsit.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::borrow::Cow;
 <a href=#2 id=2 data-nosnippet>2</a><span class="comment">// use std::cell::RefCell;
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>libxml::tree::Node;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::collections::VecDeque;
@@ -411,31 +411,43 @@
 <a href=#411 id=411 data-nosnippet>411</a>
 <a href=#412 id=412 data-nosnippet>412</a>  <span class="kw">fn </span>set_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, font: Rc&lt;Font&gt;) { <span class="self">self</span>.properties.insert(<span class="string">"font"</span>, Stored::Font(font)); }
 <a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a>  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
 <a href=#415 id=415 data-nosnippet>415</a>    <span class="kw">let </span>defn = <span class="self">self</span>.get_definition();
 <a href=#416 id=416 data-nosnippet>416</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = defn.get_sizer() {
 <a href=#417 id=417 data-nosnippet>417</a>      sizer(<span class="self">self</span>)
 <a href=#418 id=418 data-nosnippet>418</a>    } <span class="kw">else </span>{
 <a href=#419 id=419 data-nosnippet>419</a>      <span class="comment">// Nothing specified? use #body if any, else sum all box args
-<a href=#420 id=420 data-nosnippet>420</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>boxes = Vec::new();
-<a href=#421 id=421 data-nosnippet>421</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body_stored) = <span class="self">self</span>.get_property(<span class="string">"body"</span>) {
-<a href=#422 id=422 data-nosnippet>422</a>        <span class="kw">if let </span>Stored::Digested(<span class="kw-2">ref </span>body) = <span class="kw-2">*</span>body_stored {
-<a href=#423 id=423 data-nosnippet>423</a>          boxes.push((<span class="kw-2">*</span>body).clone());
-<a href=#424 id=424 data-nosnippet>424</a>        }
-<a href=#425 id=425 data-nosnippet>425</a>      }
-<a href=#426 id=426 data-nosnippet>426</a>      <span class="kw">if </span>boxes.is_empty() {
-<a href=#427 id=427 data-nosnippet>427</a>        <span class="comment">// no body
-<a href=#428 id=428 data-nosnippet>428</a>        </span><span class="kw">for </span>arg <span class="kw">in </span><span class="self">self</span>.args.iter().flatten() {
-<a href=#429 id=429 data-nosnippet>429</a>          boxes.extend(arg.unlist());
-<a href=#430 id=430 data-nosnippet>430</a>        }
-<a href=#431 id=431 data-nosnippet>431</a>      }
-<a href=#432 id=432 data-nosnippet>432</a>      <span class="kw">let </span>font = <span class="kw">if let </span>Stored::Font(<span class="kw-2">ref </span>sf) = <span class="kw-2">*</span><span class="self">self</span>.get_property(<span class="string">"font"</span>).unwrap() {
-<a href=#433 id=433 data-nosnippet>433</a>        sf.clone()
-<a href=#434 id=434 data-nosnippet>434</a>      } <span class="kw">else </span>{
-<a href=#435 id=435 data-nosnippet>435</a>        lookup_font().unwrap()
-<a href=#436 id=436 data-nosnippet>436</a>      };
-<a href=#437 id=437 data-nosnippet>437</a>      font.compute_boxes_size(<span class="kw-2">&amp;</span>boxes, options)
-<a href=#438 id=438 data-nosnippet>438</a>    }
-<a href=#439 id=439 data-nosnippet>439</a>  }
-<a href=#440 id=440 data-nosnippet>440</a>}
+<a href=#420 id=420 data-nosnippet>420</a>      // Perl: Whatsit.pm L252-255 — if body exists, pass it to computeBoxesSize
+<a href=#421 id=421 data-nosnippet>421</a>      // which unlists it internally (Font.pm L650-651). We replicate by extracting
+<a href=#422 id=422 data-nosnippet>422</a>      // properties from the body (mode, vattach, width) into options, then unlisting.
+<a href=#423 id=423 data-nosnippet>423</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>boxes = Vec::new();
+<a href=#424 id=424 data-nosnippet>424</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body_stored) = <span class="self">self</span>.get_property(<span class="string">"body"</span>) {
+<a href=#425 id=425 data-nosnippet>425</a>        <span class="kw">if let </span>Stored::Digested(<span class="kw-2">ref </span>body) = <span class="kw-2">*</span>body_stored {
+<a href=#426 id=426 data-nosnippet>426</a>          <span class="comment">// Perl: computeBoxesSize reads mode/vattach/width from $boxes before unlisting
+<a href=#427 id=427 data-nosnippet>427</a>          </span><span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"mode"</span>, <span class="string">"vattach"</span>, <span class="string">"width"</span>] {
+<a href=#428 id=428 data-nosnippet>428</a>            <span class="kw">if </span>options.get(<span class="kw-2">*</span>key).is_none() {
+<a href=#429 id=429 data-nosnippet>429</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(prop) = body.get_property(key) {
+<a href=#430 id=430 data-nosnippet>430</a>                options.insert(key, (<span class="kw-2">*</span>prop).clone());
+<a href=#431 id=431 data-nosnippet>431</a>              }
+<a href=#432 id=432 data-nosnippet>432</a>            }
+<a href=#433 id=433 data-nosnippet>433</a>          }
+<a href=#434 id=434 data-nosnippet>434</a>          <span class="kw">let </span>unlist_boxes = body.unlist();
+<a href=#435 id=435 data-nosnippet>435</a>          boxes.extend(unlist_boxes);
+<a href=#436 id=436 data-nosnippet>436</a>        }
+<a href=#437 id=437 data-nosnippet>437</a>      }
+<a href=#438 id=438 data-nosnippet>438</a>      <span class="kw">if </span>boxes.is_empty() {
+<a href=#439 id=439 data-nosnippet>439</a>        <span class="comment">// no body
+<a href=#440 id=440 data-nosnippet>440</a>        </span><span class="kw">for </span>arg <span class="kw">in </span><span class="self">self</span>.args.iter().flatten() {
+<a href=#441 id=441 data-nosnippet>441</a>          boxes.extend(arg.unlist());
+<a href=#442 id=442 data-nosnippet>442</a>        }
+<a href=#443 id=443 data-nosnippet>443</a>      }
+<a href=#444 id=444 data-nosnippet>444</a>      <span class="kw">let </span>font = <span class="kw">if let </span>Stored::Font(<span class="kw-2">ref </span>sf) = <span class="kw-2">*</span><span class="self">self</span>.get_property(<span class="string">"font"</span>).unwrap() {
+<a href=#445 id=445 data-nosnippet>445</a>        sf.clone()
+<a href=#446 id=446 data-nosnippet>446</a>      } <span class="kw">else </span>{
+<a href=#447 id=447 data-nosnippet>447</a>        lookup_font().unwrap()
+<a href=#448 id=448 data-nosnippet>448</a>      };
+<a href=#449 id=449 data-nosnippet>449</a>      font.compute_boxes_size(<span class="kw-2">&amp;</span>boxes, options)
+<a href=#450 id=450 data-nosnippet>450</a>    }
+<a href=#451 id=451 data-nosnippet>451</a>  }
+<a href=#452 id=452 data-nosnippet>452</a>}
 </code></pre></div></section></main></body></html>

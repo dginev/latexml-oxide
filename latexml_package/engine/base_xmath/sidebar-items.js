@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["add_column_to_math_fork","add_meaning_rec","close_math_fork","equationgroup_join_cols","equationgroup_join_rows","load_definitions","open_math_fork"]};

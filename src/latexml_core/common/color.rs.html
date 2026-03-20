@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/color.rs`."><title>color.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (1e2183119 2026-03-15)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>color.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::fmt;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/color.rs`."><title>color.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (bcf3d36c9 2026-03-19)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>color.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::fmt;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::hash::{Hash, Hasher};
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="doccomment">/// Color in a specific color model, matching Perl's LaTeXML::Common::Color hierarchy.
@@ -69,7 +69,7 @@
 <a href=#69 id=69 data-nosnippet>69</a>  <span class="doccomment">/// Convert to RGB model. Perl: $self-&gt;rgb
 <a href=#70 id=70 data-nosnippet>70</a>  </span><span class="kw">pub fn </span>to_rgb(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Color {
 <a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#72 id=72 data-nosnippet>72</a>      Color::Rgb(..) =&gt; <span class="self">self</span>.clone(),
+<a href=#72 id=72 data-nosnippet>72</a>      Color::Rgb(..) =&gt; <span class="kw-2">*</span><span class="self">self</span>,
 <a href=#73 id=73 data-nosnippet>73</a>      Color::Cmy(c, m, y) =&gt; Color::Rgb(<span class="number">1.0 </span>- c, <span class="number">1.0 </span>- m, <span class="number">1.0 </span>- y),
 <a href=#74 id=74 data-nosnippet>74</a>      Color::Cmyk(..) =&gt; <span class="self">self</span>.to_cmy().to_rgb(),
 <a href=#75 id=75 data-nosnippet>75</a>      Color::Hsb(h, s, b) =&gt; {
@@ -96,7 +96,7 @@
 <a href=#96 id=96 data-nosnippet>96</a>  <span class="doccomment">/// Convert to CMY model. Perl: $self-&gt;cmy
 <a href=#97 id=97 data-nosnippet>97</a>  </span><span class="kw">pub fn </span>to_cmy(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Color {
 <a href=#98 id=98 data-nosnippet>98</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#99 id=99 data-nosnippet>99</a>      Color::Cmy(..) =&gt; <span class="self">self</span>.clone(),
+<a href=#99 id=99 data-nosnippet>99</a>      Color::Cmy(..) =&gt; <span class="kw-2">*</span><span class="self">self</span>,
 <a href=#100 id=100 data-nosnippet>100</a>      Color::Rgb(r, g, b) =&gt; Color::Cmy(<span class="number">1.0 </span>- r, <span class="number">1.0 </span>- g, <span class="number">1.0 </span>- b),
 <a href=#101 id=101 data-nosnippet>101</a>      Color::Cmyk(c, m, y, k) =&gt; {
 <a href=#102 id=102 data-nosnippet>102</a>        Color::Cmy((c + k).min(<span class="number">1.0</span>), (m + k).min(<span class="number">1.0</span>), (y + k).min(<span class="number">1.0</span>))
@@ -109,7 +109,7 @@
 <a href=#109 id=109 data-nosnippet>109</a>  <span class="doccomment">/// Convert to CMYK model. Perl: $self-&gt;cmyk
 <a href=#110 id=110 data-nosnippet>110</a>  </span><span class="kw">pub fn </span>to_cmyk(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Color {
 <a href=#111 id=111 data-nosnippet>111</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#112 id=112 data-nosnippet>112</a>      Color::Cmyk(..) =&gt; <span class="self">self</span>.clone(),
+<a href=#112 id=112 data-nosnippet>112</a>      Color::Cmyk(..) =&gt; <span class="kw-2">*</span><span class="self">self</span>,
 <a href=#113 id=113 data-nosnippet>113</a>      Color::Cmy(c, m, y) =&gt; {
 <a href=#114 id=114 data-nosnippet>114</a>        <span class="comment">// Perl: undercolor-removal with beta parameters all = 1
 <a href=#115 id=115 data-nosnippet>115</a>        </span><span class="kw">let </span>k = c.min(<span class="kw-2">*</span>m).min(<span class="kw-2">*</span>y);
@@ -129,7 +129,7 @@
 <a href=#129 id=129 data-nosnippet>129</a>  <span class="doccomment">/// Convert to HSB model. Perl: $self-&gt;hsb
 <a href=#130 id=130 data-nosnippet>130</a>  </span><span class="kw">pub fn </span>to_hsb(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Color {
 <a href=#131 id=131 data-nosnippet>131</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#132 id=132 data-nosnippet>132</a>      Color::Hsb(..) =&gt; <span class="self">self</span>.clone(),
+<a href=#132 id=132 data-nosnippet>132</a>      Color::Hsb(..) =&gt; <span class="kw-2">*</span><span class="self">self</span>,
 <a href=#133 id=133 data-nosnippet>133</a>      Color::Rgb(r, g, b) =&gt; {
 <a href=#134 id=134 data-nosnippet>134</a>        <span class="comment">// Perl: rgb.pm Phi function + hsb dispatch
 <a href=#135 id=135 data-nosnippet>135</a>        </span><span class="kw">let </span>i =
@@ -156,7 +156,7 @@
 <a href=#156 id=156 data-nosnippet>156</a>  <span class="doccomment">/// Convert to gray model. Perl: $self-&gt;gray
 <a href=#157 id=157 data-nosnippet>157</a>  </span><span class="kw">pub fn </span>to_gray(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Color {
 <a href=#158 id=158 data-nosnippet>158</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#159 id=159 data-nosnippet>159</a>      Color::Gray(..) =&gt; <span class="self">self</span>.clone(),
+<a href=#159 id=159 data-nosnippet>159</a>      Color::Gray(..) =&gt; <span class="kw-2">*</span><span class="self">self</span>,
 <a href=#160 id=160 data-nosnippet>160</a>      Color::Rgb(r, g, b) =&gt; Color::Gray(<span class="number">0.3 </span>* r + <span class="number">0.59 </span>* g + <span class="number">0.11 </span>* b),
 <a href=#161 id=161 data-nosnippet>161</a>      Color::Cmy(c, m, y) =&gt; Color::Gray(<span class="number">1.0 </span>- (<span class="number">0.3 </span>* c + <span class="number">0.59 </span>* m + <span class="number">0.11 </span>* y)),
 <a href=#162 id=162 data-nosnippet>162</a>      Color::Cmyk(c, m, y, k) =&gt; {
@@ -174,7 +174,7 @@
 <a href=#174 id=174 data-nosnippet>174</a>      <span class="string">"cmyk" </span>=&gt; <span class="self">self</span>.to_cmyk(),
 <a href=#175 id=175 data-nosnippet>175</a>      <span class="string">"hsb" </span>=&gt; <span class="self">self</span>.to_hsb(),
 <a href=#176 id=176 data-nosnippet>176</a>      <span class="string">"gray" </span>=&gt; <span class="self">self</span>.to_gray(),
-<a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">_ </span>=&gt; <span class="self">self</span>.clone(),
+<a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">_ </span>=&gt; <span class="kw-2">*</span><span class="self">self</span>,
 <a href=#178 id=178 data-nosnippet>178</a>    }
 <a href=#179 id=179 data-nosnippet>179</a>  }
 <a href=#180 id=180 data-nosnippet>180</a>
@@ -248,12 +248,12 @@
 <a href=#248 id=248 data-nosnippet>248</a>  /// Perl: if base is gray, convert to other's model; else convert other to base's model.
 <a href=#249 id=249 data-nosnippet>249</a>  </span><span class="kw">fn </span>align_models(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Color) -&gt; (Color, Color) {
 <a href=#250 id=250 data-nosnippet>250</a>    <span class="kw">if </span><span class="self">self</span>.model() == other.model() {
-<a href=#251 id=251 data-nosnippet>251</a>      <span class="kw">return </span>(<span class="self">self</span>.clone(), other.clone());
+<a href=#251 id=251 data-nosnippet>251</a>      <span class="kw">return </span>(<span class="kw-2">*</span><span class="self">self</span>, <span class="kw-2">*</span>other);
 <a href=#252 id=252 data-nosnippet>252</a>    }
 <a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">if </span><span class="self">self</span>.model() == <span class="string">"gray" </span>{
-<a href=#254 id=254 data-nosnippet>254</a>      (<span class="self">self</span>.convert(other.model()), other.clone())
+<a href=#254 id=254 data-nosnippet>254</a>      (<span class="self">self</span>.convert(other.model()), <span class="kw-2">*</span>other)
 <a href=#255 id=255 data-nosnippet>255</a>    } <span class="kw">else </span>{
-<a href=#256 id=256 data-nosnippet>256</a>      (<span class="self">self</span>.clone(), other.convert(<span class="self">self</span>.model()))
+<a href=#256 id=256 data-nosnippet>256</a>      (<span class="kw-2">*</span><span class="self">self</span>, other.convert(<span class="self">self</span>.model()))
 <a href=#257 id=257 data-nosnippet>257</a>    }
 <a href=#258 id=258 data-nosnippet>258</a>  }
 <a href=#259 id=259 data-nosnippet>259</a>
