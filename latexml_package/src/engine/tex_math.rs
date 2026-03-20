@@ -755,7 +755,8 @@ LoadDefinitions!({
       use latexml_core::binding::def::dialect::get_xmarg_id;
 
       // Extract key-value pairs from arg 2
-      let (role_kv, meaning_kv, thickness_kv, has_left, has_right) = {
+      // Store left/right as Stored::Tokens so template #left/#right can absorb them
+      let (role_kv, meaning_kv, thickness_kv, has_left, has_right, left_val, right_val) = {
         let arg2 = whatsit.get_arg(2);
         if let Some(d) = arg2 {
           use latexml_core::digested::DigestedData;
@@ -763,16 +764,29 @@ LoadDefinitions!({
             let role = kv.get_value("role").map(ToString::to_string);
             let meaning = kv.get_value("meaning").map(ToString::to_string);
             let thickness = kv.get_value("thickness").map(ToString::to_string);
-            let has_left = kv.get_value("left").is_some();
-            let has_right = kv.get_value("right").is_some();
-            (role, meaning, thickness, has_left, has_right)
+            let left_val = kv.get_value("left").map(|v| v.clone());
+            let right_val = kv.get_value("right").map(|v| v.clone());
+            let has_left = left_val.is_some();
+            let has_right = right_val.is_some();
+            (role, meaning, thickness, has_left, has_right, left_val, right_val)
           } else {
-            (None, None, None, false, false)
+            (None, None, None, false, false, None::<ArgWrap>, None::<ArgWrap>)
           }
         } else {
-          (None, None, None, false, false)
+          (None, None, None, false, false, None, None)
         }
       };
+      // Store left/right as Tokens properties for template #left/#right absorption
+      use latexml_core::definition::argument::ArgWrap;
+      for (key, val_opt) in [("left", &left_val), ("right", &right_val)] {
+        if let Some(val) = val_opt {
+          if let ArgWrap::Tokens(ref ts) = val {
+            whatsit.set_property(key, Stored::Tokens(ts.clone()));
+          } else {
+            whatsit.set_property(key, Stored::String(arena::pin(val.to_string())));
+          }
+        }
+      }
 
       // Determine mathstyle from current font
       let style = lookup_font()
@@ -821,7 +835,7 @@ LoadDefinitions!({
 
       // For delimited variants, set up XMDual keys
       if has_left || has_right {
-        whatsit.set_property("needXMDual", true);
+        whatsit.set_property("needXMDual", "1");
         let key0 = get_xmarg_id()?;
         let key1 = get_xmarg_id()?;
         let key2 = get_xmarg_id()?;

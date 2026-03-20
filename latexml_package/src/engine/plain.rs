@@ -177,12 +177,13 @@ LoadDefinitions!({
   //======================================================================
   // \choose & friends, also need VERY special argument handling
 
+  // Perl: math_common.pool.ltxml L634-642 — no braces around left/right values
   DefMacro!("\\choose",
-    "\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left={\\lx@left(},right={\\lx@right)}}");
+    "\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left=\\lx@left(,right=\\lx@right)}");
   DefMacro!("\\brace",
-    "\\lx@generalized@over{\\brace}{thickness=0pt,left={\\lx@left\\{},right={\\lx@right\\}}}");
+    "\\lx@generalized@over{\\brace}{thickness=0pt,left=\\lx@left\\{,right=\\lx@right\\}}");
   DefMacro!("\\brack",
-    "\\lx@generalized@over{\\brack}{thickness=0pt,left={\\lx@left[},right={\\lx@right]}}");
+    "\\lx@generalized@over{\\brack}{thickness=0pt,left=\\lx@left[,right=\\lx@right]}");
 
 
   //======================================================================
