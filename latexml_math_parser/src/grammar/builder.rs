@@ -106,6 +106,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     // Composed functions: f∘g, sin∘cos — these can then be applied as functions
     // COMPOSEOP operates on function-level operands (curry level 2)
+    // Left-to-right associative (matching Perl): f∘g∘h = (f∘g)∘h
     composed_term = function composeop function => infix_apply
       | function composeop trigfunction => infix_apply
       | function composeop opfunction => infix_apply
@@ -115,6 +116,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | opfunction composeop function => infix_apply
       | opfunction composeop trigfunction => infix_apply
       | opfunction composeop opfunction => infix_apply
+      // Left-recursive for left-to-right associativity
       | composed_term composeop function => infix_apply
       | composed_term composeop trigfunction => infix_apply
       | composed_term composeop opfunction => infix_apply;
