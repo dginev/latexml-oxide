@@ -582,13 +582,63 @@ LoadDefinitions!({
 
   // Perl: latex_constructs.pool.ltxml L2174-2191
   // \lx@equationgroup@subnumbering@begin/end — subequation numbering
-  // TODO: Full implementation with counter save/restore and \theequation redefinition.
-  // Current stub just opens/closes the equationgroup element.
+  // Perl: latex_constructs.pool.ltxml L2174-2191
   DefConstructor!("\\lx@equationgroup@subnumbering@begin",
-    "<ltx:equationgroup>");
+    "<ltx:equationgroup xml:id='#id'>#tags",
+    after_digest => sub[whatsit] {
+      use latexml_core::binding::counter::dialect::reset_counter;
+      use latexml_core::mouth;
+      // Step the equation counter and get properties (id, refnum, tags)
+      let eqn_props = ref_step_counter("equation", false)?;
+      // Expand \theequation to get the parent equation number text
+      let eqnum_toks = gullet::do_expand(T_CS!("\\theequation"))?;
+      let eqnum_str = eqnum_toks.to_string();
+      // Save current equation counter value
+      let saved = state::lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
+        match rv {
+          RegisterValue::Number(n) => n.0,
+          _ => 0,
+        }
+      });
+      state::assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
+      // Set properties on the whatsit
+      for (k, v) in eqn_props {
+        whatsit.set_property(&arena::to_string(k), v);
+      }
+      // Reset equation counter to 0
+      reset_counter(&T_OTHER!("equation"))?;
+      // Redefine \theequation to parent_number + \alph{equation}
+      let new_theequation = format!("{}\\alph{{equation}}", eqnum_str);
+      def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
+      // Redefine \theequation@ID for xml:id generation
+      if let Some(id_val) = whatsit.get_property("id") {
+        let id_str = match &*id_val {
+          Stored::String(s) => arena::to_string(*s),
+          other => other.to_string(),
+        };
+        let new_id_macro = format!("{}.\\@equation@ID", id_str);
+        def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(&new_id_macro), None)?;
+      }
+    });
+  Tag!("ltx:equationgroup", auto_close => true);
   DefConstructor!("\\lx@equationgroup@subnumbering@end",
     sub[document, _args, _props] {
       document.maybe_close_element("ltx:equationgroup")?;
+    },
+    after_digest => {
+      // Restore the saved equation counter
+      if let Some(saved) = state::lookup_value("SAVED_EQUATION_NUMBER") {
+        let n = match saved {
+          Stored::Number(n) => n.0,
+          _ => 0,
+        };
+        state::assign_register(
+          "\\c@equation",
+          Number::new(n).into(),
+          Some(state::Scope::Global),
+          Vec::new(),
+        )?;
+      }
     });
 
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
