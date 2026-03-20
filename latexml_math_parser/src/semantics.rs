@@ -1030,7 +1030,8 @@ pub fn apply_invisible_times(
     }
   }
   // Mixed number detection: NUMBER followed by FRACOP → invisible plus
-  // Perl: 2\frac{3}{4} = 2 + 3/4, not 2 × 3/4
+  // Perl: 2\frac{3}{4} = 2 + 3/4; 123\frac{12}{34} = 123 + 12/34 (all-integer)
+  // But 123\frac{12.0}{34} = 123 × 12.0/34 (decimal → not mixed number)
   let l_num = is_number(&left);
   let mut r_frac = is_fracop(&right);
   // Also check via nodes: if right is a Lexeme pointing to a DOM node with FRACOP inside
