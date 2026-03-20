@@ -88,42 +88,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator function => prefix_apply
       | operator compound_operator => prefix_apply;
 
-    // tight_term: ALWAYS compound (2+ atoms). Single atoms are `factor`.
-    // This prevents `\log x` from parsing as `(\log) * x` via invisible_times.
-    // Non-recursive base rules (factor + something):
-    // Use atom_factor_base (not factor) as left of invisible_times to prevent
-    // opfunction from triggering invisible times (e.g. \log x should NOT be log*x)
-    // NOTE: factor can still appear as RIGHT side (any factor type)
-    // NOTE: scripted factors and fenced factors CAN trigger invisible times
-    //       because they're added to tight_term via += rules below
-    tight_term = factor factor => apply_invisible_times
-      | factor postfix => apply_postfix
-      | function factor => prefix_apply
-      | trigfunction factor => prefix_apply
-      | any_bigop factor => prefix_apply
-      | composed_bigop factor => prefix_apply
-      | compound_operator factor => prefix_apply
-      | operator factor => prefix_apply
-      | factor_base applyop factor => prefix_apply_applyop;
-    // factor followed by a standalone function: `2 \sin` = `2 * sin`
-    // Recursive extensions (tight_term + something):
-    // NOTE: `factor tight_term` is intentionally NOT here — it causes exponential
-    // ambiguity for `a b c` sequences. This means `2 \sin(x)` doesn't parse.
-    // TODO: find a targeted approach for factor * function-application.
-    tight_term += tight_term factor => apply_invisible_times
+    // tight_term includes single factors (for left-recursive chaining)
+    // and all compound constructs (invisible times, prefix application, etc.)
+    // The `\log x` → `log*x` issue is handled by semantic pruning in
+    // apply_invisible_times, not at the grammar level.
+    tight_term = factor
+      | tight_term factor => apply_invisible_times
+      // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
       | tight_term postfix => apply_postfix
       | function tight_term => prefix_apply
       | trigfunction tight_term => prefix_apply
       | any_bigop tight_term => prefix_apply
       | composed_bigop tight_term => prefix_apply
       | compound_operator tight_term => prefix_apply
+      | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop;
 
-    term = tight_term | factor
+    term = tight_term
     | term mulop tight_term => infix_apply_nary
-    | term mulop factor => infix_apply_nary
     | term mulop tight_term elideop => infix_apply_and_elide
-    | term mulop factor elideop => infix_apply_and_elide
     // Perl: COMPOSEOP creates function composition (f∘g)
     // Functions can participate as operands of composition
     | term composeop term => infix_apply
@@ -151,7 +134,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | expression addop term => infix_apply_nary
       | expression addop term elideop => infix_apply_and_elide
       | addop tight_term => prefix_apply
-      | addop factor => prefix_apply
       | factor addop => postfix_apply
       // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
       // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
