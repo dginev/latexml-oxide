@@ -757,6 +757,33 @@ pub fn fence(
     ..XProps::default()
   }
   .into();
+  // Change VERTBAR separators inside fences to MIDDLE role
+  // (Perl: Fence sets middle delimiter role to MIDDLE)
+  // Separators are at odd indices in [open, item, sep, item, ..., close]
+  let mut stuff = stuff;
+  for i in (2..stuff.len().saturating_sub(1)).step_by(2) {
+    match &mut stuff[i] {
+      XM::Token(ref mut props, _) if props.role.as_deref() == Some("VERTBAR") => {
+        props.role = Some(Cow::Borrowed("MIDDLE"));
+      },
+      XM::Lexeme(ref lex, ref meta) if lex.starts_with("VERTBAR:") => {
+        // For lexemes, change the role on the underlying DOM node
+        if let Some(ref cv) = meta.curry_level {
+          let cv_str = cv.to_string();
+          if let Some(idx_str) = cv_str.strip_prefix(':') {
+            if let Ok(lex_idx) = idx_str.parse::<usize>() {
+              let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
+              if idx < ctxt.nodes.len() {
+                let mut node = ctxt.nodes[idx].clone();
+                let _ = node.set_attribute("role", "MIDDLE");
+              }
+            }
+          }
+        }
+      },
+      _ => {},
+    }
+  }
   interpret_delimited(op, stuff, ctxt).map(Option::Some)
 }
 
