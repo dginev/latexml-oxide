@@ -695,6 +695,12 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+      // Perl: setBody(getArg(1)->unlist, undef) — sets body for tex= generation
+      if let Some(arg) = whatsit.get_arg(1) {
+        let mut body = arg.unlist();
+        body.push(Digested::default()); // sentinel for trailer (popped by set_body)
+        whatsit.set_body(body);
+      }
     },
     reversion => "\\begin{multline}#1\\end{multline}",
     after_construct => sub[document, whatsit] {
@@ -719,6 +725,11 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+      if let Some(arg) = whatsit.get_arg(1) {
+        let mut body = arg.unlist();
+        body.push(Digested::default());
+        whatsit.set_body(body);
+      }
     },
     reversion => "\\begin{multline*}#1\\end{multline*}",
     after_construct => sub[document, whatsit] {
@@ -751,6 +762,11 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+      if let Some(arg) = whatsit.get_arg(1) {
+        let mut body = arg.unlist();
+        body.push(Digested::default());
+        whatsit.set_body(body);
+      }
     },
     reversion => "\\multline#1\\endmultline",
     after_construct => sub[document, whatsit] {
