@@ -35,6 +35,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rparen = "CLOSE:)");
   token!(lbracket = "OPEN:[");
   token!(rbracket = "CLOSE:]");
+  token!(relop_equals = "RELOP:equals");
   token!(metarelop ~ "METARELOP");
   token!(modifierop ~ "MODIFIEROP");
   token!(modifier ~ "MODIFIER");
@@ -117,8 +118,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
     formula_list = expression punct expression => formula_list_apply
       | formula_list punct expression => formula_list_apply;
+    // Perl MathGrammar L709-711: Two-part relops (>=, <=, <<, >>)
+    two_part_relop = langle_rel langle_rel => two_part_relop_combine
+      | rangle_rel rangle_rel => two_part_relop_combine
+      | langle_rel relop_equals => two_part_relop_combine
+      | rangle_rel relop_equals => two_part_relop_combine;
+
     formula = expression
       | formula relop expression => infix_relation
+      | formula two_part_relop expression => infix_relation
       | formula relop formula_list => infix_relation
       | formula relop => postfix_relop
       | formula arrow expression => infix_relation

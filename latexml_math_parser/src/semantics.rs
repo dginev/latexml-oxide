@@ -595,6 +595,50 @@ pub fn postfix_apply(
   )))
 }
 
+/// Perl MathGrammar L709-711: TwoPartRelop — combines two adjacent relops.
+/// E.g. `>=` → "greater-than-or-equals", `<<` → "much-less-than"
+pub fn two_part_relop_combine(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => op1, op2);
+  // Extract meanings from the lexeme nodes
+  let (m1, content1) = if let Some(XM::Lexeme(ref lex, _)) = op1 {
+    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let m = node.get_attribute("meaning").unwrap_or_default();
+    let c = node.get_content();
+    (m, c)
+  } else {
+    (String::new(), String::new())
+  };
+  let (m2, content2) = if let Some(XM::Lexeme(ref lex, _)) = op2 {
+    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let m = node.get_attribute("meaning").unwrap_or_default();
+    let c = node.get_content();
+    (m, c)
+  } else {
+    (String::new(), String::new())
+  };
+  // Perl: TwoPartRelop logic
+  let meaning = if m1 == m2 {
+    format!("much-{m1}")
+  } else {
+    format!("{m1}-or-{m2}")
+  };
+  let content = format!("{content1}{content2}");
+  Ok(Some(XM::Token(
+    XProps {
+      role: Some(Cow::Borrowed("RELOP")),
+      meaning: Some(Cow::Owned(meaning)),
+      content: Some(Cow::Owned(content)),
+      ..XProps::default()
+    },
+    Meta::default(),
+  )))
+}
+
 pub fn fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
