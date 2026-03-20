@@ -150,7 +150,6 @@ fn subordinate_lists_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn terms_test() {
   latexml_test_single("tests/parse/terms.tex", "terms", DIR, None, None);
 }
