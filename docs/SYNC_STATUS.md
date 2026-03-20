@@ -416,7 +416,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
 - [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
 - [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
-- [ ] **9. sizes_test** (22_fonts) — 1 diff line (was 313→181→19→6→4→1). Fixed: per-size font metrics (cmm7/cmm5 from cmmi7.tfm/cmmi5.tfm) fixed 3 script width diffs. Remaining: vtop+tabular width overflow (469.75pt vs 37.05pt, needs Perl List() singleton simplification for vertical layouts).
+- [ ] **9. sizes_test** (22_fonts) — 1 diff line (was 313→181→19→6→4→1). Fixed: per-size font metrics, VBoxContents mode property fix (vtop+tabular now correct). Remaining: \vbox{hop} width needs paragraph wrapping at \hsize (5.55pt vs 469.75pt).
 - [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
