@@ -433,7 +433,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **2. eqnums_test** (50_structure) — DONE. MathFork xml:id, prefix_relop_apply, tex= mbox synthesis, tag font italic wrapping (XMArg box font family="math" detection in floating script rewrite). 0 diffs.
 - [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
-- [ ] **30. amsdisplay_test** (56_ams) — 842 diffs. MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
+- [ ] **30. amsdisplay_test** (56_ams) — 12 diffs (was 842). Ported subequations counter save/restore (`\lx@equationgroup@subnumbering@begin/end` with RefStepCounter, ResetCounter, \theequation redefinition). Remaining 12 diffs: same 3 systemic issues as amsarticle (lpadding from \quad, multline tex=, multline +i prefix parse).
 - [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
 - [ ] **32. sideset_test** (56_ams) — 315 diffs (was 488). Added \sideset stub (pass-through to base #3). **TODO:** Full sidesetWrap script handling with pre/post sub/superscript individual wrapping per Perl L1227-1234.
 
@@ -462,7 +462,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Incomplete stubs requiring full implementation:
 
 - **\\sideset** (amsmath_sty.rs): Stub passes through base #3 only. Full Perl implementation (L1183-1234) needs sidesetWrap with individual pre/post sub/superscript handling, scriptpos calculation, and FLOATING detection.
-- **\\lx@equationgroup@subnumbering@begin/end** (latex_ch7_math_mode_environments.rs): Stub opens/closes equationgroup. Full Perl implementation needs counter save/restore (SAVED_EQUATION_NUMBER), ResetCounter('equation'), DefMacroI for \\theequation with subnumbering suffix.
+- **\\lx@equationgroup@subnumbering@begin/end** (latex_ch7_math_mode_environments.rs): DONE. Full counter save/restore with RefStepCounter, ResetCounter, \theequation redefinition.
 - **mathtools.sty** (mathtools_sty.rs): \\DeclarePairedDelimiter family, \\newtagform/\\renewtagform, \\newgathered, \\smashoperator all stubbed as DefMacro None. Full Perl implementations need runtime macro factory closures.
 - **\\lxDeclare** (latexml_sty.rs): Simplified post-hoc matching vs Perl's full DeclarationRewrite system with XPath patterns, scope limiting, afterConstruct hook. Mathcode-decoded and name-attribute matching added as workarounds.
 - **diagbox.sty** (diagbox_sty.rs): Stub with simple macros. Full Perl implementation (164 lines) has diagonal line drawing, SVG generation, width calculation.
