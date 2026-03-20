@@ -147,6 +147,38 @@ LoadDefinitions!({
     PrimitiveOptions::default(),
   )?;
 
+  // Perl latexml.sty L354-371: \lxDefMath{\name}[nargs][optional]{presentation}[keyvals]
+  // Defines a math macro with semantic annotations (name, meaning, role, etc.)
+  DefPrimitive!("\\lxDefMath {} [Number] [] {} OptionalKeyVals:XMath", sub[(cs, nargs, opt, presentation, params_opt)] {
+    let cs_name = cs.to_string();
+    let n = nargs.value_of() as usize;
+    // Extract semantic properties from keyvals
+    let mut opts = MathPrimitiveOptions::default();
+    if let Some(kv) = params_opt.as_ref() {
+      if let Some(v) = kv.get_value("name") { opts.name = Some(v.to_string()); }
+      if let Some(v) = kv.get_value("meaning") { opts.meaning = Some(v.to_string()); }
+      if let Some(v) = kv.get_value("role") { opts.role = Some(v.to_string()); }
+      if let Some(v) = kv.get_value("cd") { opts.omcd = Some(v.to_string()); }
+      if let Some(v) = kv.get_value("alias") { opts.alias = Some(v.to_string()); }
+    }
+    // Build parameter spec for n args
+    use latexml_core::common::def_parser::parse_parameters;
+    let params = if n > 0 {
+      let spec = (0..n).map(|_| "{}").collect::<Vec<_>>().join("");
+      parse_parameters(&spec, &T_CS!(&cs_name), true)?
+    } else {
+      None
+    };
+    // Create the math definition
+    let presentation_str = presentation.to_string();
+    def_math(
+      T_CS!(&cs_name),
+      params,
+      presentation_str,
+      opts,
+    )?;
+  });
+
   // Perl latexml.sty L106-108: \URL[text]{href}
   DefConstructor!("\\URL[] Verbatim",
     "<ltx:ref href='#href'>?#1(#1)(#href)</ltx:ref>",
