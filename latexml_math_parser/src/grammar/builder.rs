@@ -68,8 +68,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
   rules!(
     // Factors
-    // opfunction is NOT a factor — it requires an argument.
-    // It only appears in dedicated opfunction rules (fenced_factor, tight_term, factor).
+    // opfunction/function/trigfunction are NOT factors — they require arguments.
+    // Standalone usage is handled at the term level (term += function | ...).
+    // `2 \sin` is handled via dedicated tight_term rules below.
     factor_base = unknown | number | id | atom;
     factor = factor_base;
     // Terms
@@ -104,6 +105,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | compound_operator factor => prefix_apply
       | operator factor => prefix_apply
       | factor_base applyop factor => prefix_apply_applyop;
+    // factor followed by a standalone function: `2 \sin` = `2 * sin`
+    tight_term += factor function => apply_invisible_times;
+    tight_term += factor trigfunction => apply_invisible_times;
+    tight_term += factor opfunction => apply_invisible_times;
     // Recursive extensions (tight_term + something):
     tight_term += tight_term factor => apply_invisible_times
       | tight_term postfix => apply_postfix
