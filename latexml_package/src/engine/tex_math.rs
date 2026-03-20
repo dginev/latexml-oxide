@@ -776,12 +776,16 @@ LoadDefinitions!({
           (None, None, None, false, false, None, None)
         }
       };
-      // Store left/right as Tokens properties for template #left/#right absorption
+      // Store left/right as pre-digested Stored::Digested for template #left/#right.
+      // The template's #prop lookup converts Stored→Option<Digested> for absorption.
+      // Stored::Tokens doesn't convert, but Stored::Digested does.
       use latexml_core::definition::argument::ArgWrap;
       for (key, val_opt) in [("left", &left_val), ("right", &right_val)] {
         if let Some(val) = val_opt {
           if let ArgWrap::Tokens(ref ts) = val {
-            whatsit.set_property(key, Stored::Tokens(ts.clone()));
+            // Digest the tokens now (during after_digest phase) to get a Digested value
+            let d = stomach::digest(ts.clone())?;
+            whatsit.set_property(key, Stored::Digested(d));
           } else {
             whatsit.set_property(key, Stored::String(arena::pin(val.to_string())));
           }
