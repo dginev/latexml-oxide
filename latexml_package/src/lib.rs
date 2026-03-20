@@ -153,6 +153,9 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "xkeyval.sty" => package::xkeyval_sty::load_definitions(),
     "xcolor.sty" => package::xcolor_sty::load_definitions(),
     "framed.sty" => package::framed_sty::load_definitions(),
+    "tabularx.sty" => package::tabularx_sty::load_definitions(),
+    "slashbox.sty" => package::slashbox_sty::load_definitions(),
+    "diagbox.sty" => package::diagbox_sty::load_definitions(),
     _other => return None,
   })
 }
