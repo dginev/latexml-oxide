@@ -1195,6 +1195,11 @@ fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   let content = xcell.get_content();
   let mut inferred_classes: Vec<ColumnSpec> = Vec::new();
+  // Perl: /^[\s\d]+$/ — \d matches ASCII digits only in Perl 5.
+  // Use is_numeric() which also matches mathematical digits (𝟘-𝟟) and superscript/subscript digits.
+  // This enables header detection for bbold fontmaps where double-struck digits differ from symbols.
+  // Note: circled digits (①-⑳ etc.) also match; this differs from Perl but the effect is benign
+  // for most tables since circled digits appear only in specialized fontmaps.
   if !content.is_empty() && content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
     inferred_classes.push(ColumnSpec::Integer);
   } else {
@@ -1349,7 +1354,6 @@ fn alignment_characterize_lines(
     return Ok(());
   }
   let tab_threshold = min_diff + 0.3 * (max_diff - min_diff);
-  // eprintln!("Differences {min_diff} -- {max_diff} => threshold = {tab_threshold}");
 
   // eprintln!("Differences {min_diff} -- {max_diff} => threshold = {tab_threshold}");
   // Find the first hump in differences. These are candidates for header lines.
