@@ -433,11 +433,14 @@ impl BoxOps for Alignment {
     _options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     normalize_alignment(self)?;
-    Ok((
-      self.cached_width.unwrap(),
-      self.cached_height.unwrap(),
-      self.cached_depth.unwrap(),
-    ))
+    let w = self.cached_width.unwrap();
+    let h = self.cached_height.unwrap();
+    let d = self.cached_depth.unwrap();
+    // Store in properties so get_size()'s has_property("cached_width") check works
+    self.properties.insert("cached_width", Stored::Dimension(w));
+    self.properties.insert("cached_height", Stored::Dimension(h));
+    self.properties.insert("cached_depth", Stored::Dimension(d));
+    Ok((w, h, d))
   }
 
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
@@ -1339,12 +1342,10 @@ fn alignment_characterize_lines(
   // avg_diff = avg_diff / (n - 1) as f64;
   if max_diff < 0.05 {
     // virtually no differences.
-    // eprintln!("Lines are almost identical => Fail (max_diff={max_diff})");
     return Ok(());
   }
   if (n > 2) && ((max_diff - min_diff) < max_diff * 0.5) {
     // differences too similar to establish pattern
-    // eprintln!("Differences between lines are almost identical => Fail (max={max_diff}, min={min_diff})");
     return Ok(());
   }
   let tab_threshold = min_diff + 0.3 * (max_diff - min_diff);
@@ -1566,10 +1567,11 @@ fn alignment_match_lines(
 /// lines. We'll assume the 1st line is data, compare it to following lines,
 /// but also accept `continuation' data lines.
 ///
-/// Note: Perl's continuation-line logic (accepting mostly-empty outlier rows) is effectively
-/// dead code due to `scalar($::TABLINES[0])` evaluating to a memory address instead of an
-/// array length. We match that behavior: break on any diff >= threshold.
-/// See KNOWN_PERL_ERRORS.md for details.
+/// Note: Perl's continuation-line logic (L1336-1339) is effectively dead code:
+/// `scalar($::TABLINES[0])` evaluates to an array ref's memory address (huge number),
+/// making `0.4 * huge` very large, so `count_empty <= huge` is always true.
+/// The condition `($n < 2) || true` = true, so the `last if` simplifies to just
+/// `last if diff >= threshold`. We match this behavior.
 fn alignment_skip_data(
   i: usize,
   tab_threshold: f64,
@@ -1580,7 +1582,6 @@ fn alignment_skip_data(
   if i >= tab_lines_length {
     return 0;
   }
-  // eprintln!("Scanning for data at {i}");
   let mut n = 1;
   while i + n < tab_lines_length {
     if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold {
@@ -1588,7 +1589,6 @@ fn alignment_skip_data(
     }
     n += 1;
   }
-  // eprintln!("Found {n} data lines at {i}");
   if n >= MIN_ALIGNMENT_DATA_LINES { n } else { 0 }
 }
 

@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-19):** 230 pass, 0 fail, 89 ignored (319 total). Session 9: script_sizer proper font metrics (removed 0.8 hack, added \scriptspace, nominal fontinfo ratios), dimension_to_spaces floor() precedence fix, tabular strut fixes (isLaTeX flag, baselineskip not *1.5, Glue type handling, kround). Diff reductions: sizes 19→6.
+**Status (2026-03-19):** 231 pass, 0 fail, 88 ignored (319 total). Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
 
 ### Completed items
 
@@ -408,7 +408,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
 - [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
 - [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
-- [ ] **9. sizes_test** (22_fonts) — 6 diff lines (was 313→181→19→6). Fixed: script_sizer h/d (font metrics), dimension_to_spaces floor() bug, tabular strut (isLaTeX, baselineskip, Glue type, kround). Remaining: super/subscript widths (3), halign zero dims (2), vtop width overflow (1).
+- [ ] **9. sizes_test** (22_fonts) — 4 diff lines (was 313→181→19→6→4). Fixed: script_sizer h/d (font metrics), dimension_to_spaces floor() bug, tabular strut (isLaTeX, baselineskip, Glue type, kround), Alignment compute_size_and_cache properties sync (halign zero dims fix). Remaining: super/subscript widths (3), vtop+tabular width overflow (1, needs readBoxContents matching Perl).
 - [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
@@ -446,12 +446,12 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 These are differences discovered by comparing `LaTeXML/t/*.xml` with `latexml_oxide/tests/*.xml`.
 Tests currently pass against Rust expected XMLs, but Rust output diverges from updated Perl.
 
-- [ ] **P1. guessTableHeaders update** — Perl updated header detection: `<thead>` wrapper with `thead="column"`. Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`. BLOCKED: needs guessTableHeaders post-processing port.
+- [ ] **P1. guessTableHeaders differences** — Row analysis finds fewer data lines in Rust (alignment_skip_data comparison threshold triggers earlier). Root cause: `alignment_compare` produces different diff values for adjacent rows, likely due to cell content differences (Rust ding fontmap produces `?` for unmapped positions while Perl leaves empty). Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`. NOTE: Perl's continuation-line logic (L1336-1339) is dead code — `scalar($::TABLINES[0])` evaluates to array ref address.
 - [x] **P2. ltx_figure_panel CSS class** — DONE. `arrange_panels` now marks all non-metadata children. Synced `figure_grids.xml`.
 - [x] **P3. DIFFOP recognition in math parser** — DONE. Grammar rule `factor += unknown factor_base => diffop_apply` with INTOP context check. Synced `dots.xml`.
 - [x] **P4. Titled frame support** — DONE. Fixed `after_digest_begin` to use `gullet::unread`. Synced `framed.xml`.
 - [ ] **P5. xcolors.xml fixes** — Color complement/wheel computation errors, missing `pt` units in calc output, `colortbl` row cycling broken (all "row 0"), missing `ltx_guessed_headers` class. Affects: `graphics/xcolors.xml` (~688 line diff). BLOCKED: needs color model + guessTableHeaders.
-- [ ] **P6. RDFa support** — Perl handles RDFa attributes (`property=`, `typeof=`, `resource=`). Rust produces ERROR nodes. Affects: `complex/aliceblog.xml`. BLOCKED: needs RDFa infrastructure.
+- [x] **P6. RDFa support** — DONE. Full lxRDFa.sty binding: DefKeyVal for RDFa family, `\lxRDFa`, `\lxRDFAnnotate`, `\lxRDF` preamble/body, `\lxRDFaPrefix`, `\ref` detection. aliceblog_test passes.
 - N/A **P7. Daemon format fixes** — OUT OF SCOPE. The Rust port does not currently include daemonized functionality. Daemon tests are not tracked.
 
 ### Tier 4: Needs major infrastructure
