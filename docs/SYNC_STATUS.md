@@ -426,7 +426,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [ ] **30. amsdisplay_test** (56_ams) — 842 diffs. MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
-- [ ] **31. matrix_test** (56_ams) — 187 diffs. BLOCKED: needs afterConstruct + math parser.
+- [ ] **31. matrix_test** (56_ams) — 164 diffs (down from 187). Matrix delimiter tokens fixed (left/right as Stored::Tokens).
 - [ ] **32. sideset_test** (56_ams) — 488 diffs. BLOCKED: needs afterConstruct.
 
 ### Tier 3: Needs package bindings (moderate effort)
