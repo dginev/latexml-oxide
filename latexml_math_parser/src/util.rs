@@ -32,12 +32,30 @@ pub fn node_to_grammar_lexemes_from(
   }
   for node in child_nodes.into_iter() {
     if node.get_name() == "XMApp" && node.get_attribute("role").is_some() {
-      // Only recurse into XMApp nodes that have a role (scripts, etc.)
-      // Role-less XMApps (e.g. \sqrt, already-parsed structures) are atomic.
-      let (mut inner_lexes, mut inner_nodes) = node_to_grammar_lexemes(&node, idx);
-      for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
-        lexemes.push(inner_lex);
-        nodes.push(inner_node);
+      let role = node.get_attribute("role").unwrap();
+      // ARROW-role XMApps (decorated arrows like \xrightarrow{over}) should be
+      // atomic terminals. Extract the arrow meaning from the ARROW child token.
+      if role == "ARROW" {
+        let arrow_meaning = node.get_child_elements().into_iter()
+          .find(|ch| ch.get_attribute("role").as_deref() == Some("ARROW"))
+          .and_then(|ch| {
+            ch.get_attribute("meaning")
+              .or_else(|| ch.get_attribute("name"))
+              .or_else(|| Some(ch.get_content()))
+          })
+          .unwrap_or_else(|| "ARROW".to_string());
+        *idx += 1;
+        let lexeme = format!("ARROW:{arrow_meaning}:{idx}").replace(' ', "");
+        lexemes.push(lexeme);
+        nodes.push(node);
+      } else {
+        // Only recurse into XMApp nodes that have a role (scripts, etc.)
+        // Role-less XMApps (e.g. \sqrt, already-parsed structures) are atomic.
+        let (mut inner_lexes, mut inner_nodes) = node_to_grammar_lexemes(&node, idx);
+        for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
+          lexemes.push(inner_lex);
+          nodes.push(inner_node);
+        }
       }
     } else {
       let role = get_grammatical_role(&node);
