@@ -34,7 +34,6 @@ fn mathtools_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn matrix_test() {
   latexml_test_single("tests/ams/matrix.tex", "matrix", DIR, None, None);
 }
