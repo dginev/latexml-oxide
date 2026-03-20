@@ -98,7 +98,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     term = tight_term
     | term mulop tight_term => infix_apply_nary
     | term mulop tight_term elideop => infix_apply_and_elide
+    // Perl: COMPOSEOP creates function composition (f∘g)
+    // Functions can participate as operands of composition
+    | term composeop term => infix_apply
     | operator applyop term => prefix_apply_applyop;
+
+    // Allow standalone functions/trigfunctions as terms for composition
+    // This is needed for (f*g)(x) where f and g are FUNCTION tokens
+    term += function | trigfunction;
 
     // Expressions
     expression = term
