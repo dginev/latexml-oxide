@@ -1485,9 +1485,9 @@ LoadDefinitions!({
         not_node.remove_attribute("xml:id")?;
         document.unrecord_id(&id);
         document.set_attribute(&mut strike, "xml:id", &id)?;
-        document.get_node_mut().add_child(thing)?;
-        document.close_element("ltx:XMApp")?;
       }
+      document.get_node_mut().add_child(thing)?;
+      document.close_element("ltx:XMApp")?;
     } else {
       // For simple tokens, we'll modify the relevant content & attributes
       // [children removed, id's presumably ignorable]
