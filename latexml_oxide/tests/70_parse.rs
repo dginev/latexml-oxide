@@ -123,7 +123,6 @@ fn sequences_and_lists_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn sets_test() {
   latexml_test_single("tests/parse/sets.tex", "sets", DIR, None, None);
 }
