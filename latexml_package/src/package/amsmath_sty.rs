@@ -761,6 +761,13 @@ LoadDefinitions!({
   DefMacro!("\\DOTSX", None);
 
   //======================================================================
+  // Section 7.2 \sideset command
+  // Perl: amsmath.sty.ltxml L1183-1234
+  // TODO: Full port with sidesetWrap script handling
+  // For now, just absorb arguments to prevent undefined errors
+  DefMacro!("\\sideset{}{}{}", "#3");
+
+  //======================================================================
   // Section 3.11.1 \numberwithin
   // Perl: amsmath.sty.ltxml line 741
   DefPrimitive!("\\numberwithin[]{}{}", sub[(format, counter, within)] {
