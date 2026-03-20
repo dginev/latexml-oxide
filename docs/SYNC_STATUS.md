@@ -509,12 +509,28 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 
 ### Overarching projects
 
-- [ ] **E. Translate ALL Perl binding files** — Every `.sty.ltxml`, `.tex.ltxml`, `.cls.ltxml`, `.def.ltxml` in `LaTeXML/lib/LaTeXML/Package/` must have a corresponding `_sty.rs`, `_tex.rs`, `_cls.rs`, `_def.rs` in the Rust codebase. No file should be missed. This is the full package binding parity goal.
-- [ ] **F. Port Post-processing pipeline** — Fully translate `LaTeXML/lib/LaTeXML/Post/` to Rust. This is the second major subsystem (after the TeX engine) and converts LaTeXML XML into final output (HTML5, XHTML, EPUB, JATS).
-  - **Resources (copy as-is):** XSLT stylesheets (`LaTeXML/lib/LaTeXML/resources/XSLT/`), CSS (`resources/CSS/`), JavaScript, RelaxNG schemas, Profiles. These are declarative and used unchanged.
-  - **Core modules to port:** `Post.pm` (pipeline orchestrator), `Post::Scan` (cross-ref scanning), `Post::CrossRef` (cross-references + navigation), `Post::MathML` (content/presentation MathML), `Post::OpenMath`, `Post::MathImages` (math-to-image fallback), `Post::Graphics` (image conversion), `Post::SVG`, `Post::XSLT` (apply XSLT transforms), `Post::Writer` (serialize to file), `Post::Split` (multi-page split), `Post::MakeBibliography`, `Post::MakeIndex`.
-  - **Approach:** Port each Post module as a Rust crate or module. Use `libxslt` (already a system dep) for XSLT transforms. Use existing `resources/` directory structure.
-  - **Testing:** Post-processing tests compare final HTML/MathML output. Start with `latexmlpost` CLI equivalent.
+#### Critical engine gaps (blocks multiple tests, ~2500 lines):
+- [ ] **G. latex_ch7_math_common_delimiters.rs** — 0% ported. 19 sized delimiters (`\big`, `\Big`, `\bigg`, `\Bigg` variants l/r/m). ~500 lines. Blocks ~30 tests.
+- [ ] **H. tex_box.rs SVG + vrule/hrule** — SVG collapse, `\vrule/\hrule` alignment, BoxSpecification for `\halign`. ~300 lines.
+- [ ] **I. tex_tables.rs \halign BoxSpecification** — Entirely commented-out section. ~200 lines.
+- [ ] **J. Rewrite system** — rewrite.rs at ~20% (Select/Replace only). Missing: `attributes`, `regexp`, `action`, `on_match` clauses. ~400 lines. Affects \lxDeclare, math decoration.
+- [ ] **K. Declaration system (\lxDeclare)** — Rust uses simplified post-hoc matching. Perl has full DeclarationRewrite with XPath patterns, scope limiting, semantic annotation. ~200 lines.
+
+#### Important engine gaps (needed for test suites, ~1500 lines):
+- [ ] **L. latex_ch8_defining_commands.rs** — Missing `\DeclareMathAccent`, `\DeclareFontShape/Family/Encoding`, `\SetSymbolFont`, `\SetMathAlphabet`. ~200 lines.
+- [ ] **M. latex_ch14_pictures_and_color.rs** — Picture environment 0% ported (`\put`, `\multiput`, `\line`, `\vector`, `\oval`). ~300 lines. Blocks picture_test.
+- [ ] **N. tex_fonts.rs** — `\fontname` scaling format, per-font `\hyphenchar`, `\fontdimen` (only 3/15 params), 7 ligatures. ~150 lines.
+- [ ] **O. base_xmath.rs matrix/cases** — ~24 commented-out defs, `MathWhatsit()` missing. ~100 lines.
+- [ ] **P. plain.rs missing macros** — `\alloc@{}{}{}{}{}`, `\@@oalign/@@ooalign`, `\multispan`, `\hglue`. ~100 lines.
+
+#### Package binding parity (329/452 packages unported):
+- [ ] **E. Translate ALL Perl binding files** — 123/452 ported (27%). Critical missing: physics.sty (800 lines), siunitx.sty (2000 lines), xy.sty (1000 lines), biblatex.sty (2000 lines), babel.sty (3000 lines). Mega-packages: beamer.cls (2000 lines), tikz.sty+pgf.sty (8000 lines), expl3.sty (4000 lines).
+
+#### Post-processing pipeline (entire system missing, ~7000 lines):
+- [ ] **F. Port Post-processing pipeline** — Fully translate `LaTeXML/lib/LaTeXML/Post/` to Rust. 25 modules, 0% ported.
+  - **Resources (copy as-is):** XSLT stylesheets, CSS, JavaScript, RelaxNG schemas, Profiles.
+  - **Core modules (priority order):** `Post::XMath` (math cleanup), `Post::Scan` (cross-refs), `Post::CrossRef` (navigation), `Post::MathML` (MathML generation), `Post::XSLT` (transforms), `Post::Writer` (serialization), `Post::Split` (multi-page), `Post::MakeBibliography`, `Post::MakeIndex`.
+  - **Impact:** Tests 90_latexmlpost out-of-scope. No HTML5/EPUB/JATS output. `role="ID"` assignment (affects ~20 tests) comes from Post::XMath.
 
 ### Permanent ignores (not counted)
 
