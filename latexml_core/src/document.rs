@@ -3436,19 +3436,14 @@ impl Document {
     for child in data {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
-          let attributes = child.get_attributes().into_iter().collect();
-
-          // map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) :
-          // () } TODO:
-          // DANGER: REMOVE the xml:id attribute from $child!!!!
-          // This protects against some versions of XML::LibXML that warn against duplicate id's
-          // Hopefully, you shouldn't be using the node any more
-          //         if (my $id = $attributes{'xml:id'}) {
-          //           $child->removeAttribute('xml:id');
-          //           $self->unRecordID($id); }
+          let mut attributes: HashMap<String, String> = child.get_attributes().into_iter().collect();
+          // Preserve xml:id from namespace-qualified attribute
+          // get_attributes() may not include namespace-qualified attributes like xml:id
+          if let Some(xmlid) = child.get_attribute_ns("id", XML_NS) {
+            attributes.entry("xml:id".to_string()).or_insert(xmlid);
+          }
 
           let tag_sym = get_node_qname(&child);
-          // TODO: do NOT allocate
           let tag = arena::to_string(tag_sym);
           let mut new = self.open_element_at(node, &tag, Some(attributes), None)?;
           self.append_tree(&mut new, child.get_child_nodes())?;
