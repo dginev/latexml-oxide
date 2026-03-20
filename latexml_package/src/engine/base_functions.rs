@@ -229,11 +229,18 @@ pub fn classify_box(boxnum: Number) -> Result<&'static str> {
 /// is also vertical, return the item directly instead of wrapping in a List.
 /// This enables `is_vbox` property propagation for nested \vbox/\vtop.
 pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
+  // Perl: readBoxContents returns List(@boxes, mode => $mode)
+  // The current stomach mode (e.g. "internal_vertical") should be set on the resulting List.
+  let current_mode = state::lookup_string("MODE");
   let mut contents = stomach::invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
     Ok(None)
   } else {
-    let item = contents.remove(0);
+    let mut item = contents.remove(0);
+    // Set the mode property on the resulting item (matching Perl's List(@boxes, mode => $mode))
+    if !current_mode.is_empty() {
+      item.set_property("mode", Stored::String(arena::pin(current_mode)));
+    }
     // Apply Perl's List() single-item simplification for vertical modes.
     // In Perl, List(@boxes, mode=>'internal_vertical') returns the single box
     // directly when @boxes has 1 element and the box's mode is also vertical.
