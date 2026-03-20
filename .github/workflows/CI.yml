@@ -10,7 +10,7 @@ jobs:
       - name: install dependencies
         uses: ryankurte/action-apt@v0.2.0
         with:
-          packages: "libxml2-dev libkpathsea-dev libkpathsea6 texlive texlive-latex-extra"
+          packages: "libxml2-dev libkpathsea-dev libkpathsea6 texlive texlive-latex-extra texlive-science"
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
