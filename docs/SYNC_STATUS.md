@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 237 pass, 0 fail, 82 ignored (319 total). Session 12: Per-size font metrics (cmm7/cmm5 from cmmi7.tfm/cmmi5.tfm → sizes_test 4→1 diffs), matrix delimiter absorption fix (matrix_test 164→2), \framebox mathframe (terms_test 12→11), \boxed/\implies/\impliedby port, DefMath parity audit (amsopn 2→6, amsmath +7, engine +2). Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim. Session 9: script_sizer proper font metrics, dimension_to_spaces floor(), tabular strut.
+**Status (2026-03-20):** 238 pass, 0 fail, 81 ignored (319 total). Session 12: Per-size font metrics (cmm7/cmm5), matrix delimiter absorption (164→0, PASSES), \| delimiter fix (OPEN/CLOSE + U+2016 + name="||"), \framebox mathframe (terms_test 12→11), \boxed/\implies port, DefMath parity audit. Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim.
 
 ### Completed items
 
@@ -434,7 +434,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [ ] **30. amsdisplay_test** (56_ams) — 842 diffs. MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
-- [ ] **31. matrix_test** (56_ams) — 2 diffs (down from 164→187). get_value_digested for left/right keyvals, smallmatrix atameaning typo. Remaining: \| delimiter role VERTBAR→OPEN.
+- [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
 - [ ] **32. sideset_test** (56_ams) — 488 diffs. BLOCKED: needs afterConstruct.
 
 ### Tier 3: Needs package bindings (moderate effort)
