@@ -483,7 +483,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 ### Tier 5: Math parser tests (active research, Marpa grammar)
 
 - [ ] **47. 40_math suite** (40_math) — not_test 226→77 (Unicode \not fix + child fix). arrows 69→73 (ARROW tokenization). choose 117 (XMDual now produced).
-- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES (postfix_apply + mixed number). terms 11 (division scoping). compose 167 (regression from * mathcode fix — lxDeclare keyed by `*` but mathcode decodes to `∗`).
+- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES (postfix_apply + mixed number). terms 11 (division scoping). compose 22 (lxDeclare name-matching + mathcode fix). function_argument_syntax 27 (trig barearg). scripts/testscripts/arrows/not ~74 each (parser structural).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
 - [ ] **51. eqnarray_test** (53_alignment) — 575 diffs (down from 1176). prefix_relop_apply + displaystyle fix helped.
