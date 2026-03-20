@@ -189,6 +189,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // OPFUNCTION followed by fenced args => function application
     // \operatorname{cov}(L) => cov@(L). Always treated as application, not multiplication.
     tight_term += opfunction fenced_factor => prefix_apply;
+    // Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
+    // \log x => log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
+    tight_term += opfunction tight_term => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
     // Uses existing `unknown` terminal; semantic action checks text is literally "d".
     // At factor level so it can appear as right operand of invisible_times.

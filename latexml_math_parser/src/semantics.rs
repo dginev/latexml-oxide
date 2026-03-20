@@ -1101,6 +1101,25 @@ pub fn apply_invisible_times(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, right);
   let mut left = left;
+  // Perl: OPFUNCTION/TRIGFUNCTION/FUNCTION tokens absorb the next argument via prefix_apply,
+  // NOT via invisible times. Prune invisible_times when left is one of these roles.
+  if let Some(ref l) = left {
+    let role = match l {
+      XM::Token(props, _) => props.role.as_deref().map(String::from),
+      XM::Lexeme(lex_id, _) => {
+        // Look up role from the DOM node via atom index
+        if let Some(id) = lex_id.split(':').next_back().and_then(|s| s.parse::<usize>().ok()) {
+          if id > 0 && id <= ctxt.nodes.len() {
+            ctxt.nodes[id - 1].get_attribute("role")
+          } else { None }
+        } else { None }
+      },
+      _ => None,
+    };
+    if matches!(role.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION")) {
+      return Err("apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply".into());
+    }
+  }
   // Perl: MaybeFunction — mark UNKNOWN tokens as possibleFunction when MATHPARSER_SPECULATE is set
   // and the right side is a delimited group (parenthesized)
   maybe_mark_possible_function(&mut left, &right, ctxt.nodes);
