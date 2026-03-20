@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 240 pass, 0 fail, 79 ignored (319 total). Session 12: Per-size font metrics (cmm7/cmm5), matrix delimiter absorption (PASSES), \| delimiter fix, acc_test PASSES (\lx@if@isaccent), esint_test PASSES (scripted bigop grammar), \eqalign constructors, VBoxContents mode property fix. Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim.
+**Status (2026-03-20):** 240 pass, 0 fail, 79 ignored (319 total). Session 12: Per-size font metrics (cmm7/cmm5), matrix delimiter absorption (matrix_test 164→0, PASSES), \| delimiter fix, acc_test PASSES (\lx@if@isaccent), esint_test PASSES (scripted bigop grammar), \eqalign constructors, VBoxContents mode property fix, two-part relop grammar (>=, <=, <<, >>), COMPOSEOP grammar rule (compose_test 141→29), CI fix (texlive-science for algorithmicx). Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim.
 
 ### Completed items
 
