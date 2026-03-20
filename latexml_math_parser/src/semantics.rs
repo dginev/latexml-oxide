@@ -1101,25 +1101,8 @@ pub fn apply_invisible_times(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, right);
   let mut left = left;
-  // OPFUNCTION/TRIGFUNCTION/FUNCTION tokens absorb the next argument via prefix_apply,
-  // NOT via invisible times. Even though opfunction is in factor_base (for standalone use),
-  // when followed by another factor, prefer the dedicated prefix_apply rule.
-  if let Some(ref l) = left {
-    let role = match l {
-      XM::Token(props, _) => props.role.as_deref().map(String::from),
-      XM::Lexeme(lex_id, _) => {
-        if let Some(id) = lex_id.split(':').next_back().and_then(|s| s.parse::<usize>().ok()) {
-          if id > 0 && id <= ctxt.nodes.len() {
-            ctxt.nodes[id - 1].get_attribute("role")
-          } else { None }
-        } else { None }
-      },
-      _ => None,
-    };
-    if matches!(role.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION")) {
-      return Err("apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply".into());
-    }
-  }
+  // OPFUNCTION is not in factor_base, so it can't appear as left side of invisible_times
+  // at the grammar level. FUNCTION/TRIGFUNCTION have their own prefix_apply rules.
   // Perl: MaybeFunction — mark UNKNOWN tokens as possibleFunction when MATHPARSER_SPECULATE is set
   // and the right side is a delimited group (parenthesized)
   maybe_mark_possible_function(&mut left, &right, ctxt.nodes);

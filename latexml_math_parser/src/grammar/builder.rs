@@ -68,7 +68,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
   rules!(
     // Factors
-    factor_base = unknown | number | id | atom | opfunction;
+    // opfunction is NOT a factor — it requires an argument.
+    // It only appears in dedicated opfunction rules (fenced_factor, tight_term, factor).
+    factor_base = unknown | number | id | atom;
     factor = factor_base;
     // Terms
     // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
@@ -88,6 +90,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // tight_term: ALWAYS compound (2+ atoms). Single atoms are `factor`.
     // This prevents `\log x` from parsing as `(\log) * x` via invisible_times.
     // Non-recursive base rules (factor + something):
+    // Use atom_factor_base (not factor) as left of invisible_times to prevent
+    // opfunction from triggering invisible times (e.g. \log x should NOT be log*x)
+    // NOTE: factor can still appear as RIGHT side (any factor type)
+    // NOTE: scripted factors and fenced factors CAN trigger invisible times
+    //       because they're added to tight_term via += rules below
     tight_term = factor factor => apply_invisible_times
       | factor postfix => apply_postfix
       | function factor => prefix_apply
@@ -117,9 +124,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     | term composeop term => infix_apply
     | operator applyop term => prefix_apply_applyop;
 
-    // Allow standalone functions/trigfunctions as terms for composition
+    // Allow standalone functions/trigfunctions/opfunctions as terms
     // This is needed for (f*g)(x) where f and g are FUNCTION tokens
-    term += function | trigfunction;
+    // opfunction here allows standalone \operatorname{R} to parse
+    term += function | trigfunction | opfunction;
 
     // Expressions
     expression = term
@@ -223,17 +231,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     floatsuperscript = start_floatsuperscript expression end_floatsuperscript => standalone_script;
     // Scripted factors -- avoid adding ambiguity in the left-right order of collection
     // first ALL left (=float), then right (=post).
-    scripted_factor_l11 = floatsuperarg factor_base => prefix_script;
-    scripted_factor_l12 = floatsubarg factor_base => prefix_script;
+    scripted_factor_l11 = floatsuperarg factor_base => prefix_script
+      | floatsuperarg opfunction => prefix_script;
+    scripted_factor_l12 = floatsubarg factor_base => prefix_script
+      | floatsubarg opfunction => prefix_script;
     scripted_factor_l1 = scripted_factor_l11 | scripted_factor_l12;
     scripted_factor_l2 = floatsuperarg scripted_factor_l12 => prefix_script
       | floatsubarg scripted_factor_l11 => prefix_script;
 
     scripted_factor_r11 = factor_base postsuperarg => postfix_script
+      | opfunction postsuperarg => postfix_script
       | scripted_factor_l1 postsuperarg => postfix_script
       | scripted_factor_l2 postsuperarg => postfix_script
       | fenced_factor postsuperarg => postfix_script;
     scripted_factor_r12 = factor_base postsubarg => postfix_script
+      | opfunction postsubarg => postfix_script
       | scripted_factor_l1 postsubarg => postfix_script
       | scripted_factor_l2 postsubarg => postfix_script
       | fenced_factor postsubarg => postfix_script;
