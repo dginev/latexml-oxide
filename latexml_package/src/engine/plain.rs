@@ -1474,7 +1474,7 @@ LoadDefinitions!({
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
     });
-    if text.len() != 1 { // Not simple char token.
+    if text.chars().count() != 1 { // Not simple char token.
       // Wrap with a cancel op
       document.open_element("ltx:XMApp",
         Some(map!("_box" => not_node.to_hashable().to_string())), None)?;
