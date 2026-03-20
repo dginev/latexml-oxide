@@ -338,13 +338,15 @@ macro_rules! TypedConditional {
 #[macro_export]
 macro_rules! DefPrimitive {
   // Case: simple literal replacement
+  // Perl: Box($string, font, locator, $current_token) — reversion is the CS token
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
+    let cs_for_closure = cs;
     let closure : PrimitiveBody = PrimitiveBody::Closure(Rc::new(
-      | _args: Vec<ArgWrap>| {
+      move | _args: Vec<ArgWrap>| {
       Tbox::new(arena::pin_static($replacement), None, None,
-        Tokens!(), SymHashMap::default())
+        Tokens!(cs_for_closure), SymHashMap::default())
         .into_digested_result()
     }));
     def_primitive(cs, params, Some(closure), options)?;

@@ -528,18 +528,18 @@ LoadDefinitions!({
   //  \bigcup, \biguplus
   DefMath!("\\bigsqcap", None, "\u{2A05}",
     role => "SUMOP",
-    dynamic_mathstyle => true);
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
   //  \bigsqcup
   //  \bigwedge
   //  \bigvee
   DefMath!("\\bigcurlywedge", None, "\u{22CF}",
     font => { scale => 1.6 },
     role => "SUMOP",
-    dynamic_mathstyle => true);
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\bigcurlyvee", None, "\u{22CE}",
     font => { scale => 1.6 },
     role => "SUMOP",
-    dynamic_mathstyle => true);
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
 
   //======================================================================
   // Big circles (mathx)
