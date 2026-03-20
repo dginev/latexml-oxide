@@ -103,7 +103,6 @@ fn morse_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn algx_test() {
   latexml_test_single("tests/alignment/algx.tex", "algx", DIR, None, None);
 }
