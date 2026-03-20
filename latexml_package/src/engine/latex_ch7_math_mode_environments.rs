@@ -580,9 +580,16 @@ LoadDefinitions!({
 
   Tag!("ltx:equationgroup", auto_close => true);
 
-  // TODO: Port \lx@equationgroup@subnumbering@begin/end (subequations)
   // Perl: latex_constructs.pool.ltxml L2174-2191
-  // Needs careful testing — initial port increased diffs in amsdisplay_test.
+  // \lx@equationgroup@subnumbering@begin/end — subequation numbering
+  // TODO: Full implementation with counter save/restore and \theequation redefinition.
+  // Current stub just opens/closes the equationgroup element.
+  DefConstructor!("\\lx@equationgroup@subnumbering@begin",
+    "<ltx:equationgroup>");
+  DefConstructor!("\\lx@equationgroup@subnumbering@end",
+    sub[document, _args, _props] {
+      document.maybe_close_element("ltx:equationgroup")?;
+    });
 
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => sub[document, node] {
