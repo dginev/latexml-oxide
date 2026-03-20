@@ -580,6 +580,10 @@ LoadDefinitions!({
 
   Tag!("ltx:equationgroup", auto_close => true);
 
+  // TODO: Port \lx@equationgroup@subnumbering@begin/end (subequations)
+  // Perl: latex_constructs.pool.ltxml L2174-2191
+  // Needs careful testing — initial port increased diffs in amsdisplay_test.
+
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => sub[document, node] {
     document.generate_id(node, "m")?;

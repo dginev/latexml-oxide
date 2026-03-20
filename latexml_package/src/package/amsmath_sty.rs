@@ -751,8 +751,11 @@ LoadDefinitions!({
   DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
 
   //======================================================================
-  // subequations environment
-  // Perl: amsmath.sty.ltxml lines 93-95
+  // subequations environment — TODO: port when subnumbering constructors are ready
+  // Perl: amsmath.sty.ltxml lines 757-758
+  // DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin");
+  // DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end");
+
   DefMacro!("\\DOTSB", None);
   DefMacro!("\\DOTSI", None);
   DefMacro!("\\DOTSX", None);
