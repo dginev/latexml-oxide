@@ -700,8 +700,6 @@ impl MathParser {
     match self.parse_marpa(&input_string, nodes, document) {
       Ok(parse_tree) => Ok(Some(parse_tree)),
       Err(_e) => {
-        // Reset the engine after a failed parse, since the marpa recognizer
-        // gets stuck in a started state and can't be reused.
         self.reset_engine();
         Ok(None)
       }

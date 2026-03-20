@@ -259,11 +259,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     scripted_factor_r11 = factor_base postsuperarg => postfix_script
       | opfunction postsuperarg => postfix_script
+      | any_bigop postsuperarg => postfix_script
       | scripted_factor_l1 postsuperarg => postfix_script
       | scripted_factor_l2 postsuperarg => postfix_script
       | fenced_factor postsuperarg => postfix_script;
     scripted_factor_r12 = factor_base postsubarg => postfix_script
       | opfunction postsubarg => postfix_script
+      | any_bigop postsubarg => postfix_script
       | scripted_factor_l1 postsubarg => postfix_script
       | scripted_factor_l2 postsubarg => postfix_script
       | fenced_factor postsubarg => postfix_script;
