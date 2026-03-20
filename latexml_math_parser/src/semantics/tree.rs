@@ -905,10 +905,9 @@ impl From<&Node> for XM {
         let inner_xm = children.iter().map(XM::from).collect::<Vec<_>>();
         XM::Wrap(inner_xm, XProps::from(n), Meta::default())
       },
-      // TODO: continue for the other cases
-      missing_case => {
-        dbg!(missing_case);
-        todo!()
+      // Fallback for unhandled node types — treat as token preserving attributes
+      _other => {
+        XM::Token(XProps::from(n), Meta::default())
       },
     }
   }

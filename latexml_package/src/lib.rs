@@ -56,6 +56,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "revtex4_support.sty" => package::revtex4_support_sty::load_definitions(),
     "rotating.sty" => package::rotating_sty::load_definitions(),
     "amsmath.sty" => package::amsmath_sty::load_definitions(),
+    "mathtools.sty" => package::mathtools_sty::load_definitions(),
     "amsfonts.sty" => package::amsfonts_sty::load_definitions(),
     "amssymb.sty" => package::amssymb_sty::load_definitions(),
     "amsthm.sty" => package::amsthm_sty::load_definitions(),

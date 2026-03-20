@@ -76,6 +76,7 @@ pub mod lxrdfa_sty;
 pub mod makecell_sty;
 pub mod marvosym_sty;
 pub mod mathabx_sty;
+pub mod mathtools_sty;
 pub mod supertabular_sty;
 pub mod mathbbol_sty;
 pub mod multicol_sty;
