@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 245 pass, 0 fail, 74 ignored (319 total). Session 14: amsarticle PASSES (807→0), amsdisplay PASSES (842→0). Ported: rearrangeAMSSplit/rearrangeAMSMultirow afterConstruct, \@ams@multirow@bindings, multline tex= via setBody, subequations counter save/restore, prefix addop n-ary fix, XMRef resolution in math parser, append_tree xml:id preservation. Session 13: sizes_test PASSES, abxtest_test PASSES, mathtools.sty port.
+**Status (2026-03-20):** 246 pass, 0 fail, 73 ignored (319 total). Session 14: amsarticle PASSES (807→0), amsdisplay PASSES (842→0), compose_test PASSES (12→0). Ported: rearrangeAMSSplit/rearrangeAMSMultirow afterConstruct, \@ams@multirow@bindings, multline tex= via setBody, subequations counter save/restore, prefix addop n-ary fix, XMRef resolution in math parser, append_tree xml:id preservation, composed_term grammar (COMPOSEOP function composition with left-to-right associativity, semantic pruning for curry-level coordination). Session 13: sizes_test PASSES, abxtest_test PASSES, mathtools.sty port.
 
 ### Completed items
 
