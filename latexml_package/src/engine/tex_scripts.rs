@@ -1,6 +1,6 @@
 use crate::prelude::*;
 static SCRIPT_NAME_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap());
+  Lazy::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
 
 //======================================================================
 // Scripts are a bit of a strange beast, with respect to when the arguments
@@ -41,8 +41,8 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
       obj.borrow().get_definition().get_cs().with_cs_name(|name| {
         SCRIPT_NAME_RE.captures(name).map(|cap| {
           (
-            cap.get(1).map_or("", |m| m.as_str()).to_owned(),
-            if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {
+            cap.get(1).map_or("", |m| m.as_str()).to_uppercase(),
+            if cap.get(2).map_or("", |m| m.as_str()) == "subscript" {
               Catcode::SUB
             } else {
               Catcode::SUPER

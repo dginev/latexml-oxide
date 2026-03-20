@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-19):** 231 pass, 0 fail, 88 ignored (319 total). Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
+**Status (2026-03-19):** 232 pass, 0 fail, 87 ignored (319 total). Session 11: is_script regex fix (Perl `\@@POST` → Rust `\lx@post@`), prefix_relop_apply grammar rule (absent token for leading relop), displaystyle tex= spacing fix. badeqnarray_test PASSES (148→0 diffs). eqnums_test 315→23 diffs. Whatsit default sizer unlist body fix. Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
 
 ### Completed items
 
@@ -422,10 +422,10 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
 
 - [x] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. Done. Fixed _Capture_ XMArg wrapping issue (Perl model prevents XMArg inside _Capture_).
-- [ ] **2. eqnums_test** (50_structure) — 316 diffs (down from 598→416→316). MathFork works, xml:id numbering fixed (pre-advance counter by cell count). Remaining: tex attributes on MathFork Math (\mbox content), absent token, tag font.
+- [ ] **2. eqnums_test** (50_structure) — 23 diffs (down from 598→416→316→23). MathFork works, xml:id numbering fixed, absent token fixed (prefix_relop_apply). Remaining: tag font (prime in `<sup>`, 16 diffs), tex= `\mbox{}` content missing (7 diffs).
 - [ ] **3. algx_test** (53_alignment) — 163 diffs. BLOCKED: needs math parser XMDual + fontsize.
-- [ ] **28. badeqnarray_test** (53_alignment) — 149 diffs (down from 507). MathFork xml:id fixed. Remaining: absent token, tex= attributes.
-- [ ] **30. amsdisplay_test** (56_ams) — 769 diffs (down from 963). MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
+- [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
+- [ ] **30. amsdisplay_test** (56_ams) — 842 diffs. MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
 - [ ] **31. matrix_test** (56_ams) — 187 diffs. BLOCKED: needs afterConstruct + math parser.
 - [ ] **32. sideset_test** (56_ams) — 488 diffs. BLOCKED: needs afterConstruct.
 
@@ -470,8 +470,8 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 - [ ] **47. 40_math suite** (40_math) — 149 diffs across batch. Parser bugs vs intentional Marpa divergence.
 - [ ] **48. 70_parse suite** (70_parse) — 120 diffs across batch. Generate Rust-specific expected XMLs.
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
-- [ ] **50. split_test** (53_alignment) — 2228 diffs. Amsmath split + math parser.
-- [ ] **51. eqnarray_test** (53_alignment) — 1176 diffs. afterConstruct + math parser.
+- [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
+- [ ] **51. eqnarray_test** (53_alignment) — 575 diffs (down from 1176). prefix_relop_apply + displaystyle fix helped.
 - [ ] **52. ntheorem_test** (55_theorem) — 1479 diffs. Math parser tree + eqnarray.
 
 ### Tier 6: Heavy package bindings (distant future)

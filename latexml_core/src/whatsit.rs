@@ -411,16 +411,28 @@ impl BoxOps for Whatsit {
 
   fn set_font(&mut self, font: Rc<Font>) { self.properties.insert("font", Stored::Font(font)); }
 
-  fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(&self, mut options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
       sizer(self)
     } else {
       // Nothing specified? use #body if any, else sum all box args
+      // Perl: Whatsit.pm L252-255 — if body exists, pass it to computeBoxesSize
+      // which unlists it internally (Font.pm L650-651). We replicate by extracting
+      // properties from the body (mode, vattach, width) into options, then unlisting.
       let mut boxes = Vec::new();
       if let Some(body_stored) = self.get_property("body") {
         if let Stored::Digested(ref body) = *body_stored {
-          boxes.push((*body).clone());
+          // Perl: computeBoxesSize reads mode/vattach/width from $boxes before unlisting
+          for key in &["mode", "vattach", "width"] {
+            if options.get(*key).is_none() {
+              if let Some(prop) = body.get_property(key) {
+                options.insert(key, (*prop).clone());
+              }
+            }
+          }
+          let unlist_boxes = body.unlist();
+          boxes.extend(unlist_boxes);
         }
       }
       if boxes.is_empty() {

@@ -1160,7 +1160,13 @@ pub fn close_math_fork(
         .collect();
       let body = stripped.join("");
       let combined_tex = if has_displaystyle {
-        format!("\\displaystyle {body}")
+        // Add space after \displaystyle only if body starts with a letter
+        // (TeX CS needs space termination before letters, not before operators)
+        if body.starts_with(|c: char| c.is_ascii_alphabetic()) {
+          format!("\\displaystyle {body}")
+        } else {
+          format!("\\displaystyle{body}")
+        }
       } else {
         body
       };

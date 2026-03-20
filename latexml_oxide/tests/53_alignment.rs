@@ -126,7 +126,6 @@ fn split_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: afterConstruct + math parser
 fn badeqnarray_test() {
   latexml_test_single("tests/alignment/badeqnarray.tex", "badeqnarray", DIR, None, None);
 }

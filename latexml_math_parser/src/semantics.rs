@@ -1351,6 +1351,23 @@ pub fn prefix_metarelop_apply(
   )))
 }
 
+/// Perl: AnyOp Expression => Apply(AnyOp, Absent(), Expression)
+/// Leading relop with implied absent left operand (e.g. `= e + f + g` in eqnarray)
+pub fn prefix_relop_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => relop, right);
+  Ok(Some(XM::Apply(
+    relop.into(),
+    Args(vec![Some(absent()), right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 pub fn prefix_arrow_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,

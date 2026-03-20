@@ -120,6 +120,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | formula relop => postfix_relop
       | formula arrow expression => infix_relation
       | arrow expression => prefix_arrow_apply
+      // Perl MathGrammar L81: AnyOp Expression => Apply(AnyOp, Absent(), Expression)
+      // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
+      | relop expression => prefix_relop_apply
       | modifier_expression;
 
     // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
