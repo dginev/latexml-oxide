@@ -80,7 +80,6 @@ fn marvosym_test() {
 // -- Tests that crash (need package/subsystem work) --
 
 #[test]
-#[ignore] // text= attr diffs: \underaccent, preamble PI
 fn acc_test() {
   latexml_test_single("tests/fonts/acc.tex", "acc", DIR, None, None);
 }
