@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 235 pass, 0 fail, 84 ignored (319 total). Session 11: is_script regex fix (Perl `\@@POST` → Rust `\lx@post@`), prefix_relop_apply grammar rule (absent token for leading relop), displaystyle tex= spacing fix. badeqnarray_test PASSES (148→0 diffs). eqnums_test 315→23 diffs. Whatsit default sizer unlist body fix. Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
+**Status (2026-03-20):** 235 pass, 0 fail, 84 ignored (319 total). Session 11+: is_script regex fix (Perl `\@@POST` → Rust `\lx@post@`), prefix_relop_apply grammar rule (absent token for leading relop), displaystyle tex= spacing fix. badeqnarray_test PASSES (148→0 diffs). eqnums_test 315→23 diffs. Whatsit default sizer unlist body fix. Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
 
 ### Completed items
 
@@ -437,6 +437,13 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
 - [x] **39. cleveref_minimal_test** (80_complex) — DONE. Ported cleveref.sty: \lx@cref constructor, crefMulti, type_tag_formatter mappings. 0 diffs.
+
+### Infrastructure fixes (no test flip, but improve structure):
+
+- **XMDual for \\choose/\\brace/\\brack**: Pre-digest left/right delimiter tokens during after_digest, store as Stored::Digested. Template `?#needXMDual` conditional now produces proper XMDual + XMWrap + OPEN/CLOSE structure.
+- **Matrix delimiter Tokens**: left/right keyvals stored as Stored::Tokens for proper absorption in matrix template (matrix_test 173→164).
+- **\\lx@begin@inmath@text mode fix**: Changed from 'text' to 'restricted_horizontal' matching Perl.
+- **\\subjclass Default: fix**: Handle Default: parameter spec in closure.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
 - [x] **41. aastex631_deluxetable_test** (80_complex) — DONE. Ported deluxetable.sty, Stored::Template, version-stripping dispatch.
 - [x] **42. aliceblog_test** (80_complex) — DONE. Passing after previous fixes.
