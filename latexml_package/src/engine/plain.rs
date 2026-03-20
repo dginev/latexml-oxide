@@ -1291,6 +1291,7 @@ LoadDefinitions!({
   assign_mathcode('!', 0x5021u16, None);
   assign_mathcode('(', 0x4028u16, None);
   assign_mathcode(')', 0x5029u16, None);
+  assign_mathcode('*', 0x2203u16, None);  // \ast (class 2 BINOP, family 2 OMS, pos 3)
   assign_mathcode('+', 0x202Bu16, None);
   assign_mathcode(',', 0x613Bu16, None);
   assign_mathcode('-', 0x2200u16, None);

@@ -1714,6 +1714,17 @@ macro_rules! defi_opts {
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@reversion (sub $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
+  // reversion => None means "empty reversion" (disable reversion entirely)
+  // Perl: reversion => Tokens() — produces empty tex= attribute
+  (@munch ( $(,)? reversion $(:)?$(=>)? None, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ reversion @ Some(Reversion::Tokens(Tokens!())) ] })
+  };
+  (@munch ( $(,)? reversion $(:)?$(=>)? None)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ reversion @ Some(Reversion::Tokens(Tokens!())) ] })
+  };
   (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*

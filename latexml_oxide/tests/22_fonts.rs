@@ -115,7 +115,6 @@ fn soul_test() {
 }
 
 #[test]
-#[ignore] // needs \hexnumber@, \mathxfam (font allocation)
 fn abxtest_test() {
   latexml_test_single("tests/fonts/abxtest.tex", "abxtest", DIR, None, None);
 }
