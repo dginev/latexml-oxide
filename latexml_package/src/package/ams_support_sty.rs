@@ -123,8 +123,28 @@ LoadDefinitions!({
 
   DefMacro!("\\subjclassname", None,
     "\\textup{\\@subjclassyear} Mathematics Subject Classification");
-  DefMacro!("\\subjclass[Default:\\@subjclassyear]{}",
-    "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\\@add@frontmatter{ltx:classification}[scheme={#1 Mathematics Subject Classification},name={\\subjclassname}]{#2}");
+  // Perl: DefMacro('\subjclass[Default:\@subjclassyear]{}', ...);
+  // The Default: syntax provides \@subjclassyear as default for the optional arg.
+  // Implement by splitting into two macros: one that handles the default.
+  DefMacro!("\\subjclass[]{}", "\\lx@subjclass@{#1}{#2}");
+  DefMacro!("\\lx@subjclass@{}{}", sub[args] {
+    let year_str = args[0].to_string();
+    let body_str = args[1].to_string();
+    // If year is empty, use current \@subjclassyear; otherwise update it
+    let effective_year = if year_str.trim().is_empty() {
+      let expanded = gullet::do_expand(Tokens!(T_CS!("\\@subjclassyear")))?;
+      expanded.to_string()
+    } else {
+      // Update \@subjclassyear
+      def_macro(T_CS!("\\@subjclassyear"), None,
+        Some(ExpansionBody::from(year_str.as_str())), None)?;
+      year_str
+    };
+    let expansion = s!(
+      "\\@add@frontmatter{{ltx:classification}}[scheme={{{} Mathematics Subject Classification}},name={{\\subjclassname}}]{{{}}}",
+      effective_year, body_str);
+    Ok(mouth::tokenize_internal(&expansion))
+  });
 
   DefMacro!("\\copyrightinfo{}{}",
     "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #1: #2}");
