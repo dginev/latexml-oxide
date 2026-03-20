@@ -465,6 +465,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - **\\lx@equationgroup@subnumbering@begin/end** (latex_ch7_math_mode_environments.rs): Stub opens/closes equationgroup. Full Perl implementation needs counter save/restore (SAVED_EQUATION_NUMBER), ResetCounter('equation'), DefMacroI for \\theequation with subnumbering suffix.
 - **mathtools.sty** (mathtools_sty.rs): \\DeclarePairedDelimiter family, \\newtagform/\\renewtagform, \\newgathered, \\smashoperator all stubbed as DefMacro None. Full Perl implementations need runtime macro factory closures.
 - **\\lxDeclare** (latexml_sty.rs): Simplified post-hoc matching vs Perl's full DeclarationRewrite system with XPath patterns, scope limiting, afterConstruct hook. Mathcode-decoded and name-attribute matching added as workarounds.
+- **diagbox.sty** (diagbox_sty.rs): Stub with simple macros. Full Perl implementation (164 lines) has diagonal line drawing, SVG generation, width calculation.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
 - [x] **41. aastex631_deluxetable_test** (80_complex) — DONE. Ported deluxetable.sty, Stored::Template, version-stripping dispatch.
 - [x] **42. aliceblog_test** (80_complex) — DONE. Passing after previous fixes.
