@@ -421,7 +421,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **11. abxtest_test** (22_fonts) — DONE (was TooManyErrors→29→0). Ported mathabx.sty, fixed DefPrimitive literal reversion (empty Tokens!() → CS token), added missing * mathcode (0x2203), mathabx scriptpos=>dynamic_scriptpos, empty element self-closing. 0 diffs.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
-- [ ] **18. amsarticle_test** (50_structure) — 12 diffs (was 807). Ported rearrangeAMSSplit + rearrangeAMSMultirow afterConstruct (XMDual wrapping), `\@ams@multirow@bindings`, fixed multline macros. Remaining 12 diffs: (1) lpadding from `\quad` not transferred to operator in extractXMArrayCells, (2) multline missing tex= attribute on Math element, (3) multline row 2 +i parse structure (prefix vs flat).
+- [ ] **18. amsarticle_test** (50_structure) — 10 diffs (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow afterConstruct, `\@ams@multirow@bindings`, multline tex= via setBody. Remaining 10 diffs: (1) lpadding from `\quad` not on operator (1 line), (2) multline row 2 +i prefix parse (3 extra lines).
 - [ ] **25. cells_test** (53_alignment) — 369 diffs (was stack overflow). Ported makecell.sty, fixed \rothead recursion, implemented Pair parameter type.
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
@@ -433,7 +433,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **2. eqnums_test** (50_structure) — DONE. MathFork xml:id, prefix_relop_apply, tex= mbox synthesis, tag font italic wrapping (XMArg box font family="math" detection in floating script rewrite). 0 diffs.
 - [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
-- [ ] **30. amsdisplay_test** (56_ams) — 12 diffs (was 842). Ported subequations counter save/restore (`\lx@equationgroup@subnumbering@begin/end` with RefStepCounter, ResetCounter, \theequation redefinition). Remaining 12 diffs: same 3 systemic issues as amsarticle (lpadding from \quad, multline tex=, multline +i prefix parse).
+- [ ] **30. amsdisplay_test** (56_ams) — 10 diffs (was 842). Ported subequations counter save/restore, multline tex= via setBody. Remaining 10 diffs: same 2 systemic issues as amsarticle (lpadding from \quad, multline +i prefix parse).
 - [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
 - [ ] **32. sideset_test** (56_ams) — 315 diffs (was 488). Added \sideset stub (pass-through to base #3). **TODO:** Full sidesetWrap script handling with pre/post sub/superscript individual wrapping per Perl L1227-1234.
 
