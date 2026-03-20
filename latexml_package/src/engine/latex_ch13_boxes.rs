@@ -169,19 +169,63 @@ LoadDefinitions!({
   DefMacro!("\\framebox", "\\@ifnextchar(\\pic@framebox\\@framebox");
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
+  // When in math mode, produces <ltx:XMArg enclose='box'> instead of <ltx:text framed='rectangle'>
   DefConstructor!("\\@framebox[Dimension][]{}",
-    "<ltx:text ?#width(width='#width') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>",
+    "?#mathframe(<ltx:XMArg enclose='box'>#inner</ltx:XMArg>)\
+     (<ltx:text ?#width(width='#width') ?#align(align='#align') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
     alias => "\\framebox",
-    mode => "text", bounded => true,
+    sizer => "#3",
     before_digest => {
-      reenter_text_mode(false); },
-    properties => sub[_args] {
+      let wasmath = state::lookup_value("IN_MATH").is_some();
+      stomach::begin_mode("restricted_horizontal")?;
+      state::assign_value("FRAME_IN_MATH", wasmath, None); },
+    properties => sub[args] {
       // Perl: framecolor => LookupValue('font')->getColor
       let framecolor = lookup_font()
         .and_then(|f| f.get_color().cloned())
         .map(|c| c.to_attribute())
         .unwrap_or_else(|| s!("#000000"));
-      Ok(stored_map!("framecolor" => framecolor))
+      let mut props = stored_map!("framecolor" => framecolor);
+      // Perl: align from arg 2 (optional [])
+      if let Some(align_val) = args[1].as_ref() {
+        let align_str = align_val.to_string();
+        let mapped = match align_str.as_str() {
+          "l" => "left",
+          "r" => "right",
+          "s" => "justify",
+          _ => "center",
+        };
+        props.insert("align", Stored::String(arena::pin_static(mapped)));
+      }
+      if let Some(width_val) = args[0].as_ref() {
+        props.insert("width", Stored::String(arena::pin(width_val.to_string())));
+      }
+      Ok(props)
+    },
+    after_digest => sub[whatsit] {
+      let wasmath = state::lookup_value("FRAME_IN_MATH").is_some_and(|v| matches!(v, Stored::Bool(true)));
+      let arg = whatsit.get_arg(3).cloned();
+      stomach::end_mode("restricted_horizontal")?;
+      if wasmath {
+        if let Some(ref a) = arg {
+          // Perl: $arg->isMath checks mode property =~ /math$/
+          // For \fbox{$...$}, the body is a List in restricted_horizontal mode
+          // containing a math whatsit. Check if any child has isMath.
+          let is_math = a.get_property_bool("isMath")
+            || a.unlist().iter().any(|child| child.get_property_bool("isMath"));
+          if is_math {
+            whatsit.set_property("mathframe", true);
+            // Extract inner body for the XMArg template
+            // For \fbox{$...$}, get the math body from the inner whatsit
+            if let Ok(Some(body)) = a.get_body() {
+              whatsit.set_property("inner", body);
+            } else {
+              // Fallback: use the entire arg
+              whatsit.set_property("inner", a.clone());
+            }
+          }
+        }
+      }
     },
     after_construct => sub[document, _whatsit] {
       // Perl afterConstruct: if the <ltx:text> has a single non-text child

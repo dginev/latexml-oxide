@@ -36,6 +36,16 @@ LoadDefinitions!({
   DefMath!("\\projlim", "proj lim",
     role => "LIMITOP", meaning => "projective-limit");
 
+  // Perl: amsopn.sty.ltxml — var limit operators
+  DefMath!("\\varlimsup", "\\overline{\\operatorname{lim}}",
+    role => "LIMITOP", meaning => "limit-supremum");
+  DefMath!("\\varliminf", "\\underline{\\operatorname{lim}}",
+    role => "LIMITOP", meaning => "limit-infimum");
+  DefMath!("\\varinjlim", "\\underrightarrow{\\operatorname{lim}}",
+    role => "LIMITOP", meaning => "injective-limit");
+  DefMath!("\\varprojlim", "\\underleftarrow{\\operatorname{lim}}",
+    role => "LIMITOP", meaning => "projective-limit");
+
   DefMacro!("\\nolimits@", "\\nolimits");
   DefMacro!("\\nmlimits@", "\\displaylimits");
   DefMacro!("\\qopname{}{}{}", "\\mathop{#3}\\csname n#2limits@\\endcsname");

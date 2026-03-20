@@ -865,8 +865,16 @@ LoadDefinitions!({
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
+          // Store left/right as Digested directly from digested keyvals.
+          for prop_key in &["left", "right"] {
+            if let Some(digested) = kv.get_value_digested(prop_key) {
+              props.insert(*prop_key, Stored::Digested(digested.clone()));
+            }
+          }
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(v.to_string())));
+            if k != "left" && k != "right" {
+              props.insert(k, Stored::String(arena::pin(v.to_string())));
+            }
           }
         }
       }
@@ -940,17 +948,17 @@ LoadDefinitions!({
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
+          // Store left/right as Digested directly from digested keyvals.
+          // Perl's absorb() handles Tokens natively; Rust constructor templates
+          // only absorb Digested. Using get_value_digested avoids the revert->re-digest
+          // round-trip that loses the original \lx@left CS (alias resolves to \left on revert).
+          for prop_key in &["left", "right"] {
+            if let Some(digested) = kv.get_value_digested(prop_key) {
+              props.insert(*prop_key, Stored::Digested(digested.clone()));
+            }
+          }
           for (k, v) in kv.get_pairs() {
-            // Store 'left' and 'right' as Tokens so constructor template
-            // can absorb them as live TeX content (creates XMTok elements).
-            // Perl stores keyval values as Tokens objects that get expanded.
-            if k == "left" || k == "right" {
-              if let ArgWrap::Tokens(ref ts) = v {
-                props.insert(k, Stored::Tokens(ts.clone()));
-              } else {
-                props.insert(k, Stored::String(arena::pin(v.to_string())));
-              }
-            } else {
+            if k != "left" && k != "right" {
               props.insert(k, Stored::String(arena::pin(v.to_string())));
             }
           }
@@ -1092,8 +1100,16 @@ LoadDefinitions!({
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
+          // Store left/right as Digested directly from digested keyvals.
+          for prop_key in &["left", "right"] {
+            if let Some(digested) = kv.get_value_digested(prop_key) {
+              props.insert(*prop_key, Stored::Digested(digested.clone()));
+            }
+          }
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(v.to_string())));
+            if k != "left" && k != "right" {
+              props.insert(k, Stored::String(arena::pin(v.to_string())));
+            }
           }
         }
       }
@@ -1110,8 +1126,16 @@ LoadDefinitions!({
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
+          // Store left/right as Digested directly from digested keyvals.
+          for prop_key in &["left", "right"] {
+            if let Some(digested) = kv.get_value_digested(prop_key) {
+              props.insert(*prop_key, Stored::Digested(digested.clone()));
+            }
+          }
           for (k, v) in kv.get_pairs() {
-            props.insert(k, Stored::String(arena::pin(v.to_string())));
+            if k != "left" && k != "right" {
+              props.insert(k, Stored::String(arena::pin(v.to_string())));
+            }
           }
         }
       }

@@ -233,11 +233,19 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-19)
+## Test Suite Status (2026-03-20)
 
-**Current totals: 227 pass, 0 fail, 92 ignored test functions (319 total)**
-**Coverage: 72% pass rate (227/314 non-permanent-ignore tests)**
+**Current totals: 237 pass, 0 fail, 82 ignored test functions (319 total)**
+**Coverage: 75% pass rate (237/314 non-permanent-ignore tests)**
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
+
+**Recent fixes (2026-03-20, session 12):**
+- **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
+- **Matrix delimiter absorption**: `get_value_digested()` for left/right keyvals in matrix/cases properties. matrix_test: 164→2 diffs.
+- **Smallmatrix Perl typo**: Matched Perl's `atameaning` typo (not `datameaning`) to avoid XMDual wrapping.
+- **\framebox math mode**: Added `?#mathframe` conditional template, IN_MATH detection, isMath child walk. terms_test: 12→11 diffs.
+- **\boxed**: Ported from amsmath (boxed@math → XMArg enclose='box', boxed@text → Math framed='rectangle').
+- **DefMath parity audit**: Ported `\And`, `\varlimsup/inf`, `\varinjlim`, `\varprojlim`, `\intop`, `\ointop`, `\iint/iiint/iiiint/idotsint`, `\varGamma...\varOmega` (11 italic Greeks), `\implies/\impliedby`, `\mod/\pod/\pmod/\bmod`, misc stubs.
 
 **Recent infrastructure fixes (2026-03-18, session 5):**
 - **Equation numbering tags**: Row properties changed from `HashMap<String, String>` to `HashMap<String, Stored>`, enabling `Stored::Digested` tags to propagate through alignment absorption. eqnarray equations now have `<tags>` elements matching Perl.
@@ -380,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 236 pass, 0 fail, 83 ignored (319 total). Session 11+ (40 commits): is_script regex fix (Perl `\@@POST` → Rust `\lx@post@`), prefix_relop_apply grammar rule (absent token for leading relop), displaystyle tex= spacing fix. badeqnarray_test PASSES (148→0 diffs). eqnums_test 315→23 diffs. Whatsit default sizer unlist body fix. Session 10: Alignment compute_size_and_cache fix (properties sync for get_size), halign zero-dim fix (sizes_test 6→4 diffs). lxRDFa.sty full binding, latexml.sty URL/XML/SGML/HTML macros, smart \dots, arrange_panels, DIFFOP grammar. Session 9: script_sizer proper font metrics, dimension_to_spaces floor() fix, tabular strut fixes. Diff reductions: sizes 19→6→4.
+**Status (2026-03-20):** 237 pass, 0 fail, 82 ignored (319 total). Session 12: Per-size font metrics (cmm7/cmm5 from cmmi7.tfm/cmmi5.tfm → sizes_test 4→1 diffs), matrix delimiter absorption fix (matrix_test 164→2), \framebox mathframe (terms_test 12→11), \boxed/\implies/\impliedby port, DefMath parity audit (amsopn 2→6, amsmath +7, engine +2). Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim. Session 9: script_sizer proper font metrics, dimension_to_spaces floor(), tabular strut.
 
 ### Completed items
 
@@ -408,7 +416,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
 - [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
 - [x] **8c. plainfonts_test** (22_fonts) — 62 diffs remaining. OMS `\cal` symbols with roles grammar can't handle (METARELOP prefix, empty fenced).
-- [ ] **9. sizes_test** (22_fonts) — 4 diff lines (was 313→181→19→6→4). Fixed: script_sizer h/d (font metrics), dimension_to_spaces floor() bug, tabular strut (isLaTeX, baselineskip, Glue type, kround), Alignment compute_size_and_cache properties sync (halign zero dims fix). Remaining: super/subscript widths (3), vtop+tabular width overflow (1, needs readBoxContents matching Perl).
+- [ ] **9. sizes_test** (22_fonts) — 1 diff line (was 313→181→19→6→4→1). Fixed: per-size font metrics (cmm7/cmm5 from cmmi7.tfm/cmmi5.tfm) fixed 3 script width diffs. Remaining: vtop+tabular width overflow (469.75pt vs 37.05pt, needs Perl List() singleton simplification for vertical layouts).
 - [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
 - [ ] **11. abxtest_test** (22_fonts) — TooManyErrors. Needs `\hexnumber@`, `\mathxfam`.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
@@ -426,7 +434,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [ ] **30. amsdisplay_test** (56_ams) — 842 diffs. MathFork xml:id fix helped. Remaining: afterConstruct + `\text{}`.
-- [ ] **31. matrix_test** (56_ams) — 164 diffs (down from 187). Matrix delimiter tokens fixed (left/right as Stored::Tokens).
+- [ ] **31. matrix_test** (56_ams) — 2 diffs (down from 164→187). get_value_digested for left/right keyvals, smallmatrix atameaning typo. Remaining: \| delimiter role VERTBAR→OPEN.
 - [ ] **32. sideset_test** (56_ams) — 488 diffs. BLOCKED: needs afterConstruct.
 
 ### Tier 3: Needs package bindings (moderate effort)

@@ -214,7 +214,8 @@ LoadDefinitions!({
   DefMacro!("\\endvmatrix", "\\lx@end@ams@matrix");
   DefMacro!("\\Vmatrix", "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}");
   DefMacro!("\\endVmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\smallmatrix", "\\lx@ams@matrix{name=smallmatrix,datameaning=matrix,style=\\scriptsize}");
+  // Perl has a typo: "atameaning" instead of "datameaning". Match Perl to avoid XMDual wrapping.
+  DefMacro!("\\smallmatrix", "\\lx@ams@matrix{name=smallmatrix,atameaning=matrix,style=\\scriptsize}");
   DefMacro!("\\endsmallmatrix", "\\lx@end@ams@matrix");
   DefMacro!("\\matrix@check{}", None);
 
@@ -792,6 +793,61 @@ LoadDefinitions!({
       Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
+
+  // Perl: amsmath.sty.ltxml L882-896
+  DefMacro!("\\boxed{}", "\\ifmmode\\boxed@math{#1}\\else\\boxed@text{#1}\\fi");
+  DefConstructor!("\\boxed@math{}",
+    "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
+    alias => "\\boxed");
+  DefConstructor!("\\boxed@text{}",
+    "<ltx:Math mode='display' framed='rectangle'><ltx:XMath>#1</ltx:XMath></ltx:Math>",
+    mode => "math",
+    bounded => true,
+    before_digest => { Let!("\\\\", "\\lx@newline"); },
+    alias => "\\boxed");
+
+  // Perl: amsmath.sty.ltxml L899-900
+  DefMath!("\\implies", "\u{27F9}", role => "ARROW", meaning => "implies");
+  DefMath!("\\impliedby", "\u{27F8}", role => "ARROW", meaning => "implied-by");
+
+  // Perl: amsmath.sty.ltxml L1155 — \And for multi-author
+  DefMath!("\\And", "&", role => "ADDOP", meaning => "and");
+
+  // Perl: amsmath.sty.ltxml L1156-1157 — modular arithmetic
+  DefMath!("\\mod", "mod", role => "MODIFIEROP", meaning => "modulo");
+  DefMath!("\\pod{}", "(#1)", role => "MODIFIER", meaning => "modulo");
+  DefMath!("\\pmod{}", "(mod\u{2062}#1)", role => "MODIFIER", meaning => "modulo");
+  DefMath!("\\bmod", "mod", role => "MODIFIEROP", meaning => "modulo");
+
+  // Perl: amsmath.sty.ltxml L1243-1250 — multiple integrals
+  DefMath!("\\iint", "\u{222C}", role => "INTOP", meaning => "double-integral",
+    mathstyle => "\\displaystyle");
+  DefMath!("\\iiint", "\u{222D}", role => "INTOP", meaning => "triple-integral",
+    mathstyle => "\\displaystyle");
+  DefMath!("\\iiiint", "\u{2A0C}", role => "INTOP", meaning => "quadruple-integral",
+    mathstyle => "\\displaystyle");
+  DefMath!("\\idotsint", "\u{222B}\u{22EF}\u{222B}", role => "INTOP",
+    meaning => "multiple-integral", mathstyle => "\\displaystyle");
+
+  // Perl: amsmath.sty.ltxml L1283-1293 — italic Greek capitals
+  DefMath!("\\varGamma", "\u{0393}", font => { shape => "italic" });
+  DefMath!("\\varDelta", "\u{0394}", font => { shape => "italic" });
+  DefMath!("\\varTheta", "\u{0398}", font => { shape => "italic" });
+  DefMath!("\\varLambda", "\u{039B}", font => { shape => "italic" });
+  DefMath!("\\varXi", "\u{039E}", font => { shape => "italic" });
+  DefMath!("\\varPi", "\u{03A0}", font => { shape => "italic" });
+  DefMath!("\\varSigma", "\u{03A3}", font => { shape => "italic" });
+  DefMath!("\\varUpsilon", "\u{03A5}", font => { shape => "italic" });
+  DefMath!("\\varPhi", "\u{03A6}", font => { shape => "italic" });
+  DefMath!("\\varPsi", "\u{03A8}", font => { shape => "italic" });
+  DefMath!("\\varOmega", "\u{03A9}", font => { shape => "italic" });
+
+  // Perl: amsmath.sty.ltxml L1311-1319 — misc stubs
+  DefMacro!("\\mintagsep", None);
+  DefMacro!("\\minalignsep", "10pt");
+  DefMacro!("\\primfrac{}", None);
+  DefMacro!("\\shoveleft{}", "#1");
+  DefMacro!("\\shoveright{}", "#1");
 });
 
 use latexml_core::document;
