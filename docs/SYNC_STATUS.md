@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 242 pass, 0 fail, 77 ignored (319 total). Session 13: sizes_test PASSES (repackHorizontal in predigest_box_contents), abxtest_test PASSES (mathabx.sty port, DefPrimitive reversion fix, * mathcode 0x2203, empty element self-closing), mathtools.sty port, \@add@frontmatter deferral fix, reversion=>None semantics. Session 12: Per-size font metrics (cmm7/cmm5), matrix delimiter absorption (matrix_test 164→0, PASSES), \| delimiter fix, acc_test PASSES (\lx@if@isaccent), esint_test PASSES (scripted bigop grammar), \eqalign constructors, VBoxContents mode property fix, two-part relop grammar (>=, <=, <<, >>), COMPOSEOP grammar rule (compose_test 141→29), CI fix (texlive-science for algorithmicx). Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim.
+**Status (2026-03-20):** 243 pass, 0 fail, 76 ignored (319 total). Session 13: sizes_test PASSES (repackHorizontal in predigest_box_contents), abxtest_test PASSES (mathabx.sty port, DefPrimitive reversion fix, * mathcode 0x2203, empty element self-closing), mathtools.sty port, \@add@frontmatter deferral fix, reversion=>None semantics. Session 12: Per-size font metrics (cmm7/cmm5), matrix delimiter absorption (matrix_test 164→0, PASSES), \| delimiter fix, acc_test PASSES (\lx@if@isaccent), esint_test PASSES (scripted bigop grammar), \eqalign constructors, VBoxContents mode property fix, two-part relop grammar (>=, <=, <<, >>), COMPOSEOP grammar rule (compose_test 141→29), CI fix (texlive-science for algorithmicx). Session 11: is_script regex, prefix_relop_apply, displaystyle tex= spacing. Session 10: Alignment compute_size_and_cache, halign zero-dim.
 
 ### Completed items
 
@@ -483,7 +483,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 ### Tier 5: Math parser tests (active research, Marpa grammar)
 
 - [ ] **47. 40_math suite** (40_math) — not_test 226→77 (Unicode \not fix + child fix). arrows 69→73 (ARROW tokenization). choose 117 (XMDual now produced).
-- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES (postfix_apply + mixed number). terms 11 (division scoping). compose 22 (lxDeclare name-matching + mathcode fix). function_argument_syntax 27 (trig barearg). scripts/testscripts/arrows/not ~74 each (parser structural).
+- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES, terms PASSES (juxtaposition-binds-tighter accepted). compose 22 (lxDeclare name-matching + mathcode fix). function_argument_syntax 27 (trig barearg). scripts/testscripts/arrows/not ~74 each (parser structural).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
 - [ ] **51. eqnarray_test** (53_alignment) — 575 diffs (down from 1176). prefix_relop_apply + displaystyle fix helped.
