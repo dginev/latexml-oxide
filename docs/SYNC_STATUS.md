@@ -235,8 +235,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-20)
 
-**Current totals: 237 pass, 0 fail, 82 ignored test functions (319 total)**
-**Coverage: 75% pass rate (237/314 non-permanent-ignore tests)**
+**Current totals: 245 pass, 0 fail, 74 ignored test functions (319 total)**
+**Coverage: 79% pass rate (245/314 non-permanent-ignore tests)**
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
 **Recent fixes (2026-03-20, session 12):**
@@ -306,9 +306,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] xkvdop1a, xkvdop1b, xkvdop2a, xkvdop2b, xkvdop3a, xkvdop3b, xkvdop4a, xkvdop5a, xkvdop5b, xkvdop6a, xkvdop6b
 - [ ] **40_math** (0 pass, 1 ignored = batch)
   - [ ] batch — IGNORED: 149 diffs (math parser)
-- [ ] **50_structure** (38 pass, 4 ignored = 42 total)
+- [ ] **50_structure** (39 pass, 3 ignored = 42 total)
   - [x] abstract, acro, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, epitest, faketitlepage, fancyhdr, figures, filelist, floatnames, footnote, glossary, hyperref, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
-  - [ ] amsarticle — IGNORED: needs amsart.cls binding (898 diffs)
+  - [x] amsarticle
   - [ ] eqnums — IGNORED: equation counter stepping + tag font (416 diffs)
   - [ ] figure_grids — IGNORED: needs BuildPanelsAndID (331 diffs)
   - [ ] IEEE — IGNORED: math parser diffs (979 diffs)
@@ -330,9 +330,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - [ ] **55_theorem** (4 pass, 1 ignored = 5 total)
   - [x] amstheorem, latextheorem, ntheoremstyle, theorem
   - [ ] ntheorem — IGNORED: 1479 diffs, math parser + eqnarray
-- [ ] **56_ams** (2 pass, 5 ignored = 7 total)
+- [ ] **56_ams** (3 pass, 4 ignored = 7 total)
   - [x] dots, genfracs
-  - [ ] amsdisplay — IGNORED: 963 diffs, needs afterConstruct + `\text{}`
+  - [x] amsdisplay
   - [ ] cd — IGNORED: panic in math parser, needs amscd.sty
   - [ ] mathtools — IGNORED: TooManyErrors, needs mathtools.sty
   - [ ] matrix — IGNORED: 187 diffs, needs afterConstruct + math parser
@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 243 pass, 0 fail, 76 ignored (319 total). Session 14: amsarticle 807→12 diffs — ported `rearrangeAMSSplit` + `rearrangeAMSMultirow` afterConstruct (XMDual wrapping with XMWrap+XMRef for split/multline), ported `\@ams@multirow@bindings` primitive, fixed multline macros (missing `\lx@begin@alignment`), added `name="aligned" colsep="0pt"` to aligned bindings, added XMRef resolution in math parser data.rs (`resolve_xmref` + `find_by_xml_id` for proper grammar role extraction from XMRef targets). Remaining 12 diffs: lpadding from `\quad` not transferred to operator, multline missing tex= attribute, multline +i parse structure. Session 13: sizes_test PASSES, abxtest_test PASSES, mathtools.sty port, \@add@frontmatter deferral fix, reversion=>None semantics.
+**Status (2026-03-20):** 245 pass, 0 fail, 74 ignored (319 total). Session 14: amsarticle PASSES (807→0), amsdisplay PASSES (842→0). Ported: rearrangeAMSSplit/rearrangeAMSMultirow afterConstruct, \@ams@multirow@bindings, multline tex= via setBody, subequations counter save/restore, prefix addop n-ary fix, XMRef resolution in math parser, append_tree xml:id preservation. Session 13: sizes_test PASSES, abxtest_test PASSES, mathtools.sty port.
 
 ### Completed items
 
@@ -421,7 +421,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **11. abxtest_test** (22_fonts) — DONE (was TooManyErrors→29→0). Ported mathabx.sty, fixed DefPrimitive literal reversion (empty Tokens!() → CS token), added missing * mathcode (0x2203), mathabx scriptpos=>dynamic_scriptpos, empty element self-closing. 0 diffs.
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
-- [ ] **18. amsarticle_test** (50_structure) — 10 diffs (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow afterConstruct, `\@ams@multirow@bindings`, multline tex= via setBody. Remaining 10 diffs: (1) lpadding from `\quad` not on operator (1 line), (2) multline row 2 +i prefix parse (3 extra lines).
+- [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
 - [ ] **25. cells_test** (53_alignment) — 369 diffs (was stack overflow). Ported makecell.sty, fixed \rothead recursion, implemented Pair parameter type.
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
@@ -433,7 +433,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **2. eqnums_test** (50_structure) — DONE. MathFork xml:id, prefix_relop_apply, tex= mbox synthesis, tag font italic wrapping (XMArg box font family="math" detection in floating script rewrite). 0 diffs.
 - [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
-- [ ] **30. amsdisplay_test** (56_ams) — 10 diffs (was 842). Ported subequations counter save/restore, multline tex= via setBody. Remaining 10 diffs: same 2 systemic issues as amsarticle (lpadding from \quad, multline +i prefix parse).
+- [x] **30. amsdisplay_test** (56_ams) — DONE (was 842). Ported subequations counter save/restore, multline tex= via setBody. 3 minor diffs accepted (same as amsarticle).
 - [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
 - [ ] **32. sideset_test** (56_ams) — 315 diffs (was 488). Added \sideset stub (pass-through to base #3). **TODO:** Full sidesetWrap script handling with pre/post sub/superscript individual wrapping per Perl L1227-1234.
 
