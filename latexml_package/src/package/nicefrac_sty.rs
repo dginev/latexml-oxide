@@ -30,14 +30,10 @@ LoadDefinitions!({
        <ltx:XMArg yoffset='0.3em' rpadding='-0.5em'>#1</ltx:XMArg>\
        <ltx:XMArg>#2</ltx:XMArg>\
      </ltx:XMApp>",
-    alias => "\\nicefrac",
-    after_digest => sub[whatsit] {
-      let slash_font = lookup_font()
-        .map(|f| f.specialize("/"))
-        .unwrap_or_default();
-      whatsit.set_property("slashfont", Stored::Font(Rc::new(slash_font)));
-      Ok(Vec::new())
-    }
+    alias => "\\nicefrac"
+    // TODO: slashfont property via font.specialize("/") — currently produces italic font
+    // instead of upright, causing font="italic" on the / XMTok. Need to investigate
+    // _font template attribute handling in constructable.rs.
   );
 
   // Bevelled version: MathML mfrac with bevelled='true'
