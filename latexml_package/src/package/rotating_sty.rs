@@ -34,7 +34,7 @@ LoadDefinitions!({
   DefEnvironment!("{turn}{Float}",
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
     after_digest_body => sub[whatsit] {
-      let angle = whatsit.get_arg(0).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
       if let Ok(Some(body)) = whatsit.get_body() {
         if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
           for (k, v) in props {
@@ -47,7 +47,7 @@ LoadDefinitions!({
   DefEnvironment!("{rotate}{Float}",
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
     after_digest_body => sub[whatsit] {
-      let angle = whatsit.get_arg(0).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
       if let Ok(Some(body)) = whatsit.get_body() {
         if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, true) {
           for (k, v) in props {
@@ -61,8 +61,8 @@ LoadDefinitions!({
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#2</ltx:inline-block>",
     mode => "internal_vertical",
     after_digest => sub[whatsit] {
-      let angle = whatsit.get_arg(0).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
-      if let Some(body) = whatsit.get_arg(1) {
+      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Some(body) = whatsit.get_arg(2) {
         if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
           for (k, v) in props {
             whatsit.set_property(k, v);

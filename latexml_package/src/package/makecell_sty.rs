@@ -25,8 +25,24 @@ LoadDefinitions!({
   // Since we use \thead, disable guessing
   AssignValue!("GUESS_TABULAR_HEADERS" => false, Scope::Global);
 
+  // \lx@rothead@box: custom rotation box that hardcodes 90° rotation.
+  // Avoids Float parameter parsing issues with \turnbox/\rotatebox.
+  DefConstructor!("\\lx@rothead@box{}",
+    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#1</ltx:inline-block>",
+    mode => "restricted_horizontal", enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      if let Some(body) = whatsit.get_arg(1) {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), 90.0, false) {
+          for (k, v) in props {
+            whatsit.set_property(k, v);
+          }
+        }
+      }
+    });
+
   // \rothead: simplified override — delegates to \thead without rotation.
-  // TODO: implement rotation via {turn}{90} wrapping. Raw TeX causes stack overflow.
+  // Full rotation needs p{\rotheadsize} column format in inner thead to match Perl dimensions.
+  // TODO: implement rotation with correct paragraph column width.
   DefMacro!("\\rothead[]{}",
     "\\thead[#1]{#2}");
   DefMacro!("\\rotcell[]{}",
@@ -41,33 +57,55 @@ LoadDefinitions!({
   DefConstructor!("\\lx@diagheads{}{} {}{}{}",
     "<ltx:picture width='#pxwidth' height='#pxheight' xml:id='#id'><ltx:g transform='translate(#Atransform)' innerwidth='#Aw' innerheight='#Ah'><ltx:inline-block>#A</ltx:inline-block></ltx:g><ltx:g transform='translate(#Btransform)' innerwidth='#Bw' innerheight='#Bh'><ltx:inline-block>#B</ltx:inline-block></ltx:g></ltx:picture>",
     reversion => r"\diaghead(#1,#2){#3}{#4}{#5}",
-    after_construct => sub[document, _whatsit] {
+    after_construct => sub[document, whatsit] {
       let mut node = document.get_node().clone();
       document.add_class(&mut node, "ltx_nopad")?;
+      // Insert <line> element as first child of the <picture> we just created
+      if let Some(line_pts) = whatsit.get_property("line") {
+        let children = node.get_child_nodes();
+        if let Some(mut picture) = children.into_iter().rev().find(|c| c.get_name() == "picture") {
+          let line_str = line_pts.to_attribute();
+          let color_str = whatsit.get_property("color").map(|c| c.to_attribute()).unwrap_or_else(|| "#000000".to_string());
+          // Create line node using raw libxml API
+          let ns = picture.get_namespace();
+          let mut line_node = libxml::tree::Node::new("line", ns, &document.get_document()).unwrap();
+          let _ = line_node.set_attribute("points", &line_str);
+          let _ = line_node.set_attribute("stroke", &color_str);
+          let _ = line_node.set_attribute("stroke-width", "0.4");
+          // Insert as first child of picture
+          let pic_children = picture.get_child_nodes();
+          if let Some(mut first_g) = pic_children.into_iter().find(|c| c.get_name() == "g") {
+            first_g.add_prev_sibling(&mut line_node)?;
+          } else {
+            picture.add_child(&mut line_node)?;
+          }
+        }
+      }
     },
     after_digest => sub[whatsit] {
-      let dh: f64 = whatsit.get_arg(0).map(|a| a.to_attribute().parse().unwrap_or(1.0)).unwrap_or(1.0);
-      let dv: f64 = whatsit.get_arg(1).map(|a| a.to_attribute().parse().unwrap_or(1.0)).unwrap_or(1.0);
+      // get_arg is 1-based (matching Perl's getArg)
+      let dh: f64 = whatsit.get_arg(1).map(|a| a.to_attribute().parse().unwrap_or(1.0)).unwrap_or(1.0);
+      let dv: f64 = whatsit.get_arg(2).map(|a| a.to_attribute().parse().unwrap_or(1.0)).unwrap_or(1.0);
       let flip = (dh < 0.0) != (dv < 0.0);
       // pxValue conversion: sp / 65536 * DPI / 72.27, DPI=100
       let px = |d: Dimension| -> f64 { d.value_of() as f64 / 65536.0 * 100.0 / 72.27 };
       let round2 = |v: f64| -> String { s!("{:.2}", v) };
-      // Get sizes of A and B (args 3 and 4)
+      // Get sizes of A and B (args #4 and #5)
       let (mut aw, mut ah) = (0.0_f64, 0.0_f64);
       let (mut bw, mut bh) = (0.0_f64, 0.0_f64);
-      if let Some(a) = whatsit.get_arg(3) {
+      if let Some(a) = whatsit.get_arg(4) {
         if let Ok((w,h,d,_,_,_)) = a.clone().get_size(None) {
           aw = px(w); let a_h = px(h); let a_d = px(d); ah = a_h + a_d;
         }
       }
-      if let Some(b) = whatsit.get_arg(4) {
+      if let Some(b) = whatsit.get_arg(5) {
         if let Ok((w,h,d,_,_,_)) = b.clone().get_size(None) {
           bw = px(w); let b_h = px(h); let b_d = px(d); bh = b_h + b_d;
         }
       }
-      // Get width from space arg (#3 = arg index 2)
+      // Get width from space arg (#3)
       // Perl: $space->getWidth->pxValue
-      let w = if let Some(sp) = whatsit.get_arg(2) {
+      let w = if let Some(sp) = whatsit.get_arg(3) {
         if let Ok(Some(wd)) = sp.clone().get_width(None) {
           let dim: Dimension = wd.into();
           px(dim)
@@ -77,8 +115,16 @@ LoadDefinitions!({
           px(wd)
         }
       } else { 0.0 };
-      let h = w * (dv / dh).abs();
-      let line = if flip { s!("0,{h} {w},0") } else { s!("0,0, {w},{h}") };
+      // Perl: pxValue rounds to 2dp first, then uses rounded w for h
+      let w_px = round2(w);
+      let w_r: f64 = w_px.parse().unwrap_or(w);
+      let h = w_r * (dv / dh).abs();
+      let h_px = {
+        let s = s!("{:.6}", h);
+        let s = s.trim_end_matches('0');
+        s.trim_end_matches('.').to_string()
+      };
+      let line = if flip { s!("0,{h_px} {w_px},0") } else { s!("0,0, {w_px},{h_px}") };
       let ax = if flip { 0.0 } else { w - aw };
       let ay = 0.0_f64;
       let bx = if flip { w - bw } else { 0.0 };
@@ -93,11 +139,11 @@ LoadDefinitions!({
       whatsit.set_property("pxheight", Stored::from(round2(h)));
       whatsit.set_property("width", Stored::from(to_dim_attr(w)));
       whatsit.set_property("height", Stored::from(to_dim_attr(h)));
-      whatsit.set_property("A", whatsit.get_arg(3).cloned().map(Stored::from).unwrap_or(Stored::None));
+      whatsit.set_property("A", whatsit.get_arg(4).cloned().map(Stored::from).unwrap_or(Stored::None));
       whatsit.set_property("Atransform", Stored::from(s!("{},{ay}", round2(ax))));
       whatsit.set_property("Aw", Stored::from(round2(aw)));
       whatsit.set_property("Ah", Stored::from(round2(ah)));
-      whatsit.set_property("B", whatsit.get_arg(4).cloned().map(Stored::from).unwrap_or(Stored::None));
+      whatsit.set_property("B", whatsit.get_arg(5).cloned().map(Stored::from).unwrap_or(Stored::None));
       whatsit.set_property("Btransform", Stored::from(s!("{},{}", round2(bx), round2(by))));
       whatsit.set_property("Bw", Stored::from(round2(bw)));
       whatsit.set_property("Bh", Stored::from(round2(bh)));
