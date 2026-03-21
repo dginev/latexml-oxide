@@ -518,7 +518,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 
 ### Tier 7: Crashes and infinite loops (need deep debugging)
 
-- [ ] **53. diagboxtest_test** (53_alignment) — TIMEOUT: infinite loop in diagbox.
+- [ ] **53. diagboxtest_test** (53_alignment) — 744 diffs (was TIMEOUT). No longer loops but has many structural diffs.
 - [ ] **54. ncases_test** (53_alignment) — TIMEOUT: infinite loop in ncases.
 - [ ] **55. vmode_test** (53_alignment) — SEGFAULT in vertical mode.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
