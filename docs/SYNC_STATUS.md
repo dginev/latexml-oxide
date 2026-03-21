@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 17: CRITICAL FIX: get_arg() 1-based indexing. Diaghead picture+line+g. {rotatebox} env. Multirow DefMacro split + vattach fix. Grammar: `expression addop => postfix_apply`, `term += elideop`. eqnarray 222→123, sideset 481→336.
+**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 17: get_arg(0)→panic. Diaghead, {rotatebox}, multirow. Grammar rules. colortbl backgroundcolor on td (RawTeX for @ tokenization, xcolor stub fix). eqnarray 222→123, sideset 481→336, colortbls 220→162.
 
 ### Completed items
 
