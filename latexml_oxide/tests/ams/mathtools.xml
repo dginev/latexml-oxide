@@ -2895,7 +2895,7 @@ Then a switch of tag forms.</p>
                   <XMTok role="CLOSE" stretchy="true">}</XMTok>
                 </XMWrap>
               </XMDual>
-              <XMTok name="cdots" role="ID">⋯</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -3061,7 +3061,7 @@ Then a switch of tag forms.</p>
                   <XMTok role="CLOSE" stretchy="true">}</XMTok>
                 </XMWrap>
               </XMDual>
-              <XMTok name="cdots" role="ID">⋯</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -3957,7 +3957,7 @@ Then a switch of tag forms.</p>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
               </XMDual>
-              <XMTok name="cdots" role="ID">⋯</XMTok>
+              <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
               <XMDual>
                 <XMRef idref="S7.Ex56.m1.3"/>
                 <XMWrap>
@@ -5509,7 +5509,7 @@ Then a switch of tag forms.</p>
                       </XMApp>
                     </XMCell>
                     <XMCell align="center">
-                      <XMTok name="cdots" role="ID">⋯</XMTok>
+                      <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
                     </XMCell>
                     <XMCell align="center">
                       <XMApp>
@@ -5568,7 +5568,7 @@ Then a switch of tag forms.</p>
                       </XMApp>
                     </XMCell>
                     <XMCell align="center">
-                      <XMTok name="cdots" role="ID">⋯</XMTok>
+                      <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
                     </XMCell>
                     <XMCell align="center">
                       <XMApp>
@@ -5641,7 +5641,7 @@ Then a switch of tag forms.</p>
                       </XMApp>
                     </XMCell>
                     <XMCell align="center">
-                      <XMTok name="cdots" role="ID">⋯</XMTok>
+                      <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
                     </XMCell>
                     <XMCell align="center">
                       <XMApp>
