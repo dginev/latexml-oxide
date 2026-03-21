@@ -25,8 +25,8 @@ LoadDefinitions!({
   // Since we use \thead, disable guessing
   AssignValue!("GUESS_TABULAR_HEADERS" => false, Scope::Global);
 
-  // \rothead: override to prevent infinite recursion from nested \thead
-  // in raw TeX definition. Simplified: delegate to \thead with content.
+  // \rothead: simplified override — delegates to \thead without rotation.
+  // TODO: implement rotation via {turn}{90} wrapping. Raw TeX causes stack overflow.
   DefMacro!("\\rothead[]{}",
     "\\thead[#1]{#2}");
   DefMacro!("\\rotcell[]{}",

@@ -1,4 +1,55 @@
 use crate::prelude::*;
+use latexml_core::common::dimension::attribute_format;
+
+/// Perl: rotatedProperties($box, $angle, %options) in graphics.sty.ltxml L152-202
+/// Computes bounding box and translation for rotated box content.
+pub fn rotated_properties(
+  mut body: Digested,
+  angle: f64,
+  smash: bool,
+) -> Result<Vec<(&'static str, Stored)>> {
+  let (w_dim, h_dim, d_dim, _, _, _) = body.get_size(None)?;
+  let w = w_dim.value_of() as f64;
+  let h = h_dim.value_of() as f64;
+  let d = d_dim.value_of() as f64;
+  if w == 0.0 && h == 0.0 && d == 0.0 {
+    return Ok(Vec::new());
+  }
+  let x0: f64 = 0.0;
+  let y0: f64 = 0.0;
+  // Origin parsing omitted for now (TODO: parse from keyvals)
+
+  let total_h = h + d;
+  let rad = angle * std::f64::consts::PI / 180.0;
+  let s = rad.sin();
+  let c = rad.cos();
+  let wp = (w * c).abs() + (total_h * s).abs();
+  let corners = [
+    (-d - y0) * c + (0.0 - x0) * s + y0,    // bottom-left
+    (-d - y0) * c + (w - x0) * s + y0,       // bottom-right
+    (h - y0) * c + (w - x0) * s + y0,        // top-right
+    (h - y0) * c + (0.0 - x0) * s + y0,      // top-left
+  ];
+  let hp = corners.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+  let dp = -corners.iter().cloned().fold(f64::INFINITY, f64::min);
+  let xsh = (wp - w) / 2.0;
+  let ysh = (h + d - hp - dp) / 2.0;
+
+  let dim_attr = |v: f64| attribute_format(v as i64, None);
+  let width_val = if smash { "0.0pt".to_string() } else { dim_attr(wp) };
+
+  Ok(vec![
+    ("angle", Stored::from(s!("{angle}"))),
+    ("width", Stored::from(width_val)),
+    ("height", Stored::from(dim_attr(hp))),
+    ("depth", Stored::from(dim_attr(dp))),
+    ("innerwidth", Stored::from(dim_attr(w))),
+    ("innerheight", Stored::from(dim_attr(h))),
+    ("innerdepth", Stored::from(dim_attr(d))),
+    ("xtranslate", Stored::from(dim_attr(xsh))),
+    ("ytranslate", Stored::from(dim_attr(ysh))),
+  ])
+}
 
 LoadDefinitions!({
   // Perl: graphics.sty.ltxml — base graphics package
@@ -34,8 +85,19 @@ LoadDefinitions!({
   DefKeyVal!("Grot", "y", "Dimension");
   DefKeyVal!("Grot", "units", "");
 
-  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float}{}", "<ltx:inline-block angle='#2'>#3</ltx:inline-block>",
-    mode => "restricted_horizontal", enter_horizontal => true);
+  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float}{}",
+    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+    mode => "restricted_horizontal", enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Some(body) = whatsit.get_arg(2) {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
+          for (k, v) in props {
+            whatsit.set_property(k, v);
+          }
+        }
+      }
+    });
 
   DefMacro!("\\Grot@erotate", "\\rotatebox[]");
 
