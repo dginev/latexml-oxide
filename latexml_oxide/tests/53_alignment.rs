@@ -136,7 +136,6 @@ fn array_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: afterConstruct + math parser
 fn eqnarray_test() {
   latexml_test_single("tests/alignment/eqnarray.tex", "eqnarray", DIR, None, None);
 }

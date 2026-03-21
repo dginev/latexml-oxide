@@ -1416,17 +1416,37 @@ pub fn equationgroup_join_rows(
     t.unlink_node();
     equation.add_child(&mut t).ok();
   }
-  // Perl: cell Math elements are created (with xml:ids m1,m2,...) BEFORE openMathFork,
-  // so the main MathFork Math gets the next id (e.g. m4 for 3-cell eqnarray).
-  // In Rust, we need to pre-advance the id counter to match this ordering.
-  // Count _Capture_ cells (each initially creates a Math element during construction,
-  // even if some are later converted to <text> by afterConstruct hooks).
+  // Pre-advance the ID counter to skip over cell Math IDs.
+  // For multi-row eqnarrays where different rows have different equation IDs,
+  // only count cells from the equation that provides the target ID.
+  // This prevents inflation from rows that belong to different equation contexts.
+  let has_different_ids = equations.len() > 1 && {
+    let ids: Vec<_> = equations.iter().filter_map(|eq|
+      eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+        .or_else(|| eq.get_attribute("xml:id"))
+    ).collect();
+    ids.len() > 1 || (ids.len() == 1 && equations.len() > 1)
+  };
   let mut cell_count = 0;
   for eq in equations.iter() {
-    let captures = document.findnodes("ltx:_Capture_", Some(eq));
-    cell_count += captures.len();
+    if has_different_ids {
+      // Multi-row with different IDs: only count cells with Math from the target equation
+      let eq_id = eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+        .or_else(|| eq.get_attribute("xml:id"));
+      if eq_id != id { continue; }
+      // Count only cells that contain Math elements (empty cells don't consume IDs)
+      let captures = document.findnodes("ltx:_Capture_", Some(eq));
+      for cap in &captures {
+        if !document.findnodes("ltx:Math", Some(cap)).is_empty() {
+          cell_count += 1;
+        }
+      }
+    } else {
+      // Single-equation: count all _Capture_ cells (including empty ones)
+      let captures = document.findnodes("ltx:_Capture_", Some(eq));
+      cell_count += captures.len();
+    }
   }
-  // Pre-advance the id counter so the main MathFork Math gets the correct offset
   if cell_count > 0 {
     let ctrkey = s!("_ID_counter_m_");
     let current = equation.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
