@@ -157,6 +157,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "slashbox.sty" => package::slashbox_sty::load_definitions(),
     "diagbox.sty" => package::diagbox_sty::load_definitions(),
     "nicefrac.sty" => package::nicefrac_sty::load_definitions(),
+    "units.sty" => package::units_sty::load_definitions(),
     _other => return None,
   })
 }
