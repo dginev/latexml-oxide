@@ -30,12 +30,19 @@ LoadDefinitions!({
        <ltx:XMArg yoffset='0.3em' rpadding='-0.5em'>#1</ltx:XMArg>\
        <ltx:XMArg>#2</ltx:XMArg>\
      </ltx:XMApp>",
-    alias => "\\nicefrac"
-    // TODO: _font='#slashfont' from Perl uses font.specialize("/") to prevent
-    // italic font on the / XMTok. Rust finalize_rec inherits italic from math
-    // context, producing font="italic". Needs _font attribute support in template.
+    alias => "\\nicefrac",
+    after_construct => sub[document] {
+      // Set specialized font on the slash XMTok to prevent italic inheritance.
+      // Perl: _font='#slashfont' with font.specialize("/") — returns upright default font.
+      let node = document.get_node().clone();
+      let slash_toks = document.findnodes("descendant::ltx:XMTok[@meaning='divide']", Some(&node));
+      for mut tok in slash_toks {
+        let current_font = document.get_node_font(&tok);
+        let slash_font = current_font.specialize("/");
+        document.set_node_font(&mut tok, &slash_font)?;
+      }
+    }
   );
-
   // Bevelled version: MathML mfrac with bevelled='true'
   DefConstructor!("\\ltx@nicefrac@bevelled InFractionStyle InFractionStyle",
     "<ltx:XMApp>\

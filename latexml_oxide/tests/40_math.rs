@@ -46,7 +46,6 @@ fn fracs_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn niceunits_test() {
   latexml_test_single("tests/math/niceunits.tex", "niceunits", DIR, None, None);
 }
