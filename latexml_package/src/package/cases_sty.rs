@@ -1,0 +1,154 @@
+use crate::prelude::*;
+
+/// Perl: cases.sty.ltxml — numcases and subnumcases environments
+
+/// Perl: numcasesBindings($lhs) — creates 3-column alignment for numcases
+fn numcases_bindings(lhs: Tokens) -> Result<()> {
+  use latexml_core::alignment::cell::Cell;
+  let col1 = Cell {
+    before: Some(Tokens!(T_CS!("\\hfil"), T_MATH!(), T_CS!("\\lx@hidden@bgroup"), T_CS!("\\displaystyle"))),
+    after: Some(Tokens!(T_CS!("\\lx@hidden@egroup"), T_MATH!())),
+    ..Cell::default()
+  };
+  let col2 = Cell {
+    before: Some(Tokens!(T_MATH!(), T_CS!("\\lx@hidden@bgroup"), T_CS!("\\displaystyle"))),
+    after: Some(Tokens!(T_CS!("\\lx@hidden@egroup"), T_MATH!(), T_CS!("\\hfil"))),
+    ..Cell::default()
+  };
+  let col3 = Cell {
+    before: Some(Tokens!(T_CS!("\\lx@hidden@bgroup"))),
+    after: Some(Tokens!(T_CS!("\\lx@hidden@egroup"), T_CS!("\\hfil"))),
+    ..Cell::default()
+  };
+  use latexml_core::alignment::template::TemplateConfig;
+  let mut template = Template::new(TemplateConfig::default());
+  template.add_column(col1);
+  template.add_column(col2);
+  template.add_column(col3);
+
+  let mut attrs = string_map! { "class" => "ltx_eqn_numcases" };
+  if let Ok(Some(colsep)) = lookup_register("\\arraycolsep", Vec::new()) {
+    let colsep_dim: Dimension = colsep.into();
+    let doubled = Dimension::new(colsep_dim.value_of() * 2);
+    attrs.insert(String::from("colsep"), doubled.to_attribute());
+  }
+
+  let alignment = Alignment::new(AlignmentConfig {
+    template: Some(template),
+    open_container: Rc::new(move |document, mut props| {
+      if let Ok(id_props) = ref_step_id("@equationgroup") {
+        if let Some(id) = id_props.get("id") {
+          props.insert(String::from("xml:id"), id.to_string());
+        }
+      }
+      props.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
+      document.open_element("ltx:equationgroup", Some(props), None).map(Option::Some)
+    }),
+    close_container: Rc::new(|document| document.close_element("ltx:equationgroup")),
+    open_row: Rc::new(|document, mut props| {
+      if let Some(Stored::HashStored(eq_props)) = state::remove_value("EQUATIONROW_PROPS") {
+        if let Some(id) = eq_props.get("id") {
+          props.insert(String::from("xml:id"), Stored::from(id.to_string()));
+        }
+      }
+      let tags_digested = props.remove("tags");
+      let str_props: HashMap<String, String> = props.into_iter().map(|(k, v)| (k, v.to_string())).collect();
+      document.open_element("ltx:equation", Some(str_props), None)?;
+      if let Some(Stored::Digested(d)) = tags_digested {
+        document.absorb(&d, None)?;
+      }
+      Ok(())
+    }),
+    close_row: Rc::new(|document| document.close_element("ltx:equation")),
+    open_column: Rc::new(|document, props| {
+      document.open_element("ltx:_Capture_", Some(props), None).map(Option::Some)
+    }),
+    close_column: Rc::new(|document| document.close_element("ltx:_Capture_")),
+    is_math: true,
+    properties: SymHashMap::default(),
+    xml_attributes: attrs,
+  });
+  assign_alignment(alignment, None);
+  state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
+  let mut lhs_expansion = lhs.unlist();
+  lhs_expansion.push(T_ALIGN!());
+  def_macro(T_CS!("\\@numcases@LHS"), None, Tokens::new(lhs_expansion), None)?;
+  Let!("\\\\", "\\@numcases@newline");
+  state::let_i(&T_CS!("\\lx@alignment@row@before"), &T_CS!("\\eqnarray@row@before"), None);
+  state::let_i(&T_CS!("\\lx@alignment@row@after"), &T_CS!("\\eqnarray@row@after"), None);
+  Ok(())
+}
+
+#[rustfmt::skip]
+LoadDefinitions!({
+  DefPrimitive!("\\@numcases@bindings{}", sub[(lhs)] {
+    numcases_bindings(lhs.into())?;
+  });
+
+  DefMacro!("\\numcases{}",
+    "\\@numcases@bindings{#1}\\@@numcases\\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\\lx@begin@alignment\\@numcases@LHS");
+  DefMacro!("\\endnumcases", "\\lx@end@alignment\\end@numcases");
+
+  DefMacro!("\\subnumcases{}",
+    "\\@numcases@bindings{#1}\\lx@numcases@subnumbering@begin\\@@numcases\\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\\lx@begin@alignment\\@numcases@LHS");
+  DefMacro!("\\endsubnumcases", "\\lx@end@alignment\\end@numcases\\lx@numcases@subnumbering@end");
+
+  // Sub-numbering: simplified — step, save, reset, restore
+  DefPrimitive!("\\lx@numcases@subnumbering@begin", sub[_args] {
+    let _eqn = ref_step_counter("equation", false)?;
+    // Save and reset equation counter
+    if let Ok(Some(saved)) = lookup_register("\\c@equation", Vec::new()) {
+      state::assign_value("SAVED_EQUATION_NUMBER", Stored::from(saved), None);
+    }
+    state::assign_register("\\c@equation", RegisterValue::Number(Number::new(0)), None, Vec::new())?;
+  });
+  DefPrimitive!("\\lx@numcases@subnumbering@end", sub[_args] {
+    // Restore saved equation counter
+    if let Some(saved) = state::lookup_value("SAVED_EQUATION_NUMBER") {
+      // Stored can be Number, Dimension, etc. — extract the number for the counter
+      if let Stored::Number(n) = saved {
+        state::assign_register("\\c@equation", RegisterValue::Number(n), None, Vec::new())?;
+      }
+    }
+  });
+
+  DefMacro!("\\@numcases@newline[]",
+    "\\ifx.#1.\\lx@alignment@newline\\else\\lx@alignment@newline[#1]\\fi\\@numcases@LHS");
+  DefMacro!("\\@numcases@cr", "\\lx@alignment@cr\\@numcases@LHS");
+
+  DefConstructor!("\\@@numcases SkipSpaces DigestedBody", "#1",
+    before_digest => sub { bgroup(); },
+    after_construct => sub[document, _whatsit] {
+      let node = document.get_node();
+      if let Some(equationgroup) = node.get_last_child() {
+        rearrange_numcases(document, &equationgroup)?;
+      }
+    });
+
+  DefPrimitive!("\\end@numcases", sub[_args] { egroup()?; });
+});
+
+fn rearrange_numcases(document: &mut Document, equationgroup: &Node) -> Result<()> {
+  use crate::engine::base_xmath::equationgroup_join_cols;
+  let equations: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
+  for equation in equations {
+    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&equation));
+    if cells.is_empty() { continue; }
+    let cell1cont: Vec<Node> = cells[0].get_child_elements();
+    if cells.len() == 1 && cell1cont.len() == 1
+      && cell1cont[0].get_attribute("class").unwrap_or_default().contains("ltx_intertext")
+    {
+      let mut cell1cont0 = cell1cont[0].clone();
+      cell1cont0.unlink_node();
+      let mut eq = equation.clone();
+      let _ = eq.add_prev_sibling(&mut cell1cont0);
+      eq.unlink_node();
+    } else if cells.len() == 1 && cell1cont.is_empty() {
+      let mut eq = equation.clone();
+      eq.unlink_node();
+    } else {
+      equationgroup_join_cols(document, 3, &mut equation.clone())?;
+    }
+  }
+  Ok(())
+}
