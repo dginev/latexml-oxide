@@ -631,6 +631,9 @@ pub fn prefix_apply_applyop(
 
 /// Perl: moreTerms2 trailing-operator → Apply(New('limit-from'), term, addop)
 /// Handles `a+` (limit from above) and similar trailing operators.
+/// When the expression is an n-ary Apply with the same operator (e.g. a+b+c+),
+/// only wraps the LAST term in limit-from (matching Perl behavior):
+///   Apply(+, a, b, c) + → Apply(+, a, b, Apply(limit-from, c, +))
 pub fn postfix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -638,11 +641,48 @@ pub fn postfix_apply(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg, op);
-  // Perl: Apply(New('limit-from'), $term, $addop)
   let limit_from = XM::Token(XProps {
     meaning: Some(Cow::Borrowed("limit-from")),
     ..XProps::default()
   }, Meta::default());
+  // Check if arg is an n-ary Apply with the same operator as op
+  if let (Some(XM::Apply(ref app_op, ref app_args, ref app_props, ref app_meta)),
+          Some(ref op_xm)) = (&arg, &op) {
+    let same_op = match (app_op.0.as_ref(), op_xm) {
+      // Compare Lexemes: both are lexeme strings like "ADDOP:plus:+"
+      (XM::Lexeme(ref a_lex, _), XM::Lexeme(ref o_lex, _)) => {
+        // Compare role:meaning prefix (ignoring the actual symbol after last :)
+        let a_parts: Vec<_> = a_lex.splitn(3, ':').collect();
+        let o_parts: Vec<_> = o_lex.splitn(3, ':').collect();
+        a_parts.len() >= 2 && o_parts.len() >= 2
+          && a_parts[0] == o_parts[0] && a_parts[1] == o_parts[1]
+      },
+      // Compare realized Tokens
+      (XM::Token(ref a_props, _), XM::Token(ref o_props, _)) => {
+        a_props.meaning == o_props.meaning && a_props.meaning.is_some()
+      },
+      _ => false,
+    };
+    if same_op && app_args.0.len() >= 2 {
+      // Wrap only the last argument in limit-from
+      let mut new_args = app_args.0.clone();
+      let last_arg = new_args.pop().unwrap();
+      let wrapped = XM::Apply(
+        limit_from.into(),
+        Args(vec![last_arg, op]),
+        XProps::default(),
+        Meta::default(),
+      );
+      new_args.push(Some(wrapped));
+      return Ok(Some(XM::Apply(
+        app_op.clone(),
+        Args(new_args),
+        app_props.clone(),
+        app_meta.clone(),
+      )));
+    }
+  }
+  // Fallback: wrap the entire expression
   Ok(Some(XM::Apply(
     limit_from.into(),
     Args(vec![arg, op]),
