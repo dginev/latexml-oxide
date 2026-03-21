@@ -981,8 +981,10 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node) -> Result<()> {
     }
   }
   if maxreach > heads.len() {
-    // rowspan crossed over thead boundary!
-    rows.append(&mut heads);
+    // rowspan crossed over thead boundary! Put head rows back at the FRONT of body rows.
+    heads.append(&mut rows);
+    rows = heads;
+    heads = Vec::new();
   }
   // scan trailing rows as potential tfoot
   let mut foots = VecDeque::new();
