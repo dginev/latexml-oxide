@@ -247,6 +247,15 @@ impl Alignment {
 
   pub fn current_column_number(&self) -> usize { self.current_column }
 
+  /// Set a property on the current row (for attributes like backgroundcolor from \rowcolor)
+  pub fn set_row_property(&mut self, key: &str, value: String) {
+    if let Some(row_idx) = self.current_row {
+      if let Some(row) = self.rows.get_mut(row_idx) {
+        row.properties.insert(key.to_string(), Stored::from(value));
+      }
+    }
+  }
+
   pub fn current_row_number(&self) -> usize {
     self.rows.iter().filter(|row| !row.is_pseudo()).count()
   }

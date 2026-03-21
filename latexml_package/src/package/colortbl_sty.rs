@@ -65,33 +65,22 @@ LoadDefinitions!({
       \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
       \@setrowcolor}}");
 
-  // \@setrowcolor — set tr's backgroundcolor from current font background
-  DefConstructor!(T_CS!("\\@setrowcolor"), None, sub[document, _args, _props] {
-    let bg_opt = document.get_node_font(document.get_node()).get_background()
-      .map(|c| c.to_attribute());
-    if let Some(bg) = bg_opt {
-      let node = document.get_node().clone();
-      if let Some(mut tr) = document.findnode("ancestor-or-self::ltx:tr", Some(&node)) {
-        if !tr.has_attribute("backgroundcolor") {
-          document.set_attribute(&mut tr, "backgroundcolor", &bg)?;
-        }
-      }
-    }
-  },
-    after_digest => sub[whatsit] {
-      let bg = state::lookup_font().and_then(|f| f.get_background().map(|c| c.to_attribute()));
-      if let Some(bg_str) = bg {
-        whatsit.set_property("background", Stored::String(arena::pin(&bg_str)));
+  // \@setrowcolor — store row background color during digestion.
+  // Sets tabular_row_color state value and stores bg on alignment row properties.
+  // The backgroundcolor is applied to <tr> during row absorption.
+  DefPrimitive!("\\@setrowcolor", sub[_args] {
+    if let Some(font) = lookup_font() {
+      if let Some(bg) = font.get_background() {
+        let bg_str = bg.to_attribute();
         state::assign_value(
           "tabular_row_color",
           Stored::String(arena::pin(&bg_str)),
           Some(Scope::Global),
         );
       }
-    },
-    properties => { Ok(stored_map!("alignmentSkippable" => true)) },
-    alias => ""
-  );
+    }
+    Ok(())
+  });
 
   // \@setcellcolor — store cell background color during digestion.
   // Uses DefPrimitive to capture background at digestion time (when font is set).
