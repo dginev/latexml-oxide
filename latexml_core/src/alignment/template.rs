@@ -273,6 +273,7 @@ impl Template {
         let mut after = prev.after.clone().unwrap_or_default().unlist();
         after.push(T_CS!("\\lx@intercol"));
         prev.after = Some(Tokens::new(after));
+        prev.has_intercol_after = true;
       }
     }
   }
@@ -321,6 +322,7 @@ impl Template {
         let mut after = prev.after.clone().unwrap_or_default().unlist();
         after.push(T_CS!("\\lx@intercol"));
         prev.after = Some(Tokens::new(after));
+        prev.has_intercol_after = true;
       }
     }
     // Perl L88-95: build before from save_between + \lx@intercol + properties before + save_before
@@ -388,6 +390,7 @@ impl Template {
 
   pub fn get_columns(&self) -> &[Cell] { &self.columns }
   pub fn get_columns_mut(&mut self) -> &mut Vec<Cell> { &mut self.columns }
+  pub fn get_repeated_mut(&mut self) -> &mut Vec<Cell> { &mut self.repeated }
   pub fn set_pseudo(&mut self) { self.pseudorow = true; }
   pub fn unset_pseudo(&mut self) { self.pseudorow = false; }
   pub fn is_pseudo(&self) -> bool { self.pseudorow }

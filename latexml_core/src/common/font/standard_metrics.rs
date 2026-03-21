@@ -183,6 +183,31 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
     ),
     emwidth: 65536.18,
     ..MetricData::default()},
+  // cmbx10 TFM metrics (Computer Modern Bold Extended)
+  "cmbx" => MetricData {
+    quad: 75366.00,
+    space: 25122.00,
+    encoding: "OT1",
+    file: "cmbx10.tfm",
+    spacestretch: 12561.00,
+    spaceshrink: 8374.00,
+    extraspace: 8374.00,
+    exheight: 29127.12,
+    emwidth: 75366.00,
+    ligatures: raw_map!(
+      "\u{002D}\u{002D}" => ("\u{2013}", 0.0, 0.0, 0.0, ),
+      "\u{FB00}\u{0069}" => ("\u{FB03}", 0.0, 0.0, 0.0, ),
+      "\u{0066}\u{0069}" => ("\u{FB01}", 0.0, 0.0, 0.0, ),
+      "\u{2013}\u{002D}" => ("\u{2014}", 0.0, 0.0, 0.0, ),
+      "\u{003F}\u{2018}" => ("\u{00BF}", 0.0, 0.0, 0.0, ),
+      "\u{2019}\u{2019}" => ("\u{201D}", 0.0, 0.0, 0.0, ),
+      "\u{0066}\u{0066}" => ("\u{FB00}", 0.0, 0.0, 0.0, ),
+      "\u{0021}\u{2018}" => ("\u{00A1}", 0.0, 0.0, 0.0, ),
+      "\u{FB00}\u{006C}" => ("\u{FB04}", 0.0, 0.0, 0.0, ),
+      "\u{0066}\u{006C}" => ("\u{FB02}", 0.0, 0.0, 0.0, ),
+      "\u{2018}\u{2018}" => ("\u{201C}", 0.0, 0.0, 0.0, )
+    ),
+    ..MetricData::default()},
   "cmr" => MetricData {
     quad: 65536.18,
     space: 21845.37,

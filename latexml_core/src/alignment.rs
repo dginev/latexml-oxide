@@ -563,17 +563,23 @@ impl BoxOps for Alignment {
           let threshold_02em: i64 = 131072;
           let threshold_15em: i64 = 983040;
           // Perl: $lpad = ($$cell{lspaces} ? $$cell{lspaces}->getWidth->valueOf : 0)
+          // Note: In Perl, lspaces is populated from \lx@intercol (isSpace, width=tabcolsep)
+          // during cell content extraction. Even @{} columns get lspaces from the template's
+          // \lx@intercol inserted before the column. When Rust's extraction doesn't populate
+          // lspaces, we approximate: if template has fill commands (\hfil etc), assume spacing
+          // exists (prevents incorrect ltx_nopad_l for centered/right-aligned columns).
           let lpad = cell
             .lspaces
             .as_ref()
             .and_then(|ls| ls.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              // When lspaces is unset but template has fill/spacing commands,
-              // assume spacing exists (workaround for missing rspaces extraction)
               if template_has_fill(&cell.before) { threshold_02em } else { 0 }
             });
           // Perl: $rpad = ($$cell{rspaces} ? $$cell{rspaces}->getWidth->valueOf : 0)
+          // When rspaces is not extracted, check template for \lx@intercol.
+          // Present → regular column with tabcolsep padding (assume >= 0.2em)
+          // Absent → @{} disabled intercolumn (assume 0, enabling ltx_nopad_r)
           let rpad = cell
             .rspaces
             .as_ref()
@@ -802,7 +808,7 @@ pub fn matrix_template() -> Template {
 
 /// Check whether a template token list contains fill/spacing commands
 /// like \hfil, \hfill, \hskip, \lx@intercol. Used as a fallback when
-/// lspaces/rspaces extraction missed the template spacing.
+/// lspaces extraction missed the template spacing.
 fn template_has_fill(tokens: &Option<Tokens>) -> bool {
   if let Some(ref toks) = tokens {
     for tok in toks.unlist_ref() {

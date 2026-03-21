@@ -51,6 +51,10 @@ pub struct Cell {
   pub rspaces:         Option<Digested>,
   /// Perl: $$cell{class} — CSS class for the cell
   pub class:           Option<String>,
+  /// Whether this column has \lx@intercol in its after tokens (from template).
+  /// Set during template building, used by nopad heuristic to distinguish
+  /// regular columns (has intercolumn padding) from @{}-disabled columns.
+  pub has_intercol_after: bool,
 }
 impl Cell {
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {
