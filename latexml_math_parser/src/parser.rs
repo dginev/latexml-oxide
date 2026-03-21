@@ -585,6 +585,8 @@ impl MathParser {
         }
         let new_xml_tree = parse_tree.into_xmath(mathnode, &mut nodes, document)?;
         document.append_tree(mathnode, vec![new_xml_tree])?;
+        // Resolve _xmkey references: match XMRef[@_xmkey] to elements with same _xmkey
+        resolve_xmkeys(mathnode, document)?;
         let result = element_nodes(mathnode).remove(0);
         //END reparent.
         if !punct_nodes.is_empty() {
@@ -1033,6 +1035,46 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     }
   }
   Cow::Borrowed(node)
+}
+
+/// Resolve _xmkey references after parse tree installation.
+/// Matches XMRef[@_xmkey] to elements with same _xmkey, generates xml:id and sets idref.
+fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Result<(), Box<dyn std::error::Error>> {
+  // Find all XMRef elements with _xmkey (missing idref)
+  let refs = document.findnodes("descendant::ltx:XMRef[@_xmkey]", Some(mathnode));
+  for mut ref_node in refs {
+    let key = match ref_node.get_attribute("_xmkey") {
+      Some(k) => k,
+      None => continue,
+    };
+    // Find the element with matching _xmkey (non-XMRef)
+    let xpath = format!("descendant::*[@_xmkey='{}'][not(self::ltx:XMRef)]", key);
+    let targets = document.findnodes(&xpath, Some(mathnode));
+    if let Some(mut target) = targets.into_iter().next() {
+      // Ensure target has xml:id
+      let target_id = if let Some(id) = target.get_attribute("xml:id")
+        .or_else(|| target.get_attribute("id"))
+      {
+        id
+      } else {
+        // Generate an id for the target
+        document.generate_id(&mut target, "")?;
+        target.get_attribute("xml:id")
+          .or_else(|| target.get_attribute("id"))
+          .unwrap_or_default()
+      };
+      if !target_id.is_empty() {
+        document.set_attribute(&mut ref_node, "idref", &target_id)?;
+      }
+    }
+    // Clean up _xmkey from both ref and target
+    ref_node.remove_attribute("_xmkey");
+  }
+  // Also clean up _xmkey from non-ref elements
+  for mut node in document.findnodes("descendant::*[@_xmkey]", Some(mathnode)) {
+    node.remove_attribute("_xmkey");
+  }
+  Ok(())
 }
 
 fn p_get_attribute(item: &Node, key: &str) -> Option<String> {

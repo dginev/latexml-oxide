@@ -216,10 +216,18 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
   let mut refs = Vec::new();
   for arg in args {
     match arg {
-      XM::Token(props, _meta) => {
+      XM::Token(ref mut props, _meta) => {
         if let Some(id) = props.id.as_ref() {
           refs.push(XM::Ref(XProps {
             id: Some(id.clone()),
+            ..XProps::default()
+          }));
+        } else {
+          // Parser-created token without id — use _xmkey for deferred resolution
+          let key = get_xmarg_id()?.to_string();
+          props.xmkey = Some(Cow::Owned(key.clone()));
+          refs.push(XM::Ref(XProps {
+            xmkey: Some(Cow::Owned(key)),
             ..XProps::default()
           }));
         }
@@ -237,16 +245,17 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
             ..XProps::default()
           })),
           None => {
-            // If arg is already XML, it's too late to get automatic ID's
+            // Generate xml:id for this node so we can reference it
             document.generate_id(&mut node.clone(), "")?;
-            refs.push(XM::Ref(XProps {
-              id: Some(Cow::Owned(
-                node
-                  .get_attribute("id")
-                  .expect("generate_id should always succeed in setting an id"),
-              )),
-              ..XProps::default()
-            }));
+            let generated_id = node.get_attribute("xml:id")
+              .or_else(|| node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
+              .or_else(|| node.get_attribute("id"));
+            if let Some(id) = generated_id {
+              refs.push(XM::Ref(XProps {
+                id: Some(Cow::Owned(id)),
+                ..XProps::default()
+              }));
+            }
           },
         }
       },

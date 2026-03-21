@@ -775,7 +775,6 @@ pub fn fenced(
   // TODO: For now assume a single argument in arg; specialize in other functions such as "open_interval",
   //       for the other cases from the classic MathParser.pm
   if op_name == "delimited-()" {
-    // Hopefully, can just ignore the parens?
     let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
     Ok(Some(XM::Dual(
       Box::new(arg_xmrefs.remove(0)),
