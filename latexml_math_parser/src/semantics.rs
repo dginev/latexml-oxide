@@ -743,6 +743,34 @@ pub fn fenced(
   }
 }
 
+// Empty fenced expression: OPEN CLOSE with no content => list()
+// Perl: Apply(List, []) wrapped in XMDual with XMWrap(OPEN, CLOSE)
+pub fn empty_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => open_opt, close_opt);
+  let open = open_opt.unwrap();
+  let close = close_opt.unwrap();
+  let list_op = XProps {
+    meaning: Some(Cow::Borrowed("list")),
+    ..XProps::default()
+  };
+  // Build: Dual(Apply(list), Wrap(open, close))
+  Ok(Some(XM::Dual(
+    Box::new(XM::Apply(list_op.into(), vec![].into(), XProps::default(), Meta::default())),
+    Box::new(XM::Wrap(
+      vec![open, close],
+      XProps::default(),
+      Meta::default(),
+    )),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 // similar to fenced but the operator is a kind of tuple or interval, such as "open-interval"
 // and the arguments are delimited with a comma
 pub fn interval(

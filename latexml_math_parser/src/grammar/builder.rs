@@ -182,6 +182,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl MathGrammar L81: AnyOp Expression => Apply(AnyOp, Absent(), Expression)
       // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
       | relop expression => prefix_relop_apply
+      | metarelop expression => prefix_relop_apply
       | modifier_expression;
 
     // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
@@ -218,7 +219,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
            | lbrace formula singlevertbar formula rbrace => fence
            | lbrace formula middle_bar formula rbrace => fence
-           | lbrace formula metarelop formula rbrace => fence;
+           | lbrace formula metarelop formula rbrace => fence
+           // Empty fenced expressions: () [] {} ⌊⌋ etc.
+           | lparen rparen => empty_fenced
+           | lbracket rbracket => empty_fenced
+           | lbrace rbrace => empty_fenced
+           | open close => empty_fenced;
     factor += fenced_factor;
 
     // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
