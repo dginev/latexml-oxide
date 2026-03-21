@@ -1005,7 +1005,10 @@ impl Document {
     // emulating libxml2's heuristic indentation.
     // This uses our own serializer with the correct schema-based indentation rules:
     // noindent_children=true when the element can contain #PCDATA per the schema.
-    self.serialize_aux(&self.document.as_node(), 0, false, false)
+    let result = self.serialize_aux(&self.document.as_node(), 0, false, false);
+    // Trim trailing newline (the root element adds \n after </document>
+    // but Perl doesn't include it)
+    result.trim_end_matches('\n').to_string() + "\n"
   }
 
   /// We ought to try for something close to C14N (<http://www.w3.org/TR/xml-c14n>),

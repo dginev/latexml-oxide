@@ -71,9 +71,9 @@ fn main() -> Result<(), Box<dyn Error>> {
   if let Some(xml) = response.result {
     if let Some(target_path) = target {
       let mut out_fh = File::create(target_path)?;
-      writeln!(out_fh, "{xml}")?;
+      write!(out_fh, "{xml}")?;
     } else {
-      println!("{xml}");
+      print!("{xml}");
     }
   }
 
