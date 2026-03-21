@@ -851,8 +851,9 @@ LoadDefinitions!({
   //======================================================================
   // Section 7.2 \sideset command
   // Perl: amsmath.sty.ltxml L1183-1234
-  // TODO: Full port with sidesetWrap script handling
-  // For now, just absorb arguments to prevent undefined errors
+  // TODO: Full port with sidesetWrap script handling.
+  // The implementation needs careful DOM manipulation for pre/post script wrapping.
+  // For now, just pass through the base (#3).
   DefMacro!("\\sideset{}{}{}", "#3");
 
   //======================================================================
