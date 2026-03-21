@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 247 pass, 0 fail, 72 ignored (319 total). Session 15: choose_test PASSES (237→0, delimiter digestion fix), guessTableHeaders false positive fix (cells_test 780→548), sideset DOM corruption fix (garbled tags → proper XMTok), METARELOP prefix + empty fenced grammar rules. Session 14: amsarticle PASSES, amsdisplay PASSES, compose_test PASSES. Session 13: sizes_test PASSES, abxtest_test PASSES, mathtools.sty port.
+**Status (2026-03-20):** 248 pass, 0 fail, 71 ignored (319 total). Session 15: choose_test PASSES (delimiter digestion), arrows_test PASSES (ARROW multirelation chain), guessTableHeaders fix, sideset DOM fix, nicefrac+units.sty ports (niceunits 405→38), METARELOP/empty_fenced grammar, is_relational_item Token role check. Session 14: amsarticle PASSES, amsdisplay PASSES, compose_test PASSES.
 
 ### Completed items
 
@@ -497,7 +497,8 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 ### Tier 5: Math parser tests (active research, Marpa grammar)
 
 - [x] **46. choose_test** (40_math) — DONE. Fixed \lx@generalized@over delimiter digestion (rewrite \lx@right/\lx@left to \@right/\@left before stomach::digest to avoid egroup semantics). 0 diffs.
-- [ ] **47. 40_math suite** (40_math) — niceunits 405→38 (nicefrac+units.sty ports, remaining: slash font). not 150 (needs Rewrite system for \not). arrows 146 (multirelation structure). testscripts 124 (nested \mathop Marpa RESET).
+- [x] **47a. arrows_test** (40_math) — DONE. Fixed ARROW multirelation chain (was only RELOP). 0 diffs.
+- [ ] **47. 40_math suite** (40_math) — niceunits 405→38 (nicefrac+units.sty ports, remaining: slash font). not 150 (\not\operatorname{R} sibling issue). testscripts 124 (nested \mathop Marpa RESET). ambiguous_relations 237 (structural diffs).
 - [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES, terms PASSES (juxtaposition-binds-tighter accepted). compose 12 (OPFUNCTION barearg + lxDeclare fix; remaining: f∘sin x composition scoping). function_argument_syntax 27 (sin π×x multi-function chain — parser fails). scripts/testscripts/arrows/not ~74 each (parser structural).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
