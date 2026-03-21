@@ -268,9 +268,8 @@ impl DigestionAPI for Core {
           let xpath = format!("descendant-or-self::ltx:XMath[@_hashid='{}']/..", xmath_id);
           // XMath nodes don't have @_hashid, so use the node list approach instead
         }
-        // Fallback: use the doc-level xpath on Math[not(@text)] but filtered by our ID list
+        // Apply ltx_math_unparsed to failed XMath nodes
         for mut math_node in document.findnodes("descendant-or-self::ltx:Math[not(@text)]", None) {
-          // Check if any child XMath was in our failed list
           for xmath_child in document.findnodes("ltx:XMath", Some(&math_node)) {
             if parser.failed_xmath_ids.contains(&xmath_child.to_hashable()) {
               document.add_class(&mut math_node, "ltx_math_unparsed")?;
