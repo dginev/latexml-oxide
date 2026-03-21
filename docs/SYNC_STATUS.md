@@ -502,7 +502,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 - [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES, terms PASSES (juxtaposition-binds-tighter accepted). compose 12 (OPFUNCTION barearg + lxDeclare fix; remaining: f∘sin x composition scoping). function_argument_syntax 27 (sin π×x multi-function chain — parser fails). scripts/testscripts/arrows/not ~74 each (parser structural).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
-- [ ] **51. eqnarray_test** (53_alignment) — 6 diffs (was 9, 69, 575, 1176). Fixed postfix_apply n-ary last-term wrapping, cdots ELIDEOP update, lefteqn class removal. Remaining: 5 xml:id numbering (m7 vs m2 — extra Math elements per eqnarray row), 1 tex= CS spacing (\lly vs \ll y).
+- [x] **51. eqnarray_test** (53_alignment) — DONE (was 6→0, was 575→69→9→6). Fixed: postfix_apply n-ary, cdots ELIDEOP, lefteqn class, untex CS spacing, MathFork tex= join, xml:id multi-row pre-advancement. 0 diffs.
 - [ ] **52. ntheorem_test** (55_theorem) — 1479 diffs. Math parser tree + eqnarray.
 
 ### Tier 6: Heavy package bindings (distant future)
