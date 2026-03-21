@@ -7,12 +7,12 @@ LoadDefinitions!({
   // DefConditional('\if@@rowcolored', sub { LookupValue('tabular_row_color'); });
   // Can't use DefConditional! because compile-time tokenizer splits \if@@rowcolored
   // into \if + @@ + rowcolored (@ is "other" in proc macro context).
-  // Use a runtime primitive that the RawTeX macros can reference.
-  DefConditional!("\\iflx@rowcolored", {
+  // Use a name without @ that the compile-time tokenizer handles correctly.
+  DefConditional!("\\iflxrowcolored", {
     state::lookup_value("tabular_row_color").is_some_and(|v| !matches!(v, Stored::None))
   });
-  // Alias the @ version at runtime
-  RawTeX!(r"\let\if@@rowcolored\iflx@rowcolored");
+  // Alias the @ version at runtime (@ is letter during package loading)
+  RawTeX!(r"\let\if@@rowcolored\iflxrowcolored");
 
   // DefPrimitive('\@clearrowcolor', sub {
   //   MergeFont(background => undef);
