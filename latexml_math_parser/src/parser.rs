@@ -711,7 +711,10 @@ impl MathParser {
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
     match self.parse_marpa(&input_string, nodes, document) {
-      Ok(parse_tree) => Ok(Some(parse_tree)),
+      Ok(parse_tree) => {
+        self.reset_engine(); // Reset for next parse (engine is in completed state)
+        Ok(Some(parse_tree))
+      },
       Err(_e) => {
         self.reset_engine();
         Ok(None)
