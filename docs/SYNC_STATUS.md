@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 17: get_arg(0)→panic. Diaghead, {rotatebox}, multirow. Grammar rules. colortbl full @ tokenization fix (all primitives renamed + xcolor stubs guarded + overhang args). Trailing newline fix. eqnarray 222→123, sideset 481→336, colortbls 220→103, cells ~144.
+**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 17 (32 commits): get_arg(0)→panic. Diaghead picture+line+g. {rotatebox} env. Multirow DefMacro+rowspan+vattach. Grammar: postfix_apply, elideop-as-term. colortbl overhaul (@ tokenization, xcolor stubs, overhang args, rowcolor propagation). dcolumn DC_started_math guard. Trailing newline fix. eqnarray 222→123, sideset 481→336, colortbls 220→63, cells ~143.
 
 ### Completed items
 
@@ -407,7 +407,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **23. glossary_test** (50_structure) — DONE. Ported glossaries.sty.
 - [x] **24. bibsect_test** (50_structure) — DONE. Ported bibunits.sty.
 - [x] **24b. crazybib_test** (50_structure) — DONE. `\bibsection` parsing.
-- [x] **26. colortbls_test** (53_alignment) — DONE. Ported colortbl.sty (still needs dcolumn/hhline).
+- [x] **26. colortbls_test** (53_alignment) — 63 diffs (was 220). Session 17: colortbl @ tokenization overhaul, backgroundcolor on td, overhang args, dcolumn DC_started_math fix. Remaining: preamble PIs (9), char alignment (8), multicolumn backgroundcolor (4).
 - [x] **57–61. Test suite sync** — DONE. Copied pgf (2), tikz (10), moderncv/orc, expl3 (2), slides (2). All 18 new tests ignored.
 
 ### Tier 1: Actionable items (no infrastructure blockers)
