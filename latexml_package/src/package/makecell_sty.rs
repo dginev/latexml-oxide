@@ -6,12 +6,13 @@ LoadDefinitions!({
   // Load raw TeX first
   InputDefinitions!("makecell", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // Mark thead as column header only (matching Perl: $$cell{thead} = { column => 1 })
+  // Mark thead et.al as headers (row & column)
   DefPrimitive!("\\lx@makecell@head", sub[_args] {
     if let Some(alignment) = lookup_alignment() {
       if let Some(data) = alignment.alignment_cell() {
         if let Some(col) = data.borrow_mut().current_column() {
           col.thead_in_column = true;
+          col.thead_in_row = true;
         }
       }
     }
