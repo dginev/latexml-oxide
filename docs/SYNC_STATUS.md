@@ -422,7 +422,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
-- [ ] **25. cells_test** (53_alignment) — 300 diffs (was 548, was 780). Fixed rowsep bold font metrics (-1.5→-1.7pt via cmbx10 STDMETRICS). Remaining: \rothead rotation, \diaghead picture, ltx_nopad_r padding (needs template after tokens in cell content), multirow.
+- [ ] **25. cells_test** (53_alignment) — ~152 diff lines (was 300, 548, 780). Session 17: fixed get_arg 1-based indexing (diaghead dimensions now correct), <line> element, multirow content+rowspan (DefMacro split). Remaining: \rothead rotation (needs p{rotheadsize}), ltx_nopad_r (needs template token propagation), inner tabular whitespace.
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
