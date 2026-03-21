@@ -1427,14 +1427,9 @@ pub fn equationgroup_join_rows(
     let mut eq = eq;
     eq.unlink_node();
     let mut tr = document.open_element_at(&mut branch_node, "ltx:tr", None, None)?;
-    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
-    if let Some(first_cell) = cells.first() {
-      if let Some(class) = first_cell.get_attribute("class") {
-        if class.contains("lefteqn") {
-          document.set_attribute(&mut tr, "class", "ltx_eqn_lefteqn")?;
-        }
-      }
-    }
+    // Note: Perl also checks for lefteqn class on first _Capture_ to add ltx_eqn_lefteqn
+    // to <tr>, but in practice the class is on a child td (via \multicolumn), not on
+    // _Capture_ itself, so the condition never fires in Perl output.
     let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
     for mut cell in cells {
       add_column_to_math_fork(document, &mut mainfork, &mut tr, &mut cell)?;
