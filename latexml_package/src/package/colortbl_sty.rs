@@ -38,6 +38,16 @@ LoadDefinitions!({
       let color_str = arena::with(sym, |s| s.to_string());
       if let Some(c) = latexml_core::common::color::Color::from_stored(&color_str) {
         merge_font(fontmap!(bg => c));
+        // Also propagate to cell's backgroundcolor attribute
+        // (same mechanism as \@setcellcolor)
+        if let Some(alignment) = lookup_alignment() {
+          if let Some(data) = alignment.alignment_cell() {
+            let mut data_lock = data.borrow_mut();
+            if let Some(colspec) = data_lock.current_column() {
+              colspec.backgroundcolor = Some(color_str);
+            }
+          }
+        }
       }
     }
   });
