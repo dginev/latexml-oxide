@@ -801,11 +801,25 @@ LoadDefinitions!({
       // The template's #prop lookup converts Stored→Option<Digested> for absorption.
       // Stored::Tokens doesn't convert, but Stored::Digested does.
       use latexml_core::definition::argument::ArgWrap;
+      // Digest left/right delimiter tokens.
+      // Replace \lx@left/\lx@right (which may resolve to \left/\right with egroup
+      // semantics) with \@left/\@right (Constructors without grouping).
       for (key, val_opt) in [("left", &left_val), ("right", &right_val)] {
         if let Some(val) = val_opt {
           if let ArgWrap::Tokens(ref ts) = val {
-            // Digest the tokens now (during after_digest phase) to get a Digested value
-            let d = stomach::digest(ts.clone())?;
+            // Rewrite tokens: replace any left/right CS with \@left/\@right
+            let mut new_tokens = Vec::new();
+            for tok in ts.unlist_ref().iter() {
+              let s = tok.to_string();
+              if s.ends_with("left") && s.starts_with('\\') {
+                new_tokens.push(T_CS!("\\@left"));
+              } else if s.ends_with("right") && s.starts_with('\\') {
+                new_tokens.push(T_CS!("\\@right"));
+              } else {
+                new_tokens.push(tok.clone());
+              }
+            }
+            let d = stomach::digest(Tokens::new(new_tokens))?;
             whatsit.set_property(key, Stored::Digested(d));
           } else {
             whatsit.set_property(key, Stored::String(arena::pin(val.to_string())));

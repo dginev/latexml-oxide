@@ -667,7 +667,10 @@ impl BoxOps for Alignment {
           .findnodes("descendant::ltx:td[@thead]", Some(&node))
           .is_empty();
         // If requested && no cells are already marked as being thead, apply heuristic
-        if self.properties.contains_key("guess_headers") && !hashead {
+        let guess_headers = self.properties.get("guess_headers")
+          .map(|v| !matches!(v, Stored::Bool(false)))
+          .unwrap_or(false);
+        if guess_headers && !hashead {
           guess_alignment_headers(document, &mut node, self)?;
         }
         // Otherwise, if not a math array, group thead & tbody rows

@@ -26,7 +26,6 @@ fn arrows_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn choose_test() {
   latexml_test_single("tests/math/choose.tex", "choose", DIR, None, None);
 }
