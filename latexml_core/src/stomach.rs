@@ -618,10 +618,8 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     // done if we run out of tokens
     found_token = true;
     // first, check for alignment case
-    // Perl #2775: only check at alignment nesting level (not inside nested boxing groups)
     if alignment_opt.is_some()
       && !stomach!().box_list.is_empty()
-      && (stomach!().boxing.len() <= init_depth) // guard: only at alignment nesting level
       && (token == T_ALIGN!()
         || token == T_CS!("\\cr")
         || token == T_CS!("\\lx@hidden@cr")
