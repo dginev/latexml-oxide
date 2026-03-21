@@ -2640,6 +2640,11 @@ impl Document {
     &FONT_TEXT_DEFAULT
   }
 
+  /// Decode a _font hash string to a Font object
+  pub fn decode_font(&self, font_hash: &str) -> Option<&Font> {
+    font_hash.parse::<u64>().ok().and_then(|id| self.node_fonts.get(&id))
+  }
+
   pub fn has_node_font(&self, node: &Node) -> bool {
     if let Some(element) = xml::closest_element(node) {
       element.has_attribute("_font")
