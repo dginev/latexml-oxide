@@ -99,6 +99,20 @@ LoadDefinitions!({
       }
     });
 
+  // {rotatebox} environment form — used as \begin{rotatebox}{90}...\end{rotatebox}
+  DefEnvironment!("{rotatebox}{Float}",
+    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
+    after_digest_body => sub[whatsit] {
+      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Ok(Some(body)) = whatsit.get_body() {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
+          for (k, v) in props {
+            whatsit.set_property(k, v);
+          }
+        }
+      }
+    });
+
   DefMacro!("\\Grot@erotate", "\\rotatebox[]");
 
   DefConstructor!("\\reflectbox{}", "<ltx:inline-block xscale='-1'>#1</ltx:inline-block>",
