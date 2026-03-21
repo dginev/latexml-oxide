@@ -392,23 +392,40 @@ LoadDefinitions!({
   // We need a finer granularity than TeX does: an ORD could be several things,
   // a BIN could be a MULOP or ADDOP.
   // AND, rarely, they're empty.... Is it wrong to drop them?
-  DefConstructor!("\\mathord{}", "?#1(<ltx:XMWrap role='ID'   >#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathop{}", "?#1(<ltx:XMWrap role='BIGOP' scriptpos='#scriptpos'>#1</ltx:XMWrap>)()",
+  // Perl: adjustMathRole — wraps content in XMWrap, conditionally sets role
+  // If single child already has an acceptable sub-role, DON'T override
+  DefConstructor!("\\mathord{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "ID", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathop{}", sub[document, args, props] {
+    let sp = props.get("scriptpos").map(|v| v.to_string());
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "BIGOP", sp.as_deref())?;
+  },
     bounded => true,
     properties => {
-      // doScriptpos: 'mid' in display mode, 'post' in text mode
-      // The script level number is appended later by mergeLimits (\limits, \nolimits)
       let pos = if lookup_font().is_some_and(|f|
         f.mathstyle.as_deref() == Some("display"))
       { "mid" } else { "post" };
       Ok(stored_map!("scriptpos" => pos))
     });
-  DefConstructor!("\\mathbin{}", "?#1(<ltx:XMWrap role='BINOP'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathrel{}", "?#1(<ltx:XMWrap role='RELOP'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathopen{}", "?#1(<ltx:XMWrap role='OPEN' >#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathclose{}", "?#1(<ltx:XMWrap role='CLOSE'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathpunct{}", "?#1(<ltx:XMWrap role='PUNCT'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathinner{}", "?#1(<ltx:XMWrap role='ATOM'>#1</ltx:XMWrap>)()",  bounded => true);
+  DefConstructor!("\\mathbin{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "BINOP", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathrel{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "RELOP", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathopen{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "OPEN", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathclose{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "CLOSE", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathpunct{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "PUNCT", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathinner{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "ATOM", None)?;
+  }, bounded => true);
 
   //======================================================================
   // Delimiters
@@ -1093,6 +1110,63 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
 /// Perl TeX_Math.pool.ltxml L1010-1052: adjustMathstyle
 /// Recursively adjusts font mathstyle on already-digested boxes.
 /// Called from \over handler to retroactively adjust numerator font sizes.
+/// Perl: adjustMathRole (TeX_Math.pool.ltxml L669-688)
+/// Wraps content in XMWrap, conditionally sets role.
+/// If single non-hint child has acceptable sub-role, keeps it.
+fn adjust_math_role(
+  document: &mut Document,
+  content: Option<&Digested>,
+  role: &str,
+  scriptpos: Option<&str>,
+) -> Result<()> {
+  use latexml_core::common::xml::element_nodes;
+
+  let content = match content {
+    Some(c) => c,
+    None => return Ok(()), // Nothing? do nothing!
+  };
+
+  // Perl: open XMWrap, absorb, close, inspect children
+  document.open_element("ltx:XMWrap", None, None)?;
+  document.absorb(content, None)?;
+  let wrap_opt = document.close_element("ltx:XMWrap")?;
+
+  if let Some(mut wrapper) = wrap_opt {
+    // Filter out XMHint nodes
+    let nodes: Vec<_> = element_nodes(&wrapper)
+      .into_iter()
+      .filter(|n| document::get_node_qname(n) != arena::pin_static("ltx:XMHint"))
+      .collect();
+
+    // Perl: %mathclass_subclass lookup
+    let acceptable = if role == "ATOM" {
+      true // ATOM accepts any role
+    } else if nodes.len() == 1 {
+      if let Some(got_role) = nodes[0].get_attribute("role") {
+        match role {
+          "BIGOP" => matches!(got_role.as_str(), "ARROW" | "SUMOP" | "INTOP" | "DIFFOP"),
+          "BINOP" => matches!(got_role.as_str(), "ADDOP" | "MULOP"),
+          "PUNCT" => matches!(got_role.as_str(), "PERIOD"),
+          "ID" => matches!(got_role.as_str(), "NUMBER"),
+          _ => false,
+        }
+      } else {
+        false
+      }
+    } else {
+      false
+    };
+
+    if !acceptable {
+      document.set_attribute(&mut wrapper, "role", role)?;
+    }
+    if let Some(sp) = scriptpos {
+      document.set_attribute(&mut wrapper, "scriptpos", sp)?;
+    }
+  }
+  Ok(())
+}
+
 pub fn adjust_mathstyle(outerstyle: &str, boxes: &[Digested]) {
   let mut adjusted: std::collections::HashSet<usize> = std::collections::HashSet::new();
   adjust_mathstyle_rec(outerstyle, &mut adjusted, boxes);
