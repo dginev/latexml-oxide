@@ -271,7 +271,10 @@ pub fn formula_list_apply(
 fn is_relational_item(xm: &XM) -> bool {
   match xm {
     XM::Apply(ref op, _, _, _) => match &*op.0 {
-      XM::Token(ref props, _) => props.meaning.as_deref() == Some("multirelation"),
+      XM::Token(ref props, _) => {
+        props.meaning.as_deref() == Some("multirelation")
+          || props.role.as_deref().map_or(false, |r| r.contains("RELOP"))
+      },
       XM::Lexeme(ref lex, _) => lex.split(':').next().map_or(false, |r| r.contains("RELOP")),
       _ => false,
     },
