@@ -51,7 +51,6 @@ fn niceunits_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn not_test() {
   latexml_test_single("tests/math/not.tex", "not", DIR, None, None);
 }

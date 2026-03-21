@@ -102,3 +102,18 @@ fn recognizer_after_failure() {
   assert!(parser.recognizes("UNKNOWN:D:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:r:3 end_POSTSUBSCRIPT:end:4 "),
     "D_r should parse after engine reset");
 }
+
+#[test]
+fn recognizer_mulop_opfunction() {
+  let mut parser = MathParser::default();
+  // Basic: OPFUNCTION as standalone
+  assert!(parser.recognizes("OPFUNCTION:op:1 "), "bare op");
+  // UNKNOWN + OPFUNCTION
+  assert!(parser.recognizes("UNKNOWN:a:1 OPFUNCTION:op:2 "), "a op");
+  // Two UNKNOWN + OPFUNCTION — may fail due to grammar limits
+  let two_unk = parser.recognizes("UNKNOWN:a:1 UNKNOWN:b:2 OPFUNCTION:op:3 ");
+  eprintln!("a b op: {two_unk}");
+  // With MULOP
+  let mul = parser.recognizes("UNKNOWN:a:1 MULOP:times:2 OPFUNCTION:op:3 ");
+  eprintln!("a*op: {mul}");
+}

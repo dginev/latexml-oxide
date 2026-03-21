@@ -72,7 +72,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Standalone usage is handled at the term level (term += function | ...).
     // `2 \sin` is handled via dedicated tight_term rules below.
     factor_base = unknown | number | id | atom;
-    factor = factor_base;
+    factor = factor_base | opfunction;
     // Terms
     // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
     any_bigop = bigop | sumop | intop | limitop | diffop;
