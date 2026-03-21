@@ -382,8 +382,12 @@ impl Tokens {
       // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
       } else {
         let last_prevs = prevs.chars().last().unwrap_or('_');
-        // TOOD: this used to call "lookup_catcode" in state, is this char-check as good?
-        let prev_is_letter = last_prevs.is_alphabetic();
+        // Perl: $STATE->lookupCatcode($1) == CC_LETTER
+        // Must use actual catcode lookup, not just is_alphabetic(), because
+        // characters like @ may have catcode LETTER in some contexts.
+        let prev_is_letter = crate::state::lookup_catcode(last_prevs)
+          .map(|cc| cc == Catcode::LETTER)
+          .unwrap_or_else(|| last_prevs.is_alphabetic());
 
         if (cc == Catcode::LETTER || (cc == Catcode::OTHER && first_char.is_alphanumeric()))
           && prevcc == Catcode::CS
