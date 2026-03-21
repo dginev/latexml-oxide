@@ -3516,7 +3516,21 @@ fn trim_node_left_whitespace(node: &Node) -> Result<()> {
 }
 
 fn trim_node_right_whitespace(node: &Node) -> Result<()> {
-  if let Some(mut last_child) = node.get_last_child() {
+  // Skip trailing empty <text> font wrapper elements to find the real last content.
+  // These are artifacts of font change tracking during alignment absorption.
+  let mut candidate = node.get_last_child();
+  while let Some(ref child) = candidate {
+    if child.get_type() == Some(NodeType::ElementNode)
+      && child.get_name() == "text"
+      && child.get_child_nodes().is_empty()
+      && child.has_attribute("_noautoclose")
+    {
+      candidate = child.get_prev_sibling();
+    } else {
+      break;
+    }
+  }
+  if let Some(mut last_child) = candidate {
     match last_child.get_type() {
       Some(NodeType::TextNode) => {
         let content = last_child.get_content();
