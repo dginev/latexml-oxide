@@ -32,7 +32,6 @@ fn compose_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn fences_test() {
   latexml_test_single("tests/parse/fences.tex", "fences", DIR, None, None);
 }

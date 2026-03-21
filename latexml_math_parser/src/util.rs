@@ -64,7 +64,16 @@ pub fn node_to_grammar_lexemes_from(
         text = "UNKNOWN".to_string();
       }
       *idx += 1;
-      let lexeme = format!("{role}:{text}:{idx}").replace(' ', "");
+      // Remap angle brackets to parentheses for parsing (grammar can't handle
+      // OPEN:langle without massive ambiguity, but OPEN:( works fine).
+      // The original node preserves the actual ⟨⟩ characters for XML output.
+      let lexeme = if role == "OPEN" && (text == "langle" || text == "⟨") {
+        format!("OPEN:(:{idx}")
+      } else if role == "CLOSE" && (text == "rangle" || text == "⟩") {
+        format!("CLOSE:):{idx}")
+      } else {
+        format!("{role}:{text}:{idx}").replace(' ', "")
+      };
       lexemes.push(lexeme);
       nodes.push(node);
     }

@@ -800,6 +800,7 @@ pub fn interval(
     ("[", "]") => "closed-interval",
     ("[", ")") => "closed-open-interval",
     ("(", "]") => "open-closed-interval",
+    ("⟨", "⟩") => "list", // angle brackets: ⟨a,b⟩ → list, not tuple
     _ => "tuple",
   };
 
