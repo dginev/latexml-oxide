@@ -1207,7 +1207,19 @@ pub fn close_math_fork(
         .iter()
         .map(|t| t.strip_prefix("\\displaystyle").unwrap_or(t).trim_start())
         .collect();
-      let body = stripped.join("");
+      // Join with CS-aware spacing: if previous part ends with a letter and next starts
+      // with a letter, insert a space (matching TeX CS termination rules).
+      let mut body = String::new();
+      for (i, part) in stripped.iter().enumerate() {
+        if i > 0 && !body.is_empty() && !part.is_empty() {
+          let prev_ends_letter = body.ends_with(|c: char| c.is_ascii_alphabetic());
+          let next_starts_letter = part.starts_with(|c: char| c.is_ascii_alphabetic());
+          if prev_ends_letter && next_starts_letter {
+            body.push(' ');
+          }
+        }
+        body.push_str(part);
+      }
       let combined_tex = if has_displaystyle {
         // Add space after \displaystyle only if body starts with a letter
         // (TeX CS needs space termination before letters, not before operators)
