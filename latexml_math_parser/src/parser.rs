@@ -480,10 +480,12 @@ impl MathParser {
       }
       Ok(Some(result))
     } else {
-      // Parse failed — track for ltx_math_unparsed class (applied in caller)
+      // Parse failed — track for post-parse kludge and ltx_math_unparsed
       *self.failed.entry_sym(tag).or_insert(0) += 1;
       if tag == arena::pin_static("ltx:XMath") {
         self.failed_xmath_ids.push(node.to_hashable());
+        // Note: parse_kludge can't run here — DOM manipulation inside parser
+        // module breaks Marpa precomputation. Applied in caller instead.
       }
       Ok(None)
     }
@@ -517,9 +519,12 @@ impl MathParser {
   //     unless they're attached to something plausible.
   // NOTE: we should be able to optionally switch this off.
   // Especially, when we want to try alternative parse strategies.
+  /// Fallback parser for unparseable expressions.
+  /// NOTE: Cannot implement DOM manipulation here — any DOM changes inside
+  /// the parser module break Marpa grammar precomputation. The kludge logic
+  /// must be moved to core_interface.rs (the caller) using failed_xmath_ids.
   fn parse_kludge(&self, _node: &mut Node, _document: &mut Document) {
-    // TODO: implement full kludge parser (bracket grouping + script attachment)
-    // For now, no-op — the Perl comment says "we should be able to optionally switch this off"
+    // No-op — see note above
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
