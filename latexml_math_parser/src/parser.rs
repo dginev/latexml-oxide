@@ -468,10 +468,8 @@ impl MathParser {
       }
       Ok(Some(result))
     } else {
-      // TODO:
+      // TODO: Add ltx_math_unparsed class to Math element when parse fails
       // self.parse_kludge(node, document);
-      // ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
-      // $$self{failed}{$tag}++;
       Ok(None)
     }
   }
