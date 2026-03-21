@@ -424,7 +424,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
 - [ ] **25. cells_test** (53_alignment) — 102 diffs (was 282, 300, 548, 780). Session 18: fixed \\[dim] stack overflow (reversion recursion bug), enabled \rothead rotation via raw TeX def, improved ltx_nopad_r for @{}c@{} columns. Remaining: ltx_nopad_l on left-aligned @{} cells (6 diffs), trailing whitespace (17 diffs), rotation angle/dimensions missing on inline-block, paragraph width mismatch (78.1pt vs 90.1pt).
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
-- [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
+- [ ] **35. graphrot_test** (65_graphics) — 127 diffs (was 596). `\begingroup` in `\csname..\endcsname`. Tabular row structure diffs.
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
 
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
