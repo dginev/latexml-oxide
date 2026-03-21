@@ -1233,6 +1233,17 @@ fn sideset_construct(
   let post = args.get(1).and_then(|a| a.as_ref());
   let base = args.get(2).and_then(|a| a.as_ref());
 
+  // Perl: Insert non-scripts from pre as XMWrap BEFORE the base
+  if let Some(pre_arg) = pre {
+    for item in pre_arg.unlist() {
+      if is_script(&item).is_none() && !item.is_empty().unwrap_or(true) {
+        document.open_element("ltx:XMWrap", None, None)?;
+        document.absorb(&item, None)?;
+        document.close_element("ltx:XMWrap")?;
+      }
+    }
+  }
+
   // Insert the base in XMArg
   document.open_element("ltx:XMArg", None, None)?;
   if let Some(b) = base {
@@ -1269,7 +1280,8 @@ fn sideset_construct(
     }
   }
 
-  // Process post-scripts
+  // Process post-scripts; save non-scripts for insertion after
+  let mut after: Vec<Digested> = Vec::new();
   if let Some(post_arg) = post {
     for item in post_arg.unlist() {
       if let Some(scriptop) = is_script(&item) {
@@ -1278,6 +1290,8 @@ fn sideset_construct(
         }
         let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
         node = sideset_wrap_impl(document, node, "post", y, level, &item)?;
+      } else if !item.is_empty().unwrap_or(true) {
+        after.push(item);
       }
     }
   }
@@ -1285,6 +1299,13 @@ fn sideset_construct(
   // Set scriptpos on the final node
   if !opx.is_empty() {
     document.set_attribute(&mut node, "scriptpos", &format!("{opx}{level0}"))?;
+  }
+
+  // Perl: Insert non-script garbage from post AFTER the sideset structure
+  for nonscript in &after {
+    document.open_element("ltx:XMWrap", None, None)?;
+    document.absorb(nonscript, None)?;
+    document.close_element("ltx:XMWrap")?;
   }
   Ok(())
 }
