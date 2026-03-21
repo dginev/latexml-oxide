@@ -1488,7 +1488,10 @@ LoadDefinitions!({
         document.unrecord_id(&id);
         document.set_attribute(&mut strike, "xml:id", &id)?;
       }
-      document.get_node_mut().add_child(thing)?;
+      // Use append_tree to avoid DOM corruption from add_child on detached nodes
+      let inner_children = vec![thing.clone()];
+      let mut current = document.get_node().clone();
+      document.append_tree(&mut current, inner_children)?;
       document.close_element("ltx:XMApp")?;
     } else {
       // For simple tokens, we'll modify the relevant content & attributes
@@ -1510,8 +1513,10 @@ LoadDefinitions!({
         None => Cow::Owned(text + "\u{0338}")
       };
       thing.append_text(&new)?;
-      // and put the node back in
-      document.get_node_mut().add_child(thing)?;
+      // Put the modified node back in using append_tree
+      let inner_children = vec![thing.clone()];
+      let mut current = document.get_node().clone();
+      document.append_tree(&mut current, inner_children)?;
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         let idref_xpath = format!("descendant-or-self::ltx:XMRef[@idref='{id}']");
