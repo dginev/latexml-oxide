@@ -1247,8 +1247,30 @@ pub fn apply_invisible_times(
       }
     }
   }
-  let is_mixed_number = l_num && r_frac;
+  // Mixed number only when BOTH sides of the fraction are pure integers.
+  // Perl: 2\frac{3}{4} → 2+3/4, but 123\frac{12.0}{34} → 123×(12.0/34)
+  let mut is_mixed_number = l_num && r_frac;
+  if is_mixed_number {
+    // Check the fraction's numerator/denominator are pure integers via DOM nodes.
+    // The fraction is often opaque in the XM tree (represented as an ATOM Lexeme).
+    // We need to examine the DOM node's XMArg children for non-NUMBER content.
+    let frac_node_opt = find_fracop_node(&right, ctxt.nodes);
+    if let Some(frac_node) = frac_node_opt {
+      // Check all non-operator children (numerator, denominator) for pure integer content.
+      // Children are bare XMTok elements, not wrapped in XMArg.
+      for child in frac_node.get_child_elements() {
+        let role = child.get_attribute("role").unwrap_or_default();
+        if role == "FRACOP" { continue; } // skip the operator
+        let content = child.get_content();
+        if role != "NUMBER" || content.contains('.') {
+          is_mixed_number = false;
+          break;
+        }
+      }
+    }
+  }
   let op = if is_mixed_number { invisible_plus() } else { invisible_times() };
+
   Ok(Some(XM::Apply(
     op.into(),
     Args(vec![left, right]),
@@ -1449,12 +1471,64 @@ fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
   }
 }
 
+/// Check if an XM tree node is a pure INTEGER number (for mixed fraction detection).
+/// Returns false for decimals like "12.0" — only pure integers qualify for mixed fractions.
+fn is_pure_integer_xm(xm: &Option<XM>) -> bool {
+  match xm {
+    Some(XM::Token(props, _)) => {
+      props.role.as_deref() == Some("NUMBER")
+        && props.meaning.as_ref().map_or(true, |m| !m.contains('.'))
+        && props.content.as_ref().map_or(true, |c| !c.contains('.'))
+    },
+    Some(XM::Lexeme(lex, _)) => {
+      lex.starts_with("NUMBER:") && !lex.contains('.')
+    },
+    None => true, // absent args are OK
+    _ => false,
+  }
+}
+
 fn is_number(xm: &Option<XM>) -> bool {
   match xm {
     Some(XM::Token(props, _)) => props.role.as_deref() == Some("NUMBER"),
     Some(XM::Lexeme(lex, _)) => lex.starts_with("NUMBER:"),
     _ => false,
   }
+}
+
+/// Find the DOM node for a fraction from an XM tree
+fn find_fracop_node<'a>(xm: &Option<XM>, nodes: &'a [libxml::tree::Node]) -> Option<&'a libxml::tree::Node> {
+  // Try via Lexeme curry_level (node index)
+  let meta = match xm {
+    Some(XM::Lexeme(_, ref m)) => Some(m),
+    Some(XM::Apply(_, _, _, ref m)) => Some(m),
+    _ => None,
+  };
+  if let Some(meta) = meta {
+    if let Some(ref cv) = meta.curry_level {
+      let cv_str = cv.to_string();
+      if let Some(idx_str) = cv_str.strip_prefix(':') {
+        if let Ok(lex_idx) = idx_str.parse::<usize>() {
+          let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
+          if idx < nodes.len() && nodes[idx].get_name() == "XMApp" {
+            return Some(&nodes[idx]);
+          }
+        }
+      }
+    }
+    // Try via Lexeme content: "ROLE:meaning:N" → index N-1
+    if let Some(XM::Lexeme(ref lex, _)) = xm {
+      if let Some(idx_str) = lex.rsplit(':').next() {
+        if let Ok(lex_idx) = idx_str.parse::<usize>() {
+          let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
+          if idx < nodes.len() && nodes[idx].get_name() == "XMApp" {
+            return Some(&nodes[idx]);
+          }
+        }
+      }
+    }
+  }
+  None
 }
 
 fn is_fracop(xm: &Option<XM>) -> bool {
