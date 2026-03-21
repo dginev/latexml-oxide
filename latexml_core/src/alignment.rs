@@ -1115,9 +1115,8 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
     }
     alignment.rows[nrows - 1].get_columns_mut()[c].border_bottom = Some(if h { 1 } else { 0 });
   }
-  // the constant array access *HAS* to be inefficient, but how do we avoid it without encountering
-  // objections from the Rust compiler? Mutability conflicts galore here if any &mut lives long
-  // enough.
+  // Note: This propagation doesn't exist in Perl's Alignment.pm.
+  // But removing it breaks fonts_test (guessTableHeaders). Needs careful audit.
   for r in 1..nrows - 1 {
     for c in 1..ncols - 1 {
       if let Some(bb) = alignment.rows[r - 1].get_columns_mut()[c].border_bottom {
