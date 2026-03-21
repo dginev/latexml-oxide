@@ -453,6 +453,26 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - **\\lx@begin@inmath@text mode fix**: Changed from 'text' to 'restricted_horizontal' matching Perl.
 - **\\subjclass Default: fix**: Handle Default: parameter spec in closure.
 
+### Alignment Improvement Plan (Session 19+)
+
+**Phase 1 — Quick wins (target: graphrot < 10, cells < 50):**
+- [ ] 1a. Fix guessHeaders row over-marking: column characterization adds `thead="row"` to data cells where Perl doesn't. Compare `alignment_characterize_lines` threshold/validation logic against Perl.
+- [ ] 1b. Fix `\eline`/`\nline` makecell macros: raw TeX defs produce cells with content where Perl produces empty cells. Port LaTeXML-specific behavior.
+- [ ] 1c. Fix `{turn}` rotation dimensions inside alignment: `after_digest_body` gets empty body for alignment-containing environments. Use cached alignment dimensions.
+
+**Phase 2 — Structural fixes (target: colortbls < 100, split < 200):**
+- [ ] 2a. Implement `<?latexml preamble="...">` processing instruction capture. Accounts for ~200+ cascading diffs in colortbls.
+- [ ] 2b. Fix split_test content loss: `$` mode stacking in alignment cells prevents math content generation. Implement alignment depth guard (Perl #2775) with proper `\cr` nesting check.
+- [ ] 2c. Fix font wrapper `<text>` elements during alignment absorption: prevent creation when font hasn't changed, or collapse empty wrappers during finalization.
+
+**Phase 3 — Polish (target: cells < 20, diagboxtest < 100):**
+- [ ] 3a. Port diagbox.sty binding (164 lines in Perl) for diagonal line drawing.
+- [ ] 3b. Fix ltx_nopad_l edge cases on `@{}l@{}` columns (4 remaining diffs in cells).
+
+**Phase 4 — Systemic (target: array < 50, vmode passes):**
+- [ ] 4a. Fix array math structure: XMCell/XMRow differences in math arrays.
+- [ ] 4b. Fix Marpa grammar reset segfault for vmode_test.
+
 ### Math parser known limitations:
 
 - **`2\sin(x)` doesn't parse** — `tight_term factor` is left-recursive only; `\sin(x)` as a tight_term can't appear as right of invisible_times. Perl handles this. Pre-existing limitation.
