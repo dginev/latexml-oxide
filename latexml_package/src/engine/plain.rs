@@ -1476,6 +1476,7 @@ LoadDefinitions!({
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
     });
+    // eprintln debug removed
     if text.chars().count() != 1 { // Not simple char token.
       // Wrap with a cancel op
       document.open_element("ltx:XMApp",
