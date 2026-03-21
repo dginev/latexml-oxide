@@ -25,15 +25,15 @@ LoadDefinitions!({
   // Inline nicefrac: up-shifted numerator with /
   DefConstructor!("\\ltx@nicefrac@inline InFractionStyle InFractionStyle",
     "<ltx:XMApp>\
-       <ltx:XMTok stretchy='true' meaning='divide' role='MULOP' _font='#slashfont'\
+       <ltx:XMTok stretchy='true' meaning='divide' role='MULOP'\
          xoffset='-0.1em' width='-0.15em'>/</ltx:XMTok>\
        <ltx:XMArg yoffset='0.3em' rpadding='-0.5em'>#1</ltx:XMArg>\
        <ltx:XMArg>#2</ltx:XMArg>\
      </ltx:XMApp>",
     alias => "\\nicefrac"
-    // TODO: slashfont property via font.specialize("/") — currently produces italic font
-    // instead of upright, causing font="italic" on the / XMTok. Need to investigate
-    // _font template attribute handling in constructable.rs.
+    // TODO: _font='#slashfont' from Perl uses font.specialize("/") to prevent
+    // italic font on the / XMTok. Rust finalize_rec inherits italic from math
+    // context, producing font="italic". Needs _font attribute support in template.
   );
 
   // Bevelled version: MathML mfrac with bevelled='true'
