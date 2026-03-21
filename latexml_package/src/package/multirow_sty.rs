@@ -25,8 +25,12 @@ LoadDefinitions!({
             rowspan_f as usize
           };
           colspec.rowspan = Some(rowspan);
-          if let Some(att) = attachment {
-            colspec.vattach = Some(translate_attachment(att).to_string());
+          // Only set vattach when optional [] is explicitly provided and non-empty
+          if let Some(ref att) = attachment {
+            let att_str = att.to_string();
+            if !att_str.trim().is_empty() {
+              colspec.vattach = Some(translate_attachment(att).to_string());
+            }
           }
         }
       }
