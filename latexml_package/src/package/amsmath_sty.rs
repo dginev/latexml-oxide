@@ -851,9 +851,8 @@ LoadDefinitions!({
   //======================================================================
   // Section 7.2 \sideset command
   // Perl: amsmath.sty.ltxml L1183-1234
-  // TODO: Full port with sidesetWrap script handling.
-  // The implementation needs careful DOM manipulation for pre/post script wrapping.
-  // For now, just pass through the base (#3).
+  // TODO: Full port needs careful DOM manipulation (sideset_construct/sideset_wrap).
+  // Current attempt produces corrupted XML from node unlink/reparent conflicts.
   DefMacro!("\\sideset{}{}{}", "#3");
 
   //======================================================================
@@ -1217,3 +1216,4 @@ pub fn rearrange_ams_align(
   }
   Ok(())
 }
+
