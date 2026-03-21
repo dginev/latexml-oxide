@@ -829,7 +829,8 @@ fn template_has_fill(tokens: &Option<Tokens>) -> bool {
 fn template_has_intercol(tokens: &Option<Tokens>) -> bool {
   if let Some(ref toks) = tokens {
     for tok in toks.unlist_ref() {
-      if tok.to_string() == "\\lx@intercol" {
+      let s = tok.to_string();
+      if s == "\\lx@intercol" || s.contains("intercol") {
         return true;
       }
     }
