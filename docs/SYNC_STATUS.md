@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 16: Added cmbx10 (Computer Modern Bold) font metrics fixing rowsep computation for bold tabulars (-1.5pt→-1.7pt). Added has_intercol_after Cell flag infrastructure for ltx_nopad_r/ltx_nopad_l CSS class determination. cells_test 303→300 diffs. Investigated ltx_nopad_r mechanics deeply — Perl's lspaces/rspaces populated from \lx@intercol template tokens during cell content extraction; Rust doesn't include template after tokens in cell content boxes.
+**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 16: cmbx10 bold font metrics (rowsep -1.5→-1.7pt). has_intercol_after Cell flag. rotated_properties() port. \lx@diagheads constructor with picture element output. \diaghead macro expansion ported.
 
 ### Completed items
 
