@@ -262,8 +262,23 @@ impl DigestionAPI for Core {
     if !state::get_nomathparse_flag() {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
-      // TODO: ltx_math_unparsed class — need to store failing XMath node IDs during parsing
-      // and use them for targeted class addition. XPath heuristics are too broad.
+      // Post-parse: add ltx_math_unparsed to Math parents of failed XMath nodes
+      if !parser.failed_xmath_ids.is_empty() {
+        for xmath_id in &parser.failed_xmath_ids {
+          let xpath = format!("descendant-or-self::ltx:XMath[@_hashid='{}']/..", xmath_id);
+          // XMath nodes don't have @_hashid, so use the node list approach instead
+        }
+        // Fallback: use the doc-level xpath on Math[not(@text)] but filtered by our ID list
+        for mut math_node in document.findnodes("descendant-or-self::ltx:Math[not(@text)]", None) {
+          // Check if any child XMath was in our failed list
+          for xmath_child in document.findnodes("ltx:XMath", Some(&math_node)) {
+            if parser.failed_xmath_ids.contains(&xmath_child.to_hashable()) {
+              document.add_class(&mut math_node, "ltx_math_unparsed")?;
+              break;
+            }
+          }
+        }
+      }
     }
 
     note_begin("Finalizing");

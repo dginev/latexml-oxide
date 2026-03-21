@@ -103,6 +103,8 @@ pub struct MathParser {
   // lostnodes: HashMap<String, Node>,
   // idrefs: Vec<(String, Node)>,
   maybe_functions:        SymHashMap<usize>,
+  /// XMath nodes that failed to parse (stored as hashable IDs for post-parse class marking)
+  pub failed_xmath_ids:   Vec<usize>,
   n_parsed:               usize,
   // strict: bool,
   // warned: bool,
@@ -124,6 +126,7 @@ impl Default for MathParser {
       failed: SymHashMap::default(),
       unknowns: SymHashMap::default(),
       maybe_functions: SymHashMap::default(),
+      failed_xmath_ids: Vec::new(),
       // punctuation: HashMap::default(),
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
@@ -269,6 +272,7 @@ impl MathParser {
     self.failed = sym_map!("ltx:XMath" => 0,"ltx:XMArg" => 0, "ltx:XMWrap" => 0 );
     self.unknowns = SymHashMap::default();
     self.maybe_functions = SymHashMap::default();
+    self.failed_xmath_ids = Vec::new();
     self.n_parsed = 0;
   }
   // our %EXCLUDED_PRETTYNAME_ATTRIBUTES = (fontsize => 1, opacity => 1);
@@ -476,8 +480,11 @@ impl MathParser {
       }
       Ok(Some(result))
     } else {
-      // Parse failed — track for ltx_math_unparsed class (applied post-parse)
+      // Parse failed — track for ltx_math_unparsed class (applied in caller)
       *self.failed.entry_sym(tag).or_insert(0) += 1;
+      if tag == arena::pin_static("ltx:XMath") {
+        self.failed_xmath_ids.push(node.to_hashable());
+      }
       Ok(None)
     }
   }

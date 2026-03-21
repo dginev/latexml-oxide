@@ -7,7 +7,7 @@
   <resource src="ltx-article.css" type="text/css"/>
   <resource src="ltx-listings.css" type="text/css"/>
   <para xml:id="p1">
-    <p>Inline: <text class="ltx_lstlisting"><text class="ltx_lst_identifier">foo</text>(<Math mode="inline" tex="\langle X\rangle" xml:id="p1.m1">
+    <p>Inline: <text class="ltx_lstlisting"><text class="ltx_lst_identifier">foo</text>(<Math class="ltx_math_unparsed" mode="inline" tex="\langle X\rangle" xml:id="p1.m1">
           <XMath>
             <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
             <XMTok font="italic" role="UNKNOWN">X</XMTok>
