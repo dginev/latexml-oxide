@@ -164,7 +164,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     // Formula
     // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
-    modifier_expression = modifierop expression => prefix_apply;
+    modifier_expression = modifierop expression => modifier_prefix_apply;
     // Perl: within a Formula, comma-separated expressions after a relop form a list RHS.
     // e.g. a=b,c,d → a = list(b,c,d), not list(a=b, c, d).
     // Uses formula_list_apply which rejects items containing relops (those belong at statement level).

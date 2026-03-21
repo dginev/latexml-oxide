@@ -510,6 +510,27 @@ pub fn prefix_apply(
     Meta::default(),
   )))
 }
+/// Perl: standalone modifier `\mod expr` → Apply(mod, Absent, expr)
+/// The absent first operand represents the missing left side.
+pub fn modifier_prefix_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => modop, arg1);
+  let absent = XM::Token(XProps {
+    meaning: Some(Cow::Borrowed("absent")),
+    ..XProps::default()
+  }, Meta::default());
+  Ok(Some(XM::Apply(
+    modop.into(),
+    Args(vec![Some(absent), arg1]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 /// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
 /// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
 /// only parsed as function application when speculation is active. Without speculation,
