@@ -87,6 +87,12 @@ LoadDefinitions!({
           Stored::String(arena::pin(&bg_str)),
           Some(Scope::Global),
         );
+        // Store on current row's properties for <td> backgroundcolor during absorption
+        if let Some(alignment) = lookup_alignment() {
+          if let Some(data) = alignment.alignment_cell() {
+            data.borrow_mut().set_row_property("backgroundcolor", bg_str);
+          }
+        }
       }
     }
     Ok(())
