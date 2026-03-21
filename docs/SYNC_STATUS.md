@@ -435,7 +435,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [x] **30. amsdisplay_test** (56_ams) — DONE (was 842). Ported subequations counter save/restore, multline tex= via setBody. 3 minor diffs accepted (same as amsarticle).
 - [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
-- [ ] **32. sideset_test** (56_ams) — 315 diffs (was 488). Added \sideset stub (pass-through to base #3). **TODO:** Full sidesetWrap script handling with pre/post sub/superscript individual wrapping per Perl L1227-1234.
+- [ ] **32. sideset_test** (56_ams) — 59 line mismatch, 0 per-line diffs (was 315). Full \sideset port with sideset_construct/sideset_wrap_impl. All sideset equations match. Remaining: "Classic" section ({}_a^b\sum) needs deeper floating script nesting.
 
 ### Tier 3: Needs package bindings (moderate effort)
 
