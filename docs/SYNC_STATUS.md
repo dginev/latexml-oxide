@@ -440,7 +440,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Tier 3: Needs package bindings (moderate effort)
 
 - [ ] **12. stmaryrd_test** (22_fonts) — 1007 diffs (was 1449). Ported stmaryrd.sty, fixed FontDirective Display. Remaining: mostly XMDual + math parser text= diffs.
-- [ ] **33. cd_test** (56_ams) — 146 diffs (was 175, was PANIC). postfix_apply grammar rule helped. Remaining: XMDual nesting for \operatorname, XMWrap ARROW.
+- [ ] **33. cd_test** (56_ams) — 221 diffs (was 146, 175). XMCell structure, XMDual/XMWrap diffs.
 - [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
