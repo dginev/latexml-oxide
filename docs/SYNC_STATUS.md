@@ -422,7 +422,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
-- [ ] **25. cells_test** (53_alignment) — ~144 diff lines (was 300, 548, 780). Session 17: fixed get_arg 1-based indexing, diaghead picture+line+g, multirow content+rowspan (DefMacro split), vattach fix. Remaining: \rothead rotation (needs p{rotheadsize}), ltx_nopad_r (needs \lx@intercol propagation), inner tabular trailing whitespace.
+- [ ] **25. cells_test** (53_alignment) — 102 diffs (was 282, 300, 548, 780). Session 18: fixed \\[dim] stack overflow (reversion recursion bug), enabled \rothead rotation via raw TeX def, improved ltx_nopad_r for @{}c@{} columns. Remaining: ltx_nopad_l on left-aligned @{} cells (6 diffs), trailing whitespace (17 diffs), rotation angle/dimensions missing on inline-block, paragraph width mismatch (78.1pt vs 90.1pt).
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
@@ -502,7 +502,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 - [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES, terms PASSES (juxtaposition-binds-tighter accepted). compose 12 (OPFUNCTION barearg + lxDeclare fix; remaining: f∘sin x composition scoping). function_argument_syntax 27 (sin π×x multi-function chain — parser fails). scripts/testscripts/arrows/not ~74 each (parser structural).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
-- [ ] **51. eqnarray_test** (53_alignment) — 575 diffs (down from 1176). prefix_relop_apply + displaystyle fix helped.
+- [ ] **51. eqnarray_test** (53_alignment) — 69 diffs (was 575, down from 1176). Math parser limit-from + cdots ELIDEOP diffs remain.
 - [ ] **52. ntheorem_test** (55_theorem) — 1479 diffs. Math parser tree + eqnarray.
 
 ### Tier 6: Heavy package bindings (distant future)
