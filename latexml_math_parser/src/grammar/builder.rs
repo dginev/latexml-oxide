@@ -135,6 +135,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // This is needed for (f*g)(x) where f and g are FUNCTION tokens
     // opfunction here allows standalone \operatorname{R} to parse
     term += function | trigfunction | opfunction | composed_term;
+    // Allow elideop (\cdots) as a term for chains like y + i + \cdots + y_n
+    // Perl treats cdots as a regular term in addition chains
+    term += elideop;
 
     // Higher-order operator terms: functions as standalone objects multiplied by factors
     // `2\sin` = `2 * sin`, `2\sin\cos` = `2 * sin * cos`
