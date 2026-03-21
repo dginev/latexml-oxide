@@ -1093,14 +1093,18 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  // \columncolor — stub
-  DefPrimitive!("\\columncolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let spec_str = do_expand(spec)?.to_string();
-    let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
-    merge_font(fontmap!(bg => color));
-    Ok(Vec::new())
-  });
+  // \columncolor — only define stub if colortbl not loaded.
+  // When colortbl IS loaded, its \columncolor definition handles \@setcellcolor.
+  // xcolor's stub only sets font background, missing td attribute propagation.
+  if !has_meaning(&T_CS!("\\columncolor")) {
+    DefPrimitive!("\\columncolor[]{}", sub[(model_opt, spec)] {
+      let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+      let spec_str = do_expand(spec)?.to_string();
+      let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
+      merge_font(fontmap!(bg => color));
+      Ok(Vec::new())
+    });
+  }
 
   // TeX internals via RawTeX
   RawTeX!(r##"

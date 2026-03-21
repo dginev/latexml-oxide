@@ -525,6 +525,10 @@ impl BoxOps for Alignment {
         if let Some(vpad) = vpad_opt {
           cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
         }
+        // colortbl: backgroundcolor from \columncolor/\cellcolor
+        if let Some(ref bg) = cell.backgroundcolor {
+          cell_attrs.insert(String::from("backgroundcolor"), bg.clone());
+        }
         // Perl: colspan/rowspan attributes for spanning cells
         if cell.colspan.unwrap_or(1) != 1 {
           cell_attrs.insert(String::from("colspan"), cell.colspan.unwrap().to_string());

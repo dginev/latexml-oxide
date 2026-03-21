@@ -5,9 +5,14 @@ LoadDefinitions!({
   RequirePackage!("array");
 
   // DefConditional('\if@@rowcolored', sub { LookupValue('tabular_row_color'); });
-  DefConditional!("\\if@@rowcolored", {
+  // Can't use DefConditional! because compile-time tokenizer splits \if@@rowcolored
+  // into \if + @@ + rowcolored (@ is "other" in proc macro context).
+  // Use a runtime primitive that the RawTeX macros can reference.
+  DefConditional!("\\iflx@rowcolored", {
     state::lookup_value("tabular_row_color").is_some_and(|v| !matches!(v, Stored::None))
   });
+  // Alias the @ version at runtime
+  RawTeX!(r"\let\if@@rowcolored\iflx@rowcolored");
 
   // DefPrimitive('\@clearrowcolor', sub {
   //   MergeFont(background => undef);
@@ -37,17 +42,28 @@ LoadDefinitions!({
     }
   });
 
-  // \columncolor[<model>]{<color>}[<left_overhang>][<right_overhang>]
-  DefMacro!("\\columncolor[]{}[][]",
-    "\\if@@rowcolored\\else\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi\\@setcellcolor\\fi");
+  // \columncolor, \cellcolor, \rowcolor — set background color.
+  // Must use RawTeX! because the compile-time proc macro tokenizer treats @ as "other",
+  // so DefMacro! expansion strings containing \@setcellcolor produce two tokens
+  // (\@ + setcellcolor) instead of one CS (\@setcellcolor).
+  // RawTeX! tokenizes at package loading time when @ has catcode "letter".
+  RawTeX!(r"\def\columncolor{\@ifnextchar[\lx@columncolor@ii{\lx@columncolor@ii[]}}");
+  RawTeX!(r"\long\def\lx@columncolor@ii[#1]#2{%
+    \if@@rowcolored\else
+      \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
+      \@setcellcolor
+    \fi}");
 
-  // \rowcolor[<model>]{<color>}
-  DefMacro!("\\rowcolor[]{}",
-    "\\lx@hidden@noalign{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi\\@setrowcolor}");
+  RawTeX!(r"\def\cellcolor{\@ifnextchar[\lx@cellcolor@ii{\lx@cellcolor@ii[]}}");
+  RawTeX!(r"\long\def\lx@cellcolor@ii[#1]#2{%
+    \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
+    \@setcellcolor}");
 
-  // \cellcolor[<model>]{<color>}
-  DefMacro!("\\cellcolor[]{}",
-    "\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi\\@setcellcolor");
+  RawTeX!(r"\def\rowcolor{\@ifnextchar[\lx@rowcolor@ii{\lx@rowcolor@ii[]}}");
+  RawTeX!(r"\long\def\lx@rowcolor@ii[#1]#2{%
+    \lx@hidden@noalign{%
+      \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
+      \@setrowcolor}}");
 
   // \@setrowcolor — set tr's backgroundcolor from current font background
   DefConstructor!(T_CS!("\\@setrowcolor"), None, sub[document, _args, _props] {
@@ -77,20 +93,25 @@ LoadDefinitions!({
     alias => ""
   );
 
-  // \@setcellcolor — set td's backgroundcolor from current font background
-  DefConstructor!(T_CS!("\\@setcellcolor"), None, sub[document, _args, _props] {
-    let bg_opt = document.get_node_font(document.get_node()).get_background()
-      .map(|c| c.to_attribute());
-    if let Some(bg) = bg_opt {
-      let node = document.get_node().clone();
-      if let Some(mut td) = document.findnode("ancestor-or-self::ltx:td", Some(&node)) {
-        document.set_attribute(&mut td, "backgroundcolor", &bg)?;
+  // \@setcellcolor — store cell background color during digestion.
+  // Uses DefPrimitive to capture background at digestion time (when font is set).
+  // The backgroundcolor is stored on the alignment cell and applied to <td> during absorption.
+  DefPrimitive!("\\@setcellcolor", sub[_args] {
+    if let Some(font) = lookup_font() {
+      if let Some(bg) = font.get_background() {
+        let bg_str = bg.to_attribute();
+        if let Some(alignment) = lookup_alignment() {
+          if let Some(data) = alignment.alignment_cell() {
+            let mut data_lock = data.borrow_mut();
+            if let Some(colspec) = data_lock.current_column() {
+              colspec.backgroundcolor = Some(bg_str);
+            }
+          }
+        }
       }
     }
-  },
-    properties => { Ok(stored_map!("alignmentSkippable" => true)) },
-    alias => ""
-  );
+    Ok(())
+  });
 
   // \arrayrulecolor, \doublerulesepcolor — ignore
   DefMacro!("\\arrayrulecolor[]{}", None);

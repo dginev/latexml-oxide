@@ -55,6 +55,8 @@ pub struct Cell {
   /// Set during template building, used by nopad heuristic to distinguish
   /// regular columns (has intercolumn padding) from @{}-disabled columns.
   pub has_intercol_after: bool,
+  /// Background color from \columncolor/\cellcolor (set during digestion by \@setcellcolor)
+  pub backgroundcolor: Option<String>,
 }
 impl Cell {
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {
