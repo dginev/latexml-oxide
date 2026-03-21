@@ -1218,8 +1218,9 @@ pub fn apply_invisible_times(
   }
   // Mixed number detection: NUMBER followed by FRACOP → invisible plus
   // Perl: 2\frac{3}{4} = 2 + 3/4; 123\frac{12}{34} = 123 + 12/34 (all-integer)
-  // But 123\frac{12.0}{34} = 123 × 12.0/34 (decimal → not mixed number)
+  // But 123.456\frac{12}{34} = 123.456 × (12/34) (decimal prefix → not mixed)
   let l_num = is_number(&left);
+  let l_integer = l_num && is_integer_number(&left);
   let mut r_frac = is_fracop(&right);
   // Also check via nodes: if right is a Lexeme pointing to a DOM node with FRACOP inside
   if l_num && !r_frac {
@@ -1249,7 +1250,7 @@ pub fn apply_invisible_times(
   }
   // Mixed number only when BOTH sides of the fraction are pure integers.
   // Perl: 2\frac{3}{4} → 2+3/4, but 123\frac{12.0}{34} → 123×(12.0/34)
-  let mut is_mixed_number = l_num && r_frac;
+  let mut is_mixed_number = l_integer && r_frac;
   if is_mixed_number {
     // Check the fraction's numerator/denominator are pure integers via DOM nodes.
     // The fraction is often opaque in the XM tree (represented as an ATOM Lexeme).
@@ -1468,6 +1469,20 @@ fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
       }
     },
     _ => {},
+  }
+}
+
+/// Check if an XM NUMBER has integer content (no decimal point)
+fn is_integer_number(xm: &Option<XM>) -> bool {
+  match xm {
+    Some(XM::Token(props, _)) => {
+      props.role.as_deref() == Some("NUMBER")
+        && props.meaning.as_ref().map_or(true, |m| !m.contains('.'))
+    },
+    Some(XM::Lexeme(lex, _)) => {
+      lex.starts_with("NUMBER:") && !lex.contains('.')
+    },
+    _ => false,
   }
 }
 
