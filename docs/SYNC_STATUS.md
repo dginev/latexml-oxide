@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 15: choose_test, arrows_test, niceunits_test, spacing_test, mixedfrac_test, fences_test, not_test PASS. role=UNKNOWN→ID post-finalize (5368 XML updates). OPFUNCTION as factor. Angle bracket lexeme remapping. Mixed fraction integer detection. ltx_math_unparsed class. Marpa engine reset after successful parse. Session 15: choose_test PASSES (delimiter digestion), arrows_test PASSES (ARROW multirelation chain), niceunits_test PASSES (nicefrac+units.sty ports + slash font fix + afterConstruct specialize), guessTableHeaders fix, sideset DOM fix, \not rewrite DOM fix (150→61), METARELOP/empty_fenced grammar, is_relational_item Token role check, diagboxtest no longer times out. Blocker: Marpa grammar precomputation extremely fragile — ANY code change in parser.rs triggers recomputation that breaks performance.
+**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 16: Added cmbx10 (Computer Modern Bold) font metrics fixing rowsep computation for bold tabulars (-1.5pt→-1.7pt). Added has_intercol_after Cell flag infrastructure for ltx_nopad_r/ltx_nopad_l CSS class determination. cells_test 303→300 diffs. Investigated ltx_nopad_r mechanics deeply — Perl's lspaces/rspaces populated from \lx@intercol template tokens during cell content extraction; Rust doesn't include template after tokens in cell content boxes.
 
 ### Completed items
 
@@ -422,7 +422,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
-- [ ] **25. cells_test** (53_alignment) — 548 diffs (was 780, was stack overflow). Fixed guessTableHeaders false positive (GUESS_TABULAR_HEADERS=false check). Remaining: \rothead rotation, \diaghead picture, ltx_nopad_r padding, multirow.
+- [ ] **25. cells_test** (53_alignment) — 300 diffs (was 548, was 780). Fixed rowsep bold font metrics (-1.5→-1.7pt via cmbx10 STDMETRICS). Remaining: \rothead rotation, \diaghead picture, ltx_nopad_r padding (needs template after tokens in cell content), multirow.
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
