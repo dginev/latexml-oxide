@@ -851,9 +851,12 @@ LoadDefinitions!({
   //======================================================================
   // Section 7.2 \sideset command
   // Perl: amsmath.sty.ltxml L1183-1234
-  // TODO: Full port needs careful DOM manipulation (sideset_construct/sideset_wrap).
-  // Current attempt produces corrupted XML from node unlink/reparent conflicts.
-  DefMacro!("\\sideset{}{}{}", "#3");
+  DefConstructor!("\\sideset{}{}{}", sub[document, args, props] {
+    sideset_construct(document, args, props)?;
+  },
+  properties => {
+    Ok(stored_map!("scriptlevel" => stomach::get_script_level()))
+  });
 
   //======================================================================
   // Section 3.11.1 \numberwithin
@@ -1215,5 +1218,111 @@ pub fn rearrange_ams_align(
     equationgroup_join_cols(document, 2, &mut equation)?;
   }
   Ok(())
+}
+
+/// Perl: \sideset constructor body (amsmath.sty.ltxml L1183-1225)
+fn sideset_construct(
+  document: &mut Document,
+  args: &[Option<Digested>],
+  props: &SymHashMap<Stored>,
+) -> Result<()> {
+  use crate::engine::tex_scripts::is_script;
+  use latexml_core::token::Catcode;
+
+  let pre = args.first().and_then(|a| a.as_ref());
+  let post = args.get(1).and_then(|a| a.as_ref());
+  let base = args.get(2).and_then(|a| a.as_ref());
+
+  // Insert the base in XMArg
+  document.open_element("ltx:XMArg", None, None)?;
+  if let Some(b) = base {
+    document.absorb(b, None)?;
+  }
+  let node_opt = document.close_element("ltx:XMArg")?;
+  let mut node = node_opt.unwrap_or_else(|| document.get_node().clone());
+
+  // Get scriptpos prefix from base
+  let opx = node.get_first_element_child()
+    .and_then(|ch| ch.get_attribute("scriptpos"))
+    .map(|sp| {
+      let prefix: String = sp.chars().take_while(|c| !c.is_ascii_digit()).collect();
+      if prefix.is_empty() { "post".to_string() } else { prefix }
+    })
+    .unwrap_or_else(|| "post".to_string());
+
+  let level0 = props.get("scriptlevel")
+    .map(|v| v.to_string().parse::<usize>().unwrap_or(0))
+    .unwrap_or(0);
+  let mut level = level0;
+
+  // Process pre-scripts in reverse
+  if let Some(pre_arg) = pre {
+    let items: Vec<_> = pre_arg.unlist().into_iter().rev().collect();
+    for item in items {
+      if let Some(scriptop) = is_script(&item) {
+        let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
+        node = sideset_wrap_impl(document, node, "pre", y, level, &item)?;
+        if scriptop.0 == "FLOATING" {
+          level += 1;
+        }
+      }
+    }
+  }
+
+  // Process post-scripts
+  if let Some(post_arg) = post {
+    for item in post_arg.unlist() {
+      if let Some(scriptop) = is_script(&item) {
+        if scriptop.0 == "FLOATING" {
+          level += 1;
+        }
+        let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
+        node = sideset_wrap_impl(document, node, "post", y, level, &item)?;
+      }
+    }
+  }
+
+  // Set scriptpos on the final node
+  if !opx.is_empty() {
+    document.set_attribute(&mut node, "scriptpos", &format!("{opx}{level0}"))?;
+  }
+  Ok(())
+}
+
+/// Perl: sidesetWrap (amsmath.sty.ltxml L1227-1234)
+/// Uses Document's stack-based API (openElement/closeElement) matching Perl.
+fn sideset_wrap_impl(
+  document: &mut Document,
+  mut inner: Node,
+  x: &str,
+  y: &str,
+  level: usize,
+  script: &Digested,
+) -> Result<Node> {
+  use latexml_core::digested::DigestedData;
+
+  let scriptpos = format!("{x}{level}");
+  // Perl: $document->openElement('ltx:XMApp')
+  document.open_element("ltx:XMApp", None, None)?;
+  // Perl: $document->insertElement('ltx:XMTok', undef, role => ..., scriptpos => ...)
+  let mut tok_attrs: HashMap<String, String> = HashMap::default();
+  tok_attrs.insert("role".to_string(), y.to_string());
+  tok_attrs.insert("scriptpos".to_string(), scriptpos);
+  document.open_element("ltx:XMTok", Some(tok_attrs), None)?;
+  document.close_element("ltx:XMTok")?;
+  // Perl: $new->appendChild($node) — move existing node into current element (XMApp)
+  inner.unlink_node();
+  document.get_node_mut().add_child(&mut inner)?;
+  // Perl: $document->insertElement('ltx:XMWrap', $script->getArg(1))
+  document.open_element("ltx:XMWrap", None, None)?;
+  if let DigestedData::Whatsit(ref w) = script.data() {
+    if let Some(arg) = w.borrow().get_arg(1) {
+      document.absorb(arg, None)?;
+    }
+  }
+  document.close_element("ltx:XMWrap")?;
+  // Perl: $document->closeElement('ltx:XMApp')
+  let closed = document.close_element("ltx:XMApp")?;
+  Ok(closed.unwrap_or_else(|| document.get_node().clone()))
 }
 
