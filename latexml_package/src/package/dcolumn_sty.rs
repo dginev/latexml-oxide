@@ -34,18 +34,27 @@ LoadDefinitions!({
     Let!("\\DC@saved@dollar", "$");
     state::let_i(&T_MATH!(), &T_CS!("\\relax"), None);
     // Start inline math if not already in math
-    let in_math = state::lookup_value("IN_MATH").is_some();
+    let in_math = lookup_bool("IN_MATH");
     if in_math {
+      state::assign_value("DC_started_math", Stored::Bool(false), None);
       Ok(Tokens::default())
     } else {
+      state::assign_value("DC_started_math", Stored::Bool(true), None);
       Ok(Tokens!(T_CS!("\\lx@begin@inline@math")))
     }
   });
 
-  // Perl: \DC@end — restores $ and ends inline math
+  // Perl: \DC@end — restores $ and ends inline math (only if we started it)
   DefMacro!("\\DC@end", sub[_args] {
     state::let_i(&T_MATH!(), &T_CS!("\\DC@saved@dollar"), None);
-    Ok(Tokens!(T_CS!("\\lx@end@inline@math")))
+    let started = state::lookup_value("DC_started_math")
+      .map(|v| matches!(v, Stored::Bool(true)))
+      .unwrap_or(false);
+    if started {
+      Ok(Tokens!(T_CS!("\\lx@end@inline@math")))
+    } else {
+      Ok(Tokens::default())
+    }
   });
 
   // Perl: DefColumnType('D{}{}{}', ...) — decimal alignment column
