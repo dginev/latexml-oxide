@@ -40,13 +40,9 @@ LoadDefinitions!({
       }
     });
 
-  // \rothead: simplified override — delegates to \thead without rotation.
-  // Full rotation needs p{\rotheadsize} column format in inner thead to match Perl dimensions.
-  // TODO: implement rotation with correct paragraph column width.
-  DefMacro!("\\rothead[]{}",
-    "\\thead[#1]{#2}");
-  DefMacro!("\\rotcell[]{}",
-    "\\makecell[#1]{#2}");
+  // \rothead and \rotcell: use raw TeX definitions from makecell.sty
+  // (loaded via InputDefinitions above). The raw TeX definitions use \turn{\cellrotangle}
+  // for rotation and p{\rotheadsize} column format for paragraph width.
 
   // \lx@diag@head: wraps content in \theadfont + \shortstack for alignment
   DefMacro!("\\lx@diag@head{}{}",

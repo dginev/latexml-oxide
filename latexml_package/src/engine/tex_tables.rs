@@ -332,8 +332,10 @@ LoadDefinitions!({
     current_row.set_padding(padding);
   }},
   reversion => sub[whatsit,_args] {
-    let reverted = whatsit.revert()?;
-    Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), reverted, T_OTHER!("]"), T_CR!()))
+    let arg_reverted = whatsit.get_arg(1)
+      .map(|a| a.revert())
+      .unwrap_or_else(|| Ok(Tokens!()))?;
+    Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), arg_reverted, T_OTHER!("]"), T_CR!()))
   });
 
   // Perl: \lx@intercol is our replacement for LaTeX's \@acol for intercolumn space
