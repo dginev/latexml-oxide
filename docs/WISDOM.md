@@ -465,3 +465,20 @@ tokenizer should also be fixed to handle `*` in CS names without looping.
 **Fix:** `predigest_box_contents` now calls `begin_mode`/`end_mode` matching Perl's `readBoxContents` frame scope. After `invoke_token`, checks if MODE was changed to 'horizontal' inplace, and if so, calls `repack_horizontal_in_list` to group character boxes into a horizontal sub-List with width=\hsize. Guard: only repacks when body contains simple TBoxes (not Whatsits like tabular).
 
 **Key insight:** The distinction between `assignValue(MODE, 'inplace')` and `beginMode(mode)` (which calls `pushStackFrame` + `assignValue(MODE, 'local')`) is critical. The former modifies the SAME frame's BOUND_MODE scope; the latter creates a NEW scope that hides the parent's BOUND_MODE.
+
+## 20. Whatsit::get_arg() is 1-based: get_arg(0) always returns None
+
+**Context:** `\turnbox{90}{hello}` always produced angle=0. Debug output showed `get_arg(0)` returning None. The `\turnbox` constructor used 0-based indexing for arg access.
+
+**Root cause:** `Whatsit::get_arg(n)` (whatsit.rs line 108-116) uses 1-based indexing to match Perl's `$whatsit->getArg(1)` convention:
+```rust
+pub fn get_arg(&self, n: usize) -> Option<&Digested> {
+    if n == 0 { return None; }
+    match self.args.get(n - 1) { ... }
+}
+```
+Code written with 0-based assumption silently gets None for the first arg, triggering `unwrap_or(0.0)` fallbacks.
+
+**Fix:** Changed all `get_arg(0)` to `get_arg(1)`, `get_arg(1)` to `get_arg(2)`, etc. in `\turnbox`, `{turn}`, `{rotate}`, and `\lx@diagheads`. Also confirmed: OptionalKeyVals parameters that are NOT provided do NOT occupy an arg slot (novalue=true), so they don't shift the indices.
+
+**Key insight:** Always use 1-based indexing with `get_arg()`. The pattern `get_arg(0).map(...).unwrap_or(default)` is a silent bug — it always uses the default. To catch these: grep for `get_arg(0)` in the codebase.

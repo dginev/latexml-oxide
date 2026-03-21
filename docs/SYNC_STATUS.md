@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 16: cmbx10 bold font metrics (rowsep -1.5→-1.7pt). has_intercol_after Cell flag. rotated_properties() port. \lx@diagheads constructor with picture element output. \diaghead macro expansion ported.
+**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 17: CRITICAL FIX: Whatsit::get_arg() uses 1-based indexing, fixed 0-based usage in \turnbox/{turn}/{rotate}/\lx@diagheads. Diaghead now produces correct <picture> with <line>, <g> elements. Added {rotatebox} environment definition.
 
 ### Completed items
 
