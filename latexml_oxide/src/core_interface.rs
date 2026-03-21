@@ -453,3 +453,7 @@ fn apply_lx_declarations(document: &mut Document) {
     }
   }
 }
+
+// TODO: kludge_bracket_grouping — needs full implementation with script handling
+// (parse_kludgeScripts_rec) to match Perl's XMWrap structure. The basic bracket
+// grouping works but produces different nesting than Perl, causing test diffs.

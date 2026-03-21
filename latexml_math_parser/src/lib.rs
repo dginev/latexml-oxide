@@ -8,6 +8,7 @@ mod pragmatics;
 mod semantics;
 mod util;
 
+pub use data::get_grammatical_role;
 pub use parser::MathParser;
 pub use parser::text_form;
 pub use util::node_to_grammar_lexemes;
