@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-20):** 249 pass, 0 fail, 70 ignored (319 total). Session 15: choose_test PASSES (delimiter digestion), arrows_test PASSES (ARROW multirelation chain), niceunits_test PASSES (nicefrac+units.sty ports + slash font fix), guessTableHeaders fix, sideset DOM fix, \not rewrite DOM fix (150→61), METARELOP/empty_fenced grammar. Session 14: amsarticle PASSES, amsdisplay PASSES, compose_test PASSES.
+**Status (2026-03-21):** 249 pass, 0 fail, 70 ignored (319 total). Session 15: choose_test PASSES (delimiter digestion), arrows_test PASSES (ARROW multirelation chain), niceunits_test PASSES (nicefrac+units.sty ports + slash font fix + afterConstruct specialize), guessTableHeaders fix, sideset DOM fix, \not rewrite DOM fix (150→61), METARELOP/empty_fenced grammar, is_relational_item Token role check, diagboxtest no longer times out. Blocker: Marpa grammar precomputation extremely fragile — ANY code change in parser.rs triggers recomputation that breaks performance.
 
 ### Completed items
 
