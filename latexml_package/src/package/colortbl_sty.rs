@@ -25,10 +25,11 @@ LoadDefinitions!({
   });
 
   // AddToMacro('\@tabular@row@after', '\lx@hidden@noalign{\@clearrowcolor}');
-  AddToMacro!("\\@tabular@row@after", "\\lx@hidden@noalign{\\@clearrowcolor}");
+  RawTeX!(r"\expandafter\def\expandafter\@tabular@row@after\expandafter{\@tabular@row@after\lx@hidden@noalign{\@clearrowcolor}}");
 
   // AddToMacro('\@tabular@column@before', '\@userowcolor');
-  AddToMacro!("\\@tabular@column@before", "\\@userowcolor");
+  // Use RawTeX because AddToMacro! compile-time tokenizer splits \@userowcolor
+  RawTeX!(r"\expandafter\def\expandafter\@tabular@column@before\expandafter{\@tabular@column@before\@userowcolor}");
 
   // DefPrimitive('\@userowcolor', sub {
   //   if (my $rc = LookupValue('tabular_row_color')) {
