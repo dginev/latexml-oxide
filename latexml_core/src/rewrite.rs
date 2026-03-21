@@ -254,8 +254,6 @@ impl Rewrite {
           // my ($xpath, $nnodes, @wilds) = @$pattern;
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
-            // Debug("Rewrite selecting \"$xpath\" => " . scalar(@matches) . " matches") if
-            // $LaTeXML::DEBUG{rewrite};
             for node in matches {
               // next unless node.get_owner_document()->isSameNode($tree->ownerDocument); # If still
               // attached to original document!
@@ -277,8 +275,6 @@ impl Rewrite {
           }
         },
         Replace => {
-          //     Debug("Rewrite replace at " . $tree->toString . " using $pattern")
-          // if $LaTeXML::DEBUG{rewrite};
           let mut parent = tree.get_parent().unwrap();
           // Remove & separate nodes to be replaced, and sibling nodes following them.
           let mut following = VecDeque::new(); // Collect the matching and following nodes
