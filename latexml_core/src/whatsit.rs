@@ -105,17 +105,19 @@ impl Whatsit {
   /// accessor for the definition which built this Whatsit
   pub fn get_definition(&self) -> Rc<dyn Definition> { Rc::clone(&self.definition) }
   /// accessor for the argument at index `n` (starting from 1)
+  /// Access argument at 1-based index `n` (matching Perl's `$whatsit->getArg(n)`).
+  /// Panics if n == 0 — use 1-based indexing.
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
-    if n == 0 {
-      return None;
-    }
+    assert!(n > 0, "get_arg() uses 1-based indexing (Perl convention). Use get_arg(1) for the first argument.");
     match self.args.get(n - 1) {
       Some(Some(opt)) => Some(opt),
       _ => None,
     }
   }
-  /// mutably borrow the argument at index `n` (starting from 1)
+  /// Mutably borrow argument at 1-based index `n` (matching Perl's `$whatsit->getArg(n)`).
+  /// Panics if n == 0 — use 1-based indexing.
   pub fn get_arg_mut(&mut self, n: usize) -> Option<&mut Digested> {
+    assert!(n > 0, "get_arg_mut() uses 1-based indexing (Perl convention). Use get_arg_mut(1) for the first argument.");
     match self.args.get_mut(n - 1) {
       Some(Some(opt)) => Some(opt),
       _ => None,
