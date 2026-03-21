@@ -3522,7 +3522,12 @@ fn trim_node_right_whitespace(node: &Node) -> Result<()> {
           c.is_ascii_whitespace() || c == '\u{00A0}' || c == '\u{2003}' || c == '\u{2002}'
         });
         if !content.is_empty() && (trimmed_content != content) {
-          last_child.set_content(trimmed_content)?;
+          if trimmed_content.is_empty() {
+            // Remove the entirely-whitespace text node
+            last_child.unlink();
+          } else {
+            last_child.set_content(trimmed_content)?;
+          }
         }
       },
       Some(NodeType::ElementNode) => trim_node_right_whitespace(&last_child)?,
