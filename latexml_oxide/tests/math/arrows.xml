@@ -51,19 +51,19 @@
             <XMTok meaning="multirelation"/>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
               <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
             </XMApp>
             <XMApp role="ARROW">
               <XMTok fontsize="70%" role="OVERACCENT">over</XMTok>
               <XMTok name="rightarrow" role="ARROW" stretchy="true">→</XMTok>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
             <XMApp role="ARROW">
               <XMTok fontsize="70%" role="OVERACCENT">over</XMTok>
               <XMTok name="leftarrow" role="ARROW" stretchy="true">←</XMTok>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -75,7 +75,7 @@
         <XMath>
           <XMApp>
             <XMTok meaning="multirelation"/>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="ID">a</XMTok>
             <XMApp role="ARROW">
               <XMTok fontsize="70%" role="UNDERACCENT">under</XMTok>
               <XMApp role="ARROW">
@@ -83,7 +83,7 @@
                 <XMTok name="rightarrow" role="ARROW" stretchy="true">→</XMTok>
               </XMApp>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
             <XMApp role="ARROW">
               <XMTok fontsize="70%" role="UNDERACCENT">under</XMTok>
               <XMApp role="ARROW">
@@ -91,7 +91,7 @@
                 <XMTok name="leftarrow" role="ARROW" stretchy="true">←</XMTok>
               </XMApp>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -103,17 +103,17 @@
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="ID">a</XMTok>
             <XMApp>
               <XMTok fontsize="70%" role="OVERACCENT">over</XMTok>
               <XMTok name="rightarrow" role="ARROW">→</XMTok>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
             <XMApp>
               <XMTok fontsize="70%" role="UNDERACCENT">under</XMTok>
               <XMTok name="leftarrow" role="ARROW">←</XMTok>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
           </XMApp>
         </XMath>
       </Math>

@@ -26,25 +26,25 @@
                     <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                      <XMTok font="italic" role="UNKNOWN">S</XMTok>
+                      <XMTok font="italic" role="ID">S</XMTok>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                        <XMTok font="caligraphic" fontsize="70%" role="UNKNOWN">W</XMTok>
-                        <XMTok fontsize="50%" name="Lambda" role="UNKNOWN">Λ</XMTok>
+                        <XMTok font="caligraphic" fontsize="70%" role="ID">W</XMTok>
+                        <XMTok fontsize="50%" name="Lambda" role="ID">Λ</XMTok>
                       </XMApp>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                    <XMTok font="italic" role="ID">T</XMTok>
                   </XMApp>
                 </XMCell>
                 <XMCell align="center">
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="mid5"/>
                     <XMTok class="ltx_horizontally_stretchy" meaning="rightarrow" role="ARROW" stretchy="true" width="30.0pt">→</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
                   </XMApp>
                 </XMCell>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                  <XMTok font="italic" role="ID">T</XMTok>
                 </XMCell>
               </XMRow>
               <XMRow>
@@ -58,7 +58,7 @@
                     <XMTok meaning="absent"/>
                     <XMApp width="0.0pt">
                       <XMTok fontsize="70%" role="OPFUNCTION" scriptpos="post">End</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">P</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">P</XMTok>
                     </XMApp>
                   </XMApp>
                 </XMCell>
@@ -75,13 +75,13 @@
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S0.E1.m1.1.1">
                           <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">S</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                          <XMTok font="italic" role="ID">S</XMTok>
+                          <XMTok font="italic" role="ID">T</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                    <XMTok font="italic" role="ID">I</XMTok>
                   </XMApp>
                 </XMCell>
                 <XMCell align="center">
@@ -96,13 +96,13 @@
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S0.E1.m1.1.2">
                           <XMTok meaning="tensor-product" name="otimes" role="MULOP">⊗</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Z</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                          <XMTok font="italic" role="ID">Z</XMTok>
+                          <XMTok font="italic" role="ID">T</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">J</XMTok>
+                    <XMTok font="italic" role="ID">J</XMTok>
                   </XMApp>
                 </XMCell>
               </XMRow>
@@ -135,7 +135,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S0.E2.m1.1.1">cov</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="caligraphic" role="UNKNOWN" xml:id="S0.E2.m1.1.2">L</XMTok>
+                        <XMTok font="caligraphic" role="ID" xml:id="S0.E2.m1.1.2">L</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -147,9 +147,9 @@
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="mid5"/>
                       <XMTok class="ltx_horizontally_stretchy" meaning="rightarrow" role="ARROW" stretchy="true" width="30.0pt">→</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
                   </XMApp>
                 </XMCell>
                 <XMCell align="center">
@@ -162,7 +162,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S0.E2.m1.1.3">non</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="caligraphic" role="UNKNOWN" xml:id="S0.E2.m1.1.4">K</XMTok>
+                        <XMTok font="caligraphic" role="ID" xml:id="S0.E2.m1.1.4">K</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -172,7 +172,7 @@
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="mid5"/>
                     <XMTok class="ltx_horizontally_stretchy" meaning="rightarrow" role="ARROW" stretchy="true" width="30.0pt">→</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
                   </XMApp>
                 </XMCell>
                 <XMCell align="center">
@@ -185,7 +185,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S0.E2.m1.1.5">cf</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="caligraphic" role="UNKNOWN" xml:id="S0.E2.m1.1.6">K</XMTok>
+                        <XMTok font="caligraphic" role="ID" xml:id="S0.E2.m1.1.6">K</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -195,7 +195,7 @@
                   <XMApp role="ARROW">
                     <XMTok role="SUBSCRIPTOP" scriptpos="mid5"/>
                     <XMTok class="ltx_horizontally_stretchy" meaning="rightarrow" role="ARROW" stretchy="true" width="30.0pt">→</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
                   </XMApp>
                 </XMCell>
                 <XMCell align="center">
@@ -208,7 +208,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S0.E2.m1.1.7">cf</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="caligraphic" role="UNKNOWN" xml:id="S0.E2.m1.1.8">L</XMTok>
+                        <XMTok font="caligraphic" role="ID" xml:id="S0.E2.m1.1.8">L</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -245,7 +245,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S0.E2.m1.1.9">add</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="caligraphic" role="UNKNOWN" xml:id="S0.E2.m1.1.10">L</XMTok>
+                        <XMTok font="caligraphic" role="ID" xml:id="S0.E2.m1.1.10">L</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -264,7 +264,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S0.E2.m1.1.11">add</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="caligraphic" role="UNKNOWN" xml:id="S0.E2.m1.1.12">K</XMTok>
+                        <XMTok font="caligraphic" role="ID" xml:id="S0.E2.m1.1.12">K</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -283,7 +283,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S0.E2.m1.1.13">cov</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="caligraphic" role="UNKNOWN" xml:id="S0.E2.m1.1.14">K</XMTok>
+                        <XMTok font="caligraphic" role="ID" xml:id="S0.E2.m1.1.14">K</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -302,7 +302,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S0.E2.m1.1.15">non</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="caligraphic" role="UNKNOWN" xml:id="S0.E2.m1.1.16">L</XMTok>
+                        <XMTok font="caligraphic" role="ID" xml:id="S0.E2.m1.1.16">L</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMApp>

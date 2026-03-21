@@ -23,18 +23,18 @@
               <XMArray>
                 <XMRow>
                   <XMCell align="left">
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">d</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S0.Ex1.m1.1">d</XMTok>
                   </XMCell>
                   <XMCell align="left">
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.2">c</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S0.Ex1.m1.2">c</XMTok>
                   </XMCell>
                 </XMRow>
                 <XMRow>
                   <XMCell align="left">
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.3">b</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S0.Ex1.m1.3">b</XMTok>
                   </XMCell>
                   <XMCell align="left">
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">a</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S0.Ex1.m1.4">a</XMTok>
                   </XMCell>
                 </XMRow>
               </XMArray>
@@ -51,18 +51,18 @@
           <XMArray role="ARRAY" vattach="middle">
             <XMRow>
               <XMCell align="center">
-                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="ID">a</XMTok>
               </XMCell>
               <XMCell align="center">
-                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="ID">b</XMTok>
               </XMCell>
             </XMRow>
             <XMRow>
               <XMCell align="center">
-                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                <XMTok font="italic" role="ID">c</XMTok>
               </XMCell>
               <XMCell align="center">
-                <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" role="ID">d</XMTok>
               </XMCell>
             </XMRow>
           </XMArray>
@@ -84,18 +84,18 @@
               <XMArray role="ARRAY" vattach="middle" xml:id="S0.Ex3.m1.1">
                 <XMRow>
                   <XMCell align="center">
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
                   </XMCell>
                   <XMCell align="center">
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
                   </XMCell>
                 </XMRow>
                 <XMRow>
                   <XMCell align="center">
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMCell>
                   <XMCell align="center">
-                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                    <XMTok font="italic" role="ID">d</XMTok>
                   </XMCell>
                 </XMRow>
               </XMArray>
@@ -120,18 +120,18 @@
               <XMArray role="ARRAY" vattach="middle" xml:id="S0.Ex4.m1.1">
                 <XMRow>
                   <XMCell align="center">
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
                   </XMCell>
                   <XMCell align="center">
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
                   </XMCell>
                 </XMRow>
                 <XMRow>
                   <XMCell align="center">
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMCell>
                   <XMCell align="center">
-                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                    <XMTok font="italic" role="ID">d</XMTok>
                   </XMCell>
                 </XMRow>
               </XMArray>
@@ -151,18 +151,18 @@
             <XMArray role="ARRAY" vattach="middle">
               <XMRow>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMCell>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" role="ID">b</XMTok>
                 </XMCell>
               </XMRow>
               <XMRow>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" role="ID">c</XMTok>
                 </XMCell>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="ID">d</XMTok>
                 </XMCell>
               </XMRow>
             </XMArray>
@@ -179,18 +179,18 @@
                 <XMArray>
                   <XMRow>
                     <XMCell align="left">
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.1">d</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S0.Ex5.m1.1">d</XMTok>
                     </XMCell>
                     <XMCell align="left">
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.2">c</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S0.Ex5.m1.2">c</XMTok>
                     </XMCell>
                   </XMRow>
                   <XMRow>
                     <XMCell align="left">
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.3">b</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S0.Ex5.m1.3">b</XMTok>
                     </XMCell>
                     <XMCell align="left">
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.4">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S0.Ex5.m1.4">a</XMTok>
                     </XMCell>
                   </XMRow>
                 </XMArray>
@@ -209,24 +209,24 @@
             <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
-              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="ID">b</XMTok>
             </XMApp>
             <XMArray role="ARRAY" vattach="middle">
               <XMRow>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMCell>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" role="ID">b</XMTok>
                 </XMCell>
               </XMRow>
               <XMRow>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" role="ID">c</XMTok>
                 </XMCell>
                 <XMCell align="center">
-                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="ID">d</XMTok>
                 </XMCell>
               </XMRow>
             </XMArray>
@@ -245,11 +245,11 @@
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
               <XMApp>
                 <XMTok meaning="inverse-sine" role="OPFUNCTION">arcsin</XMTok>
-                <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                <XMTok font="italic" name="pi" role="ID">π</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok meaning="not" name="neg" role="BIGOP">¬</XMTok>
-                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="ID">a</XMTok>
               </XMApp>
             </XMApp>
             <XMDual>
@@ -262,18 +262,18 @@
                 <XMArray role="ARRAY" vattach="middle" xml:id="S0.Ex7.m1.1">
                   <XMRow>
                     <XMCell align="center">
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="ID">a</XMTok>
                     </XMCell>
                     <XMCell align="center">
-                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" role="ID">b</XMTok>
                     </XMCell>
                   </XMRow>
                   <XMRow>
                     <XMCell align="center">
-                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                      <XMTok font="italic" role="ID">c</XMTok>
                     </XMCell>
                     <XMCell align="center">
-                      <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                      <XMTok font="italic" role="ID">d</XMTok>
                     </XMCell>
                   </XMRow>
                 </XMArray>

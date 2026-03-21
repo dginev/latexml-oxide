@@ -20,8 +20,8 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -30,14 +30,14 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle B" text="B" xml:id="Ch0.E1.m2">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                  <XMTok font="italic" role="ID">B</XMTok>
                 </XMath>
               </Math></td>
           </MathBranch>
@@ -53,8 +53,8 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                <XMTok font="italic" role="ID">C</XMTok>
+                <XMTok font="italic" role="ID">D</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -63,14 +63,14 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                    <XMTok font="italic" role="ID">C</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle D" text="D" xml:id="Ch0.E2.m2">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                  <XMTok font="italic" role="ID">D</XMTok>
                 </XMath>
               </Math></td>
           </MathBranch>
@@ -90,8 +90,8 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -100,14 +100,14 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle B" text="B" xml:id="Ch0.E4.m2">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                  <XMTok font="italic" role="ID">B</XMTok>
                 </XMath>
               </Math></td>
           </MathBranch>
@@ -123,8 +123,8 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                <XMTok font="italic" role="ID">C</XMTok>
+                <XMTok font="italic" role="ID">D</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -133,14 +133,14 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                    <XMTok font="italic" role="ID">C</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle D" text="D" xml:id="Ch0.E5.m2">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                  <XMTok font="italic" role="ID">D</XMTok>
                 </XMath>
               </Math></td>
           </MathBranch>
@@ -152,7 +152,7 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                <XMTok font="italic" role="ID">E</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -162,7 +162,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                    <XMTok font="italic" role="ID">E</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -192,11 +192,11 @@
                       <XMRef idref="Ch0.E6.m3.2.1"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E6.m3.1">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="Ch0.E6.m3.1">x</XMTok>
                       <XMHint name="quad" role="PUNCT" width="10pt"/>
                       <XMApp xml:id="Ch0.E6.m3.2.1">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                        <XMTok font="italic" role="ID">c</XMTok>
                         <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                       </XMApp>
                     </XMWrap>
@@ -220,11 +220,11 @@
                           <XMRef idref="Ch0.E6.m2.2.1"/>
                         </XMApp>
                         <XMWrap>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E6.m2.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E6.m2.1">x</XMTok>
                           <XMHint name="quad" role="PUNCT" width="10pt"/>
                           <XMApp xml:id="Ch0.E6.m2.2.1">
                             <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                            <XMTok font="italic" role="ID">c</XMTok>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                           </XMApp>
                         </XMWrap>
@@ -258,11 +258,11 @@
                       <XMRef idref="Ch0.E7.m2.2.1"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E7.m2.1">y</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="Ch0.E7.m2.1">y</XMTok>
                       <XMHint name="quad" role="PUNCT" width="10pt"/>
                       <XMApp xml:id="Ch0.E7.m2.2.1">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                        <XMTok font="italic" role="ID">c</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
                     </XMWrap>
@@ -285,11 +285,11 @@
                           <XMRef idref="Ch0.E7.m1.2.1"/>
                         </XMApp>
                         <XMWrap>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E7.m1.1">y</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E7.m1.1">y</XMTok>
                           <XMHint name="quad" role="PUNCT" width="10pt"/>
                           <XMApp xml:id="Ch0.E7.m1.2.1">
                             <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                            <XMTok font="italic" role="ID">c</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
                         </XMWrap>
@@ -313,8 +313,8 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -323,14 +323,14 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="left"><Math tex="\displaystyle B" text="B" xml:id="Ch0.Ex2X.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                  <XMTok font="italic" role="ID">B</XMTok>
                 </XMath>
               </Math></td>
           </MathBranch>
@@ -343,7 +343,7 @@
     <equation xml:id="Ch0.Ex3">
       <Math class="ltx_math_unparsed" mode="display" tex="C=\left\{\begin{aligned} &amp;D\end{aligned}\right." xml:id="Ch0.Ex3.m1">
         <XMath>
-          <XMTok font="italic" role="UNKNOWN">C</XMTok>
+          <XMTok font="italic" role="ID">C</XMTok>
           <XMTok meaning="equals" role="RELOP">=</XMTok>
           <XMWrap>
             <XMTok role="OPEN" stretchy="true">{</XMTok>
@@ -351,7 +351,7 @@
               <XMRow>
                 <XMCell/>
                 <XMCell align="left">
-                  <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                  <XMTok font="italic" role="ID">D</XMTok>
                 </XMCell>
               </XMRow>
             </XMArray>
@@ -369,20 +369,20 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle A" text="A" xml:id="Ch0.Ex4.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok font="italic" role="ID">A</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle B" text="B" xml:id="Ch0.Ex4.m2">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                  <XMTok font="italic" role="ID">B</XMTok>
                 </XMath>
               </Math></td>
           </MathBranch>
@@ -392,14 +392,14 @@
         <MathFork>
           <Math class="ltx_math_unparsed" tex="\displaystyle C\left\{\begin{aligned} &amp;D\end{aligned}\right." xml:id="Ch0.Ex5.m3">
             <XMath>
-              <XMTok font="italic" role="UNKNOWN">C</XMTok>
+              <XMTok font="italic" role="ID">C</XMTok>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="true">{</XMTok>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell/>
                     <XMCell align="left">
-                      <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                      <XMTok font="italic" role="ID">D</XMTok>
                     </XMCell>
                   </XMRow>
                 </XMArray>
@@ -409,7 +409,7 @@
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle C" text="C" xml:id="Ch0.Ex5.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                  <XMTok font="italic" role="ID">C</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math class="ltx_math_unparsed" mode="inline" tex="\displaystyle\left\{\begin{aligned} &amp;D\end{aligned}\right." xml:id="Ch0.Ex5.m2">
@@ -419,7 +419,7 @@
                     <XMRow>
                       <XMCell/>
                       <XMCell align="left">
-                        <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                        <XMTok font="italic" role="ID">D</XMTok>
                       </XMCell>
                     </XMRow>
                   </XMArray>
@@ -440,14 +440,14 @@
         <MathFork>
           <Math class="ltx_math_unparsed" tex="\displaystyle A=\left\{\begin{aligned} B&amp;\text{if}\\&#10;C&amp;\text{otherwise}\end{aligned}\right." xml:id="Ch0.E8.m3">
             <XMath>
-              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="ID">A</XMTok>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="true">{</XMTok>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell align="right">
-                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                      <XMTok font="italic" role="ID">B</XMTok>
                     </XMCell>
                     <XMCell align="left">
                       <XMText>if</XMText>
@@ -455,7 +455,7 @@
                   </XMRow>
                   <XMRow>
                     <XMCell align="right">
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                      <XMTok font="italic" role="ID">C</XMTok>
                     </XMCell>
                     <XMCell align="left">
                       <XMText>otherwise</XMText>
@@ -470,7 +470,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMath>
@@ -481,7 +481,7 @@
                   <XMArray colsep="0pt" name="aligned">
                     <XMRow>
                       <XMCell align="right">
-                        <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                        <XMTok font="italic" role="ID">B</XMTok>
                       </XMCell>
                       <XMCell align="left">
                         <XMText>if</XMText>
@@ -489,7 +489,7 @@
                     </XMRow>
                     <XMRow>
                       <XMCell align="right">
-                        <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                        <XMTok font="italic" role="ID">C</XMTok>
                       </XMCell>
                       <XMCell align="left">
                         <XMText>otherwise</XMText>
@@ -516,13 +516,13 @@
                 <XMRow>
                   <XMCell/>
                   <XMCell align="left">
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
                   </XMCell>
                 </XMRow>
                 <XMRow>
                   <XMCell/>
                   <XMCell align="left">
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
                   </XMCell>
                 </XMRow>
               </XMArray>
@@ -535,13 +535,13 @@
                     <XMRow>
                       <XMCell/>
                       <XMCell align="left">
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="italic" role="ID">a</XMTok>
                       </XMCell>
                     </XMRow>
                     <XMRow>
                       <XMCell/>
                       <XMCell align="left">
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok font="italic" role="ID">b</XMTok>
                       </XMCell>
                     </XMRow>
                   </XMArray>
@@ -574,13 +574,13 @@
             <XMArray colsep="0pt" name="aligned">
               <XMRow>
                 <XMCell align="right">
-                  <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E10.m1.1">C</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="Ch0.E10.m1.1">C</XMTok>
                 </XMCell>
                 <XMCell align="left">
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E10.m1.2">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E10.m1.3">D</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="Ch0.E10.m1.3">D</XMTok>
                   </XMApp>
                 </XMCell>
               </XMRow>
@@ -589,7 +589,7 @@
                 <XMCell align="left">
                   <XMApp>
                     <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E10.m1.4">+</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E10.m1.5">E</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="Ch0.E10.m1.5">E</XMTok>
                   </XMApp>
                 </XMCell>
               </XMRow>
@@ -621,12 +621,12 @@
                 <XMCell align="right">
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E11.m1.2">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E11.m1.1">C</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="Ch0.E11.m1.1">C</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMCell>
                 <XMCell align="left">
-                  <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E11.m1.3">D</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="Ch0.E11.m1.3">D</XMTok>
                 </XMCell>
               </XMRow>
               <XMRow>
@@ -634,7 +634,7 @@
                 <XMCell align="left">
                   <XMApp>
                     <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E11.m1.4">+</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E11.m1.5">E</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="Ch0.E11.m1.5">E</XMTok>
                   </XMApp>
                 </XMCell>
               </XMRow>
@@ -656,8 +656,8 @@
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="UNKNOWN">A</XMTok>
-              <XMTok font="italic" role="UNKNOWN">B</XMTok>
+              <XMTok font="italic" role="ID">A</XMTok>
+              <XMTok font="italic" role="ID">B</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -682,13 +682,13 @@
               <XMArray colsep="0pt" name="aligned">
                 <XMRow>
                   <XMCell align="right">
-                    <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E13.m1.1">C</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="Ch0.E13.m1.1">C</XMTok>
                   </XMCell>
                   <XMCell align="left">
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E13.m1.2">=</XMTok>
                       <XMTok meaning="absent"/>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E13.m1.3">D</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="Ch0.E13.m1.3">D</XMTok>
                     </XMApp>
                   </XMCell>
                 </XMRow>
@@ -697,7 +697,7 @@
                   <XMCell align="left">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E13.m1.4">+</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E13.m1.5">E</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="Ch0.E13.m1.5">E</XMTok>
                     </XMApp>
                   </XMCell>
                 </XMRow>
@@ -715,8 +715,8 @@
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="UNKNOWN">F</XMTok>
-              <XMTok font="italic" role="UNKNOWN">G</XMTok>
+              <XMTok font="italic" role="ID">F</XMTok>
+              <XMTok font="italic" role="ID">G</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -737,15 +737,15 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle A" text="A" xml:id="Ch0.E15.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok font="italic" role="ID">A</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=B" text="absent = B" xml:id="Ch0.E15.m2">
@@ -753,7 +753,7 @@ Notice that the split acts like a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                    <XMTok font="italic" role="ID">B</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -781,13 +781,13 @@ Notice that the split acts like a column pair in the align.</p>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell align="right">
-                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m1.1.mf">C</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="Ch0.E16.m1.1.mf">C</XMTok>
                     </XMCell>
                     <XMCell align="left">
                       <XMApp>
                         <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E16.m1.2.mf">=</XMTok>
                         <XMTok meaning="absent"/>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m1.3.mf">D</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E16.m1.3.mf">D</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -796,7 +796,7 @@ Notice that the split acts like a column pair in the align.</p>
                     <XMCell align="left">
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E16.m1.4.mf">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m1.5.mf">E</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E16.m1.5.mf">E</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -820,13 +820,13 @@ Notice that the split acts like a column pair in the align.</p>
                     <XMArray colsep="0pt" name="aligned">
                       <XMRow>
                         <XMCell align="right">
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m1.1">C</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E16.m1.1">C</XMTok>
                         </XMCell>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E16.m1.2">=</XMTok>
                             <XMTok meaning="absent"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m1.3">D</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E16.m1.3">D</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -835,7 +835,7 @@ Notice that the split acts like a column pair in the align.</p>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E16.m1.4">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m1.5">E</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E16.m1.5">E</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -856,15 +856,15 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">F</XMTok>
-                <XMTok font="italic" role="UNKNOWN">G</XMTok>
+                <XMTok font="italic" role="ID">F</XMTok>
+                <XMTok font="italic" role="ID">G</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle F" text="F" xml:id="Ch0.E17.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                  <XMTok font="italic" role="ID">F</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=G" text="absent = G" xml:id="Ch0.E17.m2">
@@ -872,7 +872,7 @@ Notice that the split acts like a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">G</XMTok>
+                    <XMTok font="italic" role="ID">G</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -889,15 +889,15 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">H</XMTok>
-                <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                <XMTok font="italic" role="ID">H</XMTok>
+                <XMTok font="italic" role="ID">I</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle H" text="H" xml:id="Ch0.E18.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">H</XMTok>
+                  <XMTok font="italic" role="ID">H</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=I" text="absent = I" xml:id="Ch0.E18.m2">
@@ -905,7 +905,7 @@ Notice that the split acts like a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                    <XMTok font="italic" role="ID">I</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -924,8 +924,8 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP" rpadding="5.0pt">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -934,14 +934,14 @@ Notice that the split acts like a column pair in the align.</p>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle\ B" text="B" xml:id="Ch0.E19.m2">
                 <XMath>
-                  <XMTok font="italic" lpadding="5.0pt" role="UNKNOWN">B</XMTok>
+                  <XMTok font="italic" lpadding="5.0pt" role="ID">B</XMTok>
                 </XMath>
               </Math></td>
           </MathBranch>
@@ -957,10 +957,10 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
                 <XMApp>
                   <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                  <XMTok font="italic" role="ID">C</XMTok>
                 </XMApp>
               </XMApp>
             </XMath>
@@ -970,7 +970,7 @@ Notice that the split acts like a column pair in the align.</p>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                    <XMTok font="italic" role="ID">B</XMTok>
                     <XMTok meaning="absent"/>
                   </XMApp>
                 </XMath>
@@ -979,7 +979,7 @@ Notice that the split acts like a column pair in the align.</p>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                    <XMTok font="italic" role="ID">C</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1016,7 +1016,7 @@ Notice that the split acts like a column pair in the align.</p>
                     <XMCell align="right">
                       <XMApp>
                         <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E21.m1.2.mf">=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.1.mf">C</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.1.mf">C</XMTok>
                         <XMTok meaning="absent"/>
                       </XMApp>
                     </XMCell>
@@ -1025,12 +1025,12 @@ Notice that the split acts like a column pair in the align.</p>
                         <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E21.m1.5.mf">+</XMTok>
                         <XMApp>
                           <XMTok meaning="minus" role="ADDOP" xml:id="Ch0.E21.m1.3.mf">-</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.4.mf">D</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.4.mf">D</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.6.mf">E</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.8.mf">F</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.10.mf">G</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.12.mf">H</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.6.mf">E</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.8.mf">F</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.10.mf">G</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.12.mf">H</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1039,7 +1039,7 @@ Notice that the split acts like a column pair in the align.</p>
                     <XMCell align="left">
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E21.m1.13.mf">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.14.mf">I</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.14.mf">I</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1072,7 +1072,7 @@ Notice that the split acts like a column pair in the align.</p>
                         <XMCell align="right">
                           <XMApp>
                             <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E21.m1.2">=</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.1">C</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.1">C</XMTok>
                             <XMTok meaning="absent"/>
                           </XMApp>
                         </XMCell>
@@ -1081,12 +1081,12 @@ Notice that the split acts like a column pair in the align.</p>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E21.m1.5">+</XMTok>
                             <XMApp>
                               <XMTok meaning="minus" role="ADDOP" xml:id="Ch0.E21.m1.3">-</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.4">D</XMTok>
+                              <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.4">D</XMTok>
                             </XMApp>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.6">E</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.8">F</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.10">G</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.12">H</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.6">E</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.8">F</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.10">G</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.12">H</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -1095,7 +1095,7 @@ Notice that the split acts like a column pair in the align.</p>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E21.m1.13">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m1.14">I</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E21.m1.14">I</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -1121,15 +1121,15 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle A" text="A" xml:id="Ch0.E22.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok font="italic" role="ID">A</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=B" text="absent = B" xml:id="Ch0.E22.m2">
@@ -1137,7 +1137,7 @@ Notice that the split acts like a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                    <XMTok font="italic" role="ID">B</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1148,15 +1148,15 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                <XMTok font="italic" role="ID">C</XMTok>
+                <XMTok font="italic" role="ID">D</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle C" text="C" xml:id="Ch0.E22.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                  <XMTok font="italic" role="ID">C</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=D" text="absent = D" xml:id="Ch0.E22.m4">
@@ -1164,7 +1164,7 @@ Notice that the split acts like a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                    <XMTok font="italic" role="ID">D</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1181,15 +1181,15 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">E</XMTok>
-                <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                <XMTok font="italic" role="ID">E</XMTok>
+                <XMTok font="italic" role="ID">F</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle E" text="E" xml:id="Ch0.E23.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                  <XMTok font="italic" role="ID">E</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=F" text="absent = F" xml:id="Ch0.E23.m2">
@@ -1197,7 +1197,7 @@ Notice that the split acts like a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                    <XMTok font="italic" role="ID">F</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1214,15 +1214,15 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">H</XMTok>
-                <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                <XMTok font="italic" role="ID">H</XMTok>
+                <XMTok font="italic" role="ID">I</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle H" text="H" xml:id="Ch0.E24.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">H</XMTok>
+                  <XMTok font="italic" role="ID">H</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=I" text="absent = I" xml:id="Ch0.E24.m2">
@@ -1230,7 +1230,7 @@ Notice that the split acts like a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                    <XMTok font="italic" role="ID">I</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1241,15 +1241,15 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">J</XMTok>
-                <XMTok font="italic" role="UNKNOWN">K</XMTok>
+                <XMTok font="italic" role="ID">J</XMTok>
+                <XMTok font="italic" role="ID">K</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle J" text="J" xml:id="Ch0.E24.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">J</XMTok>
+                  <XMTok font="italic" role="ID">J</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=K" text="absent = K" xml:id="Ch0.E24.m4">
@@ -1257,7 +1257,7 @@ Notice that the split acts like a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">K</XMTok>
+                    <XMTok font="italic" role="ID">K</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1280,15 +1280,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle A" text="A" xml:id="Ch0.E25.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok font="italic" role="ID">A</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=B" text="absent = B" xml:id="Ch0.E25.m2">
@@ -1296,7 +1296,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                    <XMTok font="italic" role="ID">B</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1307,15 +1307,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                <XMTok font="italic" role="ID">C</XMTok>
+                <XMTok font="italic" role="ID">D</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle C" text="C" xml:id="Ch0.E25.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                  <XMTok font="italic" role="ID">C</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=D" text="absent = D" xml:id="Ch0.E25.m4">
@@ -1323,7 +1323,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                    <XMTok font="italic" role="ID">D</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1351,13 +1351,13 @@ Note that you should omit double slash from last line of split!</p>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell align="right">
-                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m1.1.mf">E</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="Ch0.E26.m1.1.mf">E</XMTok>
                     </XMCell>
                     <XMCell align="left">
                       <XMApp>
                         <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E26.m1.2.mf">=</XMTok>
                         <XMTok meaning="absent"/>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m1.3.mf">F</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E26.m1.3.mf">F</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1366,7 +1366,7 @@ Note that you should omit double slash from last line of split!</p>
                     <XMCell align="left">
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E26.m1.4.mf">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m1.5.mf">G</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E26.m1.5.mf">G</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1390,13 +1390,13 @@ Note that you should omit double slash from last line of split!</p>
                     <XMArray colsep="0pt" name="aligned">
                       <XMRow>
                         <XMCell align="right">
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m1.1">E</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E26.m1.1">E</XMTok>
                         </XMCell>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E26.m1.2">=</XMTok>
                             <XMTok meaning="absent"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m1.3">F</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E26.m1.3">F</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -1405,7 +1405,7 @@ Note that you should omit double slash from last line of split!</p>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E26.m1.4">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m1.5">G</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E26.m1.5">G</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -1426,15 +1426,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">H</XMTok>
-                <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                <XMTok font="italic" role="ID">H</XMTok>
+                <XMTok font="italic" role="ID">I</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle H" text="H" xml:id="Ch0.E27.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">H</XMTok>
+                  <XMTok font="italic" role="ID">H</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=I" text="absent = I" xml:id="Ch0.E27.m2">
@@ -1442,7 +1442,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                    <XMTok font="italic" role="ID">I</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1453,15 +1453,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">J</XMTok>
-                <XMTok font="italic" role="UNKNOWN">K</XMTok>
+                <XMTok font="italic" role="ID">J</XMTok>
+                <XMTok font="italic" role="ID">K</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle J" text="J" xml:id="Ch0.E27.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">J</XMTok>
+                  <XMTok font="italic" role="ID">J</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=K" text="absent = K" xml:id="Ch0.E27.m4">
@@ -1469,7 +1469,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">K</XMTok>
+                    <XMTok font="italic" role="ID">K</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1490,15 +1490,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle A" text="A" xml:id="Ch0.E28.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok font="italic" role="ID">A</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=B" text="absent = B" xml:id="Ch0.E28.m2">
@@ -1506,7 +1506,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                    <XMTok font="italic" role="ID">B</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1517,15 +1517,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                <XMTok font="italic" role="ID">C</XMTok>
+                <XMTok font="italic" role="ID">D</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle C" text="C" xml:id="Ch0.E28.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                  <XMTok font="italic" role="ID">C</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=D" text="absent = D" xml:id="Ch0.E28.m4">
@@ -1533,7 +1533,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                    <XMTok font="italic" role="ID">D</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1550,15 +1550,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                <XMTok font="italic" role="ID">X</XMTok>
+                <XMTok font="italic" role="ID">Y</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle X" text="X" xml:id="Ch0.E29.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                  <XMTok font="italic" role="ID">X</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=Y" text="absent = Y" xml:id="Ch0.E29.m2">
@@ -1566,7 +1566,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                    <XMTok font="italic" role="ID">Y</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1588,13 +1588,13 @@ Note that you should omit double slash from last line of split!</p>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell align="right">
-                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m3.1.mf">E</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="Ch0.E29.m3.1.mf">E</XMTok>
                     </XMCell>
                     <XMCell align="left">
                       <XMApp>
                         <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E29.m3.2.mf">=</XMTok>
                         <XMTok meaning="absent"/>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m3.3.mf">F</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E29.m3.3.mf">F</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1603,7 +1603,7 @@ Note that you should omit double slash from last line of split!</p>
                     <XMCell align="left">
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E29.m3.4.mf">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m3.5.mf">G</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E29.m3.5.mf">G</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1627,13 +1627,13 @@ Note that you should omit double slash from last line of split!</p>
                     <XMArray colsep="0pt" name="aligned">
                       <XMRow>
                         <XMCell align="right">
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m3.1">E</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E29.m3.1">E</XMTok>
                         </XMCell>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E29.m3.2">=</XMTok>
                             <XMTok meaning="absent"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m3.3">F</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E29.m3.3">F</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -1642,7 +1642,7 @@ Note that you should omit double slash from last line of split!</p>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E29.m3.4">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m3.5">G</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E29.m3.5">G</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -1663,15 +1663,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">H</XMTok>
-                <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                <XMTok font="italic" role="ID">H</XMTok>
+                <XMTok font="italic" role="ID">I</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle H" text="H" xml:id="Ch0.E30.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">H</XMTok>
+                  <XMTok font="italic" role="ID">H</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=I" text="absent = I" xml:id="Ch0.E30.m2">
@@ -1679,7 +1679,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                    <XMTok font="italic" role="ID">I</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1690,15 +1690,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">J</XMTok>
-                <XMTok font="italic" role="UNKNOWN">K</XMTok>
+                <XMTok font="italic" role="ID">J</XMTok>
+                <XMTok font="italic" role="ID">K</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle J" text="J" xml:id="Ch0.E30.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">J</XMTok>
+                  <XMTok font="italic" role="ID">J</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=K" text="absent = K" xml:id="Ch0.E30.m4">
@@ -1706,7 +1706,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">K</XMTok>
+                    <XMTok font="italic" role="ID">K</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1736,13 +1736,13 @@ Note that you should omit double slash from last line of split!</p>
                   <XMArray colsep="0pt" name="aligned">
                     <XMRow>
                       <XMCell align="right">
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m1.1.mf">L</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E31.m1.1.mf">L</XMTok>
                       </XMCell>
                       <XMCell align="left">
                         <XMApp>
                           <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E31.m1.2.mf">=</XMTok>
                           <XMTok meaning="absent"/>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m1.3.mf">M</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E31.m1.3.mf">M</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -1751,13 +1751,13 @@ Note that you should omit double slash from last line of split!</p>
                       <XMCell align="left">
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E31.m1.4.mf">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m1.5.mf">N</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E31.m1.5.mf">N</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
                   </XMArray>
                 </XMDual>
-                <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                <XMTok font="italic" role="ID">O</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -1777,13 +1777,13 @@ Note that you should omit double slash from last line of split!</p>
                     <XMArray colsep="0pt" name="aligned">
                       <XMRow>
                         <XMCell align="right">
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m1.1">L</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E31.m1.1">L</XMTok>
                         </XMCell>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E31.m1.2">=</XMTok>
                             <XMTok meaning="absent"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m1.3">M</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E31.m1.3">M</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -1792,7 +1792,7 @@ Note that you should omit double slash from last line of split!</p>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E31.m1.4">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m1.5">N</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E31.m1.5">N</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -1802,7 +1802,7 @@ Note that you should omit double slash from last line of split!</p>
               </Math></td>
             <td align="right"><Math mode="inline" tex="\displaystyle O" text="O" xml:id="Ch0.E31.m2">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                  <XMTok font="italic" role="ID">O</XMTok>
                 </XMath>
               </Math></td>
           </MathBranch>
@@ -1813,7 +1813,7 @@ Note that you should omit double slash from last line of split!</p>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
                 <XMTok meaning="absent"/>
-                <XMTok font="italic" role="UNKNOWN">P</XMTok>
+                <XMTok font="italic" role="ID">P</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -1823,7 +1823,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">P</XMTok>
+                    <XMTok font="italic" role="ID">P</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1840,15 +1840,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">Q</XMTok>
-                <XMTok font="italic" role="UNKNOWN">R</XMTok>
+                <XMTok font="italic" role="ID">Q</XMTok>
+                <XMTok font="italic" role="ID">R</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle Q" text="Q" xml:id="Ch0.E32.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">Q</XMTok>
+                  <XMTok font="italic" role="ID">Q</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=R" text="absent = R" xml:id="Ch0.E32.m2">
@@ -1856,7 +1856,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">R</XMTok>
+                    <XMTok font="italic" role="ID">R</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1867,15 +1867,15 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">S</XMTok>
-                <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                <XMTok font="italic" role="ID">S</XMTok>
+                <XMTok font="italic" role="ID">T</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle S" text="S" xml:id="Ch0.E32.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">S</XMTok>
+                  <XMTok font="italic" role="ID">S</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=T" text="absent = T" xml:id="Ch0.E32.m4">
@@ -1883,7 +1883,7 @@ Note that you should omit double slash from last line of split!</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                    <XMTok font="italic" role="ID">T</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -1907,13 +1907,13 @@ horizontally aligned as if it were a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="ID">B</XMTok>
+                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok font="italic" role="ID">c</XMTok>
+                  <XMTok font="italic" role="ID">d</XMTok>
                 </XMApp>
               </XMApp>
             </XMath>
@@ -1921,7 +1921,7 @@ horizontally aligned as if it were a column pair in the align.</p>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle A" text="A" xml:id="Ch0.E33.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok font="italic" role="ID">A</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=B+b+c+d" text="absent = B + b + c + d" xml:id="Ch0.E33.m2">
@@ -1931,10 +1931,10 @@ horizontally aligned as if it were a column pair in the align.</p>
                     <XMTok meaning="absent"/>
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                      <XMTok font="italic" role="ID">B</XMTok>
+                      <XMTok font="italic" role="ID">b</XMTok>
+                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="ID">d</XMTok>
                     </XMApp>
                   </XMApp>
                 </XMath>
@@ -1946,15 +1946,15 @@ horizontally aligned as if it were a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                <XMTok font="italic" role="ID">C</XMTok>
+                <XMTok font="italic" role="ID">D</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle C" text="C" xml:id="Ch0.E33.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                  <XMTok font="italic" role="ID">C</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=D" text="absent = D" xml:id="Ch0.E33.m4">
@@ -1962,7 +1962,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                    <XMTok font="italic" role="ID">D</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -2000,17 +2000,17 @@ horizontally aligned as if it were a column pair in the align.</p>
                       <XMCell align="right">
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m1.2.mf">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.1.mf">E</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.3.mf">e</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.5.mf">f</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.7.mf">g</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.1.mf">E</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.3.mf">e</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.5.mf">f</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.7.mf">g</XMTok>
                         </XMApp>
                       </XMCell>
                       <XMCell align="left">
                         <XMApp>
                           <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E34.m1.8.mf">=</XMTok>
                           <XMTok meaning="absent"/>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.9.mf">F</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.9.mf">F</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -2019,7 +2019,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                       <XMCell align="left">
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m1.10.mf">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.11.mf">G</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.11.mf">G</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -2039,13 +2039,13 @@ horizontally aligned as if it were a column pair in the align.</p>
                   <XMArray colsep="0pt" name="aligned">
                     <XMRow>
                       <XMCell align="right">
-                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m2.1.mf">L</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="Ch0.E34.m2.1.mf">L</XMTok>
                       </XMCell>
                       <XMCell align="left">
                         <XMApp>
                           <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E34.m2.2.mf">=</XMTok>
                           <XMTok meaning="absent"/>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m2.3.mf">M</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m2.3.mf">M</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -2054,7 +2054,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                       <XMCell align="left">
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m2.4.mf">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m2.5.mf">N</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m2.5.mf">N</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -2063,7 +2063,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                       <XMCell align="left">
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m2.6.mf">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m2.7.mf">Z</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m2.7.mf">Z</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -2096,17 +2096,17 @@ horizontally aligned as if it were a column pair in the align.</p>
                         <XMCell align="right">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m1.2">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.1">E</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.3">e</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.5">f</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.7">g</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.1">E</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.3">e</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.5">f</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.7">g</XMTok>
                           </XMApp>
                         </XMCell>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E34.m1.8">=</XMTok>
                             <XMTok meaning="absent"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.9">F</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.9">F</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -2115,7 +2115,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m1.10">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m1.11">G</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m1.11">G</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -2139,13 +2139,13 @@ horizontally aligned as if it were a column pair in the align.</p>
                     <XMArray colsep="0pt" name="aligned">
                       <XMRow>
                         <XMCell align="right">
-                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m2.1">L</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="Ch0.E34.m2.1">L</XMTok>
                         </XMCell>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E34.m2.2">=</XMTok>
                             <XMTok meaning="absent"/>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m2.3">M</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m2.3">M</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -2154,7 +2154,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m2.4">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m2.5">N</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m2.5">N</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -2163,7 +2163,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                         <XMCell align="left">
                           <XMApp>
                             <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m2.6">+</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m2.7">Z</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="Ch0.E34.m2.7">Z</XMTok>
                           </XMApp>
                         </XMCell>
                       </XMRow>
@@ -2184,15 +2184,15 @@ horizontally aligned as if it were a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">Q</XMTok>
-                <XMTok font="italic" role="UNKNOWN">R</XMTok>
+                <XMTok font="italic" role="ID">Q</XMTok>
+                <XMTok font="italic" role="ID">R</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle Q" text="Q" xml:id="Ch0.E35.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">Q</XMTok>
+                  <XMTok font="italic" role="ID">Q</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=R" text="absent = R" xml:id="Ch0.E35.m2">
@@ -2200,7 +2200,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">R</XMTok>
+                    <XMTok font="italic" role="ID">R</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -2211,15 +2211,15 @@ horizontally aligned as if it were a column pair in the align.</p>
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">S</XMTok>
-                <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                <XMTok font="italic" role="ID">S</XMTok>
+                <XMTok font="italic" role="ID">T</XMTok>
               </XMApp>
             </XMath>
           </Math>
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle S" text="S" xml:id="Ch0.E35.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">S</XMTok>
+                  <XMTok font="italic" role="ID">S</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=T" text="absent = T" xml:id="Ch0.E35.m4">
@@ -2227,7 +2227,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="UNKNOWN">T</XMTok>
+                    <XMTok font="italic" role="ID">T</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>

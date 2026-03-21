@@ -313,7 +313,7 @@
     <para class="ltx_noindent" xml:id="S6.p6">
       <p>Math: ‘<Math mode="inline" tex="a" text="a" xml:id="S6.p6.m1">
           <XMath>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="ID">a</XMTok>
           </XMath>
         </Math>’ is 5.28589pt x 4.30554pt + 0.0pt.</p>
     </para>
@@ -322,8 +322,8 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
-              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="ID">b</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 9.57755pt x 6.94444pt + 0.0pt.</p>
@@ -340,8 +340,8 @@
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
-              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="ID">b</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 22.91077pt x 6.94444pt + 0.0pt.</p>
@@ -349,7 +349,7 @@
     <para class="ltx_noindent" xml:id="S6.p10">
       <p>Math: ‘<Math mode="inline" tex="g" text="g" xml:id="S6.p10.m1">
           <XMath>
-            <XMTok font="italic" role="UNKNOWN">g</XMTok>
+            <XMTok font="italic" role="ID">g</XMTok>
           </XMath>
         </Math>’ is 5.12846pt x 4.30554pt + 1.94444pt.</p>
     </para>
@@ -358,11 +358,11 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
-              <XMTok font="italic" role="UNKNOWN">b</XMTok>
-              <XMTok font="italic" role="UNKNOWN">c</XMTok>
-              <XMTok font="italic" role="UNKNOWN">d</XMTok>
-              <XMTok font="italic" role="UNKNOWN">e</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="ID">c</XMTok>
+              <XMTok font="italic" role="ID">d</XMTok>
+              <XMTok font="italic" role="ID">e</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 23.76624pt x 6.94444pt + 0.0pt.</p>
@@ -372,11 +372,11 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="UNKNOWN">f</XMTok>
-              <XMTok font="italic" role="UNKNOWN">g</XMTok>
-              <XMTok font="italic" role="UNKNOWN">h</XMTok>
-              <XMTok font="italic" role="UNKNOWN">i</XMTok>
-              <XMTok font="italic" role="UNKNOWN">j</XMTok>
+              <XMTok font="italic" role="ID">f</XMTok>
+              <XMTok font="italic" role="ID">g</XMTok>
+              <XMTok font="italic" role="ID">h</XMTok>
+              <XMTok font="italic" role="ID">i</XMTok>
+              <XMTok font="italic" role="ID">j</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 24.99792pt x 6.94444pt + 1.94444pt.</p>
@@ -386,11 +386,11 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="UNKNOWN">k</XMTok>
-              <XMTok font="italic" role="UNKNOWN">l</XMTok>
-              <XMTok font="italic" role="UNKNOWN">m</XMTok>
-              <XMTok font="italic" role="UNKNOWN">n</XMTok>
-              <XMTok font="italic" role="UNKNOWN">o</XMTok>
+              <XMTok font="italic" role="ID">k</XMTok>
+              <XMTok font="italic" role="ID">l</XMTok>
+              <XMTok font="italic" role="ID">m</XMTok>
+              <XMTok font="italic" role="ID">n</XMTok>
+              <XMTok font="italic" role="ID">o</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 28.33113pt x 6.94444pt + 0.0pt.</p>
@@ -400,11 +400,11 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="UNKNOWN">p</XMTok>
-              <XMTok font="italic" role="UNKNOWN">q</XMTok>
-              <XMTok font="italic" role="UNKNOWN">r</XMTok>
-              <XMTok font="italic" role="UNKNOWN">s</XMTok>
-              <XMTok font="italic" role="UNKNOWN">t</XMTok>
+              <XMTok font="italic" role="ID">p</XMTok>
+              <XMTok font="italic" role="ID">q</XMTok>
+              <XMTok font="italic" role="ID">r</XMTok>
+              <XMTok font="italic" role="ID">s</XMTok>
+              <XMTok font="italic" role="ID">t</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 22.94214pt x 6.15079pt + 1.94444pt.</p>
@@ -414,12 +414,12 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="UNKNOWN">u</XMTok>
-              <XMTok font="italic" role="UNKNOWN">v</XMTok>
-              <XMTok font="italic" role="UNKNOWN">w</XMTok>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
-              <XMTok font="italic" role="UNKNOWN">y</XMTok>
-              <XMTok font="italic" role="UNKNOWN">z</XMTok>
+              <XMTok font="italic" role="ID">u</XMTok>
+              <XMTok font="italic" role="ID">v</XMTok>
+              <XMTok font="italic" role="ID">w</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
+              <XMTok font="italic" role="ID">y</XMTok>
+              <XMTok font="italic" role="ID">z</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 34.42601pt x 4.30554pt + 1.94444pt.</p>
@@ -432,12 +432,12 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="UNKNOWN">g</XMTok>
+              <XMTok font="italic" role="ID">g</XMTok>
               <XMDual>
                 <XMRef idref="S6.p17.m1.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S6.p17.m1.1">x</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S6.p17.m1.1">x</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
@@ -453,8 +453,8 @@
           <XMath>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="UNKNOWN">A</XMTok>
-              <XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok>
+              <XMTok font="italic" role="ID">A</XMTok>
+              <XMTok font="italic" fontsize="70%" role="ID">B</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 14.38301pt x 8.41226pt + 0.0pt.</p>
@@ -464,8 +464,8 @@
           <XMath>
             <XMApp>
               <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="UNKNOWN">A</XMTok>
-              <XMTok font="italic" fontsize="70%" role="UNKNOWN">C</XMTok>
+              <XMTok font="italic" role="ID">A</XMTok>
+              <XMTok font="italic" fontsize="70%" role="ID">C</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 14.226pt x 6.83331pt + 1.5pt.</p>
@@ -477,10 +477,10 @@
               <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
               <XMApp>
                 <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok>
+                <XMTok font="italic" role="ID">A</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">B</XMTok>
               </XMApp>
-              <XMTok font="italic" fontsize="70%" role="UNKNOWN">C</XMTok>
+              <XMTok font="italic" fontsize="70%" role="ID">C</XMTok>
             </XMApp>
           </XMath>
         </Math>’ is 14.38301pt x 8.41226pt + 1.5pt.</p>

@@ -18,7 +18,7 @@
                     <XMath>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
                         <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                       </XMApp>
                     </XMath>
@@ -26,7 +26,7 @@
                     <XMath>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
                     </XMath>

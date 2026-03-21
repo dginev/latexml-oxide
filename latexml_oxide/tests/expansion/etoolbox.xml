@@ -51,10 +51,10 @@ At End stuff(inside).End stuff.After End stuff(outside).</p>
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="ID">b</XMTok>
                 <XMText> At End equation(inside).</XMText>
               </XMApp>
             </XMApp>

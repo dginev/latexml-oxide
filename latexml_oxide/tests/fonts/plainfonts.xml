@@ -85,9 +85,9 @@ but compare meanings:</p>
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
             <XMTok meaning="123" role="NUMBER">123</XMTok>
           </XMApp>
         </XMath>
@@ -105,9 +105,9 @@ but compare meanings:</p>
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
             <XMTok meaning="123" role="NUMBER">123</XMTok>
           </XMApp>
         </XMath>

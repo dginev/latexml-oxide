@@ -101,62 +101,62 @@
             <td align="left" border="r" thead="row">Ex</td>
             <td align="center"><Math mode="inline" tex="\alpha" text="alpha" xml:id="S1.p1.m2">
                 <XMath>
-                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\beta" text="beta" xml:id="S1.p1.m3">
                 <XMath>
-                  <XMTok font="italic" name="beta" role="UNKNOWN">β</XMTok>
+                  <XMTok font="italic" name="beta" role="ID">β</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\Gamma" text="Gamma" xml:id="S1.p1.m4">
                 <XMath>
-                  <XMTok name="Gamma" role="UNKNOWN">Γ</XMTok>
+                  <XMTok name="Gamma" role="ID">Γ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\pi" text="pi" xml:id="S1.p1.m5">
                 <XMath>
-                  <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                  <XMTok font="italic" name="pi" role="ID">π</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\Sigma" text="Sigma" xml:id="S1.p1.m6">
                 <XMath>
-                  <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
+                  <XMTok name="Sigma" role="ID">Σ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\sigma" text="sigma" xml:id="S1.p1.m7">
                 <XMath>
-                  <XMTok font="italic" name="sigma" role="UNKNOWN">σ</XMTok>
+                  <XMTok font="italic" name="sigma" role="ID">σ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mu" text="mu" xml:id="S1.p1.m8">
                 <XMath>
-                  <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                  <XMTok font="italic" name="mu" role="ID">μ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\gamma" text="gamma" xml:id="S1.p1.m9">
                 <XMath>
-                  <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
+                  <XMTok font="italic" name="gamma" role="ID">γ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\Phi" text="Phi" xml:id="S1.p1.m10">
                 <XMath>
-                  <XMTok name="Phi" role="UNKNOWN">Φ</XMTok>
+                  <XMTok name="Phi" role="ID">Φ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\theta" text="theta" xml:id="S1.p1.m11">
                 <XMath>
-                  <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                  <XMTok font="italic" name="theta" role="ID">θ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\Omega" text="Omega" xml:id="S1.p1.m12">
                 <XMath>
-                  <XMTok name="Omega" role="UNKNOWN">Ω</XMTok>
+                  <XMTok name="Omega" role="ID">Ω</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\delta" text="delta" xml:id="S1.p1.m13">
                 <XMath>
-                  <XMTok font="italic" name="delta" role="UNKNOWN">δ</XMTok>
+                  <XMTok font="italic" name="delta" role="ID">δ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\infty" text="infinity" xml:id="S1.p1.m14">
@@ -166,12 +166,12 @@
               </Math></td>
             <td align="center"><Math mode="inline" tex="\phi" text="phi" xml:id="S1.p1.m15">
                 <XMath>
-                  <XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok>
+                  <XMTok font="italic" name="phi" role="ID">ϕ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\varepsilon" text="varepsilon" xml:id="S1.p1.m16">
                 <XMath>
-                  <XMTok font="italic" name="varepsilon" role="UNKNOWN">ε</XMTok>
+                  <XMTok font="italic" name="varepsilon" role="ID">ε</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\cap" text="intersection" xml:id="S1.p1.m17">

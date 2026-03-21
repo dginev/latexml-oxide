@@ -14,7 +14,7 @@
             <XMTok meaning="absent"/>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
               <XMTok meaning="0" role="NUMBER">0</XMTok>
             </XMApp>
           </XMApp>

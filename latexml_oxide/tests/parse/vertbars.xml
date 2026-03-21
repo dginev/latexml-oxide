@@ -207,7 +207,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN">‖</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex8.m1.1">x</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S2.Ex8.m1.1">x</XMTok>
                   <XMTok role="CLOSE">‖</XMTok>
                 </XMWrap>
               </XMDual>
@@ -219,7 +219,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN">‖</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex8.m1.2">y</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S2.Ex8.m1.2">y</XMTok>
                   <XMTok role="CLOSE">‖</XMTok>
                 </XMWrap>
               </XMDual>
@@ -316,13 +316,13 @@
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">|</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex12.m1.1">x</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S2.Ex12.m1.1">x</XMTok>
                     <XMTok role="CLOSE" stretchy="false">|</XMTok>
                   </XMWrap>
                 </XMDual>
                 <XMApp>
                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -363,17 +363,17 @@
                                 </XMApp>
                                 <XMWrap>
                                   <XMTok role="OPEN" stretchy="false">|</XMTok>
-                                  <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex13.m1.1">t</XMTok>
+                                  <XMTok font="italic" role="ID" xml:id="S2.Ex13.m1.1">t</XMTok>
                                   <XMTok role="CLOSE" stretchy="false">|</XMTok>
                                 </XMWrap>
                               </XMDual>
                             </XMApp>
                             <XMApp>
                               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                              <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                              <XMTok font="italic" role="ID">i</XMTok>
                               <XMApp>
                                 <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">t</XMTok>
+                                <XMTok font="italic" role="ID">t</XMTok>
                               </XMApp>
                             </XMApp>
                           </XMApp>

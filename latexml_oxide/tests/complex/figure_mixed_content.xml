@@ -255,7 +255,7 @@
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMApp>
                 <XMTok meaning="square-root"/>
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" role="ID">x</XMTok>
               </XMApp>
               <XMTok meaning="0" role="NUMBER">0</XMTok>
             </XMApp>
@@ -267,13 +267,13 @@
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="UNKNOWN">E</XMTok>
+              <XMTok font="italic" role="ID">E</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="UNKNOWN">m</XMTok>
+                <XMTok font="italic" role="ID">m</XMTok>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" role="ID">c</XMTok>
                   <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMApp>
@@ -294,8 +294,8 @@
                   <XMWrap>
                     <XMApp xml:id="S0.Ex3.m4.1">
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                      <XMTok font="italic" role="ID">A</XMTok>
+                      <XMTok font="italic" role="ID">B</XMTok>
                     </XMApp>
                     <XMTok role="PUNCT">,</XMTok>
                   </XMWrap>
@@ -306,7 +306,7 @@
               <tr>
                 <td align="right"><Math mode="inline" tex="\displaystyle A" text="A" xml:id="S0.Ex3.m1">
                     <XMath>
-                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                      <XMTok font="italic" role="ID">A</XMTok>
                     </XMath>
                   </Math></td>
                 <td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.Ex3.m2">
@@ -319,7 +319,7 @@
                       <XMDual>
                         <XMRef idref="S0.Ex3.m3.1"/>
                         <XMWrap>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m3.1">B</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S0.Ex3.m3.1">B</XMTok>
                           <XMTok role="PUNCT">,</XMTok>
                         </XMWrap>
                       </XMDual>
@@ -338,8 +338,8 @@
                   <XMWrap>
                     <XMApp xml:id="S0.Ex4.m4.1">
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                      <XMTok font="italic" role="ID">C</XMTok>
+                      <XMTok font="italic" role="ID">D</XMTok>
                     </XMApp>
                     <XMTok role="PUNCT">,</XMTok>
                   </XMWrap>
@@ -350,7 +350,7 @@
               <tr>
                 <td align="right"><Math mode="inline" tex="\displaystyle C" text="C" xml:id="S0.Ex4.m1">
                     <XMath>
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                      <XMTok font="italic" role="ID">C</XMTok>
                     </XMath>
                   </Math></td>
                 <td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.Ex4.m2">
@@ -363,7 +363,7 @@
                       <XMDual>
                         <XMRef idref="S0.Ex4.m3.1"/>
                         <XMWrap>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m3.1">D</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S0.Ex4.m3.1">D</XMTok>
                           <XMTok role="PUNCT">,</XMTok>
                         </XMWrap>
                       </XMDual>

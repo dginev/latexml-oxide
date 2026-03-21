@@ -50,7 +50,7 @@
                     <XMRef idref="S1.Ex1.m1.1"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.1">X</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.1">X</XMTok>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -61,8 +61,8 @@
                       <XMTok role="OPEN" stretchy="true">(</XMTok>
                       <XMApp xml:id="S1.Ex1.m1.2">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
@@ -74,8 +74,8 @@
                       <XMTok role="OPEN" stretchy="true">(</XMTok>
                       <XMApp xml:id="S1.Ex1.m1.3">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
@@ -85,7 +85,7 @@
                     <XMRef idref="S1.Ex1.m1.4"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">[</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.4">X</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.4">X</XMTok>
                       <XMTok role="CLOSE" stretchy="true">]</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -94,7 +94,7 @@
                     <XMRef idref="S1.Ex1.m1.5"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.5">X</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.5">X</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -103,7 +103,7 @@
                     <XMRef idref="S1.Ex1.m1.6"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">{</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.6">X</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.6">X</XMTok>
                       <XMTok role="CLOSE" stretchy="true">}</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -112,7 +112,7 @@
                     <XMRef idref="S1.Ex1.m1.7"/>
                     <XMWrap>
                       <XMTok fontsize="120%" role="OPEN" stretchy="false">{</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.7">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.7">x</XMTok>
                       <XMTok fontsize="120%" role="CLOSE" stretchy="false">}</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -121,7 +121,7 @@
                     <XMRef idref="S1.Ex1.m1.8"/>
                     <XMWrap>
                       <XMTok fontsize="160%" role="OPEN" stretchy="false">{</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.8">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.8">x</XMTok>
                       <XMTok fontsize="160%" role="CLOSE" stretchy="false">}</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -130,7 +130,7 @@
                     <XMRef idref="S1.Ex1.m1.9"/>
                     <XMWrap>
                       <XMTok fontsize="210%" role="OPEN" stretchy="false">{</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.9">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.9">x</XMTok>
                       <XMTok fontsize="210%" role="CLOSE" stretchy="false">}</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -139,7 +139,7 @@
                     <XMRef idref="S1.Ex1.m1.10"/>
                     <XMWrap>
                       <XMTok fontsize="260%" role="OPEN" stretchy="false">{</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.10">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.10">x</XMTok>
                       <XMTok fontsize="260%" role="CLOSE" stretchy="false">}</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -159,20 +159,20 @@
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="ID">a</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                     <XMDual>
                       <XMRef idref="S1.Ex2.m1.1.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex2.m1.1.1">b</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex2.m1.1.1">b</XMTok>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
                     </XMDual>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
-                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                      <XMTok font="italic" role="ID">c</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
                   </XMApp>
@@ -198,7 +198,7 @@
                     <XMRef idref="S1.Ex3.m1.1"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex3.m1.1">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex3.m1.1">x</XMTok>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -207,7 +207,7 @@
                     <XMRef idref="S1.Ex3.m1.2"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">[</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex3.m1.2">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex3.m1.2">x</XMTok>
                       <XMTok role="CLOSE" stretchy="true">]</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -216,7 +216,7 @@
                     <XMRef idref="S1.Ex3.m1.3"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex3.m1.3">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex3.m1.3">x</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -225,7 +225,7 @@
                     <XMRef idref="S1.Ex3.m1.4"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">{</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex3.m1.4">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex3.m1.4">x</XMTok>
                       <XMTok role="CLOSE" stretchy="true">}</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -257,7 +257,7 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.1">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex4.m1.1">a</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -269,7 +269,7 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok fontsize="160%" role="OPEN" stretchy="false">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.2">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex4.m1.2">a</XMTok>
                       <XMTok fontsize="160%" role="CLOSE" stretchy="false">|</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -283,8 +283,8 @@
                       <XMTok role="OPEN" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex4.m1.3">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">|</XMTok>
                     </XMWrap>
@@ -297,7 +297,7 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="||" role="OPEN" stretchy="true">‖</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.4">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex4.m1.4">a</XMTok>
                       <XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -309,7 +309,7 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok fontsize="160%" name="||" role="OPEN">‖</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.5">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex4.m1.5">a</XMTok>
                       <XMTok fontsize="160%" name="||" role="CLOSE">‖</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -323,8 +323,8 @@
                       <XMTok name="||" role="OPEN">‖</XMTok>
                       <XMApp xml:id="S1.Ex4.m1.6">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="||" role="CLOSE">‖</XMTok>
                     </XMWrap>
@@ -361,7 +361,7 @@
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMWrap>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex5.m1.1">x</XMTok>
                           <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                         </XMWrap>
                         <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.Ex5.m1.2">0</XMTok>
@@ -383,7 +383,7 @@
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.4">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex5.m1.4">x</XMTok>
                           <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                         </XMWrap>
                         <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.Ex5.m1.5">0</XMTok>
@@ -405,7 +405,7 @@
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">[</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.7">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex5.m1.7">x</XMTok>
                           <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                         </XMWrap>
                         <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.Ex5.m1.8">0</XMTok>
@@ -434,11 +434,11 @@
                               <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
                               <XMApp>
                                 <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">X</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">X</XMTok>
                                 <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
                               </XMApp>
                             </XMApp>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">N</XMTok>
                           </XMApp>
                           <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                         </XMWrap>
@@ -468,11 +468,11 @@
                               <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
                               <XMApp>
                                 <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">X</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">X</XMTok>
                                 <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
                               </XMApp>
                             </XMApp>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">N</XMTok>
                           </XMApp>
                           <XMTok role="VERTBAR" stretchy="false">|</XMTok>
                         </XMWrap>
@@ -511,7 +511,7 @@
                       <XMTok role="OPEN" stretchy="true">(</XMTok>
                       <XMApp xml:id="S1.Ex6.m1.1">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
@@ -527,7 +527,7 @@
                       <XMTok fontsize="160%" role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S1.Ex6.m1.2">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
                       <XMTok fontsize="160%" role="CLOSE" stretchy="false">)</XMTok>
@@ -543,8 +543,8 @@
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S1.Ex6.m1.3">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -558,9 +558,9 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">[</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.4">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.4">A</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.5">B</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.5">B</XMTok>
                       <XMTok role="CLOSE" stretchy="true">]</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -573,9 +573,9 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok fontsize="160%" role="OPEN" stretchy="false">[</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.6">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.6">A</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.7">B</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.7">B</XMTok>
                       <XMTok fontsize="160%" role="CLOSE" stretchy="false">]</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -588,12 +588,12 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">[</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.8">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.8">A</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S1.Ex6.m1.9">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">]</XMTok>
                     </XMWrap>
@@ -607,9 +607,9 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">{</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.10">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.10">A</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.11">B</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.11">B</XMTok>
                       <XMTok role="CLOSE" stretchy="true">}</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -622,9 +622,9 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="true">{</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.12">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.12">A</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.13">B</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex6.m1.13">B</XMTok>
                       <XMTok role="CLOSE" stretchy="true">}</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -663,22 +663,22 @@
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp role="ID" xml:id="S1.Ex7.m1.3">
                     <XMTok name="overrightarrow" role="OVERACCENT" stretchy="true">→</XMTok>
-                    <XMTok font="bold" role="UNKNOWN">a</XMTok>
+                    <XMTok font="bold" role="ID">a</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp role="ID" xml:id="S1.Ex7.m1.4">
                     <XMTok name="overrightarrow" role="OVERACCENT" stretchy="true">→</XMTok>
-                    <XMTok font="bold italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="bold italic" role="ID">a</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp role="ID" xml:id="S1.Ex7.m1.5">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="bold" role="UNKNOWN">a</XMTok>
+                    <XMTok font="bold" role="ID">a</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp role="ID" xml:id="S1.Ex7.m1.6">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="bold italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="bold italic" role="ID">a</XMTok>
                   </XMApp>
                 </XMWrap>
               </XMDual>
@@ -722,7 +722,7 @@
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex9.m1.7">
                     <XMTok meaning="gradient" name="nabla" role="OPERATOR">∇</XMTok>
-                    <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex9.m1.1">Ψ</XMTok>
+                    <XMTok name="Psi" role="ID" xml:id="S1.Ex9.m1.1">Ψ</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual xml:id="S1.Ex9.m1.8">
@@ -736,11 +736,11 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex9.m1.2">
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
+                          <XMTok name="Psi" role="ID">Ψ</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                            <XMTok font="italic" role="ID">X</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
@@ -759,11 +759,11 @@
                         <XMTok role="OPEN" stretchy="true">[</XMTok>
                         <XMApp xml:id="S1.Ex9.m1.3">
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
+                          <XMTok name="Psi" role="ID">Ψ</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                            <XMTok font="italic" role="ID">X</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">]</XMTok>
@@ -822,8 +822,8 @@
                           <XMTok font="bold" role="ID">a</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                            <XMTok font="italic" role="ID">X</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
@@ -846,8 +846,8 @@
                           <XMTok font="bold" role="ID">a</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                            <XMTok font="italic" role="ID">X</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">]</XMTok>
@@ -906,8 +906,8 @@
                           <XMTok font="bold" role="ID">a</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                            <XMTok font="italic" role="ID">X</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
@@ -930,8 +930,8 @@
                           <XMTok font="bold" role="ID">a</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                            <XMTok font="italic" role="ID">X</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">]</XMTok>
@@ -970,7 +970,7 @@
                       <XMTok name="nabla" role="OPERATOR">∇</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
-                    <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex12.m1.1">Ψ</XMTok>
+                    <XMTok name="Psi" role="ID" xml:id="S1.Ex12.m1.1">Ψ</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual xml:id="S1.Ex12.m1.8">
@@ -988,11 +988,11 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex12.m1.2">
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
+                          <XMTok name="Psi" role="ID">Ψ</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                            <XMTok font="italic" role="ID">X</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
@@ -1015,11 +1015,11 @@
                         <XMTok role="OPEN" stretchy="true">[</XMTok>
                         <XMApp xml:id="S1.Ex12.m1.3">
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
+                          <XMTok name="Psi" role="ID">Ψ</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                            <XMTok font="italic" role="ID">X</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">]</XMTok>
@@ -1063,8 +1063,8 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex13.m1.1">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -1088,7 +1088,7 @@
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex13.m1.3">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex13.m1.3">x</XMTok>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -1096,7 +1096,7 @@
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex13.m1.8">
                     <XMTok meaning="sine" role="OPFUNCTION" scriptpos="post">sin</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="ID">x</XMTok>
                   </XMApp>
                 </XMWrap>
               </XMDual>
@@ -1128,8 +1128,8 @@
                         <XMTok role="OPEN" stretchy="false">[</XMTok>
                         <XMApp xml:id="S1.Ex14.m1.5">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">]</XMTok>
                       </XMWrap>
@@ -1147,7 +1147,7 @@
                         <XMTok meaning="sine" role="OPFUNCTION" scriptpos="post" xml:id="S1.Ex14.m1.6">sin</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="false">[</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex14.m1.7">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex14.m1.7">x</XMTok>
                           <XMTok role="CLOSE" stretchy="false">]</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1161,8 +1161,8 @@
                         <XMTok role="OPEN" stretchy="false">[</XMTok>
                         <XMApp xml:id="S1.Ex14.m1.8">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">]</XMTok>
                       </XMWrap>
@@ -1182,14 +1182,14 @@
                       <XMApp role="OPFUNCTION" xml:id="S1.Ex14.m1.3">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMTok role="OPFUNCTION" scriptpos="post">sin</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex14.m1.1">x</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID" xml:id="S1.Ex14.m1.1">x</XMTok>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex14.m1.2">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -1207,8 +1207,8 @@
                         <XMTok role="OPEN" stretchy="false">{</XMTok>
                         <XMApp xml:id="S1.Ex14.m1.10">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">}</XMTok>
                       </XMWrap>
@@ -1226,7 +1226,7 @@
                         <XMTok meaning="sine" role="OPFUNCTION" scriptpos="post" xml:id="S1.Ex14.m1.11">sin</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="false">[</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex14.m1.12">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex14.m1.12">x</XMTok>
                           <XMTok role="CLOSE" stretchy="false">]</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1240,8 +1240,8 @@
                         <XMTok role="OPEN" stretchy="false">{</XMTok>
                         <XMApp xml:id="S1.Ex14.m1.13">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">}</XMTok>
                       </XMWrap>
@@ -1268,7 +1268,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m1.2">sin</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m1.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m1.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1286,7 +1286,7 @@
                         <XMTok meaning="hyperbolic-sine" role="TRIGFUNCTION" xml:id="S1.SS3.p2.m2.1">sinh</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="false">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m2.2">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m2.2">x</XMTok>
                           <XMTok role="CLOSE" stretchy="false">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1304,7 +1304,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m3.2">arcsin</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m3.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m3.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1322,7 +1322,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m4.2">asin</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m4.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m4.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1342,7 +1342,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m5.2">cos</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m5.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m5.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1360,7 +1360,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m6.2">cosh</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m6.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m6.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1378,7 +1378,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m7.2">arccos</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m7.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m7.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1396,7 +1396,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m8.2">acos</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m8.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m8.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1416,7 +1416,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m9.2">tan</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m9.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m9.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1434,7 +1434,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m10.2">tanh</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m10.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m10.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1452,7 +1452,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m11.2">arctan</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m11.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m11.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1470,7 +1470,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m12.2">atan</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m12.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m12.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1490,7 +1490,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m13.2">csc</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m13.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m13.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1508,7 +1508,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m14.2">csch</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m14.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m14.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1526,7 +1526,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m15.2">arccsc</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m15.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m15.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1544,7 +1544,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m16.2">acsc</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m16.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m16.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1564,7 +1564,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m17.2">sec</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m17.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m17.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1582,7 +1582,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m18.2">sech</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m18.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m18.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1600,7 +1600,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m19.2">arcsec</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m19.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m19.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1618,7 +1618,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m20.2">asec</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m20.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m20.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1638,7 +1638,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m21.2">cot</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m21.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m21.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1656,7 +1656,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m22.2">coth</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m22.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m22.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1674,7 +1674,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m23.2">arccot</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m23.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m23.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1692,7 +1692,7 @@
                         <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.SS3.p2.m24.2">acot</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="true">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.SS3.p2.m24.1">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.SS3.p2.m24.1">x</XMTok>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>
                         </XMWrap>
                       </XMApp>
@@ -1728,8 +1728,8 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex15.m1.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -1747,8 +1747,8 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex15.m1.2">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -1766,8 +1766,8 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex15.m1.3">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -1785,8 +1785,8 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex15.m1.4">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -1804,8 +1804,8 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex15.m1.5">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -1834,7 +1834,7 @@
                 <XMWrap>
                   <XMApp xml:id="S1.Ex16.m1.9">
                     <XMTok meaning="trace" role="OPFUNCTION" scriptpos="post">tr</XMTok>
-                    <XMTok font="italic" name="rho" role="UNKNOWN">ρ</XMTok>
+                    <XMTok font="italic" name="rho" role="ID">ρ</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual xml:id="S1.Ex16.m1.7">
@@ -1848,8 +1848,8 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex16.m1.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -1858,12 +1858,12 @@
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex16.m1.10">
                     <XMTok meaning="trace" role="OPFUNCTION" scriptpos="post">Tr</XMTok>
-                    <XMTok font="italic" name="rho" role="UNKNOWN">ρ</XMTok>
+                    <XMTok font="italic" name="rho" role="ID">ρ</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex16.m1.11">
                     <XMTok meaning="rank" role="OPFUNCTION" scriptpos="post">rank</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                    <XMTok font="italic" role="ID">M</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual xml:id="S1.Ex16.m1.8">
@@ -1875,7 +1875,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.Ex16.m1.4">erf</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex16.m1.2">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex16.m1.2">x</XMTok>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -1892,12 +1892,12 @@
                         <XMTok role="OPEN" stretchy="false">[</XMTok>
                         <XMApp xml:id="S1.Ex16.m1.12.1">
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                          <XMTok font="italic" role="ID">f</XMTok>
                           <XMDual>
                             <XMRef idref="S1.Ex16.m1.5"/>
                             <XMWrap>
                               <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex16.m1.5">z</XMTok>
+                              <XMTok font="italic" role="ID" xml:id="S1.Ex16.m1.5">z</XMTok>
                               <XMTok role="CLOSE" stretchy="false">)</XMTok>
                             </XMWrap>
                           </XMDual>
@@ -1932,25 +1932,25 @@
                     </XMApp>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="caligraphic" role="UNKNOWN">P</XMTok>
+                      <XMTok font="caligraphic" role="ID">P</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex17.m1.1">
                           <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                            <XMTok font="italic" role="ID">f</XMTok>
                             <XMDual>
                               <XMRef idref="S1.Ex17.m1.1.2"/>
                               <XMWrap>
                                 <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex17.m1.1.2">z</XMTok>
+                                <XMTok font="italic" role="ID" xml:id="S1.Ex17.m1.1.2">z</XMTok>
                                 <XMTok role="CLOSE" stretchy="false">)</XMTok>
                               </XMWrap>
                             </XMDual>
                             <XMApp>
                               <XMTok meaning="differential" role="DIFFOP">d</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex17.m1.1.1">z</XMTok>
+                              <XMTok font="italic" role="ID" xml:id="S1.Ex17.m1.1.1">z</XMTok>
                             </XMApp>
                           </XMApp>
                         </XMApp>
@@ -1966,9 +1966,9 @@
                     </XMApp>
                     <XMApp>
                       <XMWrap role="OPFUNCTION" scriptpos="post" xml:id="S1.Ex17.m1.7">
-                        <XMTok role="UNKNOWN" xml:id="S1.Ex17.m1.5">P</XMTok>
+                        <XMTok role="ID" xml:id="S1.Ex17.m1.5">P</XMTok>
                         <XMTok role="PERIOD">.</XMTok>
-                        <XMTok role="UNKNOWN" xml:id="S1.Ex17.m1.6">V</XMTok>
+                        <XMTok role="ID" xml:id="S1.Ex17.m1.6">V</XMTok>
                         <XMTok role="PERIOD">.</XMTok>
                       </XMWrap>
                       <XMWrap>
@@ -1977,18 +1977,18 @@
                           <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                            <XMTok font="italic" role="ID">f</XMTok>
                             <XMDual>
                               <XMRef idref="S1.Ex17.m1.2.2"/>
                               <XMWrap>
                                 <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex17.m1.2.2">z</XMTok>
+                                <XMTok font="italic" role="ID" xml:id="S1.Ex17.m1.2.2">z</XMTok>
                                 <XMTok role="CLOSE" stretchy="false">)</XMTok>
                               </XMWrap>
                             </XMDual>
                             <XMApp>
                               <XMTok meaning="differential" role="DIFFOP">d</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex17.m1.2.1">z</XMTok>
+                              <XMTok font="italic" role="ID" xml:id="S1.Ex17.m1.2.1">z</XMTok>
                             </XMApp>
                           </XMApp>
                         </XMApp>
@@ -2006,7 +2006,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.Ex17.m1.8">Re</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">{</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex17.m1.3">z</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex17.m1.3">z</XMTok>
                         <XMTok role="CLOSE" stretchy="true">}</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -2023,7 +2023,7 @@
                       <XMTok role="OPFUNCTION" scriptpos="post" xml:id="S1.Ex17.m1.9">Im</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">{</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex17.m1.4">z</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex17.m1.4">z</XMTok>
                         <XMTok role="CLOSE" stretchy="true">}</XMTok>
                       </XMWrap>
                     </XMApp>
@@ -2061,8 +2061,8 @@
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S1.Ex18.m1.2">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
@@ -2080,8 +2080,8 @@
                         <XMTok role="OPEN" stretchy="false">[</XMTok>
                         <XMApp xml:id="S1.Ex18.m1.4">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">]</XMTok>
                       </XMWrap>
@@ -2099,8 +2099,8 @@
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S1.Ex18.m1.6">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
                       </XMWrap>
@@ -2118,8 +2118,8 @@
                         <XMTok role="OPEN" stretchy="false">[</XMTok>
                         <XMApp xml:id="S1.Ex18.m1.8">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">]</XMTok>
                       </XMWrap>
@@ -2452,12 +2452,12 @@
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex23.m1.9">
                     <XMTok meaning="differential" role="DIFFOP">d</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="ID">x</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex23.m1.6">
                     <XMTok meaning="differential" role="DIFFOP">d</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex23.m1.1">x</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S1.Ex23.m1.1">x</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual xml:id="S1.Ex23.m1.7">
@@ -2472,7 +2472,7 @@
                         <XMTok role="DIFFOP">d</XMTok>
                         <XMTok fontsize="70%" meaning="3" role="NUMBER" xml:id="S1.Ex23.m1.2">3</XMTok>
                       </XMApp>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex23.m1.3">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex23.m1.3">x</XMTok>
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
@@ -2487,7 +2487,7 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex23.m1.4">
                           <XMTok meaning="cosine" role="OPFUNCTION" scriptpos="post">cos</XMTok>
-                          <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                          <XMTok font="italic" name="theta" role="ID">θ</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -2522,7 +2522,7 @@
                       <XMTok role="DIFFOP">d</XMTok>
                       <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.1">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.1">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2538,11 +2538,11 @@
                         <XMTok role="DIFFOP">d</XMTok>
                         <XMApp>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.2">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.2">x</XMTok>
                         </XMApp>
                       </XMApp>
                     </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                    <XMTok font="italic" role="ID">f</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual xml:id="S1.Ex24.m1.15">
@@ -2557,11 +2557,11 @@
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                       <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.3">f</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.3">f</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.4">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.4">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2581,17 +2581,17 @@
                         <XMApp role="DIFFOP">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex24.m1.5">n</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID" xml:id="S1.Ex24.m1.5">n</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.6">f</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.6">f</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                         <XMApp>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.7">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.7">x</XMTok>
                         </XMApp>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex24.m1.8">n</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID" xml:id="S1.Ex24.m1.8">n</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2610,15 +2610,15 @@
                         <XMTok role="DIFFOP">d</XMTok>
                         <XMApp>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.9">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.9">x</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex24.m1.10">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -2637,11 +2637,11 @@
                       <XMTok lpadding="-0.222em" meaning="divide" role="MULOP" rpadding="-0.222em">∕</XMTok>
                       <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.11">f</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.11">f</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.12">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex24.m1.12">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2675,7 +2675,7 @@
                       <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.1">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.1">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2691,11 +2691,11 @@
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                         <XMApp>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.2">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.2">x</XMTok>
                         </XMApp>
                       </XMApp>
                     </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                    <XMTok font="italic" role="ID">f</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual role="DIFFOP" xml:id="S1.Ex25.m1.16">
@@ -2708,7 +2708,7 @@
                       <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.3">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.3">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2725,11 +2725,11 @@
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.4">f</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.4">f</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.5">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.5">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2749,17 +2749,17 @@
                         <XMApp role="DIFFOP">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex25.m1.6">n</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID" xml:id="S1.Ex25.m1.6">n</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.7">f</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.7">f</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                         <XMApp>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.8">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.8">x</XMTok>
                         </XMApp>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex25.m1.9">n</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID" xml:id="S1.Ex25.m1.9">n</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2778,15 +2778,15 @@
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                         <XMApp>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.10">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.10">x</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex25.m1.11">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
                       </XMWrap>
@@ -2805,11 +2805,11 @@
                       <XMTok lpadding="-0.222em" meaning="divide" role="MULOP" rpadding="-0.222em">∕</XMTok>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.12">f</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.12">f</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.13">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex25.m1.13">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2836,7 +2836,7 @@
                     <XMTok font="italic" meaning="variation" name="delta" role="DIFFOP">δ</XMTok>
                     <XMApp xml:id="S1.Ex26.m1.1">
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                      <XMTok font="italic" role="ID">F</XMTok>
                       <XMDual>
                         <XMApp>
                           <XMTok meaning="delimited-[]"/>
@@ -2846,12 +2846,12 @@
                           <XMTok role="OPEN" stretchy="false">[</XMTok>
                           <XMApp xml:id="S1.Ex26.m1.1.2">
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                            <XMTok font="italic" role="ID">g</XMTok>
                             <XMDual>
                               <XMRef idref="S1.Ex26.m1.1.1"/>
                               <XMWrap>
                                 <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.1.1">x</XMTok>
+                                <XMTok font="italic" role="ID" xml:id="S1.Ex26.m1.1.1">x</XMTok>
                                 <XMTok role="CLOSE" stretchy="false">)</XMTok>
                               </XMWrap>
                             </XMDual>
@@ -2873,11 +2873,11 @@
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex26.m1.2">
                           <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                          <XMTok font="italic" role="ID">E</XMTok>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">T</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">S</XMTok>
+                            <XMTok font="italic" role="ID">T</XMTok>
+                            <XMTok font="italic" role="ID">S</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
@@ -2895,7 +2895,7 @@
                       <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
                       <XMApp>
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.3">g</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex26.m1.3">g</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2912,11 +2912,11 @@
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                       <XMApp>
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.4">F</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex26.m1.4">F</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.5">g</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex26.m1.5">g</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2935,18 +2935,18 @@
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
                         <XMApp>
                           <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.6">V</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex26.m1.6">V</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
                         <XMApp xml:id="S1.Ex26.m1.7">
                           <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                          <XMTok font="italic" role="ID">E</XMTok>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">T</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">S</XMTok>
+                            <XMTok font="italic" role="ID">T</XMTok>
+                            <XMTok font="italic" role="ID">S</XMTok>
                           </XMApp>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="true">)</XMTok>
@@ -2966,11 +2966,11 @@
                       <XMTok lpadding="-0.222em" meaning="divide" role="MULOP" rpadding="-0.222em">∕</XMTok>
                       <XMApp>
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.8">F</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex26.m1.8">F</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.9">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex26.m1.9">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2998,8 +2998,8 @@
                     <XMTok role="OPEN" stretchy="false">[</XMTok>
                     <XMApp xml:id="S1.Ex27.m1.2">
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                      <XMTok font="italic" role="ID">X</XMTok>
+                      <XMTok font="italic" role="ID">Y</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -3040,17 +3040,17 @@
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                           <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.1">f</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.1">f</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMApp>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.2">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.2">x</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.3">y</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.3">y</XMTok>
                         </XMApp>
                       </XMApp>
                     </XMApp>
@@ -3077,22 +3077,22 @@
                             <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.4">f</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.4">f</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMApp>
                             <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.5">x</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.5">x</XMTok>
                           </XMApp>
                           <XMApp>
                             <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.6">y</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.6">y</XMTok>
                           </XMApp>
                         </XMApp>
                       </XMApp>
                     </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                    <XMTok font="italic" role="ID">z</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex28.m1.15">
@@ -3116,22 +3116,22 @@
                             <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.7">f</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.7">f</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMApp>
                             <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.8">x</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.8">x</XMTok>
                           </XMApp>
                           <XMApp>
                             <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.9">y</XMTok>
+                            <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.9">y</XMTok>
                           </XMApp>
                         </XMApp>
                       </XMApp>
                     </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                    <XMTok font="italic" role="ID">z</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual xml:id="S1.Ex28.m1.13">
@@ -3146,11 +3146,11 @@
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.10">x</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.10">x</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex28.m1.11">y</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex28.m1.11">y</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -3183,15 +3183,15 @@
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                         <XMApp>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex29.m1.1">f</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex29.m1.1">f</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex29.m1.2">x</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex29.m1.2">x</XMTok>
                         </XMApp>
                       </XMApp>
                     </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                    <XMTok font="italic" role="ID">y</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMApp xml:id="S1.Ex29.m1.6">
@@ -3208,15 +3208,15 @@
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                         <XMApp>
                           <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex29.m1.3">F</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex29.m1.3">F</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex29.m1.4">f</XMTok>
+                          <XMTok font="italic" role="ID" xml:id="S1.Ex29.m1.4">f</XMTok>
                         </XMApp>
                       </XMApp>
                     </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMWrap>
               </XMDual>
@@ -3246,9 +3246,9 @@
                   </XMApp>
                   <XMWrap>
                     <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                    <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex30.m1.1">ϕ</XMTok>
+                    <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex30.m1.1">ϕ</XMTok>
                     <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                    <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S1.Ex30.m1.2">ψ</XMTok>
+                    <XMTok font="italic" name="psi" role="ID" xml:id="S1.Ex30.m1.2">ψ</XMTok>
                     <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -3260,7 +3260,7 @@
                   </XMApp>
                   <XMWrap>
                     <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                    <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex30.m1.3">ϕ</XMTok>
+                    <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex30.m1.3">ϕ</XMTok>
                     <XMTok role="CLOSE" stretchy="true">|</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -3271,7 +3271,7 @@
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="true">|</XMTok>
-                    <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S1.Ex30.m1.4">ψ</XMTok>
+                    <XMTok font="italic" name="psi" role="ID" xml:id="S1.Ex30.m1.4">ψ</XMTok>
                     <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -3298,7 +3298,7 @@
                       </XMApp>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                        <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex31.m1.1">ϕ</XMTok>
+                        <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex31.m1.1">ϕ</XMTok>
                         <XMTok role="CLOSE" stretchy="true">|</XMTok>
                       </XMWrap>
                     </XMDual>
@@ -3310,11 +3310,11 @@
                       </XMApp>
                       <XMWrap>
                         <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                        <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S1.Ex31.m1.2">ψ</XMTok>
+                        <XMTok font="italic" name="psi" role="ID" xml:id="S1.Ex31.m1.2">ψ</XMTok>
                         <XMTok name="rangle" role="MIDDLE" stretchy="true">⟩</XMTok>
                         <XMWrap>
                           <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                          <XMTok font="italic" name="xi" role="UNKNOWN" xml:id="S1.Ex31.m1.3">ξ</XMTok>
+                          <XMTok font="italic" name="xi" role="ID" xml:id="S1.Ex31.m1.3">ξ</XMTok>
                           <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                         </XMWrap>
                       </XMWrap>
@@ -3332,9 +3332,9 @@
                       </XMApp>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                        <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex31.m1.4">ϕ</XMTok>
+                        <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex31.m1.4">ϕ</XMTok>
                         <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                        <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S1.Ex31.m1.5">ψ</XMTok>
+                        <XMTok font="italic" name="psi" role="ID" xml:id="S1.Ex31.m1.5">ψ</XMTok>
                         <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                       </XMWrap>
                     </XMDual>
@@ -3345,7 +3345,7 @@
                       </XMApp>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                        <XMTok font="italic" name="xi" role="UNKNOWN" xml:id="S1.Ex31.m1.6">ξ</XMTok>
+                        <XMTok font="italic" name="xi" role="ID" xml:id="S1.Ex31.m1.6">ξ</XMTok>
                         <XMTok role="CLOSE" stretchy="true">|</XMTok>
                       </XMWrap>
                     </XMDual>
@@ -3378,8 +3378,8 @@
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
                       <XMApp xml:id="S1.Ex32.m1.1">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
@@ -3394,8 +3394,8 @@
                       <XMTok role="OPEN" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex32.m1.2">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -3410,8 +3410,8 @@
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
                       <XMApp xml:id="S1.Ex32.m1.3">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
                     </XMWrap>
@@ -3426,8 +3426,8 @@
                       <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
                       <XMApp xml:id="S1.Ex32.m1.4">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">|</XMTok>
                     </XMWrap>
@@ -3458,9 +3458,9 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex33.m1.1">ϕ</XMTok>
+                      <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex33.m1.1">ϕ</XMTok>
                       <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                      <XMTok font="italic" name="psi" role="UNKNOWN" xml:id="S1.Ex33.m1.2">ψ</XMTok>
+                      <XMTok font="italic" name="psi" role="ID" xml:id="S1.Ex33.m1.2">ψ</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3473,12 +3473,12 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex33.m1.3">ϕ</XMTok>
+                      <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex33.m1.3">ϕ</XMTok>
                       <XMTok role="MIDDLE" stretchy="true">|</XMTok>
                       <XMApp xml:id="S1.Ex33.m1.4">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
@@ -3492,12 +3492,12 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                      <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex33.m1.5">ϕ</XMTok>
+                      <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex33.m1.5">ϕ</XMTok>
                       <XMTok role="MIDDLE" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex33.m1.6">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -3511,12 +3511,12 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                      <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex33.m1.7">ϕ</XMTok>
+                      <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex33.m1.7">ϕ</XMTok>
                       <XMTok role="MIDDLE" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex33.m1.8">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -3530,12 +3530,12 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                      <XMTok font="italic" name="phi" role="UNKNOWN" xml:id="S1.Ex33.m1.9">ϕ</XMTok>
+                      <XMTok font="italic" name="phi" role="ID" xml:id="S1.Ex33.m1.9">ϕ</XMTok>
                       <XMTok role="MIDDLE" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex33.m1.10">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -3565,9 +3565,9 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex34.m1.1">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex34.m1.1">a</XMTok>
                       <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex34.m1.2">b</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex34.m1.2">b</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3580,9 +3580,9 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex34.m1.3">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex34.m1.3">a</XMTok>
                       <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex34.m1.4">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex34.m1.4">a</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3595,12 +3595,12 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex34.m1.5">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex34.m1.5">a</XMTok>
                       <XMTok role="MIDDLE" stretchy="true">|</XMTok>
                       <XMApp xml:id="S1.Ex34.m1.6">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
@@ -3614,12 +3614,12 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex34.m1.7">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex34.m1.7">a</XMTok>
                       <XMTok role="MIDDLE" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex34.m1.8">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -3651,9 +3651,9 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.1">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.1">a</XMTok>
                       <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.2">b</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.2">b</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3666,11 +3666,11 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.3">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.3">a</XMTok>
                       <XMTok name="rangle" role="MIDDLE" stretchy="true">⟩</XMTok>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.4">b</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.4">b</XMTok>
                         <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                       </XMWrap>
                     </XMWrap>
@@ -3684,11 +3684,11 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.5">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.5">a</XMTok>
                       <XMTok name="rangle" role="MIDDLE" stretchy="true">⟩</XMTok>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.6">a</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.6">a</XMTok>
                         <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                       </XMWrap>
                     </XMWrap>
@@ -3702,14 +3702,14 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.7">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.7">a</XMTok>
                       <XMTok name="rangle" role="MIDDLE" stretchy="true">⟩</XMTok>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
                         <XMApp xml:id="S1.Ex35.m1.8">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                       </XMWrap>
@@ -3726,15 +3726,15 @@
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">|</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.9">a</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.9">a</XMTok>
                         <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                       </XMWrap>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
                         <XMApp xml:id="S1.Ex35.m1.10">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                          <XMTok font="italic" role="ID">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">|</XMTok>
                       </XMWrap>
@@ -3749,11 +3749,11 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.11">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.11">a</XMTok>
                       <XMTok name="rangle" role="MIDDLE" stretchy="true">⟩</XMTok>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex35.m1.12">b</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex35.m1.12">b</XMTok>
                         <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                       </XMWrap>
                     </XMWrap>
@@ -3786,11 +3786,11 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.1">a</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex36.m1.1">a</XMTok>
                       <XMTok name="rangle" role="MIDDLE" stretchy="true">⟩</XMTok>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.2">b</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S1.Ex36.m1.2">b</XMTok>
                         <XMTok role="VERTBAR" stretchy="true">|</XMTok>
                       </XMWrap>
                     </XMWrap>
@@ -3803,7 +3803,7 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.3">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex36.m1.3">A</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3817,11 +3817,11 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.4">Ψ</XMTok>
+                      <XMTok name="Psi" role="ID" xml:id="S1.Ex36.m1.4">Ψ</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.5">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex36.m1.5">A</XMTok>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.6">Ψ</XMTok>
+                      <XMTok name="Psi" role="ID" xml:id="S1.Ex36.m1.6">Ψ</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3835,11 +3835,11 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.7">Ψ</XMTok>
+                      <XMTok name="Psi" role="ID" xml:id="S1.Ex36.m1.7">Ψ</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.8">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex36.m1.8">A</XMTok>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.9">Ψ</XMTok>
+                      <XMTok name="Psi" role="ID" xml:id="S1.Ex36.m1.9">Ψ</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3853,15 +3853,15 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.10">Ψ</XMTok>
+                      <XMTok name="Psi" role="ID" xml:id="S1.Ex36.m1.10">Ψ</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
                       <XMApp xml:id="S1.Ex36.m1.11">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.12">Ψ</XMTok>
+                      <XMTok name="Psi" role="ID" xml:id="S1.Ex36.m1.12">Ψ</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3877,20 +3877,20 @@
                       <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
                       <XMApp xml:id="S1.Ex36.m1.13">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex36.m1.14">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="OPEN" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex36.m1.15">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -3905,15 +3905,15 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.16">Ψ</XMTok>
+                      <XMTok name="Psi" role="ID" xml:id="S1.Ex36.m1.16">Ψ</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
                       <XMApp xml:id="S1.Ex36.m1.17">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.18">Ψ</XMTok>
+                      <XMTok name="Psi" role="ID" xml:id="S1.Ex36.m1.18">Ψ</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3944,11 +3944,11 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.1">n</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.1">n</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.2">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.2">A</XMTok>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.3">m</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.3">m</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3962,11 +3962,11 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.4">n</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.4">n</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.5">A</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.5">A</XMTok>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.6">m</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.6">m</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -3980,15 +3980,15 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.7">n</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.7">n</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
                       <XMApp xml:id="S1.Ex37.m1.8">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.9">m</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.9">m</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -4002,18 +4002,18 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.10">n</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.10">n</XMTok>
                       <XMTok role="CLOSE" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex37.m1.11">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="OPEN" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.Ex37.m1.12">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -4028,15 +4028,15 @@
                     </XMApp>
                     <XMWrap>
                       <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.13">n</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.13">n</XMTok>
                       <XMTok role="CLOSE" stretchy="true">|</XMTok>
                       <XMApp xml:id="S1.Ex37.m1.14">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" role="ID">X</XMTok>
+                        <XMTok font="italic" role="ID">Y</XMTok>
                       </XMApp>
                       <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.15">m</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex37.m1.15">m</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -4084,10 +4084,10 @@
                     </XMRow>
                     <XMRow>
                       <XMCell align="center">
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="italic" role="ID">a</XMTok>
                       </XMCell>
                       <XMCell align="center">
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok font="italic" role="ID">b</XMTok>
                       </XMCell>
                     </XMRow>
                   </XMArray>
@@ -4151,12 +4151,12 @@
                             <XMArray xml:id="S1.Ex39.m1.1.2.1">
                               <XMRow>
                                 <XMCell align="center">
-                                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                                  <XMTok font="italic" role="ID">a</XMTok>
                                 </XMCell>
                               </XMRow>
                               <XMRow>
                                 <XMCell align="center">
-                                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                                  <XMTok font="italic" role="ID">b</XMTok>
                                 </XMCell>
                               </XMRow>
                             </XMArray>
@@ -4176,10 +4176,10 @@
                             <XMArray xml:id="S1.Ex39.m1.1.3.1">
                               <XMRow>
                                 <XMCell align="center">
-                                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                                  <XMTok font="italic" role="ID">c</XMTok>
                                 </XMCell>
                                 <XMCell align="center">
-                                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                                  <XMTok font="italic" role="ID">d</XMTok>
                                 </XMCell>
                               </XMRow>
                             </XMArray>
@@ -4187,7 +4187,7 @@
                         </XMDual>
                       </XMCell>
                       <XMCell align="center">
-                        <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                        <XMTok font="italic" role="ID">e</XMTok>
                       </XMCell>
                     </XMRow>
                   </XMArray>
@@ -4253,12 +4253,12 @@
                               <XMArray xml:id="S1.Ex40.m1.1.1.2.1">
                                 <XMRow>
                                   <XMCell align="center">
-                                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                                    <XMTok font="italic" role="ID">a</XMTok>
                                   </XMCell>
                                 </XMRow>
                                 <XMRow>
                                   <XMCell align="center">
-                                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                                    <XMTok font="italic" role="ID">b</XMTok>
                                   </XMCell>
                                 </XMRow>
                               </XMArray>
@@ -4278,10 +4278,10 @@
                               <XMArray xml:id="S1.Ex40.m1.1.1.3.1">
                                 <XMRow>
                                   <XMCell align="center">
-                                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                                    <XMTok font="italic" role="ID">c</XMTok>
                                   </XMCell>
                                   <XMCell align="center">
-                                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                                    <XMTok font="italic" role="ID">d</XMTok>
                                   </XMCell>
                                 </XMRow>
                               </XMArray>
@@ -4289,7 +4289,7 @@
                           </XMDual>
                         </XMCell>
                         <XMCell align="center">
-                          <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                          <XMTok font="italic" role="ID">e</XMTok>
                         </XMCell>
                       </XMRow>
                     </XMArray>
@@ -4357,14 +4357,14 @@
                                 <XMCell align="center">
                                   <XMApp>
                                     <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                                    <XMTok font="italic" role="ID">x</XMTok>
+                                    <XMTok font="italic" role="ID">y</XMTok>
                                   </XMApp>
                                 </XMCell>
                               </XMRow>
                               <XMRow>
                                 <XMCell align="center">
-                                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                                  <XMTok font="italic" role="ID">b</XMTok>
                                 </XMCell>
                               </XMRow>
                             </XMArray>
@@ -4386,16 +4386,16 @@
                                 <XMCell align="center">
                                   <XMApp>
                                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">u</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">v</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">w</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                                    <XMTok font="italic" role="ID">u</XMTok>
+                                    <XMTok font="italic" role="ID">v</XMTok>
+                                    <XMTok font="italic" role="ID">w</XMTok>
+                                    <XMTok font="italic" role="ID">x</XMTok>
+                                    <XMTok font="italic" role="ID">y</XMTok>
+                                    <XMTok font="italic" role="ID">z</XMTok>
                                   </XMApp>
                                 </XMCell>
                                 <XMCell align="center">
-                                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                                  <XMTok font="italic" role="ID">d</XMTok>
                                 </XMCell>
                               </XMRow>
                             </XMArray>
@@ -4403,7 +4403,7 @@
                         </XMDual>
                       </XMCell>
                       <XMCell align="center">
-                        <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                        <XMTok font="italic" role="ID">e</XMTok>
                       </XMCell>
                     </XMRow>
                   </XMArray>
@@ -4441,18 +4441,18 @@
                       <XMArray xml:id="S1.Ex42.m1.1.1">
                         <XMRow>
                           <XMCell align="center">
-                            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                            <XMTok font="italic" role="ID">a</XMTok>
                           </XMCell>
                           <XMCell align="center">
-                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                            <XMTok font="italic" role="ID">b</XMTok>
                           </XMCell>
                         </XMRow>
                         <XMRow>
                           <XMCell align="center">
-                            <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                            <XMTok font="italic" role="ID">c</XMTok>
                           </XMCell>
                           <XMCell align="center">
-                            <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                            <XMTok font="italic" role="ID">d</XMTok>
                           </XMCell>
                         </XMRow>
                       </XMArray>
@@ -4471,18 +4471,18 @@
                         <XMArray xml:id="S1.Ex42.m1.2.1">
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                              <XMTok font="italic" role="ID">a</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                              <XMTok font="italic" role="ID">b</XMTok>
                             </XMCell>
                           </XMRow>
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                              <XMTok font="italic" role="ID">c</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                              <XMTok font="italic" role="ID">d</XMTok>
                             </XMCell>
                           </XMRow>
                         </XMArray>
@@ -4503,18 +4503,18 @@
                         <XMArray xml:id="S1.Ex42.m1.3.1">
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                              <XMTok font="italic" role="ID">a</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                              <XMTok font="italic" role="ID">b</XMTok>
                             </XMCell>
                           </XMRow>
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                              <XMTok font="italic" role="ID">c</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                              <XMTok font="italic" role="ID">d</XMTok>
                             </XMCell>
                           </XMRow>
                         </XMArray>
@@ -4535,18 +4535,18 @@
                         <XMArray xml:id="S1.Ex42.m1.4.1">
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                              <XMTok font="italic" role="ID">a</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                              <XMTok font="italic" role="ID">b</XMTok>
                             </XMCell>
                           </XMRow>
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                              <XMTok font="italic" role="ID">c</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                              <XMTok font="italic" role="ID">d</XMTok>
                             </XMCell>
                           </XMRow>
                         </XMArray>
@@ -4567,18 +4567,18 @@
                         <XMArray xml:id="S1.Ex42.m1.5.1">
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                              <XMTok font="italic" role="ID">a</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                              <XMTok font="italic" role="ID">b</XMTok>
                             </XMCell>
                           </XMRow>
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                              <XMTok font="italic" role="ID">c</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                              <XMTok font="italic" role="ID">d</XMTok>
                             </XMCell>
                           </XMRow>
                         </XMArray>
@@ -4597,18 +4597,18 @@
                       <XMArray xml:id="S1.Ex42.m1.6.1">
                         <XMRow>
                           <XMCell align="center">
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                           </XMCell>
                           <XMCell align="center">
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                           </XMCell>
                         </XMRow>
                         <XMRow>
                           <XMCell align="center">
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                           </XMCell>
                           <XMCell align="center">
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                           </XMCell>
                         </XMRow>
                       </XMArray>
@@ -4630,18 +4630,18 @@
                         <XMArray xml:id="S1.Ex42.m1.7.1">
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                              <XMTok font="italic" role="ID">a</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                              <XMTok font="italic" role="ID">b</XMTok>
                             </XMCell>
                           </XMRow>
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                              <XMTok font="italic" role="ID">c</XMTok>
                             </XMCell>
                             <XMCell align="center">
-                              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                              <XMTok font="italic" role="ID">d</XMTok>
                             </XMCell>
                           </XMRow>
                         </XMArray>
@@ -4660,18 +4660,18 @@
                       <XMArray xml:id="S1.Ex42.m1.8">
                         <XMRow>
                           <XMCell align="center">
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                           </XMCell>
                           <XMCell align="center">
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                           </XMCell>
                         </XMRow>
                         <XMRow>
                           <XMCell align="center">
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                           </XMCell>
                           <XMCell align="center">
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                           </XMCell>
                         </XMRow>
                       </XMArray>
@@ -4798,7 +4798,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4816,7 +4816,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4834,7 +4834,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4854,7 +4854,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4872,7 +4872,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4890,7 +4890,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4910,7 +4910,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4928,7 +4928,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4946,7 +4946,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMDual>
                                   <XMApp>
                                     <XMTok meaning="list"/>
@@ -4982,7 +4982,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMTok fontsize="49%" meaning="1" role="NUMBER">1</XMTok>
                               </XMApp>
                             </XMCell>
@@ -4991,7 +4991,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMTok fontsize="49%" meaning="2" role="NUMBER">2</XMTok>
                               </XMApp>
                             </XMCell>
@@ -5000,7 +5000,7 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMTok fontsize="49%" meaning="3" role="NUMBER">3</XMTok>
                               </XMApp>
                             </XMCell>
@@ -5025,21 +5025,21 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMTok fontsize="49%" meaning="1" role="NUMBER">1</XMTok>
                               </XMApp>
                             </XMCell>
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMTok fontsize="49%" meaning="2" role="NUMBER">2</XMTok>
                               </XMApp>
                             </XMCell>
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok role="SUBSCRIPTOP" scriptpos="post6"/>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                                 <XMTok fontsize="49%" meaning="3" role="NUMBER">3</XMTok>
                               </XMApp>
                             </XMCell>

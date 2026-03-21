@@ -11,8 +11,8 @@
         <XMath>
           <XMApp>
             <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-            <XMTok font="italic" role="UNKNOWN">x</XMTok>
-            <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+            <XMTok font="italic" role="ID">x</XMTok>
+            <XMTok font="italic" fontsize="70%" role="ID">y</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -23,8 +23,8 @@ After <Math mode="inline" tex="x^{y}" text="x ^ y" xml:id="p1.m2">
         <XMath>
           <XMApp>
             <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-            <XMTok font="italic" role="UNKNOWN">x</XMTok>
-            <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+            <XMTok font="italic" role="ID">x</XMTok>
+            <XMTok font="italic" fontsize="70%" role="ID">y</XMTok>
           </XMApp>
         </XMath>
       </Math></p>

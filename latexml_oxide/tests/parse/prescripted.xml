@@ -13,7 +13,7 @@
             <XMTok role="SUBSCRIPTOP" scriptpos="pre2"/>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
               <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
             </XMApp>
             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>

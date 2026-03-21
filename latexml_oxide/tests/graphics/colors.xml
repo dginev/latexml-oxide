@@ -124,9 +124,9 @@ vs. <text color="#E6E6E6">Light</text></p>
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok color="#FF0000" font="italic" role="UNKNOWN">R</XMTok>
-              <XMTok color="#00FF00" font="italic" role="UNKNOWN">G</XMTok>
-              <XMTok color="#0000FF" font="italic" role="UNKNOWN">B</XMTok>
+              <XMTok color="#FF0000" font="italic" role="ID">R</XMTok>
+              <XMTok color="#00FF00" font="italic" role="ID">G</XMTok>
+              <XMTok color="#0000FF" font="italic" role="ID">B</XMTok>
             </XMApp>
           </XMath>
         </Math>

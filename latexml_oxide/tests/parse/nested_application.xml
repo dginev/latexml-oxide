@@ -16,7 +16,7 @@
                 <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
               </XMApp>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMTok font="italic" role="ID">x</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -26,9 +26,9 @@
             <XMTok font="italic" role="OPERATOR">D</XMTok>
             <XMApp>
               <XMTok meaning="times" role="MULOP">×</XMTok>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
-              <XMTok font="italic" role="UNKNOWN">y</XMTok>
-              <XMTok font="italic" role="UNKNOWN">z</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
+              <XMTok font="italic" role="ID">y</XMTok>
+              <XMTok font="italic" role="ID">z</XMTok>
             </XMApp>
           </XMApp>
         </XMath>

@@ -15,9 +15,9 @@
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                   <XMApp>
                     <XMTok name="ring" role="OVERACCENT" stretchy="false">˚</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                    <XMTok font="italic" role="ID">u</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">s</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -30,7 +30,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="acute" role="OVERACCENT">´</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -38,7 +38,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="acute" role="OVERACCENT" stretchy="false">´</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -48,9 +48,9 @@
                   <XMTok name="acute" role="OVERACCENT">´</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -61,7 +61,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -69,7 +69,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -79,9 +79,9 @@
                   <XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -92,7 +92,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="breve" role="OVERACCENT">˘</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -100,7 +100,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="breve" role="OVERACCENT" stretchy="false">˘</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -110,9 +110,9 @@
                   <XMTok name="breve" role="OVERACCENT">˘</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -123,7 +123,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="check" role="OVERACCENT" stretchy="false">ˇ</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -131,7 +131,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="check" role="OVERACCENT" stretchy="false">ˇ</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -141,9 +141,9 @@
                   <XMTok name="check" role="OVERACCENT" stretchy="false">ˇ</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -154,7 +154,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="ddot" role="OVERACCENT">¨</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -162,7 +162,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="ddot" role="OVERACCENT" stretchy="false">¨</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -172,9 +172,9 @@
                   <XMTok name="ddot" role="OVERACCENT">¨</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -185,7 +185,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="dot" role="OVERACCENT">˙</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -193,7 +193,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="dot" role="OVERACCENT" stretchy="false">˙</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -203,9 +203,9 @@
                   <XMTok name="dot" role="OVERACCENT">˙</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -216,7 +216,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="grave" role="OVERACCENT">`</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -224,7 +224,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="grave" role="OVERACCENT" stretchy="false">`</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -234,9 +234,9 @@
                   <XMTok name="grave" role="OVERACCENT">`</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -247,7 +247,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -255,7 +255,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -265,9 +265,9 @@
                   <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -278,7 +278,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="tilde" role="OVERACCENT" stretchy="false">~</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -286,7 +286,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="tilde" role="OVERACCENT" stretchy="false">~</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -296,9 +296,9 @@
                   <XMTok name="tilde" role="OVERACCENT" stretchy="false">~</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -309,7 +309,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="vec" role="OVERACCENT" stretchy="false">→</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -317,7 +317,7 @@
               <XMath>
                 <XMApp>
                   <XMTok role="OVERACCENT" stretchy="false">→</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -327,9 +327,9 @@
                   <XMTok name="vec" role="OVERACCENT" stretchy="false">→</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="ID">c</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -341,7 +341,7 @@
               <XMath>
                 <XMApp>
                   <XMTok name="ring" role="OVERACCENT" stretchy="false">˚</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -354,9 +354,9 @@
                   <XMTok name="widetilde" role="OVERACCENT">~</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -367,9 +367,9 @@
                   <XMTok role="OVERACCENT" stretchy="false">~</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -383,9 +383,9 @@
                   <XMTok name="widehat" role="OVERACCENT">^</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -396,9 +396,9 @@
                   <XMTok role="OVERACCENT" stretchy="false">^</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="ID">a</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
@@ -439,7 +439,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.1">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -469,7 +469,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.3">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -486,9 +486,9 @@ dot, ddot, overline, widehat, widetilde)</p>
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                      <XMTok font="italic" role="ID">A</XMTok>
+                      <XMTok font="italic" role="ID">B</XMTok>
+                      <XMTok font="italic" role="ID">C</XMTok>
                     </XMApp>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
@@ -504,7 +504,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.5">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -519,7 +519,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.6">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -534,7 +534,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.7">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -564,7 +564,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.9">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -604,10 +604,10 @@ dot, ddot, overline, widehat, widetilde)</p>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMApp>
                   <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok font="italic" role="ID">A</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                <XMTok font="italic" role="ID">B</XMTok>
+                <XMTok font="italic" role="ID">C</XMTok>
               </XMApp>
               <XMTok role="CLOSE" stretchy="false">]</XMTok>
             </XMWrap>
@@ -640,7 +640,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.1">
                     <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -670,7 +670,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.3">
                     <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -687,9 +687,9 @@ dot, ddot, overline, widehat, widetilde)</p>
                     <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                      <XMTok font="italic" role="ID">A</XMTok>
+                      <XMTok font="italic" role="ID">B</XMTok>
+                      <XMTok font="italic" role="ID">C</XMTok>
                     </XMApp>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
@@ -707,9 +707,9 @@ dot, ddot, overline, widehat, widetilde)</p>
                     <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                      <XMTok font="italic" role="ID">A</XMTok>
+                      <XMTok font="italic" role="ID">B</XMTok>
+                      <XMTok font="italic" role="ID">C</XMTok>
                     </XMApp>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
@@ -746,7 +746,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                       <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                       <XMTok meaning="absent"/>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -765,7 +765,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                       <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                       <XMTok meaning="absent"/>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -784,7 +784,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                       <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                       <XMTok meaning="absent"/>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -803,7 +803,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                       <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                       <XMTok meaning="absent"/>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="ID">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -825,10 +825,10 @@ dot, ddot, overline, widehat, widetilde)</p>
             </XMApp>
             <XMApp scriptpos="mid">
               <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
-              <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              <XMTok font="italic" role="ID">f</XMTok>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">o</XMTok>
-            <XMTok font="italic" role="UNKNOWN">o</XMTok>
+            <XMTok font="italic" role="ID">o</XMTok>
+            <XMTok font="italic" role="ID">o</XMTok>
           </XMApp>
         </XMath>
       </Math>

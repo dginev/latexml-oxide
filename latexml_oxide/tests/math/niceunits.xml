@@ -214,8 +214,8 @@
           <XMath>
             <XMApp>
               <XMTok meaning="divide" role="MULOP" stretchy="true" width="-0.15em" xoffset="-0.1em">/</XMTok>
-              <XMTok font="caligraphic" fontsize="70%" role="UNKNOWN" rpadding="-0.5em" yoffset="0.3em">A</XMTok>
-              <XMTok font="caligraphic" fontsize="70%" role="UNKNOWN">B</XMTok>
+              <XMTok font="caligraphic" fontsize="70%" role="ID" rpadding="-0.5em" yoffset="0.3em">A</XMTok>
+              <XMTok font="caligraphic" fontsize="70%" role="ID">B</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -232,9 +232,9 @@ Dose (10<sup><text font="italic">14</text></sup> ions/cm<sup>2</sup>)</p>
               <XMTok meaning="divide" role="MULOP" stretchy="true" width="-0.15em" xoffset="-0.1em">/</XMTok>
               <XMApp rpadding="-0.5em" yoffset="0.3em">
                 <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok fontsize="70%" role="UNKNOWN">x</XMTok>
-                <XMTok fontsize="70%" role="UNKNOWN">y</XMTok>
-                <XMTok fontsize="70%" role="UNKNOWN">z</XMTok>
+                <XMTok fontsize="70%" role="ID">x</XMTok>
+                <XMTok fontsize="70%" role="ID">y</XMTok>
+                <XMTok fontsize="70%" role="ID">z</XMTok>
               </XMApp>
               <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
             </XMApp>
@@ -245,9 +245,9 @@ Dose (10<sup><text font="italic">14</text></sup> ions/cm<sup>2</sup>)</p>
               <XMTok meaning="divide" role="MULOP" stretchy="true" width="-0.15em" xoffset="-0.1em">/</XMTok>
               <XMApp rpadding="-0.5em" yoffset="0.3em">
                 <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">x</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">y</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">z</XMTok>
               </XMApp>
               <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
             </XMApp>
@@ -264,12 +264,12 @@ Dose (10<sup><text font="italic">14</text></sup> ions/cm<sup>2</sup>)</p>
                 <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">x</XMTok>
                   <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">y</XMTok>
                   <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMApp>
@@ -277,12 +277,12 @@ Dose (10<sup><text font="italic">14</text></sup> ions/cm<sup>2</sup>)</p>
                 <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">x</XMTok>
                   <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">y</XMTok>
                   <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMApp>

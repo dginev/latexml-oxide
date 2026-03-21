@@ -1159,7 +1159,7 @@ Hello</p>
                             <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
                             <XMApp>
                               <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                              <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
                               <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             </XMApp>
                           </XMApp>
@@ -1167,8 +1167,8 @@ Hello</p>
                         </XMApp>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">t</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok font="italic" role="ID">t</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
                         </XMApp>
                       </XMApp>
                     </XMath>
@@ -1185,15 +1185,15 @@ Hello</p>
                               <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
                               <XMApp>
                                 <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                                <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                <XMTok font="italic" role="ID">e</XMTok>
                                 <XMApp>
                                   <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                                  <XMTok font="italic" fontsize="70%" role="ID">x</XMTok>
                                 </XMApp>
                               </XMApp>
                               <XMApp>
                                 <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                                <XMTok font="italic" role="ID">x</XMTok>
                               </XMApp>
                             </XMApp>
                           </XMApp>
@@ -1232,15 +1232,15 @@ Hello</p>
                           <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                            <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                            <XMTok font="italic" role="ID">e</XMTok>
                             <XMApp>
                               <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
-                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                              <XMTok font="italic" fontsize="70%" role="ID">x</XMTok>
                             </XMApp>
                           </XMApp>
                           <XMApp>
                             <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                            <XMTok font="italic" role="ID">x</XMTok>
                           </XMApp>
                         </XMApp>
                       </XMApp>
@@ -1280,10 +1280,10 @@ Hello</p>
                         <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                          <XMTok font="italic" role="ID">y</XMTok>
                           <XMApp>
                             <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                            <XMTok font="italic" role="ID">x</XMTok>
                           </XMApp>
                         </XMApp>
                       </XMApp>
@@ -1309,22 +1309,22 @@ Hello</p>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                          <XMTok font="italic" role="ID">A</XMTok>
                           <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                          <XMTok font="italic" role="ID">A</XMTok>
                           <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                          <XMTok font="italic" role="ID">A</XMTok>
                           <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                         </XMApp>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                          <XMTok font="italic" role="ID">A</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                       </XMApp>

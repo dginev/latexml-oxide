@@ -74,7 +74,7 @@
             <td align="center">´</td>
             <td align="center"><Math mode="inline" tex="\mu" text="mu" xml:id="S1.p1.m5">
                 <XMath>
-                  <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
+                  <XMTok font="italic" name="mu" role="ID">μ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center">¶</td>

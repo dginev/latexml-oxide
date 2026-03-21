@@ -17,7 +17,7 @@
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="2" role="NUMBER">2</XMTok>
-                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok font="italic" role="ID">y</XMTok>
               </XMApp>
             </XMApp>
           </XMApp>
@@ -32,7 +32,7 @@
             <XMTok meaning="absent"/>
             <XMApp>
               <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
               <XMTok meaning="2" role="NUMBER">2</XMTok>
             </XMApp>
           </XMApp>
@@ -91,7 +91,7 @@
         <XMath>
           <XMApp>
             <XMTok meaning="annotated"/>
-            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMTok font="italic" role="ID">x</XMTok>
             <XMDual>
               <XMRef idref="p6.m1.1"/>
               <XMWrap>
@@ -113,7 +113,7 @@
         <XMath>
           <XMApp>
             <XMTok meaning="annotated"/>
-            <XMTok font="italic" role="UNKNOWN">h</XMTok>
+            <XMTok font="italic" role="ID">h</XMTok>
             <XMDual>
               <XMRef idref="p7.m1.1"/>
               <XMWrap>
@@ -121,7 +121,7 @@
                 <XMApp xml:id="p7.m1.1">
                   <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
                   <XMTok meaning="absent"/>
-                  <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                  <XMTok font="italic" role="ID">C</XMTok>
                 </XMApp>
                 <XMTok role="CLOSE" stretchy="false">)</XMTok>
               </XMWrap>
@@ -135,7 +135,7 @@
         <XMath>
           <XMApp>
             <XMTok name="colon" role="METARELOP">:</XMTok>
-            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMTok font="italic" role="ID">x</XMTok>
             <XMTok role="UNKNOWN">Integer</XMTok>
           </XMApp>
         </XMath>
@@ -146,7 +146,7 @@
         <XMath>
           <XMApp>
             <XMTok name="colon" role="METARELOP">:</XMTok>
-            <XMTok font="italic" role="UNKNOWN">f</XMTok>
+            <XMTok font="italic" role="ID">f</XMTok>
             <XMApp>
               <XMTok name="Rightarrow" role="ARROW">⇒</XMTok>
               <XMTok role="UNKNOWN">Integer</XMTok>
@@ -162,7 +162,7 @@
           <XMApp>
             <XMTok name="rightarrow" role="ARROW">→</XMTok>
             <XMTok meaning="absent"/>
-            <XMTok font="italic" role="UNKNOWN">G</XMTok>
+            <XMTok font="italic" role="ID">G</XMTok>
           </XMApp>
         </XMath>
       </Math></p>
@@ -200,14 +200,14 @@
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMTok font="italic" role="UNKNOWN">P</XMTok>
+            <XMTok font="italic" role="ID">P</XMTok>
             <XMDual>
               <XMRef idref="p12.m1.1"/>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">(</XMTok>
                 <XMApp xml:id="p12.m1.1">
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                   <XMTok meaning="0" role="NUMBER">0</XMTok>
                 </XMApp>
                 <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -222,18 +222,18 @@
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMTok font="italic" role="UNKNOWN">P</XMTok>
+            <XMTok font="italic" role="ID">P</XMTok>
             <XMDual>
               <XMRef idref="p13.m1.1"/>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">(</XMTok>
                 <XMApp xml:id="p13.m1.1">
                   <XMTok meaning="multirelation"/>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
                   <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" role="ID">b</XMTok>
                   <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" role="ID">c</XMTok>
                 </XMApp>
                 <XMTok role="CLOSE" stretchy="false">)</XMTok>
               </XMWrap>

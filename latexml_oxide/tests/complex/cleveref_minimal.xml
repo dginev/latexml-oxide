@@ -23,21 +23,21 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok font="italic" role="ID">y</XMTok>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="ID">a</XMTok>
                       <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="ID">x</XMTok>
                   </XMApp>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
                     <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                   </XMApp>
                 </XMApp>
@@ -47,7 +47,7 @@
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.E1.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="ID">y</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=a_{1}x+b_{1}" text="absent = a _ 1 * x + b _ 1" xml:id="S0.E1.m2">
@@ -61,14 +61,14 @@
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                          <XMTok font="italic" role="ID">a</XMTok>
                           <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok font="italic" role="ID">b</XMTok>
                         <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                       </XMApp>
                     </XMApp>
@@ -92,21 +92,21 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok font="italic" role="ID">y</XMTok>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="ID">a</XMTok>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="ID">x</XMTok>
                   </XMApp>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMApp>
@@ -116,7 +116,7 @@
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.E2.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="ID">y</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=a_{2}x+b_{2}" text="absent = a _ 2 * x + b _ 2" xml:id="S0.E2.m2">
@@ -130,14 +130,14 @@
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                          <XMTok font="italic" role="ID">a</XMTok>
                           <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok font="italic" role="ID">b</XMTok>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
                     </XMApp>
@@ -161,21 +161,21 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok font="italic" role="ID">y</XMTok>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="ID">a</XMTok>
                       <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="ID">x</XMTok>
                   </XMApp>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
                     <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                   </XMApp>
                 </XMApp>
@@ -185,7 +185,7 @@
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.E3.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="ID">y</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=a_{3}x+b_{3}" text="absent = a _ 3 * x + b _ 3" xml:id="S0.E3.m2">
@@ -199,14 +199,14 @@
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                          <XMTok font="italic" role="ID">a</XMTok>
                           <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok font="italic" role="ID">b</XMTok>
                         <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                       </XMApp>
                     </XMApp>
@@ -230,21 +230,21 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok font="italic" role="ID">y</XMTok>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="ID">a</XMTok>
                       <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="ID">x</XMTok>
                   </XMApp>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" role="ID">b</XMTok>
                     <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                   </XMApp>
                 </XMApp>
@@ -254,7 +254,7 @@
           <MathBranch>
             <td align="right"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.E4.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="ID">y</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\displaystyle=a_{4}x+b_{4}" text="absent = a _ 4 * x + b _ 4" xml:id="S0.E4.m2">
@@ -268,14 +268,14 @@
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                          <XMTok font="italic" role="ID">a</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok font="italic" role="ID">b</XMTok>
                         <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                       </XMApp>
                     </XMApp>

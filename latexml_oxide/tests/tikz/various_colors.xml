@@ -62,15 +62,15 @@
             <td align="left"><text color="#000000">Att.</text></td>
             <td align="right"><Math mode="inline" tex="h" text="h" xml:id="S1.p2.m1">
                 <XMath>
-                  <XMTok color="#000000" font="italic" role="UNKNOWN">h</XMTok>
+                  <XMTok color="#000000" font="italic" role="ID">h</XMTok>
                 </XMath>
               </Math></td>
             <td align="right"><Math mode="inline" tex="d_{m}" text="d _ m" xml:id="S1.p2.m2">
                 <XMath>
                   <XMApp color="#000000">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">m</XMTok>
+                    <XMTok font="italic" role="ID">d</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">m</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -196,10 +196,10 @@
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok color="#06402B" font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok color="#06402B" font="italic" role="ID">x</XMTok>
                 <XMApp>
                   <XMTok meaning="square-root"/>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="ID">y</XMTok>
                 </XMApp>
               </XMApp>
               <XMTok meaning="0" role="NUMBER">0</XMTok>
@@ -215,7 +215,7 @@
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok color="#06402B" font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok color="#06402B" font="italic" role="ID">x</XMTok>
                 <XMText backgroundcolor="#FFA756">y</XMText>
               </XMApp>
               <XMTok meaning="0" role="NUMBER">0</XMTok>
@@ -238,7 +238,7 @@
                       <XMTok meaning="assign" role="RELOP">:=</XMTok>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                        <XMTok font="italic" name="kappa" role="UNKNOWN">κ</XMTok>
+                        <XMTok font="italic" name="kappa" role="ID">κ</XMTok>
                         <XMTok fontsize="70%" name="star" role="MULOP">⋆</XMTok>
                       </XMApp>
                       <XMTok meaning="absent"/>
@@ -250,8 +250,8 @@
                       <XMTok meaning="infimum" role="LIMITOP" scriptpos="mid5">inf</XMTok>
                       <XMApp>
                         <XMTok fontsize="70%" meaning="element-of" name="in" role="RELOP">∈</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">w</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">w</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">Y</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMCell>
@@ -264,9 +264,9 @@
                       </XMApp>
                       <XMWrap>
                         <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E1.m1.m1.1">T</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S2.E1.m1.m1.1">T</XMTok>
                         <XMTok role="PUNCT">,</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E1.m1.m1.2">w</XMTok>
+                        <XMTok font="italic" role="ID" xml:id="S2.E1.m1.m1.2">w</XMTok>
                         <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                       </XMWrap>
                     </XMDual>
@@ -282,21 +282,21 @@
                         <XMTok meaning="minus" role="ADDOP">-</XMTok>
                         <XMApp>
                           <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">A</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">w</XMTok>
+                          <XMTok font="italic" role="ID" rpadding="1.7pt">A</XMTok>
+                          <XMTok font="italic" role="ID">w</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                        <XMTok font="italic" role="ID">g</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                        <XMTok font="italic" role="ID">C</XMTok>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post5"/>
                           <XMDual>
                             <XMRef idref="S2.E1.m1.m1.3"/>
                             <XMWrap>
                               <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E1.m1.m1.3">X</XMTok>
+                              <XMTok font="italic" role="ID" xml:id="S2.E1.m1.m1.3">X</XMTok>
                               <XMTok role="CLOSE" stretchy="false">)</XMTok>
                             </XMWrap>
                           </XMDual>

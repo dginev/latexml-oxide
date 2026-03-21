@@ -8,11 +8,11 @@
   <para xml:id="p1">
     <p>Expected “<Math mode="inline" tex="\theta" text="theta" xml:id="p1.m1">
         <XMath>
-          <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+          <XMTok font="italic" name="theta" role="ID">θ</XMTok>
         </XMath>
       </Math> Her (catalog HD 163770)”: <text class="ltx_ast_objectname"><Math mode="inline" tex="\theta" text="theta" xml:id="p1.m2">
           <XMath>
-            <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+            <XMTok font="italic" name="theta" role="ID">θ</XMTok>
           </XMath>
         </Math> Her (catalog HD 163770)</text></p>
   </para>

@@ -21,11 +21,11 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="divide" role="MULOP">/</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                    <XMTok font="italic" role="ID">f</XMTok>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
+                      <XMTok font="italic" role="ID">f</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">N</XMTok>
                     </XMApp>
                   </XMApp>
                 </XMath>
@@ -64,14 +64,14 @@
                     <XMWrap>
                       <XMApp xml:id="p1.pic1.m2.1">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">U</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                        <XMTok font="italic" role="ID">U</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">s</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="p1.pic1.m2.2">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok name="varPsi" role="UNKNOWN">Ψ</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                        <XMTok name="varPsi" role="ID">Ψ</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">s</XMTok>
                       </XMApp>
                     </XMWrap>
                   </XMDual>
@@ -90,8 +90,8 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">U</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                    <XMTok font="italic" role="ID">U</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">s</XMTok>
                   </XMApp>
                 </XMath>
               </Math></svg:foreignObject>
@@ -105,8 +105,8 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok name="varPsi" role="UNKNOWN">Ψ</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
+                    <XMTok name="varPsi" role="ID">Ψ</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">s</XMTok>
                   </XMApp>
                 </XMath>
               </Math></svg:foreignObject>

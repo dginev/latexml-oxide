@@ -18,8 +18,8 @@
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
-              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="ID">b</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -217,8 +217,8 @@ vs. <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p1.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                <XMTok font="italic" role="ID">X</XMTok>
+                <XMTok font="italic" role="ID">g</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -233,8 +233,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -254,8 +254,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                   <XMath>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                      <XMTok font="italic" role="ID">X</XMTok>
+                      <XMTok font="italic" role="ID">g</XMTok>
                     </XMApp>
                   </XMath>
                 </Math>
@@ -315,8 +315,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                  <XMTok font="italic" role="ID">X</XMTok>
+                  <XMTok font="italic" role="ID">g</XMTok>
                 </XMApp>
               </XMath>
             </Math>
@@ -332,8 +332,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -390,8 +390,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -403,8 +403,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -416,8 +416,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -429,8 +429,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -442,8 +442,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -455,8 +455,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -468,8 +468,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -481,8 +481,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -494,8 +494,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                    <XMTok font="italic" role="ID">X</XMTok>
+                    <XMTok font="italic" role="ID">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -654,7 +654,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok name="vec" role="OVERACCENT" stretchy="false">→</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                  <XMTok font="italic" role="ID">r</XMTok>
                 </XMApp>
               </XMath>
             </Math>
@@ -664,7 +664,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok name="vec" role="OVERACCENT" stretchy="false">→</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMTok font="italic" role="ID">p</XMTok>
                 </XMApp>
               </XMath>
             </Math>
@@ -687,7 +687,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok name="vec" role="OVERACCENT" stretchy="false">→</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">L</XMTok>
+                  <XMTok font="italic" role="ID">L</XMTok>
                 </XMApp>
               </XMath>
             </Math>
@@ -711,7 +711,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                  <XMTok font="italic" role="ID">F</XMTok>
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="open-interval"/>
@@ -720,9 +720,9 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.F1.pic1.m1.1">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S3.F1.pic1.m1.1">x</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.F1.pic1.m1.2">y</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S3.F1.pic1.m1.2">y</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -753,7 +753,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
           <g class="makebox" innerdepth="1.9pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(-3.64,-4.32)">
             <Math mode="inline" tex="y" text="y" xml:id="S3.F1.pic1.m2">
               <XMath>
-                <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                <XMTok font="italic" role="ID">y</XMTok>
               </XMath>
             </Math>
           </g>
@@ -780,7 +780,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
           <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.7pt" transform="translate(-3.95,-2.98)">
             <Math mode="inline" tex="x" text="x" xml:id="S3.F1.pic1.m5">
               <XMath>
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok font="italic" role="ID">x</XMTok>
               </XMath>
             </Math>
           </g>
@@ -809,7 +809,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
+                  <XMTok font="italic" role="ID">m</XMTok>
                   <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
                 </XMApp>
               </XMath>
@@ -822,7 +822,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
+                  <XMTok font="italic" role="ID">m</XMTok>
                   <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                 </XMApp>
               </XMath>
@@ -835,7 +835,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
+                  <XMTok font="italic" role="ID">m</XMTok>
                   <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMath>
@@ -848,7 +848,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
+                  <XMTok font="italic" role="ID">m</XMTok>
                   <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                 </XMApp>
               </XMath>
@@ -885,7 +885,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m1">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                  <XMTok font="italic" role="ID">s</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -900,7 +900,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(8.5,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m2">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                  <XMTok font="italic" role="ID">E</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -915,7 +915,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(36.12,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="ID">f</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -925,7 +925,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
+                  <XMTok font="italic" role="ID">N</XMTok>
                   <XMTok meaning="32" role="NUMBER">32</XMTok>
                 </XMApp>
               </XMath>
@@ -937,7 +937,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMTok font="italic" role="ID">p</XMTok>
                   <XMTok meaning="24" role="NUMBER">24</XMTok>
                 </XMApp>
               </XMath>
@@ -953,7 +953,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m6">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                  <XMTok font="italic" role="ID">s</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -968,7 +968,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(13.75,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m7">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                  <XMTok font="italic" role="ID">E</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -983,7 +983,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(86.88,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m8">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="ID">f</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -993,7 +993,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
+                  <XMTok font="italic" role="ID">N</XMTok>
                   <XMTok meaning="64" role="NUMBER">64</XMTok>
                 </XMApp>
               </XMath>
@@ -1005,7 +1005,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMTok font="italic" role="ID">p</XMTok>
                   <XMTok meaning="53" role="NUMBER">53</XMTok>
                 </XMApp>
               </XMath>
@@ -1021,7 +1021,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m11">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">s</XMTok>
+                  <XMTok font="italic" role="ID">s</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -1036,7 +1036,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(20.75,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m12">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                  <XMTok font="italic" role="ID">E</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -1051,7 +1051,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(191.89,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m13">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="ID">f</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -1061,7 +1061,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
+                  <XMTok font="italic" role="ID">N</XMTok>
                   <XMTok meaning="128" role="NUMBER">128</XMTok>
                 </XMApp>
               </XMath>
@@ -1073,7 +1073,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
+                  <XMTok font="italic" role="ID">p</XMTok>
                   <XMTok meaning="113" role="NUMBER">113</XMTok>
                 </XMApp>
               </XMath>
@@ -1113,14 +1113,14 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m1.1">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        <XMTok font="italic" role="ID">x</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m1.2">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        <XMTok font="italic" role="ID">y</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -1131,14 +1131,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">w</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                    <XMTok font="italic" role="ID">w</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="center" border="tt" thead="column"><Math mode="inline" tex="R" text="R" xml:id="S4.T1.m3">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">R</XMTok>
+                  <XMTok font="italic" role="ID">R</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -1325,14 +1325,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                    <XMTok font="italic" role="ID">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m6.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m6.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1355,7 +1355,7 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m7.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMTok font="italic" role="ID">h</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m7.1">0</XMTok>
@@ -1390,7 +1390,7 @@ square.</caption>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m9.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMTok font="italic" role="ID">h</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -1574,7 +1574,7 @@ square.</caption>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -1587,7 +1587,7 @@ square.</caption>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1608,14 +1608,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                    <XMTok font="italic" role="ID">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m13.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m13.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1818,14 +1818,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                    <XMTok font="italic" role="ID">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m16.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m16.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                           <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1848,7 +1848,7 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m17.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMTok font="italic" role="ID">h</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m17.1">0</XMTok>
@@ -1870,7 +1870,7 @@ square.</caption>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m18.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMTok font="italic" role="ID">h</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -1908,7 +1908,7 @@ square.</caption>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -1921,7 +1921,7 @@ square.</caption>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2127,14 +2127,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                    <XMTok font="italic" role="ID">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m24.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m24.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                           <XMTok fontsize="70%" meaning="6" role="NUMBER">6</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2168,7 +2168,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="6" role="NUMBER">6</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -2213,7 +2213,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="6" role="NUMBER">6</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -2230,7 +2230,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2451,14 +2451,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                    <XMTok font="italic" role="ID">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m31.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m31.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2481,7 +2481,7 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m32.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMTok font="italic" role="ID">h</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m32.1">0</XMTok>
@@ -2503,7 +2503,7 @@ square.</caption>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m33.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMTok font="italic" role="ID">h</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -2534,12 +2534,12 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m35.1">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMTok font="italic" role="ID">h</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m35.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMTok font="italic" role="ID">h</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -2736,7 +2736,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="3" role="NUMBER">3</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -2753,7 +2753,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="3" role="NUMBER">3</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2774,14 +2774,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                    <XMTok font="italic" role="ID">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m39.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m39.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2993,14 +2993,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                    <XMTok font="italic" role="ID">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m42.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m42.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                           <XMTok fontsize="70%" meaning="6" role="NUMBER">6</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -3033,7 +3033,7 @@ square.</caption>
                               <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
                             </XMApp>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -3066,7 +3066,7 @@ square.</caption>
                               <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
                             </XMApp>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -3108,7 +3108,7 @@ square.</caption>
                               <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
                             </XMApp>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -3124,7 +3124,7 @@ square.</caption>
                               <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
                             </XMApp>
                           </XMApp>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                          <XMTok font="italic" role="ID">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>

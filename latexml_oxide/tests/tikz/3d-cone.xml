@@ -88,7 +88,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">r</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">r</XMTok>
                     <XMTok fontsize="56%" meaning="0" role="NUMBER">0</XMTok>
                   </XMApp>
                 </XMath>
@@ -102,7 +102,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">r</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">r</XMTok>
                     <XMTok fontsize="56%" meaning="1" role="NUMBER">1</XMTok>
                   </XMApp>
                 </XMath>
@@ -114,28 +114,28 @@
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 61.5 35.01)">
             <svg:foreignObject height="7.69" overflow="visible" transform="matrix(1 0 0 -1 0 16.6)" width="6.38"><Math mode="inline" tex="h" text="h" xml:id="p1.pic1.m3">
                 <XMath>
-                  <XMTok font="italic" fontsize="80%" role="UNKNOWN">h</XMTok>
+                  <XMTok font="italic" fontsize="80%" role="ID">h</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 12.58 -41.04)">
             <svg:foreignObject height="5.96" overflow="visible" transform="matrix(1 0 0 -1 0 16.6)" width="7.91"><Math mode="inline" tex="x" text="x" xml:id="p1.pic1.m4">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -3.64 120.18)">
             <svg:foreignObject height="8.65" overflow="visible" transform="matrix(1 0 0 -1 0 16.6)" width="7.28"><Math mode="inline" tex="y" text="y" xml:id="p1.pic1.m5">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="ID">y</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -94.61 -9)">
             <svg:foreignObject height="5.96" overflow="visible" transform="matrix(1 0 0 -1 0 16.6)" width="7.04"><Math mode="inline" tex="z" text="z" xml:id="p1.pic1.m6">
                 <XMath>
-                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                  <XMTok font="italic" role="ID">z</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
@@ -172,7 +172,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok fontsize="80%" meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">i</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">i</XMTok>
                     <XMTok fontsize="80%" meaning="0" role="NUMBER">0</XMTok>
                   </XMApp>
                 </XMath>
@@ -183,7 +183,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok fontsize="80%" meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">i</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">i</XMTok>
                     <XMTok fontsize="80%" meaning="1" role="NUMBER">1</XMTok>
                   </XMApp>
                 </XMath>
@@ -192,7 +192,7 @@
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 102.32 17.62)">
             <svg:foreignObject height="9.45" overflow="visible" transform="matrix(1 0 0 -1 0 16.6)" width="5.19"><Math mode="inline" tex="j" text="j" xml:id="p1.pic1.m9">
                 <XMath>
-                  <XMTok font="italic" fontsize="80%" role="UNKNOWN">j</XMTok>
+                  <XMTok font="italic" fontsize="80%" role="ID">j</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
@@ -201,7 +201,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok fontsize="80%" meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">j</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">j</XMTok>
                     <XMTok fontsize="80%" meaning="1" role="NUMBER">1</XMTok>
                   </XMApp>
                 </XMath>
@@ -219,7 +219,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">P</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">P</XMTok>
                     <XMTok fontsize="56%" meaning="00" role="NUMBER">00</XMTok>
                   </XMApp>
                 </XMath>
@@ -230,7 +230,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">P</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">P</XMTok>
                     <XMTok fontsize="56%" meaning="10" role="NUMBER">10</XMTok>
                   </XMApp>
                 </XMath>
@@ -241,7 +241,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">P</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">P</XMTok>
                     <XMTok fontsize="56%" meaning="01" role="NUMBER">01</XMTok>
                   </XMApp>
                 </XMath>
@@ -252,7 +252,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" fontsize="80%" role="UNKNOWN">P</XMTok>
+                    <XMTok font="italic" fontsize="80%" role="ID">P</XMTok>
                     <XMTok fontsize="56%" meaning="11" role="NUMBER">11</XMTok>
                   </XMApp>
                 </XMath>

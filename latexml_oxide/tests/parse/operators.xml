@@ -267,14 +267,14 @@
                     <XMTok font="italic" role="FUNCTION" xml:id="S1.Ex4.m1.1">f</XMTok>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.2">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex4.m1.2">x</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMApp>
                 </XMDual>
                 <XMApp>
                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -305,14 +305,14 @@
                     <XMTok font="italic" role="FUNCTION" xml:id="S1.Ex5.m1.1">f</XMTok>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.2">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S1.Ex5.m1.2">x</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMApp>
                 </XMDual>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -326,17 +326,17 @@
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMApp>
                 <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMTok font="italic" role="ID">u</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok font="italic" role="ID">y</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -513,7 +513,7 @@
                     <XMTok role="CLOSE" stretchy="false">|</XMTok>
                   </XMWrap>
                 </XMDual>
-                <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
+                <XMTok font="italic" fontsize="70%" name="alpha" role="ID">α</XMTok>
               </XMApp>
               <XMTok font="italic" role="FUNCTION">f</XMTok>
             </XMApp>
@@ -542,17 +542,17 @@
               <XMWrap>
                 <XMApp xml:id="S4.Ex15.m1.2">
                   <XMTok meaning="exists" role="BIGOP">∃</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                 </XMApp>
                 <XMTok role="PERIOD">.</XMTok>
                 <XMApp xml:id="S4.Ex15.m1.3">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">P</XMTok>
+                  <XMTok font="italic" role="ID">P</XMTok>
                   <XMDual>
                     <XMRef idref="S4.Ex15.m1.1"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex15.m1.1">x</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S4.Ex15.m1.1">x</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>

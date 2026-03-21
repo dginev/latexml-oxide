@@ -62,8 +62,8 @@
           <XMApp>
             <XMApp role="DIFFOP">
               <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="UNKNOWN">f</XMTok>
-              <XMTok font="italic" fontsize="70%" role="UNKNOWN">D</XMTok>
+              <XMTok font="italic" role="ID">f</XMTok>
+              <XMTok font="italic" fontsize="70%" role="ID">D</XMTok>
             </XMApp>
             <XMDual>
               <XMApp>
@@ -99,7 +99,7 @@
               </XMApp>
               <XMApp>
                 <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMTok font="italic" role="ID">f</XMTok>
                 <XMTok fontsize="70%" meaning="1" role="NUMBER" xml:id="S0.Ex4.m1.1">1</XMTok>
               </XMApp>
             </XMDual>
@@ -126,7 +126,7 @@
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
             <XMApp role="ID">
               <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-              <XMTok font="italic" role="UNKNOWN">f</XMTok>
+              <XMTok font="italic" role="ID">f</XMTok>
             </XMApp>
             <XMTok font="italic" role="ID">a</XMTok>
           </XMApp>

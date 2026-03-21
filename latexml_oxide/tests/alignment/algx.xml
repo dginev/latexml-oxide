@@ -20,9 +20,9 @@
                 <XMRef idref="algx1.l1.m1.2"/>
               </XMApp>
               <XMWrap>
-                <XMTok font="italic" role="UNKNOWN" xml:id="algx1.l1.m1.1">a</XMTok>
+                <XMTok font="italic" role="ID" xml:id="algx1.l1.m1.1">a</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="UNKNOWN" xml:id="algx1.l1.m1.2">b</XMTok>
+                <XMTok font="italic" role="ID" xml:id="algx1.l1.m1.2">b</XMTok>
               </XMWrap>
             </XMDual>
           </XMath>
@@ -60,9 +60,9 @@
                 <XMRef idref="alg1.l1.m1.2"/>
               </XMApp>
               <XMWrap>
-                <XMTok font="italic" role="UNKNOWN" xml:id="alg1.l1.m1.1">a</XMTok>
+                <XMTok font="italic" role="ID" xml:id="alg1.l1.m1.1">a</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="UNKNOWN" xml:id="alg1.l1.m1.2">b</XMTok>
+                <XMTok font="italic" role="ID" xml:id="alg1.l1.m1.2">b</XMTok>
               </XMWrap>
             </XMDual>
           </XMath>
@@ -79,11 +79,11 @@
           <XMath>
             <XMApp>
               <XMTok name="leftarrow" role="ARROW">←</XMTok>
-              <XMTok font="italic" role="UNKNOWN">r</XMTok>
+              <XMTok font="italic" role="ID">r</XMTok>
               <XMApp>
                 <XMTok meaning="modulo" name="bmod" role="MODIFIEROP">mod</XMTok>
-                <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="ID">a</XMTok>
+                <XMTok font="italic" role="ID">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -96,7 +96,7 @@
           <XMath>
             <XMApp>
               <XMTok meaning="not-equals" name="not-=" role="RELOP">≠</XMTok>
-              <XMTok font="italic" role="UNKNOWN">r</XMTok>
+              <XMTok font="italic" role="ID">r</XMTok>
               <XMTok meaning="0" role="NUMBER">0</XMTok>
             </XMApp>
           </XMath>
@@ -113,8 +113,8 @@
           <XMath>
             <XMApp>
               <XMTok name="leftarrow" role="ARROW">←</XMTok>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
-              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="ID">b</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -126,8 +126,8 @@
           <XMath>
             <XMApp>
               <XMTok name="leftarrow" role="ARROW">←</XMTok>
-              <XMTok font="italic" role="UNKNOWN">b</XMTok>
-              <XMTok font="italic" role="UNKNOWN">r</XMTok>
+              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="ID">r</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -139,11 +139,11 @@
           <XMath>
             <XMApp>
               <XMTok name="leftarrow" role="ARROW">←</XMTok>
-              <XMTok font="italic" role="UNKNOWN">r</XMTok>
+              <XMTok font="italic" role="ID">r</XMTok>
               <XMApp>
                 <XMTok meaning="modulo" name="bmod" role="MODIFIEROP">mod</XMTok>
-                <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="ID">a</XMTok>
+                <XMTok font="italic" role="ID">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -159,7 +159,7 @@
           <tag role="refnum">8</tag>
         </tags>  <text font="bold">return</text> <Math mode="inline" tex="b" text="b" xml:id="alg1.l8.m1">
           <XMath>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
           </XMath>
         </Math><text cssstyle="float:right"><Math mode="inline" tex="\triangleright" text="triangleright" xml:id="alg1.l8.m2">
             <XMath>

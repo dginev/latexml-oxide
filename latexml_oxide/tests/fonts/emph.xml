@@ -53,8 +53,8 @@
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -68,8 +68,8 @@
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
           </XMApp>
         </XMath>
       </Math>

@@ -24,7 +24,7 @@
                   </XMApp>
                   <XMApp>
                     <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
                     <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                   </XMApp>
                 </XMApp>
@@ -32,8 +32,8 @@
               </XMApp>
               <XMApp>
                 <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                <XMTok font="italic" role="UNKNOWN">S</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                <XMTok font="italic" role="ID">S</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -49,11 +49,11 @@
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
                   <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -68,11 +68,11 @@
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
                   <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -87,11 +87,11 @@
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
                   <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -106,11 +106,11 @@
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
                   <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -129,15 +129,15 @@
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -156,15 +156,15 @@
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -183,15 +183,15 @@
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -210,15 +210,15 @@
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -241,15 +241,15 @@
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -267,15 +267,15 @@
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -293,15 +293,15 @@
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="post1">∑</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -319,15 +319,15 @@
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="post1">∑</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -341,18 +341,18 @@
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
                   <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok role="SUBSCRIPTOP" scriptpos="pre2"/>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -367,18 +367,18 @@
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
                   <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -408,21 +408,21 @@
                           <XMApp>
                             <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                             <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="post1">∑</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">f</XMTok>
                           </XMApp>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">g</XMTok>
                         </XMApp>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">e</XMTok>
                       </XMApp>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -446,19 +446,19 @@
                           <XMApp>
                             <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                             <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="post1">∑</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="ID">f</XMTok>
                           </XMApp>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="ID">g</XMTok>
                         </XMApp>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="ID">e</XMTok>
                       </XMApp>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">d</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok role="SUBSCRIPTOP" scriptpos="pre2"/>
@@ -466,12 +466,12 @@
                   <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">k</XMTok>
                   </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
                 </XMApp>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -484,14 +484,14 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="UNKNOWN">u</XMTok>
+              <XMTok font="italic" role="ID">u</XMTok>
               <XMApp scriptpos="mid1">
                 <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
                 <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">e</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">v</XMTok>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="ID">v</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
             </XMApp>
           </XMath>
         </Math>

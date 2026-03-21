@@ -24,7 +24,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1.1">x</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S0.Ex1.m1.1.1">x</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
@@ -53,7 +53,7 @@
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.1.1">x</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S0.Ex2.m1.1.1">x</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -74,7 +74,7 @@
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2.1">x</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S0.Ex2.m1.2.1">x</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -103,7 +103,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="p2.m1.1.1">x</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="p2.m1.1.1">x</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
@@ -128,7 +128,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="p2.m2.1.1">x</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="p2.m2.1.1">x</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
