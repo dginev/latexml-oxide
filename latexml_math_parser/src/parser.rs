@@ -211,6 +211,9 @@ impl MathParser {
       // ($$self{maybe_functions}{$_}/$$self{unknowns}{$_} usages)" }
       // sort @funcs) . "\n"); }
 
+      // Note: ltx_math_unparsed class is NOT applied here because any DOM
+      // manipulation (findnodes/set_attribute) after parse_math breaks Marpa
+      // grammar precomputation for subsequent test runs. Applied in caller instead.
       note_end("Math Parsing");
     }
     Ok(())
@@ -256,6 +259,11 @@ impl MathParser {
   //   return; }
 
   // ================================================================================
+  /// Returns the number of XMath parse failures (for post-parse ltx_math_unparsed marking)
+  pub fn xmath_failures(&self) -> usize {
+    *self.failed.get_sym(arena::pin_static("ltx:XMath")).unwrap_or(&0)
+  }
+
   pub fn clear(&mut self) {
     self.passed = sym_map!("ltx:XMath" => 0, "ltx:XMArg" => 0, "ltx:XMWrap" => 0);
     self.failed = sym_map!("ltx:XMath" => 0,"ltx:XMArg" => 0, "ltx:XMWrap" => 0 );
@@ -468,8 +476,8 @@ impl MathParser {
       }
       Ok(Some(result))
     } else {
-      // TODO: Add ltx_math_unparsed class to Math element when parse fails
-      // self.parse_kludge(node, document);
+      // Parse failed — track for ltx_math_unparsed class (applied post-parse)
+      *self.failed.entry_sym(tag).or_insert(0) += 1;
       Ok(None)
     }
   }

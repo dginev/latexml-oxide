@@ -262,6 +262,8 @@ impl DigestionAPI for Core {
     if !state::get_nomathparse_flag() {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
+      // TODO: ltx_math_unparsed class — need to store failing XMath node IDs during parsing
+      // and use them for targeted class addition. XPath heuristics are too broad.
     }
 
     note_begin("Finalizing");
