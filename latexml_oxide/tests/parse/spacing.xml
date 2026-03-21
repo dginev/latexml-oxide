@@ -77,7 +77,7 @@
   </para>
   <para xml:id="p3">
     <equation xml:id="S0.Ex5">
-      <Math mode="display" tex="\int_{0}^{\infty}f(x)dx" text="((integral _ 0) ^ infinity)@(f * x * differential-d@(x))" xml:id="S0.Ex5.m1">
+      <Math mode="display" tex="\int_{0}^{\infty}f(x)dx" text="((integral _ 0) ^ infinity)@(f@(x) * differential-d@(x))" xml:id="S0.Ex5.m1">
         <XMath>
           <XMApp>
             <XMApp>
@@ -91,15 +91,17 @@
             </XMApp>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" possibleFunction="yes" role="UNKNOWN">f</XMTok>
-              <XMDual>
-                <XMRef idref="S0.Ex5.m1.1"/>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.1">x</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                </XMWrap>
-              </XMDual>
+              <XMApp>
+                <XMTok font="italic" possibleFunction="yes" role="UNKNOWN">f</XMTok>
+                <XMDual>
+                  <XMRef idref="S0.Ex5.m1.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.1">x</XMTok>
+                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
               <XMApp>
                 <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -110,7 +112,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex6">
-      <Math mode="display" tex="\int_{0}^{\infty}f(x)\,dx" text="((integral _ 0) ^ infinity)@(f * x * differential-d@(x))" xml:id="S0.Ex6.m1">
+      <Math mode="display" tex="\int_{0}^{\infty}f(x)\,dx" text="((integral _ 0) ^ infinity)@(f@(x) * differential-d@(x))" xml:id="S0.Ex6.m1">
         <XMath>
           <XMApp>
             <XMApp>
@@ -124,15 +126,17 @@
             </XMApp>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" possibleFunction="yes" role="UNKNOWN">f</XMTok>
-              <XMDual>
-                <XMRef idref="S0.Ex6.m1.1"/>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex6.m1.1">x</XMTok>
-                  <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
-                </XMWrap>
-              </XMDual>
+              <XMApp>
+                <XMTok font="italic" possibleFunction="yes" role="UNKNOWN">f</XMTok>
+                <XMDual>
+                  <XMRef idref="S0.Ex6.m1.1"/>
+                  <XMWrap>
+                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex6.m1.1">x</XMTok>
+                    <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                  </XMWrap>
+                </XMDual>
+              </XMApp>
               <XMApp>
                 <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -164,7 +168,7 @@
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMApp rpadding="1.7pt">
+            <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
               <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>

@@ -127,7 +127,6 @@ fn sets_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn spacing_test() {
   latexml_test_single("tests/parse/spacing.tex", "spacing", DIR, None, None);
 }
