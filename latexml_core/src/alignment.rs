@@ -502,11 +502,6 @@ impl BoxOps for Alignment {
       for before in row.before.iter() {
         document.absorb(before, None)?;
       }
-      // Pre-extract row backgroundcolor from \rowcolor
-      // Check row properties (set during digestion if alignment_cell was accessible)
-      // Also check first cell's backgroundcolor (set by \@setcellcolor from row's \@userowcolor)
-      let row_bg = row.properties.get("backgroundcolor")
-        .and_then(|v| if let Stored::String(s) = v { Some(crate::common::arena::with(*s, |s| s.to_string())) } else { None });
       for cell in row.get_columns_mut() {
         if cell.skipped {
           continue;
@@ -539,11 +534,8 @@ impl BoxOps for Alignment {
         if let Some(vpad) = vpad_opt {
           cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
         }
-        // colortbl: backgroundcolor from \columncolor/\cellcolor (per-cell)
-        // or from \rowcolor (per-row)
+        // colortbl: backgroundcolor from \columncolor/\cellcolor
         if let Some(ref bg) = cell.backgroundcolor {
-          cell_attrs.insert(String::from("backgroundcolor"), bg.clone());
-        } else if let Some(ref bg) = row_bg {
           cell_attrs.insert(String::from("backgroundcolor"), bg.clone());
         }
         // Perl: colspan/rowspan attributes for spanning cells
