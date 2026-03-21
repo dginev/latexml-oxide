@@ -577,7 +577,7 @@ impl BoxOps for Alignment {
               if template_has_fill(&cell.before) { threshold_02em } else { 0 }
             });
           // Perl: $rpad = ($$cell{rspaces} ? $$cell{rspaces}->getWidth->valueOf : 0)
-          // When rspaces is not extracted, check template for \lx@intercol.
+          // When rspaces is not extracted, check template for fill/intercol tokens.
           // Present → regular column with tabcolsep padding (assume >= 0.2em)
           // Absent → @{} disabled intercolumn (assume 0, enabling ltx_nopad_r)
           let rpad = cell
@@ -814,6 +814,22 @@ fn template_has_fill(tokens: &Option<Tokens>) -> bool {
     for tok in toks.unlist_ref() {
       let s = tok.to_string();
       if s == "\\hfil" || s == "\\hfill" || s == "\\hskip" || s == "\\lx@intercol" {
+        return true;
+      }
+    }
+  }
+  false
+}
+
+/// Check if template tokens contain \lx@intercol (intercolumn spacing).
+/// Unlike template_has_fill, this ignores \hfil/\hfill which are alignment fill.
+/// Currently unused: \lx@intercol is lost from cell.after between template build
+/// and normalize time. Use has_intercol_after flag when this is fixed.
+#[allow(dead_code)]
+fn template_has_intercol(tokens: &Option<Tokens>) -> bool {
+  if let Some(ref toks) = tokens {
+    for tok in toks.unlist_ref() {
+      if tok.to_string() == "\\lx@intercol" {
         return true;
       }
     }
