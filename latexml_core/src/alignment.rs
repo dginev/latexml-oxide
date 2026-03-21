@@ -577,10 +577,11 @@ impl BoxOps for Alignment {
           let threshold_15em: i64 = 983040;
           // Perl: $lpad = ($$cell{lspaces} ? $$cell{lspaces}->getWidth->valueOf : 0)
           // Note: In Perl, lspaces is populated from \lx@intercol (isSpace, width=tabcolsep)
-          // during cell content extraction. Even @{} columns get lspaces from the template's
-          // \lx@intercol inserted before the column. When Rust's extraction doesn't populate
-          // lspaces, we approximate: if template has fill commands (\hfil etc), assume spacing
-          // exists (prevents incorrect ltx_nopad_l for centered/right-aligned columns).
+          // during cell content extraction. Rust doesn't populate lspaces, so we approximate:
+          // - If template has \lx@intercol → there IS intercolumn padding (assume 0.2em)
+          // - Else if template has \hfil/\hfill → centering fill, treat as padding (prevents
+          //   incorrect ltx_nopad_l for regular centered/right-aligned columns)
+          // - Else → no padding (assume 0, enables ltx_nopad_l)
           let lpad = cell
             .lspaces
             .as_ref()
@@ -590,16 +591,27 @@ impl BoxOps for Alignment {
               if template_has_fill(&cell.before) { threshold_02em } else { 0 }
             });
           // Perl: $rpad = ($$cell{rspaces} ? $$cell{rspaces}->getWidth->valueOf : 0)
-          // When rspaces is not extracted, check template for fill/intercol tokens.
-          // Present → regular column with tabcolsep padding (assume >= 0.2em)
-          // Absent → @{} disabled intercolumn (assume 0, enabling ltx_nopad_r)
+          // When rspaces is not extracted, check template for intercolumn spacing.
+          // Key insight: @{}c@{} columns have \hfil (centering) but NO \lx@intercol.
+          // Regular columns have \lx@intercol in before OR after tokens.
+          // Use \lx@intercol presence as the primary signal for padding.
           let rpad = cell
             .rspaces
             .as_ref()
             .and_then(|rs| rs.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              if template_has_fill(&cell.after) { threshold_02em } else { 0 }
+              // Check after tokens first (direct intercol signal)
+              if template_has_intercol(&cell.after) {
+                threshold_02em
+              // If no intercol in after, check before: if before has intercol,
+              // this is a regular column (last column or similar) — assume padding
+              } else if template_has_intercol(&cell.before) {
+                if template_has_fill(&cell.after) { threshold_02em } else { 0 }
+              // Neither before nor after has intercol → @{} on both sides → no padding
+              } else {
+                0
+              }
             });
           if (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
@@ -820,8 +832,9 @@ pub fn matrix_template() -> Template {
 // recognize groups of header lines and groups data lines, possibly alternating.
 
 /// Check whether a template token list contains fill/spacing commands
-/// like \hfil, \hfill, \hskip, \lx@intercol. Used as a fallback when
-/// lspaces extraction missed the template spacing.
+/// like \hfil, \hfill, \hskip, \lx@intercol. Previously used as fallback
+/// for lpad/rpad; now superseded by template_has_intercol for better @{} handling.
+#[allow(dead_code)]
 fn template_has_fill(tokens: &Option<Tokens>) -> bool {
   if let Some(ref toks) = tokens {
     for tok in toks.unlist_ref() {
@@ -836,9 +849,8 @@ fn template_has_fill(tokens: &Option<Tokens>) -> bool {
 
 /// Check if template tokens contain \lx@intercol (intercolumn spacing).
 /// Unlike template_has_fill, this ignores \hfil/\hfill which are alignment fill.
-/// Currently unused: \lx@intercol is lost from cell.after between template build
-/// and normalize time. Use has_intercol_after flag when this is fixed.
-#[allow(dead_code)]
+/// \lx@intercol indicates actual intercolumn padding; \hfil is just centering.
+/// For @{}c@{} columns, \lx@intercol is disabled but \hfil remains.
 fn template_has_intercol(tokens: &Option<Tokens>) -> bool {
   if let Some(ref toks) = tokens {
     for tok in toks.unlist_ref() {
