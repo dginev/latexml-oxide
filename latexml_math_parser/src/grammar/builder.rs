@@ -154,6 +154,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | expression addop term elideop => infix_apply_and_elide
       | addop tight_term => prefix_apply
       | factor addop => postfix_apply
+      | expression addop => postfix_apply
       // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
       // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
       | expression modifierop expression => infix_apply;
