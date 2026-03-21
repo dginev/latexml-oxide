@@ -1084,14 +1084,16 @@ LoadDefinitions!({
     None,
   )?;
 
-  // \rowcolor{color} — simplified stub
-  DefPrimitive!("\\rowcolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let spec_str = do_expand(spec)?.to_string();
-    let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
-    merge_font(fontmap!(bg => color));
-    Ok(Vec::new())
-  });
+  // \rowcolor — only define stub if colortbl not loaded
+  if !has_meaning(&T_CS!("\\rowcolor")) {
+    DefPrimitive!("\\rowcolor[]{}", sub[(model_opt, spec)] {
+      let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+      let spec_str = do_expand(spec)?.to_string();
+      let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
+      merge_font(fontmap!(bg => color));
+      Ok(Vec::new())
+    });
+  }
 
   // \columncolor — only define stub if colortbl not loaded.
   // When colortbl IS loaded, its \columncolor definition handles \@setcellcolor.

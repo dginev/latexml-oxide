@@ -17,12 +17,11 @@ LoadDefinitions!({
   // DefPrimitive('\@clearrowcolor', sub {
   //   MergeFont(background => undef);
   //   AssignValue(tabular_row_color => undef, 'global'); });
-  DefPrimitive!("\\@clearrowcolor", sub [_args] {
-    // Clear background color from font
-    // Perl: MergeFont(background => undef) — sets bg to undef in font hash
+  DefPrimitive!("\\lxclearrowcolor", sub [_args] {
     merge_font(Font { bg: None, ..Font::default() });
     state::assign_value("tabular_row_color", Stored::None, Some(Scope::Global));
   });
+  RawTeX!(r"\let\@clearrowcolor\lxclearrowcolor");
 
   // AddToMacro('\@tabular@row@after', '\lx@hidden@noalign{\@clearrowcolor}');
   RawTeX!(r"\expandafter\def\expandafter\@tabular@row@after\expandafter{\@tabular@row@after\lx@hidden@noalign{\@clearrowcolor}}");
@@ -34,13 +33,13 @@ LoadDefinitions!({
   // DefPrimitive('\@userowcolor', sub {
   //   if (my $rc = LookupValue('tabular_row_color')) {
   //     MergeFont(background => $rc); } });
-  DefPrimitive!("\\@userowcolor", sub [_args] {
+  // Use name without @ for compile-time tokenization, then alias at runtime
+  DefPrimitive!("\\lxuserowcolor", sub [_args] {
     if let Some(Stored::String(sym)) = state::lookup_value("tabular_row_color") {
       let color_str = arena::with(sym, |s| s.to_string());
       if let Some(c) = latexml_core::common::color::Color::from_stored(&color_str) {
         merge_font(fontmap!(bg => c));
         // Also propagate to cell's backgroundcolor attribute
-        // (same mechanism as \@setcellcolor)
         if let Some(alignment) = lookup_alignment() {
           if let Some(data) = alignment.alignment_cell() {
             let mut data_lock = data.borrow_mut();
@@ -52,6 +51,7 @@ LoadDefinitions!({
       }
     }
   });
+  RawTeX!(r"\let\@userowcolor\lxuserowcolor");
 
   // \columncolor, \cellcolor, \rowcolor — set background color.
   // Must use RawTeX! because the compile-time proc macro tokenizer treats @ as "other",
@@ -79,7 +79,7 @@ LoadDefinitions!({
   // \@setrowcolor — store row background color during digestion.
   // Sets tabular_row_color state value and stores bg on alignment row properties.
   // The backgroundcolor is applied to <tr> during row absorption.
-  DefPrimitive!("\\@setrowcolor", sub[_args] {
+  DefPrimitive!("\\lxsetrowcolor", sub[_args] {
     if let Some(font) = lookup_font() {
       if let Some(bg) = font.get_background() {
         let bg_str = bg.to_attribute();
@@ -92,11 +92,12 @@ LoadDefinitions!({
     }
     Ok(())
   });
+  RawTeX!(r"\let\@setrowcolor\lxsetrowcolor");
 
   // \@setcellcolor — store cell background color during digestion.
   // Uses DefPrimitive to capture background at digestion time (when font is set).
   // The backgroundcolor is stored on the alignment cell and applied to <td> during absorption.
-  DefPrimitive!("\\@setcellcolor", sub[_args] {
+  DefPrimitive!("\\lxsetcellcolor", sub[_args] {
     if let Some(font) = lookup_font() {
       if let Some(bg) = font.get_background() {
         let bg_str = bg.to_attribute();
@@ -112,6 +113,7 @@ LoadDefinitions!({
     }
     Ok(())
   });
+  RawTeX!(r"\let\@setcellcolor\lxsetcellcolor");
 
   // \arrayrulecolor, \doublerulesepcolor — ignore
   DefMacro!("\\arrayrulecolor[]{}", None);
