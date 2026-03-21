@@ -388,7 +388,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 17: CRITICAL FIX: Whatsit::get_arg() uses 1-based indexing, fixed 0-based usage in \turnbox/{turn}/{rotate}/\lx@diagheads. Diaghead now produces correct <picture> with <line>, <g> elements. Added {rotatebox} environment definition.
+**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 17: CRITICAL FIX: get_arg() 1-based indexing. Diaghead picture+line+g. {rotatebox} env. Multirow DefMacro split + vattach fix. Grammar: `expression addop => postfix_apply`, `term += elideop`. eqnarray 222→123, sideset 481→336.
 
 ### Completed items
 
@@ -435,12 +435,12 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [x] **30. amsdisplay_test** (56_ams) — DONE (was 842). Ported subequations counter save/restore, multline tex= via setBody. 3 minor diffs accepted (same as amsarticle).
 - [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
-- [ ] **32. sideset_test** (56_ams) — 481 diffs (was DOM corruption). Fixed append_tree instead of unlink+add_child for DOM corruption. All \sideset equations have correct ∑ XMTok. Remaining: "Classic" section ({}_a^b\sum) floating scripts + text= diffs.
+- [ ] **32. sideset_test** (56_ams) — 336 diffs (was 481, DOM corruption). Fixed append_tree. Grammar rules helped (-145). Remaining: "Classic" section ({}_a^b\sum) floating scripts + 8 unparsed expressions.
 
 ### Tier 3: Needs package bindings (moderate effort)
 
 - [ ] **12. stmaryrd_test** (22_fonts) — 1007 diffs (was 1449). Ported stmaryrd.sty, fixed FontDirective Display. Remaining: mostly XMDual + math parser text= diffs.
-- [ ] **33. cd_test** (56_ams) — 175 diffs (was PANIC). No longer crashes after replace_tree fix.
+- [ ] **33. cd_test** (56_ams) — 146 diffs (was 175, was PANIC). postfix_apply grammar rule helped. Remaining: XMDual nesting for \operatorname, XMWrap ARROW.
 - [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
