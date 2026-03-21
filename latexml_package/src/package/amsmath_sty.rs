@@ -1332,8 +1332,12 @@ fn sideset_wrap_impl(
   document.open_element("ltx:XMTok", Some(tok_attrs), None)?;
   document.close_element("ltx:XMTok")?;
   // Perl: $new->appendChild($node) — move existing node into current element (XMApp)
-  inner.unlink_node();
-  document.get_node_mut().add_child(&mut inner)?;
+  // Use append_tree to properly recreate the node tree (avoids libxml DOM corruption
+  // from unlink_node + add_child on detached nodes).
+  let inner_children = vec![inner.clone()];
+  let mut current = document.get_node().clone();
+  document.append_tree(&mut current, inner_children)?;
+  document.remove_node(inner);
   // Perl: $document->insertElement('ltx:XMWrap', $script->getArg(1))
   document.open_element("ltx:XMWrap", None, None)?;
   if let DigestedData::Whatsit(ref w) = script.data() {
