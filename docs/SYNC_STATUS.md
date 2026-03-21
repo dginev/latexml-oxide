@@ -422,7 +422,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
-- [ ] **25. cells_test** (53_alignment) — 369 diffs (was stack overflow). Ported makecell.sty, fixed \rothead recursion, implemented Pair parameter type.
+- [ ] **25. cells_test** (53_alignment) — 548 diffs (was 780, was stack overflow). Fixed guessTableHeaders false positive (GUESS_TABULAR_HEADERS=false check). Remaining: \rothead rotation, \diaghead picture, ltx_nopad_r padding, multirow.
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 596 diffs. `\begingroup` in `\csname..\endcsname`.
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
@@ -435,7 +435,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [x] **30. amsdisplay_test** (56_ams) — DONE (was 842). Ported subequations counter save/restore, multline tex= via setBody. 3 minor diffs accepted (same as amsarticle).
 - [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
-- [ ] **32. sideset_test** (56_ams) — 59 line mismatch, 0 per-line diffs (was 315). Full \sideset port with sideset_construct/sideset_wrap_impl. All sideset equations match. Remaining: "Classic" section ({}_a^b\sum) needs deeper floating script nesting.
+- [ ] **32. sideset_test** (56_ams) — 481 diffs (was DOM corruption). Fixed append_tree instead of unlink+add_child for DOM corruption. All \sideset equations have correct ∑ XMTok. Remaining: "Classic" section ({}_a^b\sum) floating scripts + text= diffs.
 
 ### Tier 3: Needs package bindings (moderate effort)
 
@@ -496,7 +496,8 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 
 ### Tier 5: Math parser tests (active research, Marpa grammar)
 
-- [ ] **47. 40_math suite** (40_math) — not_test 226→77 (Unicode \not fix + child fix). arrows 69→73 (ARROW tokenization). choose 117 (XMDual now produced).
+- [x] **46. choose_test** (40_math) — DONE. Fixed \lx@generalized@over delimiter digestion (rewrite \lx@right/\lx@left to \@right/\@left before stomach::digest to avoid egroup semantics). 0 diffs.
+- [ ] **47. 40_math suite** (40_math) — niceunits 405→38 (nicefrac+units.sty ports, remaining: slash font). not 150 (needs Rewrite system for \not). arrows 146 (multirelation structure). testscripts 124 (nested \mathop Marpa RESET).
 - [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES, terms PASSES (juxtaposition-binds-tighter accepted). compose 12 (OPFUNCTION barearg + lxDeclare fix; remaining: f∘sin x composition scoping). function_argument_syntax 27 (sin π×x multi-function chain — parser fails). scripts/testscripts/arrows/not ~74 each (parser structural).
 - [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
