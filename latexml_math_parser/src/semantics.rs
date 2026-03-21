@@ -1471,23 +1471,6 @@ fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
   }
 }
 
-/// Check if an XM tree node is a pure INTEGER number (for mixed fraction detection).
-/// Returns false for decimals like "12.0" — only pure integers qualify for mixed fractions.
-fn is_pure_integer_xm(xm: &Option<XM>) -> bool {
-  match xm {
-    Some(XM::Token(props, _)) => {
-      props.role.as_deref() == Some("NUMBER")
-        && props.meaning.as_ref().map_or(true, |m| !m.contains('.'))
-        && props.content.as_ref().map_or(true, |c| !c.contains('.'))
-    },
-    Some(XM::Lexeme(lex, _)) => {
-      lex.starts_with("NUMBER:") && !lex.contains('.')
-    },
-    None => true, // absent args are OK
-    _ => false,
-  }
-}
-
 fn is_number(xm: &Option<XM>) -> bool {
   match xm {
     Some(XM::Token(props, _)) => props.role.as_deref() == Some("NUMBER"),
