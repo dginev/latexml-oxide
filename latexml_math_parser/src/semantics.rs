@@ -413,7 +413,8 @@ pub fn infix_relation(
           )))
         }
       } else if let XM::Lexeme(ref lex, ref _left_meta) = *op.0 {
-        if lex.split(':').next().unwrap().contains("RELOP") {
+        let first_part = lex.split(':').next().unwrap();
+        if first_part.contains("RELOP") || first_part.contains("ARROW") {
           // first multirelation need is here.
           let multirel_tok = XProps {
             meaning: Some(Cow::Borrowed("multirelation")),

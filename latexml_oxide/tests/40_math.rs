@@ -20,7 +20,6 @@ fn array_newline_math_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn arrows_test() {
   latexml_test_single("tests/math/arrows.tex", "arrows", DIR, None, None);
 }
