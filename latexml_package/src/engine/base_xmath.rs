@@ -1018,13 +1018,15 @@ LoadDefinitions!({
   //  left  : TeX code for left of cases
   //  right  : TeX code for right
 
-  // Perl: \lx@cases@condition — wraps 2nd column in <ltx:XMText> for text-mode conditions
-  // TODO: needs captureBody support
-  // DefConstructorI('\lx@cases@condition', undef,
-  //   "<ltx:XMText>#body</ltx:XMText>",
-  //   alias => '', beforeDigest => sub { $_[0]->beginMode('text'); }, captureBody => 1);
-  // DefConstructorI('\lx@cases@end@condition', undef, "", alias => '',
-  //   beforeDigest => sub { $_[0]->endMode('text'); });
+  // Perl: \lx@cases@condition — switches to text mode for condition column
+  // The captureBody mechanism wraps content in <ltx:XMText>.
+  // Simplified: just switch mode, let the constructor template handle XMText.
+  DefPrimitive!("\\lx@cases@condition", sub[_args] {
+    let _ = begin_mode("restricted_horizontal");
+  });
+  DefPrimitive!("\\lx@cases@end@condition", sub[_args] {
+    let _ = end_mode("restricted_horizontal");
+  });
 
   // Perl: Base_XMath.pool.ltxml line 701
   DefPrimitive!("\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
@@ -1056,8 +1058,8 @@ LoadDefinitions!({
     if _condtext {
       // Perl: before => Tokens($style, T_CS('\lx@cases@condition'))
       // Perl: after  => Tokens(T_CS('\lx@column@trimright'), T_CS('\lx@cases@end@condition'), T_CS('\hfil'))
-      // TODO: \lx@cases@condition not yet implemented
-      let _ = (&mut before2, &mut after2); // suppress unused warnings
+      before2.push(T_CS!("\\lx@cases@condition"));
+      after2 = vec![T_CS!("\\lx@column@trimright"), T_CS!("\\lx@cases@end@condition"), T_CS!("\\hfil")];
     }
 
     let col2 = Cell {
@@ -1179,24 +1181,56 @@ pub fn close_math_fork(
     let mut tex_parts: Vec<String> = Vec::new();
     let tds = document.findnodes("descendant::ltx:td", Some(branch));
     for td in &tds {
-      let maths = document.findnodes("ltx:Math[@tex]", Some(td));
-      if !maths.is_empty() {
-        for math in maths {
-          if let Some(tex) = math.get_attribute("tex") {
-            tex_parts.push(tex);
-          }
+      // Collect ALL content from the td: text nodes, Math[@tex], text[@class=ltx_markedasmath]
+      // Perl's MathWhatsit captures reversion of all cell content in order.
+      let mut cell_parts: Vec<String> = Vec::new();
+      for child in td.get_child_nodes() {
+        match child.get_type() {
+          Some(NodeType::TextNode) => {
+            let content = child.get_content();
+            let trimmed = content.trim();
+            if !trimmed.is_empty() {
+              cell_parts.push(trimmed.to_string());
+            }
+          },
+          Some(NodeType::ElementNode) => {
+            let name = child.get_name();
+            if name == "Math" || name == "math" {
+              if let Some(tex) = child.get_attribute("tex") {
+                cell_parts.push(tex);
+              }
+            } else if name == "text" {
+              let class = child.get_attribute("class").unwrap_or_default();
+              if class.contains("ltx_markedasmath") {
+                let content = child.get_content();
+                let content = content.trim();
+                if !content.is_empty() {
+                  cell_parts.push(format!("\\mbox{{{content}}}"));
+                }
+              } else {
+                // Plain text element — include content
+                let content = child.get_content();
+                let content = content.trim();
+                if !content.is_empty() {
+                  cell_parts.push(content.to_string());
+                }
+              }
+            }
+            // Skip other element types (p wrappers etc) — descend into them
+            else if name == "p" || name == "para" {
+              let inner_maths = document.findnodes("ltx:Math[@tex]", Some(&child));
+              for math in inner_maths {
+                if let Some(tex) = math.get_attribute("tex") {
+                  cell_parts.push(tex);
+                }
+              }
+            }
+          },
+          _ => {},
         }
-      } else {
-        // No Math element — check for text content (from \mbox in eqnarray cells)
-        // Perl's MathWhatsit captures reversion of all cell content including \mbox
-        let texts = document.findnodes("ltx:text[@class='ltx_markedasmath']", Some(td));
-        for text in &texts {
-          let content = text.get_content();
-          let content = content.trim();
-          if !content.is_empty() {
-            tex_parts.push(format!("\\mbox{{{content}}}"));
-          }
-        }
+      }
+      if !cell_parts.is_empty() {
+        tex_parts.push(cell_parts.join(""));
       }
     }
     if !tex_parts.is_empty() {

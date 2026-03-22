@@ -926,11 +926,10 @@ LoadDefinitions!({
   // Perl: amsmath.sty.ltxml L1155 — \And for multi-author
   DefMath!("\\And", "&", role => "ADDOP", meaning => "and");
 
-  // Perl: amsmath.sty.ltxml L1156-1157 — modular arithmetic
+  // Perl: amsmath.sty.ltxml L1154-1157 — modular arithmetic
+  // \bmod and \pmod are "already in LaTeX" (plain.rs) — do NOT redefine here
   DefMath!("\\mod", "mod", role => "MODIFIEROP", meaning => "modulo");
   DefMath!("\\pod{}", "(#1)", role => "MODIFIER", meaning => "modulo");
-  DefMath!("\\pmod{}", "(mod\u{2062}#1)", role => "MODIFIER", meaning => "modulo");
-  DefMath!("\\bmod", "mod", role => "MODIFIEROP", meaning => "modulo");
 
   // Perl: amsmath.sty.ltxml L1243-1250 — multiple integrals
   DefMath!("\\iint", "\u{222C}", role => "INTOP", meaning => "double-integral",

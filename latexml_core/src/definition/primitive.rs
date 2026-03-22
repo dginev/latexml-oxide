@@ -99,7 +99,7 @@ impl Definition for Primitive {
         let cs_token = self
           .alias
           .as_ref()
-          .map(|alias| T_CS!(alias))
+          .map(|alias| Token::from(alias.as_str()))
           .unwrap_or(self.cs);
         let box_tokens = vec![cs_token];
         if let Some(ref _params) = self.paramlist {
@@ -122,7 +122,7 @@ impl Definition for Primitive {
         let cs_token = self
           .alias
           .as_ref()
-          .map(|alias| T_CS!(alias))
+          .map(|alias| Token::from(alias.as_str()))
           .unwrap_or(self.cs);
         let box_tokens = vec![cs_token];
         // TODO: add revert_arguments for ArgWrap type when needed

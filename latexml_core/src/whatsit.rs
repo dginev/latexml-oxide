@@ -327,7 +327,10 @@ impl Object for Whatsit {
       None => {
         if let Some(alias) = defn.get_alias() {
           if !alias.is_empty() {
-            tokens.push(T_CS!(alias));
+            // Use From<&str> which maps single characters to their proper catcodes
+            // (e.g. "$" -> T_MATH!(), "{" -> T_BEGIN!(), etc.)
+            // This matches Perl's coerceCS which calls TokenizeInternal for single chars.
+            tokens.push(Token::from(alias.as_str()));
           }
         } else {
           tokens.push(defn.get_cs().into_owned());

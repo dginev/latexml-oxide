@@ -40,7 +40,9 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
           props.insert(String::from("xml:id"), id.to_string());
         }
       }
-      props.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
+      // Perl: %attributes has class => 'ltx_eqn_numcases' which overrides
+      // the openContainer's default class. Use 'ltx_eqn_numcases' directly.
+      props.entry(String::from("class")).or_insert_with(|| String::from("ltx_eqn_numcases"));
       document.open_element("ltx:equationgroup", Some(props), None).map(Option::Some)
     }),
     close_container: Rc::new(|document| document.close_element("ltx:equationgroup")),
@@ -92,19 +94,43 @@ LoadDefinitions!({
     "\\@numcases@bindings{#1}\\lx@numcases@subnumbering@begin\\@@numcases\\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\\lx@begin@alignment\\@numcases@LHS");
   DefMacro!("\\endsubnumcases", "\\lx@end@alignment\\end@numcases\\lx@numcases@subnumbering@end");
 
-  // Sub-numbering: simplified — step, save, reset, restore
+  // Sub-numbering: step parent equation, save counter, reset, redefine \theequation
+  // Perl: cases.sty.ltxml L57-64
   DefPrimitive!("\\lx@numcases@subnumbering@begin", sub[_args] {
-    let _eqn = ref_step_counter("equation", false)?;
-    // Save and reset equation counter
-    if let Ok(Some(saved)) = lookup_register("\\c@equation", Vec::new()) {
-      state::assign_value("SAVED_EQUATION_NUMBER", Stored::from(saved), None);
+    use latexml_core::binding::counter::dialect::reset_counter;
+    use latexml_core::mouth;
+    // Step the equation counter and get properties (id, refnum)
+    let eqn_props = ref_step_counter("equation", false)?;
+    // Expand \theequation to get the parent equation number text (e.g. "3")
+    let eqnum_toks = gullet::do_expand(T_CS!("\\theequation"))?;
+    let eqnum_str = eqnum_toks.to_string();
+    // Save current equation counter value
+    let saved = state::lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
+      match rv {
+        RegisterValue::Number(n) => n.0,
+        _ => 0,
+      }
+    });
+    state::assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), Some(Scope::Global));
+    // Reset equation counter to 0 for sub-lettering
+    reset_counter(&T_OTHER!("equation"))?;
+    // Redefine \theequation to parent_number + \alph{equation} (e.g. "3a", "3b")
+    let new_theequation = format!("{}\\alph{{equation}}", eqnum_str);
+    def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
+    // Redefine \theequation@ID for xml:id generation (e.g. "S0.E3.\@equation@ID")
+    let id_str = eqn_props.iter().find_map(|(k, v)| {
+      let ks = arena::to_string(*k);
+      if ks == "id" { Some(v.to_string()) } else { None }
+    }).unwrap_or_default();
+    if !id_str.is_empty() {
+      let new_id_macro = format!("{}.\\@equation@ID", id_str);
+      def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(&new_id_macro), None)?;
     }
-    state::assign_register("\\c@equation", RegisterValue::Number(Number::new(0)), None, Vec::new())?;
   });
   DefPrimitive!("\\lx@numcases@subnumbering@end", sub[_args] {
     // Restore saved equation counter
     if let Some(Stored::Number(n)) = state::lookup_value("SAVED_EQUATION_NUMBER") {
-      let _ = state::assign_register("\\c@equation", RegisterValue::Number(n), None, Vec::new());
+      let _ = state::assign_register("\\c@equation", RegisterValue::Number(n), Some(Scope::Global), Vec::new());
     }
   });
 
