@@ -39,7 +39,7 @@
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">×</XMTok>
                     <XMTok meaning="absent"/>
-                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   </XMApp>
                 </XMath>
               </Math></p>
@@ -56,7 +56,7 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="BINOP" stretchy="false">|</XMTok>
-                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   </XMApp>
                 </XMath>
               </Math></p>
@@ -127,9 +127,9 @@
                           <XMWrap>
                             <XMApp xml:id="S1.I1.i6.p1.m1.3">
                               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                              <XMTok font="italic" role="ID">x</XMTok>
-                              <XMTok font="italic" role="ID">y</XMTok>
-                              <XMTok font="italic" role="ID">z</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">z</XMTok>
                             </XMApp>
                             <XMTok role="CLOSE" stretchy="true">|</XMTok>
                           </XMWrap>
@@ -138,7 +138,7 @@
                         <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S1.I1.i6.p1.m1.2">2</XMTok>
                       </XMApp>
                     </XMDual>
-                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   </XMApp>
                 </XMath>
               </Math></p>
@@ -155,8 +155,8 @@
                 <XMath>
                   <XMApp>
                     <XMTok name="boxslash" role="BINOP">⧄</XMTok>
-                    <XMTok font="italic" role="ID">A</XMTok>
-                    <XMTok font="italic" role="ID">B</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">B</XMTok>
                   </XMApp>
                 </XMath>
               </Math></p>
@@ -177,12 +177,12 @@
                       <XMApp role="MULOP">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMTok meaning="times" role="MULOP">×</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
                       </XMApp>
                       <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                     </XMApp>
-                    <XMTok font="italic" role="ID">x</XMTok>
-                    <XMTok font="italic" role="ID">y</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
                   </XMApp>
                 </XMath>
               </Math></p>
@@ -281,7 +281,7 @@
                         <XMApp role="MULOP">
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                           <XMTok meaning="times" role="MULOP">×</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
                         </XMApp>
                         <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
@@ -305,9 +305,9 @@
                     <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
                     <XMApp>
                       <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
-                      <XMTok font="italic" name="pi" role="ID">π</XMTok>
+                      <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
                     </XMApp>
-                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   </XMApp>
                 </XMath>
               </Math></p>
@@ -332,12 +332,12 @@
                           <XMApp role="MULOP">
                             <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                             <XMTok meaning="times" role="MULOP">×</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
                           </XMApp>
                           <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="ID">x</XMTok>
-                        <XMTok font="italic" role="ID">y</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">y</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMApp>
@@ -400,10 +400,10 @@
                     <XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="pre1"/>
-                      <XMTok font="italic" role="ID">f</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="ID">y</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
                     </XMApp>
-                    <XMTok font="italic" fontsize="70%" role="ID">x</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
                   </XMApp>
                 </XMath>
               </Math></p>
@@ -422,20 +422,20 @@
                     <XMArray role="ARRAY" vattach="middle">
                       <XMRow>
                         <XMCell align="center">
-                          <XMTok font="italic" role="ID">F</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">F</XMTok>
                         </XMCell>
                         <XMCell align="center">
-                          <XMTok font="italic" role="ID">G</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">G</XMTok>
                         </XMCell>
                       </XMRow>
                     </XMArray>
                     <XMArray role="ARRAY" vattach="middle">
                       <XMRow>
                         <XMCell align="center">
-                          <XMTok font="italic" role="ID">x</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">x</XMTok>
                         </XMCell>
                         <XMCell align="center">
-                          <XMTok font="italic" role="ID">y</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">y</XMTok>
                         </XMCell>
                       </XMRow>
                     </XMArray>
