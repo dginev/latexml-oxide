@@ -3642,10 +3642,13 @@ impl Document {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
           let mut attributes: HashMap<String, String> = child.get_attributes().into_iter().collect();
-          // Preserve xml:id from namespace-qualified attribute
-          // get_attributes() may not include namespace-qualified attributes like xml:id
+          // Perl appendTree: REMOVE xml:id from source node before re-creation.
+          // This prevents duplicate ID registration. The ID will be re-registered
+          // by open_element_at when the new node is created with the same ID.
           if let Some(xmlid) = child.get_attribute_ns("id", XML_NS) {
-            attributes.entry("xml:id".to_string()).or_insert(xmlid);
+            attributes.entry("xml:id".to_string()).or_insert(xmlid.clone());
+            // Unrecord before re-creation (Perl: $child->removeAttribute('xml:id') + unRecordID)
+            self.unrecord_id(&xmlid);
           }
 
           let tag_sym = get_node_qname(&child);
