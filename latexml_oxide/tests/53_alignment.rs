@@ -152,7 +152,7 @@ fn ncases_test() {
 }
 
 #[test]
-#[ignore] // SEGFAULT (signal 11)
+#[ignore] // infinite recursion: debug=SEGFAULT, release=hang. Needs 7+ hbox/vbox + figure+includegraphics
 fn vmode_test() {
   latexml_test_single("tests/alignment/vmode.tex", "vmode", DIR, None, None);
 }
