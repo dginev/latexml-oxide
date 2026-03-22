@@ -1,6 +1,39 @@
 use crate::prelude::*;
 use latexml_core::common::dimension::attribute_format;
 
+/// Perl: graphics_scaledbox_props($box, $xscale, $yscale) in graphics.sty.ltxml L63-81
+/// Computes scaled dimensions and translation offsets for \scalebox.
+pub fn scaled_properties(
+  mut body: Digested,
+  xscale: f64,
+  yscale: f64,
+) -> Result<Vec<(&'static str, Stored)>> {
+  let (w_dim, h_dim, d_dim, _, _, _) = body.get_size(None)?;
+  let w = w_dim.value_of() as f64;
+  let h = h_dim.value_of() as f64;
+  let d = d_dim.value_of() as f64;
+  if w == 0.0 && h == 0.0 && d == 0.0 {
+    return Ok(Vec::new());
+  }
+  let sw = w * xscale;
+  let sh = h * yscale;
+  let sd = d * yscale;
+  let total_h = h + d;
+  let s_total_h = sh + sd;
+  let xtranslate = (sw - w) * 0.5;
+  let ytranslate = (s_total_h - total_h) * (-0.5);
+
+  let dim_attr = |v: f64| attribute_format(v as i64, None);
+
+  Ok(vec![
+    ("width", Stored::from(dim_attr(sw))),
+    ("height", Stored::from(dim_attr(sh))),
+    ("depth", Stored::from(dim_attr(sd))),
+    ("xtranslate", Stored::from(dim_attr(xtranslate))),
+    ("ytranslate", Stored::from(dim_attr(ytranslate))),
+  ])
+}
+
 /// Perl: rotatedProperties($box, $angle, %options) in graphics.sty.ltxml L152-202
 /// Computes bounding box and translation for rotated box content.
 pub fn rotated_properties(
@@ -60,13 +93,26 @@ LoadDefinitions!({
 
   // \scalebox{xscale}[yscale]{content}
   // Perl: DefConstructor('\Gscale@box {Float} [Float] {}', ...)
-  // For now, simplified: wrap content in inline-block with scale attributes
-  DefConstructor!("\\scalebox{} []{}", "<ltx:inline-block xscale='#1' yscale='#yscale'>#3</ltx:inline-block>",
+  // Perl: graphics_scaledbox_props computes scaled dimensions and translation
+  DefConstructor!("\\scalebox{} []{}", "<ltx:inline-block xscale='#1' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
     mode => "restricted_horizontal", enter_horizontal => true,
     properties => sub[args] {
       let yscale = args[1].as_ref().map(|a| a.to_attribute())
         .unwrap_or_else(|| args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default());
       Ok(stored_map!("yscale" => yscale))
+    },
+    after_digest => sub[whatsit] {
+      let xscale = whatsit.get_arg(1)
+        .map(|a| a.to_attribute().parse::<f64>().unwrap_or(1.0)).unwrap_or(1.0);
+      let yscale = whatsit.get_arg(2)
+        .map(|a| a.to_attribute().parse::<f64>().unwrap_or(xscale)).unwrap_or(xscale);
+      if let Some(body) = whatsit.get_arg(3) {
+        if let Ok(props) = crate::package::graphics_sty::scaled_properties(body.clone(), xscale, yscale) {
+          for (k, v) in props {
+            whatsit.set_property(k, v);
+          }
+        }
+      }
     });
   Let!("\\Gscale@box", "\\scalebox");
 
@@ -115,8 +161,23 @@ LoadDefinitions!({
 
   DefMacro!("\\Grot@erotate", "\\rotatebox[]");
 
-  DefConstructor!("\\reflectbox{}", "<ltx:inline-block xscale='-1'>#1</ltx:inline-block>",
-    mode => "restricted_horizontal", enter_horizontal => true);
+  // Perl: DefConstructor('\reflectbox {}', ...) with properties callback
+  // Returns width/height/depth from box size, xscale=-1, yscale=1
+  DefConstructor!("\\reflectbox{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth'>#1</ltx:inline-block>",
+    mode => "restricted_horizontal", enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      if let Some(mut body) = whatsit.get_arg(1).cloned() {
+        if let Ok((w, h, d, _, _, _)) = body.get_size(None) {
+          if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
+            whatsit.set_property("width", Stored::from(w.to_attribute()));
+            whatsit.set_property("height", Stored::from(h.to_attribute()));
+            whatsit.set_property("depth", Stored::from(d.to_attribute()));
+            whatsit.set_property("xscale", Stored::from("-1".to_string()));
+            whatsit.set_property("yscale", Stored::from("1".to_string()));
+          }
+        }
+      }
+    });
 
   // == Graphics path and inclusion ==
 
