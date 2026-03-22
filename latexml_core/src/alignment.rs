@@ -588,7 +588,14 @@ impl BoxOps for Alignment {
             .and_then(|ls| ls.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              if template_has_fill(&cell.before) { threshold_02em } else { 0 }
+              // Perl: lpad from lspaces (\lx@intercol width). When unavailable,
+              // use template tracking: has_intercol_before is set during template
+              // building and correctly distinguishes @{}-disabled columns.
+              if cell.has_intercol_before || template_has_fill(&cell.before) {
+                threshold_02em
+              } else {
+                0
+              }
             });
           // Perl: $rpad = ($$cell{rspaces} ? $$cell{rspaces}->getWidth->valueOf : 0)
           // When rspaces is not extracted, check template for intercolumn spacing.

@@ -331,7 +331,8 @@ impl Template {
       before.extend(self.save_between.clone());
     }
     // Perl L90: push \lx@intercol unless disabled_intercolumn
-    if !self.disabled_intercolumn {
+    let has_intercol_before = !self.disabled_intercolumn;
+    if has_intercol_before {
       before.push(T_CS!("\\lx@intercol"));
     }
     // Perl L91: delete disabled_intercolumn
@@ -348,6 +349,7 @@ impl Template {
     } else {
       None
     };
+    col.has_intercol_before = has_intercol_before;
     let mut after = vec![T_CS!("\\lx@column@trimright")];
     if let Some(prop_after) = col.after {
       after.extend(prop_after.unlist());
