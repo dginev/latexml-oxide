@@ -2748,7 +2748,10 @@ impl Document {
         self.record_id_with_node(&dualid, &branch);
       }
     }
-    self.replace_tree(branch, dual)?;
+    // Direct DOM swap: Perl uses replaceChild (no re-creation, no hooks fired twice)
+    let mut dual_mut = dual;
+    dual_mut.add_prev_sibling(&mut branch).ok();
+    self.remove_node(dual_mut);
     Ok(())
   }
 
