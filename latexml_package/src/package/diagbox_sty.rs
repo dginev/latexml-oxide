@@ -228,9 +228,11 @@ LoadDefinitions!({
       whatsit.set_property("linecolor", Stored::from(linecolor));
     });
 
-  // slashbox/backslashbox compatibility
+  // slashbox/backslashbox compatibility (Perl uses complex \edef to build keyvals)
   RawTeX!(r"
-\def\slashbox{\diagbox[dir=SW]}
-\def\backslashbox{\diagbox[dir=NW]}
+\def\slashbox{\@ifnextchar[{\@slashbox}{\diagbox[dir=SW]}}
+\def\@slashbox[#1]{\diagbox[dir=SW,width=#1]}
+\def\backslashbox{\@ifnextchar[{\@backslashbox}{\diagbox[dir=NW]}}
+\def\@backslashbox[#1]{\diagbox[dir=NW,width=#1]}
 ");
 });
