@@ -290,10 +290,11 @@ impl Mouth {
     } else {
       None
     };
-    // Perl: at_letter saves/restores @ catcode independently of fordefinitions
+    // Perl: at_letter saves/restores @ catcode independently of fordefinitions.
+    // Use Scope::Global to ensure it persists across scope frame pops during file loading.
     if self.at_letter {
       self.saved_at_cc = lookup_catcode('@');
-      assign_catcode('@', Catcode::LETTER, None);
+      assign_catcode('@', Catcode::LETTER, Some(Scope::Global));
     }
     // Perl: fordefinitions saves/restores INCLUDE_COMMENTS
     if self.fordefinitions {
@@ -311,11 +312,11 @@ impl Mouth {
     self.lineno = 0;
     self.colno = 0;
     self.nchars = 0;
-    // Perl: at_letter restores @ catcode (independent of fordefinitions)
+    // Perl: at_letter restores @ catcode (independent of fordefinitions).
+    // Use Scope::Global to ensure it takes effect regardless of scope frame state.
     if self.at_letter {
-      // Restore saved catcode, or OTHER if @ wasn't in catcode table before
       let cc = self.saved_at_cc.take().unwrap_or(Catcode::OTHER);
-      assign_catcode('@', cc, None);
+      assign_catcode('@', cc, Some(Scope::Global));
     }
     // Perl: fordefinitions restores INCLUDE_COMMENTS
     if let Some(sic) = self.saved_include_comments.take() {
