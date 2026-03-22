@@ -70,6 +70,7 @@ pub mod hyperref_sty;
 pub mod hyperxmp_sty;
 pub mod icml_support_sty;
 pub mod ieeetran_cls;
+pub mod iftex_sty;
 pub mod inputenc_sty;
 pub mod inst_support_sty;
 pub mod latexml_sty;

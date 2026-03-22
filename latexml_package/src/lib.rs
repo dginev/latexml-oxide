@@ -86,6 +86,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "icml2016.sty" => package::icml_support_sty::load_definitions(),
     "icml2017.sty" => package::icml_support_sty::load_definitions(),
     "icml_support.sty" => package::icml_support_sty::load_definitions(),
+    "iftex.sty" => package::iftex_sty::load_definitions(),
     "IEEEtran.cls" => package::ieeetran_cls::load_definitions(),
     "svjour.cls" => package::svjour_cls::load_definitions(),
     "inst_support.sty" => package::inst_support_sty::load_definitions(),

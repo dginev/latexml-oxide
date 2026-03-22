@@ -2,9 +2,11 @@ use crate::package::url_sty::LEADING_BACKSLASH_RE;
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // Perl #2736: newer hyperref.sty depends on etoolbox.sty
+  RequirePackage!("iftex");
+  RequirePackage!("etoolbox");
   // Some of the requirements not yet applicable/supported in latexml
   //TODO: RequirePackage!("ltxcmds");
-  //RequirePackage("iftex");
   //RequirePackage("pdftexcmds");
   //RequirePackage("infwarerr");
 
