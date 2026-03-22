@@ -29,7 +29,7 @@
       <title><tag close=" ">1.1</tag>Automatic bracing</title>
       <para xml:id="S1.SS1.p1">
         <equation xml:id="S1.Ex1">
-          <Math mode="display" tex="\quantity(X)\qquad\quantity(X^{Y})\qquad\quantity(\frac{X}{Y})\qquad\quantity[%&#10;X]\qquad\quantity|X|\qquad\quantity{X}\qquad\quantity\big{x}\qquad\quantity%&#10;\Big{x}\qquad\quantity\bigg{x}\qquad\quantity\Bigg{x}" text="list@(X, X ^ Y, X / Y, X, X, X, x, x, x, x)" xml:id="S1.Ex1.m1">
+          <Math mode="display" tex="\quantity(X)\qquad\quantity(X^{Y})\qquad\quantity(\frac{X}{Y})\qquad\quantity[X]\qquad\quantity|X|\qquad\quantity{X}\qquad\quantity\big{x}\qquad\quantity\Big{x}\qquad\quantity\bigg{x}\qquad\quantity\Bigg{x}" text="list@(X, X ^ Y, X / Y, X, X, X, x, x, x, x)" xml:id="S1.Ex1.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -237,7 +237,7 @@
       </para>
       <para xml:id="S1.SS1.p2">
         <equation xml:id="S1.Ex4">
-          <Math mode="display" tex="\absolutevalue{a}\qquad\absolutevalue\Big{a}\qquad\absolutevalue*{\frac{X}{Y}}%&#10;\qquad\norm{a}\qquad\norm\Big{a}\qquad\norm*{\frac{X}{Y}}" text="list@(absolute-value@(a), absolute-value@(a), absolute-value@(X / Y), norm@(a), norm@(a), norm@(X / Y))" xml:id="S1.Ex4.m1">
+          <Math mode="display" tex="\absolutevalue{a}\qquad\absolutevalue\Big{a}\qquad\absolutevalue*{\frac{X}{Y}}\qquad\norm{a}\qquad\norm\Big{a}\qquad\norm*{\frac{X}{Y}}" text="list@(absolute-value@(a), absolute-value@(a), absolute-value@(X / Y), norm@(a), norm@(a), norm@(X / Y))" xml:id="S1.Ex4.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -337,7 +337,7 @@
       </para>
       <para xml:id="S1.SS1.p3">
         <equation xml:id="S1.Ex5">
-          <Math mode="display" tex="\evaluated{x}_{0}^{\infty}\qquad\evaluated(x|_{0}^{\infty}\qquad\evaluated[x|_%&#10;{0}^{\infty}\qquad\evaluated[\sum_{X=0}^{N}|_{0}^{\infty}\qquad\evaluated*[%&#10;\sum_{X=0}^{N}|_{0}^{\infty}" text="list@(evaluated-at@(x, 0, infinity), evaluated-at@(x, 0, infinity), evaluated-at@(x, 0, infinity), evaluated-at@((sum _ (X = 0)) ^ N, 0, infinity), evaluated-at@((sum _ (X = 0)) ^ N, 0, infinity))" xml:id="S1.Ex5.m1">
+          <Math mode="display" tex="\evaluated{x}_{0}^{\infty}\qquad\evaluated(x|_{0}^{\infty}\qquad\evaluated[x|_{0}^{\infty}\qquad\evaluated[\sum_{X=0}^{N}|_{0}^{\infty}\qquad\evaluated*[\sum_{X=0}^{N}|_{0}^{\infty}" text="list@(evaluated-at@(x, 0, infinity), evaluated-at@(x, 0, infinity), evaluated-at@(x, 0, infinity), evaluated-at@((sum _ (X = 0)) ^ N, 0, infinity), evaluated-at@((sum _ (X = 0)) ^ N, 0, infinity))" xml:id="S1.Ex5.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -487,7 +487,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex6">
-          <Math mode="display" tex="\order{x^{2}}\qquad\order\Big{x^{2}}\qquad\order*{\frac{X}{Y}}\qquad%&#10;\commutator{A}{B}\qquad\commutator\Big{A}{B}\qquad\commutator*{A}{\frac{X}{Y}}%&#10;\qquad\anticommutator{A}{B}\qquad\poissonbracket{A}{B}" text="list@(order@(x ^ 2), order@(x ^ 2), order@(X / Y), commutator@(A, B), commutator@(A, B), commutator@(A, X / Y), anticommutator@(A, B), poisson-bracket@(A, B))" xml:id="S1.Ex6.m1">
+          <Math mode="display" tex="\order{x^{2}}\qquad\order\Big{x^{2}}\qquad\order*{\frac{X}{Y}}\qquad\commutator{A}{B}\qquad\commutator\Big{A}{B}\qquad\commutator*{A}{\frac{X}{Y}}\qquad\anticommutator{A}{B}\qquad\poissonbracket{A}{B}" text="list@(order@(x ^ 2), order@(x ^ 2), order@(X / Y), commutator@(A, B), commutator@(A, B), commutator@(A, X / Y), anticommutator@(A, B), poisson-bracket@(A, B))" xml:id="S1.Ex6.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -644,7 +644,7 @@
       <title><tag close=" ">1.2</tag>Vector notation</title>
       <para xml:id="S1.SS2.p1">
         <equation xml:id="S1.Ex7">
-          <Math mode="display" tex="\mathbf{a}\qquad{\bf\it a}\qquad\overrightarrow{\mathbf{a}}\qquad%&#10;\overrightarrow{{\bf\it a}}\qquad\hat{\mathbf{a}}\qquad\hat{{\bf\it a}}" text="list@(a, a, overrightarrow@(a), overrightarrow@(a), hat@(a), hat@(a))" xml:id="S1.Ex7.m1">
+          <Math mode="display" tex="\mathbf{a}\qquad{\bf\it a}\qquad\overrightarrow{\mathbf{a}}\qquad\overrightarrow{{\bf\it a}}\qquad\hat{\mathbf{a}}\qquad\hat{{\bf\it a}}" text="list@(a, a, overrightarrow@(a), overrightarrow@(a), hat@(a), hat@(a))" xml:id="S1.Ex7.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -707,7 +707,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex9">
-          <Math mode="display" tex="\gradient\qquad\gradient{\Psi}\qquad\gradient(\Psi+X^{Y})\qquad\gradient[\Psi+%&#10;X^{Y}]" text="list@(gradient, gradient@(Psi), gradient@(Psi + X ^ Y), gradient@(Psi + X ^ Y))" xml:id="S1.Ex9.m1">
+          <Math mode="display" tex="\gradient\qquad\gradient{\Psi}\qquad\gradient(\Psi+X^{Y})\qquad\gradient[\Psi+X^{Y}]" text="list@(gradient, gradient@(Psi), gradient@(Psi + X ^ Y), gradient@(Psi + X ^ Y))" xml:id="S1.Ex9.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -776,7 +776,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex10">
-          <Math mode="display" tex="\divergence\qquad\divergence{\mathbf{a}}\qquad\divergence(\mathbf{a}+X^{Y})%&#10;\qquad\divergence[\mathbf{a}+X^{Y}]" text="list@(divergence, divergence@(a), divergence@(a + X ^ Y), divergence@(a + X ^ Y))" xml:id="S1.Ex10.m1">
+          <Math mode="display" tex="\divergence\qquad\divergence{\mathbf{a}}\qquad\divergence(\mathbf{a}+X^{Y})\qquad\divergence[\mathbf{a}+X^{Y}]" text="list@(divergence, divergence@(a), divergence@(a + X ^ Y), divergence@(a + X ^ Y))" xml:id="S1.Ex10.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -860,7 +860,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex11">
-          <Math mode="display" tex="\curl\qquad\curl{\mathbf{a}}\qquad\curl(\mathbf{a}+X^{Y})\qquad\curl[\mathbf{a%&#10;}+X^{Y}]" text="list@(curl, curl@(a), curl@(a + X ^ Y), curl@(a + X ^ Y))" xml:id="S1.Ex11.m1">
+          <Math mode="display" tex="\curl\qquad\curl{\mathbf{a}}\qquad\curl(\mathbf{a}+X^{Y})\qquad\curl[\mathbf{a}+X^{Y}]" text="list@(curl, curl@(a), curl@(a + X ^ Y), curl@(a + X ^ Y))" xml:id="S1.Ex11.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -944,7 +944,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex12">
-          <Math mode="display" tex="\laplacian\qquad\laplacian{\Psi}\qquad\laplacian(\Psi+X^{Y})\qquad\laplacian[%&#10;\Psi+X^{Y}]" text="list@(laplacian, laplacian@(Psi), laplacian@(Psi + X ^ Y), laplacian@(Psi + X ^ Y))" xml:id="S1.Ex12.m1">
+          <Math mode="display" tex="\laplacian\qquad\laplacian{\Psi}\qquad\laplacian(\Psi+X^{Y})\qquad\laplacian[\Psi+X^{Y}]" text="list@(laplacian, laplacian@(Psi), laplacian@(Psi + X ^ Y), laplacian@(Psi + X ^ Y))" xml:id="S1.Ex12.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -1105,7 +1105,7 @@
         </equation>
         <p>But</p>
         <equation xml:id="S1.Ex14">
-          <Math mode="display" tex="\sin[\frac{X}{Y}]\qquad\sin[x][\frac{X}{Y}]\qquad\sin[x]{\frac{X}{Y}}\qquad%&#10;\sin\{\frac{X}{Y}\}\qquad\sin[x]\{\frac{X}{Y}\}" text="list@(sine@(X / Y), sine@(x) * delimited-[]@(X / Y), (power@(sine, x))@(X / Y), sine@(X / Y), sine@(x) * set@(X / Y))" xml:id="S1.Ex14.m1">
+          <Math mode="display" tex="\sin[\frac{X}{Y}]\qquad\sin[x][\frac{X}{Y}]\qquad\sin[x]{\frac{X}{Y}}\qquad\sin\{\frac{X}{Y}\}\qquad\sin[x]\{\frac{X}{Y}\}" text="list@(sine@(X / Y), sine@(x) * delimited-[]@(X / Y), (power@(sine, x))@(X / Y), sine@(X / Y), sine@(x) * set@(X / Y))" xml:id="S1.Ex14.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -1912,7 +1912,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex17">
-          <Math mode="display" tex="\qquad\principalvalue{\int f(z)\differential{z}}\qquad\PV{\int f(z)%&#10;\differential{z}}\qquad\Re{z}\qquad\Re\qquad\Im{z}\qquad\Im" text="list@(principal-value@(integral@(f * z * differential@(z))), principal-value@(integral@(f * z * differential@(z))), real-part@(z), real-part, imaginary-part@(z), imaginary-part)" xml:id="S1.Ex17.m1">
+          <Math mode="display" tex="\qquad\principalvalue{\int f(z)\differential{z}}\qquad\PV{\int f(z)\differential{z}}\qquad\Re{z}\qquad\Re\qquad\Im{z}\qquad\Im" text="list@(principal-value@(integral@(f * z * differential@(z))), principal-value@(integral@(f * z * differential@(z))), real-part@(z), real-part, imaginary-part@(z), imaginary-part)" xml:id="S1.Ex17.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2039,7 +2039,7 @@
       <para xml:id="S1.SS3.p5">
         <p>But</p>
         <equation xml:id="S1.Ex18">
-          <Math mode="display" tex="\real(\frac{X}{Y})\qquad\real[\frac{X}{Y}]\qquad\imaginary(\frac{X}{Y})\qquad%&#10;\imaginary[\frac{X}{Y}]" text="list@(real-part@(X / Y), real-part@(X / Y), imaginary-part@(X / Y), imaginary-part@(X / Y))" xml:id="S1.Ex18.m1">
+          <Math mode="display" tex="\real(\frac{X}{Y})\qquad\real[\frac{X}{Y}]\qquad\imaginary(\frac{X}{Y})\qquad\imaginary[\frac{X}{Y}]" text="list@(real-part@(X / Y), real-part@(X / Y), imaginary-part@(X / Y), imaginary-part@(X / Y))" xml:id="S1.Ex18.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2174,7 +2174,7 @@
       </para>
       <para xml:id="S1.SS4.p2">
         <equation xml:id="S1.Ex20">
-          <Math class="ltx_math_unparsed" mode="display" tex="[,\quad],[\mbox{\quad c.c.\quad}],[\mbox{\quad if\quad}],[\mbox{\quad then%&#10;\quad}],[\mbox{\quad else\quad}],[\mbox{\quad otherwise\quad}],[\mbox{\quad&#10;unless%&#10;\quad}],[\mbox{\quad given\quad}]" xml:id="S1.Ex20.m1">
+          <Math class="ltx_math_unparsed" mode="display" tex="[,\quad],[\mbox{\quad c.c.\quad}],[\mbox{\quad if\quad}],[\mbox{\quad then\quad}],[\mbox{\quad else\quad}],[\mbox{\quad otherwise\quad}],[\mbox{\quad&#10;unless\quad}],[\mbox{\quad given\quad}]" xml:id="S1.Ex20.m1">
             <XMath>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
@@ -2227,7 +2227,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex21">
-          <Math mode="display" tex="[\mbox{\quad using\quad}],[\mbox{\quad assume\quad}],[\mbox{\quad since\quad}]%&#10;,[\mbox{\quad let\quad}],[\mbox{\quad for\quad}],[\mbox{\quad all\quad}],[%&#10;\mbox{\quad even\quad}],[\mbox{\quad odd\quad}]," text="list@(delimited-[]@([ using ]), delimited-[]@([ assume ]), delimited-[]@([ since ]), delimited-[]@([ let ]), delimited-[]@([ for ]), delimited-[]@([ all ]), delimited-[]@([ even ]), delimited-[]@([ odd ]))" xml:id="S1.Ex21.m1">
+          <Math mode="display" tex="[\mbox{\quad using\quad}],[\mbox{\quad assume\quad}],[\mbox{\quad since\quad}],[\mbox{\quad let\quad}],[\mbox{\quad for\quad}],[\mbox{\quad all\quad}],[\mbox{\quad even\quad}],[\mbox{\quad odd\quad}]," text="list@(delimited-[]@([ using ]), delimited-[]@([ assume ]), delimited-[]@([ since ]), delimited-[]@([ let ]), delimited-[]@([ for ]), delimited-[]@([ all ]), delimited-[]@([ even ]), delimited-[]@([ odd ]))" xml:id="S1.Ex21.m1">
             <XMath>
               <XMDual>
                 <XMRef idref="S1.Ex21.m1.9"/>
@@ -2349,7 +2349,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex22">
-          <Math mode="display" tex="[\mbox{\quad integer\quad}],[\mbox{\quad and\quad}],[\mbox{\quad or\quad}],[%&#10;\mbox{\quad as\quad}],[\mbox{\quad in\quad}]" text="list@(delimited-[]@([ integer ]), delimited-[]@([ and ]), delimited-[]@([ or ]), delimited-[]@([ as ]), delimited-[]@([ in ]))" xml:id="S1.Ex22.m1">
+          <Math mode="display" tex="[\mbox{\quad integer\quad}],[\mbox{\quad and\quad}],[\mbox{\quad or\quad}],[\mbox{\quad as\quad}],[\mbox{\quad in\quad}]" text="list@(delimited-[]@([ integer ]), delimited-[]@([ and ]), delimited-[]@([ or ]), delimited-[]@([ as ]), delimited-[]@([ in ]))" xml:id="S1.Ex22.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2436,7 +2436,7 @@
       <title><tag close=" ">1.5</tag>Derivatives</title>
       <para xml:id="S1.SS5.p1">
         <equation xml:id="S1.Ex23">
-          <Math mode="display" tex="\differential\qquad\differential x\qquad\differential{x}\qquad\differential[3]%&#10;{x}\qquad\differential(\cos\theta)" text="list@(differential, differential@(x), differential@(x), differential@(x, 3), differential@(cosine@(theta)))" xml:id="S1.Ex23.m1">
+          <Math mode="display" tex="\differential\qquad\differential x\qquad\differential{x}\qquad\differential[3]{x}\qquad\differential(\cos\theta)" text="list@(differential, differential@(x), differential@(x), differential@(x, 3), differential@(cosine@(theta)))" xml:id="S1.Ex23.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2499,7 +2499,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex24">
-          <Math mode="display" tex="\derivative{x}\qquad\derivative{x}f\qquad\derivative{f}{x}\qquad\derivative[n]%&#10;{f}{x}\qquad\derivative{x}(\frac{X}{Y})\qquad\derivative*{f}{x}" text="list@(derivative@(x), (derivative@(x))@(f), (derivative@(x))@(f), (derivative@(x, n))@(f), (derivative@(x))@(X / Y), (derivative@(x))@(f))" xml:id="S1.Ex24.m1">
+          <Math mode="display" tex="\derivative{x}\qquad\derivative{x}f\qquad\derivative{f}{x}\qquad\derivative[n]{f}{x}\qquad\derivative{x}(\frac{X}{Y})\qquad\derivative*{f}{x}" text="list@(derivative@(x), (derivative@(x))@(f), (derivative@(x))@(f), (derivative@(x, n))@(f), (derivative@(x))@(X / Y), (derivative@(x))@(f))" xml:id="S1.Ex24.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2651,7 +2651,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex25">
-          <Math mode="display" tex="\partialderivative{x}\qquad\partialderivative{x}f\qquad\partialderivative{x}%&#10;\qquad\partialderivative{f}{x}\qquad\partialderivative[n]{f}{x}\qquad%&#10;\partialderivative{x}(\frac{X}{Y})\qquad\partialderivative*{f}{x}" text="list@(partial-derivative@(x), (partial-derivative@(x))@(f), partial-derivative@(x), (partial-derivative@(x))@(f), (partial-derivative@(x, n))@(f), (partial-derivative@(x))@(X / Y), (partial-derivative@(x))@(f))" xml:id="S1.Ex25.m1">
+          <Math mode="display" tex="\partialderivative{x}\qquad\partialderivative{x}f\qquad\partialderivative{x}\qquad\partialderivative{f}{x}\qquad\partialderivative[n]{f}{x}\qquad\partialderivative{x}(\frac{X}{Y})\qquad\partialderivative*{f}{x}" text="list@(partial-derivative@(x), (partial-derivative@(x))@(f), partial-derivative@(x), (partial-derivative@(x))@(f), (partial-derivative@(x, n))@(f), (partial-derivative@(x))@(X / Y), (partial-derivative@(x))@(f))" xml:id="S1.Ex25.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2819,7 +2819,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex26">
-          <Math mode="display" tex="\variation{F[g(x)]}\qquad\variation(E-TS)\qquad\functionalderivative{g}\qquad%&#10;\functionalderivative{F}{g}\qquad\functionalderivative{V}(E-TS)\qquad%&#10;\functionalderivative*{F}{x}" text="list@(variation@(F * delimited-[]@(g * x)), variation@(E - T * S), functional-derivative@(g), (functional-derivative@(g))@(F), (functional-derivative@(V))@(E - T * S), (functional-derivative@(x))@(F))" xml:id="S1.Ex26.m1">
+          <Math mode="display" tex="\variation{F[g(x)]}\qquad\variation(E-TS)\qquad\functionalderivative{g}\qquad\functionalderivative{F}{g}\qquad\functionalderivative{V}(E-TS)\qquad\functionalderivative*{F}{x}" text="list@(variation@(F * delimited-[]@(g * x)), variation@(E - T * S), functional-derivative@(g), (functional-derivative@(g))@(F), (functional-derivative@(V))@(E - T * S), (functional-derivative@(x))@(F))" xml:id="S1.Ex26.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3010,7 +3010,7 @@
         </equation>
         <p>And multiple derivatives, sorta; But only for partial:</p>
         <equation xml:id="S1.Ex28">
-          <Math mode="display" tex="\partialderivative{f}{x}{y}\qquad\partialderivative{f}{x}{y}{z}\qquad%&#10;\partialderivative{f}{x}{y}{z}\qquad\partialderivative{x}{y}" text="list@((partial-derivative@(x, 1, y, 1))@(f), (partial-derivative@(x, 1, y, 1))@(f) * z, (partial-derivative@(x, 1, y, 1))@(f) * z, (partial-derivative@(y))@(x))" xml:id="S1.Ex28.m1">
+          <Math mode="display" tex="\partialderivative{f}{x}{y}\qquad\partialderivative{f}{x}{y}{z}\qquad\partialderivative{f}{x}{y}{z}\qquad\partialderivative{x}{y}" text="list@((partial-derivative@(x, 1, y, 1))@(f), (partial-derivative@(x, 1, y, 1))@(f) * z, (partial-derivative@(x, 1, y, 1))@(f) * z, (partial-derivative@(y))@(x))" xml:id="S1.Ex28.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3280,7 +3280,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex31">
-          <Math mode="display" tex="\bra{\phi}\outerproduct{\psi}{\xi}.\mbox{\quad as opposed to\quad}\bra{\phi}%&#10;\ket{\psi}\bra{\xi}" text="formulae@(bra@(phi) * outer-product@(psi, xi), [ as opposed to ] * inner-product@(phi, psi) * bra@(xi))" xml:id="S1.Ex31.m1">
+          <Math mode="display" tex="\bra{\phi}\outerproduct{\psi}{\xi}.\mbox{\quad as opposed to\quad}\bra{\phi}\ket{\psi}\bra{\xi}" text="formulae@(bra@(phi) * outer-product@(psi, xi), [ as opposed to ] * inner-product@(phi, psi) * bra@(xi))" xml:id="S1.Ex31.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3438,7 +3438,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex33">
-          <Math mode="display" tex="\bra{\phi}\ket{\psi}\qquad\bra{\phi}\ket{X^{Y}}\qquad\bra*{\phi}\ket*{X^{Y}}%&#10;\qquad\bra*{\phi}\ket*{X^{Y}}\qquad\bra*{\phi}\ket*{X^{Y}}" text="list@(inner-product@(phi, psi), inner-product@(phi, X ^ Y), inner-product@(phi, X ^ Y), inner-product@(phi, X ^ Y), inner-product@(phi, X ^ Y))" xml:id="S1.Ex33.m1">
+          <Math mode="display" tex="\bra{\phi}\ket{\psi}\qquad\bra{\phi}\ket{X^{Y}}\qquad\bra*{\phi}\ket*{X^{Y}}\qquad\bra*{\phi}\ket*{X^{Y}}\qquad\bra*{\phi}\ket*{X^{Y}}" text="list@(inner-product@(phi, psi), inner-product@(phi, X ^ Y), inner-product@(phi, X ^ Y), inner-product@(phi, X ^ Y), inner-product@(phi, X ^ Y))" xml:id="S1.Ex33.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3546,7 +3546,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex34">
-          <Math mode="display" tex="\innerproduct{a}{b}\qquad\innerproduct{a}{a}\qquad\innerproduct{a}{X^{Y}}%&#10;\qquad\innerproduct*{a}{X^{Y}}" text="list@(inner-product@(a, b), inner-product@(a, a), inner-product@(a, X ^ Y), inner-product@(a, X ^ Y))" xml:id="S1.Ex34.m1">
+          <Math mode="display" tex="\innerproduct{a}{b}\qquad\innerproduct{a}{a}\qquad\innerproduct{a}{X^{Y}}\qquad\innerproduct*{a}{X^{Y}}" text="list@(inner-product@(a, b), inner-product@(a, a), inner-product@(a, X ^ Y), inner-product@(a, X ^ Y))" xml:id="S1.Ex34.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3630,7 +3630,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex35">
-          <Math mode="display" tex="\innerproduct{a}{b}\qquad\outerproduct{a}{b}\qquad\outerproduct{a}{a}\qquad%&#10;\outerproduct{a}{X^{Y}}\qquad\outerproduct*{a}{X^{Y}}\qquad\outerproduct{a}{b}" text="list@(inner-product@(a, b), outer-product@(a, b), outer-product@(a, a), outer-product@(a, X ^ Y), outer-product@(a, X ^ Y), outer-product@(a, b))" xml:id="S1.Ex35.m1">
+          <Math mode="display" tex="\innerproduct{a}{b}\qquad\outerproduct{a}{b}\qquad\outerproduct{a}{a}\qquad\outerproduct{a}{X^{Y}}\qquad\outerproduct*{a}{X^{Y}}\qquad\outerproduct{a}{b}" text="list@(inner-product@(a, b), outer-product@(a, b), outer-product@(a, a), outer-product@(a, X ^ Y), outer-product@(a, X ^ Y), outer-product@(a, b))" xml:id="S1.Ex35.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3764,7 +3764,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex36">
-          <Math mode="display" tex="\outerproduct{a}{b}\qquad\expectationvalue{A}\qquad\expectationvalue{A}{\Psi}%&#10;\qquad\expectationvalue{A}{\Psi}\qquad\expectationvalue{\frac{X}{Y}}{\Psi}%&#10;\qquad\expectationvalue*{\frac{X}{Y}}{X^{Y}}\qquad\expectationvalue{\frac{X}{Y%&#10;}}{\Psi}" text="list@(outer-product@(a, b), expectation-value@(A), expectation-value@(A, Psi, Psi), expectation-value@(A, Psi, Psi), expectation-value@(X / Y, Psi, Psi), expectation-value@(X / Y, X ^ Y, X ^ Y), expectation-value@(X / Y, Psi, Psi))" xml:id="S1.Ex36.m1">
+          <Math mode="display" tex="\outerproduct{a}{b}\qquad\expectationvalue{A}\qquad\expectationvalue{A}{\Psi}\qquad\expectationvalue{A}{\Psi}\qquad\expectationvalue{\frac{X}{Y}}{\Psi}\qquad\expectationvalue*{\frac{X}{Y}}{X^{Y}}\qquad\expectationvalue{\frac{X}{Y}}{\Psi}" text="list@(outer-product@(a, b), expectation-value@(A), expectation-value@(A, Psi, Psi), expectation-value@(A, Psi, Psi), expectation-value@(X / Y, Psi, Psi), expectation-value@(X / Y, X ^ Y, X ^ Y), expectation-value@(X / Y, Psi, Psi))" xml:id="S1.Ex36.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3923,7 +3923,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex37">
-          <Math mode="display" tex="\matrixelement{n}{A}{m}\qquad\matrixelement{n}{A}{m}\qquad\matrixelement{n}{%&#10;\frac{X}{Y}}{m}\qquad\matrixelement*{n}{\frac{X}{Y}}{X^{Y}}\qquad%&#10;\matrixelement{n}{\frac{X}{Y}}{m}" text="list@(expectation-value@(A, n, m), expectation-value@(A, n, m), expectation-value@(X / Y, n, m), expectation-value@(X / Y, n, X ^ Y), expectation-value@(X / Y, n, m))" xml:id="S1.Ex37.m1">
+          <Math mode="display" tex="\matrixelement{n}{A}{m}\qquad\matrixelement{n}{A}{m}\qquad\matrixelement{n}{\frac{X}{Y}}{m}\qquad\matrixelement*{n}{\frac{X}{Y}}{X^{Y}}\qquad\matrixelement{n}{\frac{X}{Y}}{m}" text="list@(expectation-value@(A, n, m), expectation-value@(A, n, m), expectation-value@(X / Y, n, m), expectation-value@(X / Y, n, X ^ Y), expectation-value@(X / Y, n, m))" xml:id="S1.Ex37.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -4684,7 +4684,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex43">
-          <Math mode="display" tex="\smallmatrixquantity(1&amp;0&amp;0\\&#10;0&amp;1&amp;0\\&#10;0&amp;0&amp;1)\qquad\smallmatrixquantity(1&amp;1&amp;1\\&#10;1&amp;1&amp;1)\qquad\smallmatrixquantity(a_{11}&amp;a_{12}&amp;a_{13}\\&#10;a_{21}&amp;a_{22}&amp;a_{23}\\&#10;a_{31}&amp;a_{32}&amp;a_{33})\qquad\smallmatrixquantity(a_{1}\\&#10;a_{2}\\&#10;a_{3})\qquad\smallmatrixquantity(a_{1}&amp;a_{2}&amp;a_{3})\qquad\smallmatrixquantity(%&#10;0&amp;0\\&#10;0&amp;0)" text="list@(matrix@(Array[[1, 0, 0], [0, 1, 0], [0, 0, 1]]), matrix@(Array[[1, 1, 1], [1, 1, 1]]), matrix@(Array[[a _ (list@(1, 1)), a _ (list@(1, 2)), a _ (list@(1, 3))], [a _ (list@(2, 1)), a _ (list@(2, 2)), a _ (list@(2, 3))], [a _ (list@(3, 1)), a _ (list@(3, 2)), a _ (list@(3, 3))]]), matrix@(Array[[a _ 1], [a _ 2], [a _ 3]]), matrix@(Array[[a _ 1, a _ 2, a _ 3]]), matrix@(Array[[0, 0], [0, 0]]))" xml:id="S1.Ex43.m1">
+          <Math mode="display" tex="\smallmatrixquantity(1&amp;0&amp;0\\&#10;0&amp;1&amp;0\\&#10;0&amp;0&amp;1)\qquad\smallmatrixquantity(1&amp;1&amp;1\\&#10;1&amp;1&amp;1)\qquad\smallmatrixquantity(a_{11}&amp;a_{12}&amp;a_{13}\\&#10;a_{21}&amp;a_{22}&amp;a_{23}\\&#10;a_{31}&amp;a_{32}&amp;a_{33})\qquad\smallmatrixquantity(a_{1}\\&#10;a_{2}\\&#10;a_{3})\qquad\smallmatrixquantity(a_{1}&amp;a_{2}&amp;a_{3})\qquad\smallmatrixquantity(0&amp;0\\&#10;0&amp;0)" text="list@(matrix@(Array[[1, 0, 0], [0, 1, 0], [0, 0, 1]]), matrix@(Array[[1, 1, 1], [1, 1, 1]]), matrix@(Array[[a _ (list@(1, 1)), a _ (list@(1, 2)), a _ (list@(1, 3))], [a _ (list@(2, 1)), a _ (list@(2, 2)), a _ (list@(2, 3))], [a _ (list@(3, 1)), a _ (list@(3, 2)), a _ (list@(3, 3))]]), matrix@(Array[[a _ 1], [a _ 2], [a _ 3]]), matrix@(Array[[a _ 1, a _ 2, a _ 3]]), matrix@(Array[[0, 0], [0, 0]]))" xml:id="S1.Ex43.m1">
             <XMath>
               <XMDual>
                 <XMApp>

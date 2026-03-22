@@ -320,7 +320,7 @@
         </Math>
       </equation>
       <equation xml:id="S1.Ex6">
-        <Math content-tex="\diffd u=\diffd x+\diffd y" mode="display" tex="\operatorname{\operatorname{d}\!}u=\operatorname{\operatorname{d}\!}x+%&#10;\operatorname{\operatorname{d}\!}y" text="diffd@(u) = diffd@(x) + diffd@(y)" xml:id="S1.Ex6.m1">
+        <Math content-tex="\diffd u=\diffd x+\diffd y" mode="display" tex="\operatorname{\operatorname{d}\!}u=\operatorname{\operatorname{d}\!}x+\operatorname{\operatorname{d}\!}y" text="diffd@(u) = diffd@(x) + diffd@(y)" xml:id="S1.Ex6.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
