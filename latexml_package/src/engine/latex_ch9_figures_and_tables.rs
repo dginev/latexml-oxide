@@ -6,6 +6,11 @@ use latexml_core::document::Document;
 /// `preincrement`: if Some("figure"), pre-increments the parent float counter
 ///   on first subfloat entry (before main caption), storing result for later use.
 pub fn before_float(float_type: &str, preincrement: Option<&str>) {
+  before_float_ex(float_type, preincrement, false);
+}
+
+/// Extended version with `double` flag for `*` variants (span both columns).
+pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: bool) {
   def_macro(
     T_CS!("\\@captype"), None,
     Tokens::new(ExplodeText!(float_type)),
@@ -14,6 +19,10 @@ pub fn before_float(float_type: &str, preincrement: Option<&str>) {
   // Perl #2775: rebind \\ to \lx@newline in floats to prevent
   // alignment-token early-return when floats are inside tabulars.
   Let!("\\\\", "\\lx@newline");
+  // Perl: AssignRegister('\hsize' => LookupDimension($options{double} ? '\textwidth' : '\columnwidth'));
+  let dim_name = if double { "\\textwidth" } else { "\\columnwidth" };
+  let dim_val = state::lookup_dimension(dim_name).unwrap_or_default();
+  state::assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
   // Perl: if (my $main = $options{preincrement}) {
   //   if (($type ne (LookupValue('LAST_FLOATTYPE') || ''))
   //     && !IfCondition('\iflx@donecaption')) {
@@ -340,7 +349,7 @@ LoadDefinitions!({
   </ltx:figure>
   "###,
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { before_float("figure", None); },
+    before_digest => { before_float_ex("figure", None, true); }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
@@ -355,7 +364,7 @@ LoadDefinitions!({
   DefEnvironment!("{table*}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
-    before_digest => { before_float("table", None); },
+    before_digest => { before_float_ex("table", None, true); }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
