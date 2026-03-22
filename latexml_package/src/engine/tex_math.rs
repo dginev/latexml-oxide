@@ -371,7 +371,17 @@ LoadDefinitions!({
     assign_delcode(args[0].value_of() as u8 as char,
       value.value_of() as u16, scope);
   });
-  DefRegister!("\\fam", Number!(-1));
+  // Perl #2772: \fam with getter/setter for fontfamily state
+  DefRegister!("\\fam", Number!(-1),
+    getter => {
+      let fam = state::lookup_value("fontfamily")
+        .map(|v| v.to_string().parse::<i64>().unwrap_or(-1))
+        .unwrap_or(-1);
+      Some(RegisterValue::Number(Number::new(fam)))
+    },
+    setter => sub[value, scope, _args] {
+      state::assign_value("fontfamily", Stored::from(value.value_of()), scope);
+    });
 
   //======================================================================
   // TeX-level grammatical roles
