@@ -4,6 +4,7 @@ pub mod aastex_cls;
 pub mod accents_sty;
 pub mod acronym_sty;
 pub mod algorithm_sty;
+// pub mod algorithmic_sty; // TODO: fix compile errors
 pub mod algorithmicx_sty;
 pub mod algpseudocode_sty;
 pub mod alltt_sty;
@@ -126,6 +127,7 @@ pub mod url_sty;
 pub mod utf8_def;
 pub mod verbatim_sty;
 pub mod wasysym_sty;
+pub mod wrapfig_sty;
 pub mod xargs_sty;
 pub mod xcolor_sty;
 pub mod xkeyval_sty;

@@ -155,6 +155,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "stmaryrd.sty" => package::stmaryrd_sty::load_definitions(),
     "mathabx.sty" => package::mathabx_sty::load_definitions(),
     "wasysym.sty" => package::wasysym_sty::load_definitions(),
+    "wrapfig.sty" => package::wrapfig_sty::load_definitions(),
     "xkeyval.sty" => package::xkeyval_sty::load_definitions(),
     "xcolor.sty" => package::xcolor_sty::load_definitions(),
     "framed.sty" => package::framed_sty::load_definitions(),
