@@ -465,7 +465,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
 - [ ] **25. cells_test** (53_alignment) — 5 diffs (was 6, 14, 85, 102, 282, 300, 548, 780). Session 26: cmbx10 TFM metrics (78→89.8pt), xcolor \color reversion in tex= attr. Remaining: 3 width diffs (0.3pt off, inline-block padding), 2 diaghead dimension diffs.
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
-- [ ] **35. graphrot_test** (65_graphics) — 17 diffs (was 239, 25, 127, 596). Session 26: sidewaystable full hooks (beforeFloat/afterFloat/rotatedProperties). Missing content restored (239→17). Remaining: rotation dimension precision diffs.
+- [ ] **35. graphrot_test** (65_graphics) — 17 diffs (was 239, 25, 127, 596). Session 26: sidewaystable full hooks (239→17). cmbx8/cmr8 metrics improved headers (54.7→58.3, expected 58.8). Remaining: 5 rotated header widths (0.5pt off), 2 scalebox/reflectbox widths (table width 245 vs 195pt), 6 \rotatebox dims (\parbox 595pt vs 72.3pt body measurement), 4 column angle rotations.
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
 
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
