@@ -243,6 +243,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **Empty-row pruning fix**: Perl's lspaces makes cells empty=false/skippable=true, triggering check_bracketting border guard. Rust: check template tokens for \lx@intercol + inherit top-border from preceding pruned rows. cells_test: 85→14. tabular.xml updated.
 - **has_intercol_before tracking**: Added Cell field for left intercolumn space presence, set during template building. Used in lpad fallback for ltx_nopad_l.
 - **\scalebox/\reflectbox dimensions**: Ported `scaled_properties()` — computes width/height/depth and xtranslate/ytranslate from body dimensions and scale factors. graphrot scalebox diffs: depth/height/ytranslate now match.
+- **ltx_nopad_l first-column fix**: Perl never adds ltx_nopad_l to first column (boundary, not inter-column gap). Added col_idx tracking. cells_test: 14→6 diffs. Updated sizes/halignatt/tabular/xcolors XMLs.
+- **insert_pi root placement**: PIs from \newcolumntype inside document body now insert before root element (matching Perl), not at cursor. colortbls_test: 96→27 diffs.
 
 **Recent fixes (2026-03-20, session 12):**
 - **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
@@ -412,7 +414,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **23. glossary_test** (50_structure) — DONE. Ported glossaries.sty.
 - [x] **24. bibsect_test** (50_structure) — DONE. Ported bibunits.sty.
 - [x] **24b. crazybib_test** (50_structure) — DONE. `\bibsection` parsing.
-- [x] **26. colortbls_test** (53_alignment) — 63 diffs (was 220). Session 17: colortbl @ tokenization overhaul, backgroundcolor on td, overhang args, dcolumn DC_started_math fix. Remaining: preamble PIs (9), char alignment (8), multicolumn backgroundcolor (4).
+- [x] **26. colortbls_test** (53_alignment) — 27 diffs (was 96, 63, 220). Session 20: insert_pi root placement fix (96→27). Remaining: char alignment from dcolumn D column (13 diffs), multicolumn backgroundcolor (4 diffs).
 - [x] **57–61. Test suite sync** — DONE. Copied pgf (2), tikz (10), moderncv/orc, expl3 (2), slides (2). All 18 new tests ignored.
 
 ### Tier 1: Actionable items (no infrastructure blockers)
