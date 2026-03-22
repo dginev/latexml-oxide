@@ -73,22 +73,88 @@ LoadDefinitions!({
       }
     });
 
-  // sidewaysfigure/sidewaystable — simplified stubs (no beforeFloat/afterFloat yet)
+  // sidewaysfigure/sidewaystable — full port matching Perl rotating.sty.ltxml
+  // Each has: beforeFloat/afterFloat hooks, rotatedPage hsize, rotatedProperties for dimensions
   DefEnvironment!("{sidewaysfigure}[]",
-    "<ltx:figure xml:id='#id' ?#1(placement='#1')>#tags#body</ltx:figure>",
-    mode => "internal_vertical");
+    "<ltx:figure xml:id='#id' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
+    mode => "internal_vertical",
+    before_digest => {
+      crate::engine::latex_ch9_figures_and_tables::before_float("figure", None);
+      // rotatedPage: \hsize = \textheight
+      // rotatedPage: \hsize = \textheight
+      let texheight = state::lookup_dimension("\\textheight").unwrap_or_default();
+      AssignRegister!("\\hsize", texheight.into());
+    },
+    after_digest => sub[whatsit] {
+      crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
+    },
+    after_digest_body => sub[whatsit] {
+      if let Ok(Some(body)) = whatsit.get_body() {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, 90.0, false) {
+          for (k, v) in props { whatsit.set_property(k, v); }
+        }
+      }
+    });
 
   DefEnvironment!("{sidewaysfigure*}[]",
-    "<ltx:figure xml:id='#id' ?#1(placement='#1')>#tags#body</ltx:figure>",
-    mode => "internal_vertical");
+    "<ltx:figure xml:id='#id' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
+    mode => "internal_vertical",
+    before_digest => {
+      crate::engine::latex_ch9_figures_and_tables::before_float("figure", None);
+      // rotatedPage: \hsize = \textheight
+      let texheight = state::lookup_dimension("\\textheight").unwrap_or_default();
+      AssignRegister!("\\hsize", texheight.into());
+    },
+    after_digest => sub[whatsit] {
+      crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
+    },
+    after_digest_body => sub[whatsit] {
+      if let Ok(Some(body)) = whatsit.get_body() {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, 90.0, false) {
+          for (k, v) in props { whatsit.set_property(k, v); }
+        }
+      }
+    });
 
   DefEnvironment!("{sidewaystable}[]",
-    "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
-    mode => "internal_vertical");
+    "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
+    mode => "internal_vertical",
+    before_digest => {
+      crate::engine::latex_ch9_figures_and_tables::before_float("table", None);
+      // rotatedPage: \hsize = \textheight
+      let texheight = state::lookup_dimension("\\textheight").unwrap_or_default();
+      AssignRegister!("\\hsize", texheight.into());
+    },
+    after_digest => sub[whatsit] {
+      crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
+    },
+    after_digest_body => sub[whatsit] {
+      if let Ok(Some(body)) = whatsit.get_body() {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, 90.0, false) {
+          for (k, v) in props { whatsit.set_property(k, v); }
+        }
+      }
+    });
 
   DefEnvironment!("{sidewaystable*}[]",
-    "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
-    mode => "internal_vertical");
+    "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
+    mode => "internal_vertical",
+    before_digest => {
+      crate::engine::latex_ch9_figures_and_tables::before_float("table", None);
+      // rotatedPage: \hsize = \textheight
+      let texheight = state::lookup_dimension("\\textheight").unwrap_or_default();
+      AssignRegister!("\\hsize", texheight.into());
+    },
+    after_digest => sub[whatsit] {
+      crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
+    },
+    after_digest_body => sub[whatsit] {
+      if let Ok(Some(body)) = whatsit.get_body() {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, 90.0, false) {
+          for (k, v) in props { whatsit.set_property(k, v); }
+        }
+      }
+    });
 
   DefMacro!("\\rotcaption{}", r"\caption{\turnbox{90}{#1}}");
 });
