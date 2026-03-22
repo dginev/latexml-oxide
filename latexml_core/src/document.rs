@@ -266,130 +266,236 @@ impl Document {
     }
   }
 
+  /// Iterative implementation of finalize_rec to avoid stack overflow.
+  /// Uses an explicit heap-allocated work stack instead of call-stack recursion.
+  /// Resolves fonts for each node relative to its ancestors, and removes
+  /// helper attributes (_font, _standalone_font, etc).
   fn finalize_rec(&mut self, node: &mut Node) -> Result<()> {
-    let qname = get_node_qname(node);
-    let local_font = self.get_local_font().unwrap();
-    // _standalone_font is typically for metadata that gets extracted out of context
-    let mut declared_font = if node.has_attribute("_standalone_font") {
-      Cow::Borrowed(&*FONT_TEXT_DEFAULT)
-    } else {
-      Cow::Borrowed(&*local_font)
-    };
+    // Work items for the iterative traversal.
+    // Enter: process font declarations and children (text children handled inline,
+    //        element children deferred to the stack).
+    // PostElement: after finalizing an element child, check for font wrapper collapse.
+    // PostWork: after all children processed, remove bookkeeping attrs and expire font.
+    enum Work {
+      Enter(Node),
+      PostElement {
+        child: Node,
+        parent_qname: SymStr,
+        was_forcefont: bool,
+      },
+      PostWork {
+        node: Node,
+        /// Bookkeeping attribute names captured during Enter, before tree modifications
+        bookkeeping_attrs: Vec<String>,
+      },
+    }
 
-    // TODO: _pre_comment / _comment insertion requires create_comment support in libxml wrapper
-    // Perl: parent.insertBefore(XML::LibXML::Comment.new(comment), node)
-    // Perl: parent.insertAfter(XML::LibXML::Comment.new(comment), node)
+    let mut stack: Vec<Work> = Vec::new();
+    // Track nodes that have no visible attributes after bookkeeping removal.
+    // Used in PostElement to decide collapse without calling get_attributes()
+    // (which can crash on corrupted libxml2 attribute lists after replace_node).
+    let mut empty_attr_nodes: HashSet<usize> = HashSet::default();
+    // Defer collapse operations to avoid libxml2 memory corruption.
+    // Collapsing nodes during tree traversal corrupts attribute linked lists
+    // of ancestor nodes. By collecting collapses and running them after
+    // the entire traversal completes, we avoid accessing corrupted state.
+    let mut deferred_collapses: Vec<(Node, SymStr)> = Vec::new();
+    stack.push(Work::Enter(node.clone()));
 
-    let mut keys_to_remove: Vec<SymStr> = Vec::new();
-    let mut attrs_to_set: Vec<(SymStr, SymStr)> = Vec::new();
-    let mut pending_declaration = HashMap::default();
+    while let Some(work) = stack.pop() {
+      match work {
+        Work::Enter(mut current) => {
+          let qname = get_node_qname(&current);
+          let local_font = self.get_local_font().unwrap();
+          // _standalone_font is typically for metadata that gets extracted out of context
+          let mut declared_font = if current.has_attribute("_standalone_font") {
+            Cow::Borrowed(&*FONT_TEXT_DEFAULT)
+          } else {
+            Cow::Borrowed(&*local_font)
+          };
 
-    if self.has_node_font(node) {
-      let desired_font = self.get_node_font(node);
-      pending_declaration = desired_font.relative_to(&declared_font);
-      if (!node.get_child_nodes().is_empty() || node.has_attribute("_force_font"))
-        && !pending_declaration.is_empty()
-      {
-        for (key, (value, properties)) in &pending_declaration {
-          if model::can_have_attribute(qname, arena::pin(key)) {
-            let key_sym = arena::pin(key);
-            attrs_to_set.push((key_sym, arena::pin(value)));
-            // Merge to set the font currently in effect
-            declared_font = Cow::Owned(declared_font.merge(properties.clone()));
-            keys_to_remove.push(key_sym);
-          }
-        }
+          // TODO: _pre_comment / _comment insertion requires create_comment support in libxml
+          // wrapper Perl: parent.insertBefore(XML::LibXML::Comment.new(comment), node)
+          // Perl: parent.insertAfter(XML::LibXML::Comment.new(comment), node)
 
-        for (key, mut value) in attrs_to_set {
-          if key == arena::pin_static("class") {
-            // Merge and sort class values alphabetically, matching Perl's behavior
-            if let Some(ovalue) = node.get_attribute("class") {
-              let new_s = arena::with(value, |s| s.to_string());
-              let mut classes: Vec<&str> =
-                new_s.split_whitespace().chain(ovalue.split_whitespace()).collect();
-              classes.sort();
-              classes.dedup();
-              value = arena::pin(classes.join(" "));
+          // Use boxed HashMap to reduce work item size — Font is ~500 bytes per entry
+          let mut pending_declaration: Box<HashMap<String, (String, Font)>> =
+            Box::new(HashMap::default());
+
+          if self.has_node_font(&current) {
+            let desired_font = self.get_node_font(&current);
+            *pending_declaration = desired_font.relative_to(&declared_font);
+            if (!current.get_child_nodes().is_empty() || current.has_attribute("_force_font"))
+              && !pending_declaration.is_empty()
+            {
+              let mut keys_to_remove: Vec<SymStr> = Vec::new();
+              let mut attrs_to_set: Vec<(SymStr, SymStr)> = Vec::new();
+              for (key, (value, properties)) in pending_declaration.iter() {
+                if model::can_have_attribute(qname, arena::pin(key)) {
+                  let key_sym = arena::pin(key);
+                  attrs_to_set.push((key_sym, arena::pin(value)));
+                  // Merge to set the font currently in effect
+                  declared_font = Cow::Owned(declared_font.merge(properties.clone()));
+                  keys_to_remove.push(key_sym);
+                }
+              }
+
+              for (key, mut value) in attrs_to_set {
+                if key == arena::pin_static("class") {
+                  // Merge and sort class values alphabetically, matching Perl's behavior
+                  if let Some(ovalue) = current.get_attribute("class") {
+                    let new_s = arena::with(value, |s| s.to_string());
+                    let mut classes: Vec<&str> =
+                      new_s.split_whitespace().chain(ovalue.split_whitespace()).collect();
+                    classes.sort();
+                    classes.dedup();
+                    value = arena::pin(classes.join(" "));
+                  }
+                }
+                // Resolve to owned Strings before calling set_attribute,
+                // to avoid holding an arena borrow while set_attribute may need arena::pin
+                // for schema-based attribute filtering (canHaveAttribute check).
+                let key_s = arena::with(key, |s| s.to_string());
+                let value_s = arena::with(value, |s| s.to_string());
+                self.set_attribute(&mut current, &key_s, &value_s)?;
+              }
+              for key in keys_to_remove {
+                arena::with(key, |key_str| pending_declaration.remove(key_str));
+              }
             }
           }
-          // Resolve to owned Strings before calling set_attribute,
-          // to avoid holding an arena borrow while set_attribute may need arena::pin
-          // for schema-based attribute filtering (canHaveAttribute check).
-          let key_s = arena::with(key, |s| s.to_string());
-          let value_s = arena::with(value, |s| s.to_string());
-          self.set_attribute(node, &key_s, &value_s)?;
-        }
-        for key in keys_to_remove {
-          arena::with(key, |key_str| pending_declaration.remove(key_str));
-        }
-      }
-    }
-    // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
-    if qname != arena::pin_static("ltx:document")
-      && state::lookup_bool("GENERATE_IDS")
-      && !node.has_attribute("xml:id")
-      && arena::with(qname, |qname_str| can_have_attribute(qname_str, "xml:id"))
-    {
-      self.generate_id(node, "")?;
-    }
-    self.set_local_font(Rc::new(declared_font.into_owned()));
-    for mut child in node.get_child_nodes() {
-      let child_type = child.get_type();
-      if child_type == Some(NodeType::ElementNode) {
-        let was_forcefont = child.has_attribute("_force_font");
-        self.finalize_rec(&mut child)?;
-        // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
-        // AND providing node can contain that child's content, we'll collapse it.
-        if (get_node_qname(&child) == arena::pin_static(FONT_ELEMENT_NAME))
-          && !was_forcefont
-          && child.get_attributes().is_empty()
-        {
-          let grandchildren = child.get_child_nodes();
-          if grandchildren
-            .iter()
-            .all(|gchild| can_contain_qsym(qname, get_node_qname(gchild)))
+          // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
+          if qname != arena::pin_static("ltx:document")
+            && state::lookup_bool("GENERATE_IDS")
+            && !current.has_attribute("xml:id")
+            && arena::with(qname, |qname_str| can_have_attribute(qname_str, "xml:id"))
           {
-            Debug!(
-              "will replace {} grandchildren nodes in finalize_rec",
-              grandchildren.len()
-            );
-            self.replace_node(child, grandchildren)?;
+            self.generate_id(&mut current, "")?;
           }
-        }
-      }
-      // On the other hand, if the font declaration has NOT been effected,
-      // We'll need to put an extra wrapper around the text!
-      else if child_type == Some(NodeType::TextNode) {
-        let mut keys_to_remove = Vec::new();
-        // Remove any pending declarations that can't be on FONT_ELEMENT_NAME
-        for key in pending_declaration.keys() {
-          if !can_have_attribute(FONT_ELEMENT_NAME, key) {
-            keys_to_remove.push(key.to_string());
-          }
-        }
-        for key in keys_to_remove {
-          pending_declaration.remove(&key);
-        }
-        if can_contain(node, FONT_ELEMENT_NAME) && !pending_declaration.is_empty() {
-          // Too late to do wrapNodes?
-          if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child])? {
-            for (key, (value, _properties)) in &pending_declaration {
-              self.set_attribute(&mut text, key, value)?;
-            }
-            self.finalize_rec(&mut text)?; // Now have to clean up the new node!
-          }
-        }
-      }
-    }
+          self.set_local_font(Rc::new(declared_font.into_owned()));
 
-    // Attributes that begin with (the semi-legal) "_" are for Bookkeeping.
-    // Remove them now.
-    for (name, _) in node.get_attributes() {
-      if name.starts_with('_') {
-        node.remove_attribute(&name)?;
+          // Capture bookkeeping attribute names now, before tree modifications.
+          // This avoids calling get_attributes() later when the attribute list
+          // might be corrupted by replace_node operations.
+          let bookkeeping_attrs: Vec<String> = current
+            .get_attributes()
+            .into_keys()
+            .filter(|name| name.starts_with('_'))
+            .collect();
+
+          // Process children using the snapshot from get_child_nodes().
+          // Element children are deferred to the stack; text children are handled inline.
+          // PostWork is pushed first (runs after all children), then children in reverse.
+          stack.push(Work::PostWork {
+            node: current.clone(),
+            bookkeeping_attrs,
+          });
+
+          let children = current.get_child_nodes();
+          // Collect work items forward, then push in reverse for left-to-right processing
+          let mut child_work: Vec<Work> = Vec::new();
+          for child in &children {
+            let child_type = child.get_type();
+            if child_type == Some(NodeType::ElementNode) {
+              let was_forcefont = child.has_attribute("_force_font");
+              // Enter first, PostElement after (reversed when pushed to stack)
+              child_work.push(Work::Enter(child.clone()));
+              child_work.push(Work::PostElement {
+                child: child.clone(),
+                parent_qname: qname,
+                was_forcefont,
+              });
+            } else if child_type == Some(NodeType::TextNode) {
+              // Text node: wrap with font element if needed (handled inline)
+              let mut text_keys_to_remove = Vec::new();
+              for key in pending_declaration.keys() {
+                if !can_have_attribute(FONT_ELEMENT_NAME, key) {
+                  text_keys_to_remove.push(key.to_string());
+                }
+              }
+              for key in text_keys_to_remove {
+                pending_declaration.remove(&key);
+              }
+              if can_contain(&current, FONT_ELEMENT_NAME) && !pending_declaration.is_empty() {
+                if let Some(mut text) =
+                  self.wrap_nodes(FONT_ELEMENT_NAME, vec![child.clone()])?
+                {
+                  for (key, (value, _properties)) in pending_declaration.iter() {
+                    self.set_attribute(&mut text, key, value)?;
+                  }
+                  // Text wrapper finalization is shallow (only text content), push to stack
+                  child_work.push(Work::Enter(text));
+                }
+              }
+            }
+          }
+          // Push in reverse so left-to-right processing order is maintained
+          for work_item in child_work.into_iter().rev() {
+            stack.push(work_item);
+          }
+        },
+        Work::PostElement {
+          child,
+          parent_qname,
+          was_forcefont,
+        } => {
+          // After finalizing a child element, check if it should be collapsed.
+          // Use empty_attr_nodes set instead of child.get_attributes().is_empty()
+          // to avoid traversing the attribute linked list, which can be corrupted
+          // by prior replace_node operations in libxml2.
+          // Defer the actual collapse to after the traversal completes, since
+          // replace_node can corrupt ancestor attribute lists in libxml2.
+          if (get_node_qname(&child) == arena::pin_static(FONT_ELEMENT_NAME))
+            && !was_forcefont
+            && empty_attr_nodes.contains(&child.to_hashable())
+          {
+            let grandchildren = child.get_child_nodes();
+            if grandchildren
+              .iter()
+              .all(|gchild| can_contain_qsym(parent_qname, get_node_qname(gchild)))
+            {
+              deferred_collapses.push((child, parent_qname));
+            }
+          }
+        },
+        Work::PostWork {
+          mut node,
+          bookkeeping_attrs,
+        } => {
+          // Remove bookkeeping attributes that were captured during Enter.
+          // Capture total attribute count before removal to determine if
+          // the node will have empty attributes after bookkeeping removal.
+          let total_attrs = node.get_attributes().len();
+          let bookkeeping_count = bookkeeping_attrs.len();
+          for name in &bookkeeping_attrs {
+            let _ = node.remove_attribute(name);
+          }
+          // If all attributes were bookkeeping, the node now has empty attrs.
+          if total_attrs <= bookkeeping_count {
+            empty_attr_nodes.insert(node.to_hashable());
+          }
+          self.expire_local_font();
+        },
       }
     }
-    self.expire_local_font();
+    // Execute deferred font wrapper collapses now that the entire tree has been
+    // finalized. Process from deepest (last) to shallowest (first) to avoid
+    // corrupting ancestor attribute lists during the replacement operations.
+    // This deferred approach prevents libxml2 memory corruption that occurs
+    // when replace_node runs during tree traversal.
+    for (child, _parent_qname) in deferred_collapses.into_iter().rev() {
+      let grandchildren = child.get_child_nodes();
+      if grandchildren.is_empty() {
+        // Empty font wrapper — just remove it
+        self.remove_node(child);
+      } else {
+        Debug!(
+          "will replace {} grandchildren nodes in finalize_rec (deferred)",
+          grandchildren.len()
+        );
+        self.replace_node(child, grandchildren)?;
+      }
+    }
     Ok(())
   }
 
