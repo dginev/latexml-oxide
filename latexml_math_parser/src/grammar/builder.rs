@@ -254,13 +254,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // At factor level so it can appear as right operand of invisible_times.
     factor += unknown factor_base => diffop_apply;
 
-    // Script content
-    postsubarg = start_postsubscript expression end_postsubscript => faux_wrap;
+    // Bare operators valid as script content (e.g., Na^+ has ADDOP as superscript)
+    script_op = addop | mulop | relop | arrow | metarelop
+      | bigop | sumop | intop | limitop | diffop | vertbar | supop
+      | modifierop | operator;
+    // Script content: expressions or bare operators
+    postsubarg = start_postsubscript expression end_postsubscript => faux_wrap
+      | start_postsubscript script_op end_postsubscript => faux_wrap;
     postsuperarg = start_postsuperscript expression end_postsuperscript => faux_wrap
-      // TODO: what other kinds of arguments are accepted in scripts? Should we do "anything"?
-      | start_postsuperscript supop end_postsuperscript => faux_wrap;
-    floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap;
-    floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap;
+      | start_postsuperscript script_op end_postsuperscript => faux_wrap;
+    floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap
+      | start_floatsubscript script_op end_floatsubscript => faux_wrap;
+    floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap
+      | start_floatsuperscript script_op end_floatsuperscript => faux_wrap;
     // standalone top-level variants of floating scripts:
     floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;
     floatsuperscript = start_floatsuperscript expression end_floatsuperscript => standalone_script;
@@ -348,7 +354,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | limitop | diffop | vertbar | supop
       | modifierop | composed_bigop | operator | compound_operator;
 
-    anyscript = floatsuperscript | floatsubscript;
+    anyscript = floatsuperscript | floatsubscript
+      // Standalone floating script pairs (no base: {}^c_d or {}_d^c)
+      // Perl: NewScript(NewScript(Absent(), super, 'post'), sub, 'post')
+      | floatsuperscript postsubarg => postfix_script
+      | floatsubscript postsuperarg => postfix_script;
 
     anything = statements | anyop | anyscript |
       anyop anyop => compound_operator_2
