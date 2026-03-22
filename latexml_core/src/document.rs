@@ -1714,14 +1714,21 @@ impl Document {
       if key.starts_with('_') {
         continue;
       }
-      let is_forced = force.is_some_and(|f| f.contains(key.as_str()));
+      // Normalize key: get_attributes() returns "id" for xml:id attributes.
+      // Check both "xml:id" and bare "id" with XML namespace for the special case.
+      let is_xml_id = key.as_str() == "xml:id"
+        || (key.as_str() == "id" && from.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").is_some());
+      let effective_key = if is_xml_id { "xml:id" } else { key.as_str() };
+      let is_forced = force.is_some_and(|f| f.contains(effective_key));
       // Special case attributes
-      if key.as_str() == "xml:id" {
+      if is_xml_id {
         // Use the replacement id
-        if !to.has_attribute(key) || is_forced {
+        let to_has_id = to.has_attribute("xml:id")
+          || to.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").is_some();
+        if !to_has_id || is_forced {
           self.unrecord_id(val);
           self.record_id_with_node(val, to);
-          to.set_attribute(key, val)?;
+          to.set_attribute("xml:id", val)?;
         }
       } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
         self.add_ss_values(to, key, val)?;
