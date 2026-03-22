@@ -1959,7 +1959,7 @@ impl Document {
       if node_type.is_none() || node_type == Some(NodeType::DocumentNode) {
         break;
       }
-      if node.get_name() == "_Capture_" {
+      if element_node.get_name() == "_Capture_" {
         nodes.extend(xml::element_nodes(&element_node));
       } else {
         nodes.push(element_node.into_owned());
