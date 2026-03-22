@@ -7,6 +7,11 @@ fn px_value(d: Dimension) -> f64 { d.value_of() as f64 / UNITY as f64 }
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Ensure <ltx:picture> gets xml:id generation (in case makecell isn't loaded)
+  Tag!("ltx:picture", after_open => sub[document, node] {
+    let _ = document.generate_id(node, "pic");
+  });
+
   DefKeyVal!("diagbox", "dir", "");
   DefKeyVal!("diagbox", "width", "Dimension");
   DefKeyVal!("diagbox", "height", "Dimension");
@@ -77,13 +82,64 @@ LoadDefinitions!({
 
   DefMacro!("\\lx@diagbox@head{}{}{}", "{#2\\shortstack[#1]{#3}}");
 
-  // The constructor creates a <picture> with diagonal lines and positioned text
-  // TODO: template produces wrong structure; needs manual DOM construction
-  // TODO: template produces wrong structure; needs manual DOM with xml:id/tex= support
-  DefConstructor!("\\lx@diagbox RequiredKeyVals:diagbox {}[]{}", "",
-    after_construct => sub[document, _whatsit] {
+  // The constructor creates a <picture> with diagonal lines and positioned text.
+  // Template creates the picture wrapper with xml:id; afterConstruct fills content.
+  DefConstructor!("\\lx@diagbox RequiredKeyVals:diagbox {}[]{}",
+    "<ltx:picture xml:id='#id' width='#width' height='#height'></ltx:picture>",
+    reversion => "\\diagbox[#1]{#2}{#4}",
+    after_construct => sub[document, whatsit] {
       let mut node = document.get_node().clone();
       document.add_class(&mut node, "ltx_nopad")?;
+      // Find the picture element we just created
+      let children = node.get_child_nodes();
+      if let Some(mut picture) = children.into_iter().rev().find(|c| c.get_name() == "picture") {
+        let ns = picture.get_namespace();
+        let doc_ptr = document.get_document();
+        // Add line elements
+        for line_key in &["line1", "line2"] {
+          if let Some(pts) = whatsit.get_property(*line_key) {
+            let s = pts.to_string();
+            if !s.is_empty() {
+              let color = whatsit.get_property("linecolor").map(|c| c.to_string()).unwrap_or_else(|| "#000000".to_string());
+              let lw = whatsit.get_property("linewidth").map(|c| c.to_string()).unwrap_or_else(|| "0.4".to_string());
+              let mut line_node = libxml::tree::Node::new("line", ns.clone(), doc_ptr).unwrap();
+              let _ = line_node.set_attribute("points", &s);
+              let _ = line_node.set_attribute("stroke", &color);
+              let _ = line_node.set_attribute("stroke-width", &lw);
+              picture.add_child(&mut line_node)?;
+            }
+          }
+        }
+        // Collect A, B, M content from whatsit properties BEFORE mutating document
+        let mut groups: Vec<(String, String, String, String, Digested)> = Vec::new();
+        for prefix in &["A", "B", "M"] {
+          if let Some(Stored::Digested(content)) = whatsit.get_property(prefix).map(|v| v.into_owned()) {
+            let px = whatsit.get_property(&s!("{prefix}x")).map(|v| v.to_string()).unwrap_or_else(|| "0".to_string());
+            let py = whatsit.get_property(&s!("{prefix}y")).map(|v| v.to_string()).unwrap_or_else(|| "0".to_string());
+            let pw = whatsit.get_property(&s!("{prefix}w")).map(|v| v.to_string()).unwrap_or_default();
+            let ph = whatsit.get_property(&s!("{prefix}h")).map(|v| v.to_string()).unwrap_or_default();
+            groups.push((px, py, pw, ph, content));
+          }
+        }
+        // Now add groups to DOM
+        for (px, py, pw, ph, content) in groups {
+          // Use document's open/close element API instead of raw libxml
+          let mut g_attrs = HashMap::default();
+          g_attrs.insert("transform".to_string(), s!("translate({px},{py})"));
+          if !pw.is_empty() { g_attrs.insert("innerwidth".to_string(), pw); }
+          if !ph.is_empty() { g_attrs.insert("innerheight".to_string(), ph); }
+          g_attrs.insert("class".to_string(), "ltx_svg_fog".to_string());
+          // Temporarily set cursor to picture, open g, open inline-block, absorb, close both
+          document.set_node(&mut picture);
+          document.open_element("ltx:g", Some(g_attrs), None)?;
+          document.open_element("ltx:inline-block", None, None)?;
+          document.absorb(&content, None)?;
+          document.close_element("ltx:inline-block")?;
+          document.close_element("ltx:g")?;
+        }
+        // Restore cursor
+        document.set_node(&mut node);
+      }
     },
     after_digest => sub[whatsit] {
       let args = whatsit.get_args();
