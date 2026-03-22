@@ -21,6 +21,7 @@ pub mod cancel_sty;
 pub mod cases_sty;
 pub mod cleveref_sty;
 pub mod colortbl_sty;
+// pub mod diagbox_sty; // TODO: fix compile errors for full diagbox port
 pub mod amsa_fontmap;
 pub mod amsb_fontmap;
 pub mod amsfonts_sty;
@@ -50,7 +51,7 @@ pub mod comment_sty;
 pub mod csquotes_sty;
 pub mod dcolumn_sty;
 pub mod deluxetable_sty;
-pub mod diagbox_sty;
+// pub mod diagbox_sty; // TODO: fix compile errors for full diagbox port
 pub mod endnotes_sty;
 pub mod enumitem_sty;
 pub mod epigraph_sty;
