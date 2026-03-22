@@ -1038,42 +1038,47 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
   Cow::Borrowed(node)
 }
 
-/// Resolve _xmkey references after parse tree installation.
+/// Resolve _xmkey and _pxmkey references after parse tree installation.
 /// Matches XMRef[@_xmkey] to elements with same _xmkey, generates xml:id and sets idref.
+/// _pxmkey is used by parser-generated XMDual (apply_delimited) to avoid
+/// conflicting with base_xmath's \lx@dual afterConstruct resolver.
 fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Result<(), Box<dyn std::error::Error>> {
-  // Find all XMRef elements with _xmkey (missing idref)
-  let refs = document.findnodes("descendant::ltx:XMRef[@_xmkey]", Some(mathnode));
-  for mut ref_node in refs {
-    let key = match ref_node.get_attribute("_xmkey") {
-      Some(k) => k,
-      None => continue,
-    };
-    // Find the element with matching _xmkey (non-XMRef)
-    let xpath = format!("descendant::*[@_xmkey='{}'][not(self::ltx:XMRef)]", key);
-    let targets = document.findnodes(&xpath, Some(mathnode));
-    if let Some(mut target) = targets.into_iter().next() {
-      // Ensure target has xml:id
-      let target_id = if let Some(id) = target.get_attribute("xml:id")
-        .or_else(|| target.get_attribute("id"))
-      {
-        id
-      } else {
-        // Generate an id for the target
-        document.generate_id(&mut target, "")?;
-        target.get_attribute("xml:id")
-          .or_else(|| target.get_attribute("id"))
-          .unwrap_or_default()
+  // Resolve both _xmkey (from existing infrastructure) and _pxmkey (from parser)
+  for attr_name in &["_xmkey", "_pxmkey"] {
+    let refs = document.findnodes(
+      &format!("descendant::ltx:XMRef[@{}]", attr_name), Some(mathnode));
+    for mut ref_node in refs {
+      let key = match ref_node.get_attribute(attr_name) {
+        Some(k) => k,
+        None => continue,
       };
-      if !target_id.is_empty() {
-        document.set_attribute(&mut ref_node, "idref", &target_id)?;
+      // Find the element with matching key (non-XMRef)
+      let xpath = format!("descendant::*[@{}='{}'][not(self::ltx:XMRef)]", attr_name, key);
+      let targets = document.findnodes(&xpath, Some(mathnode));
+      if let Some(mut target) = targets.into_iter().next() {
+        // Ensure target has xml:id
+        let target_id = if let Some(id) = target.get_attribute("xml:id")
+          .or_else(|| target.get_attribute("id"))
+        {
+          id
+        } else {
+          document.generate_id(&mut target, "")?;
+          target.get_attribute("xml:id")
+            .or_else(|| target.get_attribute("id"))
+            .unwrap_or_default()
+        };
+        if !target_id.is_empty() {
+          document.set_attribute(&mut ref_node, "idref", &target_id)?;
+        }
       }
+      let _ = ref_node.remove_attribute(attr_name);
     }
-    // Clean up _xmkey from both ref and target
-    let _ = ref_node.remove_attribute("_xmkey");
-  }
-  // Also clean up _xmkey from non-ref elements
-  for mut node in document.findnodes("descendant::*[@_xmkey]", Some(mathnode)) {
-    let _ = node.remove_attribute("_xmkey");
+    // Clean up from non-ref elements
+    for mut node in document.findnodes(
+      &format!("descendant::*[@{}]", attr_name), Some(mathnode))
+    {
+      let _ = node.remove_attribute(attr_name);
+    }
   }
   Ok(())
 }
