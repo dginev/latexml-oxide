@@ -243,6 +243,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **Figure panel breaks**: `<break class="ltx_break"/>` between `<p>` panels in figures.
 - **\includegraphics candidates**: graphics.sty uses image_candidates + .png default extension. **vmode_test now PASSES** (was SEGFAULT).
 - **Bare \name constructor hooks**: DefEnvironment bare CS form now gets after_digest_body and all other hooks (was missing). Fixes \rothead rotation inside alignment.
+- **Diaghead tex=/xml:id**: Tag('ltx:picture') with generate_id + reversion-based tex= on \lx@diagheads picture element.
 - **Postfix modifier grammar**: `formula modifier => postfix_modifier_apply` for `\pmod`, `\pod`.
 *Note: ~17 permanently blocked (tikz/pgf/DTD), ~7 missing packages, ~6 timeout/crash, ~27 math parser, ~7 other.*
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
