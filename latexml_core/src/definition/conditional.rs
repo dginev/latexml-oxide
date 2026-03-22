@@ -213,7 +213,7 @@ impl Conditional {
       // If there's no test, it must be the Special Case, \ifcase
       // Note: num == 0 takes the 1st branch, no need to skip
       // num < 0 should skip all \or & end up on the \else
-      let num = args[0].value_of();
+      let num = args.first().map(|a| a.value_of()).unwrap_or(0);
       if num != 0 {
         let _to = self.skip_conditional_body(num);
         //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;
