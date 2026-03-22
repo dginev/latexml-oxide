@@ -24,13 +24,13 @@
                 <XMRef idref="S1.p1.m1.4"/>
               </XMApp>
               <XMWrap>
-                <XMTok font="italic" role="ID" xml:id="S1.p1.m1.1">A</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m1.1">A</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="ID" xml:id="S1.p1.m1.2">B</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m1.2">B</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
                 <XMTok name="dotsc" role="ID" xml:id="S1.p1.m1.3">…</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="ID" xml:id="S1.p1.m1.4">Z</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m1.4">Z</XMTok>
               </XMWrap>
             </XMDual>
           </XMath>
@@ -41,10 +41,10 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">A</XMTok>
-              <XMTok font="italic" role="ID">B</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
               <XMTok name="dotsb" role="ID">⋯</XMTok>
-              <XMTok font="italic" role="ID">Z</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Z</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -56,13 +56,13 @@
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="ID">A</XMTok>
-                <XMTok font="italic" role="ID">B</XMTok>
+                <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                <XMTok font="italic" role="UNKNOWN">B</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok name="dotsm" role="ID">⋯</XMTok>
-                <XMTok font="italic" role="ID">Z</XMTok>
+                <XMTok font="italic" role="UNKNOWN">Z</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -78,7 +78,7 @@
                 <XMTok name="dotsi" role="ID">⋯</XMTok>
                 <XMApp>
                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -90,10 +90,10 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="ID">A</XMTok>
-              <XMTok font="italic" role="ID">B</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
               <XMTok name="dotso" role="ID">…</XMTok>
-              <XMTok font="italic" role="ID">Z</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Z</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -118,13 +118,13 @@
                 <XMRef idref="S2.p1.m1.4"/>
               </XMApp>
               <XMWrap>
-                <XMTok font="italic" role="ID" xml:id="S2.p1.m1.1">A</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m1.1">A</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="ID" xml:id="S2.p1.m1.2">B</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m1.2">B</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
                 <XMTok name="dots" role="ID" xml:id="S2.p1.m1.3">…</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="ID" xml:id="S2.p1.m1.4">Z</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m1.4">Z</XMTok>
               </XMWrap>
             </XMDual>
           </XMath>
@@ -141,14 +141,14 @@
                 <XMRef idref="S2.p2.m1.3"/>
               </XMApp>
               <XMWrap>
-                <XMTok font="italic" role="ID" xml:id="S2.p2.m1.1">A</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S2.p2.m1.1">A</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="ID" xml:id="S2.p2.m1.2">B</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S2.p2.m1.2">B</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
                 <XMApp xml:id="S2.p2.m1.3">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok name="dots" role="ID">…</XMTok>
-                  <XMTok font="italic" role="ID">Z</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">Z</XMTok>
                 </XMApp>
               </XMWrap>
             </XMDual>
@@ -160,10 +160,10 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">A</XMTok>
-              <XMTok font="italic" role="ID">B</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
               <XMTok name="dots" role="ID">⋯</XMTok>
-              <XMTok font="italic" role="ID">Z</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Z</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -173,10 +173,10 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">A</XMTok>
-              <XMTok font="italic" role="ID">B</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
               <XMTok name="dots" role="ID">…</XMTok>
-              <XMTok font="italic" role="ID">Z</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Z</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -188,11 +188,11 @@
               <XMTok meaning="minus" role="ADDOP">-</XMTok>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">A</XMTok>
-                <XMTok font="italic" role="ID">B</XMTok>
+                <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                <XMTok font="italic" role="UNKNOWN">B</XMTok>
                 <XMTok name="dots" role="ID">⋯</XMTok>
               </XMApp>
-              <XMTok font="italic" role="ID">Z</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Z</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -202,13 +202,13 @@
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
-              <XMTok font="italic" role="ID">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="ID">B</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMTok name="dots" role="ID">⋯</XMTok>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="ID">Z</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Z</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -223,7 +223,7 @@
                 <XMTok name="dots" role="ID">…</XMTok>
                 <XMApp>
                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -235,10 +235,10 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="ID">A</XMTok>
-              <XMTok font="italic" role="ID">B</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
               <XMTok name="dots" role="ID">…</XMTok>
-              <XMTok font="italic" role="ID">Z</XMTok>
+              <XMTok font="italic" role="UNKNOWN">Z</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -248,8 +248,8 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="ID">A</XMTok>
-              <XMTok font="italic" role="ID">B</XMTok>
+              <XMTok font="italic" role="UNKNOWN">A</XMTok>
+              <XMTok font="italic" role="UNKNOWN">B</XMTok>
               <XMTok name="dots" role="ID">…</XMTok>
             </XMApp>
           </XMath>
@@ -262,12 +262,12 @@
               <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" fontsize="70%" role="ID">A</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">A</XMTok>
                 <XMTok fontsize="70%" name="dots" role="ID">…</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" fontsize="70%" role="ID">B</XMTok>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok>
                 <XMTok fontsize="70%" name="dots" role="ID">…</XMTok>
               </XMApp>
             </XMApp>

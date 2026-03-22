@@ -9,7 +9,7 @@
   <para xml:id="p1">
     <p><Math mode="inline" tex="b" text="b" xml:id="p1.m1">
         <XMath>
-          <XMTok font="italic" role="ID">b</XMTok>
+          <XMTok font="italic" role="UNKNOWN">b</XMTok>
         </XMath>
       </Math> B</p>
   </para>
@@ -18,9 +18,9 @@
         <XMath>
           <XMApp color="#FF0000">
             <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
-            <XMTok font="italic" role="ID">r</XMTok>
-            <XMTok color="#00FF00" font="italic" role="ID">g</XMTok>
-            <XMTok color="#FFFF00" font="italic" role="ID">y</XMTok>
+            <XMTok font="italic" role="UNKNOWN">r</XMTok>
+            <XMTok color="#00FF00" font="italic" role="UNKNOWN">g</XMTok>
+            <XMTok color="#FFFF00" font="italic" role="UNKNOWN">y</XMTok>
           </XMApp>
         </XMath>
       </Math><text color="#FF0000"> R</text> B</p>
@@ -30,13 +30,13 @@
           <XMath>
             <XMApp>
               <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="ID">r</XMTok>
+              <XMTok font="italic" role="UNKNOWN">r</XMTok>
               <XMText>R</XMText>
-              <XMTok color="#00FF00" font="italic" role="ID">g</XMTok>
+              <XMTok color="#00FF00" font="italic" role="UNKNOWN">g</XMTok>
               <XMText><text color="#00FF00">G</text></XMText>
-              <XMTok color="#FFFF00" font="italic" role="ID">y</XMTok>
+              <XMTok color="#FFFF00" font="italic" role="UNKNOWN">y</XMTok>
               <XMText><text color="#FFFF00">Y</text></XMText>
-              <XMTok font="italic" role="ID">r</XMTok>
+              <XMTok font="italic" role="UNKNOWN">r</XMTok>
               <XMText>R</XMText>
             </XMApp>
           </XMath>
@@ -45,7 +45,7 @@
   <para xml:id="p4">
     <p><Math mode="inline" tex="\color[rgb]{1,0,0}r" text="r" xml:id="p4.m1">
         <XMath>
-          <XMTok color="#FF0000" font="italic" role="ID">r</XMTok>
+          <XMTok color="#FF0000" font="italic" role="UNKNOWN">r</XMTok>
         </XMath>
       </Math> B B</p>
   </para>
@@ -56,7 +56,7 @@
     <equation xml:id="S0.Ex1">
       <Math mode="display" tex="r" text="r" xml:id="S0.Ex1.m1">
         <XMath>
-          <XMTok color="#FF0000" font="italic" role="ID">r</XMTok>
+          <XMTok color="#FF0000" font="italic" role="UNKNOWN">r</XMTok>
         </XMath>
       </Math>
     </equation>
@@ -64,7 +64,7 @@
   <para xml:id="p7">
     <p><Math mode="inline" tex="b" text="b" xml:id="p7.m1">
         <XMath>
-          <XMTok font="italic" role="ID">b</XMTok>
+          <XMTok font="italic" role="UNKNOWN">b</XMTok>
         </XMath>
       </Math> B</p>
   </para>

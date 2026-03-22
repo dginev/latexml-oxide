@@ -56,7 +56,7 @@ Test (not): not</p>
     <para xml:id="S2.p7">
       <p>But still acts like math:<Math mode="inline" tex="a" text="a" xml:id="S2.p7.m1">
           <XMath>
-            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
           </XMath>
         </Math>.</p>
     </para>
@@ -85,7 +85,7 @@ DOLLAR: 3; math shift character $.</p>
     <para xml:id="S3.p5">
       <p>But still acts like math:<Math mode="inline" tex="a" text="a" xml:id="S3.p5.m1">
           <XMath>
-            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
           </XMath>
         </Math>.</p>
     </para>
@@ -187,9 +187,9 @@ equals</p>
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="ID">n</XMTok>
-              <XMTok font="italic" role="ID">o</XMTok>
-              <XMTok font="italic" role="ID">t</XMTok>
+              <XMTok font="italic" role="UNKNOWN">n</XMTok>
+              <XMTok font="italic" role="UNKNOWN">o</XMTok>
+              <XMTok font="italic" role="UNKNOWN">t</XMTok>
             </XMApp>
           </XMath>
         </Math></p>

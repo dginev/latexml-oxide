@@ -17,11 +17,11 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="2" role="NUMBER">2</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -32,11 +32,11 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="123.456" role="NUMBER">123.456</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -72,7 +72,7 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMApp>
@@ -84,7 +84,7 @@
                     <XMTok meaning="34" role="NUMBER">34</XMTok>
                   </XMApp>
                 </XMApp>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -105,7 +105,7 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="123" role="NUMBER">123</XMTok>
@@ -114,7 +114,7 @@
                   <XMTok meaning="12.0" role="NUMBER">12.0</XMTok>
                   <XMTok meaning="34" role="NUMBER">34</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -125,16 +125,16 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="123" role="NUMBER">123</XMTok>
                 <XMApp>
                   <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                   <XMTok meaning="12" role="NUMBER">12</XMTok>
-                  <XMTok font="italic" role="ID">y</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -145,7 +145,7 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="123" role="NUMBER">123</XMTok>
@@ -154,11 +154,11 @@
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="12" role="NUMBER">12</XMTok>
-                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   </XMApp>
-                  <XMTok font="italic" role="ID">y</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -169,16 +169,16 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="123" role="NUMBER">123</XMTok>
                 <XMApp>
                   <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                  <XMTok font="italic" role="ID">x</XMTok>
-                  <XMTok font="italic" role="ID">y</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -189,7 +189,7 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="123.456" role="NUMBER">123.456</XMTok>
@@ -198,7 +198,7 @@
                   <XMTok meaning="12" role="NUMBER">12</XMTok>
                   <XMTok meaning="34" role="NUMBER">34</XMTok>
                 </XMApp>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -209,11 +209,11 @@
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="2" role="NUMBER">2</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 <XMApp>
                   <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
@@ -245,7 +245,7 @@
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
-                  <XMTok font="italic" fontsize="70%" role="ID">m</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">m</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok meaning="factorial" role="POSTFIX">!</XMTok>
@@ -256,7 +256,7 @@
                       <XMApp xml:id="S3.Ex11.m1.2">
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok meaning="2" role="NUMBER">2</XMTok>
-                        <XMTok font="italic" role="ID">m</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">m</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>

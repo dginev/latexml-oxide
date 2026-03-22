@@ -134,8 +134,8 @@ No quirks</p>
               <XMTok meaning="absent"/>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -147,8 +147,8 @@ No quirks</p>
               <XMTok meaning="absent"/>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -158,8 +158,8 @@ No quirks</p>
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -169,8 +169,8 @@ No quirks</p>
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -180,8 +180,8 @@ No quirks</p>
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -195,8 +195,8 @@ No quirks</p>
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -205,8 +205,8 @@ No quirks</p>
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -214,8 +214,8 @@ No quirks</p>
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math></p>
@@ -227,8 +227,8 @@ No quirks</p>
               <XMTok meaning="absent"/>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -242,8 +242,8 @@ No quirks</p>
               <XMTok meaning="absent"/>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -257,8 +257,8 @@ No quirks</p>
               <XMTok meaning="absent"/>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -276,8 +276,8 @@ No quirks</p>
               <XMTok meaning="absent"/>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMApp>
           </XMath>

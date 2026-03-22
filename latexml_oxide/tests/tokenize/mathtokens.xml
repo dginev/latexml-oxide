@@ -12,9 +12,9 @@
             <XMTok meaning="multirelation"/>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
-              <XMTok font="italic" role="ID">c</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
             </XMApp>
             <XMTok meaning="not-equals" name="not-=" role="RELOP">≠</XMTok>
             <XMTok role="UNKNOWN">abc</XMTok>
@@ -33,7 +33,7 @@
         <XMath>
           <XMApp>
             <XMTok meaning="approximately-equals" name="approx" role="RELOP">≈</XMTok>
-            <XMTok font="italic" name="pi" role="ID">π</XMTok>
+            <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
             <XMTok meaning="3.1415926" role="NUMBER">3.1415 926</XMTok>
           </XMApp>
         </XMath>
@@ -44,9 +44,9 @@
         <XMath>
           <XMApp>
             <XMTok name="cdot" role="MULOP">⋅</XMTok>
-            <XMTok font="italic" role="ID">a</XMTok>
-            <XMTok font="italic" role="ID">b</XMTok>
-            <XMTok font="italic" role="ID">c</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
             <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
           </XMApp>
         </XMath>

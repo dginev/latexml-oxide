@@ -23,16 +23,16 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
                     <XMTok enclose="updiagonalstrike" font="italic" meaning="cancel" role="ENCLOSE"/>
                     <XMApp>
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -44,16 +44,16 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
                     <XMTok enclose="downdiagonalstrike" font="italic" meaning="cancel" role="ENCLOSE"/>
                     <XMApp>
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -65,16 +65,16 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
                     <XMTok enclose="updiagonalstrike downdiagonalstrike" font="italic" meaning="cancel" role="ENCLOSE"/>
                     <XMApp>
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -86,20 +86,20 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP"/>
                     <XMApp>
                       <XMTok enclose="updiagonalstrike updiagonalarrow" font="italic" meaning="cancel" role="ENCLOSE"/>
                       <XMApp>
                         <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                        <XMTok font="italic" role="ID">b</XMTok>
-                        <XMTok font="italic" role="ID">c</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
                       </XMApp>
                     </XMApp>
-                    <XMTok font="italic" name="phi" role="ID">ϕ</XMTok>
+                    <XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok>
                   </XMApp>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -111,16 +111,16 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
                     <XMTok color="#FF00FF" enclose="updiagonalstrike" font="italic" meaning="cancel" role="ENCLOSE"/>
                     <XMApp>
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -132,16 +132,16 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
                     <XMTok color="#FF0000" enclose="downdiagonalstrike" font="italic" meaning="cancel" role="ENCLOSE"/>
                     <XMApp>
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -153,16 +153,16 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
                     <XMTok color="#0000FF" enclose="updiagonalstrike downdiagonalstrike" font="italic" meaning="cancel" role="ENCLOSE"/>
                     <XMApp>
                       <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -174,20 +174,20 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP"/>
                     <XMApp>
                       <XMTok color="#00FF00" enclose="updiagonalstrike updiagonalarrow" font="italic" meaning="cancel" role="ENCLOSE"/>
                       <XMApp>
                         <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                        <XMTok font="italic" role="ID">b</XMTok>
-                        <XMTok font="italic" role="ID">c</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
                       </XMApp>
                     </XMApp>
-                    <XMTok font="italic" name="phi" role="ID">ϕ</XMTok>
+                    <XMTok font="italic" name="phi" role="UNKNOWN">ϕ</XMTok>
                   </XMApp>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>

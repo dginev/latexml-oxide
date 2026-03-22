@@ -29,8 +29,8 @@ a+b <Math mode="inline" tex="a+b" text="a + b" xml:id="p3.m1">
           <XMath>
             <XMApp>
               <XMTok font="serif" meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="serif italic" role="ID">a</XMTok>
-              <XMTok font="serif italic" role="ID">b</XMTok>
+              <XMTok font="serif italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="serif italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math> a+b

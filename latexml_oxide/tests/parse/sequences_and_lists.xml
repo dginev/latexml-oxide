@@ -38,19 +38,19 @@
               <XMApp xml:id="p2.m1.1">
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="2" role="NUMBER">2</XMTok>
-                <XMTok font="italic" role="ID">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
               <XMTok role="PUNCT">,</XMTok>
               <XMApp xml:id="p2.m1.2">
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="4" role="NUMBER">4</XMTok>
-                <XMTok font="italic" role="ID">y</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
               </XMApp>
               <XMTok role="PUNCT">,</XMTok>
               <XMApp xml:id="p2.m1.3">
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok meaning="6" role="NUMBER">6</XMTok>
-                <XMTok font="italic" role="ID">z</XMTok>
+                <XMTok font="italic" role="UNKNOWN">z</XMTok>
               </XMApp>
             </XMWrap>
           </XMDual>
@@ -62,7 +62,7 @@
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
             <XMDual>
               <XMApp>
                 <XMTok meaning="list"/>
@@ -71,11 +71,11 @@
                 <XMRef idref="p3.m1.3"/>
               </XMApp>
               <XMWrap>
-                <XMTok font="italic" role="ID" xml:id="p3.m1.1">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="p3.m1.1">b</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="ID" xml:id="p3.m1.2">c</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="p3.m1.2">c</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="ID" xml:id="p3.m1.3">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="p3.m1.3">d</XMTok>
               </XMWrap>
             </XMDual>
           </XMApp>
@@ -219,7 +219,7 @@
             <XMWrap>
               <XMTok meaning="plus" role="ADDOP" xml:id="p7.m3.1">+</XMTok>
               <XMTok role="PUNCT">,</XMTok>
-              <XMTok font="italic" role="ID" xml:id="p7.m3.2">G</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p7.m3.2">G</XMTok>
             </XMWrap>
           </XMDual>
         </XMath>

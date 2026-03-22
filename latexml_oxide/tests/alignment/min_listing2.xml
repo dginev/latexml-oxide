@@ -16,7 +16,7 @@
               </XMApp>
               <XMWrap>
                 <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                <XMTok font="italic" role="ID" xml:id="p1.m1.1">X</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">X</XMTok>
                 <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
               </XMWrap>
             </XMDual>

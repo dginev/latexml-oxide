@@ -36,8 +36,8 @@
               <XMWrap>
                 <XMApp xml:id="S1.E1.m1.1">
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
-                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
               </XMWrap>
@@ -59,8 +59,8 @@
               <XMWrap>
                 <XMApp xml:id="S1.E2.m1.1">
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">c</XMTok>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
               </XMWrap>
@@ -100,14 +100,14 @@
             <td align="right" border="r t" thead="row">a</td>
             <td align="center" border="t"><Math mode="inline" tex="x" text="x" xml:id="S1.T1.m1">
                 <XMath>
-                  <XMTok font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMath>
               </Math></td>
             <td align="center" border="t"><Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="S1.T1.m2">
                 <XMath>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMath>
@@ -119,14 +119,14 @@
                 <XMath>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">y</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="y" text="y" xml:id="S1.T1.m4">
                 <XMath>
-                  <XMTok font="italic" role="ID">y</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -322,8 +322,8 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
               <XMWrap>
                 <XMApp xml:id="S2.E3.m1.1">
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
-                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
               </XMWrap>
@@ -345,8 +345,8 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
               <XMWrap>
                 <XMApp xml:id="S2.E4.m1.1">
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">c</XMTok>
-                  <XMTok font="italic" role="ID">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">d</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
               </XMWrap>
@@ -386,14 +386,14 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
             <td align="right" border="r t" thead="row">a</td>
             <td align="center" border="t"><Math mode="inline" tex="x" text="x" xml:id="S2.T2.m1">
                 <XMath>
-                  <XMTok font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMath>
               </Math></td>
             <td align="center" border="t"><Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="S2.T2.m2">
                 <XMath>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMath>
@@ -405,14 +405,14 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
                 <XMath>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">y</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="y" text="y" xml:id="S2.T2.m4">
                 <XMath>
-                  <XMTok font="italic" role="ID">y</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 </XMath>
               </Math></td>
           </tr>

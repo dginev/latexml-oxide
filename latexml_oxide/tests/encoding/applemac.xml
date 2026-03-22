@@ -122,7 +122,7 @@
             <td align="center">¥</td>
             <td align="center"><Math mode="inline" tex="\mu" text="mu" xml:id="S1.p1.m6">
                 <XMath>
-                  <XMTok font="italic" name="mu" role="ID">μ</XMTok>
+                  <XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\partial" text="partial-differential" xml:id="S1.p1.m7">
@@ -132,17 +132,17 @@
               </Math></td>
             <td align="center"><Math mode="inline" tex="\Sigma" text="Sigma" xml:id="S1.p1.m8">
                 <XMath>
-                  <XMTok name="Sigma" role="ID">Σ</XMTok>
+                  <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\Pi" text="Pi" xml:id="S1.p1.m9">
                 <XMath>
-                  <XMTok name="Pi" role="ID">Π</XMTok>
+                  <XMTok name="Pi" role="UNKNOWN">Π</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\pi" text="pi" xml:id="S1.p1.m10">
                 <XMath>
-                  <XMTok font="italic" name="pi" role="ID">π</XMTok>
+                  <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\int" text="integral" xml:id="S1.p1.m11">
@@ -154,7 +154,7 @@
             <td align="center">º</td>
             <td align="center"><Math mode="inline" tex="\Omega" text="Omega" xml:id="S1.p1.m12">
                 <XMath>
-                  <XMTok name="Omega" role="ID">Ω</XMTok>
+                  <XMTok name="Omega" role="UNKNOWN">Ω</XMTok>
                 </XMath>
               </Math></td>
             <td align="center">æ</td>
@@ -182,7 +182,7 @@
               </Math></td>
             <td align="center"><Math mode="inline" tex="\Delta" text="Delta" xml:id="S1.p1.m16">
                 <XMath>
-                  <XMTok name="Delta" role="ID">Δ</XMTok>
+                  <XMTok name="Delta" role="UNKNOWN">Δ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center">«</td>

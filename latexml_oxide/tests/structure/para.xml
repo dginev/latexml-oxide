@@ -21,8 +21,8 @@
               <XMWrap>
                 <XMApp xml:id="S1.Ex1.m1.1">
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
-                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
               </XMWrap>
@@ -44,8 +44,8 @@
               <XMWrap>
                 <XMApp xml:id="S1.Ex2.m1.1">
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
-                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>
                 <XMTok role="PERIOD">.</XMTok>
               </XMWrap>

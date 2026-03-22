@@ -50,11 +50,11 @@ finish the remaining cases.</p>
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
-                <XMTok font="italic" role="ID">c</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -85,11 +85,11 @@ finish the remaining cases.</p>
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
-                <XMTok font="italic" role="ID">c</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -116,11 +116,11 @@ finish the remaining cases.</p>
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
-                <XMTok font="italic" role="ID">c</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
               </XMApp>
             </XMApp>
           </XMath>

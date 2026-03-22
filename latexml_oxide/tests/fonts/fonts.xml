@@ -27,9 +27,9 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="ID">F</XMTok>
-                  <XMTok font="italic" role="ID">f</XMTok>
-                  <XMTok font="italic" role="ID">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -37,8 +37,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -55,10 +55,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="ID">a</XMTok>
-                        <XMTok font="italic" role="ID">b</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -89,8 +89,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -107,10 +107,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok role="ID">a</XMTok>
-                        <XMTok role="ID">b</XMTok>
+                        <XMTok role="UNKNOWN">a</XMTok>
+                        <XMTok role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok role="ID">c</XMTok>
+                      <XMTok role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -134,8 +134,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="sansserif" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="sansserif" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -152,10 +152,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="sansserif" role="ID">a</XMTok>
-                        <XMTok font="sansserif" role="ID">b</XMTok>
+                        <XMTok font="sansserif" role="UNKNOWN">a</XMTok>
+                        <XMTok font="sansserif" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="sansserif" role="ID">c</XMTok>
+                      <XMTok font="sansserif" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -179,8 +179,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="typewriter" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="typewriter" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -197,10 +197,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="typewriter" role="ID">a</XMTok>
-                        <XMTok font="typewriter" role="ID">b</XMTok>
+                        <XMTok font="typewriter" role="UNKNOWN">a</XMTok>
+                        <XMTok font="typewriter" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="typewriter" role="ID">c</XMTok>
+                      <XMTok font="typewriter" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -219,9 +219,9 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="caligraphic" role="ID">F</XMTok>
-                  <XMTok font="caligraphic" role="ID">f</XMTok>
-                  <XMTok font="caligraphic" role="ID">f</XMTok>
+                  <XMTok font="caligraphic" role="UNKNOWN">F</XMTok>
+                  <XMTok font="caligraphic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="caligraphic" role="UNKNOWN">f</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -229,8 +229,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="caligraphic" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="caligraphic" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -247,10 +247,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="caligraphic" role="ID">a</XMTok>
-                        <XMTok font="caligraphic" role="ID">b</XMTok>
+                        <XMTok font="caligraphic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="caligraphic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="caligraphic" role="ID">c</XMTok>
+                      <XMTok font="caligraphic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -281,8 +281,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="bold" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="bold" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -299,10 +299,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="bold" role="ID">a</XMTok>
-                        <XMTok font="bold" role="ID">b</XMTok>
+                        <XMTok font="bold" role="UNKNOWN">a</XMTok>
+                        <XMTok font="bold" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="bold" role="ID">c</XMTok>
+                      <XMTok font="bold" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -333,8 +333,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="italic" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="italic" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -351,10 +351,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="ID">a</XMTok>
-                        <XMTok font="italic" role="ID">b</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -385,8 +385,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -403,10 +403,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok role="ID">a</XMTok>
-                        <XMTok role="ID">b</XMTok>
+                        <XMTok role="UNKNOWN">a</XMTok>
+                        <XMTok role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok role="ID">c</XMTok>
+                      <XMTok role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -430,8 +430,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="bold" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="bold" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -448,10 +448,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="bold" role="ID">a</XMTok>
-                        <XMTok font="bold" role="ID">b</XMTok>
+                        <XMTok font="bold" role="UNKNOWN">a</XMTok>
+                        <XMTok font="bold" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="bold" role="ID">c</XMTok>
+                      <XMTok font="bold" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -475,8 +475,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="italic" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="italic" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -493,10 +493,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="ID">a</XMTok>
-                        <XMTok font="italic" role="ID">b</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -527,8 +527,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="italic" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="italic" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -545,10 +545,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="ID">a</XMTok>
-                        <XMTok font="italic" role="ID">b</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -572,8 +572,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="sansserif" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="sansserif" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -590,10 +590,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="sansserif" role="ID">a</XMTok>
-                        <XMTok font="sansserif" role="ID">b</XMTok>
+                        <XMTok font="sansserif" role="UNKNOWN">a</XMTok>
+                        <XMTok font="sansserif" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="sansserif" role="ID">c</XMTok>
+                      <XMTok font="sansserif" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -617,8 +617,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="italic" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="italic" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -635,10 +635,10 @@
                       <XMTok meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="ID">a</XMTok>
-                        <XMTok font="italic" role="ID">b</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="italic" role="ID">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -664,9 +664,9 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="bold italic" role="ID">F</XMTok>
-                  <XMTok font="bold italic" role="ID">f</XMTok>
-                  <XMTok font="bold italic" role="ID">f</XMTok>
+                  <XMTok font="bold italic" role="UNKNOWN">F</XMTok>
+                  <XMTok font="bold italic" role="UNKNOWN">f</XMTok>
+                  <XMTok font="bold italic" role="UNKNOWN">f</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -674,8 +674,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="bold italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="bold" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="bold italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="bold" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -692,10 +692,10 @@
                       <XMTok font="bold" meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok font="bold" meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="bold italic" role="ID">a</XMTok>
-                        <XMTok font="bold italic" role="ID">b</XMTok>
+                        <XMTok font="bold italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="bold italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="bold italic" role="ID">c</XMTok>
+                      <XMTok font="bold italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok font="bold" role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -719,8 +719,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="bold italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="bold" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="bold italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="bold" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -737,10 +737,10 @@
                       <XMTok font="bold" meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok font="bold" meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="bold" role="ID">a</XMTok>
-                        <XMTok font="bold" role="ID">b</XMTok>
+                        <XMTok font="bold" role="UNKNOWN">a</XMTok>
+                        <XMTok font="bold" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="bold" role="ID">c</XMTok>
+                      <XMTok font="bold" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok font="bold" role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -764,8 +764,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="bold italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="sansserif bold" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="bold italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="sansserif bold" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -782,10 +782,10 @@
                       <XMTok font="bold" meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok font="bold" meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="sansserif bold" role="ID">a</XMTok>
-                        <XMTok font="sansserif bold" role="ID">b</XMTok>
+                        <XMTok font="sansserif bold" role="UNKNOWN">a</XMTok>
+                        <XMTok font="sansserif bold" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="sansserif bold" role="ID">c</XMTok>
+                      <XMTok font="sansserif bold" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok font="bold" role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -809,8 +809,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="bold italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="typewriter bold" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="bold italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="typewriter bold" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -827,10 +827,10 @@
                       <XMTok font="bold" meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok font="bold" meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="typewriter bold" role="ID">a</XMTok>
-                        <XMTok font="typewriter bold" role="ID">b</XMTok>
+                        <XMTok font="typewriter bold" role="UNKNOWN">a</XMTok>
+                        <XMTok font="typewriter bold" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="typewriter bold" role="ID">c</XMTok>
+                      <XMTok font="typewriter bold" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok font="bold" role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -849,9 +849,9 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="caligraphic bold" role="ID">F</XMTok>
-                  <XMTok font="caligraphic bold" role="ID">f</XMTok>
-                  <XMTok font="caligraphic bold" role="ID">f</XMTok>
+                  <XMTok font="caligraphic bold" role="UNKNOWN">F</XMTok>
+                  <XMTok font="caligraphic bold" role="UNKNOWN">f</XMTok>
+                  <XMTok font="caligraphic bold" role="UNKNOWN">f</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -859,8 +859,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="bold italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="caligraphic bold" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="bold italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="caligraphic bold" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -877,10 +877,10 @@
                       <XMTok font="bold" meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok font="bold" meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="caligraphic bold" role="ID">a</XMTok>
-                        <XMTok font="caligraphic bold" role="ID">b</XMTok>
+                        <XMTok font="caligraphic bold" role="UNKNOWN">a</XMTok>
+                        <XMTok font="caligraphic bold" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="caligraphic bold" role="ID">c</XMTok>
+                      <XMTok font="caligraphic bold" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok font="bold" role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>
@@ -904,8 +904,8 @@
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="bold italic" name="alpha" role="ID">α</XMTok>
-                  <XMTok font="bold italic" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="bold italic" name="alpha" role="UNKNOWN">α</XMTok>
+                  <XMTok font="bold italic" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMApp>
               </XMath>
             </Math></td>
@@ -922,10 +922,10 @@
                       <XMTok font="bold" meaning="union" name="cup" role="ADDOP">∪</XMTok>
                       <XMApp>
                         <XMTok font="bold" meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="bold italic" role="ID">a</XMTok>
-                        <XMTok font="bold italic" role="ID">b</XMTok>
+                        <XMTok font="bold italic" role="UNKNOWN">a</XMTok>
+                        <XMTok font="bold italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok font="bold italic" role="ID">c</XMTok>
+                      <XMTok font="bold italic" role="UNKNOWN">c</XMTok>
                     </XMApp>
                     <XMTok font="bold" role="CLOSE" stretchy="false">]</XMTok>
                   </XMWrap>

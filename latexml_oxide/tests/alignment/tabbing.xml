@@ -64,7 +64,7 @@
         <td/>
         <td align="left"><Math mode="inline" tex="i" text="i" xml:id="p3.m1">
             <XMath>
-              <XMTok font="italic" role="ID">i</XMTok>
+              <XMTok font="italic" role="UNKNOWN">i</XMTok>
             </XMath>
           </Math> : <text font="bold">integer</text>;</td>
         <td/>
@@ -74,7 +74,7 @@
         <td/>
         <td align="left"><Math mode="inline" tex="b" text="b" xml:id="p3.m2">
             <XMath>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMath>
           </Math> : <text font="bold">boolean</text>;</td>
       </tr>
@@ -87,7 +87,7 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="assign" role="RELOP">:=</XMTok>
-                <XMTok font="italic" role="ID">i</XMTok>
+                <XMTok font="italic" role="UNKNOWN">i</XMTok>
                 <XMTok meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
             </XMath>
@@ -101,7 +101,7 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="assign" role="RELOP">:=</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 <XMText><text font="typewriter">true</text></XMText>
               </XMApp>
             </XMath>
@@ -113,7 +113,7 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
-                <XMTok font="italic" role="ID">i</XMTok>
+                <XMTok font="italic" role="UNKNOWN">i</XMTok>
                 <XMTok meaning="15" role="NUMBER">15</XMTok>
               </XMApp>
             </XMath>
@@ -126,10 +126,10 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="assign" role="RELOP">:=</XMTok>
-                <XMTok font="italic" role="ID">i</XMTok>
+                <XMTok font="italic" role="UNKNOWN">i</XMTok>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                  <XMTok font="italic" role="ID">i</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
                   <XMTok meaning="1" role="NUMBER">1</XMTok>
                 </XMApp>
               </XMApp>
@@ -143,11 +143,11 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="assign" role="RELOP">:=</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMText rpadding="5.0pt"><text font="bold">not</text></XMText>
-                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>
               </XMApp>
             </XMath>

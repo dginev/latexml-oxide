@@ -17,8 +17,8 @@ Expect inline math: xx<Math mode="inline" tex="a+b" text="a + b" xml:id="S1.p1.m
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>xx</p>
@@ -30,8 +30,8 @@ Expect inline math: xx<Math mode="inline" tex="a+b" text="a + b" xml:id="S1.p1.m
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>

@@ -9,9 +9,9 @@
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">×</XMTok>
-            <XMTok font="italic" role="ID">a</XMTok>
-            <XMTok font="italic" role="ID">b</XMTok>
-            <XMTok font="italic" role="ID">c</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
           </XMApp>
         </XMath>
       </Math></p>

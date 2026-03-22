@@ -34,12 +34,12 @@
                     <XMTok font="upright" role="OPEN" stretchy="false">{</XMTok>
                     <XMApp xml:id="S1.Thmthm1.p1.m1.2">
                       <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok role="ID">d</XMTok>
+                      <XMTok role="UNKNOWN">d</XMTok>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok role="ID">s</XMTok>
+                          <XMTok role="UNKNOWN">s</XMTok>
                           <XMTok font="upright" fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                         </XMApp>
                         <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -50,13 +50,13 @@
                     <XMTok font="upright" role="PUNCT">,</XMTok>
                     <XMApp xml:id="S1.Thmthm1.p1.m1.3">
                       <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok role="ID">d</XMTok>
+                      <XMTok role="UNKNOWN">d</XMTok>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok role="ID">s</XMTok>
-                          <XMTok fontsize="70%" role="ID">k</XMTok>
+                          <XMTok role="UNKNOWN">s</XMTok>
+                          <XMTok fontsize="70%" role="UNKNOWN">k</XMTok>
                         </XMApp>
                         <XMTok font="upright" fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                       </XMApp>
@@ -70,15 +70,15 @@ on <Math mode="inline" tex="\mathbf{D}_{r}" text="D _ r" xml:id="S1.Thmthm1.p1.m
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="bold upright" role="ID">D</XMTok>
-                  <XMTok fontsize="70%" role="ID">r</XMTok>
+                  <XMTok font="bold upright" role="UNKNOWN">D</XMTok>
+                  <XMTok fontsize="70%" role="UNKNOWN">r</XMTok>
                 </XMApp>
               </XMath>
             </Math>, with associated forms <Math mode="inline" tex="\omega^{1}" text="omega ^ 1" xml:id="S1.Thmthm1.p1.m3">
               <XMath>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMTok name="omega" role="ID">ω</XMTok>
+                  <XMTok name="omega" role="UNKNOWN">ω</XMTok>
                   <XMTok font="upright" fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                 </XMApp>
               </XMath>
@@ -86,8 +86,8 @@ on <Math mode="inline" tex="\mathbf{D}_{r}" text="D _ r" xml:id="S1.Thmthm1.p1.m
               <XMath>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMTok name="omega" role="ID">ω</XMTok>
-                  <XMTok fontsize="70%" role="ID">k</XMTok>
+                  <XMTok name="omega" role="UNKNOWN">ω</XMTok>
+                  <XMTok fontsize="70%" role="UNKNOWN">k</XMTok>
                 </XMApp>
               </XMath>
             </Math>.
@@ -97,19 +97,19 @@ Then <Math mode="inline" tex="\omega^{i}\leq\omega_{r}" text="omega ^ i &lt;= om
                   <XMTok font="upright" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok name="omega" role="ID">ω</XMTok>
-                    <XMTok fontsize="70%" role="ID">i</XMTok>
+                    <XMTok name="omega" role="UNKNOWN">ω</XMTok>
+                    <XMTok fontsize="70%" role="UNKNOWN">i</XMTok>
                   </XMApp>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok name="omega" role="ID">ω</XMTok>
-                    <XMTok fontsize="70%" role="ID">r</XMTok>
+                    <XMTok name="omega" role="UNKNOWN">ω</XMTok>
+                    <XMTok fontsize="70%" role="UNKNOWN">r</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>
             </Math> for all <Math mode="inline" tex="i" text="i" xml:id="S1.Thmthm1.p1.m6">
               <XMath>
-                <XMTok role="ID">i</XMTok>
+                <XMTok role="UNKNOWN">i</XMTok>
               </XMath>
             </Math>.</text></p>
       </para>
@@ -129,7 +129,7 @@ Then <Math mode="inline" tex="\omega^{i}\leq\omega_{r}" text="omega ^ i &lt;= om
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok role="ID">d</XMTok>
+                  <XMTok role="UNKNOWN">d</XMTok>
                   <XMTok font="upright" fontsize="70%" meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
                 </XMApp>
               </XMath>
@@ -137,32 +137,32 @@ Then <Math mode="inline" tex="\omega^{i}\leq\omega_{r}" text="omega ^ i &lt;= om
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok role="ID">d</XMTok>
+                  <XMTok role="UNKNOWN">d</XMTok>
                   <XMTok font="upright" fontsize="70%" meaning="minimum" role="OPFUNCTION" scriptpos="post">min</XMTok>
                 </XMApp>
               </XMath>
             </Math> be the maximum, resp. minimum distance
 between any two adjacent vertices of a quadrilateral <Math mode="inline" tex="Q" text="Q" xml:id="S1.Thmthm2.p1.m3">
               <XMath>
-                <XMTok role="ID">Q</XMTok>
+                <XMTok role="UNKNOWN">Q</XMTok>
               </XMath>
             </Math>. Let <Math mode="inline" tex="\sigma" text="sigma" xml:id="S1.Thmthm2.p1.m4">
               <XMath>
-                <XMTok name="sigma" role="ID">σ</XMTok>
+                <XMTok name="sigma" role="UNKNOWN">σ</XMTok>
               </XMath>
             </Math>
 be the diagonal pigspan of a pig <Math mode="inline" tex="P" text="P" xml:id="S1.Thmthm2.p1.m5">
               <XMath>
-                <XMTok role="ID">P</XMTok>
+                <XMTok role="UNKNOWN">P</XMTok>
               </XMath>
             </Math> with four legs.
 Then <Math mode="inline" tex="P" text="P" xml:id="S1.Thmthm2.p1.m6">
               <XMath>
-                <XMTok role="ID">P</XMTok>
+                <XMTok role="UNKNOWN">P</XMTok>
               </XMath>
             </Math> is capable of standing on the corners of <Math mode="inline" tex="Q" text="Q" xml:id="S1.Thmthm2.p1.m7">
               <XMath>
-                <XMTok role="ID">Q</XMTok>
+                <XMTok role="UNKNOWN">Q</XMTok>
               </XMath>
             </Math> iff</text></p>
         <equation labels="LABEL:sdq" xml:id="S1.E1">
@@ -177,7 +177,7 @@ Then <Math mode="inline" tex="P" text="P" xml:id="S1.Thmthm2.p1.m6">
                 <XMWrap>
                   <XMApp xml:id="S1.E1.m1.1">
                     <XMTok meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
-                    <XMTok font="italic" name="sigma" role="ID">σ</XMTok>
+                    <XMTok font="italic" name="sigma" role="UNKNOWN">σ</XMTok>
                     <XMApp>
                       <XMTok meaning="square-root"/>
                       <XMApp>
@@ -186,7 +186,7 @@ Then <Math mode="inline" tex="P" text="P" xml:id="S1.Thmthm2.p1.m6">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                           <XMApp>
                             <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="ID">d</XMTok>
+                            <XMTok font="italic" role="UNKNOWN">d</XMTok>
                             <XMTok fontsize="70%" meaning="maximum" role="OPFUNCTION" scriptpos="post">max</XMTok>
                           </XMApp>
                           <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -195,7 +195,7 @@ Then <Math mode="inline" tex="P" text="P" xml:id="S1.Thmthm2.p1.m6">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                           <XMApp>
                             <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
-                            <XMTok font="italic" role="ID">d</XMTok>
+                            <XMTok font="italic" role="UNKNOWN">d</XMTok>
                             <XMTok fontsize="70%" meaning="minimum" role="OPFUNCTION" scriptpos="post">min</XMTok>
                           </XMApp>
                           <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
@@ -221,12 +221,12 @@ Then <Math mode="inline" tex="P" text="P" xml:id="S1.Thmthm2.p1.m6">
       <para xml:id="S1.Thmthm3.p1">
         <p><text font="italic">Admitting reflection and rotation, a three-legged pig <Math mode="inline" tex="P" text="P" xml:id="S1.Thmthm3.p1.m1">
               <XMath>
-                <XMTok role="ID">P</XMTok>
+                <XMTok role="UNKNOWN">P</XMTok>
               </XMath>
             </Math> is capable of
 standing on the corners of a triangle <Math mode="inline" tex="T" text="T" xml:id="S1.Thmthm3.p1.m2">
               <XMath>
-                <XMTok role="ID">T</XMTok>
+                <XMTok role="UNKNOWN">T</XMTok>
               </XMath>
             </Math> iff (<ref labelref="LABEL:sdq"/>) holds.</text></p>
       </para>

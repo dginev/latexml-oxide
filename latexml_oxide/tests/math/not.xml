@@ -201,7 +201,7 @@
               <XMTok enclose="updiagonalstrike" meaning="not" role="ENCLOSE"/>
               <XMApp>
                 <XMTok meaning="square-root"/>
-                <XMTok font="italic" role="ID">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
@@ -236,11 +236,11 @@
           <XMath>
             <XMApp>
               <XMTok meaning="divide" role="MULOP">/</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
-                <XMTok font="italic" role="ID">c</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">c</XMTok>
                 <XMTok meaning="not" role="OPFUNCTION">／</XMTok>
               </XMApp>
             </XMApp>
@@ -254,10 +254,10 @@
               <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
                 <XMTok meaning="not" role="OPFUNCTION">／</XMTok>
               </XMApp>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>

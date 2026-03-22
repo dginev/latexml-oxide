@@ -18,12 +18,12 @@
         <Math mode="display" tex="f(x)" text="f@(x)" xml:id="S1.Ex1.m1">
           <XMath>
             <XMApp>
-              <XMTok font="italic" possibleFunction="yes" role="ID">f</XMTok>
+              <XMTok font="italic" possibleFunction="yes" role="UNKNOWN">f</XMTok>
               <XMDual>
                 <XMRef idref="S1.Ex1.m1.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="ID" xml:id="S1.Ex1.m1.1">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex1.m1.1">x</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
               </XMDual>
@@ -34,4 +34,3 @@
     </para>
   </section>
 </document>
-

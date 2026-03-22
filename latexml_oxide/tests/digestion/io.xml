@@ -30,7 +30,7 @@ comment after<text font="bold">Foo!</text></p>
           <XMath>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="ID">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
               <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
             </XMApp>
           </XMath>
@@ -94,7 +94,7 @@ Line: “<Math mode="inline" tex="x^{\prime}" text="x ^ prime" xml:id="S0.SS0.SS
           <XMath>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="ID">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
               <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
             </XMApp>
           </XMath>
@@ -185,7 +185,7 @@ Line (no EOL): “<Math mode="inline" tex="x^{\prime}" text="x ^ prime" xml:id="
           <XMath>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="ID">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
               <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
             </XMApp>
           </XMath>
@@ -263,7 +263,7 @@ Line (EOL=0): “<Math mode="inline" tex="x^{\prime}" text="x ^ prime" xml:id="S
           <XMath>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="ID">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
               <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
             </XMApp>
           </XMath>

@@ -81,8 +81,8 @@
             <XMath>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMath>
           </Math>

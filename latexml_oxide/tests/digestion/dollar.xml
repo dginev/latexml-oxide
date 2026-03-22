@@ -7,7 +7,7 @@
   <para xml:id="p1">
     <p>t <Math mode="inline" tex="m" text="m" xml:id="p1.m1">
         <XMath>
-          <XMTok font="italic" role="ID">m</XMTok>
+          <XMTok font="italic" role="UNKNOWN">m</XMTok>
         </XMath>
       </Math> t</p>
   </para>
@@ -21,7 +21,7 @@
           <tag role="typerefnum">footnote 1</tag>
         </tags>t <Math mode="inline" tex="m" text="m" xml:id="footnote1.m1">
           <XMath>
-            <XMTok font="italic" role="ID">m</XMTok>
+            <XMTok font="italic" role="UNKNOWN">m</XMTok>
           </XMath>
         </Math> t</note>
 Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
@@ -31,7 +31,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         </tags>t <equation xml:id="S0.Ex1">
           <Math mode="display" tex="m" text="m" xml:id="S0.Ex1.m1">
             <XMath>
-              <XMTok font="italic" role="ID">m</XMTok>
+              <XMTok font="italic" role="UNKNOWN">m</XMTok>
             </XMath>
           </Math>
         </equation> t</note></p>
@@ -42,7 +42,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
       <equation xml:id="S0.Ex2">
         <Math mode="display" tex="m" text="m" xml:id="S0.Ex2.m1">
           <XMath>
-            <XMTok font="italic" role="ID">m</XMTok>
+            <XMTok font="italic" role="UNKNOWN">m</XMTok>
           </XMath>
         </Math>
       </equation>
@@ -55,7 +55,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         <equation xml:id="S0.Ex3">
           <Math mode="display" tex="m" text="m" xml:id="S0.Ex3.m1">
             <XMath>
-              <XMTok font="italic" role="ID">m</XMTok>
+              <XMTok font="italic" role="UNKNOWN">m</XMTok>
             </XMath>
           </Math>
         </equation>
@@ -68,7 +68,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
       <equation xml:id="S0.Ex4">
         <Math mode="display" tex="m" text="m" xml:id="S0.Ex4.m1">
           <XMath>
-            <XMTok font="italic" role="ID">m</XMTok>
+            <XMTok font="italic" role="UNKNOWN">m</XMTok>
           </XMath>
         </Math>
       </equation>
@@ -81,7 +81,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         <equation xml:id="S0.Ex5">
           <Math mode="display" tex="m" text="m" xml:id="S0.Ex5.m1">
             <XMath>
-              <XMTok font="italic" role="ID">m</XMTok>
+              <XMTok font="italic" role="UNKNOWN">m</XMTok>
             </XMath>
           </Math>
         </equation>
@@ -94,7 +94,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
   <para xml:id="p9">
     <p>t <Math mode="inline" tex="m" text="m" xml:id="p9.m1">
         <XMath>
-          <XMTok font="italic" role="ID">m</XMTok>
+          <XMTok font="italic" role="UNKNOWN">m</XMTok>
         </XMath>
       </Math> t</p>
   </para>
@@ -107,13 +107,13 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         <XMath>
           <XMApp>
             <XMTok meaning="plus" role="ADDOP">+</XMTok>
-            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
             <XMText>t <Math mode="inline" tex="m" text="m" xml:id="S0.Ex6.m1.m1">
                 <XMath>
-                  <XMTok font="italic" role="ID">m</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
                 </XMath>
               </Math> t</XMText>
-            <XMTok font="italic" role="ID">c</XMTok>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -125,9 +125,9 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         <XMath>
           <XMApp>
             <XMTok meaning="plus" role="ADDOP">+</XMTok>
-            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
             <XMText>t t t</XMText>
-            <XMTok font="italic" role="ID">c</XMTok>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -139,13 +139,13 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         <XMath>
           <XMApp>
             <XMTok meaning="plus" role="ADDOP">+</XMTok>
-            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
             <XMText>t <Math mode="inline" tex="m" text="m" xml:id="S0.Ex8.m1.m1">
                 <XMath>
-                  <XMTok font="italic" role="ID">m</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
                 </XMath>
               </Math> t</XMText>
-            <XMTok font="italic" role="ID">c</XMTok>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -157,9 +157,9 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         <XMath>
           <XMApp>
             <XMTok meaning="plus" role="ADDOP">+</XMTok>
-            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
             <XMText>t t t</XMText>
-            <XMTok font="italic" role="ID">c</XMTok>
+            <XMTok font="italic" role="UNKNOWN">c</XMTok>
           </XMApp>
         </XMath>
       </Math>
@@ -168,7 +168,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
   <para xml:id="p15">
     <p>Base<text yoffset="10.0pt">t <Math mode="inline" tex="m" text="m" xml:id="p15.m1">
           <XMath>
-            <XMTok font="italic" role="ID">m</XMTok>
+            <XMTok font="italic" role="UNKNOWN">m</XMTok>
           </XMath>
         </Math> t</text></p>
   </para>
@@ -180,7 +180,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
         <p>t</p>
         <p><Math mode="inline" tex="m" text="m" xml:id="p17.m1">
             <XMath>
-              <XMTok font="italic" role="ID">m</XMTok>
+              <XMTok font="italic" role="UNKNOWN">m</XMTok>
             </XMath>
           </Math></p>
         <p>t</p>

@@ -21,59 +21,59 @@
           <tr>
             <td align="center"><Math mode="inline" tex="\mathbb{\Gamma}" text="Gamma" xml:id="S1.p2.m1">
                 <XMath>
-                  <XMTok font="blackboard" name="Gamma" role="ID">Γ</XMTok>
+                  <XMTok font="blackboard" name="Gamma" role="UNKNOWN">Γ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Delta}" text="Delta" xml:id="S1.p2.m2">
                 <XMath>
-                  <XMTok font="blackboard" name="Delta" role="ID">Δ</XMTok>
+                  <XMTok font="blackboard" name="Delta" role="UNKNOWN">Δ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Theta}" text="Theta" xml:id="S1.p2.m3">
                 <XMath>
-                  <XMTok font="blackboard" name="Theta" role="ID">Θ</XMTok>
+                  <XMTok font="blackboard" name="Theta" role="UNKNOWN">Θ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Lambda}" text="Lambda" xml:id="S1.p2.m4">
                 <XMath>
-                  <XMTok font="blackboard" name="Lambda" role="ID">Λ</XMTok>
+                  <XMTok font="blackboard" name="Lambda" role="UNKNOWN">Λ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Xi}" text="Xi" xml:id="S1.p2.m5">
                 <XMath>
-                  <XMTok font="blackboard" name="Xi" role="ID">Ξ</XMTok>
+                  <XMTok font="blackboard" name="Xi" role="UNKNOWN">Ξ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Pi}" text="Pi" xml:id="S1.p2.m6">
                 <XMath>
-                  <XMTok font="blackboard" name="Pi" role="ID">Π</XMTok>
+                  <XMTok font="blackboard" name="Pi" role="UNKNOWN">Π</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Sigma}" text="Sigma" xml:id="S1.p2.m7">
                 <XMath>
-                  <XMTok font="blackboard" name="Sigma" role="ID">Σ</XMTok>
+                  <XMTok font="blackboard" name="Sigma" role="UNKNOWN">Σ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Upsilon}" text="Upsilon" xml:id="S1.p2.m8">
                 <XMath>
-                  <XMTok font="blackboard" name="Upsilon" role="ID">Υ</XMTok>
+                  <XMTok font="blackboard" name="Upsilon" role="UNKNOWN">Υ</XMTok>
                 </XMath>
               </Math></td>
           </tr>
           <tr>
             <td align="center"><Math mode="inline" tex="\mathbb{\Phi}" text="Phi" xml:id="S1.p2.m9">
                 <XMath>
-                  <XMTok font="blackboard" name="Phi" role="ID">Φ</XMTok>
+                  <XMTok font="blackboard" name="Phi" role="UNKNOWN">Φ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Psi}" text="Psi" xml:id="S1.p2.m10">
                 <XMath>
-                  <XMTok font="blackboard" name="Psi" role="ID">Ψ</XMTok>
+                  <XMTok font="blackboard" name="Psi" role="UNKNOWN">Ψ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{\Omega}" text="Omega" xml:id="S1.p2.m11">
                 <XMath>
-                  <XMTok font="blackboard" name="Omega" role="ID">Ω</XMTok>
+                  <XMTok font="blackboard" name="Omega" role="UNKNOWN">Ω</XMTok>
                 </XMath>
               </Math></td>
             <td/>
@@ -150,138 +150,138 @@
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{A}" text="𝔸" xml:id="S1.p2.m23">
                 <XMath>
-                  <XMTok role="ID">𝔸</XMTok>
+                  <XMTok role="UNKNOWN">𝔸</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{B}" text="𝔹" xml:id="S1.p2.m24">
                 <XMath>
-                  <XMTok role="ID">𝔹</XMTok>
+                  <XMTok role="UNKNOWN">𝔹</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{C}" text="ℂ" xml:id="S1.p2.m25">
                 <XMath>
-                  <XMTok role="ID">ℂ</XMTok>
+                  <XMTok role="UNKNOWN">ℂ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{D}" text="𝔻" xml:id="S1.p2.m26">
                 <XMath>
-                  <XMTok role="ID">𝔻</XMTok>
+                  <XMTok role="UNKNOWN">𝔻</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{E}" text="𝔼" xml:id="S1.p2.m27">
                 <XMath>
-                  <XMTok role="ID">𝔼</XMTok>
+                  <XMTok role="UNKNOWN">𝔼</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{F}" text="𝔽" xml:id="S1.p2.m28">
                 <XMath>
-                  <XMTok role="ID">𝔽</XMTok>
+                  <XMTok role="UNKNOWN">𝔽</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{G}" text="𝔾" xml:id="S1.p2.m29">
                 <XMath>
-                  <XMTok role="ID">𝔾</XMTok>
+                  <XMTok role="UNKNOWN">𝔾</XMTok>
                 </XMath>
               </Math></td>
           </tr>
           <tr>
             <td align="center"><Math mode="inline" tex="\mathbb{H}" text="ℍ" xml:id="S1.p2.m30">
                 <XMath>
-                  <XMTok role="ID">ℍ</XMTok>
+                  <XMTok role="UNKNOWN">ℍ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{I}" text="𝕀" xml:id="S1.p2.m31">
                 <XMath>
-                  <XMTok role="ID">𝕀</XMTok>
+                  <XMTok role="UNKNOWN">𝕀</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{J}" text="𝕁" xml:id="S1.p2.m32">
                 <XMath>
-                  <XMTok role="ID">𝕁</XMTok>
+                  <XMTok role="UNKNOWN">𝕁</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{K}" text="𝕂" xml:id="S1.p2.m33">
                 <XMath>
-                  <XMTok role="ID">𝕂</XMTok>
+                  <XMTok role="UNKNOWN">𝕂</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{L}" text="𝕃" xml:id="S1.p2.m34">
                 <XMath>
-                  <XMTok role="ID">𝕃</XMTok>
+                  <XMTok role="UNKNOWN">𝕃</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{M}" text="𝕄" xml:id="S1.p2.m35">
                 <XMath>
-                  <XMTok role="ID">𝕄</XMTok>
+                  <XMTok role="UNKNOWN">𝕄</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{N}" text="ℕ" xml:id="S1.p2.m36">
                 <XMath>
-                  <XMTok role="ID">ℕ</XMTok>
+                  <XMTok role="UNKNOWN">ℕ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{O}" text="𝕆" xml:id="S1.p2.m37">
                 <XMath>
-                  <XMTok role="ID">𝕆</XMTok>
+                  <XMTok role="UNKNOWN">𝕆</XMTok>
                 </XMath>
               </Math></td>
           </tr>
           <tr>
             <td align="center"><Math mode="inline" tex="\mathbb{P}" text="ℙ" xml:id="S1.p2.m38">
                 <XMath>
-                  <XMTok role="ID">ℙ</XMTok>
+                  <XMTok role="UNKNOWN">ℙ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{Q}" text="ℚ" xml:id="S1.p2.m39">
                 <XMath>
-                  <XMTok role="ID">ℚ</XMTok>
+                  <XMTok role="UNKNOWN">ℚ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{R}" text="ℝ" xml:id="S1.p2.m40">
                 <XMath>
-                  <XMTok role="ID">ℝ</XMTok>
+                  <XMTok role="UNKNOWN">ℝ</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{S}" text="𝕊" xml:id="S1.p2.m41">
                 <XMath>
-                  <XMTok role="ID">𝕊</XMTok>
+                  <XMTok role="UNKNOWN">𝕊</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{T}" text="𝕋" xml:id="S1.p2.m42">
                 <XMath>
-                  <XMTok role="ID">𝕋</XMTok>
+                  <XMTok role="UNKNOWN">𝕋</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{U}" text="𝕌" xml:id="S1.p2.m43">
                 <XMath>
-                  <XMTok role="ID">𝕌</XMTok>
+                  <XMTok role="UNKNOWN">𝕌</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{V}" text="𝕍" xml:id="S1.p2.m44">
                 <XMath>
-                  <XMTok role="ID">𝕍</XMTok>
+                  <XMTok role="UNKNOWN">𝕍</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{W}" text="𝕎" xml:id="S1.p2.m45">
                 <XMath>
-                  <XMTok role="ID">𝕎</XMTok>
+                  <XMTok role="UNKNOWN">𝕎</XMTok>
                 </XMath>
               </Math></td>
           </tr>
           <tr>
             <td align="center"><Math mode="inline" tex="\mathbb{X}" text="𝕏" xml:id="S1.p2.m46">
                 <XMath>
-                  <XMTok role="ID">𝕏</XMTok>
+                  <XMTok role="UNKNOWN">𝕏</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{Y}" text="𝕐" xml:id="S1.p2.m47">
                 <XMath>
-                  <XMTok role="ID">𝕐</XMTok>
+                  <XMTok role="UNKNOWN">𝕐</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{Z}" text="ℤ" xml:id="S1.p2.m48">
                 <XMath>
-                  <XMTok role="ID">ℤ</XMTok>
+                  <XMTok role="UNKNOWN">ℤ</XMTok>
                 </XMath>
               </Math></td>
             <td/>
@@ -294,138 +294,138 @@
             <td/>
             <td align="center"><Math mode="inline" tex="\mathbb{a}" text="𝕒" xml:id="S1.p2.m49">
                 <XMath>
-                  <XMTok role="ID">𝕒</XMTok>
+                  <XMTok role="UNKNOWN">𝕒</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{b}" text="𝕓" xml:id="S1.p2.m50">
                 <XMath>
-                  <XMTok role="ID">𝕓</XMTok>
+                  <XMTok role="UNKNOWN">𝕓</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{c}" text="𝕔" xml:id="S1.p2.m51">
                 <XMath>
-                  <XMTok role="ID">𝕔</XMTok>
+                  <XMTok role="UNKNOWN">𝕔</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{d}" text="𝕕" xml:id="S1.p2.m52">
                 <XMath>
-                  <XMTok role="ID">𝕕</XMTok>
+                  <XMTok role="UNKNOWN">𝕕</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{e}" text="𝕖" xml:id="S1.p2.m53">
                 <XMath>
-                  <XMTok role="ID">𝕖</XMTok>
+                  <XMTok role="UNKNOWN">𝕖</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{f}" text="𝕗" xml:id="S1.p2.m54">
                 <XMath>
-                  <XMTok role="ID">𝕗</XMTok>
+                  <XMTok role="UNKNOWN">𝕗</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{g}" text="𝕘" xml:id="S1.p2.m55">
                 <XMath>
-                  <XMTok role="ID">𝕘</XMTok>
+                  <XMTok role="UNKNOWN">𝕘</XMTok>
                 </XMath>
               </Math></td>
           </tr>
           <tr>
             <td align="center"><Math mode="inline" tex="\mathbb{h}" text="𝕙" xml:id="S1.p2.m56">
                 <XMath>
-                  <XMTok role="ID">𝕙</XMTok>
+                  <XMTok role="UNKNOWN">𝕙</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{i}" text="𝕚" xml:id="S1.p2.m57">
                 <XMath>
-                  <XMTok role="ID">𝕚</XMTok>
+                  <XMTok role="UNKNOWN">𝕚</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{j}" text="𝕛" xml:id="S1.p2.m58">
                 <XMath>
-                  <XMTok role="ID">𝕛</XMTok>
+                  <XMTok role="UNKNOWN">𝕛</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{k}" text="𝕜" xml:id="S1.p2.m59">
                 <XMath>
-                  <XMTok role="ID">𝕜</XMTok>
+                  <XMTok role="UNKNOWN">𝕜</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{l}" text="𝕝" xml:id="S1.p2.m60">
                 <XMath>
-                  <XMTok role="ID">𝕝</XMTok>
+                  <XMTok role="UNKNOWN">𝕝</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{m}" text="𝕞" xml:id="S1.p2.m61">
                 <XMath>
-                  <XMTok role="ID">𝕞</XMTok>
+                  <XMTok role="UNKNOWN">𝕞</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{n}" text="𝕟" xml:id="S1.p2.m62">
                 <XMath>
-                  <XMTok role="ID">𝕟</XMTok>
+                  <XMTok role="UNKNOWN">𝕟</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{o}" text="𝕠" xml:id="S1.p2.m63">
                 <XMath>
-                  <XMTok role="ID">𝕠</XMTok>
+                  <XMTok role="UNKNOWN">𝕠</XMTok>
                 </XMath>
               </Math></td>
           </tr>
           <tr>
             <td align="center"><Math mode="inline" tex="\mathbb{p}" text="𝕡" xml:id="S1.p2.m64">
                 <XMath>
-                  <XMTok role="ID">𝕡</XMTok>
+                  <XMTok role="UNKNOWN">𝕡</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{q}" text="𝕢" xml:id="S1.p2.m65">
                 <XMath>
-                  <XMTok role="ID">𝕢</XMTok>
+                  <XMTok role="UNKNOWN">𝕢</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{r}" text="𝕣" xml:id="S1.p2.m66">
                 <XMath>
-                  <XMTok role="ID">𝕣</XMTok>
+                  <XMTok role="UNKNOWN">𝕣</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{s}" text="𝕤" xml:id="S1.p2.m67">
                 <XMath>
-                  <XMTok role="ID">𝕤</XMTok>
+                  <XMTok role="UNKNOWN">𝕤</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{t}" text="𝕥" xml:id="S1.p2.m68">
                 <XMath>
-                  <XMTok role="ID">𝕥</XMTok>
+                  <XMTok role="UNKNOWN">𝕥</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{u}" text="𝕦" xml:id="S1.p2.m69">
                 <XMath>
-                  <XMTok role="ID">𝕦</XMTok>
+                  <XMTok role="UNKNOWN">𝕦</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{v}" text="𝕧" xml:id="S1.p2.m70">
                 <XMath>
-                  <XMTok role="ID">𝕧</XMTok>
+                  <XMTok role="UNKNOWN">𝕧</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{w}" text="𝕨" xml:id="S1.p2.m71">
                 <XMath>
-                  <XMTok role="ID">𝕨</XMTok>
+                  <XMTok role="UNKNOWN">𝕨</XMTok>
                 </XMath>
               </Math></td>
           </tr>
           <tr>
             <td align="center"><Math mode="inline" tex="\mathbb{x}" text="𝕩" xml:id="S1.p2.m72">
                 <XMath>
-                  <XMTok role="ID">𝕩</XMTok>
+                  <XMTok role="UNKNOWN">𝕩</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{y}" text="𝕪" xml:id="S1.p2.m73">
                 <XMath>
-                  <XMTok role="ID">𝕪</XMTok>
+                  <XMTok role="UNKNOWN">𝕪</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{z}" text="𝕫" xml:id="S1.p2.m74">
                 <XMath>
-                  <XMTok role="ID">𝕫</XMTok>
+                  <XMTok role="UNKNOWN">𝕫</XMTok>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\mathbb{-}" text="-" xml:id="S1.p2.m75">

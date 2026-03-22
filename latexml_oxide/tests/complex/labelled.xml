@@ -56,18 +56,18 @@ as well as some figures <ref labelref="LABEL:First.Sunset"/>, <ref labelref="LAB
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMApp>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">c</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
                   <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMApp>
@@ -126,13 +126,13 @@ as well as some figures <ref labelref="LABEL:First.Sunset"/>, <ref labelref="LAB
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="ID">E</XMTok>
+                <XMTok font="italic" role="UNKNOWN">E</XMTok>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="ID">m</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
                   <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">c</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMApp>

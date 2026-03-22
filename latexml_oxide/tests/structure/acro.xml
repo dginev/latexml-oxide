@@ -77,10 +77,10 @@ between the constant of Boltzmann and the <glossaryref inlist="acronym" key="NA"
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
-                <XMTok font="italic" role="ID">k</XMTok>
+                <XMTok font="italic" role="UNKNOWN">k</XMTok>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
-                  <XMTok font="italic" role="ID">R</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">R</XMTok>
                   <XMText><glossaryref inlist="acronym" key="NA" show="short"/></XMText>
                 </XMApp>
               </XMApp>
@@ -134,8 +134,8 @@ blocks to be tested separately. The latter are commonly indicated as
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">N</XMTok>
-                  <XMTok fontsize="70%" role="ID">A</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
+                  <XMTok fontsize="70%" role="UNKNOWN">A</XMTok>
                 </XMApp>
               </XMath>
             </Math></glossaryphrase>
@@ -143,8 +143,8 @@ blocks to be tested separately. The latter are commonly indicated as
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">N</XMTok>
-                  <XMTok fontsize="70%" role="ID">A</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
+                  <XMTok fontsize="70%" role="UNKNOWN">A</XMTok>
                 </XMApp>
               </XMath>
             </Math></glossaryphrase>
@@ -180,9 +180,9 @@ blocks to be tested separately. The latter are commonly indicated as
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="ID">L</XMTok>
-                  <XMTok font="italic" role="ID">O</XMTok>
-                  <XMTok font="italic" role="ID">X</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">L</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
                 </XMApp>
               </XMath>
             </Math></glossaryphrase>
@@ -190,9 +190,9 @@ blocks to be tested separately. The latter are commonly indicated as
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="ID">L</XMTok>
-                  <XMTok font="italic" role="ID">O</XMTok>
-                  <XMTok font="italic" role="ID">X</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">L</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">O</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
                 </XMApp>
               </XMath>
             </Math></glossaryphrase>
@@ -204,10 +204,10 @@ blocks to be tested separately. The latter are commonly indicated as
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="ID">L</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">L</XMTok>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">H</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">H</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMApp>
@@ -217,10 +217,10 @@ blocks to be tested separately. The latter are commonly indicated as
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="ID">L</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">L</XMTok>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">H</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">H</XMTok>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                 </XMApp>
