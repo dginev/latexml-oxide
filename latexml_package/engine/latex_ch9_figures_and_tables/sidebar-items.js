@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["after_float","before_float","load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["after_float","before_float","before_float_ex","load_definitions"]};
