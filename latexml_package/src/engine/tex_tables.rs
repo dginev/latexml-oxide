@@ -380,12 +380,26 @@ LoadDefinitions!({
   DefConstructor!("\\lx@hidden@noalign{}", "#1",
     reversion  => "",
     properties =>  sub[args] {
-      // Sometimes, we"re smuggling stuff that needs to be carried into the XML.
+      // Sometimes, we're smuggling stuff that needs to be carried into the XML.
       let mut props = stored_map!("alignmentSkippable" => true);
-      if let Some(preserve) = args.iter().find(|v_opt| if let Some(ref v) = v_opt {
-        v.get_property("alignmentPreserve").is_some()
-      } else { false }) {
-        props.insert("alignmentPreserve", preserve.as_ref().unwrap().into());
+      // Check if any arg (or child of a List arg) has alignmentPreserve.
+      // This propagates the property from e.g. \label (inside a List) to the
+      // \lx@hidden@noalign whatsit, so the alignment absorption code knows
+      // to absorb this whatsit even in skippable cells.
+      'outer: for arg_opt in args.iter() {
+        if let Some(ref v) = arg_opt {
+          if v.get_property("alignmentPreserve").is_some() {
+            props.insert("alignmentPreserve", Stored::Bool(true));
+            break;
+          }
+          // Also check children of List args
+          for child in v.unlist_ref() {
+            if child.get_property_bool("alignmentPreserve") {
+              props.insert("alignmentPreserve", Stored::Bool(true));
+              break 'outer;
+            }
+          }
+        }
       }
       Ok(props) });
 

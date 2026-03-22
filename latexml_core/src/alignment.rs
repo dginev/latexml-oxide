@@ -683,6 +683,18 @@ impl BoxOps for Alignment {
           }
           // expire local $LaTeXML::BOX
           document.expire_box_to_absorb();
+        } else if let Some(ref boxes) = cell.boxes {
+          // Cell is skippable but may contain preserved boxes (e.g. \label wrapped
+          // in \lx@hidden@noalign with alignmentPreserve=true). These boxes need
+          // to be absorbed so their constructors run (e.g. \label sets labels= on
+          // the parent equation element via float_to_label).
+          // In Perl, \hfil from the template contributes cell width, making such
+          // cells non-skippable. In Rust, \hfil doesn't contribute width.
+          for item in boxes.unlist() {
+            if item.get_property_bool("alignmentPreserve") {
+              document.absorb(&item, None)?;
+            }
+          }
         }
         let close_column_fn = &self.close_column;
         close_column_fn(document)?;

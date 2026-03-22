@@ -99,6 +99,22 @@ fn ams_rearrangeable_bindings(
   );
   // Perl: Let('\intertext', '\@ams@intertext');
   state::let_i(&T_CS!("\\intertext"), &T_CS!("\\@ams@intertext"), None);
+  // Redirect \label to the noalign version (matching Perl eqnarray behavior).
+  // In Perl, \hfil makes cells with only \label non-skippable, so the \label
+  // constructor runs during beAbsorbed. In Rust, \hfil doesn't contribute width,
+  // so such cells are skippable and the constructor is never invoked.
+  // By routing \label through \lx@hidden@noalign, the label is processed at the
+  // row level (equation element), ensuring labels= is always set.
+  state::let_i(
+    &T_CS!("\\lx@eqnarray@save@label"),
+    &T_CS!("\\label"),
+    None,
+  );
+  state::let_i(
+    &T_CS!("\\label"),
+    &T_CS!("\\lx@eqnarray@label"),
+    None,
+  );
   Ok(())
 }
 

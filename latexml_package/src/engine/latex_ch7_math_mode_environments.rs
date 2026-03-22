@@ -329,8 +329,20 @@ pub fn eqnarray_bindings() -> Result<()> {
     &T_CS!("\\eqnarray@row@after"),
     None,
   );
+  // Perl: Let('\lx@eqnarray@save@label', '\lx@label');
+  // Save the original \label as \lx@eqnarray@save@label
+  state::let_i(
+    &T_CS!("\\lx@eqnarray@save@label"),
+    &T_CS!("\\label"),
+    None,
+  );
   // Perl: Let('\label', '\lx@eqnarray@label');
-  // TODO: eqnarray label handling
+  // Redirect \label to the noalign version so it runs at the equation (row) level
+  state::let_i(
+    &T_CS!("\\label"),
+    &T_CS!("\\lx@eqnarray@label"),
+    None,
+  );
   Ok(())
 }
 
@@ -513,6 +525,16 @@ LoadDefinitions!({
   });
   DefMacro!("\\eqnarray@row@before", "\\lx@hidden@noalign{\\eqnarray@row@before@}");
   DefMacro!("\\eqnarray@row@after", "\\lx@hidden@noalign{\\eqnarray@row@after@}");
+
+  // Perl: latex_constructs.pool.ltxml lines 2323-2329
+  // \lx@eqnarray@label wraps the label in \lx@hidden@noalign so it's processed
+  // at the row level, not inside a cell. This is critical because in align-like
+  // environments, a cell containing only \label is skippable (its content is not
+  // absorbed during beAbsorbed), so the \label constructor would never run.
+  // By routing through noalign, the \label constructor runs at the equation level
+  // where float_to_label can find the ltx:equation parent.
+  DefMacro!("\\lx@eqnarray@label Semiverbatim",
+    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#1}}");
 
   // Perl: latex_constructs.pool.ltxml lines 2262-2335
   // eqnarray and eqnarray* — alignment-based environments
