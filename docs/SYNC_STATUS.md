@@ -237,6 +237,13 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 **Current totals: 258 pass, 0 fail, 63 ignored test functions (321 total)**
 **Coverage: 82% pass rate (258/297 non-permanent-ignore tests)**
+
+**Recent fixes (2026-03-22, session 21):**
+- **finalize_rec iterative rewrite**: Converted from recursive to iterative with heap work-stack. Fixes SEGFAULT for nested hboxes. Deferred font wrapper collapse to post-traversal.
+- **Figure panel breaks**: `<break class="ltx_break"/>` between `<p>` panels in figures.
+- **\includegraphics candidates**: graphics.sty uses image_candidates + .png default extension. **vmode_test now PASSES** (was SEGFAULT).
+- **Bare \name constructor hooks**: DefEnvironment bare CS form now gets after_digest_body and all other hooks (was missing). Fixes \rothead rotation inside alignment.
+- **Postfix modifier grammar**: `formula modifier => postfix_modifier_apply` for `\pmod`, `\pod`.
 *Note: ~17 permanently blocked (tikz/pgf/DTD), ~7 missing packages, ~6 timeout/crash, ~27 math parser, ~7 other.*
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
