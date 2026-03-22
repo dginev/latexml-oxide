@@ -187,7 +187,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
       | relop expression => prefix_relop_apply
       | metarelop expression => prefix_relop_apply
-      | modifier_expression;
+      | modifier_expression
+      // Perl MathGrammar L236: addExpressionModifier: MODIFIER
+      // Standalone postfix modifier (e.g. `8\pmod{3}` → annotated(8, pmod(3)))
+      | formula modifier => postfix_modifier_apply;
 
     // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
     // So standalone bigops can form statements (needed for list expressions like \int \quad \int)

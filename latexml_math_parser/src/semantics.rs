@@ -531,6 +531,27 @@ pub fn modifier_prefix_apply(
   )))
 }
 
+/// Perl: postfix modifier `expr \pmod{3}` → Apply(annotated, expr, modifier)
+/// The modifier annotates the preceding expression.
+pub fn postfix_modifier_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => expr, modifier);
+  let annotated = XM::Token(XProps {
+    meaning: Some(Cow::Borrowed("annotated")),
+    ..XProps::default()
+  }, Meta::default());
+  Ok(Some(XM::Apply(
+    annotated.into(),
+    Args(vec![expr, modifier]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 /// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
 /// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
 /// only parsed as function application when speculation is active. Without speculation,
