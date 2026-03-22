@@ -15,7 +15,7 @@ fn tabtab_test() {
 // Tests with crashes or large diffs — need alignment/math fixes
 
 #[test]
-#[ignore] // stack overflow in state.rs
+#[ignore] // 6 diffs: rotation dimensions (3), diaghead dimensions (3)
 fn cells_test() {
   latexml_test_single("tests/alignment/cells.tex", "cells", DIR, None, None);
 }
@@ -140,19 +140,19 @@ fn eqnarray_test() {
 }
 
 #[test]
-#[ignore] // timeout — diagbox infinite loop
+#[ignore] // 267 diffs: needs diagbox.sty port
 fn diagboxtest_test() {
   latexml_test_single("tests/alignment/diagboxtest.tex", "diagboxtest", DIR, None, None);
 }
 
 #[test]
-#[ignore] // timeout — ncases infinite loop
+#[ignore] // 1048 diffs: cases math + equation numbering
 fn ncases_test() {
   latexml_test_single("tests/alignment/ncases.tex", "ncases", DIR, None, None);
 }
 
 #[test]
-#[ignore] // timeout — vmode infinite loop
+#[ignore] // SEGFAULT (signal 11)
 fn vmode_test() {
   latexml_test_single("tests/alignment/vmode.tex", "vmode", DIR, None, None);
 }
