@@ -422,7 +422,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
-- [ ] **25. cells_test** (53_alignment) — 85 diffs (was 102, 282, 300, 548, 780). Session 18-19: fixed trailing whitespace (skip empty text font wrappers in trim). Remaining: ltx_nopad_l on left-aligned @{} cells (4 diffs), rotation angle/dimensions missing on inline-block, paragraph width mismatch, diaghead structural diffs.
+- [ ] **25. cells_test** (53_alignment) — 14 diffs (was 85, 102, 282, 300, 548, 780). Row pruning fix (check_bracketting for intercol cells, border inheritance from pruned rows). Remaining: ltx_nopad_l on makecell inner tabulars (8, cell.before=None), rotation dimensions (3), diaghead dimensions (3).
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 25 diffs (was 127, 596). Fixed rowspan-cancelled thead→tfoot misclassification. Remaining: thead="column row" vs "column" (from guessHeaders), inline-block dimensions (font metrics), border "ll" vs "l".
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
@@ -459,10 +459,10 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 **Completed:**
 - [x] 2a. Preamble PI capture: `\newcolumntype` now calls `AddToPreamble` via `\lx@add@Preamble@PI`. colortbls 312→96, array 230→127.
+- [x] A2. `normalize_prune_rows` empty-row preservation: Root cause: Perl's lspaces (from \lx@intercol) makes cells empty=false but skippable=true, triggering check_bracketting border guard. Rust didn't populate lspaces. Fix: check template tokens for \lx@intercol + inherit top-border from preceding pruned rows. cells_test 85→14 diffs, tabular.xml updated. Also removed dead `template_has_fill` dependency for cells before=None.
 
 **Remaining — Faithful Perl translation gaps (ordered by Perl file coverage):**
 - [ ] A1. `alignment_skip_data` continuation-line check: Perl has `&& (($n < 2) || (empty_count <= 0.4 * cols))` guard. Adding it naively caused 173 regressions — needs careful integration with full Perl matching.
-- [ ] A2. `normalize_prune_rows` empty-row preservation: Perl keeps empty rows that Rust prunes. Root cause unclear — possibly different `empty`/`skippable` computation for cells with only template fill.
 - [ ] A3. Font wrapper `<text>` elements during alignment absorption: Rust creates spurious empty `<text _noautoclose>` wrappers. Perl doesn't create these. Root: different font change tracking.
 - [ ] A4. `{turn}` rotation dimensions inside alignment: `after_digest_body` gets empty body for alignment-containing environments.
 - [ ] A5. guessHeaders column characterization: Rust over-detects column headers vs Perl. Same threshold/validation, but different results. Needs instruction-level comparison.
