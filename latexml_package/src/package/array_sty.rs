@@ -95,13 +95,35 @@ LoadDefinitions!({
   });
 
   // \newcolumntype — define new column types
-  // NOTE: Simplified — doesn't handle optional arg or AddToPreamble
-  DefPrimitive!("\\newcolumntype{}[Number][]{}", sub[(ch, _nargs, _opt, replacement)] {
+  // Perl: defines \NC@rewrite@<char> AND calls AddToPreamble to record a PI
+  DefPrimitive!("\\newcolumntype{}[Number][]{}", sub[(ch, nargs, opt, replacement)] {
     let ch_str = ch.to_string();
+    let nargs_val = nargs.value_of() as usize;
+    let opt_clone = opt.clone();
+    let replacement_toks: Tokens = replacement.revert().into();
     // Define \NC@rewrite@<char> as a macro with the replacement
     let cs_name = s!("\\NC@rewrite@{ch_str}");
-    def_macro(T_CS!(cs_name), None, Some(ExpansionBody::from(Tokens::new(replacement.revert()))), None)?;
-    Ok(())
+    let cs_args = convert_latex_args(nargs_val, opt_clone)?;
+    def_macro(T_CS!(cs_name), cs_args, Some(ExpansionBody::from(replacement_toks.clone())), None)?;
+    // AddToPreamble: record as <?latexml preamble="\newcolumntype{C}{...}"?>
+    let mut pi_tokens = vec![T_CS!("\\lx@add@Preamble@PI")];
+    // Build: \newcolumntype{ch}[nargs][opt]{replacement}
+    pi_tokens.push(T_BEGIN!()); // start of Undigested arg
+    pi_tokens.push(T_CS!("\\newcolumntype"));
+    pi_tokens.push(T_BEGIN!());
+    pi_tokens.extend(ExplodeText!(ch_str));
+    pi_tokens.push(T_END!());
+    if nargs_val > 0 {
+      pi_tokens.push(T_OTHER!("["));
+      pi_tokens.extend(ExplodeText!(s!("{nargs_val}")));
+      pi_tokens.push(T_OTHER!("]"));
+    }
+    pi_tokens.push(T_BEGIN!());
+    pi_tokens.extend(replacement_toks.unlist());
+    pi_tokens.push(T_END!());
+    pi_tokens.push(T_END!()); // end of Undigested arg
+    gullet::unread(Tokens::new(pi_tokens));
+    // The gullet will read \lx@add@Preamble@PI{...} and the stomach will digest it
   });
 
   DefMacro!("\\arraybackslash", r"\let\\\tabularnewline");
