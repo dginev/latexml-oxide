@@ -35,6 +35,8 @@ LoadDefinitions!({
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
     after_digest_body => sub[whatsit] {
       let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      // Always set angle even if body dimensions fail (e.g. alignment inside {turn})
+      whatsit.set_property("angle", Stored::from(s!("{angle}")));
       if let Ok(Some(body)) = whatsit.get_body() {
         if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
           for (k, v) in props {
