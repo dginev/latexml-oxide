@@ -453,25 +453,30 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - **\\lx@begin@inmath@text mode fix**: Changed from 'text' to 'restricted_horizontal' matching Perl.
 - **\\subjclass Default: fix**: Handle Default: parameter spec in closure.
 
-### Alignment Improvement Plan (Session 19+)
+### Alignment Faithful Translation Plan
 
-**Phase 1 — Quick wins (target: graphrot < 10, cells < 50):**
-- [ ] 1a. Fix guessHeaders row over-marking: column characterization adds `thead="row"` to data cells where Perl doesn't. Investigation found: same threshold/validation logic, same cell classification. Perl's `alignment_skip_data` has a continuation-line check (`empty_count > 0.4 * cols`) that Rust lacks, but adding it caused 173 regressions. The heuristic is extremely fragile — needs instruction-by-instruction comparison with Perl to find the precise difference.
-- [ ] 1b. Fix `\eline`/`\nline` makecell macros: raw TeX `\the\@temptokena` expansion with alignment tabs (`&`) not recognized by alignment machinery. Root cause: `&` from toks register expansion isn't processed as column separator. Needs fix in alignment body scanning to handle expanded `&` tokens.
-- [ ] 1c. Fix `{turn}` rotation dimensions inside alignment: `after_digest_body` gets empty body for alignment-containing environments. Use cached alignment dimensions.
+**Priority: Complete and faithful translation from Perl. No gaps, no silent behavioral differences.**
 
-**Phase 2 — Structural fixes (target: colortbls < 100, split < 200):**
-- [ ] 2a. Implement `<?latexml preamble="...">` processing instruction capture. Accounts for ~200+ cascading diffs in colortbls.
-- [ ] 2b. Fix split_test content loss: `$` mode stacking in alignment cells prevents math content generation. Implement alignment depth guard (Perl #2775) with proper `\cr` nesting check.
-- [ ] 2c. Fix font wrapper `<text>` elements during alignment absorption: prevent creation when font hasn't changed, or collapse empty wrappers during finalization.
+**Completed:**
+- [x] 2a. Preamble PI capture: `\newcolumntype` now calls `AddToPreamble` via `\lx@add@Preamble@PI`. colortbls 312→96, array 230→127.
 
-**Phase 3 — Polish (target: cells < 20, diagboxtest < 100):**
-- [ ] 3a. Port diagbox.sty binding (164 lines in Perl) for diagonal line drawing.
-- [ ] 3b. Fix ltx_nopad_l edge cases on `@{}l@{}` columns (4 remaining diffs in cells).
+**Remaining — Faithful Perl translation gaps (ordered by Perl file coverage):**
+- [ ] A1. `alignment_skip_data` continuation-line check: Perl has `&& (($n < 2) || (empty_count <= 0.4 * cols))` guard. Adding it naively caused 173 regressions — needs careful integration with full Perl matching.
+- [ ] A2. `normalize_prune_rows` empty-row preservation: Perl keeps empty rows that Rust prunes. Root cause unclear — possibly different `empty`/`skippable` computation for cells with only template fill.
+- [ ] A3. Font wrapper `<text>` elements during alignment absorption: Rust creates spurious empty `<text _noautoclose>` wrappers. Perl doesn't create these. Root: different font change tracking.
+- [ ] A4. `{turn}` rotation dimensions inside alignment: `after_digest_body` gets empty body for alignment-containing environments.
+- [ ] A5. guessHeaders column characterization: Rust over-detects column headers vs Perl. Same threshold/validation, but different results. Needs instruction-level comparison.
 
-**Phase 4 — Systemic (target: array < 50, vmode passes):**
-- [ ] 4a. Fix array math structure: XMCell/XMRow differences in math arrays.
-- [ ] 4b. Fix Marpa grammar reset segfault for vmode_test.
+**Remaining — Missing package bindings (faithful ports needed):**
+- [ ] B1. diagbox.sty (164 lines Perl → ~150 lines Rust). Blocks diagboxtest_test (267 diffs).
+- [ ] B2. Split/gather `$` mode: alignment depth guard (Perl #2775). Blocks split_test (1884 missing lines).
+- [ ] B3. listings math: listings code blocks with math expressions. Blocks listing_test (2032 diffs).
+
+**Remaining — Math parser faithful translation gaps:**
+- [ ] C1. Empty XMRef idref: premature id generation during grammar actions conflicts with DOM installation. Needs architectural fix.
+- [ ] C2. Font specialize for parser tokens: `_font` not fully specialized for operator symbols in nested script contexts.
+- [ ] C3. Scripted operators: `\mathop{\mathop{A}\limits_{B}}\limits^{C}` produces different structure (XMWrap vs XMApp with scriptpos differences).
+- [ ] C4. ltx_nopad_l on @{}l@{} columns: Perl doesn't add ltx_nopad_l, Rust does. Subtle lspaces difference.
 
 ### Math parser known limitations:
 
