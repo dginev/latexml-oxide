@@ -502,7 +502,7 @@ impl BoxOps for Alignment {
       for before in row.before.iter() {
         document.absorb(before, None)?;
       }
-      for cell in row.get_columns_mut() {
+      for (col_idx, cell) in row.get_columns_mut().iter_mut().enumerate() {
         if cell.skipped {
           continue;
         }
@@ -620,7 +620,10 @@ impl BoxOps for Alignment {
                 0
               }
             });
-          if (!empty || has_boxes) && lpad < threshold_02em {
+          // Perl: first column never gets ltx_nopad_l. The first column's left
+          // edge is the tabular boundary, not an inter-column gap. Only columns
+          // after the first can have their left padding suppressed by @{}.
+          if col_idx > 0 && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
             // do nothing — use CSS default padding
