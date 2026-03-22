@@ -148,6 +148,23 @@ impl Rewrite {
         pattern:  RewritePattern::String(r),
       });
     }
+    // If attributes string is set but attributes_map is not, parse string into map.
+    // Perl format: "role='ID'" or "role='ID', meaning='foo'"
+    if options.attributes_map.is_none() {
+      if let Some(ref attrs_str) = options.attributes {
+        let mut map = HashMap::default();
+        for part in attrs_str.split(',') {
+          let part = part.trim();
+          if let Some((key, val)) = part.split_once('=') {
+            let val = val.trim().trim_matches('\'').trim_matches('"');
+            map.insert(key.trim().to_string(), val.to_string());
+          }
+        }
+        if !map.is_empty() {
+          options.attributes_map = Some(map);
+        }
+      }
+    }
     if options.attributes_map.is_some() {
       clauses.push(RewriteClause {
         compiled: true,
