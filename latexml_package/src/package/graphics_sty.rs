@@ -131,12 +131,12 @@ LoadDefinitions!({
   DefKeyVal!("Grot", "y", "Dimension");
   DefKeyVal!("Grot", "units", "");
 
-  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float}{}",
+  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float} {}",
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
     mode => "restricted_horizontal", enter_horizontal => true,
     after_digest => sub[whatsit] {
-      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
-      if let Some(body) = whatsit.get_arg(2) {
+      let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Some(body) = whatsit.get_arg(3) {
         if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
           for (k, v) in props {
             whatsit.set_property(k, v);
