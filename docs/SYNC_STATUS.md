@@ -384,7 +384,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [ ] picture — IGNORED: 3125 diffs, needs picture env
   - [ ] xcolors — IGNORED: 447 diffs, complete xcolor port
   - [ ] xytest — IGNORED: crash, needs xy.sty
-- [ ] **70_parse** (17 pass, 11 ignored = 28 total)
+- [ ] **70_parse** (16 pass, 12 ignored = 28 total)
   - [ ] batch — IGNORED: 120 diffs (math parser)
 - [x] **700_unit_parse** (3/3)
   - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
@@ -429,7 +429,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-22):** 267 pass, 0 fail, 54 ignored (321 total). Session 27: Floating pre-script grammar: prescripted_bigop, prefix_script_pre, recursive scripted_factor_l2. Standalone float+post script pairs. Operator script content (Na^+ fix). Role=UNKNOWN XML sync. Tests: sideset (213→0), kludge (36→0), operators (11→0) PASS.
+**Status (2026-03-22):** 266 pass, 0 fail, 55 ignored (321 total). Session 27: Floating pre-script grammar (prescripted_bigop, prefix_script_pre). Applied function chaining (sin x cos y). Operator script content (Na^+ fix). Tests: sideset (213→0), kludge (36→0) PASS. operators.xml reverted to Perl ground truth (needs \\lxDeclare).
 
 ### Completed items
 
@@ -624,9 +624,9 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 
 ### Tier 7: Crashes and infinite loops (need deep debugging)
 
-- [ ] **53. diagboxtest_test** (53_alignment) — 744 diffs (was TIMEOUT). No longer loops but has many structural diffs.
-- [ ] **54. ncases_test** (53_alignment) — TIMEOUT: infinite loop in ncases.
-- [ ] **55. vmode_test** (53_alignment) — SEGFAULT in vertical mode.
+- [x] **53. diagboxtest_test** (53_alignment) — DONE. Session 26. 0 diffs.
+- [ ] **54. ncases_test** (53_alignment) — 1048 diffs. No longer times out (was TIMEOUT). Cases math + equation numbering.
+- [x] **55. vmode_test** (53_alignment) — DONE. Session 25. 0 diffs.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
 ### Overarching projects
