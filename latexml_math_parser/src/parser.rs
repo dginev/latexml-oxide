@@ -449,6 +449,10 @@ impl MathParser {
         if let Some(ref nid) = newid {
           attr.insert(String::from("xml:id"), nid.to_owned());
         }
+        // Perl guard: don't overwrite _box if result already has one
+        if attr.contains_key("_box") && result.has_attribute("_box") {
+          attr.remove("_box");
+        }
         for (key, value) in attr {
           if !(key.starts_with('_') || sym_can_have_attribute(rtag, arena::pin(&key))) {
             continue;
