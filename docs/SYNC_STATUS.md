@@ -237,6 +237,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 **Current totals: 257 pass, 0 fail, 64 ignored test functions (321 total)**
 **Coverage: 81% pass rate (257/297 non-permanent-ignore tests)**
+*Note: ~17 permanently blocked (tikz/pgf/DTD), ~7 missing packages, ~6 timeout/crash, ~27 math parser, ~7 other.*
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
 **Recent fixes (2026-03-21, session 20):**
