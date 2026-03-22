@@ -14,8 +14,10 @@ LoadDefinitions!({
   bounded      => true,
   sizer        => "#2",
   before_digest => { reenter_text_mode(false);
-    // then RE-RE-define this one!!!
+    // Rebind \\ and its aliases to shortstack line break
     Let!("\\\\", "\\@shortstack@cr");
+    Let!("\\lx@hidden@cr", "\\@shortstack@cr");
+    Let!("\\lx@newline", "\\@shortstack@cr");
     AssignRegister!("\\baselineskip" , Glue::new_spec("-1pt", None, None, None, None).into());
     AssignRegister!("\\lineskip"     , Glue::new_spec("3pt", None, None, None, None).into());
     bgroup(); },
