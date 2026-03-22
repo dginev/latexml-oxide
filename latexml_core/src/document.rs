@@ -2722,8 +2722,13 @@ impl Document {
     }
     // Migrate dual attributes to the new XMApp
     self.merge_attributes(&dual, &mut compact_apply, Some(&DUAL_TRANSFER))?;
-    self.replace_tree(compact_apply.clone(), dual)?;
-    self.close_element_at(&mut compact_apply)?;
+    // Direct DOM swap: replace dual with compact_apply without re-creating nodes.
+    // Perl uses replaceChild which is a direct swap; replace_tree calls append_tree
+    // which re-creates elements and fires afterOpen/afterClose hooks a second time.
+    compact_apply.unlink();
+    let mut dual_mut = dual;
+    dual_mut.add_prev_sibling(&mut compact_apply).ok();
+    self.remove_node(dual_mut);
     Ok(())
   }
 
