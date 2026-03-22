@@ -247,7 +247,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **Postfix modifier grammar**: `formula modifier => postfix_modifier_apply` for `\pmod`, `\pod`.
 - **.latexml file loader**: Parses DefMathRewrite calls from per-document .latexml files. Registers XPath-based rewrite rules for single-character match patterns. simplemath_test: 132→108 diffs.
 - **\*_src.rs convention**: Established `*_src.rs` files in latexml_contrib for per-document source-level bindings (Perl .latexml equivalent). Created `simplemath_src.rs` with MATHPARSER_SPECULATE + rewrite rules. Dispatched by document base name via load_external_binding. simplemath_test: 132→130 diffs (with speculation: a(x)/b(x) now match Perl function application).
-*Note: ~17 permanently blocked (tikz/pgf/DTD), ~7 missing packages, ~6 timeout/crash, ~27 math parser, ~7 other.*
+*Note: ~17 permanently blocked (tikz/pgf/DTD/moderncv), ~20 math parser grammar, ~7 missing packages (physics/siunitx/expl3/beamer/xy/graphpap/acmart), ~6 alignment/structure (cells font diffs, split xml:id, array tex=, diagbox, ncases, listing), ~5 performance/crash (mathtools Marpa perf, babel hang, ieee/plainfonts/figure_mixed diffs).*
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
 **Recent fixes (2026-03-21, session 20):**
