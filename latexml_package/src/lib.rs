@@ -161,7 +161,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "framed.sty" => package::framed_sty::load_definitions(),
     "tabularx.sty" => package::tabularx_sty::load_definitions(),
     "slashbox.sty" => package::slashbox_sty::load_definitions(),
-    // "diagbox.sty" => package::diagbox_sty::load_definitions(), // TODO: fix compile errors
+    "diagbox.sty" => package::diagbox_sty::load_definitions(),
     "nicefrac.sty" => package::nicefrac_sty::load_definitions(),
     "units.sty" => package::units_sty::load_definitions(),
     _other => return None,

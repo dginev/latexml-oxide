@@ -1,6 +1,4 @@
 /// Perl: diagbox.sty.ltxml — diagonal box headers in tabulars
-/// Provides \diagbox for creating diagonal lines in table cells,
-/// with 2 or 3 text segments positioned around the diagonals.
 use crate::prelude::*;
 
 fn roundto(v: f64) -> f64 { (v * 100.0).round() / 100.0 }
@@ -16,7 +14,6 @@ LoadDefinitions!({
   DefKeyVal!("diagbox", "font", "");
   DefKeyVal!("diagbox", "linewidth", "");
   DefKeyVal!("diagbox", "linecolor", "");
-  // Ignored keyvals
   for key in ["innerleftsep", "innerrightsep", "outerleftsep", "outerrightsep",
               "leftsep", "rightsep"] {
     DefKeyVal!("diagbox", key, "Dimension");
@@ -32,45 +29,46 @@ LoadDefinitions!({
 
     let has_third = gullet::if_next(T_BEGIN!())?;
     let (a_content, m_content, b_content) = if has_third {
-      let third = gullet::read_arg(Some(true))?;
+      let third = gullet::read_arg(ExpansionLevel::Full)?;
       (a_arg, Some(b_arg), third)
     } else {
       (a_arg, None, b_arg)
     };
 
-    let dir = if let ArgWrap::KeyVals(ref kv) = kv_arg {
+    let dir = if let ArgWrap::KV(ref kv) = kv_arg {
       kv.get_value("dir").map(|t| t.to_string()).unwrap_or_else(|| "NW".to_string())
     } else { "NW".to_string() };
 
-    let font_tokens: Tokens = if let ArgWrap::KeyVals(ref kv) = kv_arg {
-      kv.get_value("font").map(|t| t.into()).unwrap_or(Tokens!())
+    let font_tokens: Tokens = if let ArgWrap::KV(ref kv) = kv_arg {
+      kv.get_value("font").map(|t| Tokens::from(t.clone())).unwrap_or(Tokens!())
     } else { Tokens!() };
 
     let align_m = if dir.contains('W') { "l" } else { "r" };
 
     let mut result = Vec::new();
     result.push(T_CS!("\\lx@diagbox"));
-    // Keyvals arg
-    result.push(T_BEGIN!()); result.extend(ArgWrap::into_tokens(kv_arg)); result.push(T_END!());
+    // Keyvals arg — convert back to tokens
+    let kv_toks: Tokens = kv_arg.into();
+    result.push(T_BEGIN!()); result.extend(kv_toks.unlist()); result.push(T_END!());
     // A head
     result.push(T_BEGIN!()); result.push(T_CS!("\\lx@diagbox@head"));
     result.push(T_BEGIN!()); result.push(T_OTHER!("l")); result.push(T_END!());
-    result.push(T_BEGIN!()); result.extend(font_tokens.unlist()); result.push(T_END!());
+    result.push(T_BEGIN!()); result.extend(font_tokens.clone().unlist()); result.push(T_END!());
     result.push(T_BEGIN!()); result.extend(a_content.unlist()); result.push(T_END!());
     result.push(T_END!());
     // M head (optional)
     if let Some(m) = m_content {
-      result.push(T_OTHER!('['));
+      result.push(T_OTHER!("["));
       result.push(T_CS!("\\lx@diagbox@head"));
       result.push(T_BEGIN!()); result.extend(ExplodeText!(align_m)); result.push(T_END!());
-      result.push(T_BEGIN!()); result.extend(font_tokens.unlist()); result.push(T_END!());
+      result.push(T_BEGIN!()); result.extend(font_tokens.clone().unlist()); result.push(T_END!());
       result.push(T_BEGIN!()); result.extend(m.unlist()); result.push(T_END!());
-      result.push(T_OTHER!(']'));
+      result.push(T_OTHER!("]"));
     }
     // B head
     result.push(T_BEGIN!()); result.push(T_CS!("\\lx@diagbox@head"));
     result.push(T_BEGIN!()); result.push(T_OTHER!("r")); result.push(T_END!());
-    result.push(T_BEGIN!()); result.extend(font_tokens.unlist()); result.push(T_END!());
+    result.push(T_BEGIN!()); result.extend(font_tokens.clone().unlist()); result.push(T_END!());
     result.push(T_BEGIN!()); result.extend(b_content.unlist()); result.push(T_END!());
     result.push(T_END!());
 
@@ -80,6 +78,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@diagbox@head{}{}{}", "{#2\\shortstack[#1]{#3}}");
 
   // The constructor creates a <picture> with diagonal lines and positioned text
+  // TODO: template produces wrong structure; needs manual DOM construction
   DefConstructor!("\\lx@diagbox RequiredKeyVals:diagbox {}[]{}", "",
     after_construct => sub[document, _whatsit] {
       let mut node = document.get_node().clone();
@@ -92,28 +91,36 @@ LoadDefinitions!({
       let b = args.get(3).and_then(|a| a.clone());
 
       let (aw, ah, _ad) = if let Some(ref d) = a {
-        let (w, h, d) = d.get_size(None)?;
+        let (w, h, d, _, _, _) = d.clone().get_size(None)?;
         (roundto(px_value(w)), roundto(px_value(h) + px_value(d)), roundto(px_value(d)))
       } else { (0.0, 0.0, 0.0) };
       let (bw, bh, _bd) = if let Some(ref d) = b {
-        let (w, h, d) = d.get_size(None)?;
+        let (w, h, d, _, _, _) = d.clone().get_size(None)?;
         (roundto(px_value(w)), roundto(px_value(h) + px_value(d)), roundto(px_value(d)))
       } else { (0.0, 0.0, 0.0) };
       let (mw, mh, _md) = if let Some(ref d) = m {
-        let (w, h, d) = d.get_size(None)?;
+        let (w, h, d, _, _, _) = d.clone().get_size(None)?;
         (roundto(px_value(w)), roundto(px_value(h) + px_value(d)), roundto(px_value(d)))
       } else { (0.0, 0.0, 0.0) };
 
       let kv = args.first().and_then(|a| a.clone());
       let dir = kv.as_ref().and_then(|k| k.get_property("dir")).map(|v| v.to_string()).unwrap_or_else(|| "NW".to_string());
 
-      let kv_w = kv.as_ref().and_then(|k| {
+      let kv_w: Option<f64> = kv.as_ref().and_then(|k| {
         k.get_property("width").or_else(|| k.get_property("innerwidth"))
-      }).and_then(|v| Dimension::spec_to_f64(&v.to_string()).ok()).map(px_value);
-      let kv_h = kv.as_ref().and_then(|k| k.get_property("height"))
-        .and_then(|v| Dimension::spec_to_f64(&v.to_string()).ok()).map(px_value);
+      }).and_then(|v| {
+        let s = v.to_string();
+        Dimension::spec_to_f64(&s).ok().map(|f| f / UNITY as f64)
+      });
+      let kv_h: Option<f64> = kv.as_ref().and_then(|k| k.get_property("height"))
+        .and_then(|v| {
+          let s = v.to_string();
+          Dimension::spec_to_f64(&s).ok().map(|f| f / UNITY as f64)
+        });
 
+      #[allow(unused_assignments)]
       let (mut line1, mut line2) = (String::new(), String::new());
+      #[allow(unused_assignments, unused_mut)]
       let (mut ax, mut ay, mut bx, mut by, mut mx, mut my) = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
       let has_m = m.is_some() && mw > 0.0;
       let (w, h);
@@ -145,7 +152,6 @@ LoadDefinitions!({
       let linewidth = kv.as_ref().and_then(|k| k.get_property("linewidth")).map(|v| v.to_string()).unwrap_or_else(|| "0.4".to_string());
       let linecolor = kv.as_ref().and_then(|k| k.get_property("linecolor")).map(|v| v.to_string()).unwrap_or_else(|| "#000000".to_string());
 
-      // Convert px dimensions to pt for attributes
       whatsit.set_property("width", Stored::from(s!("{w}")));
       whatsit.set_property("height", Stored::from(s!("{h}")));
       whatsit.set_property("A", a.map(Stored::from).unwrap_or(Stored::None));
