@@ -10,6 +10,7 @@ use latexml_core::common::mathchar::decode_math_char;
 /// digest list, extracts any existing script level from the previous
 /// `scriptpos` value, and sets `scriptpos` to `pos` + level.
 fn merge_limits(pos: &str) {
+  use crate::engine::tex_scripts::is_script;
   // Compute script level before borrowing the box list mutably,
   // since get_script_level() also borrows the stomach.
   let default_level = get_script_level().to_string();
@@ -21,7 +22,9 @@ fn merge_limits(pos: &str) {
         .into_iter().rev().collect();
       let level = if level.is_empty() { &default_level } else { &level };
       b.set_property("scriptpos", format!("{pos}{level}"));
-      if !b.is_empty().unwrap_or(false) {
+      // Perl: last unless IsEmpty($box) || IsScript($box)
+      // Continue past empty boxes AND script boxes
+      if !b.is_empty().unwrap_or(false) && is_script(b).is_none() {
         break;
       }
     }
@@ -368,7 +371,17 @@ LoadDefinitions!({
     assign_delcode(args[0].value_of() as u8 as char,
       value.value_of() as u16, scope);
   });
-  DefRegister!("\\fam", Number!(-1));
+  // Perl #2772: \fam with getter/setter for fontfamily state
+  DefRegister!("\\fam", Number!(-1),
+    getter => {
+      let fam = state::lookup_value("fontfamily")
+        .map(|v| v.to_string().parse::<i64>().unwrap_or(-1))
+        .unwrap_or(-1);
+      Some(RegisterValue::Number(Number::new(fam)))
+    },
+    setter => sub[value, scope, _args] {
+      state::assign_value("fontfamily", Stored::from(value.value_of()), scope);
+    });
 
   //======================================================================
   // TeX-level grammatical roles
@@ -389,23 +402,40 @@ LoadDefinitions!({
   // We need a finer granularity than TeX does: an ORD could be several things,
   // a BIN could be a MULOP or ADDOP.
   // AND, rarely, they're empty.... Is it wrong to drop them?
-  DefConstructor!("\\mathord{}", "?#1(<ltx:XMWrap role='ID'   >#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathop{}", "?#1(<ltx:XMWrap role='BIGOP' scriptpos='#scriptpos'>#1</ltx:XMWrap>)()",
+  // Perl: adjustMathRole — wraps content in XMWrap, conditionally sets role
+  // If single child already has an acceptable sub-role, DON'T override
+  DefConstructor!("\\mathord{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "ID", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathop{}", sub[document, args, props] {
+    let sp = props.get("scriptpos").map(|v| v.to_string());
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "BIGOP", sp.as_deref())?;
+  },
     bounded => true,
     properties => {
-      // doScriptpos: 'mid' in display mode, 'post' in text mode
-      // The script level number is appended later by mergeLimits (\limits, \nolimits)
       let pos = if lookup_font().is_some_and(|f|
         f.mathstyle.as_deref() == Some("display"))
       { "mid" } else { "post" };
       Ok(stored_map!("scriptpos" => pos))
     });
-  DefConstructor!("\\mathbin{}", "?#1(<ltx:XMWrap role='BINOP'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathrel{}", "?#1(<ltx:XMWrap role='RELOP'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathopen{}", "?#1(<ltx:XMWrap role='OPEN' >#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathclose{}", "?#1(<ltx:XMWrap role='CLOSE'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathpunct{}", "?#1(<ltx:XMWrap role='PUNCT'>#1</ltx:XMWrap>)()", bounded => true);
-  DefConstructor!("\\mathinner{}", "?#1(<ltx:XMWrap role='ATOM'>#1</ltx:XMWrap>)()",  bounded => true);
+  DefConstructor!("\\mathbin{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "BINOP", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathrel{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "RELOP", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathopen{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "OPEN", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathclose{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "CLOSE", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathpunct{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "PUNCT", None)?;
+  }, bounded => true);
+  DefConstructor!("\\mathinner{}", sub[document, args, _props] {
+    adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "ATOM", None)?;
+  }, bounded => true);
 
   //======================================================================
   // Delimiters
@@ -720,6 +750,11 @@ LoadDefinitions!({
   // Perl walks all Box/List/Whatsit children and shifts mathstyle using
   // mathstyle_adjust_map. Skipped for now; cosmetic effect only.
 
+  // \lx@delimiterdot — empty delimiter hint (replacement for "." in \left. / \right.)
+  DefConstructor!("\\lx@delimiterdot", "<ltx:XMHint/>",
+    alias => ".",
+    properties => { stored_map!("hint" => true) });
+
   // \lx@left/\lx@right: like \left/\right but without extra grouping.
   // Perl uses TeXDelimiter param type; we alias to \@left/\@right for now.
   Let!("\\lx@left", "\\@left");
@@ -765,8 +800,8 @@ LoadDefinitions!({
             let role = kv.get_value("role").map(ToString::to_string);
             let meaning = kv.get_value("meaning").map(ToString::to_string);
             let thickness = kv.get_value("thickness").map(ToString::to_string);
-            let left_val = kv.get_value("left").map(|v| v.clone());
-            let right_val = kv.get_value("right").map(|v| v.clone());
+            let left_val = kv.get_value("left").cloned();
+            let right_val = kv.get_value("right").cloned();
             let has_left = left_val.is_some();
             let has_right = right_val.is_some();
             (role, meaning, thickness, has_left, has_right, left_val, right_val)
@@ -781,11 +816,25 @@ LoadDefinitions!({
       // The template's #prop lookup converts Stored→Option<Digested> for absorption.
       // Stored::Tokens doesn't convert, but Stored::Digested does.
       use latexml_core::definition::argument::ArgWrap;
+      // Digest left/right delimiter tokens.
+      // Replace \lx@left/\lx@right (which may resolve to \left/\right with egroup
+      // semantics) with \@left/\@right (Constructors without grouping).
       for (key, val_opt) in [("left", &left_val), ("right", &right_val)] {
         if let Some(val) = val_opt {
           if let ArgWrap::Tokens(ref ts) = val {
-            // Digest the tokens now (during after_digest phase) to get a Digested value
-            let d = stomach::digest(ts.clone())?;
+            // Rewrite tokens: replace any left/right CS with \@left/\@right
+            let mut new_tokens = Vec::new();
+            for tok in ts.unlist_ref().iter() {
+              let s = tok.to_string();
+              if s.ends_with("left") && s.starts_with('\\') {
+                new_tokens.push(T_CS!("\\@left"));
+              } else if s.ends_with("right") && s.starts_with('\\') {
+                new_tokens.push(T_CS!("\\@right"));
+              } else {
+                new_tokens.push(*tok);
+              }
+            }
+            let d = stomach::digest(Tokens::new(new_tokens))?;
             whatsit.set_property(key, Stored::Digested(d));
           } else {
             whatsit.set_property(key, Stored::String(arena::pin(val.to_string())));
@@ -811,9 +860,9 @@ LoadDefinitions!({
       };
 
       // Grab the numerator (already digested content)
-      let mut top = stomach::regurgitate();
+      let top = stomach::regurgitate();
       // Perl: adjustMathstyle($style, {}, @top) — retroactively adjust font sizes
-      adjust_mathstyle(&style, &mut top);
+      adjust_mathstyle(&style, &top);
 
       // Set fraction font for denominator
       merge_font(Font { fraction: Some(true), ..Font::default() });
@@ -1090,6 +1139,63 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
 /// Perl TeX_Math.pool.ltxml L1010-1052: adjustMathstyle
 /// Recursively adjusts font mathstyle on already-digested boxes.
 /// Called from \over handler to retroactively adjust numerator font sizes.
+/// Perl: adjustMathRole (TeX_Math.pool.ltxml L669-688)
+/// Wraps content in XMWrap, conditionally sets role.
+/// If single non-hint child has acceptable sub-role, keeps it.
+fn adjust_math_role(
+  document: &mut Document,
+  content: Option<&Digested>,
+  role: &str,
+  scriptpos: Option<&str>,
+) -> Result<()> {
+  use latexml_core::common::xml::element_nodes;
+
+  let content = match content {
+    Some(c) => c,
+    None => return Ok(()), // Nothing? do nothing!
+  };
+
+  // Perl: open XMWrap, absorb, close, inspect children
+  document.open_element("ltx:XMWrap", None, None)?;
+  document.absorb(content, None)?;
+  let wrap_opt = document.close_element("ltx:XMWrap")?;
+
+  if let Some(mut wrapper) = wrap_opt {
+    // Filter out XMHint nodes
+    let nodes: Vec<_> = element_nodes(&wrapper)
+      .into_iter()
+      .filter(|n| document::get_node_qname(n) != arena::pin_static("ltx:XMHint"))
+      .collect();
+
+    // Perl: %mathclass_subclass lookup
+    let acceptable = if role == "ATOM" {
+      true // ATOM accepts any role
+    } else if nodes.len() == 1 {
+      if let Some(got_role) = nodes[0].get_attribute("role") {
+        match role {
+          "BIGOP" => matches!(got_role.as_str(), "ARROW" | "SUMOP" | "INTOP" | "DIFFOP"),
+          "BINOP" => matches!(got_role.as_str(), "ADDOP" | "MULOP"),
+          "PUNCT" => matches!(got_role.as_str(), "PERIOD"),
+          "ID" => matches!(got_role.as_str(), "NUMBER"),
+          _ => false,
+        }
+      } else {
+        false
+      }
+    } else {
+      false
+    };
+
+    if !acceptable {
+      document.set_attribute(&mut wrapper, "role", role)?;
+    }
+    if let Some(sp) = scriptpos {
+      document.set_attribute(&mut wrapper, "scriptpos", sp)?;
+    }
+  }
+  Ok(())
+}
+
 pub fn adjust_mathstyle(outerstyle: &str, boxes: &[Digested]) {
   let mut adjusted: std::collections::HashSet<usize> = std::collections::HashSet::new();
   adjust_mathstyle_rec(outerstyle, &mut adjusted, boxes);

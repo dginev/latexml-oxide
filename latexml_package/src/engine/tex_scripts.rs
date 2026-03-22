@@ -174,6 +174,21 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       if let Some(pvs) = prevscript {
         properties.insert("prevscript", pvs.into());
       }
+      // Propagate scriptpos from base to script whatsit
+      // Propagate scriptpos from base to script whatsit
+      // Perl: scriptHandler doesn't explicitly set scriptpos, but merge_limits
+      // (from \limits/\nolimits) sets it on the script whatsit later.
+      // We propagate from the base's scriptpos instead.
+      if let Some(Stored::Digested(ref b)) = properties.get("base") {
+        if let Some(bsp) = b.get_property("scriptpos") {
+          let bsp_str = bsp.to_string();
+          if !bsp_str.is_empty() {
+            let base_prefix: String = bsp_str.chars().take_while(|c| !c.is_ascii_digit()).collect();
+            let sl = get_script_level();
+            properties.insert("scriptpos", Stored::from(format!("{base_prefix}{sl}")));
+          }
+        }
+      }
       if let Some(font) = script.get_font()? {
         properties.insert("font", font.into());
       }
@@ -245,7 +260,7 @@ fn script_sizer(
   base_opt: Option<&Stored>,
   prev_opt: Option<&Stored>,
   op: &str,
-  pos: &str,
+  _pos: &str,
 ) -> Result<(Dimension, Dimension, Dimension)> {
   // Perl: scriptSizer in TeX_Math.pool.ltxml
   // Uses font metrics for proper positioning of super/subscripts.
@@ -302,19 +317,17 @@ fn script_sizer(
   let font_scale = base_font_size * 65536.0; // font size in scaled points
   let xheight = font_scale * XHEIGHT_RATIO;
   // Fishing for the scriptpos on the base (if any)
-  let inferred_pos = if pos.is_empty() {
-    if let Some(Stored::Digested(ref base)) = base_opt {
-      let base_pos = base
-        .get_property("scriptpos")
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-      if base_pos.is_empty() {
-        Cow::Borrowed("post")
-      } else {
-        Cow::Owned(base_pos)
-      }
-    } else {
+  let inferred_pos = if let Some(Stored::Digested(ref base)) = base_opt {
+    let base_pos = base
+      .get_property("scriptpos")
+      .map(|s| s.to_string())
+      .unwrap_or_default();
+    if base_pos.is_empty() {
       Cow::Borrowed("post")
+    } else {
+      // Strip any existing level number to get just "mid" or "post"
+      let stripped: String = base_pos.chars().take_while(|c| !c.is_ascii_digit()).collect();
+      Cow::Owned(if stripped.is_empty() { base_pos } else { stripped })
     }
   } else {
     Cow::Borrowed("post")
@@ -399,7 +412,7 @@ LoadDefinitions!({
       Ok(Tokens!(T_SUPER!(), revert_script(arg)?)) },
     sizer => sub[w] {
       script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
-        w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "post") }
+        w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "") }
   );
 
   DefConstructor!("\\lx@post@subscript InScriptStyle",r###"
@@ -413,7 +426,7 @@ LoadDefinitions!({
       Ok(Tokens!(T_SUB!(), revert_script(arg)?)) },
     sizer => sub[w] {
       script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
-        w.get_property("prevscript").as_deref(), "SUBSCRIPT", "post") }
+        w.get_property("prevscript").as_deref(), "SUBSCRIPT", "") }
   );
 
   DefConstructor!("\\lx@floating@superscript InScriptStyle",r###"

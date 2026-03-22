@@ -5,7 +5,9 @@ LoadDefinitions!({
   // Perl: multirow.sty.ltxml
 
   DefPrimitive!("\\multirowsetup", None);
-  DefPrimitive!("\\multirow[]{Float}[Number]{}[Dimension]{}", sub[(attachment, nrows, _bigstruts, _width, _fixup, content)] {
+  // \lx@multirow@setup: internal primitive that sets rowspan/vattach on current cell.
+  // Separated from content so that content flows naturally through alignment cell boxes.
+  DefPrimitive!("\\lx@multirow@setup{Float}[]{}", sub[(nrows, attachment, _width)] {
     if let Some(alignment) = lookup_alignment() {
       if let Some(data) = alignment.alignment_cell() {
         let mut data_lock = data.borrow_mut();
@@ -23,17 +25,21 @@ LoadDefinitions!({
             rowspan_f as usize
           };
           colspec.rowspan = Some(rowspan);
-          if let Some(att) = attachment {
-            colspec.vattach = Some(translate_attachment(att).to_string());
+          // Only set vattach when optional [] is explicitly provided and non-empty
+          if let Some(ref att) = attachment {
+            let att_str = att.to_string();
+            if !att_str.trim().is_empty() {
+              colspec.vattach = Some(translate_attachment(att).to_string());
+            }
           }
         }
       }
     }
-    let rev: Vec<Token> = content.revert();
-    let mut toks: Vec<Token> = vec![T_CS!("\\hbox"), T_BEGIN!(), T_CS!("\\multirowsetup")];
-    toks.extend(rev);
-    toks.push(T_END!());
-    stomach::digest(Tokens::new(toks))?;
     Ok(())
   });
+  // \multirow[vpos]{nrows}[bigstruts]{width}[fixup]{content}
+  // Macro: sets up rowspan via \lx@multirow@setup, then passes content through.
+  // Content stays in the token stream so alignment cell processing picks it up.
+  DefMacro!("\\multirow[]{Float}[Number]{}[Dimension]{}",
+    "\\lx@multirow@setup{#2}[#1]{#4}#6");
 });

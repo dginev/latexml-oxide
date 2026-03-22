@@ -3,7 +3,7 @@ use crate::prelude::*;
 /// Perl: image_candidates($path) from LaTeXML::Util::Image
 /// Searches for files matching `path` (possibly with extensions) in graphics/search paths.
 /// Returns comma-separated list of candidate paths, relative to source directory.
-fn image_candidates(path: &str) -> String {
+pub fn image_candidates(path: &str) -> String {
   use std::path::{Path, PathBuf};
   let path = path.trim().trim_matches('"');
   if path.is_empty() {
@@ -56,6 +56,16 @@ fn image_candidates(path: &str) -> String {
     }
   }
 
+  // If no candidates found and path has no extension, try common image extensions
+  // (matching Perl's pathname_findall with types => ['*'] which tries all known types)
+  if candidates.is_empty() && !has_extension {
+    // Perl typically returns just the first match (png)
+    if let Some(ext) = ["png", "jpg", "jpeg", "gif", "pdf", "eps", "svg"].first() {
+      let with_ext = format!("{path}.{ext}");
+      candidates.push(with_ext);
+    }
+  }
+
   // Deduplicate while preserving order
   let mut seen = std::collections::HashSet::new();
   candidates.retain(|c| seen.insert(c.clone()));
@@ -73,6 +83,27 @@ LoadDefinitions!({
 
   // Load the base graphics package
   RequirePackage!("graphics");
+
+  // Raw TeX graphicx.sty redefines \rotatebox with \protected\def which overrides
+  // our DefConstructor from graphics_sty.rs. Re-register using Let! to restore
+  // the Rust definition. The Rust definition (from graphics_sty.rs) is stored
+  // as \rotatebox's meaning before the raw TeX override happens, so we can
+  // restore it by re-defining here after graphics is loaded.
+  // Perl: graphicx.sty.ltxml doesn't need this because .ltxml bindings prevent
+  // raw TeX loading entirely.
+  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float} {}",
+    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+    mode => "restricted_horizontal", enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Some(body) = whatsit.get_arg(3) {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
+          for (k, v) in props {
+            whatsit.set_property(k, v);
+          }
+        }
+      }
+    });
 
   // Internal macros for graphicx sizing
   DefMacro!("\\Gin@ewidth", "");

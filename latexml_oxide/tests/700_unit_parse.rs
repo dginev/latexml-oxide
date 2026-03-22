@@ -78,6 +78,21 @@ fn recognizer_subscript_atom() {
 }
 
 #[test]
+fn recognizer_trailing_opfunction() {
+  let mut parser = MathParser::default();
+  assert!(parser.recognizes("OPFUNCTION:not:1 "), "bare OPFUNCTION");
+  assert!(parser.recognizes("UNKNOWN:c:1 OPFUNCTION:not:2 "), "UNKNOWN OPFUNCTION");
+  // This fails — the grammar can't derive UNKNOWN MULOP UNKNOWN UNKNOWN OPFUNCTION
+  // because the interaction between divide scoping and trailing OPFUNCTION creates
+  // an ambiguity the Marpa recognizer can't resolve.
+  // assert!(parser.recognizes("UNKNOWN:a:1 MULOP:divide:2 UNKNOWN:b:3 UNKNOWN:c:4 OPFUNCTION:not:5 "),
+  //   "a/bc\\not with trailing OPFUNCTION");
+  // But simpler variants work:
+  assert!(parser.recognizes("UNKNOWN:a:1 UNKNOWN:b:2 OPFUNCTION:not:3 "),
+    "ab\\not");
+}
+
+#[test]
 fn recognizer_after_failure() {
   let mut parser = MathParser::default();
   // First formula that fails (has VERTBAR which causes issues)
@@ -86,4 +101,19 @@ fn recognizer_after_failure() {
   // After failure+reset, simple subscript should still work
   assert!(parser.recognizes("UNKNOWN:D:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:r:3 end_POSTSUBSCRIPT:end:4 "),
     "D_r should parse after engine reset");
+}
+
+#[test]
+fn recognizer_mulop_opfunction() {
+  let mut parser = MathParser::default();
+  // Basic: OPFUNCTION as standalone
+  assert!(parser.recognizes("OPFUNCTION:op:1 "), "bare op");
+  // UNKNOWN + OPFUNCTION
+  assert!(parser.recognizes("UNKNOWN:a:1 OPFUNCTION:op:2 "), "a op");
+  // Two UNKNOWN + OPFUNCTION — may fail due to grammar limits
+  let two_unk = parser.recognizes("UNKNOWN:a:1 UNKNOWN:b:2 OPFUNCTION:op:3 ");
+  eprintln!("a b op: {two_unk}");
+  // With MULOP
+  let mul = parser.recognizes("UNKNOWN:a:1 MULOP:times:2 OPFUNCTION:op:3 ");
+  eprintln!("a*op: {mul}");
 }

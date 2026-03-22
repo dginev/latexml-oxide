@@ -332,8 +332,10 @@ LoadDefinitions!({
     current_row.set_padding(padding);
   }},
   reversion => sub[whatsit,_args] {
-    let reverted = whatsit.revert()?;
-    Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), reverted, T_OTHER!("]"), T_CR!()))
+    let arg_reverted = whatsit.get_arg(1)
+      .map(|a| a.revert())
+      .unwrap_or_else(|| Ok(Tokens!()))?;
+    Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), arg_reverted, T_OTHER!("]"), T_CR!()))
   });
 
   // Perl: \lx@intercol is our replacement for LaTeX's \@acol for intercolumn space
@@ -378,12 +380,24 @@ LoadDefinitions!({
   DefConstructor!("\\lx@hidden@noalign{}", "#1",
     reversion  => "",
     properties =>  sub[args] {
-      // Sometimes, we"re smuggling stuff that needs to be carried into the XML.
+      // Sometimes, we're smuggling stuff that needs to be carried into the XML.
       let mut props = stored_map!("alignmentSkippable" => true);
-      if let Some(preserve) = args.iter().find(|v_opt| if let Some(ref v) = v_opt {
-        v.get_property("alignmentPreserve").is_some()
-      } else { false }) {
-        props.insert("alignmentPreserve", preserve.as_ref().unwrap().into());
+      // Check if any arg (or child of a List arg) has alignmentPreserve.
+      // This propagates the property from e.g. \label (inside a List) to the
+      // \lx@hidden@noalign whatsit, so the alignment absorption code knows
+      // to absorb this whatsit even in skippable cells.
+      'outer: for v in args.iter().flatten() {
+        if v.get_property("alignmentPreserve").is_some() {
+          props.insert("alignmentPreserve", Stored::Bool(true));
+          break;
+        }
+        // Also check children of List args
+        for child in v.unlist_ref() {
+          if child.get_property_bool("alignmentPreserve") {
+            props.insert("alignmentPreserve", Stored::Bool(true));
+            break 'outer;
+          }
+        }
       }
       Ok(props) });
 
@@ -837,7 +851,7 @@ pub fn extract_alignment_column(
         return Ok(Digested::default());
       }
     };
-    initial_align = colspec.align.unwrap_or(Align::Left);
+    initial_align = colspec.align.clone().unwrap_or(Align::Left);
     tabskip_clone = colspec.tabskip;
     is_omitted = colspec.omitted;
     old_border = colspec.border.clone();
@@ -998,8 +1012,9 @@ pub fn extract_alignment_column(
   let in_thead = alignment.is_in_tabular_head();
   {
     let colspec = alignment.get_column(n0).unwrap();
+    let is_justify = align == Align::Justify;
     colspec.align = Some(align);
-    if align != Align::Justify {
+    if !is_justify {
       colspec.width = None;
     }
     let new_border = s!("{}{}", old_border, border);

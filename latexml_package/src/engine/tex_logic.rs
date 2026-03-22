@@ -52,7 +52,8 @@ LoadDefinitions!({
   // \ifnum            c  compares two integers.
   // \ifodd            c  tests for an odd integer.
   // \ifcase           c  begins a multi-case conditional.
-  DefConditional!("\\ifnum Number Token Number", sub[(u,rel,v)] {
+  // Perl (2026-03-18): Relation parameter type = skip spaces + readXToken (for <, =, >)
+  DefConditional!("\\ifnum Number Relation Number", sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
   DefConditional!("\\ifodd Number", sub[(u)] {
@@ -64,7 +65,7 @@ LoadDefinitions!({
   // Dimension testing
   //----------------------------------------------------------------------
   // \ifdim            c  compares two dimensions.
-  DefConditional!("\\ifdim Dimension Token Dimension", sub[(u,rel,v)] {
+  DefConditional!("\\ifdim Dimension Relation Dimension", sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
 

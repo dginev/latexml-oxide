@@ -144,7 +144,6 @@ fn acro_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: math parser + equation numbering
 fn amsarticle_test() {
   latexml_test_single("tests/structure/amsarticle.tex", "amsarticle", DIR, None, None);
 }

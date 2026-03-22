@@ -618,8 +618,11 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     // done if we run out of tokens
     found_token = true;
     // first, check for alignment case
+    // Perl #2775: only fire at the original alignment nesting level,
+    // not inside deeper boxing groups (e.g. \vbox inside a tabular cell).
     if alignment_opt.is_some()
       && !stomach!().box_list.is_empty()
+      && (stomach!().boxing.len() <= init_depth)
       && (token == T_ALIGN!()
         || token == T_CS!("\\cr")
         || token == T_CS!("\\lx@hidden@cr")
@@ -925,7 +928,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // TODO: Use for chars where font-encoding glyph differs from input.
       if lookup_bool("IN_MATH") {
         if let Some(mathcode) = lookup_mathcode_sym(&meaning.get_sym()) {
-          return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning.clone());
+          return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
         }
       }
       if !lookup_bool("IN_MATH") {

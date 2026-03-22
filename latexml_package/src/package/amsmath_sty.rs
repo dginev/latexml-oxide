@@ -99,6 +99,22 @@ fn ams_rearrangeable_bindings(
   );
   // Perl: Let('\intertext', '\@ams@intertext');
   state::let_i(&T_CS!("\\intertext"), &T_CS!("\\@ams@intertext"), None);
+  // Redirect \label to the noalign version (matching Perl eqnarray behavior).
+  // In Perl, \hfil makes cells with only \label non-skippable, so the \label
+  // constructor runs during beAbsorbed. In Rust, \hfil doesn't contribute width,
+  // so such cells are skippable and the constructor is never invoked.
+  // By routing \label through \lx@hidden@noalign, the label is processed at the
+  // row level (equation element), ensuring labels= is always set.
+  state::let_i(
+    &T_CS!("\\lx@eqnarray@save@label"),
+    &T_CS!("\\label"),
+    None,
+  );
+  state::let_i(
+    &T_CS!("\\label"),
+    &T_CS!("\\lx@eqnarray@label"),
+    None,
+  );
   Ok(())
 }
 
@@ -177,7 +193,9 @@ fn ams_aligned_bindings() -> Result<()> {
     repeated: vec![col1, col2],
     ..TemplateConfig::default()
   });
-  let attrs = HashMap::default();
+  let mut attrs = HashMap::default();
+  attrs.insert(String::from("name"), String::from("aligned"));
+  attrs.insert(String::from("colsep"), String::from("0pt"));
   ams_alignment_bindings(template, attrs);
   // Perl: DefMacro('\lx@alignment@row@before', '');
   // Perl: DefMacro('\lx@alignment@row@after',  '');
@@ -661,6 +679,28 @@ LoadDefinitions!({
   // Section 3.3 Split equations without alignment (multline)
   // Perl: amsmath.sty.ltxml lines 240-310
 
+  // Perl: \@ams@multirow@bindings — sets up single-column alignment template for multline
+  DefPrimitive!("\\@ams@multirow@bindings RequiredKeyVals:multirow", sub[(kv)] {
+    use latexml_core::alignment::cell::Cell;
+    use latexml_core::alignment::template::TemplateConfig;
+    let mut attrs: HashMap<String, String> = HashMap::default();
+    if let Some(name_arg) = kv.get_value("name") {
+      let name = name_arg.to_attribute();
+      attrs.insert(String::from("name"), name);
+    }
+    // Single-column template: \hfil \displaystyle before
+    let col1 = Cell {
+      before: Some(Tokens::new(vec![T_CS!("\\hfil"), T_CS!("\\displaystyle")])),
+      empty: true,
+      ..Cell::default()
+    };
+    let template = Template::new(TemplateConfig {
+      repeated: vec![col1],
+      ..TemplateConfig::default()
+    });
+    ams_alignment_bindings(template, attrs);
+  });
+
   DefConstructor!("\\@@multline DigestedBody",
     "<ltx:equation xml:id='#id'>#tags\
      <ltx:Math mode='display'><ltx:XMath>#1</ltx:XMath></ltx:Math>\
@@ -668,31 +708,90 @@ LoadDefinitions!({
     mode => "display_math",
     properties => { ref_step_counter("equation", false) },
     before_digest => { bgroup(); },
-    reversion => "\\begin{multline}#1\\end{multline}");
+    after_digest => sub[whatsit] {
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+      // Perl: setBody(getArg(1)->unlist, undef) — sets body for tex= generation
+      if let Some(arg) = whatsit.get_arg(1) {
+        let mut body = arg.unlist();
+        body.push(Digested::default()); // sentinel for trailer (popped by set_body)
+        whatsit.set_body(body);
+      }
+    },
+    reversion => "\\begin{multline}#1\\end{multline}",
+    after_construct => sub[document, whatsit] {
+      // Perl: lastChild->lastChild->lastChild->lastChild
+      // equation > Math > XMath > XMArray
+      let node = document.get_node();
+      if let Some(array) = node.get_last_child()
+        .and_then(|n| n.get_last_child())
+        .and_then(|n| n.get_last_child())
+        .and_then(|n| n.get_last_child())
+      {
+        let align_rule = get_multirow_alignment_rule(whatsit);
+        rearrange_ams_multirow(document, array, &align_rule)?;
+      }
+    });
   DefConstructor!("\\@@multlinestar DigestedBody",
     "<ltx:equation>\
      <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
      </ltx:equation>",
     mode => "display_math",
     before_digest => { bgroup(); },
-    reversion => "\\begin{multline*}#1\\end{multline*}");
+    after_digest => sub[whatsit] {
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+      if let Some(arg) = whatsit.get_arg(1) {
+        let mut body = arg.unlist();
+        body.push(Digested::default());
+        whatsit.set_body(body);
+      }
+    },
+    reversion => "\\begin{multline*}#1\\end{multline*}",
+    after_construct => sub[document, whatsit] {
+      let node = document.get_node();
+      if let Some(array) = node.get_last_child()
+        .and_then(|n| n.get_last_child())
+        .and_then(|n| n.get_last_child())
+        .and_then(|n| n.get_last_child())
+      {
+        let align_rule = get_multirow_alignment_rule(whatsit);
+        rearrange_ams_multirow(document, array, &align_rule)?;
+      }
+    });
   DefPrimitive!("\\@end@multline", { egroup()?; });
 
   DefMacro!("\\multline",
-    "\\ifmmode\\lx@hidden@bgroup\\@@AmS@multline\\lx@begin@alignment\
-     \\else\\lx@hidden@bgroup\\@@multline\\fi");
+    "\\ifmmode\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@AmS@multline\\lx@begin@alignment\
+     \\else\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multline\\lx@begin@alignment\\fi");
   DefMacro!("\\endmultline",
-    "\\@end@multline\\lx@hidden@egroup");
+    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@multline\\lx@hidden@egroup");
   DefMacro!("\\csname multline*\\endcsname",
-    "\\lx@hidden@bgroup\\@@multlinestar");
+    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multlinestar\\lx@begin@alignment");
   DefMacro!("\\csname endmultline*\\endcsname",
-    "\\@end@multline\\lx@hidden@egroup");
+    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@multline\\lx@hidden@egroup");
   // AmSTeX version (inside math)
   DefConstructor!("\\@@AmS@multline DigestedBody",
     "#body",
     mode => "display_math",
     before_digest => { bgroup(); },
-    reversion => "\\multline#1\\endmultline");
+    after_digest => sub[whatsit] {
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+      if let Some(arg) = whatsit.get_arg(1) {
+        let mut body = arg.unlist();
+        body.push(Digested::default());
+        whatsit.set_body(body);
+      }
+    },
+    reversion => "\\multline#1\\endmultline",
+    after_construct => sub[document, whatsit] {
+      // Perl: lastChild (directly XMArray since template is #body)
+      if let Some(last) = document.get_node().get_last_child() {
+        let align_rule = get_multirow_alignment_rule(whatsit);
+        rearrange_ams_multirow(document, last, &align_rule)?;
+      }
+    });
 
   //======================================================================
   // Section 3.4 Split equations with alignment (split)
@@ -710,7 +809,12 @@ LoadDefinitions!({
   DefConstructor!("\\@@split DigestedBody",
     "#1",
     before_digest => { bgroup(); },
-    reversion => "\\begin{split}#1\\end{split}");
+    reversion => "\\begin{split}#1\\end{split}",
+    after_construct => sub[document, _whatsit] {
+      if let Some(last) = document.get_node().get_last_child() {
+        rearrange_ams_split(document, last)?;
+      }
+    });
 
   //======================================================================
   // Section 3.7 Alignment building blocks (gathered, aligned, alignedat)
@@ -752,14 +856,23 @@ LoadDefinitions!({
   DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
 
   //======================================================================
-  // subequations environment — TODO: port when subnumbering constructors are ready
-  // Perl: amsmath.sty.ltxml lines 757-758
-  // DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin");
-  // DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end");
+  // subequations environment
+  DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin");
+  DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end");
 
   DefMacro!("\\DOTSB", None);
   DefMacro!("\\DOTSI", None);
   DefMacro!("\\DOTSX", None);
+
+  //======================================================================
+  // Section 7.2 \sideset command
+  // Perl: amsmath.sty.ltxml L1183-1234
+  DefConstructor!("\\sideset{}{}{}", sub[document, args, props] {
+    sideset_construct(document, args, props)?;
+  },
+  properties => {
+    Ok(stored_map!("scriptlevel" => stomach::get_script_level()))
+  });
 
   //======================================================================
   // Section 3.11.1 \numberwithin
@@ -852,6 +965,195 @@ LoadDefinitions!({
 
 use latexml_core::document;
 
+/// Extract the alignment rule from whatsit properties.
+/// Perl stores as hash {0 => 'left', -1 => 'right', default => ...}
+/// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST, etc.
+fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
+  let mut rules = Vec::new();
+  if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_0") {
+    if let Stored::String(s) = &*val {
+      rules.push(("0".to_string(), arena::to_string(*s)));
+    }
+  }
+  if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_LAST") {
+    if let Stored::String(s) = &*val {
+      rules.push(("last".to_string(), arena::to_string(*s)));
+    }
+  }
+  rules
+}
+
+/// Perl: extractXMArrayCells (amsmath.sty.ltxml L165-197)
+/// Extracts all math content from XMArray/XMRow/XMCell hierarchy, flattened.
+/// Strips leading/trailing XMHint, deduplicates operators at row boundaries.
+fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
+  use latexml_core::common::xml::element_nodes;
+  let xmhint_sym = arena::pin_static("ltx:XMHint");
+  let xmtok_sym = arena::pin_static("ltx:XMTok");
+  let mut contents: Vec<Node> = Vec::new();
+  let rows = element_nodes(array);
+  for row in rows.iter() {
+    let cells = element_nodes(row);
+    for cell in cells.iter() {
+      // XMCell should contain content directly (or via XMArg in some cases)
+      let cell_children = element_nodes(cell);
+      if cell_children.is_empty() {
+        continue;
+      }
+      // Check if first child is an XMArg wrapper
+      let arg_nodes: Vec<Node> = {
+        let first = &cell_children[0];
+        let qname = document::get_node_qname(first);
+        if qname == arena::pin_static("ltx:XMArg") {
+          element_nodes(first)
+        } else {
+          cell_children
+        }
+      };
+
+      let mut nodes = arg_nodes;
+      if nodes.is_empty() {
+        continue;
+      }
+
+      // Strip leading & trailing XMHint nodes
+      if document::get_node_qname(&nodes[0]) == xmhint_sym {
+        nodes.remove(0);
+      }
+      if !nodes.is_empty() && document::get_node_qname(nodes.last().unwrap()) == xmhint_sym {
+        nodes.pop();
+      }
+
+      // Deduplicate operators at row boundaries
+      if let Some(prev) = contents.last() {
+        if let Some(next) = nodes.first() {
+          let prev_qname = document::get_node_qname(prev);
+          let next_qname = document::get_node_qname(next);
+          if prev_qname == xmtok_sym && next_qname == xmtok_sym {
+            let prev_role = prev.get_attribute("role").unwrap_or_default();
+            let next_role = next.get_attribute("role").unwrap_or_default();
+            let prev_meaning = prev.get_attribute("meaning").unwrap_or_default();
+            let next_meaning = next.get_attribute("meaning").unwrap_or_default();
+            if prev_role == next_role
+              && prev_meaning == next_meaning
+              && matches!(prev_role.as_str(), "ADDOP" | "MULOP" | "RELOP")
+            {
+              contents.pop(); // Remove duplicate
+            }
+          }
+        }
+      }
+      contents.extend(nodes);
+    }
+  }
+  contents
+}
+
+/// Perl: rearrangeAMSSplit (amsmath.sty.ltxml L364-373)
+/// Wraps XMArray in XMDual(XMWrap(refs), XMArray).
+/// The XMWrap content is a flat list of all cells, which the math parser
+/// will then parse as a regular expression.
+fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
+  let array_qname = arena::to_string(document::get_node_qname(&array));
+  if !array_qname.ends_with("XMArray") {
+    return Ok(());
+  }
+  let mut cells = extract_xm_array_cells(&array);
+  if cells.is_empty() {
+    return Ok(());
+  }
+
+  // Ensure all content nodes have xml:ids, and collect XMRef idrefs
+  let xmhint_sym = arena::pin_static("ltx:XMHint");
+  let mut ref_ids: Vec<String> = Vec::new();
+  for node in cells.iter_mut() {
+    let qname = document::get_node_qname(node);
+    if qname == xmhint_sym {
+      continue; // Ephemeral, skip
+    }
+    // Generate xml:id if needed
+    if !node.has_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
+      document.generate_id(node, "")?;
+    }
+    if let Some(id) = node
+      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .or_else(|| node.get_attribute("xml:id"))
+    {
+      ref_ids.push(id);
+    }
+  }
+
+  // Build XMDual in-place:
+  // 1. Get parent of XMArray
+  // 2. Create XMDual at parent, before array
+  // 3. Create XMWrap inside XMDual with XMRef children
+  // 4. Move array into XMDual
+  if let Some(mut parent) = array.get_parent() {
+    let mut xm_dual = document.open_element_at(&mut parent, "ltx:XMDual", None, None)?;
+    // Move XMDual before the array
+    array.add_prev_sibling(&mut xm_dual).ok();
+
+    // Create XMWrap inside XMDual
+    let mut wrap_attrs: HashMap<String, String> = HashMap::default();
+    wrap_attrs.insert("rule".to_string(), "Anything,".to_string());
+    let mut xm_wrap =
+      document.open_element_at(&mut xm_dual, "ltx:XMWrap", Some(wrap_attrs), None)?;
+    // Add XMRef children
+    for id in &ref_ids {
+      let mut ref_attrs: HashMap<String, String> = HashMap::default();
+      ref_attrs.insert("idref".to_string(), id.clone());
+      let mut xm_ref =
+        document.open_element_at(&mut xm_wrap, "ltx:XMRef", Some(ref_attrs), None)?;
+      document.close_element_at(&mut xm_ref)?;
+    }
+    document.close_element_at(&mut xm_wrap)?;
+
+    // Move XMArray into XMDual
+    array.unlink_node();
+    xm_dual.add_child(&mut array)?;
+
+    document.close_element_at(&mut xm_dual)?;
+  }
+
+  Ok(())
+}
+
+/// Perl: rearrangeAMSMultirow (amsmath.sty.ltxml L286-307)
+/// Like split, but also adjusts row alignment (first=left, last=right for multline).
+fn rearrange_ams_multirow(
+  document: &mut Document,
+  array: Node,
+  align_rules: &[(String, String)],
+) -> Result<()> {
+  use latexml_core::common::xml::element_nodes;
+  let array_qname = arena::to_string(document::get_node_qname(&array));
+  if !array_qname.ends_with("XMArray") {
+    return Ok(());
+  }
+  // Apply alignment rules to rows
+  let rows = element_nodes(&array);
+  let num_rows = rows.len();
+  for (key, align_val) in align_rules {
+    let row_idx = if key == "last" {
+      if num_rows > 0 { num_rows - 1 } else { continue; }
+    } else if let Ok(idx) = key.parse::<usize>() {
+      idx
+    } else {
+      continue;
+    };
+    if row_idx < num_rows {
+      let row = &rows[row_idx];
+      let cells = element_nodes(row);
+      for mut cell in cells {
+        cell.set_attribute("align", align_val).ok();
+      }
+    }
+  }
+
+  // Now do the same XMDual wrapping as split
+  rearrange_ams_split(document, array)
+}
+
 /// Perl: rearrangeAMSGather (amsmath.sty.ltxml L400-415)
 /// Each equation row consists of single equation. Pull math content up past _Capture_.
 pub fn rearrange_ams_gather(
@@ -933,3 +1235,135 @@ pub fn rearrange_ams_align(
   }
   Ok(())
 }
+
+/// Perl: \sideset constructor body (amsmath.sty.ltxml L1183-1225)
+fn sideset_construct(
+  document: &mut Document,
+  args: &[Option<Digested>],
+  props: &SymHashMap<Stored>,
+) -> Result<()> {
+  use crate::engine::tex_scripts::is_script;
+  use latexml_core::token::Catcode;
+
+  let pre = args.first().and_then(|a| a.as_ref());
+  let post = args.get(1).and_then(|a| a.as_ref());
+  let base = args.get(2).and_then(|a| a.as_ref());
+
+  // Perl: Insert non-scripts from pre as XMWrap BEFORE the base
+  if let Some(pre_arg) = pre {
+    for item in pre_arg.unlist() {
+      if is_script(&item).is_none() && !item.is_empty().unwrap_or(true) {
+        document.open_element("ltx:XMWrap", None, None)?;
+        document.absorb(&item, None)?;
+        document.close_element("ltx:XMWrap")?;
+      }
+    }
+  }
+
+  // Insert the base in XMArg
+  document.open_element("ltx:XMArg", None, None)?;
+  if let Some(b) = base {
+    document.absorb(b, None)?;
+  }
+  let node_opt = document.close_element("ltx:XMArg")?;
+  let mut node = node_opt.unwrap_or_else(|| document.get_node().clone());
+
+  // Get scriptpos prefix from base
+  let opx = node.get_first_element_child()
+    .and_then(|ch| ch.get_attribute("scriptpos"))
+    .map(|sp| {
+      let prefix: String = sp.chars().take_while(|c| !c.is_ascii_digit()).collect();
+      if prefix.is_empty() { "post".to_string() } else { prefix }
+    })
+    .unwrap_or_else(|| "post".to_string());
+
+  let level0 = props.get("scriptlevel")
+    .map(|v| v.to_string().parse::<usize>().unwrap_or(0))
+    .unwrap_or(0);
+  let mut level = level0;
+
+  // Process pre-scripts in reverse
+  if let Some(pre_arg) = pre {
+    let items: Vec<_> = pre_arg.unlist().into_iter().rev().collect();
+    for item in items {
+      if let Some(scriptop) = is_script(&item) {
+        let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
+        node = sideset_wrap_impl(document, node, "pre", y, level, &item)?;
+        if scriptop.0 == "FLOATING" {
+          level += 1;
+        }
+      }
+    }
+  }
+
+  // Process post-scripts; save non-scripts for insertion after
+  let mut after: Vec<Digested> = Vec::new();
+  if let Some(post_arg) = post {
+    for item in post_arg.unlist() {
+      if let Some(scriptop) = is_script(&item) {
+        if scriptop.0 == "FLOATING" {
+          level += 1;
+        }
+        let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
+        node = sideset_wrap_impl(document, node, "post", y, level, &item)?;
+      } else if !item.is_empty().unwrap_or(true) {
+        after.push(item);
+      }
+    }
+  }
+
+  // Set scriptpos on the final node
+  if !opx.is_empty() {
+    document.set_attribute(&mut node, "scriptpos", &format!("{opx}{level0}"))?;
+  }
+
+  // Perl: Insert non-script garbage from post AFTER the sideset structure
+  for nonscript in &after {
+    document.open_element("ltx:XMWrap", None, None)?;
+    document.absorb(nonscript, None)?;
+    document.close_element("ltx:XMWrap")?;
+  }
+  Ok(())
+}
+
+/// Perl: sidesetWrap (amsmath.sty.ltxml L1227-1234)
+/// Uses Document's stack-based API (openElement/closeElement) matching Perl.
+fn sideset_wrap_impl(
+  document: &mut Document,
+  inner: Node,
+  x: &str,
+  y: &str,
+  level: usize,
+  script: &Digested,
+) -> Result<Node> {
+  use latexml_core::digested::DigestedData;
+
+  let scriptpos = format!("{x}{level}");
+  // Perl: $document->openElement('ltx:XMApp')
+  document.open_element("ltx:XMApp", None, None)?;
+  // Perl: $document->insertElement('ltx:XMTok', undef, role => ..., scriptpos => ...)
+  let mut tok_attrs: HashMap<String, String> = HashMap::default();
+  tok_attrs.insert("role".to_string(), y.to_string());
+  tok_attrs.insert("scriptpos".to_string(), scriptpos);
+  document.open_element("ltx:XMTok", Some(tok_attrs), None)?;
+  document.close_element("ltx:XMTok")?;
+  // Perl: $new->appendChild($node) — move existing node into current element (XMApp)
+  // Use append_tree to properly recreate the node tree (avoids libxml DOM corruption
+  // from unlink_node + add_child on detached nodes).
+  let inner_children = vec![inner.clone()];
+  let mut current = document.get_node().clone();
+  document.append_tree(&mut current, inner_children)?;
+  document.remove_node(inner);
+  // Perl: $document->insertElement('ltx:XMWrap', $script->getArg(1))
+  document.open_element("ltx:XMWrap", None, None)?;
+  if let DigestedData::Whatsit(ref w) = script.data() {
+    if let Some(arg) = w.borrow().get_arg(1) {
+      document.absorb(arg, None)?;
+    }
+  }
+  document.close_element("ltx:XMWrap")?;
+  // Perl: $document->closeElement('ltx:XMApp')
+  let closed = document.close_element("ltx:XMApp")?;
+  Ok(closed.unwrap_or_else(|| document.get_node().clone()))
+}
+

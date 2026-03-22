@@ -51,15 +51,21 @@
     </tabular>
   </para>
   <para xml:id="p2">
-    <tabular vattach="middle">
+    <tabular class="ltx_guessed_headers" vattach="middle">
+      <thead>
+        <tr>
+          <td align="center" border="l rr t" thead="column row">x</td>
+          <td align="center" border="r t" thead="column">x</td>
+        </tr>
+      </thead>
       <tbody>
         <tr>
-          <td align="center" border="l rr t">x</td>
-          <td align="center" border="r t">x</td>
+          <td border="l rr t" thead="row"/>
+          <td border="r t"/>
         </tr>
         <tr>
-          <td align="center" border="b l rr tt">x</td>
-          <td align="center" border="b r tt">x</td>
+          <td align="center" border="b l rr t" thead="row">x</td>
+          <td align="center" border="b r t">x</td>
         </tr>
       </tbody>
     </tabular>
@@ -68,7 +74,7 @@
     <tabular vattach="middle">
       <tbody>
         <tr>
-          <td align="justify" class="ltx_nopad_l ltx_nopad_r" vattach="top">1<inline-block vattach="top">
+          <td align="justify" class="ltx_nopad_r" vattach="top">1<inline-block vattach="top">
               <p width="30.0pt">a</p>
             </inline-block>2</td>
           <td align="justify" class="ltx_nopad_l ltx_nopad_r" vattach="top"><inline-block vattach="top">
@@ -79,7 +85,7 @@
             </inline-block>4</td>
         </tr>
         <tr>
-          <td align="justify" class="ltx_nopad_l ltx_nopad_r" vattach="top">1<inline-block vattach="top">
+          <td align="justify" class="ltx_nopad_r" vattach="top">1<inline-block vattach="top">
               <p width="30.0pt">a a a a a a a a a a</p>
             </inline-block>2</td>
           <td align="justify" class="ltx_nopad_l ltx_nopad_r" vattach="top"><inline-block vattach="top">

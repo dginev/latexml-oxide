@@ -103,6 +103,8 @@ pub struct MathParser {
   // lostnodes: HashMap<String, Node>,
   // idrefs: Vec<(String, Node)>,
   maybe_functions:        SymHashMap<usize>,
+  /// XMath nodes that failed to parse (stored as hashable IDs for post-parse class marking)
+  pub failed_xmath_ids:   Vec<usize>,
   n_parsed:               usize,
   // strict: bool,
   // warned: bool,
@@ -124,6 +126,7 @@ impl Default for MathParser {
       failed: SymHashMap::default(),
       unknowns: SymHashMap::default(),
       maybe_functions: SymHashMap::default(),
+      failed_xmath_ids: Vec::new(),
       // punctuation: HashMap::default(),
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
@@ -157,15 +160,16 @@ impl MathParser {
     // R → B → O → T → GReady. Use "NUMBER:1:1 " which is a valid single-token formula.
     match engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 "))) {
       Ok(_) => { self.engine = engine; },
-      Err(e) => {
-        eprintln!("RESET FAILED: {e}");
-        // If the trivial parse also fails, rebuild from scratch
+      Err(_e) => {
+        // Cloned grammar is in bad state — rebuild from scratch.
+        // Cache the fresh grammar for future resets to avoid repeated init_grammar() calls.
         let (grammar, _actions, _builder) = init_grammar().unwrap();
         let thin_grammar = grammar.unwrap();
         self.grammar = thin_grammar.clone();
-        self.engine = Parser::with_grammar(thin_grammar);
-        // Now run the trivial parse to get past precompute
-        let _ = self.engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")));
+        let mut fresh_engine = Parser::with_grammar(thin_grammar);
+        // Advance past precompute with trivial parse
+        let _ = fresh_engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")));
+        self.engine = fresh_engine;
       }
     }
   }
@@ -211,6 +215,9 @@ impl MathParser {
       // ($$self{maybe_functions}{$_}/$$self{unknowns}{$_} usages)" }
       // sort @funcs) . "\n"); }
 
+      // Note: ltx_math_unparsed class is NOT applied here because any DOM
+      // manipulation (findnodes/set_attribute) after parse_math breaks Marpa
+      // grammar precomputation for subsequent test runs. Applied in caller instead.
       note_end("Math Parsing");
     }
     Ok(())
@@ -256,11 +263,17 @@ impl MathParser {
   //   return; }
 
   // ================================================================================
+  /// Returns the number of XMath parse failures (for post-parse ltx_math_unparsed marking)
+  pub fn xmath_failures(&self) -> usize {
+    *self.failed.get_sym(arena::pin_static("ltx:XMath")).unwrap_or(&0)
+  }
+
   pub fn clear(&mut self) {
     self.passed = sym_map!("ltx:XMath" => 0, "ltx:XMArg" => 0, "ltx:XMWrap" => 0);
     self.failed = sym_map!("ltx:XMath" => 0,"ltx:XMArg" => 0, "ltx:XMWrap" => 0 );
     self.unknowns = SymHashMap::default();
     self.maybe_functions = SymHashMap::default();
+    self.failed_xmath_ids = Vec::new();
     self.n_parsed = 0;
   }
   // our %EXCLUDED_PRETTYNAME_ATTRIBUTES = (fontsize => 1, opacity => 1);
@@ -468,10 +481,13 @@ impl MathParser {
       }
       Ok(Some(result))
     } else {
-      // TODO:
-      // self.parse_kludge(node, document);
-      // ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
-      // $$self{failed}{$tag}++;
+      // Parse failed — track for post-parse kludge and ltx_math_unparsed
+      *self.failed.entry_sym(tag).or_insert(0) += 1;
+      if tag == arena::pin_static("ltx:XMath") {
+        self.failed_xmath_ids.push(node.to_hashable());
+        // Note: parse_kludge can't run here — DOM manipulation inside parser
+        // module breaks Marpa precomputation. Applied in caller instead.
+      }
       Ok(None)
     }
   }
@@ -504,9 +520,12 @@ impl MathParser {
   //     unless they're attached to something plausible.
   // NOTE: we should be able to optionally switch this off.
   // Especially, when we want to try alternative parse strategies.
+  /// Fallback parser for unparseable expressions.
+  /// NOTE: Cannot implement DOM manipulation here — any DOM changes inside
+  /// the parser module break Marpa grammar precomputation. The kludge logic
+  /// must be moved to core_interface.rs (the caller) using failed_xmath_ids.
   fn parse_kludge(&self, _node: &mut Node, _document: &mut Document) {
-    // TODO: implement full kludge parser (bracket grouping + script attachment)
-    // For now, no-op — the Perl comment says "we should be able to optionally switch this off"
+    // No-op — see note above
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -567,6 +586,8 @@ impl MathParser {
         }
         let new_xml_tree = parse_tree.into_xmath(mathnode, &mut nodes, document)?;
         document.append_tree(mathnode, vec![new_xml_tree])?;
+        // Resolve _xmkey references: match XMRef[@_xmkey] to elements with same _xmkey
+        resolve_xmkeys(mathnode, document)?;
         let result = element_nodes(mathnode).remove(0);
         //END reparent.
         if !punct_nodes.is_empty() {
@@ -698,10 +719,11 @@ impl MathParser {
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
     match self.parse_marpa(&input_string, nodes, document) {
-      Ok(parse_tree) => Ok(Some(parse_tree)),
+      Ok(parse_tree) => {
+        self.reset_engine(); // Reset for next parse (engine is in completed state)
+        Ok(Some(parse_tree))
+      },
       Err(_e) => {
-        // Reset the engine after a failed parse, since the marpa recognizer
-        // gets stuck in a started state and can't be reused.
         self.reset_engine();
         Ok(None)
       }
@@ -1014,6 +1036,46 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     }
   }
   Cow::Borrowed(node)
+}
+
+/// Resolve _xmkey references after parse tree installation.
+/// Matches XMRef[@_xmkey] to elements with same _xmkey, generates xml:id and sets idref.
+fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Result<(), Box<dyn std::error::Error>> {
+  // Find all XMRef elements with _xmkey (missing idref)
+  let refs = document.findnodes("descendant::ltx:XMRef[@_xmkey]", Some(mathnode));
+  for mut ref_node in refs {
+    let key = match ref_node.get_attribute("_xmkey") {
+      Some(k) => k,
+      None => continue,
+    };
+    // Find the element with matching _xmkey (non-XMRef)
+    let xpath = format!("descendant::*[@_xmkey='{}'][not(self::ltx:XMRef)]", key);
+    let targets = document.findnodes(&xpath, Some(mathnode));
+    if let Some(mut target) = targets.into_iter().next() {
+      // Ensure target has xml:id
+      let target_id = if let Some(id) = target.get_attribute("xml:id")
+        .or_else(|| target.get_attribute("id"))
+      {
+        id
+      } else {
+        // Generate an id for the target
+        document.generate_id(&mut target, "")?;
+        target.get_attribute("xml:id")
+          .or_else(|| target.get_attribute("id"))
+          .unwrap_or_default()
+      };
+      if !target_id.is_empty() {
+        document.set_attribute(&mut ref_node, "idref", &target_id)?;
+      }
+    }
+    // Clean up _xmkey from both ref and target
+    let _ = ref_node.remove_attribute("_xmkey");
+  }
+  // Also clean up _xmkey from non-ref elements
+  for mut node in document.findnodes("descendant::*[@_xmkey]", Some(mathnode)) {
+    let _ = node.remove_attribute("_xmkey");
+  }
+  Ok(())
 }
 
 fn p_get_attribute(item: &Node, key: &str) -> Option<String> {

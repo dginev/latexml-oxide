@@ -15,13 +15,11 @@ fn tabtab_test() {
 // Tests with crashes or large diffs — need alignment/math fixes
 
 #[test]
-#[ignore] // stack overflow in state.rs
 fn cells_test() {
   latexml_test_single("tests/alignment/cells.tex", "cells", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn colortbls_test() {
   latexml_test_single("tests/alignment/colortbls.tex", "colortbls", DIR, None, None);
 }
@@ -136,25 +134,22 @@ fn array_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: afterConstruct + math parser
 fn eqnarray_test() {
   latexml_test_single("tests/alignment/eqnarray.tex", "eqnarray", DIR, None, None);
 }
 
 #[test]
-#[ignore] // timeout — diagbox infinite loop
 fn diagboxtest_test() {
   latexml_test_single("tests/alignment/diagboxtest.tex", "diagboxtest", DIR, None, None);
 }
 
 #[test]
-#[ignore] // timeout — ncases infinite loop
+#[ignore] // 1048 diffs: cases math + equation numbering
 fn ncases_test() {
   latexml_test_single("tests/alignment/ncases.tex", "ncases", DIR, None, None);
 }
 
 #[test]
-#[ignore] // timeout — vmode infinite loop
 fn vmode_test() {
   latexml_test_single("tests/alignment/vmode.tex", "vmode", DIR, None, None);
 }

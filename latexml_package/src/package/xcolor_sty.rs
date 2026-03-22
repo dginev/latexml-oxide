@@ -680,7 +680,21 @@ LoadDefinitions!({
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));
-    Ok(Vec::new())
+
+    // Perl: Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
+    // Return a reversion-only Tbox so \color appears in tex= attributes
+    let rgb = color.to_rgb();
+    let comps = rgb.components().iter()
+      .map(|c| {
+        let v = (*c * 10000.0).round() / 10000.0;
+        if v == v.floor() { format!("{}", v as i64) } else { format!("{v}") }
+      })
+      .collect::<Vec<_>>().join(",");
+    let reversion_tokens = Invocation!("\\color",
+      vec![Some(Tokens::from(T_OTHER!("rgb"))),
+           Some(Tokens::from(T_OTHER!(&*comps)))]);
+    Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
+      reversion_tokens, arena::SymHashMap::default()))])
   });
 
   // \set@color
@@ -1071,7 +1085,7 @@ LoadDefinitions!({
           let row_num = cell.borrow().current_row_number();
           let num_str = row_num.to_string();
           let toks: Vec<Token> = num_str.chars().map(|c| {
-            Token::new(&c.to_string(), Catcode::OTHER)
+            Token::new(c.to_string(), Catcode::OTHER)
           }).collect();
           Ok(Tokens::new(toks))
         } else {
@@ -1084,23 +1098,29 @@ LoadDefinitions!({
     None,
   )?;
 
-  // \rowcolor{color} — simplified stub
-  DefPrimitive!("\\rowcolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let spec_str = do_expand(spec)?.to_string();
-    let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
-    merge_font(fontmap!(bg => color));
-    Ok(Vec::new())
-  });
+  // \rowcolor — only define stub if colortbl not loaded
+  if !has_meaning(&T_CS!("\\rowcolor")) {
+    DefPrimitive!("\\rowcolor[]{}", sub[(model_opt, spec)] {
+      let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+      let spec_str = do_expand(spec)?.to_string();
+      let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
+      merge_font(fontmap!(bg => color));
+      Ok(Vec::new())
+    });
+  }
 
-  // \columncolor — stub
-  DefPrimitive!("\\columncolor[]{}", sub[(model_opt, spec)] {
-    let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let spec_str = do_expand(spec)?.to_string();
-    let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
-    merge_font(fontmap!(bg => color));
-    Ok(Vec::new())
-  });
+  // \columncolor — only define stub if colortbl not loaded.
+  // When colortbl IS loaded, its \columncolor definition handles \@setcellcolor.
+  // xcolor's stub only sets font background, missing td attribute propagation.
+  if !has_meaning(&T_CS!("\\columncolor")) {
+    DefPrimitive!("\\columncolor[]{}", sub[(model_opt, spec)] {
+      let model_str = model_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+      let spec_str = do_expand(spec)?.to_string();
+      let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
+      merge_font(fontmap!(bg => color));
+      Ok(Vec::new())
+    });
+  }
 
   // TeX internals via RawTeX
   RawTeX!(r##"

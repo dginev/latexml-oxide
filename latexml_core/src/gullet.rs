@@ -286,8 +286,6 @@ fn handle_template(
   vtype: &str,
   hidden: bool,
 ) -> Result<()> {
-
-
   //  Append expansion to end!?!?!?!
   local_current_token(token);
   let post = alignment.get_column_after();

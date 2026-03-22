@@ -3,6 +3,7 @@ use crate::document::Document;
 use crate::state::Scope;
 use crate::tokens::Tokens;
 use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::fmt;
 use std::rc::Rc;
@@ -14,15 +15,17 @@ pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Res
 // These are applied after the document is completely constructed
 #[derive(Clone, Default)]
 pub struct RewriteOptions {
-  pub label:        Option<String>,
-  pub scope:        Option<Scope>,
-  pub xpath:        Option<String>,
-  pub on_match:     Option<Tokens>,
-  pub attributes:   Option<String>,
-  pub replace:      Option<RewriteReplaceClosure>,
-  pub regexp:       Option<String>,
-  pub select:       Option<String>,
-  pub select_count: Option<usize>,
+  pub label:          Option<String>,
+  pub scope:          Option<Scope>,
+  pub xpath:          Option<String>,
+  pub on_match:       Option<Tokens>,
+  pub attributes:     Option<String>,
+  pub attributes_map: Option<HashMap<String, String>>,
+  pub replace:        Option<RewriteReplaceClosure>,
+  pub regexp:         Option<String>,
+  pub select:         Option<String>,
+  pub select_count:   Option<usize>,
+  pub is_math:        bool,
 }
 impl fmt::Debug for RewriteOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "<RewriteOptions>") }
@@ -70,6 +73,15 @@ pub struct RewriteClause {
   compiled: bool,
   op:       RewriteOperator,
   pattern:  RewritePattern,
+}
+impl RewriteClause {
+  pub fn new_uncompiled(op: RewriteOperator, pattern: RewritePattern) -> Self {
+    RewriteClause { compiled: false, op, pattern }
+  }
+
+  pub fn new_compiled(op: RewriteOperator, pattern: RewritePattern) -> Self {
+    RewriteClause { compiled: true, op, pattern }
+  }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -136,6 +148,30 @@ impl Rewrite {
         pattern:  RewritePattern::String(r),
       });
     }
+    // If attributes string is set but attributes_map is not, parse string into map.
+    // Perl format: "role='ID'" or "role='ID', meaning='foo'"
+    if options.attributes_map.is_none() {
+      if let Some(ref attrs_str) = options.attributes {
+        let mut map = HashMap::default();
+        for part in attrs_str.split(',') {
+          let part = part.trim();
+          if let Some((key, val)) = part.split_once('=') {
+            let val = val.trim().trim_matches('\'').trim_matches('"');
+            map.insert(key.trim().to_string(), val.to_string());
+          }
+        }
+        if !map.is_empty() {
+          options.attributes_map = Some(map);
+        }
+      }
+    }
+    if options.attributes_map.is_some() {
+      clauses.push(RewriteClause {
+        compiled: true,
+        op:       Attributes,
+        pattern:  RewritePattern::String(String::new()), // attributes stored in options
+      });
+    }
     Rewrite { options, clauses }
   }
 
@@ -154,37 +190,12 @@ impl Rewrite {
 
   pub fn compile_clause(
     &mut self,
-    _document: &mut Document,
+    document: &mut Document,
     clause: RewriteClause,
   ) -> RewriteClause {
     let op = clause.op;
     let pattern = clause.pattern;
-    //   my ($oop, $opattern) = ($op, $pattern);
-    //   if ($op eq 'label') {
-    //     if (ref $pattern eq 'ARRAY') {
-    //       #      $op='multi_select'; $pattern = [map(["descendant-or-self::*[\@label='$_']",1],
-    // @$pattern)]; }
 
-    //       $op = 'multi_select'; $pattern = [map { ["descendant-or-self::*[\@xml:id='$_']", 1] }
-    //           map { $self->getLabelID($_) } @$pattern]; }
-    //     else {
-    //       #      $op='select'; $pattern=["descendant-or-self::*[\@label='$pattern']",1]; }}
-    //       $op      = 'select';
-    //       $pattern = ["descendant-or-self::*[\@xml:id='" . $self->getLabelID($pattern) . "']",
-    // 1]; } }   elsif ($op eq 'scope') {
-    //     $op = 'select';
-    //     if ($pattern =~ /^label:(.*)$/) {
-    //       #      $pattern=["descendant-or-self::*[\@label='$1']",1]; }
-    //       $pattern = ["descendant-or-self::*[\@xml:id='" . $self->getLabelID($1) . "']", 1]; }
-    //     elsif ($pattern =~ /^id:(.*)$/) {
-    //       $pattern = ["descendant-or-self::*[\@xml:id='$1']", 1]; }
-    // ### Is this pattern ever used? <elementname>:<refnum> expects attribute!!!
-    // ###    elsif ($pattern =~ /^(.*):(.*)$/) {
-    // ###      $pattern = ["descendant-or-self::*[local-name()='$1' and \@refnum='$2']", 1]; }
-    //     else {
-    //       Error('misdefined', '<rewrite>', undef,
-    //         "Unrecognized scope pattern in Rewrite clause: \"$pattern\"; Ignoring it.");
-    //       $op = 'ignore'; $pattern = []; } }
     if op == RewriteOperator::Xpath {
       self.options.select_count = Some(1);
       return RewriteClause {
@@ -193,22 +204,65 @@ impl Rewrite {
         pattern,
       };
     }
-    //   elsif ($op eq 'match') {
-    //     if (ref $pattern eq 'CODE') {
-    //       $op = 'test'; }
-    //     elsif (ref $pattern eq 'ARRAY') {    # Multiple patterns!
-    //       $op      = 'multi_select';
-    //       $pattern = [map { $self->compile_match($document, $_) } @$pattern]; }
-    //     else {
-    //       $op = 'select'; $pattern = $self->compile_match($document, $pattern); } }
-    //   elsif ($op eq 'replace') {
-    //     if (ref $pattern eq 'CODE') { }
-    //     else {
-    //       $pattern = $self->compile_replacement($document, $pattern); } }
-    //   elsif ($op eq 'regexp') {
-    //     $pattern = $self->compile_regexp($pattern); }
-    //   Debug("Compiled clause $oop=>" . ToString($opattern) . "  ==> $op=>" . ToString($pattern))
-    //     if $LaTeXML::DEBUG{rewrite};
+    // scope => 'label:...' compiles to select with xpath via label ID resolution
+    // Perl: $op = 'select'; $pattern = ["descendant-or-self::*[@xml:id='<id>']", 1];
+    if op == RewriteOperator::Scope {
+      if let RewritePattern::String(scope_str) = &pattern {
+        if let Some(label_part) = scope_str.strip_prefix("label:") {
+          if let Some(id) = document.rewrite_labels.get(label_part).cloned() {
+            self.options.select_count = Some(1);
+            let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
+            return RewriteClause {
+              compiled: true,
+              op: RewriteOperator::Select,
+              pattern: RewritePattern::String(xpath),
+            };
+          }
+          // Try with LABEL: prefix (clean_label adds it)
+          let clean_key = format!("LABEL:{}", label_part);
+          if let Some(id) = document.rewrite_labels.get(&clean_key).cloned() {
+            self.options.select_count = Some(1);
+            let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
+            return RewriteClause {
+              compiled: true,
+              op: RewriteOperator::Select,
+              pattern: RewritePattern::String(xpath),
+            };
+          }
+          // Label not found — ignore this clause
+          return RewriteClause {
+            compiled: true,
+            op: RewriteOperator::Ignore,
+            pattern: RewritePattern::String(String::new()),
+          };
+        } else if let Some(id_part) = scope_str.strip_prefix("id:") {
+          self.options.select_count = Some(1);
+          let xpath = format!("descendant-or-self::*[@xml:id='{}']", id_part);
+          return RewriteClause {
+            compiled: true,
+            op: RewriteOperator::Select,
+            pattern: RewritePattern::String(xpath),
+          };
+        }
+        return RewriteClause {
+          compiled: true,
+          op: RewriteOperator::Ignore,
+          pattern: RewritePattern::String(String::new()),
+        };
+      }
+    }
+    // Match => pre-compiled XPath string (for .latexml loader)
+    // When match is already a RewritePattern::String, it's a pre-compiled xpath
+    if op == RewriteOperator::Match {
+      if let RewritePattern::String(xpath) = pattern {
+        self.options.select_count = Some(1);
+        return RewriteClause {
+          compiled: true,
+          op: RewriteOperator::Select,
+          pattern: RewritePattern::String(xpath),
+        };
+      }
+    }
     RewriteClause { compiled: true, op, pattern }
   }
 
@@ -254,8 +308,6 @@ impl Rewrite {
           // my ($xpath, $nnodes, @wilds) = @$pattern;
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
-            // Debug("Rewrite selecting \"$xpath\" => " . scalar(@matches) . " matches") if
-            // $LaTeXML::DEBUG{rewrite};
             for node in matches {
               // next unless node.get_owner_document()->isSameNode($tree->ownerDocument); # If still
               // attached to original document!
@@ -277,8 +329,6 @@ impl Rewrite {
           }
         },
         Replace => {
-          //     Debug("Rewrite replace at " . $tree->toString . " using $pattern")
-          // if $LaTeXML::DEBUG{rewrite};
           let mut parent = tree.get_parent().unwrap();
           // Remove & separate nodes to be replaced, and sibling nodes following them.
           let mut following = VecDeque::new(); // Collect the matching and following nodes
@@ -341,10 +391,61 @@ impl Rewrite {
             parent.add_child(&mut follow_node)?;
           }
         },
+        Attributes => {
+          // Perl: setAttributes_encapsulate — set attributes on the matched node(s)
+          // For simple single-token matches (nmatched=1), just set attributes directly.
+          if let Some(ref attrs) = self.options.attributes_map {
+            // Skip if already matched
+            if !tree.has_attribute("_matched") {
+              let mut node = tree.clone();
+              for (key, value) in attrs {
+                let _ = node.set_attribute(key, value);
+              }
+            }
+          }
+          // Perl: markSeen after attributes, then continue with remaining clauses
+          mark_seen(tree, nmatched);
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
+        Ignore => {
+          // Perl: $self->applyClause($document, $tree, $nmatched, @more_clauses);
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
         _ => todo!(),
       }
+    } else {
+      // No more clauses — mark the matched nodes as seen
+      // Perl: markSeen($tree, $nmatched) when no more clauses
+      mark_seen(tree, nmatched);
     }
 
     Ok(())
+  }
+}
+
+/// Mark a node (and nsibs following siblings) as matched, preventing re-matching.
+/// Perl: markSeen($node, $nsibs) + markSeen_rec($node)
+fn mark_seen(node: &Node, nsibs: usize) {
+  let mut current = Some(node.clone());
+  for _i in 0..nsibs {
+    if let Some(n) = current {
+      mark_seen_rec(&n);
+      current = n.get_next_sibling();
+    } else {
+      break;
+    }
+  }
+}
+
+fn mark_seen_rec(node: &Node) {
+  if node.has_attribute("_wildcard") {
+    return;
+  }
+  let mut n = node.clone();
+  let _ = n.set_attribute("_matched", "1");
+  for child in node.get_child_nodes() {
+    if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+      mark_seen_rec(&child);
+    }
   }
 }

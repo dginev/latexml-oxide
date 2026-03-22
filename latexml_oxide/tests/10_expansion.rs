@@ -22,8 +22,8 @@ pub fn expansion_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     // Document-level bindings: loaded by load_external_binding(stem)
     // Translate the Perl .latexml files to Rust
-    "whichinput" => Some(helpers::whichinput_tex::load_definitions()),
-    "whichcache" => Some(helpers::whichcache_tex::load_definitions()),
+    "whichinput.latexml" => Some(helpers::whichinput_tex::load_definitions()),
+    "whichcache.latexml" => Some(helpers::whichcache_tex::load_definitions()),
     _ => None,
   }
 }

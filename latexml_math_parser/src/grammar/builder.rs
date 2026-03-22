@@ -68,8 +68,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
   rules!(
     // Factors
-    factor_base = unknown | number | id | atom | opfunction;
-    factor = factor_base;
+    // opfunction/function/trigfunction are NOT factors — they require arguments.
+    // Standalone usage is handled at the term level (term += function | ...).
+    // `2 \sin` is handled via dedicated tight_term rules below.
+    factor_base = unknown | number | id | atom;
+    factor = factor_base | opfunction;
     // Terms
     // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
     any_bigop = bigop | sumop | intop | limitop | diffop;
@@ -85,6 +88,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator function => prefix_apply
       | operator compound_operator => prefix_apply;
 
+    // tight_term includes single factors (for left-recursive chaining)
+    // and all compound constructs (invisible times, prefix application, etc.)
+    // The `\log x` → `log*x` issue is handled by semantic pruning in
+    // apply_invisible_times, not at the grammar level.
     tight_term = factor
       | tight_term factor => apply_invisible_times
       // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
@@ -97,17 +104,52 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop;
 
+    // Composed functions: f∘g, sin∘cos — these can then be applied as functions
+    // COMPOSEOP operates on function-level operands (curry level 2)
+    // Left-to-right associative (matching Perl): f∘g∘h = (f∘g)∘h
+    composed_term = function composeop function => infix_apply
+      | function composeop trigfunction => infix_apply
+      | function composeop opfunction => infix_apply
+      | trigfunction composeop function => infix_apply
+      | trigfunction composeop trigfunction => infix_apply
+      | trigfunction composeop opfunction => infix_apply
+      | opfunction composeop function => infix_apply
+      | opfunction composeop trigfunction => infix_apply
+      | opfunction composeop opfunction => infix_apply
+      // Left-recursive for left-to-right associativity
+      | composed_term composeop function => infix_apply
+      | composed_term composeop trigfunction => infix_apply
+      | composed_term composeop opfunction => infix_apply;
+
+    // Composed functions can be applied like regular functions
+    tight_term += composed_term tight_term => prefix_apply;
+
     term = tight_term
     | term mulop tight_term => infix_apply_nary
     | term mulop tight_term elideop => infix_apply_and_elide
-    // Perl: COMPOSEOP creates function composition (f∘g)
-    // Functions can participate as operands of composition
+    // Fallback: COMPOSEOP on general terms (for non-function-level composition)
     | term composeop term => infix_apply
     | operator applyop term => prefix_apply_applyop;
 
-    // Allow standalone functions/trigfunctions as terms for composition
+    // Allow standalone functions/trigfunctions/opfunctions as terms
     // This is needed for (f*g)(x) where f and g are FUNCTION tokens
-    term += function | trigfunction;
+    // opfunction here allows standalone \operatorname{R} to parse
+    term += function | trigfunction | opfunction | composed_term;
+    // Allow elideop (\cdots) as a term for chains like y + i + \cdots + y_n
+    // Perl treats cdots as a regular term in addition chains
+    term += elideop;
+
+    // Higher-order operator terms: functions as standalone objects multiplied by factors
+    // `2\sin` = `2 * sin`, `2\sin\cos` = `2 * sin * cos`
+    // These are term-level (not tight_term) so they don't interfere with
+    // function application: `2\sin x` = `2 * sin(x)` (not `(2*sin) * x`)
+    tight_opterm = factor function => apply_invisible_times
+      | factor trigfunction => apply_invisible_times
+      | factor opfunction => apply_invisible_times
+      | tight_opterm function => apply_invisible_times
+      | tight_opterm trigfunction => apply_invisible_times
+      | tight_opterm opfunction => apply_invisible_times;
+    term += tight_opterm;
 
     // Expressions
     expression = term
@@ -115,13 +157,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | expression addop term elideop => infix_apply_and_elide
       | addop tight_term => prefix_apply
       | factor addop => postfix_apply
+      | expression addop => postfix_apply
       // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
       // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
       | expression modifierop expression => infix_apply;
 
     // Formula
     // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
-    modifier_expression = modifierop expression => prefix_apply;
+    modifier_expression = modifierop expression => modifier_prefix_apply;
     // Perl: within a Formula, comma-separated expressions after a relop form a list RHS.
     // e.g. a=b,c,d → a = list(b,c,d), not list(a=b, c, d).
     // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
@@ -143,7 +186,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl MathGrammar L81: AnyOp Expression => Apply(AnyOp, Absent(), Expression)
       // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
       | relop expression => prefix_relop_apply
-      | modifier_expression;
+      | metarelop expression => prefix_relop_apply
+      | modifier_expression
+      // Perl MathGrammar L236: addExpressionModifier: MODIFIER
+      // Standalone postfix modifier (e.g. `8\pmod{3}` → annotated(8, pmod(3)))
+      | formula modifier => postfix_modifier_apply;
 
     // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
     // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
@@ -179,7 +226,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
            | lbrace formula singlevertbar formula rbrace => fence
            | lbrace formula middle_bar formula rbrace => fence
-           | lbrace formula metarelop formula rbrace => fence;
+           | lbrace formula metarelop formula rbrace => fence
+           // Empty fenced expressions: () [] {} ⌊⌋ etc.
+           | lparen rparen => empty_fenced
+           | lbracket rbracket => empty_fenced
+           | lbrace rbrace => empty_fenced
+           | open close => empty_fenced;
     factor += fenced_factor;
 
     // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
@@ -189,6 +241,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // OPFUNCTION followed by fenced args => function application
     // \operatorname{cov}(L) => cov@(L). Always treated as application, not multiplication.
     tight_term += opfunction fenced_factor => prefix_apply;
+    // Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
+    // \log x => log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
+    tight_term += opfunction tight_term => prefix_apply;
+    tight_term += opfunction factor => prefix_apply;
+    // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi)
+    // Note: trigfunction tight_term already in compound_operator, can't duplicate.
+    tight_term += trigfunction factor => prefix_apply;
+    tight_term += trigfunction fenced_factor => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
     // Uses existing `unknown` terminal; semantic action checks text is literally "d".
     // At factor level so it can appear as right operand of invisible_times.
@@ -206,17 +266,23 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     floatsuperscript = start_floatsuperscript expression end_floatsuperscript => standalone_script;
     // Scripted factors -- avoid adding ambiguity in the left-right order of collection
     // first ALL left (=float), then right (=post).
-    scripted_factor_l11 = floatsuperarg factor_base => prefix_script;
-    scripted_factor_l12 = floatsubarg factor_base => prefix_script;
+    scripted_factor_l11 = floatsuperarg factor_base => prefix_script
+      | floatsuperarg opfunction => prefix_script;
+    scripted_factor_l12 = floatsubarg factor_base => prefix_script
+      | floatsubarg opfunction => prefix_script;
     scripted_factor_l1 = scripted_factor_l11 | scripted_factor_l12;
     scripted_factor_l2 = floatsuperarg scripted_factor_l12 => prefix_script
       | floatsubarg scripted_factor_l11 => prefix_script;
 
     scripted_factor_r11 = factor_base postsuperarg => postfix_script
+      | opfunction postsuperarg => postfix_script
+      | any_bigop postsuperarg => postfix_script
       | scripted_factor_l1 postsuperarg => postfix_script
       | scripted_factor_l2 postsuperarg => postfix_script
       | fenced_factor postsuperarg => postfix_script;
     scripted_factor_r12 = factor_base postsubarg => postfix_script
+      | opfunction postsubarg => postfix_script
+      | any_bigop postsubarg => postfix_script
       | scripted_factor_l1 postsubarg => postfix_script
       | scripted_factor_l2 postsubarg => postfix_script
       | fenced_factor postsubarg => postfix_script;
@@ -235,6 +301,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | scripted_bigop_r1 postsuperarg => postfix_script
       | scripted_bigop_r1 postsubarg => postfix_script;
     tight_term += scripted_bigop tight_term => prefix_apply;
+    tight_term += scripted_bigop factor => prefix_apply;
     // Scripted bigops can also appear as standalone statements
     statement += scripted_bigop;
 

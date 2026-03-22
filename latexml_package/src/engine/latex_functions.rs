@@ -207,10 +207,30 @@ pub fn only_preamble(cs: &str) -> Result<()> {
 }
 
 pub fn tabular_bindings(
-  template: Template,
+  mut template: Template,
   mut properties: SymHashMap<Stored>,
   mut xml_attributes: HashMap<String, String>,
 ) -> Result<()> {
+  // Ensure has_intercol_after flag is set on template columns.
+  // The flag may be lost during parameter passing (Stored::Template serialization).
+  // Re-derive it from the after tokens: presence of \lx@intercol indicates
+  // regular intercolumn spacing (non-@{} column).
+  // Re-derive has_intercol_after from template tokens.
+  // The flag may be lost during parameter passing.
+  for col in template.get_columns_mut() {
+    if let Some(ref after) = col.after {
+      if after.unlist_ref().iter().any(|t| t.to_string().contains("intercol")) {
+        col.has_intercol_after = true;
+      }
+    }
+  }
+  for col in template.get_repeated_mut() {
+    if let Some(ref after) = col.after {
+      if after.unlist_ref().iter().any(|t| t.to_string().contains("intercol")) {
+        col.has_intercol_after = true;
+      }
+    }
+  }
   if !properties.contains_key("guess_headers") {
     if let Some(v) = lookup_value("GUESS_TABULAR_HEADERS") {
       properties.insert("guess_headers", v);

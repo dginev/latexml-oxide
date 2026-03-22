@@ -247,6 +247,15 @@ impl Alignment {
 
   pub fn current_column_number(&self) -> usize { self.current_column }
 
+  /// Set a property on the current row (for attributes like backgroundcolor from \rowcolor)
+  pub fn set_row_property(&mut self, key: &str, value: String) {
+    if let Some(row_idx) = self.current_row {
+      if let Some(row) = self.rows.get_mut(row_idx) {
+        row.properties.insert(key.to_string(), Stored::from(value));
+      }
+    }
+  }
+
   pub fn current_row_number(&self) -> usize {
     self.rows.iter().filter(|row| !row.is_pseudo()).count()
   }
@@ -493,7 +502,7 @@ impl BoxOps for Alignment {
       for before in row.before.iter() {
         document.absorb(before, None)?;
       }
-      for cell in row.get_columns_mut() {
+      for (col_idx, cell) in row.get_columns_mut().iter_mut().enumerate() {
         if cell.skipped {
           continue;
         }
@@ -513,8 +522,8 @@ impl BoxOps for Alignment {
         }
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
-        if let Some(align) = cell.align {
-          cell_attrs.insert(String::from("align"), align.name().to_owned());
+        if let Some(ref align) = cell.align {
+          cell_attrs.insert(String::from("align"), align.name());
         };
         if let Some(ref vattach) = cell.vattach {
           cell_attrs.insert(String::from("vattach"), vattach.clone());
@@ -524,6 +533,10 @@ impl BoxOps for Alignment {
         }
         if let Some(vpad) = vpad_opt {
           cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
+        }
+        // colortbl: backgroundcolor from \columncolor/\cellcolor
+        if let Some(ref bg) = cell.backgroundcolor {
+          cell_attrs.insert(String::from("backgroundcolor"), bg.clone());
         }
         // Perl: colspan/rowspan attributes for spanning cells
         if cell.colspan.unwrap_or(1) != 1 {
@@ -563,26 +576,54 @@ impl BoxOps for Alignment {
           let threshold_02em: i64 = 131072;
           let threshold_15em: i64 = 983040;
           // Perl: $lpad = ($$cell{lspaces} ? $$cell{lspaces}->getWidth->valueOf : 0)
+          // Note: In Perl, lspaces is populated from \lx@intercol (isSpace, width=tabcolsep)
+          // during cell content extraction. Rust doesn't populate lspaces, so we approximate:
+          // - If template has \lx@intercol → there IS intercolumn padding (assume 0.2em)
+          // - Else if template has \hfil/\hfill → centering fill, treat as padding (prevents
+          //   incorrect ltx_nopad_l for regular centered/right-aligned columns)
+          // - Else → no padding (assume 0, enables ltx_nopad_l)
           let lpad = cell
             .lspaces
             .as_ref()
             .and_then(|ls| ls.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              // When lspaces is unset but template has fill/spacing commands,
-              // assume spacing exists (workaround for missing rspaces extraction)
-              if template_has_fill(&cell.before) { threshold_02em } else { 0 }
+              // Perl: lpad from lspaces (\lx@intercol width). When unavailable,
+              // use template tracking: has_intercol_before is set during template
+              // building and correctly distinguishes @{}-disabled columns.
+              if cell.has_intercol_before || template_has_fill(&cell.before) {
+                threshold_02em
+              } else {
+                0
+              }
             });
           // Perl: $rpad = ($$cell{rspaces} ? $$cell{rspaces}->getWidth->valueOf : 0)
+          // When rspaces is not extracted, check template for intercolumn spacing.
+          // Key insight: @{}c@{} columns have \hfil (centering) but NO \lx@intercol.
+          // Regular columns have \lx@intercol in before OR after tokens.
+          // Use \lx@intercol presence as the primary signal for padding.
           let rpad = cell
             .rspaces
             .as_ref()
             .and_then(|rs| rs.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              if template_has_fill(&cell.after) { threshold_02em } else { 0 }
+              // Check after tokens first (direct intercol signal)
+              if template_has_intercol(&cell.after) {
+                threshold_02em
+              // If no intercol in after, check before: if before has intercol,
+              // this is a regular column (last column or similar) — assume padding
+              } else if template_has_intercol(&cell.before) {
+                if template_has_fill(&cell.after) { threshold_02em } else { 0 }
+              // Neither before nor after has intercol → @{} on both sides → no padding
+              } else {
+                0
+              }
             });
-          if (!empty || has_boxes) && lpad < threshold_02em {
+          // Perl: first column never gets ltx_nopad_l. The first column's left
+          // edge is the tabular boundary, not an inter-column gap. Only columns
+          // after the first can have their left padding suppressed by @{}.
+          if col_idx > 0 && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
             // do nothing — use CSS default padding
@@ -642,6 +683,18 @@ impl BoxOps for Alignment {
           }
           // expire local $LaTeXML::BOX
           document.expire_box_to_absorb();
+        } else if let Some(ref boxes) = cell.boxes {
+          // Cell is skippable but may contain preserved boxes (e.g. \label wrapped
+          // in \lx@hidden@noalign with alignmentPreserve=true). These boxes need
+          // to be absorbed so their constructors run (e.g. \label sets labels= on
+          // the parent equation element via float_to_label).
+          // In Perl, \hfil from the template contributes cell width, making such
+          // cells non-skippable. In Rust, \hfil doesn't contribute width.
+          for item in boxes.unlist() {
+            if item.get_property_bool("alignmentPreserve") {
+              document.absorb(&item, None)?;
+            }
+          }
         }
         let close_column_fn = &self.close_column;
         close_column_fn(document)?;
@@ -667,7 +720,10 @@ impl BoxOps for Alignment {
           .findnodes("descendant::ltx:td[@thead]", Some(&node))
           .is_empty();
         // If requested && no cells are already marked as being thead, apply heuristic
-        if self.properties.contains_key("guess_headers") && !hashead {
+        let guess_headers = self.properties.get("guess_headers")
+          .map(|v| !matches!(v, Stored::Bool(false)))
+          .unwrap_or(false);
+        if guess_headers && !hashead {
           guess_alignment_headers(document, &mut node, self)?;
         }
         // Otherwise, if not a math array, group thead & tbody rows
@@ -798,13 +854,30 @@ pub fn matrix_template() -> Template {
 // recognize groups of header lines and groups data lines, possibly alternating.
 
 /// Check whether a template token list contains fill/spacing commands
-/// like \hfil, \hfill, \hskip, \lx@intercol. Used as a fallback when
-/// lspaces/rspaces extraction missed the template spacing.
+/// like \hfil, \hfill, \hskip, \lx@intercol. Previously used as fallback
+/// for lpad/rpad; now superseded by template_has_intercol for better @{} handling.
+#[allow(dead_code)]
 fn template_has_fill(tokens: &Option<Tokens>) -> bool {
   if let Some(ref toks) = tokens {
     for tok in toks.unlist_ref() {
       let s = tok.to_string();
       if s == "\\hfil" || s == "\\hfill" || s == "\\hskip" || s == "\\lx@intercol" {
+        return true;
+      }
+    }
+  }
+  false
+}
+
+/// Check if template tokens contain \lx@intercol (intercolumn spacing).
+/// Unlike template_has_fill, this ignores \hfil/\hfill which are alignment fill.
+/// \lx@intercol indicates actual intercolumn padding; \hfil is just centering.
+/// For @{}c@{} columns, \lx@intercol is disabled but \hfil remains.
+fn template_has_intercol(tokens: &Option<Tokens>) -> bool {
+  if let Some(ref toks) = tokens {
+    for tok in toks.unlist_ref() {
+      let s = tok.to_string();
+      if s == "\\lx@intercol" || s.contains("intercol") {
         return true;
       }
     }
@@ -930,8 +1003,10 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node) -> Result<()> {
     }
   }
   if maxreach > heads.len() {
-    // rowspan crossed over thead boundary!
-    rows.append(&mut heads);
+    // rowspan crossed over thead boundary! Put head rows back at the FRONT of body rows.
+    heads.append(&mut rows);
+    rows = heads;
+    heads = Vec::new();
   }
   // scan trailing rows as potential tfoot
   let mut foots = VecDeque::new();
@@ -986,7 +1061,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
           ColumnSpec::Unknown
         },
       );
-      // eprintln!("    cell[{ri},{ci}]: cell={}, class={:?}", col.cell.is_some(), col.content_class);
+      // eprintln!("    cell: cell={}, class={:?}, border='{}'", col.cell.is_some(), col.content_class, col.border);
       col.content_length = Some(if col.content_class == Some(ColumnSpec::Graphics) {
         1000
       } else if col.cell.is_some() {
@@ -1034,6 +1109,11 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   // DG: cache assignments, and execute in post-loop, so that we can avoid indexing arithmetic
   let mut outer_border_right_assignments = Vec::new();
   let mut outer_border_bottom_assignments = Vec::new();
+  // Perl: copy characterizations (align/content_class/content_length) from rowspan/colspan cells
+  // to the cells they span over. Deferred to avoid borrow conflicts across rows.
+  #[allow(clippy::type_complexity)]
+  let mut rowspan_propagation: Vec<(usize, usize, Option<Align>, Option<ColumnSpec>, Option<usize>)> =
+    Vec::new();
   // copy the characterizations to spanned cells
   for r in 0..alignment.rows.len() {
     let row = &mut alignment.rows[r];
@@ -1041,7 +1121,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
     for c in 0..cols.len() {
       let rs = cols[c].rowspan.unwrap_or(1);
       let cs = cols[c].colspan.unwrap_or(1);
-      let ca = cols[c].align;
+      let ca = cols[c].align.clone();
       let cc = cols[c].content_class;
       let cl = cols[c].content_length;
       let rb = cols[c].border_right;
@@ -1050,21 +1130,16 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
       let bb = cols[c].border_bottom;
       cols[c].border_bottom = Some(0);
       for row_reach in cols.iter_mut().take(c + cs).skip(c + 1) {
-        row_reach.align = ca;
+        row_reach.align = ca.clone();
         row_reach.content_class = cc;
         row_reach.content_length = cl;
       }
-      // TODO:
-      // for irow_idx in r+1 .. r+rs {
-      //   let mut irow = &mut alignment.rows[irow_idx];
-      //   let mut icols = irow.get_columns_mut();
-      //   for icol_idx in c .. c+cs {
-      //     let icol = &mut icols[icol_idx];
-      //     icol.align          = ca;
-      //     icol.content_class  = cc;
-      //     icol.content_length = cl;
-      //   }
-      // }
+      // Perl L1073-1077: copy characterizations to rowspan-covered cells
+      for sr in 1..rs {
+        for sc in 0..cs {
+          rowspan_propagation.push((r + sr, c + sc, ca.clone(), cc, cl));
+        }
+      }
 
       // move the outer borders
       for sr in 0..rs {
@@ -1072,6 +1147,17 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
       }
       for sc in 0..cs {
         outer_border_bottom_assignments.push((r + rs - 1, c + sc, bb));
+      }
+    }
+  }
+  // Apply the collected rowspan propagation assignments
+  for (row_idx, col_idx, align, content_class, content_length) in rowspan_propagation.into_iter() {
+    if row_idx < alignment.rows.len() {
+      let cols = alignment.rows[row_idx].get_columns_mut();
+      if col_idx < cols.len() {
+        cols[col_idx].align = align;
+        cols[col_idx].content_class = content_class;
+        cols[col_idx].content_length = content_length;
       }
     }
   }
@@ -1115,9 +1201,8 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
     }
     alignment.rows[nrows - 1].get_columns_mut()[c].border_bottom = Some(if h { 1 } else { 0 });
   }
-  // the constant array access *HAS* to be inefficient, but how do we avoid it without encountering
-  // objections from the Rust compiler? Mutability conflicts galore here if any &mut lives long
-  // enough.
+  // Note: This propagation doesn't exist in Perl's Alignment.pm.
+  // But removing it breaks fonts_test (guessTableHeaders). Needs careful audit.
   for r in 1..nrows - 1 {
     for c in 1..ncols - 1 {
       if let Some(bb) = alignment.rows[r - 1].get_columns_mut()[c].border_bottom {
@@ -1239,7 +1324,11 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
                 inferred_classes.push(ColumnSpec::Text);
               }
             },
-            "ltx:XMArg" => {
+            "ltx:XMArg" | "ltx:inline-block" | "ltx:p" => {
+              // Transparent containers: look through to classify children.
+              // Perl's beAbsorbed creates <text> directly in td; Rust wraps in
+              // <inline-block><p> from {turn}/{rotate}. Treat these as transparent
+              // so the classification matches Perl's view of the cell content.
               let mut children = ch.get_child_nodes();
               children.append(&mut nodes);
               nodes = children;
@@ -1391,18 +1480,19 @@ fn alignment_characterize_lines(
           cell.cell_type = Some('h');
           if let Some(ref mut xcell) = cell.cell {
             // But NOT empty cells on outer edges.
+            // Perl: !$$cell{l} is falsy for both undef AND 0.
             if (cell.content_class == Some(ColumnSpec::Empty))
               && ((i == 0
                 && (if axis == Axis::Row {
-                  cell.border_left.is_none()
+                  cell.border_left.unwrap_or(0) == 0
                 } else {
-                  cell.border_top.is_none()
+                  cell.border_top.unwrap_or(0) == 0
                 }))
                 || (i == nn
                   && (if axis == Axis::Row {
-                    cell.border_right.is_none()
+                    cell.border_right.unwrap_or(0) == 0
                   } else {
-                    cell.border_bottom.is_none()
+                    cell.border_bottom.unwrap_or(0) == 0
                   })))
             {
             } else {
@@ -1424,7 +1514,7 @@ fn alignment_test_headers(
   axis: Axis,
   lines: &[Vec<&mut Cell>],
 ) -> Vec<usize> {
-  // eprintln!("Testing {nhead} headers with threshold {tab_threshold}");
+  // eprintln!("Testing {nhead} headers with threshold {tab_threshold} for axis {:?}", axis);
   let mut heads: Vec<usize> = (0..nhead).collect(); // The indices of heading lines.
   let mut head_length = alignment_max_content_length(0, 0, nhead - 1, lines);
   let mut next_line = nhead; // Start from the end of the proposed headings.

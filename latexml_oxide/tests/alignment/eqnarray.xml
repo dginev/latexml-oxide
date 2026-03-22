@@ -424,7 +424,7 @@
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok font="italic" role="UNKNOWN">y</XMTok>
                   <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                  <XMTok name="cdots" role="ID">⋯</XMTok>
+                  <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -454,7 +454,7 @@
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN">y</XMTok>
                       <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                      <XMTok name="cdots" role="ID">⋯</XMTok>
+                      <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMTok font="italic" role="UNKNOWN">y</XMTok>

@@ -1,7 +1,25 @@
 // Math tests — individually listed for per-test #[ignore] support.
+#[macro_use]
+extern crate latexml_codegen;
+#[macro_use]
+extern crate latexml_package;
+
+mod helpers;
+
+use std::rc::Rc;
+
 use latexml::util::test::*;
+use latexml_core::common::error::Result;
 
 const DIR: &str = "tests/math";
+
+/// Dispatcher for math test source-level bindings (*_src.rs)
+pub fn math_tests_dispatch(filename: &str) -> Option<Result<()>> {
+  match filename {
+    "simplemath.latexml" => Some(helpers::simplemath_src::load_definitions()),
+    _ => latexml_contrib::dispatch(filename),
+  }
+}
 
 #[test]
 #[ignore] // text= attr diffs: math parser
@@ -20,13 +38,11 @@ fn array_newline_math_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn arrows_test() {
   latexml_test_single("tests/math/arrows.tex", "arrows", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn choose_test() {
   latexml_test_single("tests/math/choose.tex", "choose", DIR, None, None);
 }
@@ -37,7 +53,6 @@ fn compact_dual_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: many undefined commands
 fn declare_test() {
   latexml_test_single("tests/math/declare.tex", "declare", DIR, None, None);
 }
@@ -48,27 +63,24 @@ fn fracs_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn niceunits_test() {
   latexml_test_single("tests/math/niceunits.tex", "niceunits", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn not_test() {
   latexml_test_single("tests/math/not.tex", "not", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn sampler_test() {
   latexml_test_single("tests/math/sampler.tex", "sampler", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
+#[ignore] // text= attr diffs: math parser (needs scoped rewrites for full match)
 fn simplemath_test() {
-  latexml_test_single("tests/math/simplemath.tex", "simplemath", DIR, None, None);
+  latexml_test_single("tests/math/simplemath.tex", "simplemath", DIR, None, Some(Rc::new(math_tests_dispatch)));
 }
 
 #[test]
@@ -77,7 +89,6 @@ fn testover_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn testscripts_test() {
   latexml_test_single("tests/math/testscripts.tex", "testscripts", DIR, None, None);
 }

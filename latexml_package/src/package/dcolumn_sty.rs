@@ -1,5 +1,45 @@
 use crate::prelude::*;
 
+/// Perl: absorbedString — digests tokens and extracts text content.
+/// Mirrors the Perl function in dcolumn.sty.ltxml that creates a temporary
+/// document to get the display form of math tokens (e.g. \cdot → ⋅).
+fn absorbed_string(todelim: &Tokens) -> String {
+  // Build \ensuremath{todelim} tokens
+  let mut toks = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
+  toks.extend(todelim.clone().unlist());
+  toks.push(T_END!());
+  // Digest and extract text from resulting boxes
+  match stomach::digest(Tokens::new(toks)) {
+    Ok(digested) => collect_text(&digested),
+    Err(_) => todelim.to_string(),
+  }
+}
+
+/// Recursively extract leaf text content from a Digested tree.
+fn collect_text(digested: &Digested) -> String {
+  let mut result = String::new();
+  match digested.data() {
+    DigestedData::TBox(b) => {
+      let tbox = b.borrow();
+      arena::with(tbox.text, |text| result.push_str(text));
+    },
+    DigestedData::List(l) => {
+      let list = l.borrow();
+      for item in list.boxes.iter() {
+        result.push_str(&collect_text(item));
+      }
+    },
+    DigestedData::Whatsit(w) => {
+      let whatsit = w.borrow();
+      if let Some(Stored::Digested(body)) = whatsit.properties.get("body") {
+        result.push_str(&collect_text(body));
+      }
+    },
+    _ => {},
+  }
+  result
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: dcolumn.sty.ltxml — decimal-aligned columns
@@ -34,23 +74,34 @@ LoadDefinitions!({
     Let!("\\DC@saved@dollar", "$");
     state::let_i(&T_MATH!(), &T_CS!("\\relax"), None);
     // Start inline math if not already in math
-    let in_math = state::lookup_value("IN_MATH").is_some();
+    let in_math = lookup_bool("IN_MATH");
     if in_math {
+      state::assign_value("DC_started_math", Stored::Bool(false), None);
       Ok(Tokens::default())
     } else {
+      state::assign_value("DC_started_math", Stored::Bool(true), None);
       Ok(Tokens!(T_CS!("\\lx@begin@inline@math")))
     }
   });
 
-  // Perl: \DC@end — restores $ and ends inline math
+  // Perl: \DC@end — restores $ and ends inline math (only if we started it)
   DefMacro!("\\DC@end", sub[_args] {
     state::let_i(&T_MATH!(), &T_CS!("\\DC@saved@dollar"), None);
-    Ok(Tokens!(T_CS!("\\lx@end@inline@math")))
+    let started = state::lookup_value("DC_started_math")
+      .map(|v| matches!(v, Stored::Bool(true)))
+      .unwrap_or(false);
+    if started {
+      Ok(Tokens!(T_CS!("\\lx@end@inline@math")))
+    } else {
+      Ok(Tokens::default())
+    }
   });
 
   // Perl: DefColumnType('D{}{}{}', ...) — decimal alignment column
-  // Simplified: uses center alignment with before/after wrappers
+  // Perl: align => 'char:' . absorbedString(Tokens(T_CS('\ensuremath'), T_BEGIN, $todelim, T_END))
   DefColumnType!("D{}{}{}", sub[(delim, todelim, ndec)] {
+    // Perl: absorbedString — digest \ensuremath{todelim} to get display character
+    let alignment = absorbed_string(&todelim);
     // Build before tokens: \DC@{delim}{todelim}{ndec}
     let mut before = vec![T_CS!("\\DC@"), T_BEGIN!()];
     before.extend(delim.unlist());
@@ -65,7 +116,7 @@ LoadDefinitions!({
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens::new(before)),
         after: Some(Tokens!(T_CS!("\\DC@end"))),
-        align: Some(Align::Center),
+        align: Some(Align::Char(alignment)),
         ..Cell::default()
       });
     });

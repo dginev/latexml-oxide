@@ -383,3 +383,35 @@ Daemon test XMLs in `LaTeXML/t/daemon/` are not tracked or synced.
 
 **Impact:** 7 daemon format test XMLs have known differences (lang attributes, MathML
 namespace declarations, Content-Type casing, logo styling) that are not being addressed.
+
+### 18. Source-Level Bindings via `\input{name.latexml}`
+
+**Decision:** Perl's per-document `.latexml` files are emulated by `*_src.rs` files in the test helpers, loaded via `\input{name.latexml}` in the `.tex` source.
+
+**Perl mechanism:** When processing `foo.tex`, Perl automatically checks for `foo.latexml` in the same directory. If found, it loads and executes the Perl code, which typically contains `DefMathRewrite`, `DefMacro`, `DefConstructor` calls that customize the conversion for that specific document.
+
+**Rust mechanism:**
+1. The `.tex` file includes `\input{name.latexml}` to explicitly request the binding
+2. The `input()` function recognizes `.latexml` extension and routes to `input_definitions()`
+3. The test's dispatcher (in `tests/helpers/`) maps `"name.latexml"` to `name_src::load_definitions()`
+4. The `*_src.rs` file in `tests/helpers/` contains the Rust equivalent of the `.latexml` definitions
+
+**Test organization:** The `*_src.rs` files live in `latexml_oxide/tests/helpers/` and are dispatched by per-suite functions passed to `tex_tests!`. This compartmentalizes test concerns and keeps `latexml_contrib` clean for user-contributed bindings.
+
+**Rationale:**
+- Rust cannot interpret Perl at runtime, so `.latexml` files cannot be executed directly
+- Using `\input{name.latexml}` preserves Perl's naming convention
+- The `.latexml` extension is recognized by the `input()` function and always routes through `input_definitions()` (the binding dispatch path)
+- Test-specific bindings in `tests/helpers/` keep the dispatch logic close to where it's used
+
+**Critical insight:** Math rewrite rules (`DefMathRewrite`) in `.latexml` files execute BEFORE the Marpa grammar parses the expression. This means setting `role="ID"` or `role="FUNCTION"` via rewrites changes how the grammar interprets the tokens — it is NOT equivalent to a post-processing role change. The `*_src.rs` mechanism preserves this pre-parse semantics.
+
+**Example:** `simplemath_src.rs` mirrors `simplemath.latexml`:
+```rust
+// Sets MATHPARSER_SPECULATE + rewrite rules for a,b,x,D → ID, f → FUNCTION
+add_math_rewrite("a", "ID")?;
+add_math_rewrite("f", "FUNCTION")?;
+AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
+```
+
+**Impact:** Tests with `.latexml` files need corresponding `*_src.rs` files in `tests/helpers/` and `\input{name.latexml}` in their `.tex` source to get the same parsing behavior as Perl.

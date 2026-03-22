@@ -141,6 +141,20 @@ LoadDefinitions!({
     }
   });
 
+  // Perl (2026-03-18): Relation parameter type for numeric comparisons (<, =, >)
+  // Perl: $gullet->skipSpaces; return $gullet->readXToken(0, 1);
+  //   toplevel=0, for_conditional=1 => autoclose=0, fully_expand=0
+  // Skips spaces, then reads with expansion (but not full expansion).
+  DefParameterType!(Relation, sub[_inner, _extra] {
+    gullet::skip_spaces()?;
+    if let Some(t) = gullet::read_x_token(Some(false), true, None)? {
+      Ok(ArgWrap::Token(t))
+    } else {
+      Error!("expected","Relation", "Parameter <Relation> found None.");
+      Ok(ArgWrap::Tokens(Tokens!()))
+    }
+  });
+
   // Read a number
   DefParameterType!(Number, sub[_inner, _extra] {
     gullet::read_number()?
@@ -173,28 +187,28 @@ LoadDefinitions!({
   // Returns ArgWrap::Pair if ( is found, ArgWrap::None otherwise (for Optional).
   DefParameterType!(Pair, sub[_inner, _extra] {
     use latexml_core::common::pair::Pair;
-    gullet::skip_spaces();
+    let _ = gullet::skip_spaces();
     if gullet::if_next(T_OTHER!("("))? {
       gullet::read_token()?; // consume (
-      gullet::skip_spaces();
+      let _ = gullet::skip_spaces();
       let x = gullet::read_float()?;
-      gullet::skip_spaces();
+      let _ = gullet::skip_spaces();
       // Skip comma separator
       if let Some(tok) = gullet::read_token()? {
         if tok.to_string() != "," {
           gullet::unread_one(tok);
         }
       }
-      gullet::skip_spaces();
+      let _ = gullet::skip_spaces();
       let y = gullet::read_float()?;
-      gullet::skip_spaces();
+      let _ = gullet::skip_spaces();
       // Skip closing )
       if let Some(tok) = gullet::read_token()? {
         if tok.to_string() != ")" {
           gullet::unread_one(tok);
         }
       }
-      gullet::skip_spaces();
+      let _ = gullet::skip_spaces();
       Ok(ArgWrap::Pair(Pair::new(x, y)))
     } else {
       Ok(ArgWrap::None)

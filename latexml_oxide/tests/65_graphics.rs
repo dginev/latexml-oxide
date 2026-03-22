@@ -27,7 +27,6 @@ fn framed_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: math parser + graphicx
 fn graphrot_test() {
   latexml_test_single("tests/graphics/graphrot.tex", "graphrot", DIR, None, None);
 }

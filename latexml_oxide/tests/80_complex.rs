@@ -13,8 +13,8 @@ const DIR: &str = "tests/complex";
 
 pub fn complex_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
-    "xii" => Some(helpers::xii_tex::load_definitions()),
-    "labelled" => Some(helpers::labelled_tex::load_definitions()),
+    "xii" | "xii.latexml" => Some(helpers::xii_tex::load_definitions()),
+    "labelled.latexml" => Some(helpers::labelled_tex::load_definitions()),
     _ => None,
   }
 }

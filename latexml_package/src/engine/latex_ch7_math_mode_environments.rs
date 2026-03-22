@@ -329,8 +329,20 @@ pub fn eqnarray_bindings() -> Result<()> {
     &T_CS!("\\eqnarray@row@after"),
     None,
   );
+  // Perl: Let('\lx@eqnarray@save@label', '\lx@label');
+  // Save the original \label as \lx@eqnarray@save@label
+  state::let_i(
+    &T_CS!("\\lx@eqnarray@save@label"),
+    &T_CS!("\\label"),
+    None,
+  );
   // Perl: Let('\label', '\lx@eqnarray@label');
-  // TODO: eqnarray label handling
+  // Redirect \label to the noalign version so it runs at the equation (row) level
+  state::let_i(
+    &T_CS!("\\label"),
+    &T_CS!("\\lx@eqnarray@label"),
+    None,
+  );
   Ok(())
 }
 
@@ -514,6 +526,16 @@ LoadDefinitions!({
   DefMacro!("\\eqnarray@row@before", "\\lx@hidden@noalign{\\eqnarray@row@before@}");
   DefMacro!("\\eqnarray@row@after", "\\lx@hidden@noalign{\\eqnarray@row@after@}");
 
+  // Perl: latex_constructs.pool.ltxml lines 2323-2329
+  // \lx@eqnarray@label wraps the label in \lx@hidden@noalign so it's processed
+  // at the row level, not inside a cell. This is critical because in align-like
+  // environments, a cell containing only \label is skippable (its content is not
+  // absorbed during beAbsorbed), so the \label constructor would never run.
+  // By routing through noalign, the \label constructor runs at the equation level
+  // where float_to_label can find the ltx:equation parent.
+  DefMacro!("\\lx@eqnarray@label Semiverbatim",
+    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#1}}");
+
   // Perl: latex_constructs.pool.ltxml lines 2262-2335
   // eqnarray and eqnarray* — alignment-based environments
   DefPrimitive!("\\@eqnarray@bindings", {
@@ -580,9 +602,66 @@ LoadDefinitions!({
 
   Tag!("ltx:equationgroup", auto_close => true);
 
-  // TODO: Port \lx@equationgroup@subnumbering@begin/end (subequations)
   // Perl: latex_constructs.pool.ltxml L2174-2191
-  // Needs careful testing — initial port increased diffs in amsdisplay_test.
+  // \lx@equationgroup@subnumbering@begin/end — subequation numbering
+  // Perl: latex_constructs.pool.ltxml L2174-2191
+  DefConstructor!("\\lx@equationgroup@subnumbering@begin",
+    "<ltx:equationgroup xml:id='#id'>#tags",
+    after_digest => sub[whatsit] {
+      use latexml_core::binding::counter::dialect::reset_counter;
+      use latexml_core::mouth;
+      // Step the equation counter and get properties (id, refnum, tags)
+      let eqn_props = ref_step_counter("equation", false)?;
+      // Expand \theequation to get the parent equation number text
+      let eqnum_toks = gullet::do_expand(T_CS!("\\theequation"))?;
+      let eqnum_str = eqnum_toks.to_string();
+      // Save current equation counter value
+      let saved = state::lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
+        match rv {
+          RegisterValue::Number(n) => n.0,
+          _ => 0,
+        }
+      });
+      state::assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
+      // Set properties on the whatsit
+      for (k, v) in eqn_props {
+        whatsit.set_property(&arena::to_string(k), v);
+      }
+      // Reset equation counter to 0
+      reset_counter(&T_OTHER!("equation"))?;
+      // Redefine \theequation to parent_number + \alph{equation}
+      let new_theequation = format!("{}\\alph{{equation}}", eqnum_str);
+      def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
+      // Redefine \theequation@ID for xml:id generation
+      if let Some(id_val) = whatsit.get_property("id") {
+        let id_str = match &*id_val {
+          Stored::String(s) => arena::to_string(*s),
+          other => other.to_string(),
+        };
+        let new_id_macro = format!("{}.\\@equation@ID", id_str);
+        def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(&new_id_macro), None)?;
+      }
+    });
+  Tag!("ltx:equationgroup", auto_close => true);
+  DefConstructor!("\\lx@equationgroup@subnumbering@end",
+    sub[document, _args, _props] {
+      document.maybe_close_element("ltx:equationgroup")?;
+    },
+    after_digest => {
+      // Restore the saved equation counter
+      if let Some(saved) = state::lookup_value("SAVED_EQUATION_NUMBER") {
+        let n = match saved {
+          Stored::Number(n) => n.0,
+          _ => 0,
+        };
+        state::assign_register(
+          "\\c@equation",
+          Number::new(n).into(),
+          Some(state::Scope::Global),
+          Vec::new(),
+        )?;
+      }
+    });
 
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => sub[document, node] {

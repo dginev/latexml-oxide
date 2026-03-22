@@ -229,14 +229,43 @@ pub fn classify_box(boxnum: Number) -> Result<&'static str> {
 /// is also vertical, return the item directly instead of wrapping in a List.
 /// This enables `is_vbox` property propagation for nested \vbox/\vtop.
 pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
-  // Perl: readBoxContents returns List(@boxes, mode => $mode)
-  // The current stomach mode (e.g. "internal_vertical") should be set on the resulting List.
+  // Perl: readBoxContents calls beginMode($mode) / endMode($mode) around the body reading.
+  // This creates a scoped frame where enterHorizontal can change MODE inplace.
+  // When endMode is called, leaveHorizontal_internal detects MODE='horizontal' with
+  // BOUND_MODE ending in 'vertical', triggers repackHorizontal, then pops the frame.
+  //
+  // We replicate this by adding our own beginMode/endMode pair, matching Perl's
+  // readBoxContents (TeX_Box.pool.ltxml lines 145, 153).
   let current_mode = state::lookup_string("MODE");
+  // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
+  if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
+    stomach::begin_mode(&current_mode)?;
+  }
   let mut contents = stomach::invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
+    // Perl: $stomach->endMode($mode)
+    if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
+      stomach::end_mode(&current_mode)?;
+    }
     Ok(None)
   } else {
     let mut item = contents.remove(0);
+    // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
+    // when enterHorizontal changed MODE to 'horizontal' inplace within this frame.
+    // Check the condition BEFORE endMode pops the frame.
+    let post_mode = state::lookup_string("MODE");
+    let bound_mode = state::lookup_string("BOUND_MODE");
+    if post_mode == "horizontal" && bound_mode.ends_with("vertical")
+      && has_only_simple_horizontal_content(&item)
+    {
+      repack_horizontal_in_list(&mut item);
+      // Restore MODE like leave_horizontal_internal does
+      state::assign_value_inplace("MODE", arena::pin(&bound_mode));
+    }
+    // Perl: $stomach->endMode($mode) — pop the frame
+    if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
+      stomach::end_mode(&current_mode)?;
+    }
     // Set the mode property on the resulting item (matching Perl's List(@boxes, mode => $mode))
     if !current_mode.is_empty() {
       item.set_property("mode", Stored::String(arena::pin(current_mode)));
@@ -248,6 +277,91 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
     // must be visible to the outer box's constructor.
     Ok(Some(simplify_vertical_list(item)))
   }
+}
+
+/// Check if a List contains only simple horizontal content (TBoxes/Comments),
+/// not structured content like Whatsits or sub-Lists. This guards against
+/// repack being triggered for cases like `\vtop{\begin{tabular}...}` where
+/// the tabular processing leaks MODE='horizontal' but the content should
+/// NOT be paragraph-wrapped.
+fn has_only_simple_horizontal_content(item: &Digested) -> bool {
+  if let DigestedData::List(l) = item.data() {
+    let list = l.borrow();
+    // Filter out empty items
+    let non_empty: Vec<_> = list.boxes.iter()
+      .filter(|b| !b.get_property_bool("isEmpty"))
+      .collect();
+    // If all non-empty items are TBoxes or Comments, it's simple horizontal content
+    non_empty.iter().all(|b| matches!(b.data(), DigestedData::TBox(_) | DigestedData::Comment(_)))
+  } else {
+    false
+  }
+}
+
+/// Replicates Perl's repackHorizontal() within a List's children.
+///
+/// Perl (Stomach.pm lines 442-456): In readBoxContents, after digesting box content
+/// in vertical mode, repackHorizontal groups consecutive horizontal-mode items
+/// from @LaTeXML::LIST into a single List(@para, mode => 'horizontal') with
+/// width set to \hsize. This enables compute_boxes_size to do paragraph wrapping.
+///
+/// Without this, \vbox{hop} measures each character individually (width=5.55pt)
+/// instead of wrapping as a paragraph at \hsize (width=469.75pt).
+fn repack_horizontal_in_list(item: &mut Digested) {
+  if let DigestedData::List(l) = item.data() {
+    let mut list = l.borrow_mut();
+    let children = std::mem::take(&mut list.boxes);
+    let mut result: Vec<Digested> = Vec::new();
+    let mut para: Vec<Digested> = Vec::new();
+    let mut keep = false;
+
+    for child in children {
+      let child_mode = child.get_property("mode")
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "horizontal".to_string());
+      if child_mode == "horizontal"
+        || child_mode == "restricted_horizontal"
+        || child_mode == "math"
+      {
+        // Perl: $keep = 1 if ($mode ne 'horizontal') || !$item->getProperty('isSpace');
+        if child_mode != "horizontal" || !child.get_property_bool("isSpace") {
+          keep = true;
+        }
+        para.push(child);
+      } else {
+        // Flush accumulated horizontal items as a horizontal List
+        if keep {
+          let horiz_list = make_horizontal_list(std::mem::take(&mut para));
+          result.push(Digested::from(horiz_list));
+        } else {
+          result.extend(std::mem::take(&mut para));
+        }
+        keep = false;
+        result.push(child);
+      }
+    }
+    // Flush remaining horizontal items
+    if keep {
+      let horiz_list = make_horizontal_list(para);
+      result.push(Digested::from(horiz_list));
+    } else {
+      result.extend(para);
+    }
+    list.boxes = result;
+  }
+}
+
+/// Create a horizontal List with mode='horizontal' and width=\hsize.
+/// Perl: push(@LaTeXML::LIST, List(@para, mode => 'horizontal')) if $keep;
+/// Perl: $list->setProperty(width => LookupRegister('\hsize')) if $mode eq 'horizontal';
+fn make_horizontal_list(para: Vec<Digested>) -> List {
+  let mut list = List::new(para);
+  list.mode = Some(TexMode::Text);
+  list.set_property("mode", Stored::String(arena::pin_static("horizontal")));
+  if let Some(hsize) = state::lookup_dimension("\\hsize") {
+    list.set_property("width", Stored::Dimension(hsize));
+  }
+  list
 }
 
 /// Perl's List() single-item simplification for vertical modes.

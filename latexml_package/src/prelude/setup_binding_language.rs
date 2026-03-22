@@ -156,6 +156,7 @@ macro_rules! DefRewrite {
   }};
 }
 
+#[macro_export]
 macro_rules! DefMathRewrite {
   ($($input:tt)+) => {{
     let rewrite_options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
@@ -338,13 +339,15 @@ macro_rules! TypedConditional {
 #[macro_export]
 macro_rules! DefPrimitive {
   // Case: simple literal replacement
+  // Perl: Box($string, font, locator, $current_token) — reversion is the CS token
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
+    let cs_for_closure = cs;
     let closure : PrimitiveBody = PrimitiveBody::Closure(Rc::new(
-      | _args: Vec<ArgWrap>| {
+      move | _args: Vec<ArgWrap>| {
       Tbox::new(arena::pin_static($replacement), None, None,
-        Tokens!(), SymHashMap::default())
+        Tokens!(cs_for_closure), SymHashMap::default())
         .into_digested_result()
     }));
     def_primitive(cs, params, Some(closure), options)?;
@@ -1711,6 +1714,17 @@ macro_rules! defi_opts {
   (@munch ( $(,)? reversion $(:)?$(=>)? $(sub)? $body:block $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@reversion (sub $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  // reversion => None means "empty reversion" (disable reversion entirely)
+  // Perl: reversion => Tokens() — produces empty tex= attribute
+  (@munch ( $(,)? reversion $(:)?$(=>)? None, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ reversion @ Some(Reversion::Tokens(Tokens!())) ] })
+  };
+  (@munch ( $(,)? reversion $(:)?$(=>)? None)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ reversion @ Some(Reversion::Tokens(Tokens!())) ] })
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {

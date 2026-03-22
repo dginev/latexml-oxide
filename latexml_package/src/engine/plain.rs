@@ -1291,12 +1291,14 @@ LoadDefinitions!({
   assign_mathcode('!', 0x5021u16, None);
   assign_mathcode('(', 0x4028u16, None);
   assign_mathcode(')', 0x5029u16, None);
+  assign_mathcode('*', 0x2203u16, None);  // \ast (class 2 BINOP, family 2 OMS, pos 3)
   assign_mathcode('+', 0x202Bu16, None);
   assign_mathcode(',', 0x613Bu16, None);
   assign_mathcode('-', 0x2200u16, None);
   assign_mathcode('.', 0x013Au16, None);
   assign_mathcode('/', 0x013Du16, None);
   assign_mathcode(':', 0x303Au16, None);
+  assign_mathcode('?', 0x503Fu16, None);  // class CLOSE (from plain.tex dump)
   assign_mathcode(';', 0x603Bu16, None);
   assign_mathcode('<', 0x313Cu16, None);
   assign_mathcode('=', 0x303Du16, None);
@@ -1474,6 +1476,7 @@ LoadDefinitions!({
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
     });
+    // eprintln debug removed
     if text.chars().count() != 1 { // Not simple char token.
       // Wrap with a cancel op
       document.open_element("ltx:XMApp",
@@ -1486,7 +1489,10 @@ LoadDefinitions!({
         document.unrecord_id(&id);
         document.set_attribute(&mut strike, "xml:id", &id)?;
       }
-      document.get_node_mut().add_child(thing)?;
+      // Use append_tree to avoid DOM corruption from add_child on detached nodes
+      let inner_children = vec![thing.clone()];
+      let mut current = document.get_node().clone();
+      document.append_tree(&mut current, inner_children)?;
       document.close_element("ltx:XMApp")?;
     } else {
       // For simple tokens, we'll modify the relevant content & attributes
@@ -1508,8 +1514,10 @@ LoadDefinitions!({
         None => Cow::Owned(text + "\u{0338}")
       };
       thing.append_text(&new)?;
-      // and put the node back in
-      document.get_node_mut().add_child(thing)?;
+      // Put the modified node back in using append_tree
+      let inner_children = vec![thing.clone()];
+      let mut current = document.get_node().clone();
+      document.append_tree(&mut current, inner_children)?;
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         let idref_xpath = format!("descendant-or-self::ltx:XMRef[@idref='{id}']");

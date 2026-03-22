@@ -109,7 +109,6 @@ LoadDefinitions!({
 
       if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
         // Store as "token_text\trole\tname\tmeaning" in LATEXML_DECLARATIONS
-        let decl = format!("{}\t{}\t{}\t{}", body_text, role, name_val, meaning);
         let key = "LATEXML_DECLARATIONS";
         let mut decls: Vec<String> = match lookup_value(key) {
           Some(Stored::String(s)) => {
@@ -118,7 +117,39 @@ LoadDefinitions!({
           },
           _ => Vec::new(),
         };
+        let decl = format!("{}\t{}\t{}\t{}", body_text, role, name_val, meaning);
         decls.push(decl);
+        // Perl: \lxDeclare digests the $...$ body in math mode, producing the
+        // mathcode-decoded glyph. If the body_text is a single char with a mathcode,
+        // also store the declaration under the decoded character so it matches
+        // after mathcode processing (e.g. * → ∗).
+        if body_text.chars().count() == 1 {
+          let ch = body_text.chars().next().unwrap();
+          if let Some(mathcode) = state::lookup_mathcode(&ch.to_string()) {
+            if mathcode > 0 {
+              let decoded_pos = (mathcode % 256) as u8;
+              let decoded_fam = (mathcode / 256) % 16 ;
+              // Look up the font encoding for this family to decode the character
+              let _style = "text";
+              let font_key = format!("textfont_{decoded_fam}");
+              if let Some(Stored::Token(ref ftok)) = state::lookup_value(&font_key) {
+                state::with_font_info(ftok, |fontinfo| {
+                  if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
+                    if let Some(ref encoding) = info.encoding {
+                      if let Some(decoded_char) = latexml_core::common::font::decode(decoded_pos, Some(encoding.to_string()), false) {
+                        let decoded_str = decoded_char.to_string();
+                        if decoded_str != body_text {
+                          let decoded_decl = format!("{}\t{}\t{}\t{}", decoded_str, role, name_val, meaning);
+                          decls.push(decoded_decl);
+                        }
+                      }
+                    }
+                  }
+                });
+              }
+            }
+          }
+        }
         assign_value(key, Stored::String(arena::pin(decls.join("\n"))), Some(Scope::Global));
       }
 
@@ -186,7 +217,7 @@ LoadDefinitions!({
     properties => sub[_args] {
       let mut href_str = _args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       // Perl: CleanURL — strip whitespace/newlines from URLs
-      href_str = href_str.replace('\n', "").replace('\r', "").trim().to_string();
+      href_str = href_str.replace(['\n', '\r'], "").trim().to_string();
       Ok(stored_map!("href" => href_str))
     }
   );

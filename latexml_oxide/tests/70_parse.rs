@@ -27,13 +27,11 @@ fn calculus_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn compose_test() {
   latexml_test_single("tests/parse/compose.tex", "compose", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn fences_test() {
   latexml_test_single("tests/parse/fences.tex", "fences", DIR, None, None);
 }
@@ -62,7 +60,6 @@ fn metarelation_elision_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn mixedfrac_test() {
   latexml_test_single("tests/parse/mixedfrac.tex", "mixedfrac", DIR, None, None);
 }
@@ -128,7 +125,6 @@ fn sets_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn spacing_test() {
   latexml_test_single("tests/parse/spacing.tex", "spacing", DIR, None, None);
 }
@@ -150,7 +146,6 @@ fn subordinate_lists_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn terms_test() {
   latexml_test_single("tests/parse/terms.tex", "terms", DIR, None, None);
 }

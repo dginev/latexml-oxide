@@ -6,13 +6,12 @@ use latexml::util::test::*;
 const DIR: &str = "tests/ams";
 
 #[test]
-#[ignore] // text= + tags diffs: afterConstruct + math parser
 fn amsdisplay_test() {
   latexml_test_single("tests/ams/amsdisplay.tex", "amsdisplay", DIR, None, None);
 }
 
 #[test]
-#[ignore] // crash — math parser panic in parse_rec tree replacement
+#[ignore] // 221 diffs: XMCell structure, XMDual/XMWrap diffs
 fn cd_test() {
   latexml_test_single("tests/ams/cd.tex", "cd", DIR, None, None);
 }

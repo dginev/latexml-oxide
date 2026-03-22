@@ -25,7 +25,7 @@ mod tex_registers;
 pub mod tex_tables;
 
 pub mod base_functions; // auxiliary functions
-mod tex_scripts;
+pub(crate) mod tex_scripts;
 // eTeX Pool
 pub mod etex;
 // pdfTeX Pool

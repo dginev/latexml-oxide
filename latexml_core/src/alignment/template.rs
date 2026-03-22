@@ -12,13 +12,15 @@ use std::fmt::{self, Debug, Display};
 
 // ??
 pub type Row = Template;
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum Align {
   #[default]
   Left,
   Center,
   Right,
   Justify,
+  /// Perl: align => 'char:X' — decimal-aligned column (dcolumn.sty)
+  Char(String),
 }
 impl Align {
   pub fn char_code(&self) -> char {
@@ -27,14 +29,16 @@ impl Align {
       Align::Left => 'l',
       Align::Center => 'c',
       Align::Justify => 'p',
+      Align::Char(_) => 'c', // fallback for sizing
     }
   }
-  pub fn name(&self) -> &'static str {
+  pub fn name(&self) -> String {
     match self {
-      Align::Right => "right",
-      Align::Left => "left",
-      Align::Center => "center",
-      Align::Justify => "justify", // ?
+      Align::Right => "right".to_string(),
+      Align::Left => "left".to_string(),
+      Align::Center => "center".to_string(),
+      Align::Justify => "justify".to_string(),
+      Align::Char(ch) => format!("char:{ch}"),
     }
   }
 }
@@ -273,6 +277,7 @@ impl Template {
         let mut after = prev.after.clone().unwrap_or_default().unlist();
         after.push(T_CS!("\\lx@intercol"));
         prev.after = Some(Tokens::new(after));
+        prev.has_intercol_after = true;
       }
     }
   }
@@ -321,6 +326,7 @@ impl Template {
         let mut after = prev.after.clone().unwrap_or_default().unlist();
         after.push(T_CS!("\\lx@intercol"));
         prev.after = Some(Tokens::new(after));
+        prev.has_intercol_after = true;
       }
     }
     // Perl L88-95: build before from save_between + \lx@intercol + properties before + save_before
@@ -329,7 +335,8 @@ impl Template {
       before.extend(self.save_between.clone());
     }
     // Perl L90: push \lx@intercol unless disabled_intercolumn
-    if !self.disabled_intercolumn {
+    let has_intercol_before = !self.disabled_intercolumn;
+    if has_intercol_before {
       before.push(T_CS!("\\lx@intercol"));
     }
     // Perl L91: delete disabled_intercolumn
@@ -346,6 +353,7 @@ impl Template {
     } else {
       None
     };
+    col.has_intercol_before = has_intercol_before;
     let mut after = vec![T_CS!("\\lx@column@trimright")];
     if let Some(prop_after) = col.after {
       after.extend(prop_after.unlist());
@@ -388,6 +396,7 @@ impl Template {
 
   pub fn get_columns(&self) -> &[Cell] { &self.columns }
   pub fn get_columns_mut(&mut self) -> &mut Vec<Cell> { &mut self.columns }
+  pub fn get_repeated_mut(&mut self) -> &mut Vec<Cell> { &mut self.repeated }
   pub fn set_pseudo(&mut self) { self.pseudorow = true; }
   pub fn unset_pseudo(&mut self) { self.pseudorow = false; }
   pub fn is_pseudo(&self) -> bool { self.pseudorow }

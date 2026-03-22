@@ -657,17 +657,29 @@ impl XM {
         Ok(atom_node.clone())
       },
       XM::Token(props, _meta) => {
-        // This is mildly confusing. Porting the Font-related logic from Perl,
-        // I know we need to transition the {font} property to the "_font" attribute
-        // when the abstract XMath data becomes a libxml object
-        //
-        // but there is some contextual inference at times, e.g. in "insertMathToken", and not at
-        // others. this does the simpler aspect only:
+        // Transition the {font} property to the "_font" attribute.
+        let has_explicit_font = props.font.is_some();
         let (content_opt, font, attrs) = props.into_attributes();
         let mut xmtok = document.open_element_at(owner, "ltx:XMTok", attrs, font)?;
-        if let Some(content) = content_opt {
+        if let Some(ref content) = content_opt {
           if !content.is_empty() {
-            xmtok.set_content(&content)?;
+            xmtok.set_content(content)?;
+          }
+        }
+        // Perl: Font->specialize($content) — for parser-created tokens without
+        // explicit font, the ambient _font is specialized based on content.
+        // Operators get default font (no italic), letters get italic.
+        if !has_explicit_font {
+          if let Some(font_hash) = xmtok.get_attribute("_font") {
+            let content = content_opt.as_deref().unwrap_or("");
+            if content.is_empty() {
+              // Empty content: no font needed
+              let _ = xmtok.remove_attribute("_font");
+            } else if let Some(font) = document.decode_font(&font_hash) {
+              let specialized = font.specialize(content);
+              // Re-encode: store the specialized font and update _font hash
+              document.set_node_font(&mut xmtok, &specialized)?;
+            }
           }
         }
         document.close_element_at(&mut xmtok)?;
@@ -905,10 +917,9 @@ impl From<&Node> for XM {
         let inner_xm = children.iter().map(XM::from).collect::<Vec<_>>();
         XM::Wrap(inner_xm, XProps::from(n), Meta::default())
       },
-      // TODO: continue for the other cases
-      missing_case => {
-        dbg!(missing_case);
-        todo!()
+      // Fallback for unhandled node types — treat as token preserving attributes
+      _other => {
+        XM::Token(XProps::from(n), Meta::default())
       },
     }
   }

@@ -868,7 +868,7 @@ LoadDefinitions!({
           // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
-              props.insert(*prop_key, Stored::Digested(digested.clone()));
+              props.insert(prop_key, Stored::Digested(digested.clone()));
             }
           }
           for (k, v) in kv.get_pairs() {
@@ -954,7 +954,7 @@ LoadDefinitions!({
           // round-trip that loses the original \lx@left CS (alias resolves to \left on revert).
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
-              props.insert(*prop_key, Stored::Digested(digested.clone()));
+              props.insert(prop_key, Stored::Digested(digested.clone()));
             }
           }
           for (k, v) in kv.get_pairs() {
@@ -1103,7 +1103,7 @@ LoadDefinitions!({
           // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
-              props.insert(*prop_key, Stored::Digested(digested.clone()));
+              props.insert(prop_key, Stored::Digested(digested.clone()));
             }
           }
           for (k, v) in kv.get_pairs() {
@@ -1129,7 +1129,7 @@ LoadDefinitions!({
           // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
-              props.insert(*prop_key, Stored::Digested(digested.clone()));
+              props.insert(prop_key, Stored::Digested(digested.clone()));
             }
           }
           for (k, v) in kv.get_pairs() {
@@ -1207,7 +1207,19 @@ pub fn close_math_fork(
         .iter()
         .map(|t| t.strip_prefix("\\displaystyle").unwrap_or(t).trim_start())
         .collect();
-      let body = stripped.join("");
+      // Join with CS-aware spacing: if previous part ends with a letter and next starts
+      // with a letter, insert a space (matching TeX CS termination rules).
+      let mut body = String::new();
+      for (i, part) in stripped.iter().enumerate() {
+        if i > 0 && !body.is_empty() && !part.is_empty() {
+          let prev_ends_letter = body.ends_with(|c: char| c.is_ascii_alphabetic());
+          let next_starts_letter = part.starts_with(|c: char| c.is_ascii_alphabetic());
+          if prev_ends_letter && next_starts_letter {
+            body.push(' ');
+          }
+        }
+        body.push_str(part);
+      }
       let combined_tex = if has_displaystyle {
         // Add space after \displaystyle only if body starts with a letter
         // (TeX CS needs space termination before letters, not before operators)
@@ -1404,17 +1416,37 @@ pub fn equationgroup_join_rows(
     t.unlink_node();
     equation.add_child(&mut t).ok();
   }
-  // Perl: cell Math elements are created (with xml:ids m1,m2,...) BEFORE openMathFork,
-  // so the main MathFork Math gets the next id (e.g. m4 for 3-cell eqnarray).
-  // In Rust, we need to pre-advance the id counter to match this ordering.
-  // Count _Capture_ cells (each initially creates a Math element during construction,
-  // even if some are later converted to <text> by afterConstruct hooks).
+  // Pre-advance the ID counter to skip over cell Math IDs.
+  // For multi-row eqnarrays where different rows have different equation IDs,
+  // only count cells from the equation that provides the target ID.
+  // This prevents inflation from rows that belong to different equation contexts.
+  let has_different_ids = equations.len() > 1 && {
+    let ids: Vec<_> = equations.iter().filter_map(|eq|
+      eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+        .or_else(|| eq.get_attribute("xml:id"))
+    ).collect();
+    ids.len() > 1 || (ids.len() == 1 && equations.len() > 1)
+  };
   let mut cell_count = 0;
   for eq in equations.iter() {
-    let captures = document.findnodes("ltx:_Capture_", Some(eq));
-    cell_count += captures.len();
+    if has_different_ids {
+      // Multi-row with different IDs: only count cells with Math from the target equation
+      let eq_id = eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+        .or_else(|| eq.get_attribute("xml:id"));
+      if eq_id != id { continue; }
+      // Count only cells that contain Math elements (empty cells don't consume IDs)
+      let captures = document.findnodes("ltx:_Capture_", Some(eq));
+      for cap in &captures {
+        if !document.findnodes("ltx:Math", Some(cap)).is_empty() {
+          cell_count += 1;
+        }
+      }
+    } else {
+      // Single-equation: count all _Capture_ cells (including empty ones)
+      let captures = document.findnodes("ltx:_Capture_", Some(eq));
+      cell_count += captures.len();
+    }
   }
-  // Pre-advance the id counter so the main MathFork Math gets the correct offset
   if cell_count > 0 {
     let ctrkey = s!("_ID_counter_m_");
     let current = equation.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
@@ -1427,14 +1459,9 @@ pub fn equationgroup_join_rows(
     let mut eq = eq;
     eq.unlink_node();
     let mut tr = document.open_element_at(&mut branch_node, "ltx:tr", None, None)?;
-    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
-    if let Some(first_cell) = cells.first() {
-      if let Some(class) = first_cell.get_attribute("class") {
-        if class.contains("lefteqn") {
-          document.set_attribute(&mut tr, "class", "ltx_eqn_lefteqn")?;
-        }
-      }
-    }
+    // Note: Perl also checks for lefteqn class on first _Capture_ to add ltx_eqn_lefteqn
+    // to <tr>, but in practice the class is on a child td (via \multicolumn), not on
+    // _Capture_ itself, so the condition never fires in Perl output.
     let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
     for mut cell in cells {
       add_column_to_math_fork(document, &mut mainfork, &mut tr, &mut cell)?;

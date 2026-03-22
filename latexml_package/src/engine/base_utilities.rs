@@ -119,25 +119,51 @@ LoadDefinitions!({
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
   // \\@add@frontmatter[keys]{tag}[attributes]{content}
-  // keys can have
-  //   replace (to replace the current entry, if any)
-  //   ifnew   (only add if no previous entry)//
-
+  // Perl: DEFERS processing by pushing \@add@frontmatter@now invocation
+  // into @at@begin@maketitle, which is digested at \maketitle time.
+  // This is critical for correct ordering: \author creates entry BEFORE
+  // \address/\email append to it.
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
+    sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
+    // Build invocation: \@add@frontmatter@now[keys]{tag}[attrs]{tokens}
+    let mut inv_tokens: Vec<Token> = vec![T_CS!("\\@add@frontmatter@now")];
+    // Pass keys if present
+    if let Some(ref keys) = keys_opt {
+      inv_tokens.push(T_OTHER!("["));
+      inv_tokens.extend(keys.revert()?.unlist());
+      inv_tokens.push(T_OTHER!("]"));
+    }
+    inv_tokens.push(T_BEGIN!());
+    inv_tokens.extend(tag_tks.unlist());
+    inv_tokens.push(T_END!());
+    // Pass attrs if present
+    if let Some(ref attrs) = attrs_opt {
+      inv_tokens.push(T_OTHER!("["));
+      inv_tokens.extend(attrs.revert()?.unlist());
+      inv_tokens.push(T_OTHER!("]"));
+    }
+    inv_tokens.push(T_BEGIN!());
+    inv_tokens.extend(tokens.unlist());
+    inv_tokens.push(T_END!());
+    let _ = state::push_value("@at@begin@maketitle", Stored::Tokens(Tokens::new(inv_tokens)));
+  });
+
+  // \@add@frontmatter@now — actually processes the frontmatter entry
+  // keys can have: replace (to replace the current entry, if any),
+  //                ifnew (only add if no previous entry)
+  DefPrimitive!("\\@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals {}",
     sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
     // Digest this as if we're already in the document body!
     let inpreamble = lookup_bool("inPreamble");
     assign_value("inPreamble", false, None);
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
-    // So, we append this entry before digesting
+    // So, we append this entry before digesting (Perl comment from Base_Utility.pool.ltxml)
     let tag = tag_tks.to_string();
     if let Some(keys) = keys_opt {
       let known_key = if let Some(Stored::HashTagData(ref mut frnt)) = lookup_value("frontmatter") {
         frnt.contains_key(&tag)
       } else { false };
-      // if replace and previous entries
-      // remove previous entries
       if known_key && keys.has_key("replace") {
         state::with_value_mut("frontmatter", |val_opt| {
           if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
@@ -145,8 +171,6 @@ LoadDefinitions!({
           }
         });
       }
-      // if ifnew and previous entries
-      // skip this one.
       if known_key && keys.has_key("ifnew") {
         return Ok(Vec::new());
       }
@@ -161,23 +185,40 @@ LoadDefinitions!({
     } else {
       None
     };
-    let mut wrapped_tokens = vec![T_BEGIN!()];
-    wrapped_tokens.extend(tokens.unlist());
-    wrapped_tokens.push(T_END!());
-    let digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))?;
-    let entry = (tag.clone(), attrs_digested, digested_tokens);
+    // Perl: Create entry FIRST, then digest content (so nested @add@to@ appends to this entry)
+    let placeholder = Digested::from(List::new(Vec::new()));
+    let entry = (tag.clone(), attrs_digested, placeholder);
     state::with_value_mut("frontmatter", |val_opt| {
       let frontmatter = match val_opt {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
         _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
       };
-      let f_entry = frontmatter.entry(tag).or_insert_with(Vec::new);
+      let f_entry = frontmatter.entry(tag.clone()).or_insert_with(Vec::new);
       f_entry.push(entry);
       Ok(())
     })?;
-
+    // NOW digest the content — nested @add@to@frontmatter calls will see this entry as "last"
+    let mut wrapped_tokens = vec![T_BEGIN!()];
+    wrapped_tokens.extend(tokens.unlist());
+    wrapped_tokens.push(T_END!());
+    let digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))?;
+    // Fill in the placeholder
+    state::with_value_mut("frontmatter", |val_opt| {
+      let frontmatter = match val_opt {
+        Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
+        _ => return Ok::<(), latexml_core::Error>(()),
+      };
+      if let Some(list) = frontmatter.get_mut(&tag) {
+        if let Some(last) = list.last_mut() {
+          last.2 = digested_tokens;
+        }
+      }
+      Ok(())
+    })?;
     AssignValue!("inPreamble", inpreamble);
-  });
+  },
+  before_digest => { stomach::bgroup(); },
+  after_digest => { let _ = stomach::egroup(); });
 
   // Append a piece of data to an existing frontmatter item that is contained in <$tag>
   // If $label is given, look for an item which has label=>$label,
@@ -548,7 +589,7 @@ LoadDefinitions!({
   // PI syntax not supported in constructor templates, so use procedural body.
   DefConstructor!("\\lx@add@Preamble@PI Undigested",
     sub[document, args, _props] {
-      if let Some(Some(preamble_arg)) = args.get(0) {
+      if let Some(Some(preamble_arg)) = args.first() {
         let preamble_text = preamble_arg.untex()?;
         if !preamble_text.is_empty() {
           let mut attrs = HashMap::default();

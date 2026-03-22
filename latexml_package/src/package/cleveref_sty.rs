@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
-/// Perl: cleveref.sty.ltxml — cleveref cross-referencing
-/// Provides \cref, \Cref, \crefrange, etc. with type-aware formatting
+// Perl: cleveref.sty.ltxml — cleveref cross-referencing
+// Provides \cref, \Cref, \crefrange, etc. with type-aware formatting
 #[rustfmt::skip]
 LoadDefinitions!({
   // Save original \label
