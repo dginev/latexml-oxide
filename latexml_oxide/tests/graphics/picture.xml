@@ -18,8 +18,8 @@
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath>
         </Math>
@@ -51,7 +51,7 @@
         <p>All should be the same.</p>
       </para>
       <para xml:id="S2.SS1.p3">
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){\line(1,0){100.0}}\put(0.0,0.0){\line(1,1){50.0}}\put(0.0,0.0){\line(0,1){100.0}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p3.pic1">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){\line(1,0){100.0}}\put(0.0,0.0){%&#10;\line(1,1){50.0}}\put(0.0,0.0){\line(0,1){100.0}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p3.pic1">
           <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -62,7 +62,7 @@
             <line points="0,0 0,138.37" stroke="#000000" stroke-width="0.4"/>
           </g>
         </picture>
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(1.0,1.0)\put(0.0,0.0){\line(1,0){1.0}}\put(0.0,0.0){\line(1,1){0.5}}\put(0.0,0.0){\line(0,1){1.0}}\end{picture}" unitlength="100.0pt" width="100.0pt" xml:id="S2.SS1.p3.pic2">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(1.0,1.0)\put(0.0,0.0){\line(1,0){1.0}}\put(0.0,0.0){\line(1,1)%&#10;{0.5}}\put(0.0,0.0){\line(0,1){1.0}}\end{picture}" unitlength="100.0pt" width="100.0pt" xml:id="S2.SS1.p3.pic2">
           <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -75,7 +75,7 @@
         </picture>
       </para>
       <para xml:id="S2.SS1.p4">
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){\line(1,0){100.0}}\put(0.0,0.0){\line(1,1){50.0}}\put(0.0,0.0){\line(0,1){100.0}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p4.pic1">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){\line(1,0){100.0}}\put(0.0,0.0){%&#10;\line(1,1){50.0}}\put(0.0,0.0){\line(0,1){100.0}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p4.pic1">
           <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -86,7 +86,7 @@
             <line points="0,0 0,138.37" stroke="#000000" stroke-width="0.4"/>
           </g>
         </picture>
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){\line(1,0){100.0}}\put(0.0,0.0){\line(1,1){50.0}}\put(0.0,0.0){\line(0,1){100.0}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p4.pic2">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){\line(1,0){100.0}}\put(0.0,0.0){%&#10;\line(1,1){50.0}}\put(0.0,0.0){\line(0,1){100.0}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p4.pic2">
           <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -107,7 +107,7 @@
       </tags>
       <title><tag close=" ">2.2</tag>Vectors:</title>
       <para xml:id="S2.SS2.p1">
-        <picture fill="none" height="100.0pt" origin-x="-100.0pt" origin-y="-100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)(-100.0,-100.0)\put(0.0,0.0){\vector(-1,0){100.0}}\put(0.0,0.0){\vector(-1,-1){100.0}}\put(0.0,0.0){\vector(0,-1){100.0}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS2.p1.pic1">
+        <picture fill="none" height="100.0pt" origin-x="-100.0pt" origin-y="-100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)(-100.0,-100.0)\put(0.0,0.0){\vector(-1,0){100.0}}%&#10;\put(0.0,0.0){\vector(-1,-1){100.0}}\put(0.0,0.0){\vector(0,-1){100.0}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS2.p1.pic1">
           <g transform="translate(138.37,138.37)">
             <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
               <line points="0,0 -138.37,0" stroke="#000000" stroke-width="0.4" terminators="-&gt;"/>
@@ -130,7 +130,7 @@
       </tags>
       <title><tag close=" ">2.3</tag>Boxes;</title>
       <para xml:id="S2.SS3.p1">
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){\bf A}\put(15.0,15.0){\framebox(15.0,15.0)[]{A}}\put(30.0,30.0){\framebox(15.0,15.0)[]{\bf A}}\put(45.0,45.0){\framebox(15.0,15.0)[]{A}}\put(60.0,30.0){\framebox(0.0,0.0)[bl]{\shortstack{A\\&#10;B\\&#10;\bf C\\&#10;D}}}\put(75.0,20.0){\framebox(15.0,80.0)[]{\shortstack{A\\&#10;\bf B\\&#10;C\\&#10;D}}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p1.pic1">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){\bf A}\put(15.0,15.0){\framebox(15.0%&#10;,15.0)[]{A}}\put(30.0,30.0){\framebox(15.0,15.0)[]{\bf A}}\put(45.0,45.0){%&#10;\framebox(15.0,15.0)[]{A}}\put(60.0,30.0){\framebox(0.0,0.0)[bl]{\shortstack{A%&#10;\\&#10;B\\&#10;\bf C\\&#10;D}}}\put(75.0,20.0){\framebox(15.0,80.0)[]{\shortstack{A\\&#10;\bf B\\&#10;C\\&#10;D}}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p1.pic1">
           <g innerdepth="0.0pt" innerheight="6.9pt" innerwidth="8.7pt" transform="translate(0,0)">
             <text font="bold">A</text>
           </g>
@@ -177,7 +177,7 @@
         </picture>
       </para>
       <para xml:id="S2.SS3.p2">
-        <picture fill="none" height="40.0pt" stroke="none" tex="\begin{picture}(100.0,40.0)\put(0.0,0.0){\makebox(10.0,10.0)[]{x}}\put(20.0,0.0){\framebox(10.0,10.0)[]{x}}\put(40.0,0.0){\dashbox(2.0)(10.0,10.0)[]{x}}\put(60.0,0.0){\framebox(0.0,0.0)[bl]{x}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p2.pic1">
+        <picture fill="none" height="40.0pt" stroke="none" tex="\begin{picture}(100.0,40.0)\put(0.0,0.0){\makebox(10.0,10.0)[]{x}}\put(20.0,0.%&#10;0){\framebox(10.0,10.0)[]{x}}\put(40.0,0.0){\dashbox(2.0)(10.0,10.0)[]{x}}\put%&#10;(60.0,0.0){\framebox(0.0,0.0)[bl]{x}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p2.pic1">
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(0,0)">
             <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(3.27,3.94)">
               <text>x</text>
@@ -217,8 +217,8 @@ vs. <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p1.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="ID">X</XMTok>
-                <XMTok font="italic" role="ID">g</XMTok>
+                <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                <XMTok font="italic" role="UNKNOWN">g</XMTok>
               </XMApp>
             </XMath>
           </Math>
@@ -233,8 +233,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -254,8 +254,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                   <XMath>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="ID">X</XMTok>
-                      <XMTok font="italic" role="ID">g</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">g</XMTok>
                     </XMApp>
                   </XMath>
                 </Math>
@@ -264,7 +264,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
           </picture></p>
       </para>
       <para xml:id="S2.SS4.p2">
-        <picture fill="none" height="120.0pt" stroke="none" tex="\begin{picture}(120.0,120.0)\put(0.0,0.0){\line(1,0){120.0}}\put(0.0,20.0){\line(1,0){120.0}}\put(0.0,40.0){\line(1,0){120.0}}\put(0.0,60.0){\line(1,0){120.0}}\put(0.0,80.0){\line(1,0){120.0}}\put(0.0,100.0){\line(1,0){120.0}}\put(0.0,120.0){\line(1,0){120.0}}\put(0.0,0.0){\line(0,1){120.0}}\put(20.0,0.0){\line(0,1){120.0}}\put(40.0,0.0){\line(0,1){120.0}}\put(60.0,0.0){\line(0,1){120.0}}\put(80.0,0.0){\line(0,1){120.0}}\put(100.0,0.0){\line(0,1){120.0}}\put(120.0,0.0){\line(0,1){120.0}}\put(0.0,20.0){Xg}\put(60.0,20.0){$Xg$}\put(40.0,20.0){\makebox(0.0,0.0)[]{Xg}}\put(100.0,20.0){\makebox(0.0,0.0)[]{$Xg$}}\put(0.0,60.0){\makebox(20.0,20.0)[tl]{Xg}}\put(20.0,60.0){\makebox(20.0,20.0)[t]{Xg}}\put(40.0,60.0){\makebox(20.0,20.0)[tr]{Xg}}\put(0.0,80.0){\makebox(20.0,20.0)[l]{Xg}}\put(20.0,80.0){\makebox(20.0,20.0)[]{Xg}}\put(40.0,80.0){\makebox(20.0,20.0)[r]{Xg}}\put(0.0,100.0){\makebox(20.0,20.0)[bl]{Xg}}\put(20.0,100.0){\makebox(20.0,20.0)[b]{Xg}}\put(40.0,100.0){\makebox(20.0,20.0)[br]{Xg}}\put(60.0,60.0){\makebox(20.0,20.0)[tl]{$Xg$}}\put(80.0,60.0){\makebox(20.0,20.0)[t]{$Xg$}}\put(100.0,60.0){\makebox(20.0,20.0)[tr]{$Xg$}}\put(60.0,80.0){\makebox(20.0,20.0)[l]{$Xg$}}\put(80.0,80.0){\makebox(20.0,20.0)[]{$Xg$}}\put(100.0,80.0){\makebox(20.0,20.0)[r]{$Xg$}}\put(60.0,100.0){\makebox(20.0,20.0)[bl]{$Xg$}}\put(80.0,100.0){\makebox(20.0,20.0)[b]{$Xg$}}\put(100.0,100.0){\makebox(20.0,20.0)[br]{$Xg$}}\end{picture}" unitlength="1.0pt" width="120.0pt" xml:id="S2.SS4.p2.pic1">
+        <picture fill="none" height="120.0pt" stroke="none" tex="\begin{picture}(120.0,120.0)\put(0.0,0.0){\line(1,0){120.0}}\put(0.0,20.0){%&#10;\line(1,0){120.0}}\put(0.0,40.0){\line(1,0){120.0}}\put(0.0,60.0){\line(1,0){1%&#10;20.0}}\put(0.0,80.0){\line(1,0){120.0}}\put(0.0,100.0){\line(1,0){120.0}}\put(%&#10;0.0,120.0){\line(1,0){120.0}}\put(0.0,0.0){\line(0,1){120.0}}\put(20.0,0.0){%&#10;\line(0,1){120.0}}\put(40.0,0.0){\line(0,1){120.0}}\put(60.0,0.0){\line(0,1){1%&#10;20.0}}\put(80.0,0.0){\line(0,1){120.0}}\put(100.0,0.0){\line(0,1){120.0}}\put(%&#10;120.0,0.0){\line(0,1){120.0}}\put(0.0,20.0){Xg}\put(60.0,20.0){$Xg$}\put(40.0,%&#10;20.0){\makebox(0.0,0.0)[]{Xg}}\put(100.0,20.0){\makebox(0.0,0.0)[]{$Xg$}}\put(%&#10;0.0,60.0){\makebox(20.0,20.0)[tl]{Xg}}\put(20.0,60.0){\makebox(20.0,20.0)[t]{%&#10;Xg}}\put(40.0,60.0){\makebox(20.0,20.0)[tr]{Xg}}\put(0.0,80.0){\makebox(20.0,2%&#10;0.0)[l]{Xg}}\put(20.0,80.0){\makebox(20.0,20.0)[]{Xg}}\put(40.0,80.0){\makebox%&#10;(20.0,20.0)[r]{Xg}}\put(0.0,100.0){\makebox(20.0,20.0)[bl]{Xg}}\put(20.0,100.0%&#10;){\makebox(20.0,20.0)[b]{Xg}}\put(40.0,100.0){\makebox(20.0,20.0)[br]{Xg}}\put%&#10;(60.0,60.0){\makebox(20.0,20.0)[tl]{$Xg$}}\put(80.0,60.0){\makebox(20.0,20.0)[%&#10;t]{$Xg$}}\put(100.0,60.0){\makebox(20.0,20.0)[tr]{$Xg$}}\put(60.0,80.0){%&#10;\makebox(20.0,20.0)[l]{$Xg$}}\put(80.0,80.0){\makebox(20.0,20.0)[]{$Xg$}}\put(%&#10;100.0,80.0){\makebox(20.0,20.0)[r]{$Xg$}}\put(60.0,100.0){\makebox(20.0,20.0)[%&#10;bl]{$Xg$}}\put(80.0,100.0){\makebox(20.0,20.0)[b]{$Xg$}}\put(100.0,100.0){%&#10;\makebox(20.0,20.0)[br]{$Xg$}}\end{picture}" unitlength="1.0pt" width="120.0pt" xml:id="S2.SS4.p2.pic1">
           <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <line points="0,0 166.04,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -315,8 +315,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="ID">X</XMTok>
-                  <XMTok font="italic" role="ID">g</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">g</XMTok>
                 </XMApp>
               </XMath>
             </Math>
@@ -332,8 +332,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -390,8 +390,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -403,8 +403,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -416,8 +416,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -429,8 +429,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -442,8 +442,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -455,8 +455,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -468,8 +468,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -481,8 +481,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -494,8 +494,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">X</XMTok>
-                    <XMTok font="italic" role="ID">g</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   </XMApp>
                 </XMath>
               </Math>
@@ -512,7 +512,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
       </tags>
       <title><tag close=" ">2.5</tag>Circles:</title>
       <para xml:id="S2.SS5.p1">
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(20.0,20.0){\circle{30.0}\vector(0,1){15.0}\circle*{5.0}}\put(70.0,70.0){\oval(60.0,30.0)}\put(70.0,20.0){\oval(45.0,30.0)}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS5.p1.pic1">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(20.0,20.0){\circle{30.0}\vector(0,1){15.0}%&#10;\circle*{5.0}}\put(70.0,70.0){\oval(60.0,30.0)}\put(70.0,20.0){\oval(45.0,30.0%&#10;)}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS5.p1.pic1">
           <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="5.0pt" transform="translate(27.67,27.67)">
             <circle r="20.76" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
             <line points="0,0 0,20.76" stroke="#000000" stroke-width="0.4" terminators="-&gt;"/>
@@ -535,7 +535,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
       </tags>
       <title><tag close=" ">2.6</tag>Curves:</title>
       <para xml:id="S2.SS6.p1">
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\qbezier(40.0,80.0)(80.0,120.0)(100.0,80.0)\qbezier[50](40.0,89.0)(80.0,129.0)(100.0,89.0)\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS6.p1.pic1">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\qbezier(40.0,80.0)(80.0,120.0)(100.0,80.0)%&#10;\qbezier[50](40.0,89.0)(80.0,129.0)(100.0,89.0)\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS6.p1.pic1">
           <bezier points="40,80 80,120 100,80" stroke="#000000" stroke-width="0.4"/>
           <bezier displayedpoints="50" points="40,89 80,129 100,89" stroke="#000000" stroke-width="0.4"/>
         </picture>
@@ -549,7 +549,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
       </tags>
       <title><tag close=" ">2.7</tag>Repeats:</title>
       <para xml:id="S2.SS7.p1">
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){a}\put(10.0,10.0){a}\put(20.0,20.0){a}\put(30.0,30.0){a}\put(40.0,40.0){a}\put(50.0,50.0){a}\put(60.0,60.0){a}\put(70.0,70.0){a}\put(80.0,80.0){a}\put(90.0,90.0){a}\put(100.0,100.0){a}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS7.p1.pic1">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(0.0,0.0){a}\put(10.0,10.0){a}\put(20.0,20.0){%&#10;a}\put(30.0,30.0){a}\put(40.0,40.0){a}\put(50.0,50.0){a}\put(60.0,60.0){a}\put%&#10;(70.0,70.0){a}\put(80.0,80.0){a}\put(90.0,90.0){a}\put(100.0,100.0){a}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS7.p1.pic1">
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.0pt" transform="translate(0,0)">
             <text>a</text>
           </g>
@@ -586,7 +586,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
         </picture>
       </para>
       <para xml:id="S2.SS7.p2">
-        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(10.0,10.0){\circle{5.0}}\put(20.0,20.0){\framebox(10.0,10.0)[]{\circle{5.0}}}\put(30.0,30.0){\framebox(10.0,10.0)[l]{\circle{5.0}}}\put(40.0,40.0){\framebox(10.0,10.0)[r]{\circle{5.0}}}\put(50.0,50.0){\framebox(10.0,10.0)[t]{\circle{5.0}}}\put(60.0,60.0){\framebox(10.0,10.0)[b]{\circle{5.0}}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS7.p2.pic1">
+        <picture fill="none" height="100.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)\put(10.0,10.0){\circle{5.0}}\put(20.0,20.0){%&#10;\framebox(10.0,10.0)[]{\circle{5.0}}}\put(30.0,30.0){\framebox(10.0,10.0)[l]{%&#10;\circle{5.0}}}\put(40.0,40.0){\framebox(10.0,10.0)[r]{\circle{5.0}}}\put(50.0,%&#10;50.0){\framebox(10.0,10.0)[t]{\circle{5.0}}}\put(60.0,60.0){\framebox(10.0,10.%&#10;0)[b]{\circle{5.0}}}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS7.p2.pic1">
           <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(13.84,13.84)">
             <circle r="3.46" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
           </g>
@@ -632,7 +632,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
     </tags>
     <title><tag close=" ">3</tag>User Examples</title>
     <para xml:id="S3.p1">
-      <picture fill="none" height="100.0pt" origin-x="-30.0pt" origin-y="0.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)(-30.0,0.0)\put(11.0,11.0){\vector(1,1){33.0}}\put(44.0,44.0){\line(1,1){23.5}}\put(75.5,71.0){\vector(1,0){24.5}}\put(100.0,71.0){\line(1,0){20.0}}\put(0.0,0.0){O}\put(33.0,43.0){$\vec{r}$}\put(93.0,78.0){$\vec{p}$}\put(71.0,71.0){\circle{10.0}}\put(11.0,11.0){\circle*{3.0}}\put(66.5,68.0){$\times$}\put(58.0,75.0){$\vec{L}$}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S3.p1.pic1">
+      <picture fill="none" height="100.0pt" origin-x="-30.0pt" origin-y="0.0pt" stroke="none" tex="\begin{picture}(100.0,100.0)(-30.0,0.0)\put(11.0,11.0){\vector(1,1){33.0}}\put%&#10;(44.0,44.0){\line(1,1){23.5}}\put(75.5,71.0){\vector(1,0){24.5}}\put(100.0,71.%&#10;0){\line(1,0){20.0}}\put(0.0,0.0){O}\put(33.0,43.0){$\vec{r}$}\put(93.0,78.0){%&#10;$\vec{p}$}\put(71.0,71.0){\circle{10.0}}\put(11.0,11.0){\circle*{3.0}}\put(66.%&#10;5,68.0){$\times$}\put(58.0,75.0){$\vec{L}$}\end{picture}" unitlength="1.0pt" width="100.0pt" xml:id="S3.p1.pic1">
         <g transform="translate(41.51,0)">
           <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(15.22,15.22)">
             <line points="0,0 45.66,45.66" stroke="#000000" stroke-width="0.8" terminators="-&gt;"/>
@@ -654,7 +654,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok name="vec" role="OVERACCENT" stretchy="false">→</XMTok>
-                  <XMTok font="italic" role="ID">r</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">r</XMTok>
                 </XMApp>
               </XMath>
             </Math>
@@ -664,7 +664,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok name="vec" role="OVERACCENT" stretchy="false">→</XMTok>
-                  <XMTok font="italic" role="ID">p</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
                 </XMApp>
               </XMath>
             </Math>
@@ -687,7 +687,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok name="vec" role="OVERACCENT" stretchy="false">→</XMTok>
-                  <XMTok font="italic" role="ID">L</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">L</XMTok>
                 </XMApp>
               </XMath>
             </Math>
@@ -704,14 +704,14 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
         <tag role="refnum">1</tag>
         <tag role="typerefnum">Figure 1</tag>
       </tags>
-      <picture class="ltx_centering" fill="none" height="65.0pt" stroke="none" tex="\begin{picture}(70.0,65.0)\put(12.0,57.0){\makebox(0.0,0.0)[]{$F(x,y)$}}\par\put(30.0,40.0){\line(1,0){40.0}}\put(30.0,20.0){\line(1,0){40.0}}\put(30.0,0.0){\line(1,0){40.0}}\par\put(30.0,0.0){\line(0,1){40.0}}\put(50.0,0.0){\line(0,1){40.0}}\put(70.0,0.0){\line(0,1){40.0}}\par\put(50.0,57.0){\makebox(0.0,0.0)[]{$y$}}\put(40.0,47.0){\makebox(0.0,0.0)[]{\footnotesize$0$}}\put(60.0,47.0){\makebox(0.0,0.0)[]{\footnotesize$1$}}\par\put(14.0,20.0){\makebox(0.0,0.0)[]{$x$}}\put(22.0,30.0){\makebox(0.0,0.0)[]{\footnotesize$0$}}\put(22.0,10.0){\makebox(0.0,0.0)[]{\footnotesize$1$}}\par\put(40.0,30.0){\makebox(0.0,0.0)[]{$m_{0}$}}\put(60.0,30.0){\makebox(0.0,0.0)[]{$m_{1}$}}\put(40.0,10.0){\makebox(0.0,0.0)[]{$m_{2}$}}\put(60.0,10.0){\makebox(0.0,0.0)[]{$m_{3}$}}\end{picture}" unitlength="1.0pt" width="70.0pt" xml:id="S3.F1.pic1">
+      <picture class="ltx_centering" fill="none" height="65.0pt" stroke="none" tex="\begin{picture}(70.0,65.0)\put(12.0,57.0){\makebox(0.0,0.0)[]{$F(x,y)$}}\par%&#10;\put(30.0,40.0){\line(1,0){40.0}}\put(30.0,20.0){\line(1,0){40.0}}\put(30.0,0.%&#10;0){\line(1,0){40.0}}\par\put(30.0,0.0){\line(0,1){40.0}}\put(50.0,0.0){\line(0%&#10;,1){40.0}}\put(70.0,0.0){\line(0,1){40.0}}\par\put(50.0,57.0){\makebox(0.0,0.0%&#10;)[]{$y$}}\put(40.0,47.0){\makebox(0.0,0.0)[]{\footnotesize$0$}}\put(60.0,47.0)%&#10;{\makebox(0.0,0.0)[]{\footnotesize$1$}}\par\put(14.0,20.0){\makebox(0.0,0.0)[]%&#10;{$x$}}\put(22.0,30.0){\makebox(0.0,0.0)[]{\footnotesize$0$}}\put(22.0,10.0){%&#10;\makebox(0.0,0.0)[]{\footnotesize$1$}}\par\put(40.0,30.0){\makebox(0.0,0.0)[]{%&#10;$m_{0}$}}\put(60.0,30.0){\makebox(0.0,0.0)[]{$m_{1}$}}\put(40.0,10.0){\makebox%&#10;(0.0,0.0)[]{$m_{2}$}}\put(60.0,10.0){\makebox(0.0,0.0)[]{$m_{3}$}}\end{picture}" unitlength="1.0pt" width="70.0pt" xml:id="S3.F1.pic1">
         <g innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.0pt" transform="translate(16.6,78.87)">
           <g class="makebox" innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.0pt" transform="translate(-21.46,-6.92)">
             <Math mode="inline" tex="F(x,y)" text="F * open-interval@(x, y)" xml:id="S3.F1.pic1.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" role="ID">F</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">F</XMTok>
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="open-interval"/>
@@ -720,9 +720,9 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
                     </XMApp>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="ID" xml:id="S3.F1.pic1.m1.1">x</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.F1.pic1.m1.1">x</XMTok>
                       <XMTok role="PUNCT">,</XMTok>
-                      <XMTok font="italic" role="ID" xml:id="S3.F1.pic1.m1.2">y</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.F1.pic1.m1.2">y</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -753,7 +753,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
           <g class="makebox" innerdepth="1.9pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(-3.64,-4.32)">
             <Math mode="inline" tex="y" text="y" xml:id="S3.F1.pic1.m2">
               <XMath>
-                <XMTok font="italic" role="ID">y</XMTok>
+                <XMTok font="italic" role="UNKNOWN">y</XMTok>
               </XMath>
             </Math>
           </g>
@@ -780,7 +780,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
           <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.7pt" transform="translate(-3.95,-2.98)">
             <Math mode="inline" tex="x" text="x" xml:id="S3.F1.pic1.m5">
               <XMath>
-                <XMTok font="italic" role="ID">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMath>
             </Math>
           </g>
@@ -809,7 +809,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">m</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
                   <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
                 </XMApp>
               </XMath>
@@ -822,7 +822,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">m</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
                   <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                 </XMApp>
               </XMath>
@@ -835,7 +835,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">m</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
                   <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMath>
@@ -848,7 +848,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">m</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">m</XMTok>
                   <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                 </XMApp>
               </XMath>
@@ -873,7 +873,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
         <tag role="refnum">2</tag>
         <tag role="typerefnum">Figure 2</tag>
       </tags>
-      <picture class="ltx_centering" fill="none" height="96.1pt" origin-x="-2.5pt" origin-y="-2.5pt" stroke="none" tex="\begin{picture}(152.0,38.0)(-1.0,-1.0)\put(0.0,31.0){\makebox(2.0,6.0)[]{\small 1}}\put(0.0,26.0){\framebox(2.0,6.0)[]{$s$}}\put(3.0,31.0){\makebox(8.0,6.0)[]{\small 8}}\put(3.0,26.0){\framebox(8.0,6.0)[]{$E$}}\put(12.0,31.0){\makebox(23.0,6.0)[]{\small 23 bits}}\put(12.0,26.0){\framebox(23.0,6.0)[]{$f$}}\put(133.0,31.0){$N=32$,}\put(135.0,27.0){$p=24$}\put(0.0,18.0){\makebox(2.0,6.0)[]{\small 1}}\put(0.0,13.0){\framebox(2.0,6.0)[]{$s$}}\put(3.0,18.0){\makebox(11.0,6.0)[]{\small 11}}\put(3.0,13.0){\framebox(11.0,6.0)[]{$E$}}\put(15.0,18.0){\makebox(52.0,6.0)[]{\small 52 bits}}\put(15.0,13.0){\framebox(52.0,6.0)[]{$f$}}\put(133.0,17.0){$N=64$,}\put(135.0,13.0){$p=53$}\put(0.0,5.0){\makebox(2.0,6.0)[]{\small 1}}\put(0.0,0.0){\framebox(2.0,6.0)[]{$s$}}\put(3.0,5.0){\makebox(15.0,6.0)[]{\small 15}}\put(3.0,0.0){\framebox(15.0,6.0)[]{$E$}}\put(19.0,5.0){\makebox(112.0,6.0)[]{\small 112 bits}}\put(19.0,0.0){\framebox(112.0,6.0)[]{$f$}}\put(133.0,4.0){$N=128$,}\put(135.0,0.0){$p=113$}\end{picture}" unitlength="2.5pt" width="384.5pt" xml:id="S4.F2.pic1">
+      <picture class="ltx_centering" fill="none" height="96.1pt" origin-x="-2.5pt" origin-y="-2.5pt" stroke="none" tex="\begin{picture}(152.0,38.0)(-1.0,-1.0)\put(0.0,31.0){\makebox(2.0,6.0)[]{%&#10;\small 1}}\put(0.0,26.0){\framebox(2.0,6.0)[]{$s$}}\put(3.0,31.0){\makebox(8.0%&#10;,6.0)[]{\small 8}}\put(3.0,26.0){\framebox(8.0,6.0)[]{$E$}}\put(12.0,31.0){%&#10;\makebox(23.0,6.0)[]{\small 23 bits}}\put(12.0,26.0){\framebox(23.0,6.0)[]{$f$%&#10;}}\put(133.0,31.0){$N=32$,}\put(135.0,27.0){$p=24$}\put(0.0,18.0){\makebox(2.0%&#10;,6.0)[]{\small 1}}\put(0.0,13.0){\framebox(2.0,6.0)[]{$s$}}\put(3.0,18.0){%&#10;\makebox(11.0,6.0)[]{\small 11}}\put(3.0,13.0){\framebox(11.0,6.0)[]{$E$}}\put%&#10;(15.0,18.0){\makebox(52.0,6.0)[]{\small 52 bits}}\put(15.0,13.0){\framebox(52.%&#10;0,6.0)[]{$f$}}\put(133.0,17.0){$N=64$,}\put(135.0,13.0){$p=53$}\put(0.0,5.0){%&#10;\makebox(2.0,6.0)[]{\small 1}}\put(0.0,0.0){\framebox(2.0,6.0)[]{$s$}}\put(3.0%&#10;,5.0){\makebox(15.0,6.0)[]{\small 15}}\put(3.0,0.0){\framebox(15.0,6.0)[]{$E$}%&#10;}\put(19.0,5.0){\makebox(112.0,6.0)[]{\small 112 bits}}\put(19.0,0.0){%&#10;\framebox(112.0,6.0)[]{$f$}}\put(133.0,4.0){$N=128$,}\put(135.0,0.0){$p=113$}\end{picture}" unitlength="2.5pt" width="384.5pt" xml:id="S4.F2.pic1">
         <g transform="translate(3.5,3.5)">
           <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0,108.51)">
             <g class="makebox" innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0.3,6.49)">
@@ -885,7 +885,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m1">
                 <XMath>
-                  <XMTok font="italic" role="ID">s</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">s</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -900,7 +900,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(8.5,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m2">
                 <XMath>
-                  <XMTok font="italic" role="ID">E</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">E</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -915,7 +915,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(36.12,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m3">
                 <XMath>
-                  <XMTok font="italic" role="ID">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -925,7 +925,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="ID">N</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   <XMTok meaning="32" role="NUMBER">32</XMTok>
                 </XMApp>
               </XMath>
@@ -937,7 +937,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="ID">p</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
                   <XMTok meaning="24" role="NUMBER">24</XMTok>
                 </XMApp>
               </XMath>
@@ -953,7 +953,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m6">
                 <XMath>
-                  <XMTok font="italic" role="ID">s</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">s</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -968,7 +968,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(13.75,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m7">
                 <XMath>
-                  <XMTok font="italic" role="ID">E</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">E</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -983,7 +983,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(86.88,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m8">
                 <XMath>
-                  <XMTok font="italic" role="ID">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -993,7 +993,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="ID">N</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   <XMTok meaning="64" role="NUMBER">64</XMTok>
                 </XMApp>
               </XMath>
@@ -1005,7 +1005,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="ID">p</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
                   <XMTok meaning="53" role="NUMBER">53</XMTok>
                 </XMApp>
               </XMath>
@@ -1021,7 +1021,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="4.3pt" innerwidth="4.7pt" transform="translate(0.26,7.52)">
               <Math mode="inline" tex="s" text="s" xml:id="S4.F2.pic1.m11">
                 <XMath>
-                  <XMTok font="italic" role="ID">s</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">s</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -1036,7 +1036,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="8.0pt" transform="translate(20.75,5.77)">
               <Math mode="inline" tex="E" text="E" xml:id="S4.F2.pic1.m12">
                 <XMath>
-                  <XMTok font="italic" role="ID">E</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">E</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -1051,7 +1051,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
             <g class="makebox" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="6.0pt" transform="translate(191.89,4.35)">
               <Math mode="inline" tex="f" text="f" xml:id="S4.F2.pic1.m13">
                 <XMath>
-                  <XMTok font="italic" role="ID">f</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
                 </XMath>
               </Math>
             </g>
@@ -1061,7 +1061,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="ID">N</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">N</XMTok>
                   <XMTok meaning="128" role="NUMBER">128</XMTok>
                 </XMApp>
               </XMath>
@@ -1073,7 +1073,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" tex="\begin{picture}(12.0
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
-                  <XMTok font="italic" role="ID">p</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">p</XMTok>
                   <XMTok meaning="113" role="NUMBER">113</XMTok>
                 </XMApp>
               </XMath>
@@ -1113,14 +1113,14 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m1.1">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="ID">x</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m1.2">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="ID">y</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -1131,14 +1131,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">w</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="ID">j</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">w</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
             <td align="center" border="tt" thead="column"><Math mode="inline" tex="R" text="R" xml:id="S4.T1.m3">
                 <XMath>
-                  <XMTok font="italic" role="ID">R</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">R</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -1147,7 +1147,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.05}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1){\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0){\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0){0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(0.0,0.0){\circle{2.0}}\put(0.0,0.0){\circle*{0.15}}\put(1.0,0.0){\circle*{0.15}}\put(0.0,1.0){\circle*{0.15}}\put(-1.0,0.0){\circle*{0.15}}\put(0.0,-1.0){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic1">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.%&#10;0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.%&#10;05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0%&#10;){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.0%&#10;5}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1)%&#10;{\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05%&#10;}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){%&#10;\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}%&#10;}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0)%&#10;{\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0)%&#10;{0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(%&#10;-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){%&#10;\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0%&#10;.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.%&#10;0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){%&#10;\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){%&#10;0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(0%&#10;.0,0.0){\circle{2.0}}\put(0.0,0.0){\circle*{0.15}}\put(1.0,0.0){\circle*{0.15}%&#10;}\put(0.0,1.0){\circle*{0.15}}\put(-1.0,0.0){\circle*{0.15}}\put(0.0,-1.0){%&#10;\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic1">
                 <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -1325,14 +1325,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">O</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m6.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m6.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1355,7 +1355,7 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m7.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="ID">h</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m7.1">0</XMTok>
@@ -1390,7 +1390,7 @@ square.</caption>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m9.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="ID">h</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -1411,7 +1411,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="2" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.05}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1){\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0){\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0){0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(0.0,0.0){\circle{2.0}}\put(0.5,0.5){\circle*{0.15}}\put(-0.5,0.5){\circle*{0.15}}\put(0.5,-0.5){\circle*{0.15}}\put(-0.5,-0.5){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic2">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.%&#10;0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.%&#10;05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0%&#10;){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.0%&#10;5}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1)%&#10;{\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05%&#10;}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){%&#10;\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}%&#10;}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0)%&#10;{\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0)%&#10;{0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(%&#10;-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){%&#10;\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0%&#10;.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.%&#10;0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){%&#10;\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){%&#10;0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(0%&#10;.0,0.0){\circle{2.0}}\put(0.5,0.5){\circle*{0.15}}\put(-0.5,0.5){\circle*{0.15%&#10;}}\put(0.5,-0.5){\circle*{0.15}}\put(-0.5,-0.5){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic2">
                 <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -1574,7 +1574,7 @@ square.</caption>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -1587,7 +1587,7 @@ square.</caption>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1608,14 +1608,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">O</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m13.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m13.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1628,7 +1628,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.05}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1){\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0){\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0){0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(0.0,0.0){\circle{2.0}}\put(0.0,0.0){\circle*{0.15}}\put(-1.0,0.0){\circle*{0.15}}\put(1.0,0.0){\circle*{0.15}}\put(0.0,-1.0){\circle*{0.15}}\put(0.0,1.0){\circle*{0.15}}\put(0.5,0.5){\circle*{0.15}}\put(-0.5,0.5){\circle*{0.15}}\put(0.5,-0.5){\circle*{0.15}}\put(-0.5,-0.5){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic3">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.%&#10;0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.%&#10;05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0%&#10;){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.0%&#10;5}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1)%&#10;{\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05%&#10;}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){%&#10;\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}%&#10;}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0)%&#10;{\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0)%&#10;{0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(%&#10;-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){%&#10;\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0%&#10;.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.%&#10;0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){%&#10;\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){%&#10;0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(0%&#10;.0,0.0){\circle{2.0}}\put(0.0,0.0){\circle*{0.15}}\put(-1.0,0.0){\circle*{0.15%&#10;}}\put(1.0,0.0){\circle*{0.15}}\put(0.0,-1.0){\circle*{0.15}}\put(0.0,1.0){%&#10;\circle*{0.15}}\put(0.5,0.5){\circle*{0.15}}\put(-0.5,0.5){\circle*{0.15}}\put%&#10;(0.5,-0.5){\circle*{0.15}}\put(-0.5,-0.5){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic3">
                 <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -1818,14 +1818,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">O</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m16.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m16.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                           <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1848,7 +1848,7 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m17.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="ID">h</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m17.1">0</XMTok>
@@ -1870,7 +1870,7 @@ square.</caption>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m18.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="ID">h</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -1908,7 +1908,7 @@ square.</caption>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -1921,7 +1921,7 @@ square.</caption>
                             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -1943,7 +1943,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.05}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1){\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0){\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0){0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(0.0,0.0){\circle{2.0}}\put(0.0,0.0){\circle*{0.15}}\put(0.8165,0.0){\circle*{0.15}}\put(-0.8165,0.0){\circle*{0.15}}\put(0.408,0.707){\circle*{0.15}}\put(-0.408,0.707){\circle*{0.15}}\put(0.408,-0.707){\circle*{0.15}}\put(-0.408,-0.707){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic4">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.%&#10;0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.%&#10;05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0%&#10;){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.0%&#10;5}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1)%&#10;{\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05%&#10;}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){%&#10;\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}%&#10;}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0)%&#10;{\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0)%&#10;{0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(%&#10;-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){%&#10;\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0%&#10;.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.%&#10;0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){%&#10;\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){%&#10;0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(0%&#10;.0,0.0){\circle{2.0}}\put(0.0,0.0){\circle*{0.15}}\put(0.8165,0.0){\circle*{0.%&#10;15}}\put(-0.8165,0.0){\circle*{0.15}}\put(0.408,0.707){\circle*{0.15}}\put(-0.%&#10;408,0.707){\circle*{0.15}}\put(0.408,-0.707){\circle*{0.15}}\put(-0.408,-0.707%&#10;){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic4">
                 <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -2127,14 +2127,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">O</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m24.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m24.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                           <XMTok fontsize="70%" meaning="6" role="NUMBER">6</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2168,7 +2168,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="6" role="NUMBER">6</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -2213,7 +2213,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="6" role="NUMBER">6</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -2230,7 +2230,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="2" role="NUMBER">2</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2252,7 +2252,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.05}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1){\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0){\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0){0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(-1.0,1.0){\line(1,0){2.0}}\put(-1.0,1.0){\line(0,-1){2.0}}\put(1.0,-1.0){\line(-1,0){2.0}}\put(1.0,-1.0){\line(0,1){2.0}}\put(0.0,0.0){\circle*{0.15}}\put(1.0,0.0){\circle*{0.15}}\put(-1.0,0.0){\circle*{0.15}}\put(0.0,1.0){\circle*{0.15}}\put(0.0,-1.0){\circle*{0.15}}\put(1.0,1.0){\circle*{0.15}}\put(-1.0,1.0){\circle*{0.15}}\put(1.0,-1.0){\circle*{0.15}}\put(-1.0,-1.0){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic5">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.%&#10;0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.%&#10;05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0%&#10;){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.0%&#10;5}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1)%&#10;{\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05%&#10;}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){%&#10;\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}%&#10;}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0)%&#10;{\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0)%&#10;{0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(%&#10;-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){%&#10;\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0%&#10;.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.%&#10;0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){%&#10;\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){%&#10;0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(-%&#10;1.0,1.0){\line(1,0){2.0}}\put(-1.0,1.0){\line(0,-1){2.0}}\put(1.0,-1.0){\line(%&#10;-1,0){2.0}}\put(1.0,-1.0){\line(0,1){2.0}}\put(0.0,0.0){\circle*{0.15}}\put(1.%&#10;0,0.0){\circle*{0.15}}\put(-1.0,0.0){\circle*{0.15}}\put(0.0,1.0){\circle*{0.1%&#10;5}}\put(0.0,-1.0){\circle*{0.15}}\put(1.0,1.0){\circle*{0.15}}\put(-1.0,1.0){%&#10;\circle*{0.15}}\put(1.0,-1.0){\circle*{0.15}}\put(-1.0,-1.0){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic5">
                 <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -2451,14 +2451,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">O</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m31.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m31.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2481,7 +2481,7 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m32.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="ID">h</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m32.1">0</XMTok>
@@ -2503,7 +2503,7 @@ square.</caption>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m33.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="ID">h</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -2534,12 +2534,12 @@ square.</caption>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
                       <XMApp xml:id="S4.T1.m35.1">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="ID">h</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="S4.T1.m35.2">
                         <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                        <XMTok font="italic" role="ID">h</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
@@ -2560,7 +2560,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="2" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.05}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1){\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0){\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0){0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(-1.0,1.0){\line(1,0){2.0}}\put(-1.0,1.0){\line(0,-1){2.0}}\put(1.0,-1.0){\line(-1,0){2.0}}\put(1.0,-1.0){\line(0,1){2.0}}\put(0.577,0.577){\circle*{0.15}}\put(-0.577,0.577){\circle*{0.15}}\put(0.577,-0.577){\circle*{0.15}}\put(-0.577,-0.577){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic6">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.%&#10;0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.%&#10;05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0%&#10;){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.0%&#10;5}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1)%&#10;{\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05%&#10;}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){%&#10;\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}%&#10;}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0)%&#10;{\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0)%&#10;{0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(%&#10;-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){%&#10;\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0%&#10;.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.%&#10;0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){%&#10;\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){%&#10;0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(-%&#10;1.0,1.0){\line(1,0){2.0}}\put(-1.0,1.0){\line(0,-1){2.0}}\put(1.0,-1.0){\line(%&#10;-1,0){2.0}}\put(1.0,-1.0){\line(0,1){2.0}}\put(0.577,0.577){\circle*{0.15}}%&#10;\put(-0.577,0.577){\circle*{0.15}}\put(0.577,-0.577){\circle*{0.15}}\put(-0.57%&#10;7,-0.577){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic6">
                 <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -2736,7 +2736,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="3" role="NUMBER">3</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -2753,7 +2753,7 @@ square.</caption>
                             <XMTok meaning="square-root"/>
                             <XMTok meaning="3" role="NUMBER">3</XMTok>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2774,14 +2774,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">O</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m39.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m39.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                           <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -2794,7 +2794,7 @@ square.</caption>
           <tr>
             <td align="center" border="b t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.05}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1){\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0){\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0){0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(-1.0,1.0){\line(1,0){2.0}}\put(-1.0,1.0){\line(0,-1){2.0}}\put(1.0,-1.0){\line(-1,0){2.0}}\put(1.0,-1.0){\line(0,1){2.0}}\put(0.0,0.0){\circle*{0.15}}\put(0.7746,0.0){\circle*{0.15}}\put(-0.7746,0.0){\circle*{0.15}}\put(0.0,0.7746){\circle*{0.15}}\put(0.0,-0.7746){\circle*{0.15}}\put(0.7746,0.7746){\circle*{0.15}}\put(-0.7746,0.7746){\circle*{0.15}}\put(0.7746,-0.7746){\circle*{0.15}}\put(-0.7746,-0.7746){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic7">
+<picture fill="none" height="75.9pt" origin-x="-30.4pt" origin-y="-39.2pt" stroke="none" tex="\begin{picture}(2.4,3.0)(-1.2,-1.55)\put(0.0,0.0){\line(1,0){0.05}}\put(0.1,0.%&#10;0){\line(1,0){0.05}}\put(0.2,0.0){\line(1,0){0.05}}\put(0.3,0.0){\line(1,0){0.%&#10;05}}\put(0.4,0.0){\line(1,0){0.05}}\put(0.5,0.0){\line(1,0){0.05}}\put(0.6,0.0%&#10;){\line(1,0){0.05}}\put(0.7,0.0){\line(1,0){0.05}}\put(0.8,0.0){\line(1,0){0.0%&#10;5}}\put(0.9,0.0){\line(1,0){0.05}}\put(0.0,0.0){\line(0,1){0.05}}\put(0.0,0.1)%&#10;{\line(0,1){0.05}}\put(0.0,0.2){\line(0,1){0.05}}\put(0.0,0.3){\line(0,1){0.05%&#10;}}\put(0.0,0.4){\line(0,1){0.05}}\put(0.0,0.5){\line(0,1){0.05}}\put(0.0,0.6){%&#10;\line(0,1){0.05}}\put(0.0,0.7){\line(0,1){0.05}}\put(0.0,0.8){\line(0,1){0.05}%&#10;}\put(0.0,0.9){\line(0,1){0.05}}\put(0.0,0.0){\line(-1,0){0.05}}\put(-0.1,0.0)%&#10;{\line(-1,0){0.05}}\put(-0.2,0.0){\line(-1,0){0.05}}\put(-0.3,0.0){\line(-1,0)%&#10;{0.05}}\put(-0.4,0.0){\line(-1,0){0.05}}\put(-0.5,0.0){\line(-1,0){0.05}}\put(%&#10;-0.6,0.0){\line(-1,0){0.05}}\put(-0.7,0.0){\line(-1,0){0.05}}\put(-0.8,0.0){%&#10;\line(-1,0){0.05}}\put(-0.9,0.0){\line(-1,0){0.05}}\put(0.0,0.0){\line(0,-1){0%&#10;.05}}\put(0.0,-0.1){\line(0,-1){0.05}}\put(0.0,-0.2){\line(0,-1){0.05}}\put(0.%&#10;0,-0.3){\line(0,-1){0.05}}\put(0.0,-0.4){\line(0,-1){0.05}}\put(0.0,-0.5){%&#10;\line(0,-1){0.05}}\put(0.0,-0.6){\line(0,-1){0.05}}\put(0.0,-0.7){\line(0,-1){%&#10;0.05}}\put(0.0,-0.8){\line(0,-1){0.05}}\put(0.0,-0.9){\line(0,-1){0.05}}\put(-%&#10;1.0,1.0){\line(1,0){2.0}}\put(-1.0,1.0){\line(0,-1){2.0}}\put(1.0,-1.0){\line(%&#10;-1,0){2.0}}\put(1.0,-1.0){\line(0,1){2.0}}\put(0.0,0.0){\circle*{0.15}}\put(0.%&#10;7746,0.0){\circle*{0.15}}\put(-0.7746,0.0){\circle*{0.15}}\put(0.0,0.7746){%&#10;\circle*{0.15}}\put(0.0,-0.7746){\circle*{0.15}}\put(0.7746,0.7746){\circle*{0%&#10;.15}}\put(-0.7746,0.7746){\circle*{0.15}}\put(0.7746,-0.7746){\circle*{0.15}}%&#10;\put(-0.7746,-0.7746){\circle*{0.15}}\end{picture}" unitlength="25.3pt" width="60.7pt" xml:id="S4.T1.pic7">
                 <g transform="translate(42,54.25)">
                   <g innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -2993,14 +2993,14 @@ square.</caption>
                 <XMath>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="ID">O</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">O</XMTok>
                     <XMDual>
                       <XMRef idref="S4.T1.m42.1"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
                         <XMApp xml:id="S4.T1.m42.1">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                           <XMTok fontsize="70%" meaning="6" role="NUMBER">6</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -3033,7 +3033,7 @@ square.</caption>
                               <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
                             </XMApp>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -3066,7 +3066,7 @@ square.</caption>
                               <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
                             </XMApp>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
@@ -3108,7 +3108,7 @@ square.</caption>
                               <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
                             </XMApp>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="PUNCT">,</XMTok>
@@ -3124,7 +3124,7 @@ square.</caption>
                               <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
                             </XMApp>
                           </XMApp>
-                          <XMTok font="italic" role="ID">h</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>

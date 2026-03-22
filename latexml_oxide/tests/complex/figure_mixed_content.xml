@@ -59,7 +59,7 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}{433.62pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{\lx@tag[ ]{{\small(a)}}{\small}}}\lx@subcaption@addinlist{}\end{subfigure}&amp;\begin{subfigure}{433.62pt}\includegraphics[width=85.35826pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{\small}}}\lx@subcaption@addinlist{}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
+    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}{433.62pt}\includegraphics[width=85.35826%&#10;pt]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{%&#10;\lx@tag[ ]{{\small(a)}}{\small}}}\lx@subcaption@addinlist{}\end{subfigure}&amp;%&#10;\begin{subfigure}{433.62pt}\includegraphics[width=85.35826pt]{../graphics/none%&#10;.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{%&#10;\small}}}\lx@subcaption@addinlist{}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
         <XMath>
           <XMArray role="ARRAY" vattach="middle">
             <XMRow>
@@ -255,7 +255,7 @@
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMApp>
                 <XMTok meaning="square-root"/>
-                <XMTok font="italic" role="ID">x</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
               <XMTok meaning="0" role="NUMBER">0</XMTok>
             </XMApp>
@@ -267,13 +267,13 @@
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="ID">E</XMTok>
+              <XMTok font="italic" role="UNKNOWN">E</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="ID">m</XMTok>
+                <XMTok font="italic" role="UNKNOWN">m</XMTok>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">c</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
                   <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMApp>
@@ -294,8 +294,8 @@
                   <XMWrap>
                     <XMApp xml:id="S0.Ex3.m4.1">
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok font="italic" role="ID">A</XMTok>
-                      <XMTok font="italic" role="ID">B</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
                     </XMApp>
                     <XMTok role="PUNCT">,</XMTok>
                   </XMWrap>
@@ -306,7 +306,7 @@
               <tr>
                 <td align="right"><Math mode="inline" tex="\displaystyle A" text="A" xml:id="S0.Ex3.m1">
                     <XMath>
-                      <XMTok font="italic" role="ID">A</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
                     </XMath>
                   </Math></td>
                 <td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.Ex3.m2">
@@ -319,7 +319,7 @@
                       <XMDual>
                         <XMRef idref="S0.Ex3.m3.1"/>
                         <XMWrap>
-                          <XMTok font="italic" role="ID" xml:id="S0.Ex3.m3.1">B</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m3.1">B</XMTok>
                           <XMTok role="PUNCT">,</XMTok>
                         </XMWrap>
                       </XMDual>
@@ -338,8 +338,8 @@
                   <XMWrap>
                     <XMApp xml:id="S0.Ex4.m4.1">
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok font="italic" role="ID">C</XMTok>
-                      <XMTok font="italic" role="ID">D</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">D</XMTok>
                     </XMApp>
                     <XMTok role="PUNCT">,</XMTok>
                   </XMWrap>
@@ -350,7 +350,7 @@
               <tr>
                 <td align="right"><Math mode="inline" tex="\displaystyle C" text="C" xml:id="S0.Ex4.m1">
                     <XMath>
-                      <XMTok font="italic" role="ID">C</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
                     </XMath>
                   </Math></td>
                 <td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.Ex4.m2">
@@ -363,7 +363,7 @@
                       <XMDual>
                         <XMRef idref="S0.Ex4.m3.1"/>
                         <XMWrap>
-                          <XMTok font="italic" role="ID" xml:id="S0.Ex4.m3.1">D</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m3.1">D</XMTok>
                           <XMTok role="PUNCT">,</XMTok>
                         </XMWrap>
                       </XMDual>

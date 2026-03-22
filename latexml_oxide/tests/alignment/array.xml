@@ -85,8 +85,8 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" role="ID">a</XMTok>
-                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -97,8 +97,8 @@
                 <XMath>
                   <XMApp>
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                    <XMTok font="italic" role="ID">a</XMTok>
-                    <XMTok font="italic" role="ID">b</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
                 </XMath>
               </Math></td>
@@ -116,7 +116,7 @@
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="ID">z</XMTok>
+              <XMTok font="italic" role="UNKNOWN">z</XMTok>
               <XMArray role="ARRAY" vattach="middle">
                 <XMRow>
                   <XMCell align="center">
@@ -125,8 +125,8 @@
                   <XMCell align="center">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      <XMTok font="italic" role="ID">a</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
                     </XMApp>
                   </XMCell>
                 </XMRow>
@@ -137,8 +137,8 @@
                   <XMCell align="center">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      <XMTok font="italic" role="ID">a</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
                     </XMApp>
                   </XMCell>
                 </XMRow>
@@ -158,8 +158,8 @@
                   <XMath>
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      <XMTok font="italic" role="ID">a</XMTok>
-                      <XMTok font="italic" role="ID">b</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
                     </XMApp>
                   </XMath>
                 </Math></td>

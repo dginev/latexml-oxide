@@ -6,6 +6,7 @@
 /// - a, b, x, D → ID
 use latexml_package::prelude::*;
 
+#[allow(dead_code)]
 fn add_math_rewrite(match_char: &str, role: &str) -> Result<()> {
   let xpath = format!(
     "descendant-or-self::ltx:XMTok[text()='{}' and not(@meaning)][@_pvis and @_cvis]",
