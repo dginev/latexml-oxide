@@ -197,7 +197,8 @@ LoadDefinitions!({
     properties => sub[args] {
       let path = args[3].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
       let path = path.trim().to_string();
-      Ok(stored_map!("graphic" => path.clone(), "candidates" => path, "options" => ""))
+      let candidates = crate::package::graphicx_sty::image_candidates(&path);
+      Ok(stored_map!("graphic" => path, "candidates" => candidates, "options" => ""))
     },
     alias => "\\includegraphics");
 

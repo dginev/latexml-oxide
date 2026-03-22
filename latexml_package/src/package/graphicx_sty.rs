@@ -3,7 +3,7 @@ use crate::prelude::*;
 /// Perl: image_candidates($path) from LaTeXML::Util::Image
 /// Searches for files matching `path` (possibly with extensions) in graphics/search paths.
 /// Returns comma-separated list of candidate paths, relative to source directory.
-fn image_candidates(path: &str) -> String {
+pub fn image_candidates(path: &str) -> String {
   use std::path::{Path, PathBuf};
   let path = path.trim().trim_matches('"');
   if path.is_empty() {
@@ -53,6 +53,16 @@ fn image_candidates(path: &str) -> String {
           }
         }
       }
+    }
+  }
+
+  // If no candidates found and path has no extension, try common image extensions
+  // (matching Perl's pathname_findall with types => ['*'] which tries all known types)
+  if candidates.is_empty() && !has_extension {
+    for ext in &["png", "jpg", "jpeg", "gif", "pdf", "eps", "svg"] {
+      let with_ext = format!("{path}.{ext}");
+      candidates.push(with_ext);
+      break; // Perl typically returns just the first match (png)
     }
   }
 
