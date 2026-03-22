@@ -252,6 +252,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **\rotatebox raw TeX override fix**: Raw TeX graphicx.sty `\protected\def\rotatebox` was overriding our DefConstructor. Re-registered in graphicx_sty.rs. Also fixed after_digest arg indexing (get_arg(2)/get_arg(3) for Float/body, accounting for OptionalKeyVals at #1). graphrot_test: 168→623 output lines (4th+ tables now render, was 5 missing-content diffs, now 239 dimension diffs from newly-rendered content).
 - **\label in empty alignment columns**: Fixed \label before & in align/eqnarray. Route through \lx@eqnarray@label → \lx@hidden@noalign. Deep alignmentPreserve check for List wrappers. Absorb preserved boxes from skippable cells. split_test: 102→101 diffs.
 - **get_insertion_candidates bug**: Fixed _Capture_ name check (element_node vs start node) in ancestor traversal.
+- **finalize_rec iterative rewrite**: Converted from recursive to iterative traversal with heap work-stack. Fixes SIGSEGV from stack overflow (debug) / infinite loop (release) for 3+ nested hboxes. Font wrapper collapse deferred to post-traversal. vmode_test: SEGFAULT → 26 diffs.
 
 **Recent fixes (2026-03-20, session 12):**
 - **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
