@@ -1049,7 +1049,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
           ColumnSpec::Unknown
         },
       );
-      // eprintln!("    cell[{ri},{ci}]: cell={}, class={:?}", col.cell.is_some(), col.content_class);
+      // eprintln!("    cell: cell={}, class={:?}, border='{}'", col.cell.is_some(), col.content_class, col.border);
       col.content_length = Some(if col.content_class == Some(ColumnSpec::Graphics) {
         1000
       } else if col.cell.is_some() {
@@ -1097,6 +1097,10 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   // DG: cache assignments, and execute in post-loop, so that we can avoid indexing arithmetic
   let mut outer_border_right_assignments = Vec::new();
   let mut outer_border_bottom_assignments = Vec::new();
+  // Perl: copy characterizations (align/content_class/content_length) from rowspan/colspan cells
+  // to the cells they span over. Deferred to avoid borrow conflicts across rows.
+  let mut rowspan_propagation: Vec<(usize, usize, Option<Align>, Option<ColumnSpec>, Option<usize>)> =
+    Vec::new();
   // copy the characterizations to spanned cells
   for r in 0..alignment.rows.len() {
     let row = &mut alignment.rows[r];
@@ -1117,17 +1121,12 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
         row_reach.content_class = cc;
         row_reach.content_length = cl;
       }
-      // TODO:
-      // for irow_idx in r+1 .. r+rs {
-      //   let mut irow = &mut alignment.rows[irow_idx];
-      //   let mut icols = irow.get_columns_mut();
-      //   for icol_idx in c .. c+cs {
-      //     let icol = &mut icols[icol_idx];
-      //     icol.align          = ca;
-      //     icol.content_class  = cc;
-      //     icol.content_length = cl;
-      //   }
-      // }
+      // Perl L1073-1077: copy characterizations to rowspan-covered cells
+      for sr in 1..rs {
+        for sc in 0..cs {
+          rowspan_propagation.push((r + sr, c + sc, ca.clone(), cc, cl));
+        }
+      }
 
       // move the outer borders
       for sr in 0..rs {
@@ -1135,6 +1134,17 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
       }
       for sc in 0..cs {
         outer_border_bottom_assignments.push((r + rs - 1, c + sc, bb));
+      }
+    }
+  }
+  // Apply the collected rowspan propagation assignments
+  for (row_idx, col_idx, align, content_class, content_length) in rowspan_propagation.into_iter() {
+    if row_idx < alignment.rows.len() {
+      let cols = alignment.rows[row_idx].get_columns_mut();
+      if col_idx < cols.len() {
+        cols[col_idx].align = align;
+        cols[col_idx].content_class = content_class;
+        cols[col_idx].content_length = content_length;
       }
     }
   }
@@ -1301,7 +1311,11 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
                 inferred_classes.push(ColumnSpec::Text);
               }
             },
-            "ltx:XMArg" => {
+            "ltx:XMArg" | "ltx:inline-block" | "ltx:p" => {
+              // Transparent containers: look through to classify children.
+              // Perl's beAbsorbed creates <text> directly in td; Rust wraps in
+              // <inline-block><p> from {turn}/{rotate}. Treat these as transparent
+              // so the classification matches Perl's view of the cell content.
               let mut children = ch.get_child_nodes();
               children.append(&mut nodes);
               nodes = children;
@@ -1453,18 +1467,19 @@ fn alignment_characterize_lines(
           cell.cell_type = Some('h');
           if let Some(ref mut xcell) = cell.cell {
             // But NOT empty cells on outer edges.
+            // Perl: !$$cell{l} is falsy for both undef AND 0.
             if (cell.content_class == Some(ColumnSpec::Empty))
               && ((i == 0
                 && (if axis == Axis::Row {
-                  cell.border_left.is_none()
+                  cell.border_left.unwrap_or(0) == 0
                 } else {
-                  cell.border_top.is_none()
+                  cell.border_top.unwrap_or(0) == 0
                 }))
                 || (i == nn
                   && (if axis == Axis::Row {
-                    cell.border_right.is_none()
+                    cell.border_right.unwrap_or(0) == 0
                   } else {
-                    cell.border_bottom.is_none()
+                    cell.border_bottom.unwrap_or(0) == 0
                   })))
             {
             } else {
@@ -1486,7 +1501,7 @@ fn alignment_test_headers(
   axis: Axis,
   lines: &[Vec<&mut Cell>],
 ) -> Vec<usize> {
-  // eprintln!("Testing {nhead} headers with threshold {tab_threshold}");
+  // eprintln!("Testing {nhead} headers with threshold {tab_threshold} for axis {:?}", axis);
   let mut heads: Vec<usize> = (0..nhead).collect(); // The indices of heading lines.
   let mut head_length = alignment_max_content_length(0, 0, nhead - 1, lines);
   let mut next_line = nhead; // Start from the end of the proposed headings.
