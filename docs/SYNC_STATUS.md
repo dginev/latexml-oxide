@@ -456,7 +456,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Alignment Improvement Plan (Session 19+)
 
 **Phase 1 — Quick wins (target: graphrot < 10, cells < 50):**
-- [ ] 1a. Fix guessHeaders row over-marking: column characterization adds `thead="row"` to data cells where Perl doesn't. Compare `alignment_characterize_lines` threshold/validation logic against Perl.
+- [ ] 1a. Fix guessHeaders row over-marking: column characterization adds `thead="row"` to data cells where Perl doesn't. Investigation found: same threshold/validation logic, same cell classification. Perl's `alignment_skip_data` has a continuation-line check (`empty_count > 0.4 * cols`) that Rust lacks, but adding it caused 173 regressions. The heuristic is extremely fragile — needs instruction-by-instruction comparison with Perl to find the precise difference.
 - [ ] 1b. Fix `\eline`/`\nline` makecell macros: raw TeX `\the\@temptokena` expansion with alignment tabs (`&`) not recognized by alignment machinery. Root cause: `&` from toks register expansion isn't processed as column separator. Needs fix in alignment body scanning to handle expanded `&` tokens.
 - [ ] 1c. Fix `{turn}` rotation dimensions inside alignment: `after_digest_body` gets empty body for alignment-containing environments. Use cached alignment dimensions.
 
