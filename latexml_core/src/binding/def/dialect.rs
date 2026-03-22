@@ -1083,6 +1083,16 @@ pub fn def_environment(
   }
   before_digest_env.extend(options.before_digest);
 
+  // Clone fields needed for the bare \name constructor (Perl Package.pm lines 1949-1969)
+  // before they are moved into the \begin{name} constructor below.
+  let bare_after_digest_begin = options.after_digest_begin.clone();
+  let bare_after_digest_body = options.after_digest_body.clone();
+  let bare_before_construct = options.before_construct.clone();
+  let bare_after_construct = options.after_construct.clone();
+  let bare_sizer = options.sizer.clone();
+  let bare_reversion = options.reversion.clone();
+  let bare_alias = options.alias.clone();
+
   let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
     push_frame();
     Ok(())
@@ -1209,6 +1219,12 @@ pub fn def_environment(
   // Perl Package.pm lines 1949-1969: \FOO gets the same hook pipeline as \begin{FOO}
   let mut before_digest_bare: Vec<BeforeDigestClosure> = Vec::new();
   before_digest_bare.push(before_digest_simple!({ bgroup(); }));
+  if options.enter_horizontal {
+    before_digest_bare.push(before_digest_simple!({ enter_horizontal(); }));
+  }
+  if options.leave_horizontal {
+    before_digest_bare.push(before_digest_simple!({ leave_horizontal()?; }));
+  }
   if let Some(ref bmode) = mode {
     let bmode = bmode.clone();
     before_digest_bare.push(before_digest_simple!({
@@ -1223,6 +1239,12 @@ pub fn def_environment(
     pop_frame()?;
     Ok(())
   });
+  // Perl: \name gets the same afterDigest, afterDigestBody, beforeConstruct, afterConstruct,
+  // sizer, reversion, alias as \begin{name}
+  let mut before_construct_bare: Vec<ConstructionClosure> = vec![push_frame_bare];
+  before_construct_bare.extend(bare_before_construct);
+  let mut after_construct_bare: Vec<ConstructionClosure> = bare_after_construct;
+  after_construct_bare.push(pop_frame_bare);
   let name_constructor = Rc::new(Constructor {
     cs: T_CS!(s!("\\{}", &name)),
     paramlist,
@@ -1231,8 +1253,13 @@ pub fn def_environment(
     capture_body: true,
     properties: options.properties.clone(),
     before_digest: before_digest_bare,
-    before_construct: vec![push_frame_bare],
-    after_construct: vec![pop_frame_bare],
+    after_digest: bare_after_digest_begin,
+    after_digest_body: bare_after_digest_body,
+    before_construct: before_construct_bare,
+    after_construct: after_construct_bare,
+    sizer: infer_sizer(bare_sizer.as_ref(), bare_reversion.as_ref()),
+    reversion: bare_reversion,
+    alias: bare_alias,
     ..Constructor::default()
   });
   install_definition(name_constructor, options.scope);
