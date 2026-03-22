@@ -392,14 +392,17 @@ namespace declarations, Content-Type casing, logo styling) that are not being ad
 
 **Rust mechanism:**
 1. The `.tex` file includes `\input{name.src}` to explicitly request the binding
-2. The `latexml_contrib` dispatcher maps `"name.src"` to `name_src::load_definitions()`
-3. The `*_src.rs` file in `latexml_contrib/src/` contains the Rust equivalent of the `.latexml` definitions
+2. The test's dispatcher (in `tests/helpers/` or via `latexml_contrib`) maps `"name.src"` to `name_src::load_definitions()`
+3. The `*_src.rs` (or `*_tex.rs`) file contains the Rust equivalent of the `.latexml` definitions
+
+**Test organization:** For test-specific bindings, the `*_src.rs` files live in `latexml_oxide/tests/helpers/` and are dispatched by per-suite dispatcher functions. This compartmentalizes test concerns and keeps `latexml_contrib` clean for user-contributed bindings. See `helpers/rebox_tex.rs` and `20_digestion.rs::digestion_tests_dispatch()` for examples.
 
 **Rationale:**
 - Rust cannot interpret Perl at runtime, so `.latexml` files cannot be loaded directly
 - Compile-time binding registration is required for Rust's type system
 - Explicit `\input{name.src}` makes the dependency visible in the TeX source
 - The `*_src.rs` naming convention distinguishes source-level bindings from package bindings (`*_sty.rs`)
+- Test-specific bindings in `tests/helpers/` keep the dispatch logic close to where it's used
 
 **Critical insight:** Math rewrite rules (`DefMathRewrite`) in `.latexml` files execute BEFORE the Marpa grammar parses the expression. This means setting `role="ID"` or `role="FUNCTION"` via rewrites changes how the grammar interprets the tokens — it is NOT equivalent to a post-processing role change. The `*_src.rs` mechanism preserves this pre-parse semantics.
 
