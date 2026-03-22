@@ -1111,6 +1111,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   let mut outer_border_bottom_assignments = Vec::new();
   // Perl: copy characterizations (align/content_class/content_length) from rowspan/colspan cells
   // to the cells they span over. Deferred to avoid borrow conflicts across rows.
+  #[allow(clippy::type_complexity)]
   let mut rowspan_propagation: Vec<(usize, usize, Option<Align>, Option<ColumnSpec>, Option<usize>)> =
     Vec::new();
   // copy the characterizations to spanned cells

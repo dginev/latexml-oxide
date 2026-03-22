@@ -185,13 +185,13 @@ LoadDefinitions!({
       let opts = MathPrimitiveOptions{
         operator_role: Some("OVERACCENT".to_string()),
         ..Default::default()};
-      def_math(cs.clone(), paramlist, presentation, opts)?;
+      def_math(cs, paramlist, presentation, opts)?;
     }
     // Perl: return AddToPreamble('\DeclareMathAccent', $cs, $kind, $class, $code);
     // AddToPreamble returns Digest(Invocation(\lx@add@Preamble@PI, Invocation(\DeclareMathAccent, ...)))
     // The primitive must RETURN this digested result so it gets absorbed by the document.
     let preamble_text = format!("\\DeclareMathAccent{}{{{}}}{{{}}}{{{}}}",
-      cs.with_str(|s| s.to_string()), kind.to_string(), class.to_string(), code.value_of());
+      cs.with_str(|s| s.to_string()), kind, class, code.value_of());
     let preamble_toks = build_invocation(
       T_CS!("\\lx@add@Preamble@PI"),
       vec![Some(Tokens::new(Explode!(preamble_text)))])?;

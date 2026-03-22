@@ -868,7 +868,7 @@ LoadDefinitions!({
           // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
-              props.insert(*prop_key, Stored::Digested(digested.clone()));
+              props.insert(prop_key, Stored::Digested(digested.clone()));
             }
           }
           for (k, v) in kv.get_pairs() {
@@ -954,7 +954,7 @@ LoadDefinitions!({
           // round-trip that loses the original \lx@left CS (alias resolves to \left on revert).
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
-              props.insert(*prop_key, Stored::Digested(digested.clone()));
+              props.insert(prop_key, Stored::Digested(digested.clone()));
             }
           }
           for (k, v) in kv.get_pairs() {
@@ -1103,7 +1103,7 @@ LoadDefinitions!({
           // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
-              props.insert(*prop_key, Stored::Digested(digested.clone()));
+              props.insert(prop_key, Stored::Digested(digested.clone()));
             }
           }
           for (k, v) in kv.get_pairs() {
@@ -1129,7 +1129,7 @@ LoadDefinitions!({
           // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
-              props.insert(*prop_key, Stored::Digested(digested.clone()));
+              props.insert(prop_key, Stored::Digested(digested.clone()));
             }
           }
           for (k, v) in kv.get_pairs() {

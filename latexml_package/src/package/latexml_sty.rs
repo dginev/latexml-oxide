@@ -128,7 +128,7 @@ LoadDefinitions!({
           if let Some(mathcode) = state::lookup_mathcode(&ch.to_string()) {
             if mathcode > 0 {
               let decoded_pos = (mathcode % 256) as u8;
-              let decoded_fam = ((mathcode / 256) % 16) as u16;
+              let decoded_fam = (mathcode / 256) % 16 ;
               // Look up the font encoding for this family to decode the character
               let _style = "text";
               let font_key = format!("textfont_{decoded_fam}");
@@ -217,7 +217,7 @@ LoadDefinitions!({
     properties => sub[_args] {
       let mut href_str = _args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       // Perl: CleanURL — strip whitespace/newlines from URLs
-      href_str = href_str.replace('\n', "").replace('\r', "").trim().to_string();
+      href_str = href_str.replace(['\n', '\r'], "").trim().to_string();
       Ok(stored_map!("href" => href_str))
     }
   );

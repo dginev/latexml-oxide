@@ -1330,7 +1330,7 @@ fn sideset_construct(
 /// Uses Document's stack-based API (openElement/closeElement) matching Perl.
 fn sideset_wrap_impl(
   document: &mut Document,
-  mut inner: Node,
+  inner: Node,
   x: &str,
   y: &str,
   level: usize,

@@ -30,6 +30,15 @@ use crate::definition::expandable::ExpandableOptions;
 
 static QUOTE_WRAPPED: Lazy<Regex> = Lazy::new(|| Regex::new("^\"(.+)\"$").unwrap());
 
+/// Maximum nesting depth for package/class loading to prevent infinite recursion.
+/// Perl LaTeXML has no explicit limit but rarely exceeds 20 levels in practice.
+const MAX_INPUT_DEPTH: usize = 500;
+
+thread_local! {
+  /// Current nesting depth of input_definitions calls.
+  static INPUT_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
 pub struct InputDefinitionOptions {
   /// an optional extension (such as "sty")
@@ -76,6 +85,32 @@ impl Default for InputDefinitionOptions {
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) -> Result<()> {
   let name = raw_file.trim();
+
+  // Guard: prevent infinite recursion from circular or runaway package loading.
+  // When a binding is missing, raw TeX loading can trigger macro loops.
+  let depth = INPUT_DEPTH.with(|d| {
+    let current = d.get();
+    d.set(current + 1);
+    current + 1
+  });
+  if depth > MAX_INPUT_DEPTH {
+    INPUT_DEPTH.with(|d| d.set(d.get() - 1));
+    Fatal!(
+      Stomach, Recursion,
+      s!("Package loading depth exceeded {} (loading '{}').\
+        This usually means a missing binding causes infinite recursion.", MAX_INPUT_DEPTH, name)
+    );
+  }
+
+  // Ensure depth cleanup on all exit paths via a guard
+  struct InputDepthGuard;
+  impl Drop for InputDepthGuard {
+    fn drop(&mut self) {
+      INPUT_DEPTH.with(|d| d.set(d.get() - 1));
+    }
+  }
+  let _guard = InputDepthGuard;
+
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
   let prevname = if options.handleoptions && lookup_definition(&T_CS!("\\@currname"))?.is_some() {
@@ -195,6 +230,18 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     ))?;
   }
 
+  // Perl: early-stop if already loaded (checks request_loaded, name_loaded, etc.)
+  // This prevents double-loading and breaks circular loading chains.
+  let loaded_key = s!("{filename}_loaded");
+  if !options.reloadable && lookup_bool(&loaded_key) {
+    return Ok(());
+  }
+  // Also check without extension (Perl checks name_loaded too)
+  let name_loaded_key = s!("{name}_loaded");
+  if !options.reloadable && name != filename && lookup_bool(&name_loaded_key) {
+    return Ok(());
+  }
+
   let is_binding =
     !options.noltxml && (load_external_binding(&filename)? || load_binding(&filename)?);
   let mut is_found_raw = false;
@@ -221,10 +268,15 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     ) {
       is_found_raw = true;
       load_tex_definitions(&filename, &file, options.reloadable)?;
-    } else if !options.noerror {
-      Error!("missing_file", name,
-        s!("Can't find binding or file for '{filename}'. \
-          No dispatcher entry and no raw file found on disk."));
+    } else {
+      // Mark as loaded even on failure — prevents retrying a missing file
+      // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
+      assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+      if !options.noerror {
+        Error!("missing_file", name,
+          s!("Can't find binding or file for '{filename}'. \
+            No dispatcher entry and no raw file found on disk."));
+      }
     }
   }
 

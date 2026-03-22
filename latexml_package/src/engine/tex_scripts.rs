@@ -260,7 +260,7 @@ fn script_sizer(
   base_opt: Option<&Stored>,
   prev_opt: Option<&Stored>,
   op: &str,
-  pos: &str,
+  _pos: &str,
 ) -> Result<(Dimension, Dimension, Dimension)> {
   // Perl: scriptSizer in TeX_Math.pool.ltxml
   // Uses font metrics for proper positioning of super/subscripts.

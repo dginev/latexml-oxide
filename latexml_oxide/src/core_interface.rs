@@ -299,7 +299,7 @@ impl DigestionAPI for Core {
       // Post-parse: add ltx_math_unparsed to Math parents of failed XMath nodes
       if !parser.failed_xmath_ids.is_empty() {
         for xmath_id in &parser.failed_xmath_ids {
-          let xpath = format!("descendant-or-self::ltx:XMath[@_hashid='{}']/..", xmath_id);
+          let _xpath = format!("descendant-or-self::ltx:XMath[@_hashid='{}']/..", xmath_id);
           // XMath nodes don't have @_hashid, so use the node list approach instead
         }
         // Apply ltx_math_unparsed to failed XMath nodes
@@ -326,7 +326,7 @@ impl DigestionAPI for Core {
     for mut tok in document.findnodes("descendant-or-self::ltx:XMTok[@role='UNKNOWN']", None) {
       let content = tok.get_content();
       if content.chars().count() == 1
-        && content.chars().next().map_or(false, |c| c.is_alphabetic())
+        && content.chars().next().is_some_and(|c| c.is_alphabetic())
         && tok.get_attribute("meaning").is_none()
       {
         tok.set_attribute("role", "ID")?;
@@ -585,7 +585,7 @@ fn apply_lx_declarations(document: &mut Document) {
     for &(pattern, role, name, meaning) in &declarations {
       // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
       let matches = content == pattern
-        || (!tok_name.is_empty() && pattern.starts_with('\\') && &pattern[1..] == tok_name);
+        || (!tok_name.is_empty() && pattern.starts_with('\\') && pattern[1..] == tok_name);
       if matches {
         if !role.is_empty() {
           let _ = tok.set_attribute("role", role);

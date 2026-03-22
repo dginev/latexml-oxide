@@ -9,7 +9,7 @@ fn rdf_attributes_from_digested(kv: &Digested) -> HashMap<String, String> {
       if key == "about" || key == "resource" {
         // Perl L111-121: check if value is a \ref Whatsit or #id string
         let digested_opt = val.clone().undigested();
-        let is_ref = digested_opt.as_ref().map_or(false, |d| {
+        let is_ref = digested_opt.as_ref().is_some_and(|d| {
           if let DigestedData::Whatsit(ref w) = *d.data() {
             let cs = w.borrow().get_definition().get_cs_name().to_string();
             cs == "\\ref" || cs == "\\ref "
@@ -143,7 +143,7 @@ LoadDefinitions!({
     let p = do_expand(prefix)?.to_string();
     let u = do_expand(url)?.to_string();
     let entry = if p.is_empty() { u } else { s!("{}: {}", p, u) };
-    state::push_value("RDFa_prefixes", entry);
+    let _ = state::push_value("RDFa_prefixes", entry);
     Ok(Vec::new())
   });
 
@@ -215,7 +215,7 @@ LoadDefinitions!({
         .map(|(k, v)| s!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join("\x00");
-      state::push_value("RDFa_preamble_rdf", serialized);
+      let _ = state::push_value("RDFa_preamble_rdf", serialized);
     }
     Ok(Vec::new())
   });
@@ -244,7 +244,7 @@ LoadDefinitions!({
   );
 
   Let!("\\lxRDF", "\\lxRDF@preamble");
-  state::push_value("@at@begin@document",
+  let _ = state::push_value("@at@begin@document",
     Tokens!(T_CS!("\\let"), T_CS!("\\lxRDF"), T_CS!("\\lxRDF@body")));
 
   // Add prefix= attribute and insert preamble <rdf> elements when document opens

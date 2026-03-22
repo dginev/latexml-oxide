@@ -69,7 +69,7 @@ LoadDefinitions!({
           let color_str = whatsit.get_property("color").map(|c| c.to_attribute()).unwrap_or_else(|| "#000000".to_string());
           // Create line node using raw libxml API
           let ns = picture.get_namespace();
-          let mut line_node = libxml::tree::Node::new("line", ns, &document.get_document()).unwrap();
+          let mut line_node = libxml::tree::Node::new("line", ns, document.get_document()).unwrap();
           let _ = line_node.set_attribute("points", &line_str);
           let _ = line_node.set_attribute("stroke", &color_str);
           let _ = line_node.set_attribute("stroke-width", "0.4");

@@ -298,11 +298,10 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
     _ => -1,
   };
 
-  if class == 7 {
-    if curfam_val >= 0 && curfam_val <= 15 {
+  if class == 7
+    && (0..=15).contains(&curfam_val) {
       fam = curfam_val as u16;
     }
-  }
   n %= 256;
 
   let curfont = state::lookup_font().unwrap();
@@ -326,14 +325,14 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
     let style = curfont.get_mathstyle().map(|s| s.to_string()).unwrap_or_default();
     let style_str = if style == "script" || style == "scriptscript" || style == "text" { style.as_str() } else { "text" };
     if style_str == "text" {
-      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t.clone()); }
+      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t); }
     } else if style_str == "script" {
-      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptfont_{fam}")) { fontdef_tok = Some(t.clone()); }
-      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t.clone()); downsize = 1; }
+      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptfont_{fam}")) { fontdef_tok = Some(t); }
+      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t); downsize = 1; }
     } else if style_str == "scriptscript" {
-      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptscriptfont_{fam}")) { fontdef_tok = Some(t.clone()); }
-      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptfont_{fam}")) { fontdef_tok = Some(t.clone()); downsize = 1; }
-      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t.clone()); downsize = 2; }
+      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptscriptfont_{fam}")) { fontdef_tok = Some(t); }
+      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptfont_{fam}")) { fontdef_tok = Some(t); downsize = 1; }
+      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t); downsize = 2; }
     }
   }
   
@@ -438,7 +437,7 @@ pub fn decode_math_char_for_stomach(
   mathcode: u16,
   meaning: Token,
 ) -> Result<Option<Digested>> {
-  let props = decode_math_char(mathcode, Some(crate::Tokens!(meaning.clone())))?;
+  let props = decode_math_char(mathcode, Some(crate::Tokens!(meaning)))?;
 
   let glyph = match props.glyph {
     Some(g) => g,

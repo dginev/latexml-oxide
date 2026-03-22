@@ -1,7 +1,6 @@
 use crate::prelude::*;
 
 /// Perl: cases.sty.ltxml — numcases and subnumcases environments
-
 /// Perl: numcasesBindings($lhs) — creates 3-column alignment for numcases
 fn numcases_bindings(lhs: Tokens) -> Result<()> {
   use latexml_core::alignment::cell::Cell;
@@ -82,7 +81,7 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
 #[rustfmt::skip]
 LoadDefinitions!({
   DefPrimitive!("\\@numcases@bindings{}", sub[(lhs)] {
-    numcases_bindings(lhs.into())?;
+    numcases_bindings(lhs)?;
   });
 
   DefMacro!("\\numcases{}",
@@ -104,11 +103,8 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\lx@numcases@subnumbering@end", sub[_args] {
     // Restore saved equation counter
-    if let Some(saved) = state::lookup_value("SAVED_EQUATION_NUMBER") {
-      // Stored can be Number, Dimension, etc. — extract the number for the counter
-      if let Stored::Number(n) = saved {
-        state::assign_register("\\c@equation", RegisterValue::Number(n), None, Vec::new())?;
-      }
+    if let Some(Stored::Number(n)) = state::lookup_value("SAVED_EQUATION_NUMBER") {
+      let _ = state::assign_register("\\c@equation", RegisterValue::Number(n), None, Vec::new());
     }
   });
 

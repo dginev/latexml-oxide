@@ -680,7 +680,21 @@ LoadDefinitions!({
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));
-    Ok(Vec::new())
+
+    // Perl: Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
+    // Return a reversion-only Tbox so \color appears in tex= attributes
+    let rgb = color.to_rgb();
+    let comps = rgb.components().iter()
+      .map(|c| {
+        let v = (*c * 10000.0).round() / 10000.0;
+        if v == v.floor() { format!("{}", v as i64) } else { format!("{v}") }
+      })
+      .collect::<Vec<_>>().join(",");
+    let reversion_tokens = Invocation!("\\color",
+      vec![Some(Tokens::from(T_OTHER!("rgb"))),
+           Some(Tokens::from(T_OTHER!(&*comps)))]);
+    Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
+      reversion_tokens, arena::SymHashMap::default()))])
   });
 
   // \set@color
@@ -1071,7 +1085,7 @@ LoadDefinitions!({
           let row_num = cell.borrow().current_row_number();
           let num_str = row_num.to_string();
           let toks: Vec<Token> = num_str.chars().map(|c| {
-            Token::new(&c.to_string(), Catcode::OTHER)
+            Token::new(c.to_string(), Catcode::OTHER)
           }).collect();
           Ok(Tokens::new(toks))
         } else {

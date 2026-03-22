@@ -1068,11 +1068,11 @@ fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Resu
       }
     }
     // Clean up _xmkey from both ref and target
-    ref_node.remove_attribute("_xmkey");
+    let _ = ref_node.remove_attribute("_xmkey");
   }
   // Also clean up _xmkey from non-ref elements
   for mut node in document.findnodes("descendant::*[@_xmkey]", Some(mathnode)) {
-    node.remove_attribute("_xmkey");
+    let _ = node.remove_attribute("_xmkey");
   }
   Ok(())
 }

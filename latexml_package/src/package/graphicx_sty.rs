@@ -59,10 +59,10 @@ pub fn image_candidates(path: &str) -> String {
   // If no candidates found and path has no extension, try common image extensions
   // (matching Perl's pathname_findall with types => ['*'] which tries all known types)
   if candidates.is_empty() && !has_extension {
-    for ext in &["png", "jpg", "jpeg", "gif", "pdf", "eps", "svg"] {
+    // Perl typically returns just the first match (png)
+    if let Some(ext) = ["png", "jpg", "jpeg", "gif", "pdf", "eps", "svg"].first() {
       let with_ext = format!("{path}.{ext}");
       candidates.push(with_ext);
-      break; // Perl typically returns just the first match (png)
     }
   }
 

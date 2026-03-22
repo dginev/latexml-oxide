@@ -11,11 +11,13 @@ fn add_math_rewrite(match_char: &str, role: &str) -> Result<()> {
     "descendant-or-self::ltx:XMTok[text()='{}' and not(@meaning)][@_pvis and @_cvis]",
     match_char
   );
-  let mut options = latexml_core::rewrite::RewriteOptions::default();
-  options.xpath = Some(xpath);
-  options.attributes = Some(format!("role='{role}'"));
-  options.is_math = true;
-  options.select_count = Some(1);
+  let options = latexml_core::rewrite::RewriteOptions {
+    xpath: Some(xpath),
+    attributes: Some(format!("role='{role}'")),
+    is_math: true,
+    select_count: Some(1),
+    ..Default::default()
+  };
   state::push_value(
     "DOCUMENT_REWRITE_RULES",
     latexml_core::rewrite::Rewrite::new("math", options),

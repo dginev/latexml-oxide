@@ -589,7 +589,7 @@ LoadDefinitions!({
   // PI syntax not supported in constructor templates, so use procedural body.
   DefConstructor!("\\lx@add@Preamble@PI Undigested",
     sub[document, args, _props] {
-      if let Some(Some(preamble_arg)) = args.get(0) {
+      if let Some(Some(preamble_arg)) = args.first() {
         let preamble_text = preamble_arg.untex()?;
         if !preamble_text.is_empty() {
           let mut attrs = HashMap::default();

@@ -9,15 +9,13 @@ LoadDefinitions!({
   DefPrimitive!("\\nf@mathcopytextfont", sub[_args] {
     use latexml_core::binding::content::merge_font;
     use latexml_core::common::font::Font;
-    if let Some(saved) = lookup_value("savedfont") {
-      if let Stored::Font(ref f) = saved {
-        merge_font(Font {
-          family: f.family.clone(),
-          series: f.series.clone(),
-          shape: f.shape.clone(),
-          ..Font::default()
-        });
-      }
+    if let Some(Stored::Font(ref f)) = lookup_value("savedfont") {
+      merge_font(Font {
+        family: f.family.clone(),
+        series: f.series.clone(),
+        shape: f.shape.clone(),
+        ..Font::default()
+      });
     }
     Ok(())
   });

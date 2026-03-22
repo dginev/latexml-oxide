@@ -427,7 +427,7 @@ impl BoxOps for Whatsit {
         if let Stored::Digested(ref body) = *body_stored {
           // Perl: computeBoxesSize reads mode/vattach/width from $boxes before unlisting
           for key in &["mode", "vattach", "width"] {
-            if options.get(*key).is_none() {
+            if options.get(key).is_none() {
               if let Some(prop) = body.get_property(key) {
                 options.insert(key, (*prop).clone());
               }

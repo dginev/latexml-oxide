@@ -386,18 +386,16 @@ LoadDefinitions!({
       // This propagates the property from e.g. \label (inside a List) to the
       // \lx@hidden@noalign whatsit, so the alignment absorption code knows
       // to absorb this whatsit even in skippable cells.
-      'outer: for arg_opt in args.iter() {
-        if let Some(ref v) = arg_opt {
-          if v.get_property("alignmentPreserve").is_some() {
+      'outer: for v in args.iter().flatten() {
+        if v.get_property("alignmentPreserve").is_some() {
+          props.insert("alignmentPreserve", Stored::Bool(true));
+          break;
+        }
+        // Also check children of List args
+        for child in v.unlist_ref() {
+          if child.get_property_bool("alignmentPreserve") {
             props.insert("alignmentPreserve", Stored::Bool(true));
-            break;
-          }
-          // Also check children of List args
-          for child in v.unlist_ref() {
-            if child.get_property_bool("alignmentPreserve") {
-              props.insert("alignmentPreserve", Stored::Bool(true));
-              break 'outer;
-            }
+            break 'outer;
           }
         }
       }

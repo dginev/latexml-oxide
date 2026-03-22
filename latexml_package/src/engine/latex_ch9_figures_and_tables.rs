@@ -11,6 +11,9 @@ pub fn before_float(float_type: &str, preincrement: Option<&str>) {
     Tokens::new(ExplodeText!(float_type)),
     None,
   ).ok();
+  // Perl #2775: rebind \\ to \lx@newline in floats to prevent
+  // alignment-token early-return when floats are inside tabulars.
+  Let!("\\\\", "\\lx@newline");
   // Perl: if (my $main = $options{preincrement}) {
   //   if (($type ne (LookupValue('LAST_FLOATTYPE') || ''))
   //     && !IfCondition('\iflx@donecaption')) {
@@ -117,7 +120,7 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
       // (only when all panels are simple <p> elements)
       if all_p && i + 1 < panels.len() {
         let ns = panels[i].get_namespace();
-        let mut break_node = libxml::tree::Node::new("break", ns, &document.get_document()).unwrap();
+        let mut break_node = libxml::tree::Node::new("break", ns, document.get_document()).unwrap();
         let _ = break_node.set_attribute("class", "ltx_break");
         panels[i].add_next_sibling(&mut break_node)?;
       }

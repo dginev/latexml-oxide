@@ -276,6 +276,7 @@ impl Document {
     //        element children deferred to the stack).
     // PostElement: after finalizing an element child, check for font wrapper collapse.
     // PostWork: after all children processed, remove bookkeeping attrs and expire font.
+    #[allow(clippy::enum_variant_names)]
     enum Work {
       Enter(Node),
       PostElement {
@@ -320,7 +321,7 @@ impl Document {
 
           // Use boxed HashMap to reduce work item size — Font is ~500 bytes per entry
           let mut pending_declaration: Box<HashMap<String, (String, Font)>> =
-            Box::new(HashMap::default());
+            Box::default();
 
           if self.has_node_font(&current) {
             let desired_font = self.get_node_font(&current);
@@ -1645,7 +1646,7 @@ impl Document {
       if key.starts_with('_') {
         continue;
       }
-      let is_forced = force.map_or(false, |f| f.contains(key.as_str()));
+      let is_forced = force.is_some_and(|f| f.contains(key.as_str()));
       // Special case attributes
       if key.as_str() == "xml:id" {
         // Use the replacement id
@@ -2606,7 +2607,7 @@ impl Document {
       Pair(Node, Node), // (content_arg, pres_arg) — to be merged
     }
     let mut new_args: Vec<NewArg> = Vec::new();
-    for (c_arg, p_arg) in content_args.into_iter().zip(pres_args.into_iter()) {
+    for (c_arg, p_arg) in content_args.into_iter().zip(pres_args) {
       if let Some(c_idref) = c_arg.get_attribute("idref") {
         if c_idref == p_arg.get_attribute_ns("id", XML_NS).unwrap_or_default() {
           new_args.push(NewArg::Single(p_arg));

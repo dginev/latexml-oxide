@@ -13,7 +13,7 @@ LoadDefinitions!({
     }
     // Extract the last component after '.' or '^'
     let last = label
-      .rfind(|c: char| c == '.' || c == '^')
+      .rfind(['.', '^'])
       .map(|pos| &label[pos + 1..])
       .unwrap_or(label);
     (Some(last.to_string()), Some(label.to_string()))

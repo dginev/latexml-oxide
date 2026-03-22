@@ -221,7 +221,7 @@ pub fn list_apply(
   // Perl: comma-separated relational formulas (containing RELOP/multirelation) → "formulae"
   // Otherwise → "list"
   let meaning = if is_comma {
-    let left_rel = left.as_ref().map_or(false, is_relational_item);
+    let left_rel = left.as_ref().is_some_and(is_relational_item);
     let right_rel = is_relational_item(&right);
     if left_rel && right_rel { "formulae" } else { "list" }
   } else {
@@ -235,13 +235,13 @@ pub fn list_apply(
 /// This prevents `1<x<10,2<y<20` from being parsed as `1 < x < list(10,2) < y < ...`.
 pub fn formula_list_apply(
   rule_id: i32,
-  mut args: Vec<Option<XM>>,
+  args: Vec<Option<XM>>,
   p: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   // Check if ANY of the items contain relations — if so, reject this parse
   // so Marpa falls back to the statement-level comma separation.
-  let has_relational = args.iter().any(|a| a.as_ref().map_or(false, is_relational_item));
+  let has_relational = args.iter().any(|a| a.as_ref().is_some_and(is_relational_item));
   if has_relational {
     return Err("formula_list_apply: items contain relations, use statement-level list".into());
   }
@@ -252,7 +252,7 @@ pub fn formula_list_apply(
         if props.meaning.as_deref() == Some("list") {
           // Check if any list item is relational
           for arg in &op_args.0 {
-            if arg.as_ref().map_or(false, is_relational_item) {
+            if arg.as_ref().is_some_and(is_relational_item) {
               return Err(
                 "formula_list_apply: list contains relational items".into(),
               );
@@ -273,9 +273,9 @@ fn is_relational_item(xm: &XM) -> bool {
     XM::Apply(ref op, _, _, _) => match &*op.0 {
       XM::Token(ref props, _) => {
         props.meaning.as_deref() == Some("multirelation")
-          || props.role.as_deref().map_or(false, |r| r.contains("RELOP"))
+          || props.role.as_deref().is_some_and(|r| r.contains("RELOP"))
       },
-      XM::Lexeme(ref lex, _) => lex.split(':').next().map_or(false, |r| r.contains("RELOP")),
+      XM::Lexeme(ref lex, _) => lex.split(':').next().is_some_and(|r| r.contains("RELOP")),
       _ => false,
     },
     _ => false,
@@ -286,7 +286,7 @@ fn is_relational_item(xm: &XM) -> bool {
 /// Smart list/formulae: use "formulae" for comma-separated statements, "list" otherwise.
 /// Perl: Formulae = Statement (',' Statement)* produces meaning="formulae"
 /// but \quad-separated items produce meaning="list".
-pub fn formulae_apply(
+pub fn _formulae_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
@@ -591,10 +591,10 @@ pub fn diffop_apply(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   // Check that the first token is literally "d"
-  let is_d = args.first().and_then(|a| a.as_ref()).map_or(false, |xm| {
+  let is_d = args.first().and_then(|a| a.as_ref()).is_some_and(|xm| {
     match xm {
       XM::Token(props, _) => props.content.as_deref() == Some("d"),
-      XM::Lexeme(lex, _) => lex.split(':').nth(1).map_or(false, |v| v == "d"),
+      XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("d"),
       _ => false,
     }
   });
@@ -620,10 +620,12 @@ pub fn diffop_apply(
     Some(XM::Lexeme(lex, meta)) => {
       // Lexeme from Marpa: create a new Token with DIFFOP annotation
       // Preserve the original lexeme reference for into_xmath node lookup
-      let mut props = XProps::default();
-      props.content = Some(Cow::Borrowed("d"));
-      props.role = Some(Cow::Borrowed("DIFFOP"));
-      props.meaning = Some(Cow::Borrowed("differential-d"));
+      let mut props = XProps {
+        content: Some(Cow::Borrowed("d")),
+        role: Some(Cow::Borrowed("DIFFOP")),
+        meaning: Some(Cow::Borrowed("differential-d")),
+        ..XProps::default()
+      };
       // Store original lexeme id in _xmkey for node reference
       props.xmkey = lex.split(':').nth(2).map(|s| Cow::Owned(s.to_string()));
       Some(XM::Token(props, meta))
@@ -1310,7 +1312,7 @@ pub fn apply_invisible_times(
   let mut r_frac = is_fracop(&right);
   // Also check via nodes: if right is a Lexeme pointing to a DOM node with FRACOP inside
   if l_num && !r_frac {
-    if let Some(XM::Lexeme(ref lex, ref meta)) = right {
+    if let Some(XM::Lexeme(ref _lex, ref meta)) = right {
       // Use curry_level to find the node — it encodes the node position
       if let Some(ref cv) = meta.curry_level {
         let cv_str = cv.to_string();
@@ -1517,10 +1519,7 @@ fn maybe_mark_possible_function(left: &mut Option<XM>, right: &Option<XM>, nodes
     return;
   }
   // Check if right side contains delimiters (parenthesized group)
-  let right_has_delimiters = match right {
-    Some(XM::Dual(..)) | Some(XM::Wrap(..)) => true,
-    _ => false,
-  };
+  let right_has_delimiters = matches!(right, Some(XM::Dual(..)) | Some(XM::Wrap(..)));
   if !right_has_delimiters {
     return;
   }
@@ -1530,21 +1529,17 @@ fn maybe_mark_possible_function(left: &mut Option<XM>, right: &Option<XM>, nodes
 
 fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
   match xm {
-    Some(XM::Token(ref mut props, _)) => {
-      if props.role.as_deref() == Some("UNKNOWN") {
-        props.possible_function = Some(Cow::Borrowed("yes"));
-      }
+    Some(XM::Token(ref mut props, _)) if props.role.as_deref() == Some("UNKNOWN") => {
+      props.possible_function = Some(Cow::Borrowed("yes"));
     },
-    Some(XM::Lexeme(ref lex, _)) => {
+    Some(XM::Lexeme(ref lex, _)) if lex.starts_with("UNKNOWN:") => {
       // Lexemes are "ROLE:content:id" references to XML nodes.
       // Set the attribute directly on the underlying XML node.
-      if lex.starts_with("UNKNOWN:") {
-        if let Some(id_str) = lex.split(':').next_back() {
-          if let Ok(id) = id_str.parse::<usize>() {
-            if id > 0 && id <= nodes.len() {
-              let mut node = nodes[id - 1].clone();
-              let _ = node.set_attribute("possibleFunction", "yes");
-            }
+      if let Some(id_str) = lex.split(':').next_back() {
+        if let Ok(id) = id_str.parse::<usize>() {
+          if id > 0 && id <= nodes.len() {
+            let mut node = nodes[id - 1].clone();
+            let _ = node.set_attribute("possibleFunction", "yes");
           }
         }
       }
@@ -1563,7 +1558,7 @@ fn is_integer_number(xm: &Option<XM>) -> bool {
   match xm {
     Some(XM::Token(props, _)) => {
       props.role.as_deref() == Some("NUMBER")
-        && props.meaning.as_ref().map_or(true, |m| !m.contains('.'))
+        && props.meaning.as_ref().is_none_or(|m| !m.contains('.'))
     },
     Some(XM::Lexeme(lex, _)) => {
       lex.starts_with("NUMBER:") && !lex.contains('.')
@@ -1681,9 +1676,9 @@ pub fn vertbar_modifier(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  ctxt: ActionContext,
+  _ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => left, vertbar, right);
+  unp!(args => left, _vertbar, right);
   // Morph the VERTBAR to MODIFIEROP with meaning="conditional"
   // Use text default font (not math italic) — Perl MorphVertbar produces unfonted |
   let modop = XProps {

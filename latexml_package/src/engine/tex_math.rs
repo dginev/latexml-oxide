@@ -785,8 +785,8 @@ LoadDefinitions!({
             let role = kv.get_value("role").map(ToString::to_string);
             let meaning = kv.get_value("meaning").map(ToString::to_string);
             let thickness = kv.get_value("thickness").map(ToString::to_string);
-            let left_val = kv.get_value("left").map(|v| v.clone());
-            let right_val = kv.get_value("right").map(|v| v.clone());
+            let left_val = kv.get_value("left").cloned();
+            let right_val = kv.get_value("right").cloned();
             let has_left = left_val.is_some();
             let has_right = right_val.is_some();
             (role, meaning, thickness, has_left, has_right, left_val, right_val)
@@ -816,7 +816,7 @@ LoadDefinitions!({
               } else if s.ends_with("right") && s.starts_with('\\') {
                 new_tokens.push(T_CS!("\\@right"));
               } else {
-                new_tokens.push(tok.clone());
+                new_tokens.push(*tok);
               }
             }
             let d = stomach::digest(Tokens::new(new_tokens))?;
@@ -845,9 +845,9 @@ LoadDefinitions!({
       };
 
       // Grab the numerator (already digested content)
-      let mut top = stomach::regurgitate();
+      let top = stomach::regurgitate();
       // Perl: adjustMathstyle($style, {}, @top) — retroactively adjust font sizes
-      adjust_mathstyle(&style, &mut top);
+      adjust_mathstyle(&style, &top);
 
       // Set fraction font for denominator
       merge_font(Font { fraction: Some(true), ..Font::default() });

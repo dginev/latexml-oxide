@@ -1260,7 +1260,6 @@ pub fn def_environment(
     sizer: infer_sizer(bare_sizer.as_ref(), bare_reversion.as_ref()),
     reversion: bare_reversion,
     alias: bare_alias,
-    ..Constructor::default()
   });
   install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);
