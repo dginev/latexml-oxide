@@ -49,7 +49,6 @@ fn functions_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn kludge_test() {
   latexml_test_single("tests/parse/kludge.tex", "kludge", DIR, None, None);
 }
@@ -75,7 +74,6 @@ fn nested_application_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn operators_test() {
   latexml_test_single("tests/parse/operators.tex", "operators", DIR, None, None);
 }

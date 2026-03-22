@@ -175,12 +175,12 @@
                     <XMRef idref="S1.Ex4.m1.1"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="ID" xml:id="S1.Ex4.m1.1">x</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.1">x</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
                   <XMTok font="italic" role="ID">d</XMTok>
-                  <XMTok font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -208,12 +208,12 @@
                     <XMRef idref="S1.Ex5.m1.1"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="ID" xml:id="S1.Ex5.m1.1">x</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.1">x</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok role="ID">x</XMTok>
+                  <XMTok role="UNKNOWN">x</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -227,17 +227,17 @@
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMApp>
                 <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                <XMTok role="ID">u</XMTok>
+                <XMTok role="UNKNOWN">u</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok role="ID">x</XMTok>
+                  <XMTok role="UNKNOWN">x</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok role="ID">y</XMTok>
+                  <XMTok role="UNKNOWN">y</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -399,7 +399,7 @@
             <XMTok name="nabla" role="OPERATOR">∇</XMTok>
             <XMTok role="VERTBAR" stretchy="false">|</XMTok>
             <XMApp role="POSTSUPERSCRIPT" scriptpos="1">
-              <XMTok font="italic" fontsize="70%" name="alpha" role="ID">α</XMTok>
+              <XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok>
             </XMApp>
             <XMTok font="italic" role="FUNCTION">f</XMTok>
           </XMath>
@@ -419,11 +419,11 @@
         <Math class="ltx_math_unparsed" mode="display" tex="\exists x.P(x)" xml:id="S4.Ex15.m1">
           <XMath>
             <XMTok meaning="exists" role="BIGOP">∃</XMTok>
-            <XMTok font="italic" role="ID">x</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
             <XMTok role="PERIOD">.</XMTok>
-            <XMTok font="italic" role="ID">P</XMTok>
+            <XMTok font="italic" role="UNKNOWN">P</XMTok>
             <XMTok role="OPEN" stretchy="false">(</XMTok>
-            <XMTok font="italic" role="ID">x</XMTok>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
             <XMTok role="CLOSE" stretchy="false">)</XMTok>
           </XMath>
         </Math>
