@@ -1,7 +1,8 @@
 use crate::prelude::*;
 LoadDefinitions!({
-  TeX!(
-    r"
+  // RawTeX! (not TeX!) because \etb@catcodes etc. need @ as letter at runtime.
+  // TeX! tokenizes at compile time with @ = OTHER, breaking \etb@catcodes into \etb + @catcodes.
+  RawTeX!(r"
 \def\etb@catcodes{\do\&\do\|\do\:\do\-\do\=\do\<\do\>}
 \def\do#1{\catcode\number`#1=\the\catcode`#1\relax}
 \edef\etb@catcodes{\etb@catcodes}
@@ -20,8 +21,7 @@ LoadDefinitions!({
 \protected\def\etb@warning{\PackageWarning{etoolbox}}
 \protected\def\etb@info{\PackageInfo{etoolbox}}
 \newcount\etb@tempcnta
-"
-  );
+");
 
   DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   if !is_definable(&cs) {
