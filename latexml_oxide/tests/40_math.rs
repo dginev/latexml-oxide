@@ -53,7 +53,6 @@ fn compact_dual_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: many undefined commands
 fn declare_test() {
   latexml_test_single("tests/math/declare.tex", "declare", DIR, None, None);
 }
@@ -74,7 +73,6 @@ fn not_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn sampler_test() {
   latexml_test_single("tests/math/sampler.tex", "sampler", DIR, None, None);
 }
@@ -91,7 +89,6 @@ fn testover_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn testscripts_test() {
   latexml_test_single("tests/math/testscripts.tex", "testscripts", DIR, None, None);
 }
