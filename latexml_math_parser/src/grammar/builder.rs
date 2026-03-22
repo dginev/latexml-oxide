@@ -245,6 +245,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // \log x => log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
     tight_term += opfunction tight_term => prefix_apply;
     tight_term += opfunction factor => prefix_apply;
+    // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi)
+    // Note: trigfunction tight_term already in compound_operator, can't duplicate.
+    tight_term += trigfunction factor => prefix_apply;
+    tight_term += trigfunction fenced_factor => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
     // Uses existing `unknown` terminal; semantic action checks text is literally "d".
     // At factor level so it can appear as right operand of invisible_times.
