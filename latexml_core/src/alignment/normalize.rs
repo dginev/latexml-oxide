@@ -1,6 +1,8 @@
 use super::Alignment;
+use super::cell::Cell;
 use super::template::Align;
 use crate::BoxOps;
+use crate::Tokens;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::store::Stored;
@@ -251,8 +253,17 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
     let next = if i + 1 < nrows { Some(&init_rows[i + 1]) } else { None };
     let mut prunable = true;
     let mut check_bracketting = false;
+    let is_pseudo = row.is_pseudo();
     for c in row.get_columns().iter() {
       if c.skippable && !c.empty {
+        check_bracketting = true;
+      }
+      // Perl: cells with lspaces (from \lx@intercol) have fullw > 0, making them
+      // empty=false but skippable=true. Rust doesn't populate lspaces from template,
+      // so we check template tokens directly: if before/after has \lx@intercol AND
+      // this is not a pseudorow (\hline creates pseudorows which should always be prunable),
+      // treat as "non-empty" for bracketting purposes.
+      if c.skippable && c.empty && !is_pseudo && cell_has_intercol(c) {
         check_bracketting = true;
       }
       if !c.skippable {
@@ -260,10 +271,19 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
       }
     }
     if prunable && check_bracketting {
-      let has_top = row
+      // Check for top borders: include borders from preceding prunable rows
+      // that would be transferred during the second pass (matching Perl's
+      // single-pass where pseudorow borders are already merged).
+      let mut has_top = row
         .get_columns()
         .iter()
         .any(|c| c.border.contains('t') || c.border.contains('T'));
+      if !has_top && i > 0 && !keep[i - 1] {
+        has_top = init_rows[i - 1]
+          .get_columns()
+          .iter()
+          .any(|c| c.border.contains('t') || c.border.contains('T'));
+      }
       if has_top {
         if let Some(next_row) = next {
           let next_has_top = next_row
@@ -414,6 +434,26 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
   alignment.rows = filtered;
   Ok(())
 }
+
+/// Check if a cell has \lx@intercol in its before or after template tokens.
+/// In Perl, \lx@intercol presence means lspaces/rspaces are populated with
+/// intercolumn glue (tabcolsep), making fullw > 0 even for empty cells.
+/// Rust doesn't populate lspaces from template, so we check tokens directly.
+fn cell_has_intercol(cell: &Cell) -> bool {
+  fn has_intercol(tokens: &Option<Tokens>) -> bool {
+    if let Some(ref toks) = tokens {
+      for tok in toks.unlist_ref() {
+        let s = tok.to_string();
+        if s == "\\lx@intercol" || s.contains("intercol") {
+          return true;
+        }
+      }
+    }
+    false
+  }
+  has_intercol(&cell.before) || has_intercol(&cell.after)
+}
+
 /// Scan for and remove empty columns
 /// but copying borders and adjusting rowspan's & colspan's appropriately.
 /// Perl: normalize_prune_columns (Alignment.pm L801-857)
