@@ -233,12 +233,28 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-21)
+## Test Suite Status (2026-03-22)
 
 **Current totals: 258 pass, 0 fail, 63 ignored test functions (321 total)**
 **Coverage: 82% pass rate (258/297 non-permanent-ignore tests)**
 
-**Recent fixes (2026-03-22, session 21):**
+**Ignored test breakdown (63 total):**
+- **17 permanently blocked**: tikz (10), DTD ns1-5 (5), moderncv (2) — need major infrastructure
+- **20 math parser grammar**: scripts, operators, relations, parens, functions, calculus, kludge, artefacts, qm, array_math_parse (70_parse: 14), ambiguous_relations, declare, sampler, simplemath, testscripts (40_math: 5), ntheorem (1)
+- **7 missing packages**: physics, siunitx, expl3 (2), beamer, xy, graphpap, acmart
+- **6 alignment/structure**: cells (6 font metric diffs), split (101 xml:id diffs), array (127), diagboxtest (267), ncases (1048), listing (2032)
+- **5 other**: mathtools (Marpa perf timeout), babel (hang), plainfonts (77 math diffs), ieee (977), figure_mixed_content (877)
+- **2 stmaryrd** (1134) + **graphrot** (239 — content renders but dimension diffs)
+
+**Key findings from sessions 20-25:**
+- Perl's `equationgroupJoinCols` has NO pre-advancement (confirmed from Perl source L970-980). The xml:id m2-vs-m3 difference must come from ID counter initialization or Math element creation order.
+- `.latexml` files need Rust `*_src.rs` equivalents (can't interpret Perl at runtime). Convention: `simplemath_src.rs` in `latexml_contrib`, dispatched by document base name.
+- `role="ID"` in Rust expected XMLs comes from post-finalize UNKNOWN→ID conversion (compensating for missing `.latexml` DefMathRewrite rules). Perl core produces UNKNOWN; test XMLs get ID from `.latexml` files.
+- `MATHPARSER_SPECULATE` enables `unknown(args)` → function application. Needs to be set before digestion for math parser to use it.
+- `finalize_rec` iterative rewrite eliminated all stack overflow risks for any DOM depth.
+- DefEnvironment bare `\name` form now gets all hooks (after_digest_body, after_construct, sizer, etc.).
+
+**Recent fixes (2026-03-22, sessions 21-25):**
 - **finalize_rec iterative rewrite**: Converted from recursive to iterative with heap work-stack. Fixes SEGFAULT for nested hboxes. Deferred font wrapper collapse to post-traversal.
 - **Figure panel breaks**: `<break class="ltx_break"/>` between `<p>` panels in figures.
 - **\includegraphics candidates**: graphics.sty uses image_candidates + .png default extension. **vmode_test now PASSES** (was SEGFAULT).
@@ -447,7 +463,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
-- [ ] **25. cells_test** (53_alignment) — 14 diffs (was 85, 102, 282, 300, 548, 780). Row pruning fix (check_bracketting for intercol cells, border inheritance from pruned rows). Remaining: ltx_nopad_l on makecell inner tabulars (8, cell.before=None), rotation dimensions (3), diaghead dimensions (3).
+- [ ] **25. cells_test** (53_alignment) — 6 diffs (was 14, 85, 102, 282, 300, 548, 780). Session 20-21: row pruning, ltx_nopad_l first-column guard, bare env hooks (rotation now computed), diaghead tex=/xml:id. Remaining 6: all font metric differences (cmbx10 bold width 78pt vs Perl 90pt for "Second multilined").
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 10 diffs (was 25, 127, 596). Session 20: guessHeaders transparent containers (classify through inline-block/p). Remaining: rotation dimensions (3), scalebox body width (2), missing 4th+ tables (5 — rotatebox content issue).
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
