@@ -160,15 +160,16 @@ impl MathParser {
     // R → B → O → T → GReady. Use "NUMBER:1:1 " which is a valid single-token formula.
     match engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 "))) {
       Ok(_) => { self.engine = engine; },
-      Err(e) => {
-        eprintln!("RESET FAILED: {e}");
-        // If the trivial parse also fails, rebuild from scratch
+      Err(_e) => {
+        // Cloned grammar is in bad state — rebuild from scratch.
+        // Cache the fresh grammar for future resets to avoid repeated init_grammar() calls.
         let (grammar, _actions, _builder) = init_grammar().unwrap();
         let thin_grammar = grammar.unwrap();
         self.grammar = thin_grammar.clone();
-        self.engine = Parser::with_grammar(thin_grammar);
-        // Now run the trivial parse to get past precompute
-        let _ = self.engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")));
+        let mut fresh_engine = Parser::with_grammar(thin_grammar);
+        // Advance past precompute with trivial parse
+        let _ = fresh_engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")));
+        self.engine = fresh_engine;
       }
     }
   }
