@@ -1,7 +1,15 @@
 // Math tests — individually listed for per-test #[ignore] support.
+use std::rc::Rc;
+
 use latexml::util::test::*;
+use latexml_core::common::error::Result;
 
 const DIR: &str = "tests/math";
+
+/// Dispatcher for math test source-level bindings (*_src.rs)
+pub fn math_tests_dispatch(filename: &str) -> Option<Result<()>> {
+  latexml_contrib::dispatch(filename)
+}
 
 #[test]
 #[ignore] // text= attr diffs: math parser
@@ -62,9 +70,9 @@ fn sampler_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
+#[ignore] // text= attr diffs: math parser (needs scoped rewrites for full match)
 fn simplemath_test() {
-  latexml_test_single("tests/math/simplemath.tex", "simplemath", DIR, None, None);
+  latexml_test_single("tests/math/simplemath.tex", "simplemath", DIR, None, Some(Rc::new(math_tests_dispatch)));
 }
 
 #[test]

@@ -156,6 +156,7 @@ macro_rules! DefRewrite {
   }};
 }
 
+#[macro_export]
 macro_rules! DefMathRewrite {
   ($($input:tt)+) => {{
     let rewrite_options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
