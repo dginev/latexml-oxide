@@ -740,6 +740,11 @@ LoadDefinitions!({
   // Perl walks all Box/List/Whatsit children and shifts mathstyle using
   // mathstyle_adjust_map. Skipped for now; cosmetic effect only.
 
+  // \lx@delimiterdot — empty delimiter hint (replacement for "." in \left. / \right.)
+  DefConstructor!("\\lx@delimiterdot", "<ltx:XMHint/>",
+    alias => ".",
+    properties => { stored_map!("hint" => true) });
+
   // \lx@left/\lx@right: like \left/\right but without extra grouping.
   // Perl uses TeXDelimiter param type; we alias to \@left/\@right for now.
   Let!("\\lx@left", "\\@left");
