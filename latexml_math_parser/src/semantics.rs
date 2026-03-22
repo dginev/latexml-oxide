@@ -556,6 +556,10 @@ pub fn postfix_modifier_apply(
 /// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
 /// only parsed as function application when speculation is active. Without speculation,
 /// this parse is pruned and Marpa falls back to `tight_term factor => invisible_times`.
+///
+/// MATHPARSER_SPECULATE is enabled by:
+/// - \usepackage[mathparserspeculate]{latexml}
+/// - .latexml files that declare FUNCTION roles (auto-enabled by loader)
 pub fn speculative_prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
