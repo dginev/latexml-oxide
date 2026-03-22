@@ -263,10 +263,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | open close => empty_fenced;
     factor += fenced_factor;
 
-    // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
+    // UNKNOWN followed by fenced args => function application (Perl: doubtArgs/maybeArgs)
     // f(x) => f@(x), g(a+b) => g@(a+b). Only active when MATHPARSER_SPECULATE is set.
     // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
+    // NOTE: ID tokens are multiplicative atoms — NEVER prefix-apply. Only UNKNOWN
+    // tokens get speculative function application. ID always uses invisible-times.
     tight_term += unknown fenced_factor => speculative_prefix_apply;
+    // FUNCTION followed by fenced args => function application (Perl: addArgs/addEasyArgs)
+    // f(x) => f@(x) when f has role=FUNCTION (from DefMathRewrite or \lxDeclare).
+    // Always treated as application — FUNCTION role is an explicit declaration.
+    tight_term += function fenced_factor => prefix_apply;
     // OPFUNCTION followed by fenced args => function application
     // \operatorname{cov}(L) => cov@(L). Always treated as application, not multiplication.
     tight_term += opfunction fenced_factor => prefix_apply;

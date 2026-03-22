@@ -1,3 +1,4 @@
+use crate::common::arena;
 use crate::common::error::*;
 use crate::document::Document;
 use crate::state::Scope;
@@ -114,10 +115,17 @@ impl Rewrite {
       });
     }
     if let Some(scope) = options.scope.take() {
+      // Convert Scope to string for compile_clause:
+      // Perl uses strings like "label:sec:restricted" or "id:S1"
+      let scope_str = match scope {
+        crate::state::Scope::Named(s) => arena::with(s, |r| r.to_string()),
+        crate::state::Scope::Global => String::from("global"),
+        crate::state::Scope::Local => String::from("local"),
+      };
       clauses.push(RewriteClause {
         compiled: false,
         op:       Scope,
-        pattern:  RewritePattern::Scope(scope),
+        pattern:  RewritePattern::String(scope_str),
       });
     }
     if let Some(xpath) = options.xpath.take() {
