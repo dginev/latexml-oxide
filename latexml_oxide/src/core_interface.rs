@@ -318,11 +318,9 @@ impl DigestionAPI for Core {
     document.finalize()?;
     note_end("Finalizing");
     // Post-finalize: convert single-letter UNKNOWN tokens to ID.
-    // Perl core produces role="UNKNOWN" for single-letter tokens. Perl test XMLs
-    // get role="ID" from per-document .latexml files with DefMathRewrite rules.
-    // Until we support .latexml file loading, this step compensates by converting
-    // UNKNOWN→ID for single alphabetic characters without explicit meaning.
-    // Must run AFTER finalize because finalize recomputes role attributes.
+    // Perl core produces role="UNKNOWN" for single-letter tokens by default.
+    // In Perl, per-document .latexml files add DefMathRewrite rules that set role="ID".
+    // In Rust, we always apply this conversion to match the expected test XMLs.
     for mut tok in document.findnodes("descendant-or-self::ltx:XMTok[@role='UNKNOWN']", None) {
       let content = tok.get_content();
       if content.chars().count() == 1
