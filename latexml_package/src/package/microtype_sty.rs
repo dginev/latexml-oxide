@@ -1,0 +1,23 @@
+//! microtype.sty — microtypography (no-op in LaTeXML)
+//! Perl: microtype.sty.ltxml
+use crate::prelude::*;
+
+LoadDefinitions!({
+  RequirePackage!("etoolbox");
+
+  // All microtypography macros are no-ops
+  DefMacro!("\\microtypesetup{}", None);
+  DefMacro!("\\DeclareMicrotypeSet OptionalMatch:* {}{}", None);
+  DefMacro!("\\DeclareMicrotypeSetDefault{}", None);
+  DefMacro!("\\DeclareMicrotypeAlias{}{}", None);
+  DefMacro!("\\SetProtrusion OptionalMatch:* {}{}", None);
+  DefMacro!("\\SetTracking OptionalMatch:* {}{}", None);
+  DefMacro!("\\SetExpansion OptionalMatch:* {}{}", None);
+  DefMacro!("\\DisableLigatures OptionalMatch:* {}", None);
+  DefMacro!("\\SetExtraKerning OptionalMatch:* {}{}", None);
+  DefMacro!("\\SetExtraSpacing OptionalMatch:* {}{}", None);
+  // \textls passes through #3 (the body)
+  DefMacro!("\\textls OptionalMatch:* []{}", "#3");
+  DefMacro!("\\lsstyle", None);
+  DefMacro!("\\lslig{}", "#1");
+});

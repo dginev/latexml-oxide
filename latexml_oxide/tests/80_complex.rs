@@ -61,7 +61,6 @@ fn equationnest_test() { complex("equationnest"); }
 fn aastex631_deluxetable_test() { complex("aastex631_deluxetable"); }
 
 #[test]
-#[ignore] // needs acmart.cls binding
 fn acm_aria_test() { complex("acm_aria"); }
 
 #[test]
