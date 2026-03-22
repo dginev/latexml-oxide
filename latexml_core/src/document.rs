@@ -647,7 +647,14 @@ impl Document {
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
-      self.node.add_prev_sibling(&mut pi_node)?;
+      // Perl: insertPI always places PIs before the root element.
+      // Find the document root and insert before it.
+      let doc_node = self.document.clone();
+      if let Some(mut root) = doc_node.get_root_element() {
+        root.add_prev_sibling(&mut pi_node)?;
+      } else {
+        self.node.add_prev_sibling(&mut pi_node)?;
+      }
     }
     Ok(())
   }
