@@ -128,7 +128,6 @@ fn badeqnarray_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn array_test() {
   latexml_test_single("tests/alignment/array.tex", "array", DIR, None, None);
 }

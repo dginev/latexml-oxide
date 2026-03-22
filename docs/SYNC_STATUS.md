@@ -228,7 +228,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | caption.sty | MINOR | Stub-level: captionsetup, Declare* macros, registers. Missing: KeyVals, CAPTION_ value storage. |
 | remreset.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
 | chngcntr.sty | OK | Empty stub (obsolete, macros moved to LaTeX core). |
-| listings.sty | GAPS | Core infrastructure ported: `lstActivate`, `\@listings@inline`, `\lstdefinelanguage`, `\@listingGroup`, `\@listingKeyword`, `lstClassBegin/End`, language loading (lstlang0-3). Fixed: `lstAddDelimiter` style parameter processing ("commentstyle"→"comments" class chain), delimiter font scoping (delim chars outside `\itshape` scope). Remaining: index generation (`lst@@index`), `literate` key, `extendedchars`, listing_test blocked by math parser (mathescape XMDual diffs, 2062 lines). |
+| listings.sty | GAPS | Core infrastructure ported: `lstActivate`, `\@listings@inline`, `\lstdefinelanguage`, `\@listingGroup`, `\@listingKeyword`, `lstClassBegin/End`, language loading (lstlang0-3). Fixed: `lstAddDelimiter` style parameter processing ("commentstyle"→"comments" class chain), delimiter font scoping (delim chars outside `\itshape` scope). Fixed: `\lstMakeShortInline`/`\lstDeleteShortInline` now save/restore original catcode (was always restoring to OTHER, breaking `^` as superscript after delete). Remaining: index generation (`lst@@index`), `literate` key, `extendedchars`, `directivestyle`/`stringstyle` color propagation, `title=`/`caption=` elements in display listings, math in listings (mathescape/texcl). listing_test: 2032→1660 diffs. |
 | ntheorem.sty | GAPS | Framing constructors (`\lx@addframing`, `\lx@@snapshot@framing`) ported. Missing: `\colorbox` (needs xcolor port) for shaded theorems, `backgroundcolor` attribute. |
 
 ---
@@ -429,7 +429,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-22):** 266 pass, 0 fail, 55 ignored (321 total). Session 27: Floating pre-script grammar (prescripted_bigop, prefix_script_pre). Applied function chaining (sin x cos y). Operator script content (Na^+ fix). Tests: sideset (213→0), kludge (36→0) PASS. operators.xml reverted to Perl ground truth (needs \\lxDeclare).
+**Status (2026-03-22):** 270 pass, 0 fail, 51 ignored (321 total). Session 30: +2 tests: standalone_modifiers_test (79→0) PASS, acm_aria_test (3→0) PASS. XMDual for apply_delimited. Modifier binding at expression level. Parenthesized modifier expressions. Fixed amsmath \\pmod override. Full acmart.cls port (11 deps: geometry, microtype, setspace, newtxmath, balance, ifxetex, ifluatex, ifpdf, txfonts, ifthen, refcount). xmlns namespace declarations on root element. Bigop absorption pruning (calculus 368→331). ifthen noltxml passthrough fix (reloadable+extension). ncases class fix. listing catcode fix (2032→1660). plainfonts_test (77→0) PASS via consecutive_relop_chain grammar rule.
 
 ### Completed items
 
@@ -513,7 +513,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 **Remaining — Missing package bindings (faithful ports needed):**
 - [x] B1. diagbox.sty — DONE. Full port with afterConstruct DOM, slashbox compat, shortstack fix.
 - [ ] B2. Split/gather `$` mode: alignment depth guard (Perl #2775 ported but split still times out). Blocks split_test.
-- [ ] B3. listings math: listings code blocks with math expressions. Blocks listing_test (2032 diffs).
+- [ ] B3. listings math: listings code blocks with math expressions. Blocks listing_test (1660 diffs after shorthand catcode fix).
 
 **Session 26 new ports:**
 - icml_support.sty (icml2016/icml2017 version aliases)
@@ -523,12 +523,17 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - sidewaystable/sidewaysfigure full hooks (beforeFloat, afterFloat, rotatedPage, rotatedProperties)
 
 **Remaining — Math parser faithful translation gaps:**
+- [x] C0. **XMDual/XMWrap for function application**: DONE for `function lparen formula rparen => apply_delimited`. Uses `create_xmrefs` with `_xmkey` deferred resolution. Content: `Apply(XMRef(func), XMRef(arg))`, Presentation: `Apply(func, XMWrap(open, arg, close))`. Note: opfunction/trigfunction rules with XMDual worsened parens_test/operators_test (structure mismatch with Perl's compact_xmdual), so kept as simple prefix_apply for now.
+- [x] C0b. **Modifier binding level**: DONE. Moved `formula modifier => postfix_modifier_apply` to expression level.
+- [x] C0c. **Parenthesized modifier expressions**: DONE. Added `expression lparen relop/modifierop expression rparen => annotated_fenced_modifier`.
+- [x] C0d. **\\pmod override removed**: DONE. Removed amsmath_sty.rs duplicate \\pmod/\\bmod definitions (Perl doesn't redefine them in amsmath).
 - [ ] C1. Empty XMRef idref: premature id generation during grammar actions conflicts with DOM installation. Needs architectural fix.
 - [ ] C2. Font specialize for parser tokens: `_font` not fully specialized for operator symbols in nested script contexts.
 - [ ] C3. Scripted operators: `\mathop{\mathop{A}\limits_{B}}\limits^{C}` produces different structure (XMWrap vs XMApp with scriptpos differences).
 - [ ] C4. ltx_nopad_l on @{}l@{} columns: Perl doesn't add ltx_nopad_l, Rust does. Subtle lspaces difference.
+- [ ] C5. Multi-token match rewrites: `f_D` → DIFFOP, `\hat{f}` → ID, `f_\WildCard` → ID. Current XPath rewrite only matches single XMTok. Blocks: simplemath (f_D, f_1 parse failures).
 
-### Remaining 60 ignored tests breakdown:
+### Remaining 55 ignored tests breakdown:
 
 **Permanently blocked (5):** DTD namespace ns1–ns5. Rust only supports RelaxNG schemas.
 
@@ -544,34 +549,51 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - siunitx: 1 test — needs siunitx.sty port
 - acmart: 1 test — needs acmart.cls port
 
-**Math parser grammar (19):** All need grammar rule additions.
-- 70_parse: 13 tests (scripts, qm, standalone_modifiers, artefacts, functions, calculus, relations, operators, parens, vertbars, kludge, array_math_parse, function_argument_syntax)
-- 40_math: 5 tests (ambiguous_relations 101, declare 867, sampler 1631, simplemath 130, testscripts 61)
-- 53_alignment/plainmath: 1 test (320 diffs)
-- Key patterns needed: trig bare args, annotated@, integral scoping, METARELOP prefix, floating scripts
+**Math parser grammar (12), sorted by diffs:** (kludge, sideset, standalone_modifiers already DONE)
+- function_argument_syntax 38 — **CLOSEST**: trig argument scoping only (sin absorbs too narrowly across \\times)
+- simplemath 89 — f(123) XMDual now works. `f_D f(a+b)` parse failure remains (multi-token rewrites)
+- ambiguous_relations 102 — XMDual + parse structure diffs
+- array_math_parse 220
+- relations 260
+- scripts 301 — pre-script ordering, prime combining, empty XMRef, trailing punct XMDual
+- artefacts 333
+- calculus 368 — dominated by bigop argument absorption (bigop should eat full term, not just tight_term)
+- qm 400
+- operators 422 — needs \\lxDeclare for role=ID rewrites per .latexml file
+- vertbars 464
+- functions 329 — improved from 481 via XMDual apply_delimited
+- parens 510 — XMDual structure mismatch with Perl's compact form
 
-**Structural/package (14):** Need deep code changes.
-- 22_fonts: plainfonts 77 (math cascade), stmaryrd 1134 (XMDual)
-- 50_structure: ieee 977 (equation numbering + math)
-- 53_alignment: listing 2032 (mathescape), ncases 1048 (cases math), array 127, split timeout
-- 55_theorem: ntheorem 1358
-- 56_ams: cd 221 (XMCell), sideset 213 (floating scripts), mathtools timeout
+**Key infrastructure blockers for math tests:**
+1. **XMDual/XMWrap for function application** — DONE for `function(args)` pattern. For opfunction/trigfunction, XMDual produces structure mismatch with Perl's `compact_xmdual`; kept as prefix_apply. Need to port `compact_xmdual` fully before enabling XMDual for all function types.
+2. **Trig argument scoping** — `\sin \pi \times x` → Rust: `sin(pi)*x`, Perl: `sin(pi*x)`. Grammar's `applied_func` stops at MULOP boundaries. Legitimate ambiguity per user feedback — may need semantic pruning rather than grammar fix.
+3. **Bigop argument absorption** — `∫ x * y * dx` → Rust: `∫(x) * y * dx`, Perl: `∫(x*y*dx)`. The `any_bigop tight_term` rule only absorbs one tight_term. Perl's `addIntOpArgs` absorbs full multiplicative chain. Marpa ambiguity: both parses exist, need semantic ranking. Blocks: calculus, ntheorem (~1360 diffs cascade from one integral).
+4. **Multi-token match rewrites** — `f_D` → DIFFOP, `\hat{f}` → ID, `f_\WildCard` → ID. Current XPath rewrite only matches single XMTok elements. Blocks: simplemath (f_D, f_1 parse failures).
+
+**Structural/package (13):** Need deep code changes.
+- 22_fonts: plainfonts 78 (math cascade), stmaryrd 1135 (XMDual)
+- 50_structure: ieee 967 (equation numbering + math)
+- 53_alignment: listing 2032 (mathescape), ncases 1048 (cases math), plainmath 320, split timeout
+- 55_theorem: ntheorem 1399
+- 56_ams: cd 222 (XMCell), mathtools timeout
 - 65_graphics: picture 3125 (picture env), xytest TooManyErrors (xy.sty)
-- 80_complex: figure_mixed_content 868
+- 80_complex: figure_mixed_content 868, acm_aria SIGKILL (OOM/infinite loop — likely microtype package cascade)
 
 ### Math parser known limitations:
 
 - **`2\sin(x)` doesn't parse** — `tight_term factor` is left-recursive only; `\sin(x)` as a tight_term can't appear as right of invisible_times. Perl handles this. Pre-existing limitation.
 - **Division right-scoping** — `abc/de` = `(abc)/(de)` in Rust, `((abc)/d)*e` in Perl. Accepted as intentional: juxtaposition binds tighter than explicit `/`.
 - **`f∘sin x` composition scoping** — Rust: `compose(f, sin(x))`, Perl: `(compose(f, sin))(x)`. Both mathematically equivalent.
+- **Trig argument scoping** — `sin(π)×x` vs `sin(π×x)` is a legitimate semantic ambiguity (per user). NOT resolved at grammar level. Needs future semantic pruning based on context (invisible vs explicit MulOp, known constants).
+- **XMDual for function application** — Grammar correctly produces `Apply(f, 123)` but Perl emits `XMDual(Apply(XMRef(f), XMRef(123)), Apply(f, XMWrap((,123,))))`. The `_pxmkey` infrastructure exists but setting keys during grammar actions fails because nodes are detached before `into_xmath`. Keys must be set AFTER Lexeme materialization in `tree.rs`.
 
 ### Incomplete stubs requiring full implementation:
 
-- **\\sideset** (amsmath_sty.rs): Stub passes through base #3 only. Full Perl implementation (L1183-1234) needs sidesetWrap with individual pre/post sub/superscript handling, scriptpos calculation, and FLOATING detection.
+- **\\sideset** (amsmath_sty.rs): DONE. Floating pre-script grammar handles sideset patterns. Grammar rules: `prescripted_bigop`, `prefix_script_pre`, `scripted_factor_l2`.
 - **\\lx@equationgroup@subnumbering@begin/end** (latex_ch7_math_mode_environments.rs): DONE. Full counter save/restore with RefStepCounter, ResetCounter, \theequation redefinition.
 - **mathtools.sty** (mathtools_sty.rs): \\DeclarePairedDelimiter family, \\newtagform/\\renewtagform, \\newgathered, \\smashoperator all stubbed as DefMacro None. Full Perl implementations need runtime macro factory closures.
 - **\\lxDeclare** (latexml_sty.rs): Simplified post-hoc matching vs Perl's full DeclarationRewrite system with XPath patterns, scope limiting, afterConstruct hook. Mathcode-decoded and name-attribute matching added as workarounds.
-- **diagbox.sty** (diagbox_sty.rs): Stub with simple macros. Full Perl implementation (164 lines) has diagonal line drawing, SVG generation, width calculation.
+- **diagbox.sty** (diagbox_sty.rs): DONE. Full port with afterConstruct DOM, slashbox/backslashbox compat.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
 - [x] **41. aastex631_deluxetable_test** (80_complex) — DONE. Ported deluxetable.sty, Stored::Template, version-stripping dispatch.
 - [x] **42. aliceblog_test** (80_complex) — DONE. Passing after previous fixes.
