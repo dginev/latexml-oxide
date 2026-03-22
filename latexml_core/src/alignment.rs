@@ -522,8 +522,8 @@ impl BoxOps for Alignment {
         }
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
-        if let Some(align) = cell.align {
-          cell_attrs.insert(String::from("align"), align.name().to_owned());
+        if let Some(ref align) = cell.align {
+          cell_attrs.insert(String::from("align"), align.name());
         };
         if let Some(ref vattach) = cell.vattach {
           cell_attrs.insert(String::from("vattach"), vattach.clone());
@@ -1104,7 +1104,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
     for c in 0..cols.len() {
       let rs = cols[c].rowspan.unwrap_or(1);
       let cs = cols[c].colspan.unwrap_or(1);
-      let ca = cols[c].align;
+      let ca = cols[c].align.clone();
       let cc = cols[c].content_class;
       let cl = cols[c].content_length;
       let rb = cols[c].border_right;
@@ -1113,7 +1113,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
       let bb = cols[c].border_bottom;
       cols[c].border_bottom = Some(0);
       for row_reach in cols.iter_mut().take(c + cs).skip(c + 1) {
-        row_reach.align = ca;
+        row_reach.align = ca.clone();
         row_reach.content_class = cc;
         row_reach.content_length = cl;
       }

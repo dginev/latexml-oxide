@@ -12,13 +12,15 @@ use std::fmt::{self, Debug, Display};
 
 // ??
 pub type Row = Template;
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum Align {
   #[default]
   Left,
   Center,
   Right,
   Justify,
+  /// Perl: align => 'char:X' — decimal-aligned column (dcolumn.sty)
+  Char(String),
 }
 impl Align {
   pub fn char_code(&self) -> char {
@@ -27,14 +29,16 @@ impl Align {
       Align::Left => 'l',
       Align::Center => 'c',
       Align::Justify => 'p',
+      Align::Char(_) => 'c', // fallback for sizing
     }
   }
-  pub fn name(&self) -> &'static str {
+  pub fn name(&self) -> String {
     match self {
-      Align::Right => "right",
-      Align::Left => "left",
-      Align::Center => "center",
-      Align::Justify => "justify", // ?
+      Align::Right => "right".to_string(),
+      Align::Left => "left".to_string(),
+      Align::Center => "center".to_string(),
+      Align::Justify => "justify".to_string(),
+      Align::Char(ch) => format!("char:{ch}"),
     }
   }
 }

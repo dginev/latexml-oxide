@@ -839,7 +839,7 @@ pub fn extract_alignment_column(
         return Ok(Digested::default());
       }
     };
-    initial_align = colspec.align.unwrap_or(Align::Left);
+    initial_align = colspec.align.clone().unwrap_or(Align::Left);
     tabskip_clone = colspec.tabskip;
     is_omitted = colspec.omitted;
     old_border = colspec.border.clone();
@@ -1000,8 +1000,9 @@ pub fn extract_alignment_column(
   let in_thead = alignment.is_in_tabular_head();
   {
     let colspec = alignment.get_column(n0).unwrap();
+    let is_justify = align == Align::Justify;
     colspec.align = Some(align);
-    if align != Align::Justify {
+    if !is_justify {
       colspec.width = None;
     }
     let new_border = s!("{}{}", old_border, border);

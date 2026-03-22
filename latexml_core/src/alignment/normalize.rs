@@ -61,7 +61,7 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
     for cell in row.get_columns_mut() {
       if let Some(ref mut boxes) = &mut cell.boxes {
         let (w, mut h, mut d, cw, ch, cd) = boxes.get_size(Some(stored_map!(
-            "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
+            "align" => cell.align.as_ref().map(|a| a.char_code()), "width" => cell.width,
             "vattach" => cell.vattach.clone() )))?;
         let mut fullw = cw;
         // Perl L441-450: lspaces/rspaces size computation
@@ -814,7 +814,7 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
     let ncols = row.get_columns().len();
     for j in 0..ncols {
       let cell = &row.get_columns()[j];
-      let a = cell.align.unwrap_or(Align::Left);
+      let a = cell.align.clone().unwrap_or(Align::Left);
       let cached_width = cell.cached_width.unwrap_or_default().value_of();
       let colposx = colpos.get(j).copied().unwrap_or_default();
       let colwidth = colwidths.get(j).copied().unwrap_or(0);
@@ -822,7 +822,7 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
       let colx = if colwidth > 0 && cached_width > 0 && a != Align::Left {
         let dx = Dimension::new(colwidth - cached_width);
         match a {
-          Align::Center => colposx.add(dx.multiply(Float::new_f64(0.5))),
+          Align::Center | Align::Char(_) => colposx.add(dx.multiply(Float::new_f64(0.5))),
           Align::Right => colposx.add(dx),
           _ => colposx,
         }
