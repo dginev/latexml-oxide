@@ -37,9 +37,10 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     // Document-level binding: loaded by load_external_binding("scopemacro")
     // when processing scopemacro.tex — mirrors scopemacro.latexml in Perl
     "scopemacro" => Some(scopemacro_tex::load_definitions()),
-    // Source-level binding: loaded by load_external_binding("simplemath")
-    // when processing simplemath.tex — mirrors simplemath.latexml in Perl
-    "simplemath" => Some(simplemath_src::load_definitions()),
+    // Source-level bindings: *.src files mirror Perl's *.latexml mechanism.
+    // In the .tex file, add \input{name.src} to load the binding.
+    // The dispatcher routes "name.src" to name_src::load_definitions().
+    "simplemath.src" | "simplemath" => Some(simplemath_src::load_definitions()),
     // xkeyval test packages — passthrough to raw TeX (noltxml)
     "xkvdop1.sty" => Some(xkvdop1_sty::load_definitions()),
     "xkvdop2.sty" => Some(xkvdop2_sty::load_definitions()),

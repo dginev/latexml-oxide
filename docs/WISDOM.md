@@ -482,3 +482,21 @@ Code written with 0-based assumption silently gets None for the first arg, trigg
 **Fix:** Changed all `get_arg(0)` to `get_arg(1)`, `get_arg(1)` to `get_arg(2)`, etc. in `\turnbox`, `{turn}`, `{rotate}`, and `\lx@diagheads`. Also confirmed: OptionalKeyVals parameters that are NOT provided do NOT occupy an arg slot (novalue=true), so they don't shift the indices.
 
 **Key insight:** Always use 1-based indexing with `get_arg()`. The pattern `get_arg(0).map(...).unwrap_or(default)` is a silent bug — it always uses the default. To catch these: grep for `get_arg(0)` in the codebase.
+
+---
+
+## 8. Math rewrite rules run BEFORE grammar parsing
+
+**Discovery:** The DefMathRewrite mechanism (via `.latexml` files in Perl, `*_src.rs` files in Rust) fires during the "Rewriting" phase in `core_interface.rs`, which happens BEFORE the Marpa grammar parses the XMath tree. This means rewrite rules can change the XMTok structure (e.g., setting `role="ID"` or `role="FUNCTION"`) and those changes INFLUENCE how the grammar parses the expression.
+
+**Why it matters:** The post-finalize UNKNOWN→ID conversion that was added as a workaround does NOT achieve the same effect. By the time it runs, the grammar has already parsed the expression using `role="UNKNOWN"`. Setting role to ID after parsing is cosmetic — it doesn't change the parse tree structure.
+
+**Correct approach:** For tests that need `role="ID"` on single-letter tokens, create a `*_src.rs` file in `latexml_contrib` that uses `DefMathRewrite!` to set roles BEFORE parsing. This matches Perl's `.latexml` mechanism and actually changes how the math is parsed.
+
+**Example:** `simplemath_src.rs` already demonstrates this pattern:
+```rust
+add_math_rewrite("a", "ID")?;  // sets role="ID" before parsing
+add_math_rewrite("f", "FUNCTION")?;  // enables function application
+```
+
+**Key insight:** The rewriting phase is a meaningful pre-parse step, not a post-processing cosmetic. Changing roles before parsing changes the parse tree.

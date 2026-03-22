@@ -383,3 +383,32 @@ Daemon test XMLs in `LaTeXML/t/daemon/` are not tracked or synced.
 
 **Impact:** 7 daemon format test XMLs have known differences (lang attributes, MathML
 namespace declarations, Content-Type casing, logo styling) that are not being addressed.
+
+### 18. Source-Level Bindings via `*.src` Files
+
+**Decision:** Perl's per-document `.latexml` files are replaced by `*_src.rs` files in the `latexml_contrib` crate, loaded via `\input{name.src}` in the `.tex` source.
+
+**Perl mechanism:** When processing `foo.tex`, Perl automatically checks for `foo.latexml` in the same directory. If found, it loads and executes the Perl code, which typically contains `DefMathRewrite`, `DefMacro`, `DefConstructor` calls that customize the conversion for that specific document.
+
+**Rust mechanism:**
+1. The `.tex` file includes `\input{name.src}` to explicitly request the binding
+2. The `latexml_contrib` dispatcher maps `"name.src"` to `name_src::load_definitions()`
+3. The `*_src.rs` file in `latexml_contrib/src/` contains the Rust equivalent of the `.latexml` definitions
+
+**Rationale:**
+- Rust cannot interpret Perl at runtime, so `.latexml` files cannot be loaded directly
+- Compile-time binding registration is required for Rust's type system
+- Explicit `\input{name.src}` makes the dependency visible in the TeX source
+- The `*_src.rs` naming convention distinguishes source-level bindings from package bindings (`*_sty.rs`)
+
+**Critical insight:** Math rewrite rules (`DefMathRewrite`) in `.latexml` files execute BEFORE the Marpa grammar parses the expression. This means setting `role="ID"` or `role="FUNCTION"` via rewrites changes how the grammar interprets the tokens — it is NOT equivalent to a post-processing role change. The `*_src.rs` mechanism preserves this pre-parse semantics.
+
+**Example:** `simplemath_src.rs` mirrors `simplemath.latexml`:
+```rust
+// Sets MATHPARSER_SPECULATE + rewrite rules for a,b,x,D → ID, f → FUNCTION
+add_math_rewrite("a", "ID")?;
+add_math_rewrite("f", "FUNCTION")?;
+AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
+```
+
+**Impact:** Tests with `.latexml` files need corresponding `*_src.rs` files and `\input{name.src}` in their `.tex` source to get the same parsing behavior as Perl.
