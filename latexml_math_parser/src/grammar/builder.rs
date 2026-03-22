@@ -97,12 +97,35 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
       | tight_term postfix => apply_postfix
       | function tight_term => prefix_apply
-      | trigfunction tight_term => prefix_apply
+      // trigfunction uses trigbarearg via applied_func (absorbs MulOp chains)
       | any_bigop tight_term => prefix_apply
       | composed_bigop tight_term => prefix_apply
       | compound_operator tight_term => prefix_apply
       | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop;
+
+    // Perl MathGrammar L258: Factor moreFactors — function application results
+    // can be followed by another Factor (invisible times). In Perl, function
+    // applications ARE Factors, so moreFactors chains them automatically.
+    // In our grammar, function applications are tight_terms, not factors.
+    // We add specific rules to allow tight_term * applied_function chaining.
+    // Perl MathGrammar L321-337: barearg/trigBarearg — chains of factors with
+    // explicit MulOp, used for unparenthesized function arguments.
+    // trigBarearg excludes TRIGFUNCTION from starting tokens.
+    // e.g. \sin\pi\times x => sin@(π × x), not sin@(π) × x
+    trigbarearg = factor
+      | trigbarearg mulop factor => infix_apply_nary
+      | trigbarearg factor => apply_invisible_times;
+
+    // Applied function: function + its argument (tight_term or MulOp chain)
+    applied_func = function tight_term => prefix_apply
+      | trigfunction trigbarearg => prefix_apply
+      | opfunction tight_term => prefix_apply;
+    // Standalone applied functions are also tight_terms
+    tight_term += applied_func;
+    // Function application results can chain with invisible times (Perl moreFactors)
+    // e.g. \sin x \cos y => sin(x) * cos(y)
+    tight_term += tight_term applied_func => apply_invisible_times;
 
     // Composed functions: f∘g, sin∘cos — these can then be applied as functions
     // COMPOSEOP operates on function-level operands (curry level 2)
