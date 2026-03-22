@@ -388,8 +388,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | floatsuperscript postsubarg => postfix_script
       | floatsubscript postsuperarg => postfix_script;
 
+    // Operators that CANNOT start a valid expression on their own —
+    // only appear as leading orphans from tabular row fragments.
+    // addop excluded (prefix ±), relop excluded (prefix =), arrow excluded.
+    orphan_op = mulop | diffop | supop | modifierop;
     anything = statements | anyop | anyscript |
-      anyop anyop => compound_operator_2
+      anyop anyop => compound_operator_2 |
+      // Perl MathGrammar L81: leading orphan operator (tabular fragment)
+      // Only for operators that have NO valid prefix interpretation.
+      orphan_op statements => prefix_relop_apply
   );
   // | term_argument postsuperarg tex_argument  => post_script
   // | term_argument postsubscript tex_argument    => post_script
