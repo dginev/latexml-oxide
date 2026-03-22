@@ -139,7 +139,6 @@ fn eqnarray_test() {
 }
 
 #[test]
-#[ignore] // 267 diffs: needs diagbox.sty port
 fn diagboxtest_test() {
   latexml_test_single("tests/alignment/diagboxtest.tex", "diagboxtest", DIR, None, None);
 }
