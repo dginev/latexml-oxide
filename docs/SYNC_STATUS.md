@@ -476,7 +476,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] A1. `alignment_skip_data` continuation-line check: Perl has `&& (($n < 2) || (empty_count <= 0.4 * cols))` guard. Adding it naively caused 173 regressions — needs careful integration with full Perl matching.
 - [ ] A3. Font wrapper `<text>` elements during alignment absorption: Rust creates spurious empty `<text _noautoclose>` wrappers. Perl doesn't create these. Root: different font change tracking.
 - [ ] A4. `{turn}` rotation dimensions inside alignment: `after_digest_body` gets empty body for alignment-containing environments.
-- [ ] A5. guessHeaders column characterization: Rust over-detects column headers vs Perl. Same threshold/validation, but different results. Needs instruction-level comparison.
+- [x] A5. guessHeaders column characterization: Root cause: `classify_alignment_cell` didn't look through `<inline-block>`/`<p>` wrappers (Perl classifies before these exist). Fixed with transparent container queue. Also fixed rowspan propagation and border edge check. graphrot 25→10 diffs.
 
 **Remaining — Missing package bindings (faithful ports needed):**
 - [ ] B1. diagbox.sty (164 lines Perl → ~150 lines Rust). Blocks diagboxtest_test (267 diffs).
