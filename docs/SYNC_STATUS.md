@@ -248,6 +248,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **dcolumn Align::Char**: Added `Align::Char(String)` variant for D-column decimal alignment (`align="char:⋅"`). Ported `absorbed_string()` from Perl. colortbls_test: 27→17 diffs.
 - **colortbl DefConstructor port**: \@setrowcolor/\@setcellcolor ported as DefConstructor with DOM walk (ancestor::ltx:tr/td). backgroundcolor now on `<tr>` and `<td>` matching Perl. **colortbls_test now PASSES** (257 pass).
 - **guessHeaders transparent containers**: classify_alignment_cell now looks through `<inline-block>` and `<p>` wrappers (matching Perl which classifies before these are added). Fixed rowspan propagation and border edge check. graphrot_test: 25→10 diffs.
+- **\rotatebox raw TeX override fix**: Raw TeX graphicx.sty `\protected\def\rotatebox` was overriding our DefConstructor. Re-registered in graphicx_sty.rs. Also fixed after_digest arg indexing (get_arg(2)/get_arg(3) for Float/body, accounting for OptionalKeyVals at #1). graphrot_test: 168→623 output lines (4th+ tables now render, was 5 missing-content diffs, now 239 dimension diffs from newly-rendered content).
 
 **Recent fixes (2026-03-20, session 12):**
 - **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
