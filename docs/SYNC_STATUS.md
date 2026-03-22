@@ -429,7 +429,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-22):** 258 pass, 0 fail, 63 ignored (321 total). Session 26: clippy 0 warnings. Ported Perl #2775 (digestNextBody boxing depth guard + Let \\\\ to \\lx@newline in beforeFloat). xcolor \\color reversion Box. Package loading depth guard (Fatal at 500). Already-loaded early-stop. icml_support.sty ported. etoolbox TeX!→RawTeX!. cmbx10 TFM per-character metrics (cells_test widths 78→89.8pt, expected 90.1pt).
+**Status (2026-03-22):** 258 pass, 0 fail, 63 ignored (321 total). Session 26 (24 commits): clippy 0 warnings. Perl #2775 (boxing depth + float \\\\). xcolor \\color reversion Box. Package loading guards (Fatal@500, loaded early-stop, fail-mark). Ports: icml_support.sty, wrapfig.sty, sidewaystable/sidewaysfigure full. Font metrics: cmbx10, cmbx8, cmr8 TFM. Fixes: centering class propagation, \\ifcase crash, etoolbox @-catcode, parbox sizer (width + paragraph height estimation), beforeFloat \\hsize. graphrot 239→17. diagbox scaffolded (TODO: API fixes).
 
 ### Completed items
 
