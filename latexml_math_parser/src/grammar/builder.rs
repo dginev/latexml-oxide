@@ -229,7 +229,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator | compound_operator
       | function | trigfunction
       // Bare operators can form comma-separated lists: +,-,×
-      | addop | mulop | relop | arrow;
+      | addop | mulop | relop | arrow
+;
 
     end_punct = punct | period;
     statements = statement
@@ -388,14 +389,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | floatsuperscript postsubarg => postfix_script
       | floatsubscript postsuperarg => postfix_script;
 
-    // Operators that CANNOT start a valid expression on their own —
-    // only appear as leading orphans from tabular row fragments.
-    // addop excluded (prefix ±), relop excluded (prefix =), arrow excluded.
+    // Operators that CANNOT start a valid expression — leading orphans
+    // from tabular fragments where LHS is on a preceding row.
+    // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
+    // These already have valid prefix interpretations inside expressions.
     orphan_op = mulop | diffop | supop | modifierop;
     anything = statements | anyop | anyscript |
       anyop anyop => compound_operator_2 |
-      // Perl MathGrammar L81: leading orphan operator (tabular fragment)
-      // Only for operators that have NO valid prefix interpretation.
+      // Perl MathGrammar L81: leading orphan operator (tabular fragment).
+      // Only at the start rule (anything) — not recursive, not inside subexpressions.
       orphan_op statements => prefix_relop_apply
   );
   // | term_argument postsuperarg tex_argument  => post_script
