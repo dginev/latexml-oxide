@@ -235,9 +235,68 @@ impl Document {
       self.set_local_font(Rc::new(Font::text_default()));
       self.finalize_rec(&mut root)?;
       self.set_rdfa_prefixes();
+      self.apply_document_namespace_declarations(&mut root);
       self.expire_local_font();
     }
     Ok(())
+  }
+
+  /// Apply registered document namespace declarations to the root element.
+  /// Perl's RegisterDocumentNamespace stores prefix→URI mappings in the model.
+  /// These must appear as xmlns:prefix="URI" on the root element during serialization.
+  /// Only emit namespaces that are actually used in the document (Perl behavior).
+  fn apply_document_namespace_declarations(&self, root: &mut Node) {
+    let prefixes = model::get_document_namespace_prefixes();
+    // Collect which prefixes are actually used in the document
+    let nsnodes = root.get_namespace_declarations();
+    let existing_prefixes: Vec<String> = nsnodes.iter().map(|ns| ns.get_prefix()).collect();
+    for (prefix, ns_uri) in prefixes {
+      // Skip internal/default namespaces
+      if prefix.is_empty() || prefix == "ltx" || prefix == "xml" {
+        continue;
+      }
+      // Skip namespaces containing "DEFAULT#" (internal model entries)
+      if ns_uri.contains("DEFAULT#") {
+        continue;
+      }
+      // Only add if this prefix appears as a namespace declaration on some child node
+      // (meaning it's actually used in the document)
+      if existing_prefixes.contains(&prefix) {
+        continue; // already declared on root
+      }
+      // Check if any descendant element uses this namespace prefix
+      // by looking for namespace declarations on descendant elements
+      let has_usage = self.has_namespace_usage(root, &prefix);
+      if has_usage {
+        let attr_name = format!("xmlns:{prefix}");
+        root.set_attribute(&attr_name, &ns_uri).ok();
+      }
+    }
+  }
+
+  /// Check if any descendant of node uses the given namespace prefix.
+  fn has_namespace_usage(&self, node: &Node, prefix: &str) -> bool {
+    // Check attributes of this node for prefix: usage
+    for (key, _) in node.get_attributes() {
+      if key.starts_with(&format!("{prefix}:")) {
+        return true;
+      }
+    }
+    // Check children recursively
+    for child in node.get_child_nodes() {
+      if child.get_type() == Some(NodeType::ElementNode) {
+        // Check if element itself is in this namespace
+        for ns in child.get_namespace_declarations() {
+          if ns.get_prefix() == prefix {
+            return true;
+          }
+        }
+        if self.has_namespace_usage(&child, prefix) {
+          return true;
+        }
+      }
+    }
+    false
   }
 
   /// Remove xml:ids from XMTok elements that aren't referenced by any idref.
@@ -1172,7 +1231,16 @@ impl Document {
 
         let anodes = node.get_attributes();
         let mut anodes_keys: Vec<&String> = anodes.keys().collect();
-        anodes_keys.sort();
+        // Sort: xmlns:* declarations first (matching Perl's output order), then alphabetically
+        anodes_keys.sort_by(|a, b| {
+          let a_is_xmlns = a.starts_with("xmlns:");
+          let b_is_xmlns = b.starts_with("xmlns:");
+          match (a_is_xmlns, b_is_xmlns) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.cmp(b),
+          }
+        });
         for key in anodes_keys {
           if key == "id" {
             continue;
