@@ -271,7 +271,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += unknown fenced_factor => speculative_prefix_apply;
     // FUNCTION followed by fenced args => function application (Perl: addArgs/addEasyArgs)
     // f(x) => f@(x) when f has role=FUNCTION (from DefMathRewrite or \lxDeclare).
-    // Always treated as application — FUNCTION role is an explicit declaration.
+    // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
+    //        presentation=Apply(f, XMWrap(open, args, close))).
+    // Grammar: function lparen/lbracket + formula + rparen/rbracket → apply_delimited
+    tight_term += function lparen formula rparen => apply_delimited;
+    tight_term += function lbracket formula rbracket => apply_delimited;
+    // Also support fenced_factor for backwards compat (no XMDual wrapping)
     tight_term += function fenced_factor => prefix_apply;
     // OPFUNCTION followed by fenced args => function application
     // \operatorname{cov}(L) => cov@(L). Always treated as application, not multiplication.

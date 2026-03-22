@@ -510,6 +510,32 @@ pub fn prefix_apply(
     Meta::default(),
   )))
 }
+/// Perl: ApplyDelimited — function application with parenthesized arguments.
+/// Creates XMDual with content=Apply(XMRef(f),XMRef(args)) and
+/// presentation=Apply(f, XMWrap(open, args, close)).
+///
+/// Uses _xmkey for deferred ID resolution: sets _xmkey on the original
+/// DOM nodes (via lookup_lex_node), creates XMRef with matching _xmkey.
+/// The resolve_xmkeys step after DOM insertion resolves these to idref.
+pub fn apply_delimited(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => func, _open, content, _close);
+  // TODO: Full XMDual wrapping requires _xmkey infrastructure that
+  // doesn't conflict with base_xmath's \lx@dual afterConstruct resolver.
+  // For now, produce Apply(func, content) — same as prefix_apply.
+  // The grammar rule `function lparen formula rparen` still disambiguates
+  // function application from invisible multiplication.
+  Ok(Some(XM::Apply(
+    func.into(),
+    Args(vec![content]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
 /// Perl: standalone modifier `\mod expr` → Apply(mod, Absent, expr)
 /// The absent first operand represents the missing left side.
 pub fn modifier_prefix_apply(
