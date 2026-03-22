@@ -235,8 +235,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-21)
 
-**Current totals: 256 pass, 0 fail, 65 ignored test functions (321 total)**
-**Coverage: 80% pass rate (256/297 non-permanent-ignore tests)**
+**Current totals: 257 pass, 0 fail, 64 ignored test functions (321 total)**
+**Coverage: 81% pass rate (257/297 non-permanent-ignore tests)**
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
 **Recent fixes (2026-03-21, session 20):**
@@ -245,6 +245,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **\scalebox/\reflectbox dimensions**: Ported `scaled_properties()` — computes width/height/depth and xtranslate/ytranslate from body dimensions and scale factors. graphrot scalebox diffs: depth/height/ytranslate now match.
 - **ltx_nopad_l first-column fix**: Perl never adds ltx_nopad_l to first column (boundary, not inter-column gap). Added col_idx tracking. cells_test: 14→6 diffs. Updated sizes/halignatt/tabular/xcolors XMLs.
 - **insert_pi root placement**: PIs from \newcolumntype inside document body now insert before root element (matching Perl), not at cursor. colortbls_test: 96→27 diffs.
+- **dcolumn Align::Char**: Added `Align::Char(String)` variant for D-column decimal alignment (`align="char:⋅"`). Ported `absorbed_string()` from Perl. colortbls_test: 27→17 diffs.
+- **colortbl DefConstructor port**: \@setrowcolor/\@setcellcolor ported as DefConstructor with DOM walk (ancestor::ltx:tr/td). backgroundcolor now on `<tr>` and `<td>` matching Perl. **colortbls_test now PASSES** (257 pass).
 
 **Recent fixes (2026-03-20, session 12):**
 - **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
