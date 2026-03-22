@@ -333,6 +333,20 @@ LoadDefinitions!({
       let width = args[3].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
       Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
     },
+    // Sizer: width from arg #4 (Dimension), height/depth from body (arg #5)
+    sizer => sub[whatsit] {
+      // Width from the "width" property (arg #4 Dimension)
+      let w = whatsit.get_property("width")
+        .and_then(|s| Dimension::new_f64(Dimension::spec_to_f64(&s.to_string()).ok()?).into())
+        .unwrap_or_default();
+      // Height/depth from body (arg #5 VBoxContents)
+      if let Some(body) = whatsit.get_arg(5) {
+        let (_, h, d) = body.compute_size(SymHashMap::default())?;
+        Ok((w, h, d))
+      } else {
+        Ok((w, Dimension::default(), Dimension::default()))
+      }
+    },
     mode => "internal_vertical",
     before_digest => {
       Let!("\\\\", "\\lx@newline");
