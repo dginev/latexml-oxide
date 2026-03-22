@@ -341,8 +341,32 @@ LoadDefinitions!({
         .unwrap_or_default();
       // Height/depth from body (arg #5 VBoxContents)
       if let Some(body) = whatsit.get_arg(5) {
-        let (_, h, d) = body.compute_size(SymHashMap::default())?;
-        Ok((w, h, d))
+        let w_val = w.value_of();
+        if w_val > 0 {
+          // Approximate paragraph height: measure total unwrapped width,
+          // estimate lines, use \baselineskip for line height.
+          let (body_w, body_h, body_d) = body.compute_size(SymHashMap::default())?;
+          let total_w = body_w.value_of();
+          if total_w > w_val {
+            // Paragraph wrapping: estimate number of lines
+            let num_lines = ((total_w as f64) / (w_val as f64)).ceil() as i64;
+            // Use \baselineskip (typically 12pt = 786432 sp) for line height
+            let baseline_skip = state::lookup_dimension("\\baselineskip")
+              .unwrap_or(Dimension::new(786432)); // 12pt default
+            let line_h = baseline_skip.value_of();
+            let total_h = num_lines * line_h;
+            // Height = first line ascender, depth = rest
+            let first_line_h = body_h.value_of().max(line_h * 2 / 3); // ~ascender
+            let d = Dimension::new(total_h - first_line_h);
+            let h = Dimension::new(first_line_h);
+            Ok((w, h, d))
+          } else {
+            Ok((w, body_h, body_d))
+          }
+        } else {
+          let (_, h, d) = body.compute_size(SymHashMap::default())?;
+          Ok((w, h, d))
+        }
       } else {
         Ok((w, Dimension::default(), Dimension::default()))
       }
