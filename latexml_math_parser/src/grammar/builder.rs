@@ -104,17 +104,26 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop;
 
-    // Perl MathGrammar L258: Factor moreFactors — function application results
-    // can be followed by another Factor (invisible times). In Perl, function
-    // applications ARE Factors, so moreFactors chains them automatically.
-    // In our grammar, function applications are tight_terms, not factors.
-    // We add specific rules to allow tight_term * applied_function chaining.
     // Perl MathGrammar L258: Factor moreFactors — consecutive function
     // applications chain with invisible times.
     // e.g. \sin x \cos y => sin(x) * cos(y)
-    // Note: trigfunction MulOp absorption (trigBarearg) is deliberately NOT
-    // implemented — sin(π)×x vs sin(π×x) is a legitimate ambiguity that
-    // depends on concrete values, not grammar structure.
+    //
+    // IMPORTANT — TRIGFUNCTION ARGUMENT SCOPING AMBIGUITY:
+    // Perl's trigBarearg absorbs MulOp chains: \sin\pi\times x => sin(π×x).
+    // We deliberately DO NOT implement this absorption. The expression
+    // sin(π)×x vs sin(π×x) is a *legitimate semantic ambiguity* that cannot
+    // be resolved purely by grammar structure. Both parses are valid:
+    //   sin(π)×x = 0×x (evaluating sin at π)
+    //   sin(π×x) = sin of the product
+    // Perl's Parse::RecDescent picks the "absorb" interpretation heuristically.
+    //
+    // FUTURE WORK: To match Perl's output, implement *targeted semantic pruning*
+    // in the parse tree selection phase (semantics/tree.rs) that uses context
+    // cues to prefer one interpretation:
+    //   - If the MulOp is invisible (⁢), prefer absorption (sin 2x → sin(2x))
+    //   - If the MulOp is explicit (×,·), either interpretation is valid
+    //   - If the argument is a known constant (π, e), standalone may be preferred
+    // This is a semantic-level decision, not a grammar-level one.
     applied_func = function tight_term => prefix_apply
       | trigfunction tight_term => prefix_apply
       | opfunction tight_term => prefix_apply;
