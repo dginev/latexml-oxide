@@ -109,22 +109,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // applications ARE Factors, so moreFactors chains them automatically.
     // In our grammar, function applications are tight_terms, not factors.
     // We add specific rules to allow tight_term * applied_function chaining.
-    // Perl MathGrammar L321-337: barearg/trigBarearg — chains of factors with
-    // explicit MulOp, used for unparenthesized function arguments.
-    // trigBarearg excludes TRIGFUNCTION from starting tokens.
-    // e.g. \sin\pi\times x => sin@(π × x), not sin@(π) × x
-    trigbarearg = factor
-      | trigbarearg mulop factor => infix_apply_nary
-      | trigbarearg factor => apply_invisible_times;
-
-    // Applied function: function + its argument (tight_term or MulOp chain)
+    // Perl MathGrammar L258: Factor moreFactors — consecutive function
+    // applications chain with invisible times.
+    // e.g. \sin x \cos y => sin(x) * cos(y)
+    // Note: trigfunction MulOp absorption (trigBarearg) is deliberately NOT
+    // implemented — sin(π)×x vs sin(π×x) is a legitimate ambiguity that
+    // depends on concrete values, not grammar structure.
     applied_func = function tight_term => prefix_apply
-      | trigfunction trigbarearg => prefix_apply
+      | trigfunction tight_term => prefix_apply
       | opfunction tight_term => prefix_apply;
     // Standalone applied functions are also tight_terms
     tight_term += applied_func;
     // Function application results can chain with invisible times (Perl moreFactors)
-    // e.g. \sin x \cos y => sin(x) * cos(y)
     tight_term += tight_term applied_func => apply_invisible_times;
 
     // Composed functions: f∘g, sin∘cos — these can then be applied as functions
