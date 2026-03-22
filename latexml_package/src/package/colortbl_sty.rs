@@ -34,20 +34,14 @@ LoadDefinitions!({
   //   if (my $rc = LookupValue('tabular_row_color')) {
   //     MergeFont(background => $rc); } });
   // Use name without @ for compile-time tokenization, then alias at runtime
+  // Perl: only calls MergeFont(background => $rc). Does NOT set cell backgroundcolor.
+  // The font background propagates to <text backgroundcolor="..."> wrappers.
+  // The <tr> backgroundcolor is set by \@setrowcolor's constructor body.
   DefPrimitive!("\\lxuserowcolor", sub [_args] {
     if let Some(Stored::String(sym)) = state::lookup_value("tabular_row_color") {
       let color_str = arena::with(sym, |s| s.to_string());
       if let Some(c) = latexml_core::common::color::Color::from_stored(&color_str) {
         merge_font(fontmap!(bg => c));
-        // Also propagate to cell's backgroundcolor attribute
-        if let Some(alignment) = lookup_alignment() {
-          if let Some(data) = alignment.alignment_cell() {
-            let mut data_lock = data.borrow_mut();
-            if let Some(colspec) = data_lock.current_column() {
-              colspec.backgroundcolor = Some(color_str);
-            }
-          }
-        }
       }
     }
   });
@@ -83,43 +77,71 @@ LoadDefinitions!({
       \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
       \@setrowcolor}}");
 
-  // \@setrowcolor — store row background color during digestion.
-  // Sets tabular_row_color state value and stores bg on alignment row properties.
-  // The backgroundcolor is applied to <tr> during row absorption.
-  DefPrimitive!("\\lxsetrowcolor", sub[_args] {
-    if let Some(font) = lookup_font() {
-      if let Some(bg) = font.get_background() {
-        let bg_str = bg.to_attribute();
-        state::assign_value(
-          "tabular_row_color",
-          Stored::String(arena::pin(&bg_str)),
-          Some(Scope::Global),
-        );
-      }
-    }
-    Ok(())
-  });
-  RawTeX!(r"\let\@setrowcolor\lxsetrowcolor");
-
-  // \@setcellcolor — store cell background color during digestion.
-  // Uses DefPrimitive to capture background at digestion time (when font is set).
-  // The backgroundcolor is stored on the alignment cell and applied to <td> during absorption.
-  DefPrimitive!("\\lxsetcellcolor", sub[_args] {
-    if let Some(font) = lookup_font() {
-      if let Some(bg) = font.get_background() {
-        let bg_str = bg.to_attribute();
-        if let Some(alignment) = lookup_alignment() {
-          if let Some(data) = alignment.alignment_cell() {
-            let mut data_lock = data.borrow_mut();
-            if let Some(colspec) = data_lock.current_column() {
-              colspec.backgroundcolor = Some(bg_str);
-            }
+  // \@setrowcolor — Perl: DefConstructor('\@setrowcolor', sub { ... },
+  //   afterDigest => sub { ... }, properties => { alignmentSkippable => 1 }, alias => '');
+  // During digestion (afterDigest): captures font background, stores tabular_row_color.
+  // During absorption (constructor body): walks DOM to find ancestor <tr>, sets backgroundcolor.
+  DefConstructor!("\\lxsetrowcolor",
+    sub[document, _args, props] {
+      if let Some(Stored::String(bg_sym)) = props.get("background") {
+        let bg_str = arena::with(*bg_sym, |s| s.to_string());
+        let current = document.get_node().clone();
+        if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current)) {
+          if !tr_node.has_attribute("backgroundcolor") {
+            document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
           }
         }
       }
-    }
-    Ok(())
-  });
+    },
+    after_digest => sub[whatsit] {
+      if let Some(font) = lookup_font() {
+        if let Some(bg) = font.get_background() {
+          // Store hex format for the constructor body (DOM attribute value)
+          let bg_hex = bg.to_attribute();
+          whatsit.set_property("background", Stored::String(arena::pin(&bg_hex)));
+          // Store "model c1 c2 ..." format for tabular_row_color state
+          // (used by \@userowcolor via Color::from_stored)
+          let bg_stored = bg.to_stored();
+          state::assign_value(
+            "tabular_row_color",
+            Stored::String(arena::pin(&bg_stored)),
+            Some(Scope::Global),
+          );
+        }
+      }
+      Ok(Vec::new())
+    },
+    properties => { Ok(stored_map!("alignmentSkippable" => true)) },
+    alias => "");
+  RawTeX!(r"\let\@setrowcolor\lxsetrowcolor");
+
+  // \@setcellcolor — Perl: DefConstructor('\@setcellcolor', sub { ... },
+  //   properties => { alignmentSkippable => 1 }, alias => '');
+  // During absorption: walks DOM to find ancestor <td>, sets backgroundcolor from font.
+  DefConstructor!("\\lxsetcellcolor",
+    sub[document, _args, props] {
+      if let Some(Stored::String(bg_sym)) = props.get("background") {
+        let bg_str = arena::with(*bg_sym, |s| s.to_string());
+        let current = document.get_node().clone();
+        if let Some(mut td_node) = document.findnode("ancestor-or-self::ltx:td", Some(&current)) {
+          if !bg_str.is_empty() {
+            document.set_attribute(&mut td_node, "backgroundcolor", &bg_str)?;
+          }
+        }
+      }
+    },
+    after_digest => sub[whatsit] {
+      // Capture font background during digestion for use in constructor body
+      if let Some(font) = lookup_font() {
+        if let Some(bg) = font.get_background() {
+          let bg_hex = bg.to_attribute();
+          whatsit.set_property("background", Stored::String(arena::pin(&bg_hex)));
+        }
+      }
+      Ok(Vec::new())
+    },
+    properties => { Ok(stored_map!("alignmentSkippable" => true)) },
+    alias => "");
   RawTeX!(r"\let\@setcellcolor\lxsetcellcolor");
 
   // \arrayrulecolor, \doublerulesepcolor — ignore

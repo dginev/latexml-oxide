@@ -21,7 +21,6 @@ fn cells_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn colortbls_test() {
   latexml_test_single("tests/alignment/colortbls.tex", "colortbls", DIR, None, None);
 }
