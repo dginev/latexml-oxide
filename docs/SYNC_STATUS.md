@@ -429,7 +429,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-21):** 255 pass, 0 fail, 66 ignored (321 total). Session 17 (32 commits): get_arg(0)→panic. Diaghead picture+line+g. {rotatebox} env. Multirow DefMacro+rowspan+vattach. Grammar: postfix_apply, elideop-as-term. colortbl overhaul (@ tokenization, xcolor stubs, overhang args, rowcolor propagation). dcolumn DC_started_math guard. Trailing newline fix. eqnarray 222→123, sideset 481→336, colortbls 220→63, cells ~143.
+**Status (2026-03-22):** 258 pass, 0 fail, 63 ignored (321 total). Session 26: clippy 0 warnings. Ported Perl #2775 (digestNextBody boxing depth guard + Let \\\\ to \\lx@newline in beforeFloat). xcolor \\color reversion Box. Package loading depth guard (Fatal at 500). Already-loaded early-stop. icml_support.sty ported. etoolbox TeX!→RawTeX!. cmbx10 TFM per-character metrics (cells_test widths 78→89.8pt, expected 90.1pt).
 
 ### Completed items
 
@@ -463,7 +463,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
 - [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
-- [ ] **25. cells_test** (53_alignment) — 6 diffs (was 14, 85, 102, 282, 300, 548, 780). Session 20-21: row pruning, ltx_nopad_l first-column guard, bare env hooks (rotation now computed), diaghead tex=/xml:id. Remaining 6: all font metric differences (cmbx10 bold width 78pt vs Perl 90pt for "Second multilined").
+- [ ] **25. cells_test** (53_alignment) — 5 diffs (was 6, 14, 85, 102, 282, 300, 548, 780). Session 26: cmbx10 TFM metrics (78→89.8pt), xcolor \color reversion in tex= attr. Remaining: 3 width diffs (0.3pt off, inline-block padding), 2 diaghead dimension diffs.
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
 - [ ] **35. graphrot_test** (65_graphics) — 10 diffs (was 25, 127, 596). Session 20: guessHeaders transparent containers (classify through inline-block/p). Remaining: rotation dimensions (3), scalebox body width (2), missing 4th+ tables (5 — rotatebox content issue).
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
