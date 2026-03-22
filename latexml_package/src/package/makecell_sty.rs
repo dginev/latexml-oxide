@@ -44,6 +44,11 @@ LoadDefinitions!({
   // (loaded via InputDefinitions above). The raw TeX definitions use \turn{\cellrotangle}
   // for rotation and p{\rotheadsize} column format for paragraph width.
 
+  // Generate xml:id for <picture> elements (Perl: Tag('ltx:picture', afterOpen => \&GenerateID))
+  Tag!("ltx:picture", after_open => sub[document, node] {
+    document.generate_id(node, "pic")?;
+  });
+
   // \lx@diag@head: wraps content in \theadfont + \shortstack for alignment
   DefMacro!("\\lx@diag@head{}{}",
     "{\\theadfont\\shortstack[#1]{#2}}");
@@ -74,6 +79,13 @@ LoadDefinitions!({
             first_g.add_prev_sibling(&mut line_node)?;
           } else {
             picture.add_child(&mut line_node)?;
+          }
+          // Set tex= attribute on <picture> from constructor reversion
+          let tex_str = whatsit.revert()
+            .map(|toks| toks.untex())
+            .unwrap_or_default();
+          if !tex_str.is_empty() {
+            document.set_attribute(&mut picture, "tex", &tex_str)?;
           }
         }
       }
