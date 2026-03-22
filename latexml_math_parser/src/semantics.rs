@@ -519,21 +519,46 @@ pub fn prefix_apply(
 /// The resolve_xmkeys step after DOM insertion resolves these to idref.
 /// Perl: ApplyDelimited — function application with parenthesized arguments.
 /// Produces Apply(func, content) — same as prefix_apply for now.
-/// TODO: Full XMDual wrapping (content=Apply(XMRef, XMRef), pres=Apply(func, XMWrap))
-/// requires infrastructure to set _pxmkey on Lexeme nodes during into_xmath
-/// (original DOM nodes are detached before parse tree installation).
-/// The grammar rule `function lparen formula rparen` still correctly
-/// disambiguates function application from invisible multiplication.
+/// Perl MathGrammar: function(args) → XMDual(Apply(XMRef, XMRef), Apply(func, XMWrap(open, args, close)))
+/// Produces XMDual wrapping that preserves both semantic and presentation forms.
+/// Content: Apply(XMRef(func), XMRef(args)) — pure semantic
+/// Presentation: Apply(func, XMWrap(open, args, close)) — visual with delimiters
 pub fn apply_delimited(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _ctxt: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => func, _open, content, _close);
-  Ok(Some(XM::Apply(
-    func.into(),
-    Args(vec![content]),
+  unp!(args => func, open, content, close);
+  let mut func_node = func.unwrap();
+  let mut content_node = content.unwrap();
+  // Create XMRefs for the semantic (content) branch
+  let mut xmrefs = create_xmrefs(&mut [&mut func_node, &mut content_node], ctxt)?;
+  let func_ref = xmrefs.remove(0);
+  let content_ref = xmrefs.remove(0);
+  // Content branch: Apply(XMRef(func), XMRef(content))
+  let content_apply = XM::Apply(
+    func_ref.into(),
+    Args(vec![Some(content_ref)]),
+    XProps::default(),
+    Meta::default(),
+  );
+  // Presentation branch: Apply(func, XMWrap(open, content, close))
+  let pres_wrap = XM::Wrap(
+    vec![open.unwrap(), content_node, close.unwrap()],
+    XProps::default(),
+    Meta::default(),
+  );
+  let pres_apply = XM::Apply(
+    func_node.into(),
+    Args(vec![Some(pres_wrap)]),
+    XProps::default(),
+    Meta::default(),
+  );
+  // XMDual(content, presentation)
+  Ok(Some(XM::Dual(
+    Box::new(content_apply),
+    Box::new(pres_apply),
     XProps::default(),
     Meta::default(),
   )))
@@ -575,6 +600,52 @@ pub fn postfix_modifier_apply(
   Ok(Some(XM::Apply(
     annotated.into(),
     Args(vec![expr, modifier]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Perl MathGrammar L224-233: addExpressionModifier with parenthesized relop/modifierop
+/// `x(>0)` → `Apply(annotated, x, Fence(OPEN, Apply(relop, Absent, 0), CLOSE))`
+/// `h(\in C)` → `Apply(annotated, h, Fence(OPEN, Apply(\in, Absent, C), CLOSE))`
+pub fn annotated_fenced_modifier(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => expr, open, op, inner_expr, close);
+  let annotated = XM::Token(XProps {
+    meaning: Some(Cow::Borrowed("annotated")),
+    ..XProps::default()
+  }, Meta::default());
+  let absent = XM::Token(XProps {
+    meaning: Some(Cow::Borrowed("absent")),
+    ..XProps::default()
+  }, Meta::default());
+  // Build Apply(op, Absent, inner_expr) for the modifier content
+  let mut modifier_apply = XM::Apply(
+    op.into(),
+    Args(vec![Some(absent), inner_expr]),
+    XProps::default(),
+    Meta::default(),
+  );
+  // Fence the modifier: Dual(XMRef, XMWrap(OPEN, Apply(...), CLOSE))
+  // matching Perl's Fence() which creates XMDual for parenthesized groups
+  let mut fenced_xmrefs = create_xmrefs(&mut [&mut modifier_apply], ctxt)?;
+  let fenced = XM::Dual(
+    Box::new(fenced_xmrefs.remove(0)),
+    Box::new(XM::Wrap(
+      vec![open.unwrap(), modifier_apply, close.unwrap()],
+      XProps::default(),
+      Meta::default(),
+    )),
+    XProps::default(),
+    Meta::default(),
+  );
+  Ok(Some(XM::Apply(
+    annotated.into(),
+    Args(vec![expr, Some(fenced)]),
     XProps::default(),
     Meta::default(),
   )))
@@ -1348,6 +1419,16 @@ pub fn apply_invisible_times(
       return Err("apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply".into());
     }
   }
+  // Bigop application results should not participate in invisible-times on their right.
+  // When ∫_0^∞ x^2 dx is parsed, both `∫_0^∞(x^2 dx)` (absorption) and
+  // `∫_0^∞(x^2) * dx` (flat) exist. Prune the flat parse by rejecting
+  // invisible-times where the left is Apply(bigop, ...).
+  // Perl: addIntOpArgs/addOpArgs absorbs the full integrand; we match by pruning.
+  if let Some(ref l) = left {
+    if is_bigop_or_scripted_bigop(l, ctxt.nodes) {
+      return Err("apply_invisible_times: left is bigop/scripted bigop, prefer absorption".into());
+    }
+  }
   // Perl: MaybeFunction — mark UNKNOWN tokens as possibleFunction when MATHPARSER_SPECULATE is set
   // and the right side is a delimited group (parenthesized)
   maybe_mark_possible_function(&mut left, &right, ctxt.nodes);
@@ -1721,6 +1802,59 @@ fn xnew(text: String) -> XProps {
   }
 }
 
+/// Check if an XM node is a bigop or a scripted bigop (at any depth).
+/// e.g. ∫, ∫_0, ∫_0^∞, {}_a^b∫_c^d — all contain a bigop at the base.
+fn is_bigop_or_scripted_bigop(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
+  match xm {
+    XM::Token(props, _) => {
+      matches!(props.role.as_deref(),
+        Some("INTOP") | Some("BIGOP") | Some("SUMOP") | Some("LIMITOP") | Some("DIFFOP"))
+    },
+    XM::Lexeme(lex_id, _) => {
+      matches!(get_lexeme_role(lex_id, nodes).as_deref(),
+        Some("INTOP") | Some("BIGOP") | Some("SUMOP") | Some("LIMITOP") | Some("DIFFOP"))
+    },
+    XM::Apply(ref op, ref args, _, _) => {
+      let op_role = get_operator_role(op, nodes);
+      // Direct bigop application: Apply(INTOP, ...)
+      if matches!(op_role.as_deref(),
+        Some("INTOP") | Some("BIGOP") | Some("SUMOP") | Some("LIMITOP") | Some("DIFFOP"))
+      {
+        return true;
+      }
+      // Scripted: Apply(SUBSCRIPTOP/SUPERSCRIPTOP, base, script)
+      // Recursively check the base (first arg)
+      if matches!(op_role.as_deref(), Some("SUBSCRIPTOP") | Some("SUPERSCRIPTOP") | Some("POSTSUBSCRIPT") | Some("POSTSUPERSCRIPT")) {
+        if let Some(Some(ref base)) = args.0.first() {
+          return is_bigop_or_scripted_bigop(base, nodes);
+        }
+      }
+      false
+    },
+    _ => false,
+  }
+}
+
+/// Extract the role of an XM operator (Token or Lexeme).
+fn get_operator_role(op: &Operator, nodes: &[libxml::tree::Node]) -> Option<String> {
+  match &*op.0 {
+    XM::Token(props, _) => props.role.as_deref().map(String::from),
+    XM::Lexeme(lex_id, _) => get_lexeme_role(lex_id, nodes),
+    _ => None,
+  }
+}
+
+/// Extract the role from a lexeme ID by looking up the DOM node.
+fn get_lexeme_role(lex_id: &str, nodes: &[libxml::tree::Node]) -> Option<String> {
+  lex_id.split(':').next_back()
+    .and_then(|s| s.parse::<usize>().ok())
+    .and_then(|id| {
+      if id > 0 && id <= nodes.len() {
+        nodes[id - 1].get_attribute("role")
+      } else { None }
+    })
+}
+
 fn absent() -> XM {
   let props = XProps {
     meaning: Some(Cow::Borrowed("absent")),
@@ -1752,6 +1886,58 @@ pub fn vertbar_modifier(
   Ok(Some(XM::Apply(
     modop.into(),
     Args(vec![left, right]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Perl moreRelations: consecutive relops without intervening terms.
+/// `A ∈ ∞ ∋` → Apply(∈, A*∞, ∋) where ∋ is appended without absent.
+pub fn consecutive_relop_chain(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, relop1, relop2);
+  // Build a multirelation or extend existing one, appending both relops
+  let mut left = left;
+  if let Some(XM::Apply(ref op, ref mut left_args, _, _)) = left {
+    if let XM::Token(ref tok, _) = *op.0 {
+      if tok.meaning == Some(Cow::Borrowed("multirelation")) {
+        left_args.0.push(relop1);
+        left_args.0.push(relop2);
+        return Ok(left);
+      }
+    }
+    // If left is Apply(RELOP, a, b), convert to multirelation
+    let is_relop = match &*op.0 {
+      XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap().contains("RELOP"),
+      XM::Token(ref tok, _) => matches!(tok.role.as_deref(), Some("RELOP")),
+      _ => false,
+    };
+    if is_relop {
+      let multirel_tok = XProps {
+        meaning: Some(Cow::Borrowed("multirelation")),
+        ..XProps::default()
+      };
+      let mut drained = left_args.0.drain(..);
+      let l1 = drained.next().unwrap();
+      let l2 = drained.next().unwrap();
+      let moved_op = (*op.0).clone();
+      return Ok(Some(XM::Apply(
+        multirel_tok.into(),
+        Args(vec![l1, Some(moved_op), l2, relop1, relop2]),
+        XProps::default(),
+        Meta::default(),
+      )));
+    }
+  }
+  // Base case: left is an expression, relop1+relop2 are consecutive
+  // Apply(relop1, left, relop2) — relop2 becomes the right operand
+  Ok(Some(XM::Apply(
+    relop1.into(),
+    Args(vec![left, relop2]),
     XProps::default(),
     Meta::default(),
   )))
@@ -1852,4 +2038,32 @@ pub fn prefix_arrow_apply(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// Arrow-wrapped content from amscd XMWrap role="ARROW":
+/// start_ARROW arrow expression end_ARROW → Apply(arrow, absent, expression)
+pub fn arrow_wrap_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => _start, arrowop, content, _end);
+  Ok(Some(XM::Apply(
+    arrowop.into(),
+    Args(vec![Some(absent()), content]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Arrow-wrapped solo (no expression): start_ARROW arrow end_ARROW → just the arrow
+pub fn arrow_wrap_solo(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => _start, arrowop, _end);
+  Ok(arrowop)
 }

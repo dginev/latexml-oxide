@@ -182,7 +182,7 @@
                   <XMRef idref="p11.m1.1"/>
                 </XMApp>
                 <XMWrap>
-                  <XMTok lpadding="5.6pt" role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
                   <XMApp xml:id="p11.m1.2">
                     <XMTok role="BIGOP" scriptpos="post">mod</XMTok>
                     <XMTok meaning="3" role="NUMBER" xml:id="p11.m1.1">3</XMTok>

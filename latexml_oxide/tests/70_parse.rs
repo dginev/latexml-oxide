@@ -134,7 +134,6 @@ fn standalone_equations_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn standalone_modifiers_test() {
   latexml_test_single("tests/parse/standalone_modifiers.tex", "standalone_modifiers", DIR, None, None);
 }

@@ -65,13 +65,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(end_floatsuperscript ~ "end_FLOATSUPERSCRIPT");
   token!(start_floatsubscript ~ "start_FLOATSUBSCRIPT");
   token!(end_floatsubscript ~ "end_FLOATSUBSCRIPT");
+  token!(start_arrow ~ "start_ARROW");
+  token!(end_arrow ~ "end_ARROW");
 
   rules!(
     // Factors
     // opfunction/function/trigfunction are NOT factors — they require arguments.
     // Standalone usage is handled at the term level (term += function | ...).
     // `2 \sin` is handled via dedicated tight_term rules below.
-    factor_base = unknown | number | id | atom;
+    // Perl MathGrammar L315: ATOM_OR_ID : ATOM | ID | ARRAY
+    // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
+    factor_base = unknown | number | id | atom | array;
     factor = factor_base | opfunction;
     // Terms
     // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
@@ -188,7 +192,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | expression addop => postfix_apply
       // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
       // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
-      | expression modifierop expression => infix_apply;
+      | expression modifierop expression => infix_apply
+      // Perl MathGrammar L236: addExpressionModifier: MODIFIER
+      // Standalone postfix modifier (e.g. `8\pmod{3}` → annotated(8, pmod(3)))
+      // Placed at expression level so MODIFIER binds BEFORE RELOP.
+      // e.g. `5 ≡ 8 \pmod{3}` → `5 ≡ annotated(8, pmod(3))` not `annotated(5≡8, pmod(3))`
+      | expression modifier => postfix_modifier_apply
+      // Perl MathGrammar L224-233: OPEN relop/modifierop Expression balancedClose
+      // Parenthesized modifier expressions: x(>0) → annotated(x, Fence(>0))
+      | expression lparen relop expression rparen => annotated_fenced_modifier
+      | expression lparen modifierop expression rparen => annotated_fenced_modifier;
 
     // Formula
     // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
@@ -209,16 +222,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | formula two_part_relop expression => infix_relation
       | formula relop formula_list => infix_relation
       | formula relop => postfix_relop
+      // Perl moreRelations: `relop moreRelations` — consecutive relops chain without intervening terms
+      // e.g. `A ∈ ∞ ∋` → the ∈ absorbs ∞, then ∋ appends to the chain (no absent)
+      | formula relop relop => consecutive_relop_chain
       | formula arrow expression => infix_relation
       | arrow expression => prefix_arrow_apply
+      // Arrow-wrapped content (from amscd XMWrap role="ARROW"):
+      // Parsed as a prefix arrow application on the enclosed content.
+      | start_arrow arrow expression end_arrow => arrow_wrap_apply
+      | start_arrow arrow end_arrow => arrow_wrap_solo
       // Perl MathGrammar L81: AnyOp Expression => Apply(AnyOp, Absent(), Expression)
       // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
       | relop expression => prefix_relop_apply
       | metarelop expression => prefix_relop_apply
-      | modifier_expression
-      // Perl MathGrammar L236: addExpressionModifier: MODIFIER
-      // Standalone postfix modifier (e.g. `8\pmod{3}` → annotated(8, pmod(3)))
-      | formula modifier => postfix_modifier_apply;
+      | modifier_expression;
 
     // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
     // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
@@ -278,8 +295,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += function lbracket formula rbracket => apply_delimited;
     // Also support fenced_factor for backwards compat (no XMDual wrapping)
     tight_term += function fenced_factor => prefix_apply;
-    // OPFUNCTION followed by fenced args => function application
-    // \operatorname{cov}(L) => cov@(L). Always treated as application, not multiplication.
+    // OPFUNCTION/TRIGFUNCTION followed by fenced args => function application
+    // NOTE: opfunction/trigfunction + lparen/rparen with XMDual worsened parens_test/operators_test
+    // because the XMDual structure doesn't match Perl's compact_xmdual output.
+    // Keep simple prefix_apply for now until compact_xmdual is fully ported.
     tight_term += opfunction fenced_factor => prefix_apply;
     // Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
     // \log x => log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
