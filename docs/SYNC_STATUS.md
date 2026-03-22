@@ -247,6 +247,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **insert_pi root placement**: PIs from \newcolumntype inside document body now insert before root element (matching Perl), not at cursor. colortbls_test: 96→27 diffs.
 - **dcolumn Align::Char**: Added `Align::Char(String)` variant for D-column decimal alignment (`align="char:⋅"`). Ported `absorbed_string()` from Perl. colortbls_test: 27→17 diffs.
 - **colortbl DefConstructor port**: \@setrowcolor/\@setcellcolor ported as DefConstructor with DOM walk (ancestor::ltx:tr/td). backgroundcolor now on `<tr>` and `<td>` matching Perl. **colortbls_test now PASSES** (257 pass).
+- **guessHeaders transparent containers**: classify_alignment_cell now looks through `<inline-block>` and `<p>` wrappers (matching Perl which classifies before these are added). Fixed rowspan propagation and border edge check. graphrot_test: 25→10 diffs.
 
 **Recent fixes (2026-03-20, session 12):**
 - **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
@@ -433,7 +434,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
 - [ ] **25. cells_test** (53_alignment) — 14 diffs (was 85, 102, 282, 300, 548, 780). Row pruning fix (check_bracketting for intercol cells, border inheritance from pruned rows). Remaining: ltx_nopad_l on makecell inner tabulars (8, cell.before=None), rotation dimensions (3), diaghead dimensions (3).
 - [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
-- [ ] **35. graphrot_test** (65_graphics) — 25 diffs (was 127, 596). Fixed rowspan-cancelled thead→tfoot misclassification. Remaining: thead="column row" vs "column" (from guessHeaders), inline-block dimensions (font metrics), border "ll" vs "l".
+- [ ] **35. graphrot_test** (65_graphics) — 10 diffs (was 25, 127, 596). Session 20: guessHeaders transparent containers (classify through inline-block/p). Remaining: rotation dimensions (3), scalebox body width (2), missing 4th+ tables (5 — rotatebox content issue).
 - [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
 
 ### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
