@@ -79,6 +79,7 @@ LoadDefinitions!({
 
   // The constructor creates a <picture> with diagonal lines and positioned text
   // TODO: template produces wrong structure; needs manual DOM construction
+  // TODO: template produces wrong structure; needs manual DOM with xml:id/tex= support
   DefConstructor!("\\lx@diagbox RequiredKeyVals:diagbox {}[]{}", "",
     after_construct => sub[document, _whatsit] {
       let mut node = document.get_node().clone();
