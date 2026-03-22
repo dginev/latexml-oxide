@@ -145,16 +145,16 @@
               </tabular></td>
             <td align="center" border="r t" thead="column row"> <tabular rowsep="-1.7pt" vattach="middle">
                 <tr>
-                  <td align="center" class="ltx_nopad_r" thead="column row"><inline-block angle="90" depth="0.0pt" height="96.1pt" innerdepth="9.5pt" innerheight="14.5pt" innerwidth="96.1pt" width="24.0pt" xtranslate="-36.1pt" ytranslate="-36.1pt">
+                  <td align="center" class="ltx_nopad_r" thead="column row"><inline-block angle="90" depth="0.0pt" height="89.8pt" innerdepth="9.5pt" innerheight="14.5pt" innerwidth="89.8pt" width="24.0pt" xtranslate="-32.9pt" ytranslate="-32.9pt">
                       <p><text color="#FF0000" font="bold"><tabular rowsep="-1.7pt" vattach="middle">
                             <tr>
                               <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top">
-                                  <p width="90.1pt">Second multilined</p>
+                                  <p width="89.8pt">Second multilined</p>
                                 </inline-block></td>
                             </tr>
                             <tr>
                               <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top">
-                                  <p width="90.1pt">column head</p>
+                                  <p width="89.8pt">column head</p>
                                 </inline-block></td>
                             </tr>
                           </tabular></text></p>
@@ -384,7 +384,7 @@
           <tr>
             <td align="left" border="l r t" class="ltx_nopad" thead="column row"><picture height="41.34" tex="\diaghead(4,1){\hskip 119.50148pt}{{\color[rgb]{1,0,0}\shortstack[r]{Diag \\&#10;Column Head I}}}{{\color[rgb]{1,0,0}\shortstack[l]{Diag Column \\&#10;Head II}}}" width="165.35" xml:id="S10.p1.pic1">
                 <line points="0,0, 165.35,41.3375" stroke="#000000" stroke-width="0.4"/>
-                <g innerheight="26.21" innerwidth="107.77" transform="translate(57.58,0)">
+                <g innerheight="26.21" innerwidth="106.01" transform="translate(59.35,0)">
                   <inline-block>
                     <inline-block align="right">
                       <p><text color="#FF0000" font="bold">Diag</text></p>
@@ -392,7 +392,7 @@
                     </inline-block>
                   </inline-block>
                 </g>
-                <g innerheight="26.21" innerwidth="97.73" transform="translate(0,15.1275)">
+                <g innerheight="26.21" innerwidth="95.96" transform="translate(0.00,15.12)">
                   <inline-block>
                     <inline-block align="left">
                       <p><text color="#FF0000" font="bold">Diag Column</text></p>

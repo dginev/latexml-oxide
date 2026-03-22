@@ -15,7 +15,6 @@ fn tabtab_test() {
 // Tests with crashes or large diffs — need alignment/math fixes
 
 #[test]
-#[ignore] // 6 diffs: rotation dimensions (3), diaghead dimensions (3)
 fn cells_test() {
   latexml_test_single("tests/alignment/cells.tex", "cells", DIR, None, None);
 }
