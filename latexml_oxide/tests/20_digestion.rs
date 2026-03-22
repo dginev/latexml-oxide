@@ -19,7 +19,7 @@ use latexml_core::common::error::Result;
 fn digestion_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     // Document-level binding: loaded by load_external_binding(stem)
-    "rebox" => Some(helpers::rebox_tex::load_definitions()),
+    "rebox.latexml" => Some(helpers::rebox_src::load_definitions()),
     _ => None,
   }
 }

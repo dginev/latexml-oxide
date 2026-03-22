@@ -1,4 +1,11 @@
 // Math tests — individually listed for per-test #[ignore] support.
+#[macro_use]
+extern crate latexml_codegen;
+#[macro_use]
+extern crate latexml_package;
+
+mod helpers;
+
 use std::rc::Rc;
 
 use latexml::util::test::*;
@@ -8,7 +15,10 @@ const DIR: &str = "tests/math";
 
 /// Dispatcher for math test source-level bindings (*_src.rs)
 pub fn math_tests_dispatch(filename: &str) -> Option<Result<()>> {
-  latexml_contrib::dispatch(filename)
+  match filename {
+    "simplemath.latexml" => Some(helpers::simplemath_src::load_definitions()),
+    _ => latexml_contrib::dispatch(filename),
+  }
 }
 
 #[test]

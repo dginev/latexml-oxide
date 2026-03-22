@@ -519,6 +519,12 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   // }
   // // Next special case: If we were currently reading a "known" style or binding file,
   // // then this file, even if .tex, must also be definitions rather than content.!!(?)
+  // Check for *.latexml source-level bindings first — these are always handled
+  // as definitions regardless of INTERPRETING_DEFINITIONS state.
+  // Mirrors Perl's automatic .latexml file loading mechanism.
+  if clean_req.ends_with(".latexml") {
+    return input_definitions(&clean_req, InputDefinitionOptions::default());
+  }
   if lookup_bool("INTERPRETING_DEFINITIONS") {
     input_definitions(&clean_req, InputDefinitionOptions::default())
   } else if let Some(path) = find_file(&clean_req, None) {
