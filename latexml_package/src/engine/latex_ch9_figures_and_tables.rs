@@ -105,8 +105,22 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
   }
   // Perl L3403-3405: only add class if >1 panel (complex figure)
   if panels.len() >= 2 {
-    for mut panel in panels {
-      document.add_class(&mut panel, "ltx_figure_panel")?;
+    // Check if ALL panels are simple <p> elements (not sub-figures).
+    // Only insert breaks between <p> panels (Perl checks width for row-splitting).
+    let all_p = panels.iter().all(|p| {
+      let qname = latexml_core::document::get_node_qname(p);
+      arena::with(qname, |name| name == "ltx:p")
+    });
+    for i in 0..panels.len() {
+      document.add_class(&mut panels[i], "ltx_figure_panel")?;
+      // Insert break AFTER each <p> panel except the last
+      // (only when all panels are simple <p> elements)
+      if all_p && i + 1 < panels.len() {
+        let ns = panels[i].get_namespace();
+        let mut break_node = libxml::tree::Node::new("break", ns, &document.get_document()).unwrap();
+        let _ = break_node.set_attribute("class", "ltx_break");
+        panels[i].add_next_sibling(&mut break_node)?;
+      }
     }
   }
   Ok(())
