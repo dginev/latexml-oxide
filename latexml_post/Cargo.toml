@@ -1,0 +1,17 @@
+[package]
+name = "latexml_post"
+version = "0.1.0"
+edition = "2021"
+license = "CC0"
+authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
+description = "Post-processing pipeline for latexml_oxide (Rust port of LaTeXML::Post)"
+
+[lib]
+name = "latexml_post"
+crate-type = ["lib"]
+
+[dependencies]
+libxml = "0.3.3"
+log = "0.4"
+regex = "1.7.1"
+unicode-normalization = "0.1.25"
