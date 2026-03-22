@@ -283,8 +283,11 @@ impl DigestionAPI for Core {
     note_begin("Finalizing");
     document.finalize()?;
     note_end("Finalizing");
-    // Post-finalize: convert single-letter UNKNOWN tokens to ID
-    // (Perl's Post pipeline does this; single Latin/Greek letters are identifiers)
+    // Post-finalize: convert single-letter UNKNOWN tokens to ID.
+    // Perl core produces role="UNKNOWN" for single-letter tokens. Perl test XMLs
+    // get role="ID" from per-document .latexml files with DefMathRewrite rules.
+    // Until we support .latexml file loading, this step compensates by converting
+    // UNKNOWN→ID for single alphabetic characters without explicit meaning.
     // Must run AFTER finalize because finalize recomputes role attributes.
     for mut tok in document.findnodes("descendant-or-self::ltx:XMTok[@role='UNKNOWN']", None) {
       let content = tok.get_content();
