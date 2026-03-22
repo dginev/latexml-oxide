@@ -152,7 +152,6 @@ fn ncases_test() {
 }
 
 #[test]
-#[ignore] // 26 diffs: finalize_rec fixed (was SEGFAULT). Remaining: text wrapping, centering, scalebox dims
 fn vmode_test() {
   latexml_test_single("tests/alignment/vmode.tex", "vmode", DIR, None, None);
 }
