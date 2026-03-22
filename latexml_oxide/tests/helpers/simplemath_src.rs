@@ -12,9 +12,11 @@ fn add_math_rewrite(match_char: &str, role: &str) -> Result<()> {
     "descendant-or-self::ltx:XMTok[text()='{}' and not(@meaning)][@_pvis and @_cvis]",
     match_char
   );
+  let mut attrs_map = rustc_hash::FxHashMap::default();
+  attrs_map.insert("role".to_string(), role.to_string());
   let options = latexml_core::rewrite::RewriteOptions {
     xpath: Some(xpath),
-    attributes: Some(format!("role='{role}'")),
+    attributes_map: Some(attrs_map),
     is_math: true,
     select_count: Some(1),
     ..Default::default()
