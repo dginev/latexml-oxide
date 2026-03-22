@@ -271,8 +271,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     scripted_factor_l12 = floatsubarg factor_base => prefix_script
       | floatsubarg opfunction => prefix_script;
     scripted_factor_l1 = scripted_factor_l11 | scripted_factor_l12;
+    // POST script used as pre-script on factor (forced 'pre', no _wasfloat)
+    // e.g., {}_a^b x: ^b is POST, used as pre-script on x
+    prescripted_factor_post_r = postsuperarg factor_base => prefix_script_pre
+      | postsuperarg opfunction => prefix_script_pre;
+    prescripted_factor_post_l = postsubarg factor_base => prefix_script_pre
+      | postsubarg opfunction => prefix_script_pre;
     scripted_factor_l2 = floatsuperarg scripted_factor_l12 => prefix_script
-      | floatsubarg scripted_factor_l11 => prefix_script;
+      | floatsubarg scripted_factor_l11 => prefix_script
+      // Mixed FLOAT+POST from same {} base: FLOAT wraps POST pre-script
+      | floatsubarg prescripted_factor_post_r => prefix_script
+      | floatsuperarg prescripted_factor_post_l => prefix_script
+      // Recursive: chain 3+ floating scripts on factor (e.g., {}_i{}_j^k x)
+      | floatsuperarg scripted_factor_l2 => prefix_script
+      | floatsubarg scripted_factor_l2 => prefix_script;
 
     scripted_factor_r11 = factor_base postsuperarg => postfix_script
       | opfunction postsuperarg => postfix_script
@@ -304,6 +316,32 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += scripted_bigop factor => prefix_apply;
     // Scripted bigops can also appear as standalone statements
     statement += scripted_bigop;
+
+    // Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
+    // Handles patterns like {}_a^b\sum_c^d x where floating scripts
+    // attach as pre-scripts to the following operator.
+    // Perl's parse_kludgeScripts_rec: FLOAT + POST pairs from same {} base
+    // both become pre-scripts (POST gets forced 'pre' position without _wasfloat).
+    prescripted_bigop_inner = scripted_bigop | scripted_bigop_r1 | any_bigop;
+    // FLOAT script wrapping a bigop as pre-script
+    // Perl: preScripted['bigop'] / preScripted['INTOP']
+    prescripted_bigop = floatsuperarg prescripted_bigop_inner => prefix_script
+      | floatsubarg prescripted_bigop_inner => prefix_script
+      // Recursive: chain multiple floating scripts before bigop
+      | floatsuperarg prescripted_bigop => prefix_script
+      | floatsubarg prescripted_bigop => prefix_script;
+    // POST script used as pre-script (forced 'pre', no _wasfloat).
+    // Only used INSIDE prescripted_bigop (always FLOAT-wrapped outside),
+    // so they can't incorrectly match bare post-scripts as pre-scripts.
+    // Perl: parse_kludgeScripts_rec calls NewScript($base, $y, 'pre') for POST
+    // scripts that follow a FLOAT from the same empty {} base.
+    prescripted_bigop += postsuperarg prescripted_bigop_inner => prefix_script_pre
+      | postsubarg prescripted_bigop_inner => prefix_script_pre
+      | postsuperarg prescripted_bigop => prefix_script_pre
+      | postsubarg prescripted_bigop => prefix_script_pre;
+    tight_term += prescripted_bigop tight_term => prefix_apply;
+    tight_term += prescripted_bigop factor => prefix_apply;
+    statement += prescripted_bigop;
 
     anyop = addop | mulop | relop | arrow | metarelop
       | bigop | sumop | intop

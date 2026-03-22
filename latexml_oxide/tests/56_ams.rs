@@ -38,7 +38,6 @@ fn matrix_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn sideset_test() {
   latexml_test_single("tests/ams/sideset.tex", "sideset", DIR, None, None);
 }

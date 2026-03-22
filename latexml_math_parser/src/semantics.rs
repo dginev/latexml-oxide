@@ -1088,6 +1088,19 @@ pub fn prefix_script(
   new_script(base, op.unwrap(), ctxt)
 }
 
+/// Like prefix_script but forces "pre" position for POST scripts used as pre-scripts.
+/// Perl: parse_kludgeScripts_rec calls NewScript($base, $script, 'pre') for POST scripts
+/// that follow FLOAT scripts from the same empty {} base.
+pub fn prefix_script_pre(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => op, base);
+  new_script_forced_pre(base, op.unwrap(), ctxt)
+}
+
 /// Parse a scriptpos string like "post2" into position type and level.
 /// Follows Perl's: ($sx, $sl) = ($scriptpos || 'post') =~ /^(pre|mid|post)?(\d+)?$/
 fn parse_scriptpos(s: &str) -> (&'static str, u32) {
@@ -1113,10 +1126,29 @@ pub fn new_script(
   script: XM,
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
+  new_script_inner(base, script, ctxt, false)
+}
+
+/// Like new_script but forces "pre" position (Perl: NewScript($base, $script, 'pre')).
+/// Used for POST scripts kludged into pre-script position. Sets "pre" without _wasfloat.
+fn new_script_forced_pre(
+  base: Option<XM>,
+  script: XM,
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  new_script_inner(base, script, ctxt, true)
+}
+
+fn new_script_inner(
+  base: Option<XM>,
+  script: XM,
+  ctxt: ActionContext,
+  force_pre: bool,
+) -> Result<Option<XM>, Box<dyn Error>> {
   if let XM::Lexeme(ref lex, _) = script {
     let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
-    let is_float = node_role.starts_with("FLOAT");
+    let is_float = !force_pre && node_role.starts_with("FLOAT");
     let is_super = node_role.ends_with("SUPERSCRIPT");
     let role = Cow::Borrowed(if is_super {
       "SUPERSCRIPTOP"
@@ -1151,7 +1183,7 @@ pub fn new_script(
     };
 
     // Perl: $x = ($pos ? $pos : ($mode eq 'FLOAT' ? 'pre' : ($bl == $sl ? $bx : $sx) || 'post'));
-    let x = if is_float {
+    let x = if force_pre || is_float {
       "pre"
     } else if bl == sl {
       bx

@@ -371,7 +371,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - [ ] **55_theorem** (4 pass, 1 ignored = 5 total)
   - [x] amstheorem, latextheorem, ntheoremstyle, theorem
   - [ ] ntheorem — IGNORED: 1479 diffs, math parser + eqnarray
-- [ ] **56_ams** (3 pass, 4 ignored = 7 total)
+- [ ] **56_ams** (4 pass, 3 ignored = 7 total)
   - [x] dots, genfracs
   - [x] amsdisplay
   - [ ] cd — IGNORED: panic in math parser, needs amscd.sty
@@ -429,7 +429,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-22):** 264 pass, 0 fail, 57 ignored (321 total). Session 26 (258 commits, +6 tests): role=UNKNOWN default restored (matches Perl). \\input{name.latexml} binding mechanism. DefMathRewrite attributes_map fix (rewrites now apply). Removed blanket UNKNOWN→ID conversion. ~120 XMLs synced from Perl. Ports: icml_support, wrapfig, diagbox, iftex, sidewaystable. Font metrics: cmbx10/cmbx8/cmr8 TFM. Fixes: Perl #2775, parbox sizer, centering class, shortstack \\\\, package loading guards, etoolbox @-catcode, \\fam getter/setter.
+**Status (2026-03-22):** 265 pass, 0 fail, 56 ignored (321 total). Session 27: Floating pre-script grammar rules (prescripted_bigop, prefix_script_pre, recursive scripted_factor_l2). sideset_test PASSES (213→0).
 
 ### Completed items
 
@@ -476,7 +476,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
 - [x] **30. amsdisplay_test** (56_ams) — DONE (was 842). Ported subequations counter save/restore, multline tex= via setBody. 3 minor diffs accepted (same as amsarticle).
 - [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
-- [ ] **32. sideset_test** (56_ams) — 213 diffs (was 336, 481). Grammar rules helped. Remaining: floating scripts ({}_a^b\sum) + 8 unparsed expressions.
+- [x] **32. sideset_test** (56_ams) — DONE (was 213, 336, 481). Implemented floating pre-script grammar: `prescripted_bigop` rules for FLOAT scripts before bigops, `prefix_script_pre` semantic action for POST-as-pre (forced 'pre' without _wasfloat), recursive `scripted_factor_l2` for 3+ float chains. 0 diffs.
 
 ### Tier 3: Needs package bindings (moderate effort)
 
@@ -635,7 +635,7 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 - [ ] **G. latex_ch7_math_common_delimiters.rs** — File empty but `\big` etc. already work via plain.rs. May need LaTeX-specific sizing adjustments. Low priority.
 - [ ] **H. tex_box.rs SVG + vrule/hrule** — SVG collapse, `\vrule/\hrule` alignment, BoxSpecification for `\halign`. ~300 lines.
 - [ ] **I. tex_tables.rs \halign BoxSpecification** — Entirely commented-out section. ~200 lines.
-- [ ] **J. Rewrite system** — rewrite.rs at ~20% (Select/Replace only). Missing: `attributes`, `regexp`, `action`, `on_match` clauses. ~400 lines. Affects \lxDeclare, math decoration.
+- [ ] **J. Rewrite system** — rewrite.rs at ~40% (Select/Replace/Attributes). Missing: `regexp`, `action`, `on_match` clauses. ~300 lines. Affects \lxDeclare, math decoration.
 - [ ] **K. Declaration system (\lxDeclare)** — Rust uses simplified post-hoc matching. Perl has full DeclarationRewrite with XPath patterns, scope limiting, semantic annotation. ~200 lines.
 
 #### Important engine gaps (needed for test suites, ~1500 lines):
