@@ -245,6 +245,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **Bare \name constructor hooks**: DefEnvironment bare CS form now gets after_digest_body and all other hooks (was missing). Fixes \rothead rotation inside alignment.
 - **Diaghead tex=/xml:id**: Tag('ltx:picture') with generate_id + reversion-based tex= on \lx@diagheads picture element.
 - **Postfix modifier grammar**: `formula modifier => postfix_modifier_apply` for `\pmod`, `\pod`.
+- **.latexml file loader**: Parses DefMathRewrite calls from per-document .latexml files. Registers XPath-based rewrite rules for single-character match patterns. simplemath_test: 132→108 diffs. Note: roles assigned after parsing, so text= still reflects pre-rewrite parse.
 *Note: ~17 permanently blocked (tikz/pgf/DTD), ~7 missing packages, ~6 timeout/crash, ~27 math parser, ~7 other.*
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
 
