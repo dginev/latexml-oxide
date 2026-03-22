@@ -97,7 +97,7 @@ LoadDefinitions!({
         let doc_ptr = document.get_document();
         // Add line elements
         for line_key in &["line1", "line2"] {
-          if let Some(pts) = whatsit.get_property(*line_key) {
+          if let Some(pts) = whatsit.get_property(line_key) {
             let s = pts.to_string();
             if !s.is_empty() {
               let color = whatsit.get_property("linecolor").map(|c| c.to_string()).unwrap_or_else(|| "#000000".to_string());
@@ -130,7 +130,7 @@ LoadDefinitions!({
           if !ph.is_empty() { g_attrs.insert("innerheight".to_string(), ph); }
           g_attrs.insert("class".to_string(), "ltx_svg_fog".to_string());
           // Temporarily set cursor to picture, open g, open inline-block, absorb, close both
-          document.set_node(&mut picture);
+          document.set_node(&picture);
           document.open_element("ltx:g", Some(g_attrs), None)?;
           document.open_element("ltx:inline-block", None, None)?;
           document.absorb(&content, None)?;
@@ -138,7 +138,7 @@ LoadDefinitions!({
           document.close_element("ltx:g")?;
         }
         // Restore cursor
-        document.set_node(&mut node);
+        document.set_node(&node);
       }
     },
     after_digest => sub[whatsit] {
