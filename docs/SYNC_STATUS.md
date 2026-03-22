@@ -429,7 +429,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-22):** 261 pass, 0 fail, 60 ignored (321 total). Session 26 (64 commits): +3 tests (cells, graphrot, diagboxtest). Clippy 0 warnings. Perl #2775 (boxing depth + float \\\\). xcolor \\color reversion Box. Package loading guards (Fatal@500, loaded early-stop, fail-mark). Ports: icml_support, wrapfig, diagbox (full constructor + slashbox compat), iftex, sidewaystable/sidewaysfigure. Font metrics: cmbx10, cmbx8, cmr8 TFM. Fixes: centering class propagation, \\ifcase crash, etoolbox @-catcode, parbox sizer (width + height), beforeFloat \\hsize, shortstack \\\\ in tabular/float, \\fam getter/setter (#2772), \\lx@delimiterdot, hyperref etoolbox (#2736). RESET FAILED suppressed.
+**Status (2026-03-22):** 261 pass, 0 fail, 60 ignored (321 total). role=UNKNOWN default restored (matches Perl). .latexml binding mechanism operational. Session 26 (64 commits): +3 tests (cells, graphrot, diagboxtest). Clippy 0 warnings. Perl #2775 (boxing depth + float \\\\). xcolor \\color reversion Box. Package loading guards (Fatal@500, loaded early-stop, fail-mark). Ports: icml_support, wrapfig, diagbox (full constructor + slashbox compat), iftex, sidewaystable/sidewaysfigure. Font metrics: cmbx10, cmbx8, cmr8 TFM. Fixes: centering class propagation, \\ifcase crash, etoolbox @-catcode, parbox sizer (width + height), beforeFloat \\hsize, shortstack \\\\ in tabular/float, \\fam getter/setter (#2772), \\lx@delimiterdot, hyperref etoolbox (#2736). RESET FAILED suppressed.
 
 ### Completed items
 
