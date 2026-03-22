@@ -14,6 +14,7 @@ use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::gullet;
 use latexml_core::list::List;
+use latexml_core::rewrite::{Rewrite, RewriteOptions};
 use latexml_core::state::{self, Scope};
 use latexml_core::stomach;
 use latexml_core::token::{Catcode, Token};
@@ -31,6 +32,23 @@ use latexml_package::prelude::{
 static CLS_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.cls$").unwrap());
 static STY_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.sty$").unwrap());
 static LATEX_OPTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\[([^\]]*)\]").unwrap());
+
+// Regex for parsing DefMathRewrite calls from .latexml files
+// Matches: DefMathRewrite( ... );
+static DEF_MATH_REWRITE_RE: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"(?s)DefMathRewrite\(([^;]+)\);").unwrap()
+});
+// Key-value patterns within DefMathRewrite
+static SCOPE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"scope\s*=>\s*'([^']+)'").unwrap());
+static MATCH_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"match\s*=>\s*'([^']*)'").unwrap());
+static ROLE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"role\s*=>\s*'([^']+)'").unwrap());
+static NAME_ATTR_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"(?:^|,)\s*name\s*=>\s*'([^']*)'").unwrap());
+static MEANING_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"meaning\s*=>\s*'([^']*)'").unwrap());
 
 #[derive(Default)]
 pub struct DigestionOptions {
@@ -228,6 +246,22 @@ impl DigestionAPI for Core {
     document.absorb(&digested, None)?;
     note_end("Building");
 
+    // Load .latexml file if it exists alongside the source .tex file.
+    // Perl does this automatically during initialization; we do it post-build
+    // so the rewrite rules can be compiled against the built document.
+    if let Some(Stored::String(source_sym)) = state::lookup_value("SOURCEFILE") {
+      let source_path = arena::with(source_sym, |s| s.to_string());
+      // Replace .tex extension with .latexml
+      let latexml_path = if source_path.ends_with(".tex") {
+        source_path.replace(".tex", ".latexml")
+      } else {
+        format!("{}.latexml", source_path)
+      };
+      if Path::new(&latexml_path).exists() {
+        let _ = load_latexml_file(&latexml_path);
+      }
+    }
+
     let has_rewrites = state::has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
       note_begin("Rewriting");
@@ -413,6 +447,105 @@ impl DigestionAPI for Core {
     note_end(&s!("Digesting {} {}", mode, name));
     Ok(list)
   }
+}
+
+/// Load a `.latexml` file alongside a `.tex` source file.
+/// Parses `DefMathRewrite(...)` calls and registers them as rewrite rules.
+/// Perl loads these automatically; this provides the equivalent for Rust tests.
+///
+/// Supported patterns:
+///   - Single character: `match => 'a'` -> XPath on XMTok text content
+///   - Complex patterns (e.g. `\hat{f}`, `f_D`, `f_\WildCard`): skipped
+///   - `scope => 'label:...'`: scoped rewrites via label lookup
+///   - `attributes => { role => 'FUNCTION' }`: sets role (and optionally name/meaning)
+fn load_latexml_file(path: &str) -> Result<()> {
+  use latexml_core::rewrite::{RewriteClause, RewriteOperator, RewritePattern};
+
+  let content = match std::fs::read_to_string(path) {
+    Ok(c) => c,
+    Err(_) => return Ok(()), // File doesn't exist or can't be read
+  };
+
+  for cap in DEF_MATH_REWRITE_RE.captures_iter(&content) {
+    let body = &cap[1];
+
+    // Extract match pattern
+    let match_str = match MATCH_RE.captures(body) {
+      Some(m) => m[1].to_string(),
+      None => continue, // No match clause, skip
+    };
+
+    // Skip complex patterns: anything with \, _, {, } in the match string
+    // These need full token-level matching (digestion + DOM -> XPath) which we
+    // don't implement yet.
+    if match_str.contains('\\') || match_str.contains('_') || match_str.contains('{') {
+      continue;
+    }
+
+    // Build attributes map from the attributes => { ... } section
+    let mut attrs = HashMap::default();
+    if let Some(role_cap) = ROLE_RE.captures(body) {
+      attrs.insert("role".to_string(), role_cap[1].to_string());
+    }
+    if let Some(name_cap) = NAME_ATTR_RE.captures(body) {
+      attrs.insert("name".to_string(), name_cap[1].to_string());
+    }
+    if let Some(meaning_cap) = MEANING_RE.captures(body) {
+      attrs.insert("meaning".to_string(), meaning_cap[1].to_string());
+    }
+    if attrs.is_empty() {
+      continue; // No attributes to set
+    }
+
+    // Build the XPath for this match.
+    // For math mode, Perl's compile_match digests "$a$", builds DOM, then generates:
+    //   descendant-or-self::ltx:XMTok[text()='a'][@_pvis and @_cvis]
+    // We generate the equivalent XPath directly for single-character matches.
+    let xpath = format!(
+      "descendant-or-self::ltx:XMTok[text()='{}'][@_pvis and @_cvis]",
+      match_str
+    );
+
+    // Check for optional scope
+    let scope_str = SCOPE_RE.captures(body).map(|s| s[1].to_string());
+
+    // Build the rewrite rule with pre-compiled clauses
+    let mut clauses = Vec::new();
+
+    // Add scope clause if present (compiled during compile_clauses phase)
+    if let Some(ref scope) = scope_str {
+      clauses.push(RewriteClause::new_uncompiled(
+        RewriteOperator::Scope,
+        RewritePattern::String(scope.clone()),
+      ));
+    }
+
+    // Add match clause (pre-compiled as XPath string)
+    clauses.push(RewriteClause::new_uncompiled(
+      RewriteOperator::Match,
+      RewritePattern::String(xpath),
+    ));
+
+    // Add attributes clause
+    clauses.push(RewriteClause::new_compiled(
+      RewriteOperator::Attributes,
+      RewritePattern::String(String::new()),
+    ));
+
+    let rewrite = Rewrite {
+      options: RewriteOptions {
+        attributes_map: Some(attrs),
+        is_math: true,
+        select_count: Some(1),
+        ..RewriteOptions::default()
+      },
+      clauses,
+    };
+
+    state::push_value("DOCUMENT_REWRITE_RULES", rewrite)?;
+  }
+
+  Ok(())
 }
 
 /// Apply \lxDeclare declarations to the document.
