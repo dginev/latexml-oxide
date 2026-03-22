@@ -233,11 +233,16 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-20)
+## Test Suite Status (2026-03-21)
 
-**Current totals: 245 pass, 0 fail, 74 ignored test functions (319 total)**
-**Coverage: 79% pass rate (245/314 non-permanent-ignore tests)**
+**Current totals: 256 pass, 0 fail, 65 ignored test functions (321 total)**
+**Coverage: 80% pass rate (256/297 non-permanent-ignore tests)**
 *Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
+
+**Recent fixes (2026-03-21, session 20):**
+- **Empty-row pruning fix**: Perl's lspaces makes cells empty=false/skippable=true, triggering check_bracketting border guard. Rust: check template tokens for \lx@intercol + inherit top-border from preceding pruned rows. cells_test: 85→14. tabular.xml updated.
+- **has_intercol_before tracking**: Added Cell field for left intercolumn space presence, set during template building. Used in lpad fallback for ltx_nopad_l.
+- **\scalebox/\reflectbox dimensions**: Ported `scaled_properties()` — computes width/height/depth and xtranslate/ytranslate from body dimensions and scale factors. graphrot scalebox diffs: depth/height/ytranslate now match.
 
 **Recent fixes (2026-03-20, session 12):**
 - **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
