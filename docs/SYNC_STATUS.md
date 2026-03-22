@@ -384,7 +384,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [ ] picture — IGNORED: 3125 diffs, needs picture env
   - [ ] xcolors — IGNORED: 447 diffs, complete xcolor port
   - [ ] xytest — IGNORED: crash, needs xy.sty
-- [ ] **70_parse** (0 pass, 1 ignored = batch)
+- [ ] **70_parse** (17 pass, 11 ignored = 28 total)
   - [ ] batch — IGNORED: 120 diffs (math parser)
 - [x] **700_unit_parse** (3/3)
   - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
@@ -429,7 +429,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-22):** 265 pass, 0 fail, 56 ignored (321 total). Session 27: Floating pre-script grammar rules (prescripted_bigop, prefix_script_pre, recursive scripted_factor_l2). sideset_test PASSES (213→0).
+**Status (2026-03-22):** 267 pass, 0 fail, 54 ignored (321 total). Session 27: Floating pre-script grammar: prescripted_bigop, prefix_script_pre, recursive scripted_factor_l2. Standalone float+post script pairs. Operator script content (Na^+ fix). Role=UNKNOWN XML sync. Tests: sideset (213→0), kludge (36→0), operators (11→0) PASS.
 
 ### Completed items
 
