@@ -211,22 +211,12 @@ pub fn list_apply(
     }
   }
 
-  // Determine if separator is a comma
-  let is_comma = match &sep {
-    XM::Lexeme(lex, _) => lex.contains(','),
-    XM::Token(props, _) => props.content.as_deref() == Some(","),
-    _ => false,
-  };
-
-  // Perl: comma-separated relational formulas (containing RELOP/multirelation) → "formulae"
-  // Otherwise → "list"
-  let meaning = if is_comma {
-    let left_rel = left.as_ref().is_some_and(is_relational_item);
-    let right_rel = is_relational_item(&right);
-    if left_rel && right_rel { "formulae" } else { "list" }
-  } else {
-    "list"
-  };
+  // Perl: top-level PUNCT-separated relational formulas (containing RELOP/multirelation)
+  // use meaning="formulae" (NewFormulae). Non-relational items use "list" (NewList).
+  // This applies regardless of separator type (comma, \quad, period, etc.).
+  let left_rel = left.as_ref().is_some_and(is_relational_item);
+  let right_rel = is_relational_item(&right);
+  let meaning = if left_rel && right_rel { "formulae" } else { "list" };
   list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
 }
 

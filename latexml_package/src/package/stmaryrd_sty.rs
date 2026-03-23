@@ -172,5 +172,6 @@ LoadDefinitions!({
   DefMath!("\\rrbracket", None, "\u{27E7}", role => "CLOSE");
 
   // Text symbol
-  DefPrimitive!("\\varcopyright", None);
+  // Perl: DefPrimitive('\varcopyright', UTF(0xA9));
+  DefPrimitive!("\\varcopyright", "\u{00A9}");
 });
