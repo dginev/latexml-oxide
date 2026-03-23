@@ -34,7 +34,7 @@
       </Math>
     </equation>
     <equation>
-      <Math class="ltx_math_unparsed" mode="display" tex="\bordermatrix{&amp;A&amp;B\cr C&amp;0&amp;1\cr D&amp;2&amp;3}" text="Array[[, , A, B, ], [C, (@ , 0, 1, )@ ], [D, , 2, 3, ]]">
+      <Math mode="display" tex="\bordermatrix{&amp;A&amp;B\cr C&amp;0&amp;1\cr D&amp;2&amp;3}" text="Array[[, , A, B, ], [C, (@ , 0, 1, )@ ], [D, , 2, 3, ]]">
         <XMath>
           <XMArray>
             <XMRow>
@@ -53,9 +53,9 @@
                 <XMTok font="italic" role="UNKNOWN">C</XMTok>
               </XMCell>
               <XMCell class="ltx_nopad" rowspan="2">
-                <XMWrap height="8.4pt" yoffset="-5.2pt">
+                <XMWrap>
                   <XMTok role="OPEN" stretchy="true">(</XMTok>
-                  <XMTok depth="12.0pt" height="12.0pt"> </XMTok>
+                  <XMTok height="10.0pt"> </XMTok>
                 </XMWrap>
               </XMCell>
               <XMCell align="center">
@@ -65,9 +65,9 @@
                 <XMTok meaning="1" role="NUMBER">1</XMTok>
               </XMCell>
               <XMCell class="ltx_nopad" rowspan="2">
-                <XMWrap height="8.4pt" yoffset="-5.2pt">
+                <XMWrap>
                   <XMTok role="CLOSE" stretchy="true">)</XMTok>
-                  <XMTok depth="12.0pt" height="12.0pt"> </XMTok>
+                  <XMTok height="10.0pt"> </XMTok>
                 </XMWrap>
               </XMCell>
             </XMRow>
@@ -325,7 +325,7 @@
                   <XMTok font="italic" role="UNKNOWN">z</XMTok>
                 </XMApp>
               </XMCell>
-              <XMCell/>
+              <XMCell align="left"/>
             </XMRow>
           </XMArray>
         </XMath>
@@ -376,7 +376,7 @@
                   <XMTok font="italic" role="UNKNOWN">z</XMTok>
                 </XMApp>
               </XMCell>
-              <XMCell/>
+              <XMCell align="left"/>
             </XMRow>
           </XMArray>
         </XMath>
