@@ -22,7 +22,6 @@ pub fn math_tests_dispatch(filename: &str) -> Option<Result<()>> {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn ambiguous_relations_test() {
   latexml_test_single("tests/math/ambiguous_relations.tex", "ambiguous_relations", DIR, None, None);
 }
