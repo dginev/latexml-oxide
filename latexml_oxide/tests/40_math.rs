@@ -78,7 +78,6 @@ fn sampler_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (needs scoped rewrites for full match)
 fn simplemath_test() {
   latexml_test_single("tests/math/simplemath.tex", "simplemath", DIR, None, Some(Rc::new(math_tests_dispatch)));
 }

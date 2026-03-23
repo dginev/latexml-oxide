@@ -65,10 +65,11 @@ fn add_math_rewrite_scoped(match_char: &str, role: &str, scope: Option<&str>) ->
 /// Single-node match (nnodes=1): the XMApp containing hat accent + f.
 #[allow(dead_code)]
 fn add_accent_f_rewrite() -> Result<()> {
+  // Use * instead of ltx:XMTok in nested predicates to avoid
+  // namespace resolution issues in libxml2 XPath evaluation.
   let xpath = "descendant-or-self::ltx:XMApp\
-    [ltx:XMTok[@name='hat' and @role='OVERACCENT']]\
-    [ltx:XMTok[text()='f' and not(@meaning)]]\
-    [@_pvis and @_cvis]"
+    [*[@name='hat' and @role='OVERACCENT']]\
+    [*[text()='f'] or */*[text()='f']]"
     .to_string();
   let mut attrs_map = rustc_hash::FxHashMap::default();
   attrs_map.insert("role".to_string(), "ID".to_string());

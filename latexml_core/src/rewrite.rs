@@ -443,6 +443,11 @@ impl Rewrite {
               for (key, value) in attrs {
                 let _ = node.set_attribute(key, value);
               }
+              // Mark XMApp nodes with rewrite-set roles so the parser treats them
+              // as atomic tokens (prevents start_ROLE/end_ROLE lexeme emission).
+              if node.get_name() == "XMApp" && attrs.contains_key("role") {
+                let _ = node.set_attribute("_rewrite", "1");
+              }
             }
           }
           mark_seen(tree, nmatched);

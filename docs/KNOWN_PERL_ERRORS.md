@@ -125,3 +125,63 @@ the header heuristic less likely to succeed on borderline cases.
 **Rust fix:** Match the Perl behavior — break immediately when diff >=
 threshold. The continuation-line logic is commented out with a reference
 to this entry.
+
+---
+
+## 7. `NewScript` XMDual content arm uses meaningless `Apply(∅, XMRef)` for subscripted identifiers
+
+**Perl source:** `LaTeXML/MathParser.pm` line 1637, `NewScript()` function
+
+**Symptom:** When a subscripted expression like `f_1` is assigned `role="ID"` via
+`DefMathRewrite`, the math parser wraps it in `XMDual`. The presentation branch
+correctly shows the subscript structure (`SUBSCRIPTOP + f + 1`). But the content
+branch contains:
+
+```xml
+<XMApp>
+  <XMTok/>                              <!-- empty/absent operator -->
+  <XMRef idref="S0.Ex4.m1.1"/>          <!-- reference to subscript value "1" -->
+</XMApp>
+```
+
+This is `Apply(∅, 1)` — applying a nonexistent operator to just the subscript
+value. It is **not mathematically meaningful**. An identifier `f₁` should be
+represented as a single atomic token (a skolem constant), e.g.:
+
+```xml
+<XMTok name="f_1" role="ID"/>
+```
+
+or simply left as the flat subscript structure with `role="ID"`:
+
+```xml
+<XMApp role="ID">
+  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+  <XMTok>f</XMTok>
+  <XMTok meaning="1" role="NUMBER">1</XMTok>
+</XMApp>
+```
+
+**Root cause:** `NewScript()` always creates `Apply(SCRIPTOP, base, script)` for
+the presentation branch. The XMDual content branch is constructed mechanically
+by extracting `Arg($script, 0)` and wrapping in `Apply(empty_tok, XMRef)`. This
+pattern works for operators where the subscript carries semantic meaning (e.g.,
+`∑_i` → `Apply(sum, i)`), but for plain identifiers (`f_1`) the subscript is
+just a name component, not an argument.
+
+**Minimal example:**
+```tex
+% In .latexml file:
+DefMathRewrite(match => 'f_\WildCard', attributes => { role => 'ID' });
+% In .tex file:
+$f_1(a+b)$
+```
+
+**Impact:** Content MathML generation would produce `<apply><csymbol/><cn>1</cn></apply>`
+instead of `<ci>f₁</ci>`. No known downstream breakage because content MathML
+is rarely consumed for such tokens, but semantically incorrect.
+
+**Rust fix:** Rust produces the flat `XMApp[role="ID"]` form without XMDual.
+The test XML is updated to match the Rust output. This is an intentional
+divergence — the Rust form is semantically cleaner (no meaningless `Apply(∅, ref)`).
+If XMDual is needed later, the content branch should use a skolem `XMTok[name="f_1"]`.
