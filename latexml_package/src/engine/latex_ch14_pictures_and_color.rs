@@ -58,16 +58,33 @@ LoadDefinitions!({
   });
 
   // {picture} environment: (width,height) with optional (origin-x,origin-y)
-  // Perl uses Pair directly in DefEnvironment. In Rust, Pair is lost during digestion.
-  // Workaround: set picture dimensions as properties using the register values.
+  // Pair now survives digestion via RegisterValue::Pair, so properties can extract coordinates.
   DefEnvironment!("{picture} Pair OptionalPair",
-    "<ltx:picture fill='none' stroke='none'>\
+    "<ltx:picture width='#width' height='#height' fill='none' stroke='none' unitlength='#unitlength'>\
       #body\
     </ltx:picture>",
     mode => "text",
     before_digest => {
       // Perl: before_picture — Let \raisebox to \pic@raisebox
       Let!("\\raisebox", "\\pic@raisebox");
+    },
+    properties => sub[args] {
+      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let (w, h) = match args[0].as_ref() {
+        Some(d) => match d.data() {
+          DigestedData::RegisterValue(RegisterValue::Pair(p)) => (p.x.0 * unit, p.y.0 * unit),
+          _ => (0.0, 0.0),
+        },
+        None => (0.0, 0.0),
+      };
+      Ok(stored_map!(
+        "width"      => Stored::String(arena::pin(&format!("{w}pt"))),
+        "height"     => Stored::String(arena::pin(&format!("{h}pt"))),
+        "unitlength" => Stored::String(arena::pin(&format!("{unit}pt")))
+      ))
     }
   );
 
