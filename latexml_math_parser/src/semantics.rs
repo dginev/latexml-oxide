@@ -673,9 +673,55 @@ pub fn prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
+  // Perl: when a FUNCTION applies to a fenced arg (from `fenced` semantic action),
+  // lift the XMDual to wrap the entire application:
+  //   Apply(func, Dual(Ref, Wrap)) → Dual(Apply(Ref(func), Ref), Apply(func, Wrap))
+  // This matches Perl's ApplyFunction XMDual structure.
+  let is_function_role = match &prefixop {
+    Some(XM::Lexeme(lex, _)) => {
+      let role = lex.split(':').next().unwrap_or("");
+      matches!(role, "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
+    },
+    Some(XM::Token(props, _)) => {
+      props.role.as_deref().map_or(false, |r|
+        matches!(r, "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION"))
+    },
+    _ => false,
+  };
+  if is_function_role {
+    if let Some(XM::Dual(ref content, ref pres, _, _)) = arg1 {
+      if matches!(**content, XM::Ref(_)) && matches!(**pres, XM::Wrap(..)) {
+        let mut func = prefixop.unwrap();
+        let arg1_inner = arg1.unwrap();
+        let XM::Dual(content_box, pres_box, _, _) = arg1_inner else { unreachable!() };
+        let content_ref = *content_box;
+        let pres_wrap = *pres_box;
+        let func_refs = create_xmrefs(&mut [&mut func], ctxt)?;
+        let func_ref = func_refs.into_iter().next().unwrap();
+        let content_apply = XM::Apply(
+          func_ref.into(),
+          Args(vec![Some(content_ref)]),
+          XProps::default(),
+          Meta::default(),
+        );
+        let pres_apply = XM::Apply(
+          func.into(),
+          Args(vec![Some(pres_wrap)]),
+          XProps::default(),
+          Meta::default(),
+        );
+        return Ok(Some(XM::Dual(
+          Box::new(content_apply),
+          Box::new(pres_apply),
+          XProps::default(),
+          Meta::default(),
+        )));
+      }
+    }
+  }
   Ok(Some(XM::Apply(
     prefixop.into(),
     Args(vec![arg1]),
