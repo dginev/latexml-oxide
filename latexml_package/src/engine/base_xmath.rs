@@ -1180,14 +1180,14 @@ LoadDefinitions!({
 
   // Perl: amsmath.sty.ltxml line 694 (defined in Perl Package but logically belongs here)
   // AMS variant of cases — takes DigestedBody
-  // TODO: afterConstruct hook that creates XMDual with meaning='cases'
   DefConstructor!("\\lx@ams@cases@ RequiredKeyVals:lx@GEN DigestedBody",
     "<ltx:XMWrap>#left#2#right</ltx:XMWrap>",
+    alias => "\\begin{cases}",
+    reversion => "\\begin{cases}#2\\end{cases}",
     properties => sub[args] {
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
-          // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
               props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1201,6 +1201,59 @@ LoadDefinitions!({
         }
       }
       Ok(props)
+    },
+    after_construct => sub[document, _whatsit] {
+      // Same as \lx@gen@plain@cases@ — wrap in XMDual with meaning='cases'
+      if let Some(current) = document.get_element() {
+        if let Some(mut point) = current.get_last_element_child() {
+          let cells = document.findnodes("ltx:XMArray/ltx:XMRow/ltx:XMCell", Some(&point));
+          if !cells.is_empty() {
+            let mut ref_ids: Vec<Option<String>> = Vec::new();
+            for cell in &cells {
+              if !cell.get_child_elements().is_empty() {
+                for mut child in cell.get_child_elements() {
+                  document.generate_id(&mut child, "")?;
+                  let id = child.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+                    .unwrap_or_default();
+                  ref_ids.push(Some(id));
+                }
+              } else {
+                ref_ids.push(None);
+              }
+            }
+            if let Some(mut parent) = point.get_parent() {
+              let mut xm_dual =
+                document.open_element_at(&mut parent, "ltx:XMDual", None, None)?;
+              point.add_prev_sibling(&mut xm_dual).ok();
+              let mut xm_app =
+                document.open_element_at(&mut xm_dual, "ltx:XMApp", None, None)?;
+              let mut tok_attrs = HashMap::default();
+              tok_attrs.insert("meaning".to_string(), "cases".to_string());
+              let mut xm_tok =
+                document.open_element_at(&mut xm_app, "ltx:XMTok", Some(tok_attrs), None)?;
+              document.close_element_at(&mut xm_tok)?;
+              for ref_id_opt in &ref_ids {
+                if let Some(id) = ref_id_opt {
+                  let mut ref_attrs = HashMap::default();
+                  ref_attrs.insert("idref".to_string(), id.clone());
+                  let mut xm_ref =
+                    document.open_element_at(&mut xm_app, "ltx:XMRef", Some(ref_attrs), None)?;
+                  document.close_element_at(&mut xm_ref)?;
+                } else {
+                  let mut xm_text =
+                    document.open_element_at(&mut xm_app, "ltx:XMText", None, None)?;
+                  xm_text.set_content("otherwise");
+                  document.close_element_at(&mut xm_text)?;
+                }
+              }
+              document.close_element_at(&mut xm_app)?;
+              point.unlink_node();
+              xm_dual.add_child(&mut point)?;
+              document.close_element_at(&mut xm_dual)?;
+            }
+          }
+        }
+      }
     }
   );
 
