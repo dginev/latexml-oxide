@@ -254,7 +254,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - `finalize_rec` iterative rewrite eliminated all stack overflow risks for any DOM depth.
 - DefEnvironment bare `\name` form now gets all hooks (after_digest_body, after_construct, sizer, etc.).
 
-**Perl XML parity: 204/242 test XMLs match Perl exactly. 18 more match modulo intentional divergences (`%&#10;` + ELIDEOP). 20 have real diffs (lpadding, XMWrap fencing, guessTableHeaders, font metrics, division scoping). plainmath_test: 343→9 diffs.**
+**Perl XML parity: 206/242 test XMLs match Perl exactly. 17 more match modulo intentional divergences (`%&#10;` + ELIDEOP). 19 have real diffs (xml:id on operators, XMWrap fencing, guessTableHeaders, font metrics, division scoping). plainmath_test: 343→5 approved diffs. standalone_modifiers: 0 Perl diffs.**
 
 **Recent fixes (2026-03-23, session 31, 17 commits):**
 - **\lx@math@nounicode DefPrimitive fix**: Changed from DefConstructor (creating XML `<ltx:text>` element) to DefPrimitive (returning Tbox with `class='ltx_nounicode'`), matching Perl's `Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode')`. Fixed XMDual wrapping for all non-Unicode math symbols (stmaryrd etc.).
@@ -269,7 +269,10 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **cleveref `~` tilde**: `\lx@tilde` primitive produces literal `~` surviving `{}` parameter reading. cleveref_minimal.xml now matches Perl exactly.
 - **KeyVals comma separator**: `", "` → `","` (no space). keyvalstyle.xml now matches Perl exactly.
 - **`\halign` `is_halign` flag**: First column CAN have ltx_nopad_l. sizes.xml, halignatt.xml now match Perl.
-- **`\bordermatrix` DOM manipulation**: Ported afterConstruct — adds XMCell columns with rowspan for stretchy parens. class="ltx_nopad" on paren cells. plainmath_test: 343→9 diffs.
+- **`\bordermatrix` DOM manipulation**: Ported afterConstruct — adds XMCell columns with rowspan for stretchy parens. Proper dimensions from alignment row heights. plainmath_test: 343→5 approved diffs.
+- **Empty cell `align` stripping**: Perl doesn't set align on empty alignment cells.
+- **`\quad` lpadding in math alignment cells**: \quad isSpace boxes classified as lspaces; now absorbed as pre-content in math mode creating XMHint.
+- **XMHint glue parsing**: Fixed `get_xmhint_spacing` to strip `plus`/`minus` from glue specs. Enables \; \, \> spacing in math mode. standalone_modifiers: 0 Perl diffs.
 
 **Recent fixes (2026-03-22, sessions 21-25):**
 - **finalize_rec iterative rewrite**: Converted from recursive to iterative with heap work-stack. Fixes SEGFAULT for nested hboxes. Deferred font wrapper collapse to post-traversal.
