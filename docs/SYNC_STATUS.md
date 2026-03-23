@@ -575,9 +575,9 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 **Math parser grammar (11), sorted by diffs:** (kludge, sideset, standalone_modifiers, simplemath, function_argument_syntax already DONE)
 - ambiguous_relations 101 — Rust parses 2 eqs Perl leaves unparsed (0=<x,y> with absent), xml:id numbering
 - relations 101 — structural parse diffs
-- array_math_parse 180 — 3 unparsed eqs (\\{\\begin{array} brace+array combo)
+- array_math_parse 194 — fenced_array grammar added (\\{array→cases), all eqs parse, structural diffs remain (XMDual wrapping)
 - scripts 301 — empty-base absent, combined scripts ordering, prime handling
-- calculus 331 — bigop argument absorption (bigop should eat full term)
+- calculus 273 — bigop_application absorbs term (was 331), remaining: limit-from, nested sums, evaluated-at
 - artefacts 345
 - qm 400
 - operators 422 — needs \\lxDeclare for role=ID rewrites per .latexml file
