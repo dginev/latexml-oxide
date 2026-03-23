@@ -326,6 +326,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi)
     // Note: trigfunction tight_term already in compound_operator, can't duplicate.
     tight_term += trigfunction factor => prefix_apply;
+    // TRIGFUNCTION followed by fenced args => function application with XMDual wrapping.
+    tight_term += trigfunction lparen formula rparen => apply_delimited;
+    tight_term += trigfunction lbracket formula rbracket => apply_delimited;
     tight_term += trigfunction fenced_factor => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
     // Uses existing `unknown` terminal; semantic action checks text is literally "d".
