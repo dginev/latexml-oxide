@@ -1,4 +1,25 @@
 use crate::prelude::*;
+
+/// Convert TeX points to CSS pixels using DPI setting (default 100).
+/// Perl: $$self[0] / 65536 * DPI / 72.27
+fn px_value(pt: f64) -> f64 {
+  // DPI default is 100 in LaTeXML (state::lookupValue('DPI') || 100)
+  let dpi = state::lookup_value("DPI")
+    .and_then(|v| if let Stored::Number(n) = v { Some(n.0 as f64) } else { None })
+    .unwrap_or(100.0);
+  // Round to 2 decimal places (Perl default precision)
+  (pt * dpi / 72.27 * 100.0).round() / 100.0
+}
+
+/// Format a px value, dropping trailing ".0" for integers
+fn fmt_px(v: f64) -> String {
+  if v == v.round() && v.abs() < 1e10 {
+    format!("{}", v as i64)
+  } else {
+    format!("{v}")
+  }
+}
+
 LoadDefinitions!({
   // Not sure that ltx:p is the best to use here, but ... (see also \vbox, \vtop)
   // This should be fairly compact vertically.
@@ -109,9 +130,9 @@ LoadDefinitions!({
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
-      let tx = x * unit;
-      let ty = y * unit;
-      let transform_str = format!("translate({tx},{ty})");
+      let tx = px_value(x * unit);
+      let ty = px_value(y * unit);
+      let transform_str = format!("translate({},{})", fmt_px(tx), fmt_px(ty));
       Ok(stored_map!("transform" => Stored::String(arena::pin(&transform_str))))
     }
   );
@@ -133,18 +154,18 @@ LoadDefinitions!({
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
       };
-      // slopeToPicCoord: compute endpoint from slope and length
+      // slopeToPicCoord: compute endpoint from slope and length, then convert to px
       let s = if mx > 0.0 { 1.0 } else if mx < 0.0 { -1.0 } else { 0.0 };
-      let ex = xlength * unit * s;
+      let ex = px_value(xlength * unit * s);
       let ey = if s == 0.0 {
-        xlength * unit * (if my > 0.0 { 1.0 } else { -1.0 })
+        px_value(xlength * unit * (if my > 0.0 { 1.0 } else { -1.0 }))
       } else {
-        xlength * unit * my / mx.abs()
+        px_value(xlength * unit * my / mx.abs())
       };
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(&format!("0,0 {ex},{ey}"))),
+        "points" => Stored::String(arena::pin(&format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
         "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
-        "color"  => "black"
+        "color"  => "#000000"
       ))
     }
   );
@@ -167,16 +188,16 @@ LoadDefinitions!({
         _ => 0.4,
       };
       let s = if mx > 0.0 { 1.0 } else if mx < 0.0 { -1.0 } else { 0.0 };
-      let ex = xlength * unit * s;
+      let ex = px_value(xlength * unit * s);
       let ey = if s == 0.0 {
-        xlength * unit * (if my > 0.0 { 1.0 } else { -1.0 })
+        px_value(xlength * unit * (if my > 0.0 { 1.0 } else { -1.0 }))
       } else {
-        xlength * unit * my / mx.abs()
+        px_value(xlength * unit * my / mx.abs())
       };
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(&format!("0,0 {ex},{ey}"))),
+        "points" => Stored::String(arena::pin(&format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
         "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
-        "color"  => "black"
+        "color"  => "#000000"
       ))
     }
   );
@@ -196,14 +217,14 @@ LoadDefinitions!({
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
       };
-      let radius = dia * unit * 0.5;
+      let radius = px_value(dia * unit * 0.5);
       let (fill, stroke) = if filled {
-        ("black", "none")
+        ("#000000", "none")
       } else {
-        ("none", "black")
+        ("none", "#000000")
       };
       Ok(stored_map!(
-        "radius" => Stored::String(arena::pin(&format!("{radius}"))),
+        "radius" => Stored::String(arena::pin(&format!("{}", fmt_px(radius)))),
         "fill"   => fill,
         "stroke" => stroke,
         "thick"  => Stored::String(arena::pin(&format!("{thick}")))
@@ -238,13 +259,14 @@ LoadDefinitions!({
       let parse_f = |i: usize| -> f64 {
         args[i].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0)
       };
-      let (x1, y1) = (parse_f(1) * unit, parse_f(2) * unit);
-      let (x2, y2) = (parse_f(3) * unit, parse_f(4) * unit);
-      let (x3, y3) = (parse_f(5) * unit, parse_f(6) * unit);
+      let (x1, y1) = (px_value(parse_f(1) * unit), px_value(parse_f(2) * unit));
+      let (x2, y2) = (px_value(parse_f(3) * unit), px_value(parse_f(4) * unit));
+      let (x3, y3) = (px_value(parse_f(5) * unit), px_value(parse_f(6) * unit));
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(&format!("{x1},{y1} {x2},{y2} {x3},{y3}"))),
+        "points" => Stored::String(arena::pin(&format!("{},{} {},{} {},{}",
+          fmt_px(x1), fmt_px(y1), fmt_px(x2), fmt_px(y2), fmt_px(x3), fmt_px(y3)))),
         "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
-        "color"  => "black"
+        "color"  => "#000000"
       ))
     }
   );
