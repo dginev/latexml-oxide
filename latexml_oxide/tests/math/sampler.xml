@@ -214,7 +214,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           <tag>(5)</tag>
           <tag role="refnum">5</tag>
         </tags>
-        <Math class="ltx_math_unparsed" mode="display" tex="(a|b),\qquad\bigl{(}a\bigm{|}b\bigr{)},\qquad\Bigl{(}a\Bigm{|}b\Bigr{)},\qquad\biggl{(}a\biggm{|}b\biggr{)},\qquad\Biggl{(}a\Biggm{|}b\Biggr{)}" xml:id="S1.E5.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="(a|b),\qquad\bigl(a\bigm|b\bigr),\qquad\Bigl(a\Bigm|b\Bigr),\qquad\biggl(a\biggm|b\biggr),\qquad\Biggl(a\Biggm|b\Biggr)" xml:id="S1.E5.m1">
           <XMath>
             <XMTok role="OPEN" stretchy="false">(</XMTok>
             <XMTok font="italic" role="UNKNOWN">a</XMTok>
@@ -306,7 +306,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           <tag>(7)</tag>
           <tag role="refnum">7</tag>
         </tags>
-        <Math mode="display" tex="\left(x\right),\qquad\Bigg{(}x\Bigg{)},\qquad\Big{((}x-z\Big{))}" text="list@(x, x, x - z)" xml:id="S1.E7.m1">
+        <Math mode="display" tex="\left(x\right),\qquad\Bigg(x\Bigg),\qquad\Big((x-z\Big))" text="list@(x, x, x - z)" xml:id="S1.E7.m1">
           <XMath>
             <XMDual>
               <XMApp>
