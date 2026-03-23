@@ -128,13 +128,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     //   - If the MulOp is explicit (×,·), either interpretation is valid
     //   - If the argument is a known constant (π, e), standalone may be preferred
     // This is a semantic-level decision, not a grammar-level one.
-    applied_func = function tight_term => prefix_apply
-      | trigfunction tight_term => prefix_apply
-      | opfunction tight_term => prefix_apply;
-    // Standalone applied functions are also tight_terms
-    tight_term += applied_func;
-    // Function application results can chain with invisible times (Perl moreFactors)
-    tight_term += tight_term applied_func => apply_invisible_times;
+    // applied_func and tight_term augmentations moved below trig_arg definition
 
     // Composed functions: f∘g, sin∘cos — these can then be applied as functions
     // COMPOSEOP operates on function-level operands (curry level 2)
@@ -279,6 +273,26 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbrace rbrace => empty_fenced
            | open close => empty_fenced;
     factor += fenced_factor;
+
+    // Perl: addTrigFunArgs → trigBarearg → aTrigBarearg moreTrigBareargs
+    // Trig functions absorb chains of mulop+factor (but NOT other trig functions).
+    // aTrigBarearg includes: FUNCTION+args, OPFUNCTION+args, ATOM_OR_ID, UNKNOWN, NUMBER
+    trig_arg = factor
+      | fenced_factor
+      | unknown fenced_factor => speculative_prefix_apply
+      | function fenced_factor => prefix_apply
+      | opfunction fenced_factor => prefix_apply
+      | trig_arg mulop factor => infix_apply_nary
+      | trig_arg factor => apply_invisible_times;
+
+    // applied_func uses trig_arg (defined above)
+    applied_func = function tight_term => prefix_apply
+      | trigfunction trig_arg => prefix_apply
+      | opfunction tight_term => prefix_apply;
+    // Standalone applied functions are also tight_terms
+    tight_term += applied_func;
+    // Function application results can chain with invisible times (Perl moreFactors)
+    tight_term += tight_term applied_func => apply_invisible_times;
 
     // UNKNOWN followed by fenced args => function application (Perl: doubtArgs/maybeArgs)
     // f(x) => f@(x), g(a+b) => g@(a+b). Only active when MATHPARSER_SPECULATE is set.
