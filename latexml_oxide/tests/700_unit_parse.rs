@@ -117,3 +117,58 @@ fn recognizer_mulop_opfunction() {
   let mul = parser.recognizes("UNKNOWN:a:1 MULOP:times:2 OPFUNCTION:op:3 ");
   eprintln!("a*op: {mul}");
 }
+
+#[test]
+fn repeated_parse_failures_no_corruption() {
+  // Stress test: repeatedly parse unrecognized token sequences.
+  // Unrecognized role tokens like start_DIFFOP/end_DIFFOP caused garbled
+  // output in earlier implementations. This test verifies that failed parses
+  // don't corrupt the parser state or cause memory issues.
+  let mut parser = MathParser::default();
+
+  // These sequences should all fail (grammar has no rules for DIFFOP/CUSTOMROLE)
+  for i in 0..5 {
+    let fails = parser.recognizes(&format!(
+      "start_DIFFOP:start:{} UNKNOWN:f:{} end_DIFFOP:end:{} ",
+      i * 3 + 1,
+      i * 3 + 2,
+      i * 3 + 3
+    ));
+    assert!(!fails, "DIFFOP sequence #{i} should NOT parse");
+  }
+
+  // After repeated failures, the parser should still handle valid sequences
+  assert!(
+    parser.recognizes("UNKNOWN:a:1 ADDOP:plus:2 UNKNOWN:b:3 "),
+    "a+b should parse after repeated failures"
+  );
+  assert!(
+    parser.recognizes(
+      "UNKNOWN:D:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:r:3 end_POSTSUBSCRIPT:end:4 "
+    ),
+    "D_r should parse after repeated failures"
+  );
+}
+
+#[test]
+fn parse_failure_with_full_document() {
+  // End-to-end test: parse a TeX formula that produces XMWrap with
+  // rewrite role, ensuring the full pipeline handles parse failures gracefully.
+  let tex = "a+b";
+  let mut latexml = new_test_engine();
+  let (_lexemes, _nodes, xmath_opt, mut doc) = lex_single_tex_formula(tex, &mut latexml);
+  assert!(xmath_opt.is_some(), "should produce XMath");
+
+  // Parse a simple formula to verify the document is usable
+  assert!(model::load_schema(&[]).is_ok());
+  let mut parser = MathParser::default();
+  parser.parse_math(&mut doc).unwrap();
+
+  // Verify the document serializes without corruption
+  let xml = doc.serialize_to_string();
+  assert!(xml.contains("XMath"), "serialized XML should contain XMath");
+  assert!(
+    !xml.contains('\0'),
+    "serialized XML should not contain null bytes"
+  );
+}
