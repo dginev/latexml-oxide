@@ -452,7 +452,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-22):** 270 pass, 0 fail, 51 ignored (321 total). Session 30: +2 tests: standalone_modifiers_test (79→0) PASS, acm_aria_test (3→0) PASS. XMDual for apply_delimited. Modifier binding at expression level. Parenthesized modifier expressions. Fixed amsmath \\pmod override. Full acmart.cls port (11 deps: geometry, microtype, setspace, newtxmath, balance, ifxetex, ifluatex, ifpdf, txfonts, ifthen, refcount). xmlns namespace declarations on root element. Bigop absorption pruning (calculus 368→331). ifthen noltxml passthrough fix (reloadable+extension). ncases class fix. listing catcode fix (2032→1660). plainfonts_test (77→0) PASS via consecutive_relop_chain grammar rule.
+**Status (2026-03-23):** 274 pass, 0 fail, 47 ignored (321 total). Session 33: +1 test: simplemath_test (208→0) PASS. Multi-token math rewrite infrastructure (C5): select_count preservation, XMWrap wrapping for multi-node matches, _rewrite marker for parser atomic handling. replace_tree safety analysis (node cache prevents use-after-free). KNOWN_PERL_ERRORS #7: NewScript XMDual content arm bug. XPath namespace workaround (use * in nested predicates). function_argument_syntax_test already enabled by prior session.
 
 ### Completed items
 
