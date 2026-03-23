@@ -254,12 +254,20 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - `finalize_rec` iterative rewrite eliminated all stack overflow risks for any DOM depth.
 - DefEnvironment bare `\name` form now gets all hooks (after_digest_body, after_construct, sizer, etc.).
 
-**Recent fixes (2026-03-23, session 31):**
+**Perl XML parity: 202/242 test XMLs match Perl exactly. 16 more differ only by `%&#10;` (intentional). 24 have real diffs (lpadding, XMWrap fencing, guessTableHeaders, font metrics).**
+
+**Recent fixes (2026-03-23, session 31, 13 commits):**
 - **\lx@math@nounicode DefPrimitive fix**: Changed from DefConstructor (creating XML `<ltx:text>` element) to DefPrimitive (returning Tbox with `class='ltx_nounicode'`), matching Perl's `Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode')`. Fixed XMDual wrapping for all non-Unicode math symbols (stmaryrd etc.).
 - **\varcopyright**: Now produces `©` (U+00A9) instead of None.
 - **list_apply formulae meaning**: Simplified to check content (relational or not) regardless of separator type. `meaning="formulae"` when both sides contain RELOP/multirelation.
 - **amscd arrow width**: Fixed `"0pt"` → `"0.0pt"` for XMArg width attributes.
-- **TeXDelimiter parameter type**: Investigated using `DefToken` for sized delimiters (`\Big`, `\big`, etc.) to fix `\Big{\|}` → `\Big\|` in tex= attributes. Reverted — `DefToken` breaks XML structure (produces XMText instead of XMTok). Needs proper `TeXDelimiter` parameter type implementation.
+- **TeXDelimiter parameter type**: Implemented. Reads like `{}` for correct math digestion, uses `digested_reversion` to strip outer braces. `\Big\|` in tex= instead of `\Big{\|}`.
+- **`\genfrac` doubled fraction**: Template false branch had duplicate XMApp. Fixed to empty `()`.
+- **`\genfrac` thickness detection**: Raw value check (0.01ex ≈ 0.04pt rounds to "0.0pt" but is non-zero).
+- **IEEEproof QED tombstone**: `before_digest_end` discarded result. ieee_test 966→866 diffs.
+- **`\cases` afterConstruct**: XMDual with meaning='cases' + XMRefs for both plain and AMS variants.
+- **cleveref `~` tilde**: `\lx@tilde` primitive produces literal `~` surviving `{}` parameter reading. cleveref_minimal.xml now matches Perl exactly.
+- **KeyVals comma separator**: `", "` → `","` (no space). keyvalstyle.xml now matches Perl exactly.
 
 **Recent fixes (2026-03-22, sessions 21-25):**
 - **finalize_rec iterative rewrite**: Converted from recursive to iterative with heap work-stack. Fixes SEGFAULT for nested hboxes. Deferred font wrapper collapse to post-traversal.
