@@ -1966,6 +1966,11 @@ LoadDefinitions!({
   // Perl: adds empty XMCell columns for stretchy parens with rowspan
   DefConstructor!("\\lx@hack@bordermatrix{}", sub[document, args, _props] {
       let matrix = args[0].as_ref().unwrap();
+      // Default dimensions: h=10pt, d=0.
+      // TODO: extract actual dimensions from alignment->getHeight and row[1].y
+      // (alignment cached_height is None before absorption)
+      let h_sp: i64 = 10 * 65536; // 10pt in scaled points
+      let d_sp: i64 = 0;
       document.absorb(matrix, None)?;
       // DOM manipulation: add paren columns to the border matrix
       let marray = document.get_node().get_last_element_child();
@@ -1998,11 +2003,7 @@ LoadDefinitions!({
               let mut col1 = cols[1].clone();
               col1.set_attribute("rowspan", &rowspan_str).ok();
               col1.set_attribute("class", "ltx_nopad").ok();
-              // Compute dimensions from alignment (Perl: $h, $d from alignment rows)
-              // TODO: extract from alignment->getHeight and row->y for actual values
-              // Default: h=10pt (10*UNITY), d=0.
-              let h_sp: i64 = 10 * 65536; // 10pt in scaled points
-              let d_sp: i64 = 0;
+              // Dimensions from alignment (extracted above before absorb)
               let md_sp = -d_sp;
 
               // Build XMWrap with open paren — use text_default font to avoid math italic

@@ -200,6 +200,7 @@ impl Alignment {
   }
 
   pub fn rows(&self) -> &VecDeque<Row> { &self.rows }
+  pub fn get_cached_height(&self) -> Option<Dimension> { self.cached_height }
 
   pub fn add_line(&mut self, border: &str, cols: Vec<usize>) {
     if let Some(row_idx) = self.current_row {
