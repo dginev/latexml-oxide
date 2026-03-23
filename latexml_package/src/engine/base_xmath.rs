@@ -1095,14 +1095,14 @@ LoadDefinitions!({
   // Perl: Base_XMath.pool.ltxml line 730
   // The logical structure for cases extracts the columns of the alignment
   // to give alternating value,condition (empty conditions become "otherwise")
-  // TODO: afterConstruct hook that creates XMDual with meaning='cases'
   DefConstructor!("\\lx@gen@plain@cases@ RequiredKeyVals:lx@GEN {}",
     "<ltx:XMWrap>#left#2#right</ltx:XMWrap>",
+    alias => "\\cases",
+    reversion => "\\cases{#2}",
     properties => sub[args] {
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
-          // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
               props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1116,6 +1116,65 @@ LoadDefinitions!({
         }
       }
       Ok(props)
+    },
+    after_construct => sub[document, _whatsit] {
+      // Perl afterConstruct: wrap in XMDual with meaning='cases'
+      // Get the XMWrap we just created (last child of current element)
+      if let Some(current) = document.get_element() {
+        if let Some(mut point) = current.get_last_element_child() {
+          let cells = document.findnodes("ltx:XMArray/ltx:XMRow/ltx:XMCell", Some(&point));
+          if !cells.is_empty() {
+            // Collect XMRef ids for non-empty cells, "otherwise" text for empty cells
+            let mut ref_ids: Vec<Option<String>> = Vec::new();
+            for cell in &cells {
+              if !cell.get_child_elements().is_empty() {
+                // Generate id on the cell's content and create XMRef to it
+                for mut child in cell.get_child_elements() {
+                  document.generate_id(&mut child, "")?;
+                  let id = child.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+                    .unwrap_or_default();
+                  ref_ids.push(Some(id));
+                }
+              } else {
+                ref_ids.push(None); // Will become <XMText>otherwise</XMText>
+              }
+            }
+            // Build XMDual structure around the XMWrap
+            if let Some(mut parent) = point.get_parent() {
+              let mut xm_dual =
+                document.open_element_at(&mut parent, "ltx:XMDual", None, None)?;
+              point.add_prev_sibling(&mut xm_dual).ok();
+              // Content: <XMApp><XMTok meaning="cases"/> XMRefs/XMTexts </XMApp>
+              let mut xm_app =
+                document.open_element_at(&mut xm_dual, "ltx:XMApp", None, None)?;
+              let mut tok_attrs = HashMap::default();
+              tok_attrs.insert("meaning".to_string(), "cases".to_string());
+              let mut xm_tok =
+                document.open_element_at(&mut xm_app, "ltx:XMTok", Some(tok_attrs), None)?;
+              document.close_element_at(&mut xm_tok)?;
+              for ref_id_opt in &ref_ids {
+                if let Some(id) = ref_id_opt {
+                  let mut ref_attrs = HashMap::default();
+                  ref_attrs.insert("idref".to_string(), id.clone());
+                  let mut xm_ref =
+                    document.open_element_at(&mut xm_app, "ltx:XMRef", Some(ref_attrs), None)?;
+                  document.close_element_at(&mut xm_ref)?;
+                } else {
+                  let mut xm_text =
+                    document.open_element_at(&mut xm_app, "ltx:XMText", None, None)?;
+                  xm_text.set_content("otherwise");
+                  document.close_element_at(&mut xm_text)?;
+                }
+              }
+              document.close_element_at(&mut xm_app)?;
+              // Move original XMWrap into XMDual (presentation branch)
+              point.unlink_node();
+              xm_dual.add_child(&mut point)?;
+              document.close_element_at(&mut xm_dual)?;
+            }
+          }
+        }
+      }
     }
   );
 
