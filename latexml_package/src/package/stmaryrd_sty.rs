@@ -69,28 +69,29 @@ LoadDefinitions!({
   DefMath!("\\varowedge", None, "\u{2227}\u{20DD}", role => "RELOP");
   DefMath!("\\vartimes",  None, "\u{00D7}",         role => "MULOP");
 
-  // Big operators (SUMOP with dynamic mathstyle)
+  // Big operators (SUMOP with dynamic mathstyle + scriptpos)
+  // Perl: scriptpos => \&doScriptpos, mathstyle => \&doVariablesizeOp
   DefMath!("\\bigbox", None, "\u{25A1}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\bigcurlywedge", None, "\u{22CF}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\bigcurlyvee", None, "\u{22CE}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\biginterleave", None, "\u{2AFC}",
-    role => "SUMOP", dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\bigparallel", None, "\u{2016}",
-    role => "SUMOP", dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\bigsqcap", None, "\u{2A05}",
-    role => "SUMOP", dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\bigtriangledown", None, "\u{25BD}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\bigtriangleup", None, "\u{25B3}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
 
   // More relational operators
   DefMath!("\\inplus",                None, "\u{2A2D}", role => "RELOP");
@@ -117,7 +118,7 @@ LoadDefinitions!({
   DefMath!("\\bignplus", None,
     "\\lx@kludged{\\bigcap\\mathchoice{\\lx@tweaked{width=0pt,xoffset=-1.6em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}}",
     role => "ADDOP", meaning => "intersection-plus",
-    dynamic_mathstyle => true);
+    dynamic_scriptpos => true, dynamic_mathstyle => true);
 
   DefMath!("\\trianglelefteqslant",  None, "\u{22B4}",                  role => "RELOP");
   DefMath!("\\trianglerighteqslant", None, "\u{22B5}",                  role => "RELOP");
