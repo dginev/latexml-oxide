@@ -1963,10 +1963,71 @@ LoadDefinitions!({
     r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"
   );
   // HACK the newly created border matrix to add columns for the (spanned) parentheses!!!
-  // TODO: Port the full DOM manipulation (adding paren columns, rowspans, etc.)
+  // Perl: adds empty XMCell columns for stretchy parens with rowspan
   DefConstructor!("\\lx@hack@bordermatrix{}", sub[document, args, _props] {
       let matrix = args[0].as_ref().unwrap();
       document.absorb(matrix, None)?;
+      // DOM manipulation: add paren columns to the border matrix
+      let marray = document.get_node().get_last_element_child();
+      if let Some(marray) = marray {
+        let rows = document.findnodes("ltx:XMRow", Some(&marray));
+        let n = rows.len();
+        if n >= 2 {
+          // Add 2 empty cells to each row; move one to 2nd position
+          for mut row in rows.iter().cloned() {
+            let mut nopad_attrs = HashMap::default();
+            nopad_attrs.insert("class".to_string(), "ltx_nopad".to_string());
+            let mut cell1 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs.clone()), None)?;
+            document.close_element_at(&mut cell1)?;
+            let mut cell2 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs), None)?;
+            document.close_element_at(&mut cell2)?;
+            // Move cell2 (last child) to 2nd position (after first child)
+            if let Some(mut first_child) = row.get_first_element_child() {
+              cell2.unlink_node();
+              first_child.add_next_sibling(&mut cell2).ok();
+            }
+          }
+          // Set rowspan and add parens on 2nd and last columns of row 1
+          if let Some(row1) = rows.get(1) {
+            let cols: Vec<_> = row1.get_child_elements();
+            if cols.len() >= 2 {
+              let rowspan_str = (n - 1).to_string();
+              // 2nd column (index 1): open paren
+              let mut col1 = cols[1].clone();
+              col1.set_attribute("rowspan", &rowspan_str).ok();
+              col1.set_attribute("class", "ltx_nopad").ok();
+              // Build XMWrap with open paren
+              let mut wrap1 = document.open_element_at(&mut col1, "ltx:XMWrap", None, None)?;
+              let mut open_attrs = HashMap::default();
+              open_attrs.insert("role".to_string(), "OPEN".to_string());
+              open_attrs.insert("stretchy".to_string(), "true".to_string());
+              let mut open_tok = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(open_attrs), None)?;
+              open_tok.set_content("(");
+              document.close_element_at(&mut open_tok)?;
+              // Strut for height
+              let mut strut = document.open_element_at(&mut wrap1, "ltx:XMTok", None, None)?;
+              strut.set_content(" ");
+              document.close_element_at(&mut strut)?;
+              document.close_element_at(&mut wrap1)?;
+              // Last column: close paren
+              let mut coln = cols[cols.len() - 1].clone();
+              coln.set_attribute("rowspan", &rowspan_str).ok();
+              coln.set_attribute("class", "ltx_nopad").ok();
+              let mut wrap2 = document.open_element_at(&mut coln, "ltx:XMWrap", None, None)?;
+              let mut close_attrs = HashMap::default();
+              close_attrs.insert("role".to_string(), "CLOSE".to_string());
+              close_attrs.insert("stretchy".to_string(), "true".to_string());
+              let mut close_tok = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(close_attrs), None)?;
+              close_tok.set_content(")");
+              document.close_element_at(&mut close_tok)?;
+              let mut strut2 = document.open_element_at(&mut wrap2, "ltx:XMTok", None, None)?;
+              strut2.set_content(" ");
+              document.close_element_at(&mut strut2)?;
+              document.close_element_at(&mut wrap2)?;
+            }
+          }
+        }
+      }
     },
     reversion => "#1");
   // DefConstructor('\lx@hack@bordermatrix{}', sub {
