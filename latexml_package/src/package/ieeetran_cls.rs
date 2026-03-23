@@ -169,7 +169,9 @@ LoadDefinitions!({
     before_digest_end => {
       let qed = state::pop_value("QED@stack")?;
       match qed {
-        Some(Stored::Tokens(toks)) if !toks.is_empty() => { stomach::digest(toks)?; },
+        Some(Stored::Tokens(toks)) if !toks.is_empty() => {
+          return Ok(vec![stomach::digest(toks)?]);
+        },
         _ => {},
       }
     }
