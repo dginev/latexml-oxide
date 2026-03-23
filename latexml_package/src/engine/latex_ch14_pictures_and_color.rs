@@ -64,12 +64,25 @@ LoadDefinitions!({
     }
   );
 
-  // \put(x,y){content}
-  DefMacro!("\\put Pair {}", "\\lx@pic@put(#1){#2\\relax}");
-  DefConstructor!("\\lx@pic@put Pair {}",
-    "<ltx:g>#2</ltx:g>",
+  // \put(x,y){content} — Perl: Match:( reads "(", Until:, reads x, Until:) reads y
+  // The macro decomposes (x,y) into separate text args to avoid Pair digestion loss.
+  DefMacro!("\\put SkipSpaces Match:( Until:, Until:) {}", "\\lx@pic@put{#2}{#3}{#4\\relax}");
+  DefConstructor!("\\lx@pic@put{}{}{}",
+    "<ltx:g transform='#transform'>#3</ltx:g>",
     alias => "\\put",
-    mode  => "text"
+    mode  => "text",
+    properties => sub[args] {
+      let x: f64 = args[0].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let y: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let tx = x * unit;
+      let ty = y * unit;
+      let transform_str = format!("translate({tx},{ty})");
+      Ok(stored_map!("transform" => Stored::String(arena::pin(&transform_str))))
+    }
   );
 
   // \line(slope){length}
@@ -103,9 +116,10 @@ LoadDefinitions!({
   );
 
   // \multiput(pos)(delta){n}{body} — Perl expands to n \put commands via macro.
-  // Simplified: just place the body at the initial position (full loop requires runtime).
-  // TODO: full multiput loop expansion
-  DefMacro!("\\multiput Pair Pair {}{}", "\\put(#1){#4}");
+  // Use Match:(/Until: to decompose coordinates, avoiding Pair digestion issues.
+  // Simplified: just place the body at the initial position.
+  // TODO: full multiput loop expansion with delta stepping
+  DefMacro!("\\multiput Match:( Until:, Until:) Match:( Until:, Until:) {}{}", "\\put(#2,#3){#8}");
 
   // Box commands for picture mode (simplified)
   DefMacro!("\\pic@makebox Pair [] {}", "#3");
