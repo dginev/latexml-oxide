@@ -634,7 +634,12 @@ impl BoxOps for Alignment {
           if (col_idx > 0 || self.is_halign) && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
-            // do nothing — use CSS default padding
+            // In math mode, absorb named spacing (like \quad) as XMHint content
+            // even when below the 1.5em threshold. This preserves XMHint for
+            // the math parser to convert to lpadding.
+            if ismath && cell.lspaces.is_some() {
+              pre_absorb = cell.lspaces.take();
+            }
           } else {
             pre_absorb = cell.lspaces.take();
           }
