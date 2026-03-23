@@ -3,6 +3,9 @@
 ///
 /// Declares math token roles for the simplemath test:
 /// - f → FUNCTION (function application: f(x) → f@(x))
+/// - \hat{f} → ID (accented f is multiplicative, not a function)
+/// - f_D → DIFFOP (differential operator)
+/// - f_* → ID (any other subscripted f is an identifier)
 /// - a, b, x, D → ID
 use latexml_package::prelude::*;
 
@@ -44,7 +47,6 @@ fn add_math_rewrite_scoped(match_char: &str, role: &str, scope: Option<&str>) ->
   );
   let mut attrs_map = rustc_hash::FxHashMap::default();
   attrs_map.insert("role".to_string(), role.to_string());
-  // Perl scope strings: "label:sec:restricted" or "id:S1" — passed as Named(SymStr)
   let options = latexml_core::rewrite::RewriteOptions {
     xpath: Some(xpath),
     scope: scope.map(|s| latexml_core::state::Scope::Named(latexml_core::common::arena::pin(s))),
@@ -59,28 +61,98 @@ fn add_math_rewrite_scoped(match_char: &str, role: &str, scope: Option<&str>) ->
   )
 }
 
+/// \hat{f} → ID: accented f treated as identifier, not function.
+/// Single-node match (nnodes=1): the XMApp containing hat accent + f.
+#[allow(dead_code)]
+fn add_accent_f_rewrite() -> Result<()> {
+  let xpath = "descendant-or-self::ltx:XMApp\
+    [ltx:XMTok[@name='hat' and @role='OVERACCENT']]\
+    [ltx:XMTok[text()='f' and not(@meaning)]]\
+    [@_pvis and @_cvis]"
+    .to_string();
+  let mut attrs_map = rustc_hash::FxHashMap::default();
+  attrs_map.insert("role".to_string(), "ID".to_string());
+  let options = latexml_core::rewrite::RewriteOptions {
+    xpath: Some(xpath),
+    attributes_map: Some(attrs_map),
+    is_math: true,
+    select_count: Some(1),
+    ..Default::default()
+  };
+  state::push_value(
+    "DOCUMENT_REWRITE_RULES",
+    latexml_core::rewrite::Rewrite::new("math", options),
+  )
+}
+
+/// f_D → DIFFOP: f subscripted by D is a differential operator.
+/// Two-sibling match (nnodes=2): XMTok[f] + XMApp[POSTSUBSCRIPT[D]].
+/// Wrapped in XMWrap[role=DIFFOP] by the rewrite engine.
+#[allow(dead_code)]
+fn add_f_d_diffop_rewrite() -> Result<()> {
+  let xpath = "descendant-or-self::ltx:XMTok[text()='f' and not(@meaning)]\
+    [following-sibling::*[1]\
+    [self::ltx:XMApp[@role='POSTSUBSCRIPT' and normalize-space(.)='D']]]\
+    [@_pvis and @_cvis]"
+    .to_string();
+  let mut attrs_map = rustc_hash::FxHashMap::default();
+  attrs_map.insert("role".to_string(), "DIFFOP".to_string());
+  let options = latexml_core::rewrite::RewriteOptions {
+    xpath: Some(xpath),
+    attributes_map: Some(attrs_map),
+    is_math: true,
+    select_count: Some(2),
+    ..Default::default()
+  };
+  state::push_value(
+    "DOCUMENT_REWRITE_RULES",
+    latexml_core::rewrite::Rewrite::new("math", options),
+  )
+}
+
+/// f_* → ID: f with any subscript (except D, handled above) is an identifier.
+/// Two-sibling match (nnodes=2): XMTok[f] + XMApp[POSTSUBSCRIPT].
+/// Wrapped in XMWrap[role=ID] by the rewrite engine.
+/// The f_D rule fires first and marks those nodes, so this only catches
+/// remaining subscripted-f patterns (f_1, f_2, etc.).
+#[allow(dead_code)]
+fn add_f_wildcard_rewrite() -> Result<()> {
+  let xpath = "descendant-or-self::ltx:XMTok[text()='f' and not(@meaning)]\
+    [following-sibling::*[1][self::ltx:XMApp[@role='POSTSUBSCRIPT']]]\
+    [@_pvis and @_cvis]"
+    .to_string();
+  let mut attrs_map = rustc_hash::FxHashMap::default();
+  attrs_map.insert("role".to_string(), "ID".to_string());
+  let options = latexml_core::rewrite::RewriteOptions {
+    xpath: Some(xpath),
+    attributes_map: Some(attrs_map),
+    is_math: true,
+    select_count: Some(2),
+    ..Default::default()
+  };
+  state::push_value(
+    "DOCUMENT_REWRITE_RULES",
+    latexml_core::rewrite::Rewrite::new("math", options),
+  )
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Enable speculative function application for f(x) patterns
   AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
 
-  // Global role assignments (matching simplemath.latexml)
+  // Global role assignments (matching Perl simplemath.latexml order)
   add_math_rewrite("a", "ID")?;
   add_math_rewrite("b", "ID")?;
-  add_math_rewrite("x", "ID")?;
-  add_math_rewrite("D", "ID")?;
+  add_accent_f_rewrite()?;      // \hat{f} → ID (single-node XMApp match)
+  add_f_d_diffop_rewrite()?;     // f_D → DIFFOP (two-sibling, XMWrap)
+  add_f_wildcard_rewrite()?;    // f_* → ID (two-sibling, XMWrap)
   add_math_rewrite("f", "FUNCTION")?;
+  add_math_rewrite("D", "ID")?;
+  add_math_rewrite("x", "ID")?;
 
   // Scoped rewrites: within label:sec:restricted, a and b become FUNCTION
-  // Perl: DefMathRewrite(scope => 'label:sec:restricted', match => 'a', attributes => { role => 'FUNCTION' });
-  // MUST be added before global rewrites (UnshiftValue in Perl) so they take priority.
+  // MUST be added via UnshiftValue (prepend) so they take priority over global rules.
   add_math_rewrite_scoped_first("a", "FUNCTION", "label:sec:restricted")?;
   add_math_rewrite_scoped_first("b", "FUNCTION", "label:sec:restricted")?;
-
-  // Perl: DefMathRewrite(match => '\hat{f}', attributes => { role => 'ID' });
-  // \hat{f} treated as ID (multiplicative atom, not function)
-  // TODO: multi-token match patterns like \hat{f}
-
-  // Also add \hat{f} as ID (Perl simplemath.latexml)
-  // DefMathRewrite(match => '\hat{f}', attributes => { role => 'ID' });
 });

@@ -48,6 +48,18 @@ pub fn node_to_grammar_lexemes_from(
         let lexeme = format!("ARROW:{arrow_meaning}:{idx}").replace(' ', "");
         lexemes.push(lexeme);
         nodes.push(node);
+      } else if node.has_attribute("_rewrite") {
+        // Rewrite-created: treat as atomic token with the assigned role.
+        // Don't recurse — the inner structure was pre-parsed, and the role
+        // on this node overrides whatever the children contain.
+        let gram_role = get_grammatical_role(&node);
+        let mut text = get_token_meaning(&node);
+        if text.is_empty() {
+          text = "UNKNOWN".to_string();
+        }
+        *idx += 1;
+        lexemes.push(format!("{gram_role}:{text}:{idx}").replace(' ', ""));
+        nodes.push(node);
       } else {
         // Only recurse into XMApp nodes that have a role (scripts, etc.)
         // Role-less XMApps (e.g. \sqrt, already-parsed structures) are atomic.

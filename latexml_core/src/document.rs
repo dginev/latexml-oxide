@@ -3625,6 +3625,11 @@ impl Document {
         sib.unlink();
         following.push_front(sib);
       }
+      // NOTE: remove_node calls old.unlink() which sets unlinked=true and detaches
+      // the node from the DOM. The document's node cache holds another Rc reference,
+      // so _Node::drop (and xmlFreeNode) doesn't run until the Document itself drops.
+      // By that time, any children reused by `new` have been moved at the C level,
+      // so xmlFreeNode on old only frees the shell.
       self.remove_node(old);
       self.append_tree(&mut parent, vec![new])?;
       let inserted = parent.get_last_child();

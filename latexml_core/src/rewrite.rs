@@ -205,7 +205,9 @@ impl Rewrite {
     let pattern = clause.pattern;
 
     if op == RewriteOperator::Xpath {
-      self.options.select_count = Some(1);
+      if self.options.select_count.is_none() {
+        self.options.select_count = Some(1);
+      }
       return RewriteClause {
         compiled: true,
         op: RewriteOperator::Select,
@@ -218,7 +220,9 @@ impl Rewrite {
       if let RewritePattern::String(scope_str) = &pattern {
         if let Some(label_part) = scope_str.strip_prefix("label:") {
           if let Some(id) = document.rewrite_labels.get(label_part).cloned() {
-            self.options.select_count = Some(1);
+            if self.options.select_count.is_none() {
+              self.options.select_count = Some(1);
+            }
             let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
             return RewriteClause {
               compiled: true,
@@ -229,7 +233,9 @@ impl Rewrite {
           // Try with LABEL: prefix (clean_label adds it)
           let clean_key = format!("LABEL:{}", label_part);
           if let Some(id) = document.rewrite_labels.get(&clean_key).cloned() {
-            self.options.select_count = Some(1);
+            if self.options.select_count.is_none() {
+              self.options.select_count = Some(1);
+            }
             let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
             return RewriteClause {
               compiled: true,
@@ -244,7 +250,9 @@ impl Rewrite {
             pattern: RewritePattern::String(String::new()),
           };
         } else if let Some(id_part) = scope_str.strip_prefix("id:") {
-          self.options.select_count = Some(1);
+          if self.options.select_count.is_none() {
+            self.options.select_count = Some(1);
+          }
           let xpath = format!("descendant-or-self::*[@xml:id='{}']", id_part);
           return RewriteClause {
             compiled: true,
@@ -263,7 +271,9 @@ impl Rewrite {
     // When match is already a RewritePattern::String, it's a pre-compiled xpath
     if op == RewriteOperator::Match {
       if let RewritePattern::String(xpath) = pattern {
-        self.options.select_count = Some(1);
+        if self.options.select_count.is_none() {
+          self.options.select_count = Some(1);
+        }
         return RewriteClause {
           compiled: true,
           op: RewriteOperator::Select,
@@ -401,17 +411,40 @@ impl Rewrite {
         },
         Attributes => {
           // Perl: setAttributes_encapsulate — set attributes on the matched node(s)
-          // For simple single-token matches (nmatched=1), just set attributes directly.
           if let Some(ref attrs) = self.options.attributes_map {
-            // Skip if already matched
-            if !tree.has_attribute("_matched") {
+            if nmatched > 1 {
+              // Multi-node: collect nmatched element siblings starting from tree
+              let mut nodes = vec![tree.clone()];
+              let mut cur = tree.clone();
+              for _ in 1..nmatched {
+                while let Some(sib) = cur.get_next_sibling() {
+                  cur = sib.clone();
+                  if sib.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+                    nodes.push(sib);
+                    break;
+                  }
+                }
+              }
+              // Perl: skip if ALL nodes already matched
+              if nodes.iter().any(|n| !n.has_attribute("_matched")) {
+                // Wrap in XMWrap and set attributes on wrapper.
+                // Mark as rewrite-created so the parser treats it as an atomic
+                // token (not recursively parsed like parser-created XMWraps).
+                if let Ok(Some(mut wrapper)) = document.wrap_nodes("ltx:XMWrap", nodes) {
+                  for (key, value) in attrs {
+                    let _ = wrapper.set_attribute(key, value);
+                  }
+                  let _ = wrapper.set_attribute("_rewrite", "1");
+                }
+              }
+            } else if !tree.has_attribute("_matched") {
+              // Single node: set attributes directly
               let mut node = tree.clone();
               for (key, value) in attrs {
                 let _ = node.set_attribute(key, value);
               }
             }
           }
-          // Perl: markSeen after attributes, then continue with remaining clauses
           mark_seen(tree, nmatched);
           self.apply_clause(document, tree, nmatched, clauses)?;
         },

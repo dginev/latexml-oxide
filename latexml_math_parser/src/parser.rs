@@ -500,8 +500,30 @@ impl MathParser {
   fn parse_children(&mut self, node: &Node, document: &mut Document) -> Result<()> {
     for child in element_nodes(node) {
       let tag = get_node_qname(&child);
-      if tag == arena::pin_static("ltx:XMArg") || tag == arena::pin_static("ltx:XMWrap") {
+      if tag == arena::pin_static("ltx:XMArg") {
         self.parse_rec(child, "Anything", document)?;
+      } else if tag == arena::pin_static("ltx:XMWrap") {
+        if child.has_attribute("_rewrite") {
+          // Rewrite-created XMWrap: parse inner structure (subscripts etc.) but
+          // the XMWrap's role overrides whatever the inner parse produces.
+          // Temporarily remove role so parse_rec doesn't emit start_ROLE/end_ROLE
+          // tokens (the grammar only handles script roles).
+          let saved_role = child.get_attribute("role");
+          let mut c = child.clone();
+          if saved_role.is_some() {
+            c.remove_attribute("role").ok();
+          }
+          if let Some(mut result) = self.parse_rec(child, "Anything", document)? {
+            if let Some(ref role) = saved_role {
+              result.set_attribute("role", role).ok();
+            }
+          } else if let Some(ref role) = saved_role {
+            // Parse failed — XMWrap still in DOM, restore role
+            c.set_attribute("role", role).ok();
+          }
+        } else {
+          self.parse_rec(child, "Anything", document)?;
+        }
       } else if tag == arena::pin_static("ltx:XMApp")
         || tag == arena::pin_static("ltx:XMArray")
         || tag == arena::pin_static("ltx:XMRow")
