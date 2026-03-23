@@ -406,13 +406,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | scripted_bigop_r1 postsuperarg => postfix_script
       | scripted_bigop_r1 postsubarg => postfix_script;
     // Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
-    // moreOpArgFactors chains factors with MulOp (= a term-level construct).
-    // Using `term` absorbs mulop chains like x² * dx, matching Perl's behavior.
-    // The early tight_term definition (line ~110) has `bigop tight_term` for the
-    // base case; these += rules extend to full term absorption.
-    tight_term += scripted_bigop term => prefix_apply;
-    tight_term += any_bigop term => prefix_apply;
-    tight_term += composed_bigop term => prefix_apply;
+    // moreOpArgFactors chains factors with MulOp or invisible times.
+    //
+    // bigop_application is a dedicated nonterminal that:
+    // - Acts as tight_term on the LEFT (2∫ works via invisible times)
+    // - Absorbs full factor chains on the RIGHT (∫ x² dx → ∫(x²*dx))
+    // - Does NOT recurse back into tight_term → bigop cycle (avoids ambiguity)
+    //
+    // Once inside bigop_application, invisible_times and mulop extend the
+    // argument chain without re-entering the bigop dispatch.
+    bigop_application = any_bigop term => prefix_apply
+      | scripted_bigop term => prefix_apply
+      | composed_bigop term => prefix_apply;
+    // Lift into tight_term: bigop_application acts as an atom on the left
+    tight_term += bigop_application;
     // Scripted bigops can also appear as standalone statements
     statement += scripted_bigop;
 
