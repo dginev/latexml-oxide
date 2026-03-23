@@ -1979,8 +1979,10 @@ LoadDefinitions!({
             nopad_attrs.insert("class".to_string(), "ltx_nopad".to_string());
             let mut cell1 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs.clone()), None)?;
             document.close_element_at(&mut cell1)?;
+            cell1.remove_attribute("align"); // Empty paren cell — no alignment
             let mut cell2 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs), None)?;
             document.close_element_at(&mut cell2)?;
+            cell2.remove_attribute("align"); // Empty paren cell — no alignment
             // Move cell2 (last child) to 2nd position (after first child)
             if let Some(mut first_child) = row.get_first_element_child() {
               cell2.unlink_node();
