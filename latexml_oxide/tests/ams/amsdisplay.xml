@@ -97,7 +97,7 @@
                   <XMApp>
                     <XMTok meaning="minus" role="ADDOP" xml:id="S0.E2.m1.10">-</XMTok>
                     <XMApp>
-                      <XMTok meaning="plus" role="ADDOP" xml:id="S0.E2.m1.8">+</XMTok>
+                      <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP" xml:id="S0.E2.m1.8">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.9">e</XMTok>
                     </XMApp>
                     <XMTok font="italic" role="UNKNOWN" xml:id="S0.E2.m1.11">f</XMTok>

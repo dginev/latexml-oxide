@@ -685,6 +685,13 @@ impl BoxOps for Alignment {
           if let Some(ref pre) = pre_absorb {
             document.absorb(pre, None)?;
           }
+          // In math mode, absorb lspaces as content (creates XMHint for \quad etc.)
+          // This is needed for the math parser to convert XMHint → lpadding.
+          if ismath && pre_absorb.is_none() {
+            if let Some(ref lsp) = cell.lspaces {
+              document.absorb(lsp, None)?;
+            }
+          }
           document.absorb(box_ref, None)?;
           // Perl L367: absorb post-spacing (rspaces > 1.5em)
           if let Some(ref post) = post_absorb {
