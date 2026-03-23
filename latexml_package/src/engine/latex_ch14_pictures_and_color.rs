@@ -71,16 +71,23 @@ LoadDefinitions!({
     }
   );
 
-  // \put(x,y){content} — Perl: Match:( reads "(", Until:, reads x, Until:) reads y
-  // The macro decomposes (x,y) into separate text args to avoid Pair digestion loss.
-  DefMacro!("\\put SkipSpaces Match:( Until:, Until:) {}", "\\lx@pic@put{#2}{#3}{#4\\relax}");
-  DefConstructor!("\\lx@pic@put{}{}{}",
-    "<ltx:g transform='#transform'>#3</ltx:g>",
+  // \put(x,y){content} — Perl: Match:( reads "(", Until:, reads y, Until:) reads y
+  // Now that Pair survives digestion (RegisterValue::Pair), use it directly.
+  DefMacro!("\\put SkipSpaces Match:( Until:, Until:) {}", "\\lx@pic@put(#2,#3){#4\\relax}");
+  DefConstructor!("\\lx@pic@put Pair {}",
+    "<ltx:g transform='#transform'>#2</ltx:g>",
     alias => "\\put",
     mode  => "text",
     properties => sub[args] {
-      let x: f64 = args[0].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-      let y: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let (x, y) = match args[0].as_ref() {
+        Some(d) => match d.data() {
+          DigestedData::RegisterValue(RegisterValue::Pair(p)) => (p.x.0, p.y.0),
+          _ => { let s = d.to_string(); let mut p = s.splitn(2, ',');
+            (p.next().unwrap_or("0").trim().parse().unwrap_or(0.0),
+             p.next().unwrap_or("0").trim().parse().unwrap_or(0.0)) }
+        },
+        None => (0.0, 0.0),
+      };
       let unit = match state::lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,

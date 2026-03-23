@@ -535,6 +535,7 @@ impl From<RegisterValue> for ArgWrap {
       RegisterValue::Tokens(n) => ArgWrap::Tokens(n),
       RegisterValue::MuGlue(n) => ArgWrap::MuGlue(n),
       RegisterValue::MuDimension(n) => ArgWrap::MuDimension(n),
+      RegisterValue::Pair(p) => ArgWrap::Pair(p),
     }
   }
 }
