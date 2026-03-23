@@ -418,8 +418,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     bigop_application = any_bigop term => prefix_apply
       | scripted_bigop term => prefix_apply
       | composed_bigop term => prefix_apply;
-    // Lift into tight_term: bigop_application acts as an atom on the left
-    tight_term += bigop_application;
+    // Lift into expression: bigop_application is asymmetric.
+    // On its LEFT, it acts as a term (2∫ x dx → 2 * ∫(x*dx) via term*bigop).
+    // On its RIGHT, it already absorbed the full term — nothing chains after.
+    // At expression level, addop/relop can follow: ∫ x dx + y → ∫(x*dx) + y.
+    expression += bigop_application;
+    expression += term mulop bigop_application => apply_invisible_times;
+    expression += term bigop_application => apply_invisible_times;
     // Scripted bigops can also appear as standalone statements
     statement += scripted_bigop;
 

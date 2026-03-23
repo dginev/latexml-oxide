@@ -398,7 +398,7 @@
     <title><tag close=" ">3</tag>Practical</title>
     <para xml:id="S3.p1">
       <equation xml:id="S3.Ex7">
-        <Math mode="display" tex="f(x)=\sum_{i=0}^{\infty}f_{i}x^{i}" text="f * x = ((sum _ (i = 0)) ^ infinity)@(f _ i) * x ^ i" xml:id="S3.Ex7.m1">
+        <Math mode="display" tex="f(x)=\sum_{i=0}^{\infty}f_{i}x^{i}" text="f * x = ((sum _ (i = 0)) ^ infinity)@(f _ i * x ^ i)" xml:id="S3.Ex7.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -415,31 +415,31 @@
                 </XMDual>
               </XMApp>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
                   <XMApp>
-                    <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                    <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
                     <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                      <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMApp>
-                        <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
-                        <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                      </XMApp>
+                      <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
                     </XMApp>
-                    <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
                   </XMApp>
+                  <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMTok font="italic" role="ID">f</XMTok>
                     <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
                   </XMApp>
-                </XMApp>
-                <XMApp>
-                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">x</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                  </XMApp>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -838,7 +838,7 @@
     <title><tag close=" ">7</tag>More detail</title>
     <para xml:id="S7.p1">
       <equation xml:id="S7.Ex14">
-        <Math mode="display" tex="f(x)=\sum_{i=0}^{\infty}f_{i}x^{i}" text="f * x = ((sum _ (i = 0)) ^ infinity)@(f _ i) * x ^ i" xml:id="S7.Ex14.m1">
+        <Math mode="display" tex="f(x)=\sum_{i=0}^{\infty}f_{i}x^{i}" text="f * x = ((sum _ (i = 0)) ^ infinity)@(f _ i * x ^ i)" xml:id="S7.Ex14.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -855,31 +855,31 @@
                 </XMDual>
               </XMApp>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
                   <XMApp>
-                    <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                    <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
                     <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                      <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMApp>
-                        <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
-                        <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                      </XMApp>
+                      <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
                     </XMApp>
-                    <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
                   </XMApp>
+                  <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMTok font="italic" role="ID">f</XMTok>
                     <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
                   </XMApp>
-                </XMApp>
-                <XMApp>
-                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="ID">x</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="ID">i</XMTok>
+                  </XMApp>
                 </XMApp>
               </XMApp>
             </XMApp>

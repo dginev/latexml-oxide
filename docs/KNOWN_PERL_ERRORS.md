@@ -185,3 +185,30 @@ is rarely consumed for such tokens, but semantically incorrect.
 The test XML is updated to match the Rust output. This is an intentional
 divergence — the Rust form is semantically cleaner (no meaningless `Apply(∅, ref)`).
 If XMDual is needed later, the content branch should use a skolem `XMTok[name="f_1"]`.
+
+---
+
+## 8. `addOpArgs` narrow bigop absorption in declare test
+
+**Perl source:** `LaTeXML/MathGrammar` lines 668-672, `addOpArgs` / `moreOpArgFactors`
+
+**Symptom:** In `f(x) = \sum_{i=0}^{\infty} f_i x^i`, Perl's Parse::RecDescent
+parser produces `∑(f_i) * x^i` — the sum absorbs only `f_i`, not `f_i * x^i`.
+This is mathematically wrong: `i` is the summation variable, so `x^i` must be
+inside the summand. The correct parse is `∑(f_i * x^i)`.
+
+**Root cause:** `moreOpArgFactors` in Parse::RecDescent tries alternatives in
+order. After absorbing `f_i`, the next token `x^i` could extend the chain via
+invisible times (`Factor moreOpArgFactors`). But Parse::RecDescent's
+backtracking and top-down evaluation means the "stop absorbing" alternative
+(`{ $arg[0]; }`) can win depending on the context. The result is
+non-deterministic — the narrow parse happens to be selected for this specific
+expression.
+
+**Perl expected XML:** `text="... ((sum _ (i = 0)) ^ infinity)@(f _ i) * x ^ i"`
+
+**Correct parse:** `text="... ((sum _ (i = 0)) ^ infinity)@(f _ i * x ^ i)"`
+
+**Rust fix:** Rust's `bigop_application` nonterminal at expression level absorbs
+the full `term` (factor chain with mulop/invisible-times). The declare test XML
+is updated to match the mathematically correct broad absorption.
