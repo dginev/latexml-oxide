@@ -472,7 +472,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
           <tag>(11)</tag>
           <tag role="refnum">11</tag>
         </tags>
-        <Math mode="display" tex="\binom{a}{b}\genfrac{}{}{0.0pt}{}{a}{b},\qquad\genfrac{}{}{0.04303pt}{}{a}{b},\qquad\genfrac{}{}{0.43057pt}{}{a}{b},\qquad\genfrac{}{}{4.30554pt}{}{a}{b}" text="list@(binomial@(a, b) * (a FRACOP b), a FRACOP b, a / b, a / b)" xml:id="S2.E11.m1">
+        <Math mode="display" tex="\binom{a}{b}\genfrac{}{}{0.0pt}{}{a}{b},\qquad\genfrac{}{}{0.04303pt}{}{a}{b},\qquad\genfrac{}{}{0.43057pt}{}{a}{b},\qquad\genfrac{}{}{4.30554pt}{}{a}{b}" text="list@(binomial@(a, b) * (a FRACOP b), a / b, a / b, a / b)" xml:id="S2.E11.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -509,7 +509,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
                 </XMApp>
                 <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
                 <XMApp xml:id="S2.E11.m1.4">
-                  <XMTok mathstyle="display" role="FRACOP" thickness="0.0pt"/>
+                  <XMTok mathstyle="display" meaning="divide" role="FRACOP" thickness="0.0pt"/>
                   <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>

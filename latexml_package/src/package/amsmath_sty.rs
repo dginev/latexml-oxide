@@ -461,9 +461,22 @@ LoadDefinitions!({
       let denom = digest(denom_tokens.clone())?;
       egroup()?;
 
-      // thickness=0pt means no rule line (like \atop), so meaning is empty
+      // thickness=0pt means no rule line (like \atop), so meaning is empty.
+      // Perl checks raw dimension value (not rounded attribute string),
+      // so 0.01ex (≈0.04pt, rounds to "0.0pt") still gets meaning="divide".
       let thickness_str = thickness.as_ref().map(|t| t.to_attribute()).unwrap_or_default();
-      let meaning = if thickness_str == "0.0pt" || thickness_str == "0pt" {
+      let thickness_is_zero = if thickness.is_none() {
+        false // No thickness → use default rule line → meaning="divide"
+      } else {
+        // Check the raw to_attribute which uses 1 decimal place
+        // For exact 0: to_attribute = "0.0pt"
+        // For "0.0ex" input: Dimension(0) → to_attribute = "0.0pt"
+        // For "0.01ex" input: Dimension(~2821) → to_attribute = "0.0pt" BUT original is non-zero
+        // Use the stored token string to check the original input
+        let raw = thickness.as_ref().map(|t| t.to_string()).unwrap_or_default();
+        raw.trim() == "0.0pt" || raw.trim() == "0pt"
+      };
+      let meaning = if thickness_is_zero {
         String::new()
       } else {
         "divide".to_string()
