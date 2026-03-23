@@ -1998,16 +1998,36 @@ LoadDefinitions!({
               let mut col1 = cols[1].clone();
               col1.set_attribute("rowspan", &rowspan_str).ok();
               col1.set_attribute("class", "ltx_nopad").ok();
-              // Build XMWrap with open paren
-              let mut wrap1 = document.open_element_at(&mut col1, "ltx:XMWrap", None, None)?;
+              // Compute dimensions from alignment (Perl: $h, $d from alignment rows)
+              // TODO: extract from alignment->getHeight and row->y for actual values
+              // Default: h=10pt (10*UNITY), d=0.
+              let h_sp: i64 = 10 * 65536; // 10pt in scaled points
+              let d_sp: i64 = 0;
+              let md_sp = -d_sp;
+
+              // Build XMWrap with open paren — use text_default font to avoid math italic
+              let default_font = Font::text_default();
+              let mut wrap_attrs1 = HashMap::default();
+              if d_sp != 0 {
+                wrap_attrs1.insert("depth".to_string(), Dimension::new(d_sp).to_attribute());
+              }
+              let mut wrap1 = document.open_element_at(&mut col1, "ltx:XMWrap", Some(wrap_attrs1), Some(default_font.clone()))?;
               let mut open_attrs = HashMap::default();
               open_attrs.insert("role".to_string(), "OPEN".to_string());
               open_attrs.insert("stretchy".to_string(), "true".to_string());
-              let mut open_tok = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(open_attrs), None)?;
+              if d_sp != 0 {
+                open_attrs.insert("height".to_string(), "0".to_string());
+                open_attrs.insert("depth".to_string(), Dimension::new(d_sp).to_attribute());
+                open_attrs.insert("yoffset".to_string(), Dimension::new(md_sp).to_attribute());
+              }
+              let mut open_tok = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(open_attrs), Some(default_font.clone()))?;
               open_tok.set_content("(");
               document.close_element_at(&mut open_tok)?;
               // Strut for height
-              let mut strut = document.open_element_at(&mut wrap1, "ltx:XMTok", None, None)?;
+              let mut strut_attrs = HashMap::default();
+              strut_attrs.insert("height".to_string(), Dimension::new(h_sp).to_attribute());
+              if md_sp != 0 { strut_attrs.insert("yoffset".to_string(), Dimension::new(md_sp).to_attribute()); }
+              let mut strut = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(strut_attrs), Some(default_font.clone()))?;
               strut.set_content(" ");
               document.close_element_at(&mut strut)?;
               document.close_element_at(&mut wrap1)?;
@@ -2015,14 +2035,22 @@ LoadDefinitions!({
               let mut coln = cols[cols.len() - 1].clone();
               coln.set_attribute("rowspan", &rowspan_str).ok();
               coln.set_attribute("class", "ltx_nopad").ok();
-              let mut wrap2 = document.open_element_at(&mut coln, "ltx:XMWrap", None, None)?;
+              let mut wrap2 = document.open_element_at(&mut coln, "ltx:XMWrap", None, Some(default_font.clone()))?;
               let mut close_attrs = HashMap::default();
               close_attrs.insert("role".to_string(), "CLOSE".to_string());
               close_attrs.insert("stretchy".to_string(), "true".to_string());
-              let mut close_tok = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(close_attrs), None)?;
+              if d_sp != 0 {
+                close_attrs.insert("height".to_string(), "0".to_string());
+                close_attrs.insert("depth".to_string(), Dimension::new(d_sp).to_attribute());
+                close_attrs.insert("yoffset".to_string(), Dimension::new(md_sp).to_attribute());
+              }
+              let mut close_tok = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(close_attrs), Some(default_font.clone()))?;
               close_tok.set_content(")");
               document.close_element_at(&mut close_tok)?;
-              let mut strut2 = document.open_element_at(&mut wrap2, "ltx:XMTok", None, None)?;
+              let mut strut2_attrs = HashMap::default();
+              strut2_attrs.insert("height".to_string(), Dimension::new(h_sp).to_attribute());
+              if md_sp != 0 { strut2_attrs.insert("yoffset".to_string(), Dimension::new(md_sp).to_attribute()); }
+              let mut strut2 = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(strut2_attrs), Some(default_font))?;
               strut2.set_content(" ");
               document.close_element_at(&mut strut2)?;
               document.close_element_at(&mut wrap2)?;
