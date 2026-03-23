@@ -111,7 +111,6 @@ fn mathmix_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn plainmath_test() {
   latexml_test_single("tests/alignment/plainmath.tex", "plainmath", DIR, None, None);
 }
