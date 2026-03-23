@@ -425,7 +425,9 @@ LoadDefinitions!({
   // We take 4 formal args; numer/denom are read manually in afterDigest.
   DefConstructor!(
     "\\lx@@genfrac {} [Dimension] {} [Number]",
-    r###"?#needXMDual(<ltx:XMDual><ltx:XMApp><ltx:XMRef _xmkey='#xmkey0'/><ltx:XMRef _xmkey='#xmkey1'/><ltx:XMRef _xmkey='#xmkey2'/></ltx:XMApp><ltx:XMWrap>#open)()<ltx:XMApp><ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg><ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg></ltx:XMApp>?#needXMDual(#close</ltx:XMWrap></ltx:XMDual>)(<ltx:XMApp><ltx:XMTok role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg>#top</ltx:XMArg><ltx:XMArg>#bottom</ltx:XMArg></ltx:XMApp>)"###,
+    // Perl: the middle XMApp is always present; the ?#needXMDual conditionals wrap it in XMDual.
+    // The false branch of both conditionals is empty "()" — NOT a duplicate fraction.
+    r###"?#needXMDual(<ltx:XMDual><ltx:XMApp><ltx:XMRef _xmkey='#xmkey0'/><ltx:XMRef _xmkey='#xmkey1'/><ltx:XMRef _xmkey='#xmkey2'/></ltx:XMApp><ltx:XMWrap>#open)()<ltx:XMApp><ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg><ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg></ltx:XMApp>?#needXMDual(#close</ltx:XMWrap></ltx:XMDual>)()"###,
     alias => "\\genfrac",
     after_digest => sub[whatsit] {
       // Clone args upfront to avoid borrow conflicts with set_property

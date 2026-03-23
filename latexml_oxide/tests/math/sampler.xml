@@ -472,18 +472,18 @@ and <text font="typewriter">m:mstyle</text>:</p>
           <tag>(11)</tag>
           <tag role="refnum">11</tag>
         </tags>
-        <Math mode="display" tex="\binom{a}{b}\genfrac{}{}{0.0pt}{}{a}{b},\qquad\genfrac{}{}{0.04303pt}{}{a}{b},\qquad\genfrac{}{}{0.43057pt}{}{a}{b},\qquad\genfrac{}{}{4.30554pt}{}{a}{b}" text="list@(binomial@(a, b) * (a FRACOP b) * (a FRACOP b), (a FRACOP b) * (a FRACOP b), (a / b) * (a / b), (a / b) * (a / b))" xml:id="S2.E11.m1">
+        <Math mode="display" tex="\binom{a}{b}\genfrac{}{}{0.0pt}{}{a}{b},\qquad\genfrac{}{}{0.04303pt}{}{a}{b},\qquad\genfrac{}{}{0.43057pt}{}{a}{b},\qquad\genfrac{}{}{4.30554pt}{}{a}{b}" text="list@(binomial@(a, b) * (a FRACOP b), a FRACOP b, a / b, a / b)" xml:id="S2.E11.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="list"/>
+                <XMRef idref="S2.E11.m1.7"/>
                 <XMRef idref="S2.E11.m1.4"/>
                 <XMRef idref="S2.E11.m1.5"/>
                 <XMRef idref="S2.E11.m1.6"/>
-                <XMRef idref="S2.E11.m1.7"/>
               </XMApp>
               <XMWrap>
-                <XMApp xml:id="S2.E11.m1.4">
+                <XMApp xml:id="S2.E11.m1.7">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMDual>
                     <XMApp>
@@ -506,53 +506,24 @@ and <text font="typewriter">m:mstyle</text>:</p>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
-                  <XMApp>
-                    <XMTok mathstyle="display" role="FRACOP" thickness="0.0pt"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
+                <XMApp xml:id="S2.E11.m1.4">
+                  <XMTok mathstyle="display" role="FRACOP" thickness="0.0pt"/>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
                 <XMApp xml:id="S2.E11.m1.5">
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="display" role="FRACOP" thickness="0.0pt"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok mathstyle="display" role="FRACOP" thickness="0.0pt"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
+                  <XMTok mathstyle="display" meaning="divide" role="FRACOP" thickness="0.4pt"/>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
                 <XMApp xml:id="S2.E11.m1.6">
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="display" meaning="divide" role="FRACOP" thickness="0.4pt"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok mathstyle="display" meaning="divide" role="FRACOP" thickness="0.4pt"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                </XMApp>
-                <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
-                <XMApp xml:id="S2.E11.m1.7">
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="display" meaning="divide" role="FRACOP" thickness="4.3pt"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok mathstyle="display" meaning="divide" role="FRACOP" thickness="4.3pt"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
+                  <XMTok mathstyle="display" meaning="divide" role="FRACOP" thickness="4.3pt"/>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 </XMApp>
               </XMWrap>
             </XMDual>
