@@ -1966,12 +1966,40 @@ LoadDefinitions!({
   // Perl: adds empty XMCell columns for stretchy parens with rowspan
   DefConstructor!("\\lx@hack@bordermatrix{}", sub[document, args, _props] {
       let matrix = args[0].as_ref().unwrap();
-      // Default dimensions: h=10pt, d=0.
-      // TODO: extract actual dimensions from alignment->getHeight and row[1].y
-      // (alignment cached_height is None before absorption)
-      let h_sp: i64 = 10 * 65536; // 10pt in scaled points
-      let d_sp: i64 = 0;
       document.absorb(matrix, None)?;
+      // Perl: Extract alignment dimensions for paren sizing
+      // half = (totalHeight - row0Height) / 2 — symmetric strut height
+      // shift = row0Height - half — yoffset to center parens on data rows
+      // h1 = row[1] height — XMWrap height
+      let (h1_sp, half_sp, shift_sp) = {
+        let em = lookup_font().map(|f| f.get_em_width()).unwrap_or(655360); // 10pt default
+        let mut found = (em, em, em); // default: all 1em
+        for item in matrix.unlist() {
+          if let Some(prop) = item.get_property("alignment") {
+            if let Stored::Digested(ref alignment_d) = *prop {
+              if let DigestedData::Alignment(ref alignment_rc) = alignment_d.data() {
+                let alignment = alignment_rc.borrow();
+                // Use row_heights from normalization
+                let row_heights = alignment.get_row_heights();
+                if row_heights.len() >= 2 {
+                  let h0 = row_heights[0].value_of();
+                  let h1 = row_heights[1].value_of();
+                  if let Some(total_h) = alignment.get_cached_height() {
+                    let total = total_h.value_of();
+                    if let Some(total_d) = alignment.get_cached_depth() {
+                      let total_height = total + total_d.value_of(); // getTotalHeight = height + depth
+                      let half = (total_height - h0) / 2;
+                      let shift = h0 - half;
+                      found = (h1, half, shift);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        found
+      };
       // DOM manipulation: add paren columns to the border matrix
       let marray = document.get_node().get_last_element_child();
       if let Some(marray) = marray {
@@ -2003,55 +2031,48 @@ LoadDefinitions!({
               let mut col1 = cols[1].clone();
               col1.set_attribute("rowspan", &rowspan_str).ok();
               col1.set_attribute("class", "ltx_nopad").ok();
-              // Dimensions from alignment (extracted above before absorb)
-              let md_sp = -d_sp;
-
-              // Build XMWrap with open paren — use text_default font to avoid math italic
-              let default_font = Font::text_default();
+              // Perl: XMWrap { height=>h1, yoffset=>shift }
+              //   XMTok { role=>'OPEN', stretchy=>'true', font=>pfont }  '('
+              //   XMTok { height=>half, depth=>half, font=>pfont }  ' ' (strut)
+              let paren_font = lookup_font()
+                .map(|f| f.specialize("(")).unwrap_or_else(Font::text_default);
+              // Open paren
               let mut wrap_attrs1 = HashMap::default();
-              if d_sp != 0 {
-                wrap_attrs1.insert("depth".to_string(), Dimension::new(d_sp).to_attribute());
-              }
-              let mut wrap1 = document.open_element_at(&mut col1, "ltx:XMWrap", Some(wrap_attrs1), Some(default_font.clone()))?;
+              wrap_attrs1.insert("height".to_string(), Dimension::new(h1_sp).to_attribute());
+              wrap_attrs1.insert("yoffset".to_string(), Dimension::new(shift_sp).to_attribute());
+              let mut wrap1 = document.open_element_at(&mut col1, "ltx:XMWrap", Some(wrap_attrs1), Some(paren_font.clone()))?;
               let mut open_attrs = HashMap::default();
               open_attrs.insert("role".to_string(), "OPEN".to_string());
               open_attrs.insert("stretchy".to_string(), "true".to_string());
-              if d_sp != 0 {
-                open_attrs.insert("height".to_string(), "0".to_string());
-                open_attrs.insert("depth".to_string(), Dimension::new(d_sp).to_attribute());
-                open_attrs.insert("yoffset".to_string(), Dimension::new(md_sp).to_attribute());
-              }
-              let mut open_tok = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(open_attrs), Some(default_font.clone()))?;
+              let mut open_tok = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(open_attrs), Some(paren_font.clone()))?;
               open_tok.set_content("(");
               document.close_element_at(&mut open_tok)?;
-              // Strut for height
+              // Strut: height=half, depth=half (symmetric)
               let mut strut_attrs = HashMap::default();
-              strut_attrs.insert("height".to_string(), Dimension::new(h_sp).to_attribute());
-              if md_sp != 0 { strut_attrs.insert("yoffset".to_string(), Dimension::new(md_sp).to_attribute()); }
-              let mut strut = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(strut_attrs), Some(default_font.clone()))?;
+              strut_attrs.insert("height".to_string(), Dimension::new(half_sp).to_attribute());
+              strut_attrs.insert("depth".to_string(), Dimension::new(half_sp).to_attribute());
+              let mut strut = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(strut_attrs), Some(paren_font.clone()))?;
               strut.set_content(" ");
               document.close_element_at(&mut strut)?;
               document.close_element_at(&mut wrap1)?;
-              // Last column: close paren
+              // Close paren — same structure
               let mut coln = cols[cols.len() - 1].clone();
               coln.set_attribute("rowspan", &rowspan_str).ok();
               coln.set_attribute("class", "ltx_nopad").ok();
-              let mut wrap2 = document.open_element_at(&mut coln, "ltx:XMWrap", None, Some(default_font.clone()))?;
+              let mut wrap_attrs2 = HashMap::default();
+              wrap_attrs2.insert("height".to_string(), Dimension::new(h1_sp).to_attribute());
+              wrap_attrs2.insert("yoffset".to_string(), Dimension::new(shift_sp).to_attribute());
+              let mut wrap2 = document.open_element_at(&mut coln, "ltx:XMWrap", Some(wrap_attrs2), Some(paren_font.clone()))?;
               let mut close_attrs = HashMap::default();
               close_attrs.insert("role".to_string(), "CLOSE".to_string());
               close_attrs.insert("stretchy".to_string(), "true".to_string());
-              if d_sp != 0 {
-                close_attrs.insert("height".to_string(), "0".to_string());
-                close_attrs.insert("depth".to_string(), Dimension::new(d_sp).to_attribute());
-                close_attrs.insert("yoffset".to_string(), Dimension::new(md_sp).to_attribute());
-              }
-              let mut close_tok = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(close_attrs), Some(default_font.clone()))?;
+              let mut close_tok = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(close_attrs), Some(paren_font.clone()))?;
               close_tok.set_content(")");
               document.close_element_at(&mut close_tok)?;
               let mut strut2_attrs = HashMap::default();
-              strut2_attrs.insert("height".to_string(), Dimension::new(h_sp).to_attribute());
-              if md_sp != 0 { strut2_attrs.insert("yoffset".to_string(), Dimension::new(md_sp).to_attribute()); }
-              let mut strut2 = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(strut2_attrs), Some(default_font))?;
+              strut2_attrs.insert("height".to_string(), Dimension::new(half_sp).to_attribute());
+              strut2_attrs.insert("depth".to_string(), Dimension::new(half_sp).to_attribute());
+              let mut strut2 = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(strut2_attrs), Some(paren_font))?;
               strut2.set_content(" ");
               document.close_element_at(&mut strut2)?;
               document.close_element_at(&mut wrap2)?;
