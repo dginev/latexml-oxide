@@ -254,9 +254,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - `finalize_rec` iterative rewrite eliminated all stack overflow risks for any DOM depth.
 - DefEnvironment bare `\name` form now gets all hooks (after_digest_body, after_construct, sizer, etc.).
 
-**Perl XML parity: 202/242 test XMLs match Perl exactly. 16 more differ only by `%&#10;` (intentional). 24 have real diffs (lpadding, XMWrap fencing, guessTableHeaders, font metrics).**
+**Perl XML parity: 204/242 test XMLs match Perl exactly. 18 more match modulo intentional divergences (`%&#10;` + ELIDEOP). 20 have real diffs (lpadding, XMWrap fencing, guessTableHeaders, font metrics, division scoping). plainmath_test: 343→9 diffs.**
 
-**Recent fixes (2026-03-23, session 31, 13 commits):**
+**Recent fixes (2026-03-23, session 31, 17 commits):**
 - **\lx@math@nounicode DefPrimitive fix**: Changed from DefConstructor (creating XML `<ltx:text>` element) to DefPrimitive (returning Tbox with `class='ltx_nounicode'`), matching Perl's `Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode')`. Fixed XMDual wrapping for all non-Unicode math symbols (stmaryrd etc.).
 - **\varcopyright**: Now produces `©` (U+00A9) instead of None.
 - **list_apply formulae meaning**: Simplified to check content (relational or not) regardless of separator type. `meaning="formulae"` when both sides contain RELOP/multirelation.
@@ -268,6 +268,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **`\cases` afterConstruct**: XMDual with meaning='cases' + XMRefs for both plain and AMS variants.
 - **cleveref `~` tilde**: `\lx@tilde` primitive produces literal `~` surviving `{}` parameter reading. cleveref_minimal.xml now matches Perl exactly.
 - **KeyVals comma separator**: `", "` → `","` (no space). keyvalstyle.xml now matches Perl exactly.
+- **`\halign` `is_halign` flag**: First column CAN have ltx_nopad_l. sizes.xml, halignatt.xml now match Perl.
+- **`\bordermatrix` DOM manipulation**: Ported afterConstruct — adds XMCell columns with rowspan for stretchy parens. class="ltx_nopad" on paren cells. plainmath_test: 343→9 diffs.
 
 **Recent fixes (2026-03-22, sessions 21-25):**
 - **finalize_rec iterative rewrite**: Converted from recursive to iterative with heap work-stack. Fixes SEGFAULT for nested hboxes. Deferred font wrapper collapse to post-traversal.
