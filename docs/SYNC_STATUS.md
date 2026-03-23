@@ -235,7 +235,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-23)
 
-**Current totals: 272 pass, 0 fail, 49 ignored test functions (321 total)**
+**Current totals: 273 pass, 0 fail, 48 ignored test functions (321 total)**
 **Coverage: 89% pass rate (270/304 non-permanent-ignore tests)**
 
 **Ignored test breakdown (51 total):**
