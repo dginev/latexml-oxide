@@ -2,7 +2,7 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-19. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-23. Only lists open gaps & TODOs; completed items live in git history.
 
 **High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
 (Engine Parity → Package Bindings → Post-Processing → Production).
@@ -235,86 +235,34 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-23)
 
-**Current totals: 273 pass, 0 fail, 48 ignored test functions (321 total)**
-**Coverage: 89% pass rate (270/304 non-permanent-ignore tests)**
+**Current totals: 274 pass, 0 fail, 47 ignored (321 total integration tests)**
+**Plus 8 unit tests (replace_tree, parse recognizer) = 282 total passing**
+**Coverage: 91% pass rate (274/301 non-permanently-blocked tests)**
 
-**Ignored test breakdown (51 total):**
-- **17 permanently blocked**: tikz (10), DTD ns1-5 (5), moderncv (2) — need major infrastructure
-- **20 math parser grammar**: scripts, operators, relations, parens, functions, calculus, artefacts, qm, array_math_parse, vertbars (70_parse: 10), ambiguous_relations, declare, sampler, simplemath, testscripts (40_math: 5), ntheorem (1), plainmath (1), cd (1), stmaryrd (1), function_argument_syntax (1)
-- **5 missing packages**: physics, siunitx, expl3 (2), beamer, xy
-- **5 alignment/structure**: split (timeout), ncases (~897 diffs), listing (~1730 diffs), ieee (~965 diffs), figure_mixed_content (~867 diffs)
-- **3 other**: mathtools (Marpa perf timeout), babel (hang), picture (missing env)
-- **1 slides**: slides_test (missing cls)
+**Ignored test breakdown (47 total):**
+- **~24 permanently blocked / missing packages**: tikz (10), pgf (2), DTD ns1-5 (5), moderncv (2), beamer, slides, expl3 (2), babel, physics, si — need major package porting
+- **~11 math parser grammar**: ambiguous_relations (98), scripts (301), calculus (273), artefacts (345), operators (422), functions (452), parens (510), relations (260), array_math_parse (194), qm (400), vertbars (466)
+- **~7 structural**: stmaryrd (990, 68% xml:id), ieee (867), ncases (894), ntheorem (1361), listing (1660), figure_mixed_content (868), split/mathtools (timeout)
+- **~5 other**: picture (1451), xytest (conversion error), slides (conversion error)
 
-**Key findings from sessions 20-25:**
-- Perl's `equationgroupJoinCols` has NO pre-advancement (confirmed from Perl source L970-980). The xml:id m2-vs-m3 difference must come from ID counter initialization or Math element creation order.
-- `.latexml` files need Rust `*_src.rs` equivalents (can't interpret Perl at runtime). Convention: `simplemath_src.rs` in `latexml_contrib`, dispatched by document base name.
-- `role="ID"` in Rust expected XMLs comes from post-finalize UNKNOWN→ID conversion (compensating for missing `.latexml` DefMathRewrite rules). Perl core produces UNKNOWN; test XMLs get ID from `.latexml` files.
-- `MATHPARSER_SPECULATE` enables `unknown(args)` → function application. Needs to be set before digestion for math parser to use it.
-- `finalize_rec` iterative rewrite eliminated all stack overflow risks for any DOM depth.
-- DefEnvironment bare `\name` form now gets all hooks (after_digest_body, after_construct, sizer, etc.).
+**Key infrastructure (sessions 26-33):**
+- Multi-token math rewrite infrastructure (C5): XMWrap wrapping, `_rewrite` marker, parser atomic handling
+- `bigop_application` at expression level — absorbs full term (∫ x²dx → ∫(x²*dx))
+- `term_list` + angle bracket fencing (`<x,y>` → inner product)
+- `parse_kludge` OPEN/CLOSE balancing for failed expressions
+- `fenced_array` grammar rules (OPEN ARRAY CLOSE → cases)
+- `*_src.rs` convention for per-document bindings (Perl .latexml equivalent)
+- `finalize_rec` iterative rewrite (no stack overflow for any DOM depth)
+- replace_tree safety verified (node cache prevents premature xmlFreeNode)
+- 8 Perl bugs documented (KNOWN_PERL_ERRORS.md), 8 intentional divergences (OXIDIZED_DESIGN.md)
 
-**Perl XML parity: 206/242 test XMLs match Perl exactly. 17 more match modulo intentional divergences (`%&#10;` + ELIDEOP). 19 have real diffs (xml:id on operators, XMWrap fencing, guessTableHeaders, font metrics, division scoping). plainmath_test: 343→5 approved diffs. standalone_modifiers: 0 Perl diffs.**
-
-**Recent fixes (2026-03-23, session 31, 17 commits):**
-- **\lx@math@nounicode DefPrimitive fix**: Changed from DefConstructor (creating XML `<ltx:text>` element) to DefPrimitive (returning Tbox with `class='ltx_nounicode'`), matching Perl's `Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode')`. Fixed XMDual wrapping for all non-Unicode math symbols (stmaryrd etc.).
-- **\varcopyright**: Now produces `©` (U+00A9) instead of None.
-- **list_apply formulae meaning**: Simplified to check content (relational or not) regardless of separator type. `meaning="formulae"` when both sides contain RELOP/multirelation.
-- **amscd arrow width**: Fixed `"0pt"` → `"0.0pt"` for XMArg width attributes.
-- **TeXDelimiter parameter type**: Implemented. Reads like `{}` for correct math digestion, uses `digested_reversion` to strip outer braces. `\Big\|` in tex= instead of `\Big{\|}`.
-- **`\genfrac` doubled fraction**: Template false branch had duplicate XMApp. Fixed to empty `()`.
-- **`\genfrac` thickness detection**: Raw value check (0.01ex ≈ 0.04pt rounds to "0.0pt" but is non-zero).
-- **IEEEproof QED tombstone**: `before_digest_end` discarded result. ieee_test 966→866 diffs.
-- **`\cases` afterConstruct**: XMDual with meaning='cases' + XMRefs for both plain and AMS variants.
-- **cleveref `~` tilde**: `\lx@tilde` primitive produces literal `~` surviving `{}` parameter reading. cleveref_minimal.xml now matches Perl exactly.
-- **KeyVals comma separator**: `", "` → `","` (no space). keyvalstyle.xml now matches Perl exactly.
-- **`\halign` `is_halign` flag**: First column CAN have ltx_nopad_l. sizes.xml, halignatt.xml now match Perl.
-- **`\bordermatrix` DOM manipulation**: Ported afterConstruct — adds XMCell columns with rowspan for stretchy parens. Proper dimensions from alignment row heights. plainmath_test: 343→5 approved diffs.
-- **Empty cell `align` stripping**: Perl doesn't set align on empty alignment cells.
-- **`\quad` lpadding in math alignment cells**: \quad isSpace boxes classified as lspaces; now absorbed as pre-content in math mode creating XMHint.
-- **XMHint glue parsing**: Fixed `get_xmhint_spacing` to strip `plus`/`minus` from glue specs. Enables \; \, \> spacing in math mode. standalone_modifiers: 0 Perl diffs.
-- **~ tilde reversion**: Changed `~` expansion from `\nobreakspace{}` to `\lx@NBSP` (Perl parity). Fixed `\lx@NBSP` reversion to `T_ACTIVE('~')`. Eliminates `~{}` artifacts.
-- **\scalebox Float format**: xscale/yscale now format as `3.0` (was `3`), matching Perl's `{Float}` param.
-- **aliceblog trailing newline**: Removed stale trailing empty line.
-
-**Recent fixes (2026-03-22, sessions 21-25):**
-- **finalize_rec iterative rewrite**: Converted from recursive to iterative with heap work-stack. Fixes SEGFAULT for nested hboxes. Deferred font wrapper collapse to post-traversal.
-- **Figure panel breaks**: `<break class="ltx_break"/>` between `<p>` panels in figures.
-- **\includegraphics candidates**: graphics.sty uses image_candidates + .png default extension. **vmode_test now PASSES** (was SEGFAULT).
-- **Bare \name constructor hooks**: DefEnvironment bare CS form now gets after_digest_body and all other hooks (was missing). Fixes \rothead rotation inside alignment.
-- **Diaghead tex=/xml:id**: Tag('ltx:picture') with generate_id + reversion-based tex= on \lx@diagheads picture element.
-- **Postfix modifier grammar**: `formula modifier => postfix_modifier_apply` for `\pmod`, `\pod`.
-- **.latexml file loader**: Parses DefMathRewrite calls from per-document .latexml files. Registers XPath-based rewrite rules for single-character match patterns. simplemath_test: 132→108 diffs.
-- **\*_src.rs convention**: Established `*_src.rs` files in latexml_contrib for per-document source-level bindings (Perl .latexml equivalent). Created `simplemath_src.rs` with MATHPARSER_SPECULATE + rewrite rules. Dispatched by document base name via load_external_binding. simplemath_test: 132→130 diffs (with speculation: a(x)/b(x) now match Perl function application).
-*Note: ~17 permanently blocked (tikz/pgf/DTD/moderncv), ~20 math parser grammar, ~7 missing packages (physics/siunitx/expl3/beamer/xy/graphpap/acmart), ~6 alignment/structure (cells font diffs, split xml:id, array tex=, diagbox, ncases, listing), ~5 performance/crash (mathtools Marpa perf, babel hang, ieee/plainfonts/figure_mixed diffs).*
-*Note: 40_math (14) and 70_parse (28) split into individual tests, adding 40 test functions.*
-
-**Recent fixes (2026-03-21, session 20):**
-- **Empty-row pruning fix**: Perl's lspaces makes cells empty=false/skippable=true, triggering check_bracketting border guard. Rust: check template tokens for \lx@intercol + inherit top-border from preceding pruned rows. cells_test: 85→14. tabular.xml updated.
-- **has_intercol_before tracking**: Added Cell field for left intercolumn space presence, set during template building. Used in lpad fallback for ltx_nopad_l.
-- **\scalebox/\reflectbox dimensions**: Ported `scaled_properties()` — computes width/height/depth and xtranslate/ytranslate from body dimensions and scale factors. graphrot scalebox diffs: depth/height/ytranslate now match.
-- **ltx_nopad_l first-column fix**: Perl never adds ltx_nopad_l to first column (boundary, not inter-column gap). Added col_idx tracking. cells_test: 14→6 diffs. Updated sizes/halignatt/tabular/xcolors XMLs.
-- **insert_pi root placement**: PIs from \newcolumntype inside document body now insert before root element (matching Perl), not at cursor. colortbls_test: 96→27 diffs.
-- **dcolumn Align::Char**: Added `Align::Char(String)` variant for D-column decimal alignment (`align="char:⋅"`). Ported `absorbed_string()` from Perl. colortbls_test: 27→17 diffs.
-- **colortbl DefConstructor port**: \@setrowcolor/\@setcellcolor ported as DefConstructor with DOM walk (ancestor::ltx:tr/td). backgroundcolor now on `<tr>` and `<td>` matching Perl. **colortbls_test now PASSES** (257 pass).
-- **guessHeaders transparent containers**: classify_alignment_cell now looks through `<inline-block>` and `<p>` wrappers (matching Perl which classifies before these are added). Fixed rowspan propagation and border edge check. graphrot_test: 25→10 diffs.
-- **\rotatebox raw TeX override fix**: Raw TeX graphicx.sty `\protected\def\rotatebox` was overriding our DefConstructor. Re-registered in graphicx_sty.rs. Also fixed after_digest arg indexing (get_arg(2)/get_arg(3) for Float/body, accounting for OptionalKeyVals at #1). graphrot_test: 168→623 output lines (4th+ tables now render, was 5 missing-content diffs, now 239 dimension diffs from newly-rendered content).
-- **\label in empty alignment columns**: Fixed \label before & in align/eqnarray. Route through \lx@eqnarray@label → \lx@hidden@noalign. Deep alignmentPreserve check for List wrappers. Absorb preserved boxes from skippable cells. split_test: 102→101 diffs.
-- **get_insertion_candidates bug**: Fixed _Capture_ name check (element_node vs start node) in ancestor traversal.
-- **finalize_rec iterative rewrite**: Converted from recursive to iterative traversal with heap work-stack. Fixes SIGSEGV from stack overflow (debug) / infinite loop (release) for 3+ nested hboxes. Font wrapper collapse deferred to post-traversal. vmode_test: SEGFAULT → 26 diffs.
-
-**Recent fixes (2026-03-20, session 12):**
-- **Per-size font metrics**: Added cmm7/cmm5 entries to STDMETRICS (from cmmi7.tfm/cmmi5.tfm). Script/scriptscript style characters now use correct design-size metrics instead of always falling back to cmmi10. sizes_test: 4→1 diffs (3 script width diffs fixed).
-- **Matrix delimiter absorption**: `get_value_digested()` for left/right keyvals in matrix/cases properties. matrix_test: 164→2 diffs.
-- **Smallmatrix Perl typo**: Matched Perl's `atameaning` typo (not `datameaning`) to avoid XMDual wrapping.
-- **\framebox math mode**: Added `?#mathframe` conditional template, IN_MATH detection, isMath child walk. terms_test: 12→11 diffs.
-- **\boxed**: Ported from amsmath (boxed@math → XMArg enclose='box', boxed@text → Math framed='rectangle').
-- **DefMath parity audit**: Ported `\And`, `\varlimsup/inf`, `\varinjlim`, `\varprojlim`, `\intop`, `\ointop`, `\iint/iiint/iiiint/idotsint`, `\varGamma...\varOmega` (11 italic Greeks), `\implies/\impliedby`, `\mod/\pod/\pmod/\bmod`, misc stubs.
-
-**Recent infrastructure fixes (2026-03-18, session 5):**
-- **Equation numbering tags**: Row properties changed from `HashMap<String, String>` to `HashMap<String, Stored>`, enabling `Stored::Digested` tags to propagate through alignment absorption. eqnarray equations now have `<tags>` elements matching Perl.
-- **Preamble PI**: `\lx@add@Preamble@PI` constructor now uses procedural body with `document.insert_pi()`. `\DeclareMathAccent` returns AddToPreamble result. acc_test: 169→96 diffs.
-- **\pagecolor reversion**: Both color.sty and xcolor.sty now return Tbox with reversion tokens.
+**Detailed fix history lives in git log. Key session summaries:**
+- **S33 (17 commits, 2026-03-23)**: +simplemath_test. C5 multi-token rewrites. bigop_application. angle bracket fencing (<x,y>). parse_kludge. replace_tree safety analysis. KNOWN_PERL_ERRORS #7-8. calculus 331→273, ambiguous_relations 101→98.
+- **S32 (9 commits)**: +plainmath_test, +cd_test. BINOP grammar. apply_delimited XMDual. dynamic_scriptpos. stmaryrd 2502→2010.
+- **S31 (31 commits)**: TeXDelimiter. \genfrac. \bordermatrix. \halign is_halign. XMHint glue. standalone_modifiers 0 diffs.
+- **S30**: +standalone_modifiers, +array, +acm_aria. acmart.cls. ncases 1048→894. listing 2032→1660.
+- **S26-29**: +cells, +graphrot, +diagboxtest, +sideset, +kludge, +array. diagbox.sty. TFM fonts. alias catcode bug. ARRAY grammar rule.
+- **S18-25**: +eqnarray, +vmode. finalize_rec iterative. normalize.rs refactor. colortbl. equation numbering.
 
 **Recent fixes (2026-03-18, session 2):**
 - **cleanup_math XPath**: Updated to match Perl — excludes XMHint and lone PUNCT/PERIOD from "real math" check. Math spacing commands (`\,`, `\!`, `\>`, `\;`, `\mskip`) no longer produce spurious `<Math>` elements. XMHint width converted to Unicode space chars via `dimension_to_spaces`.
@@ -452,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-23):** 274 pass, 0 fail, 47 ignored (321 total). Session 33: +1 test: simplemath_test (208→0) PASS. Multi-token math rewrite infrastructure (C5): select_count preservation, XMWrap wrapping for multi-node matches, _rewrite marker for parser atomic handling. replace_tree safety analysis (node cache prevents use-after-free). KNOWN_PERL_ERRORS #7: NewScript XMDual content arm bug. XPath namespace workaround (use * in nested predicates). function_argument_syntax_test already enabled by prior session.
+**Status (2026-03-23):** 274 pass, 0 fail, 47 ignored (321 total). Session 33 (17 commits): +simplemath_test (208→0). Multi-token rewrite infrastructure (C5). bigop_application at expression level. Angle bracket fencing (<x,y> → inner product). parse_kludge. fenced_array grammar. replace_tree safety analysis. KNOWN_PERL_ERRORS #7-8. OXIDIZED_DESIGN #7-8. calculus 331→273, ambiguous_relations 101→98.
 
 ### Completed items
 
