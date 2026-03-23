@@ -214,6 +214,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
     formula_list = expression punct expression => formula_list_apply
       | formula_list punct expression => formula_list_apply;
+    // Comma-separated term lists: term, term, term, ...
+    // Used for angle-bracket inner products <x,y>, <a,b,c>, etc.
+    term_list = term punct term => list_apply
+      | term_list punct term => list_apply;
+
     // Perl MathGrammar L709-711: Two-part relops (>=, <=, <<, >>)
     two_part_relop = langle_rel langle_rel => two_part_relop_combine
       | rangle_rel rangle_rel => two_part_relop_combine
@@ -263,6 +268,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     fenced_factor = lbrace expression rbrace    => fenced
            | lbracket expression rbracket       => fenced
            | lparen formula rparen              => fenced
+           // Angle brackets as delimiters: <x,y> for inner products, etc.
+           // Old typesetting conventions used < > instead of \langle \rangle.
+           // Uses term_list (comma-separated terms) to avoid matching complex
+           // nested expressions. Only fires when content has commas.
+           | langle_rel term_list rangle_rel => fenced
            | lparen term punct term rparen      => interval
            | lparen term punct term rbracket    => interval
            | lbracket term punct term rbracket  => interval

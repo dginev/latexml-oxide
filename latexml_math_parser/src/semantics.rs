@@ -2325,3 +2325,27 @@ pub fn close_fenced(
     )))
   }
 }
+
+/// Double-fenced: <<expr>> or <<list>> — double angle brackets as a single
+/// semantic unit. Used in quantum mechanics (<<a|b>>), operator theory, etc.
+/// Produces Apply(delimited-<<>>, content).
+pub fn double_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Args: open1, open2, content, close1, close2
+  unp!(args => _open1, _open2, arg_opt, _close1, _close2);
+  let arg = arg_opt.unwrap();
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("delimited-\\langle\\langle\\rangle\\rangle")),
+    ..XProps::default()
+  };
+  Ok(Some(XM::Apply(
+    Operator::from(op),
+    Args(vec![Some(arg)]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
