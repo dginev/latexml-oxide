@@ -235,7 +235,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-23)
 
-**Current totals: 270 pass, 0 fail, 51 ignored test functions (321 total)**
+**Current totals: 271 pass, 0 fail, 50 ignored test functions (321 total)**
 **Coverage: 89% pass rate (270/304 non-permanent-ignore tests)**
 
 **Ignored test breakdown (51 total):**
@@ -505,7 +505,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **40. diagboxtest_test** (53_alignment) — DONE (was 267→144→94→86→80→0). Session 26: full diagbox.sty port with afterConstruct DOM building, slashbox/backslashbox compat, shortstack \\\\ fix in tabular context. Updated XML for dimension precision. 0 diffs.
 
-- [ ] **12. stmaryrd_test** (22_fonts) — 1007 diffs (was 1449). Ported stmaryrd.sty, fixed FontDirective Display. Remaining: mostly XMDual + math parser text= diffs.
+- [ ] **12. stmaryrd_test** (22_fonts) — 2010 diffs (was 2502→2010). BINOP grammar rules added (declared but never used). Right-recursive formulae restructuring for \quad-separated RELOP/ARROW expressions. dynamic_scriptpos on bigops. Remaining: xml:id numbering (from restructuring), mixed BINOP/RELOP parse structure (3 eqs), kludge delimiter structures.
 - [ ] **33. cd_test** (56_ams) — 221 diffs (was 146, 175). XMCell structure, XMDual/XMWrap diffs.
 - [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
