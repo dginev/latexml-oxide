@@ -546,7 +546,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - sidewaystable/sidewaysfigure full hooks (beforeFloat, afterFloat, rotatedPage, rotatedProperties)
 
 **Remaining — Math parser faithful translation gaps:**
-- [x] C0. **XMDual/XMWrap for function application**: DONE for `function lparen formula rparen => apply_delimited`. Uses `create_xmrefs` with `_xmkey` deferred resolution. Content: `Apply(XMRef(func), XMRef(arg))`, Presentation: `Apply(func, XMWrap(open, arg, close))`. Note: opfunction/trigfunction rules with XMDual worsened parens_test/operators_test (structure mismatch with Perl's compact_xmdual), so kept as simple prefix_apply for now.
+- [x] C0. **XMDual/XMWrap for function application**: DONE for `function` AND `opfunction` with `lparen formula rparen => apply_delimited`. Uses `create_xmrefs` with `_xmkey` deferred resolution. Content: `Apply(XMRef(func), XMRef(arg))`, Presentation: `Apply(func, XMWrap(open, arg, close))`. OPFUNCTION added in session 32 (cd_test 352→0). Note: trigfunction + XMDual still uses simple prefix_apply.
 - [x] C0b. **Modifier binding level**: DONE. Moved `formula modifier => postfix_modifier_apply` to expression level.
 - [x] C0c. **Parenthesized modifier expressions**: DONE. Added `expression lparen relop/modifierop expression rparen => annotated_fenced_modifier`.
 - [x] C0d. **\\pmod override removed**: DONE. Removed amsmath_sty.rs duplicate \\pmod/\\bmod definitions (Perl doesn't redefine them in amsmath).
