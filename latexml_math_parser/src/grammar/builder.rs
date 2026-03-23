@@ -313,10 +313,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += function lbracket formula rbracket => apply_delimited;
     // Also support fenced_factor for backwards compat (no XMDual wrapping)
     tight_term += function fenced_factor => prefix_apply;
-    // OPFUNCTION/TRIGFUNCTION followed by fenced args => function application
-    // NOTE: opfunction/trigfunction + lparen/rparen with XMDual worsened parens_test/operators_test
-    // because the XMDual structure doesn't match Perl's compact_xmdual output.
-    // Keep simple prefix_apply for now until compact_xmdual is fully ported.
+    // OPFUNCTION followed by fenced args => function application with XMDual wrapping.
+    // Perl: ApplyDelimited for \operatorname{cov}(L), \log(x), etc.
+    tight_term += opfunction lparen formula rparen => apply_delimited;
+    tight_term += opfunction lbracket formula rbracket => apply_delimited;
+    // Also support fenced_factor for backwards compat (no XMDual wrapping)
     tight_term += opfunction fenced_factor => prefix_apply;
     // Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
     // \log x => log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
