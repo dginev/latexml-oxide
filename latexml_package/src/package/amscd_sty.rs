@@ -153,7 +153,7 @@ LoadDefinitions!({
       if !left_empty {
         if let Some(left_val) = left {
           document.insert_element("ltx:XMArg", vec![left_val],
-            Some(map!("width" => "0pt".to_string())))?;
+            Some(map!("width" => "0.0pt".to_string())))?;
         }
       }
       if let Some(op_val) = op {
@@ -162,7 +162,7 @@ LoadDefinitions!({
       if !right_empty {
         if let Some(right_val) = right {
           document.insert_element("ltx:XMArg", vec![right_val],
-            Some(map!("width" => "0pt".to_string())))?;
+            Some(map!("width" => "0.0pt".to_string())))?;
         }
       }
       document.close_element("ltx:XMWrap")?;

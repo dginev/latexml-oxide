@@ -48,6 +48,18 @@ pub fn node_to_grammar_lexemes_from(
         let lexeme = format!("ARROW:{arrow_meaning}:{idx}").replace(' ', "");
         lexemes.push(lexeme);
         nodes.push(node);
+      } else if node.has_attribute("_rewrite") {
+        // Rewrite-created: treat as atomic token with the assigned role.
+        // Don't recurse — the inner structure was pre-parsed, and the role
+        // on this node overrides whatever the children contain.
+        let gram_role = get_grammatical_role(&node);
+        let mut text = get_token_meaning(&node);
+        if text.is_empty() {
+          text = "UNKNOWN".to_string();
+        }
+        *idx += 1;
+        lexemes.push(format!("{gram_role}:{text}:{idx}").replace(' ', ""));
+        nodes.push(node);
       } else {
         // Only recurse into XMApp nodes that have a role (scripts, etc.)
         // Role-less XMApps (e.g. \sqrt, already-parsed structures) are atomic.
@@ -108,13 +120,20 @@ pub fn distill_lexeme(name: &str) -> (&str, &str, &str) {
 
 /// Parse an XMHint `width` attribute string to points.
 /// Supports "3.0mu" (mu → pt by dividing by 1.8) and "1.667pt"/"0.16667em".
+/// Handles glue specs like "2.77pt plus 2.77pt" by extracting base dimension.
 fn get_xmhint_spacing(width: &str) -> f64 {
   let width = width.trim();
   if width.is_empty() {
     return 0.0;
   }
-  let unit_start = width.find(|c: char| c.is_alphabetic()).unwrap_or(width.len());
-  let (number_str, unit) = width.split_at(unit_start);
+  // Strip glue stretch/shrink: "2.77pt plus 2.77pt" → "2.77pt"
+  let base = width
+    .split_once(" plus")
+    .or_else(|| width.split_once(" minus"))
+    .map_or(width, |(base, _)| base)
+    .trim();
+  let unit_start = base.find(|c: char| c.is_alphabetic()).unwrap_or(base.len());
+  let (number_str, unit) = base.split_at(unit_start);
   let number: f64 = number_str.trim().parse().unwrap_or(0.0);
   match unit.trim() {
     "mu" => number / 1.8,

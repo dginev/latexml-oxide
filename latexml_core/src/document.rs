@@ -235,9 +235,68 @@ impl Document {
       self.set_local_font(Rc::new(Font::text_default()));
       self.finalize_rec(&mut root)?;
       self.set_rdfa_prefixes();
+      self.apply_document_namespace_declarations(&mut root);
       self.expire_local_font();
     }
     Ok(())
+  }
+
+  /// Apply registered document namespace declarations to the root element.
+  /// Perl's RegisterDocumentNamespace stores prefix→URI mappings in the model.
+  /// These must appear as xmlns:prefix="URI" on the root element during serialization.
+  /// Only emit namespaces that are actually used in the document (Perl behavior).
+  fn apply_document_namespace_declarations(&self, root: &mut Node) {
+    let prefixes = model::get_document_namespace_prefixes();
+    // Collect which prefixes are actually used in the document
+    let nsnodes = root.get_namespace_declarations();
+    let existing_prefixes: Vec<String> = nsnodes.iter().map(|ns| ns.get_prefix()).collect();
+    for (prefix, ns_uri) in prefixes {
+      // Skip internal/default namespaces
+      if prefix.is_empty() || prefix == "ltx" || prefix == "xml" {
+        continue;
+      }
+      // Skip namespaces containing "DEFAULT#" (internal model entries)
+      if ns_uri.contains("DEFAULT#") {
+        continue;
+      }
+      // Only add if this prefix appears as a namespace declaration on some child node
+      // (meaning it's actually used in the document)
+      if existing_prefixes.contains(&prefix) {
+        continue; // already declared on root
+      }
+      // Check if any descendant element uses this namespace prefix
+      // by looking for namespace declarations on descendant elements
+      let has_usage = self.has_namespace_usage(root, &prefix);
+      if has_usage {
+        let attr_name = format!("xmlns:{prefix}");
+        root.set_attribute(&attr_name, &ns_uri).ok();
+      }
+    }
+  }
+
+  /// Check if any descendant of node uses the given namespace prefix.
+  fn has_namespace_usage(&self, node: &Node, prefix: &str) -> bool {
+    // Check attributes of this node for prefix: usage
+    for (key, _) in node.get_attributes() {
+      if key.starts_with(&format!("{prefix}:")) {
+        return true;
+      }
+    }
+    // Check children recursively
+    for child in node.get_child_nodes() {
+      if child.get_type() == Some(NodeType::ElementNode) {
+        // Check if element itself is in this namespace
+        for ns in child.get_namespace_declarations() {
+          if ns.get_prefix() == prefix {
+            return true;
+          }
+        }
+        if self.has_namespace_usage(&child, prefix) {
+          return true;
+        }
+      }
+    }
+    false
   }
 
   /// Remove xml:ids from XMTok elements that aren't referenced by any idref.
@@ -1172,7 +1231,16 @@ impl Document {
 
         let anodes = node.get_attributes();
         let mut anodes_keys: Vec<&String> = anodes.keys().collect();
-        anodes_keys.sort();
+        // Sort: xmlns:* declarations first (matching Perl's output order), then alphabetically
+        anodes_keys.sort_by(|a, b| {
+          let a_is_xmlns = a.starts_with("xmlns:");
+          let b_is_xmlns = b.starts_with("xmlns:");
+          match (a_is_xmlns, b_is_xmlns) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.cmp(b),
+          }
+        });
         for key in anodes_keys {
           if key == "id" {
             continue;
@@ -1646,14 +1714,21 @@ impl Document {
       if key.starts_with('_') {
         continue;
       }
-      let is_forced = force.is_some_and(|f| f.contains(key.as_str()));
+      // Normalize key: get_attributes() returns "id" for xml:id attributes.
+      // Check both "xml:id" and bare "id" with XML namespace for the special case.
+      let is_xml_id = key.as_str() == "xml:id"
+        || (key.as_str() == "id" && from.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").is_some());
+      let effective_key = if is_xml_id { "xml:id" } else { key.as_str() };
+      let is_forced = force.is_some_and(|f| f.contains(effective_key));
       // Special case attributes
-      if key.as_str() == "xml:id" {
+      if is_xml_id {
         // Use the replacement id
-        if !to.has_attribute(key) || is_forced {
+        let to_has_id = to.has_attribute("xml:id")
+          || to.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").is_some();
+        if !to_has_id || is_forced {
           self.unrecord_id(val);
           self.record_id_with_node(val, to);
-          to.set_attribute(key, val)?;
+          to.set_attribute("xml:id", val)?;
         }
       } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
         self.add_ss_values(to, key, val)?;
@@ -2647,8 +2722,13 @@ impl Document {
     }
     // Migrate dual attributes to the new XMApp
     self.merge_attributes(&dual, &mut compact_apply, Some(&DUAL_TRANSFER))?;
-    self.replace_tree(compact_apply.clone(), dual)?;
-    self.close_element_at(&mut compact_apply)?;
+    // Direct DOM swap: replace dual with compact_apply without re-creating nodes.
+    // Perl uses replaceChild which is a direct swap; replace_tree calls append_tree
+    // which re-creates elements and fires afterOpen/afterClose hooks a second time.
+    compact_apply.unlink();
+    let mut dual_mut = dual;
+    dual_mut.add_prev_sibling(&mut compact_apply).ok();
+    self.remove_node(dual_mut);
     Ok(())
   }
 
@@ -2668,7 +2748,10 @@ impl Document {
         self.record_id_with_node(&dualid, &branch);
       }
     }
-    self.replace_tree(branch, dual)?;
+    // Direct DOM swap: Perl uses replaceChild (no re-creation, no hooks fired twice)
+    let mut dual_mut = dual;
+    dual_mut.add_prev_sibling(&mut branch).ok();
+    self.remove_node(dual_mut);
     Ok(())
   }
 
@@ -3542,6 +3625,11 @@ impl Document {
         sib.unlink();
         following.push_front(sib);
       }
+      // NOTE: remove_node calls old.unlink() which sets unlinked=true and detaches
+      // the node from the DOM. The document's node cache holds another Rc reference,
+      // so _Node::drop (and xmlFreeNode) doesn't run until the Document itself drops.
+      // By that time, any children reused by `new` have been moved at the C level,
+      // so xmlFreeNode on old only frees the shell.
       self.remove_node(old);
       self.append_tree(&mut parent, vec![new])?;
       let inserted = parent.get_last_child();
@@ -3559,10 +3647,13 @@ impl Document {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
           let mut attributes: HashMap<String, String> = child.get_attributes().into_iter().collect();
-          // Preserve xml:id from namespace-qualified attribute
-          // get_attributes() may not include namespace-qualified attributes like xml:id
+          // Perl appendTree: REMOVE xml:id from source node before re-creation.
+          // This prevents duplicate ID registration. The ID will be re-registered
+          // by open_element_at when the new node is created with the same ID.
           if let Some(xmlid) = child.get_attribute_ns("id", XML_NS) {
-            attributes.entry("xml:id".to_string()).or_insert(xmlid);
+            attributes.entry("xml:id".to_string()).or_insert(xmlid.clone());
+            // Unrecord before re-creation (Perl: $child->removeAttribute('xml:id') + unRecordID)
+            self.unrecord_id(&xmlid);
           }
 
           let tag_sym = get_node_qname(&child);

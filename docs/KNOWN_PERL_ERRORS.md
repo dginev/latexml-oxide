@@ -125,3 +125,114 @@ the header heuristic less likely to succeed on borderline cases.
 **Rust fix:** Match the Perl behavior — break immediately when diff >=
 threshold. The continuation-line logic is commented out with a reference
 to this entry.
+
+---
+
+## 7. `NewScript` XMDual content arm uses meaningless `Apply(∅, XMRef)` for subscripted identifiers
+
+**Perl source:** `LaTeXML/MathParser.pm` line 1637, `NewScript()` function
+
+**Symptom:** When a subscripted expression like `f_1` is assigned `role="ID"` via
+`DefMathRewrite`, the math parser wraps it in `XMDual`. The presentation branch
+correctly shows the subscript structure (`SUBSCRIPTOP + f + 1`). But the content
+branch contains:
+
+```xml
+<XMApp>
+  <XMTok/>                              <!-- empty/absent operator -->
+  <XMRef idref="S0.Ex4.m1.1"/>          <!-- reference to subscript value "1" -->
+</XMApp>
+```
+
+This is `Apply(∅, 1)` — applying a nonexistent operator to just the subscript
+value. It is **not mathematically meaningful**. An identifier `f₁` should be
+represented as a single atomic token (a skolem constant), e.g.:
+
+```xml
+<XMTok name="f_1" role="ID"/>
+```
+
+or simply left as the flat subscript structure with `role="ID"`:
+
+```xml
+<XMApp role="ID">
+  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+  <XMTok>f</XMTok>
+  <XMTok meaning="1" role="NUMBER">1</XMTok>
+</XMApp>
+```
+
+**Root cause:** `NewScript()` always creates `Apply(SCRIPTOP, base, script)` for
+the presentation branch. The XMDual content branch is constructed mechanically
+by extracting `Arg($script, 0)` and wrapping in `Apply(empty_tok, XMRef)`. This
+pattern works for operators where the subscript carries semantic meaning (e.g.,
+`∑_i` → `Apply(sum, i)`), but for plain identifiers (`f_1`) the subscript is
+just a name component, not an argument.
+
+**Minimal example:**
+```tex
+% In .latexml file:
+DefMathRewrite(match => 'f_\WildCard', attributes => { role => 'ID' });
+% In .tex file:
+$f_1(a+b)$
+```
+
+**Impact:** Content MathML generation would produce `<apply><csymbol/><cn>1</cn></apply>`
+instead of `<ci>f₁</ci>`. No known downstream breakage because content MathML
+is rarely consumed for such tokens, but semantically incorrect.
+
+**Rust fix:** Rust produces the flat `XMApp[role="ID"]` form without XMDual.
+The test XML is updated to match the Rust output. This is an intentional
+divergence — the Rust form is semantically cleaner (no meaningless `Apply(∅, ref)`).
+If XMDual is needed later, the content branch should use a skolem `XMTok[name="f_1"]`.
+
+---
+
+## 8. `addOpArgs` narrow bigop absorption in declare test
+
+**Perl source:** `LaTeXML/MathGrammar` lines 668-672, `addOpArgs` / `moreOpArgFactors`
+
+**Symptom:** In `f(x) = \sum_{i=0}^{\infty} f_i x^i`, Perl's Parse::RecDescent
+parser produces `∑(f_i) * x^i` — the sum absorbs only `f_i`, not `f_i * x^i`.
+This is mathematically wrong: `i` is the summation variable, so `x^i` must be
+inside the summand. The correct parse is `∑(f_i * x^i)`.
+
+**Root cause:** `moreOpArgFactors` in Parse::RecDescent tries alternatives in
+order. After absorbing `f_i`, the next token `x^i` could extend the chain via
+invisible times (`Factor moreOpArgFactors`). But Parse::RecDescent's
+backtracking and top-down evaluation means the "stop absorbing" alternative
+(`{ $arg[0]; }`) can win depending on the context. The result is
+non-deterministic — the narrow parse happens to be selected for this specific
+expression.
+
+**Perl expected XML:** `text="... ((sum _ (i = 0)) ^ infinity)@(f _ i) * x ^ i"`
+
+**Correct parse:** `text="... ((sum _ (i = 0)) ^ infinity)@(f _ i * x ^ i)"`
+
+**Rust fix:** Rust's `bigop_application` nonterminal at expression level absorbs
+the full `term` (factor chain with mulop/invisible-times). The declare test XML
+is updated to match the mathematically correct broad absorption.
+
+---
+
+## 9. Quantifier period-binding parsed as formulae split
+
+**Symptom:** `\exists x. P(x)` is parsed as `formulae@(exists@(x), P*x)` — two
+separate formulas separated by a period. The correct mathematical reading is
+`exists@(x, P(x))` — a bound quantifier where the period separates the bound
+variable from the body (the predicate `P(x)`).
+
+**Root cause:** Perl's MathGrammar treats `.` as a ColRHS (column-right-hand-side)
+separator, which creates a `formulae` structure splitting `exists@(x)` from `P*x`.
+The grammar has no special handling for quantifier-period-body patterns like
+`\exists x. P(x)` or `\forall \epsilon > 0. \exists \delta > 0. |x - a| < \delta`.
+
+**Perl expected XML:** `text="formulae@(exists@(x), P * x)"`
+
+**Correct parse:** `text="exists@(x, P(x))"` — the period should bind the quantifier's
+variable to its body, similar to how `\int f(x)\,dx` binds the integral to its
+integrand and differential.
+
+**Rust status:** Currently unparsed (`ltx_math_unparsed`). Future fix should add
+quantifier-period-body grammar rules rather than mimicking Perl's incorrect
+formulae split.

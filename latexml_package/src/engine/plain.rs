@@ -774,7 +774,8 @@ LoadDefinitions!({
       "width" => Dimension::from_str("0.333em")?),
     )
   });
-  DefMacro!(T_ACTIVE!('~'), None, "\\nobreakspace{}");
+  // Perl: DefMacro(T_ACTIVE("~"), T_CS('\lx@NBSP'));
+  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP");
 
   DefMacro!("\\slash", "/");
   DefPrimitive!("\\filbreak", None);
@@ -1752,14 +1753,12 @@ LoadDefinitions!({
   //   my ($delim) = @_;
   //   return $DELIMITER_MAP{$delim}; }
 
-  // These originally had Token as parameter, rather than {}..... Why?
-  // Note that in TeX, \big{((} will only enlarge the 1st paren!!!
-  // Perl: font => { size => 'big' } where 'big' maps to scale factor 1.2, etc.
-  // Use scale (not absolute size) so fontsize computes correctly as percentage.
-  DefConstructor!("\\big {}",  "#1", bounded => true, font => { scale => 1.2 });
-  DefConstructor!("\\Big {}",  "#1", bounded => true, font => { scale => 1.6 });
-  DefConstructor!("\\bigg {}", "#1", bounded => true, font => { scale => 2.1 });
-  DefConstructor!("\\Bigg {}", "#1", bounded => true, font => { scale => 2.6 });
+  // Perl PR#2596: TeXDelimiter reads like {} (for correct math XMTok digestion)
+  // but reverts WITHOUT adding braces: \Big( not \Big{(}
+  DefConstructor!("\\big TeXDelimiter",  "#1", bounded => true, font => { scale => 1.2 });
+  DefConstructor!("\\Big TeXDelimiter",  "#1", bounded => true, font => { scale => 1.6 });
+  DefConstructor!("\\bigg TeXDelimiter", "#1", bounded => true, font => { scale => 2.1 });
+  DefConstructor!("\\Bigg TeXDelimiter", "#1", bounded => true, font => { scale => 2.6 });
 
   // sub addDelimiterRole {
   //   my ($document, $role) = @_;
@@ -1775,32 +1774,32 @@ LoadDefinitions!({
   //   return; }
 
   // Sized delimiters with role assignment (l=OPEN, m=MIDDLE, r=CLOSE)
-  DefConstructor!("\\bigl {}",  "#1", bounded => true, font => { size => 1.2 },
+  DefConstructor!("\\bigl TeXDelimiter",  "#1", bounded => true, font => { size => 1.2 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\bigm {}",  "#1", bounded => true, font => { size => 1.2 },
+  DefConstructor!("\\bigm TeXDelimiter",  "#1", bounded => true, font => { size => 1.2 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\bigr {}",  "#1", bounded => true, font => { size => 1.2 },
+  DefConstructor!("\\bigr TeXDelimiter",  "#1", bounded => true, font => { size => 1.2 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\Bigl {}",  "#1", bounded => true, font => { size => 1.6 },
+  DefConstructor!("\\Bigl TeXDelimiter",  "#1", bounded => true, font => { size => 1.6 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\Bigm {}",  "#1", bounded => true, font => { size => 1.6 },
+  DefConstructor!("\\Bigm TeXDelimiter",  "#1", bounded => true, font => { size => 1.6 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\Bigr {}",  "#1", bounded => true, font => { size => 1.6 },
+  DefConstructor!("\\Bigr TeXDelimiter",  "#1", bounded => true, font => { size => 1.6 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\biggl {}", "#1", bounded => true, font => { size => 2.1 },
+  DefConstructor!("\\biggl TeXDelimiter", "#1", bounded => true, font => { size => 2.1 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\biggm {}", "#1", bounded => true, font => { size => 2.1 },
+  DefConstructor!("\\biggm TeXDelimiter", "#1", bounded => true, font => { size => 2.1 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\biggr {}", "#1", bounded => true, font => { size => 2.1 },
+  DefConstructor!("\\biggr TeXDelimiter", "#1", bounded => true, font => { size => 2.1 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\Biggl {}", "#1", bounded => true, font => { size => 2.6 },
+  DefConstructor!("\\Biggl TeXDelimiter", "#1", bounded => true, font => { size => 2.6 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\Biggm {}", "#1", bounded => true, font => { size => 2.6 },
+  DefConstructor!("\\Biggm TeXDelimiter", "#1", bounded => true, font => { size => 2.6 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\Biggr {}", "#1", bounded => true, font => { size => 2.6 },
+  DefConstructor!("\\Biggr TeXDelimiter", "#1", bounded => true, font => { size => 2.6 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
   Let!(&T_CS!("\\vert"), T_OTHER!("|"));
@@ -1908,42 +1907,38 @@ LoadDefinitions!({
   DefMath!("\\csc", None, "csc", role => "TRIGFUNCTION", meaning => "cosecant");
   DefMath!("\\deg", None, "deg", role => "OPFUNCTION",   meaning => "degree");
   DefMath!("\\det", None, "det", role => "LIMITOP", meaning => "determinant",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    dynamic_scriptpos => true);
   DefMath!("\\dim", None, "dim", role => "LIMITOP", meaning => "dimension");
 
   DefMath!("\\exp", None, "exp", role => "OPFUNCTION", meaning => "exponential");
   DefMath!("\\gcd", None, "gcd", role => "OPFUNCTION", meaning => "gcd",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    dynamic_scriptpos => true);
   DefMath!("\\hom", None, "hom", role => "OPFUNCTION");
   DefMath!("\\inf", None, "inf", role => "LIMITOP", meaning => "infimum",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    dynamic_scriptpos => true);
 
   DefMath!("\\ker", None, "ker", role => "OPFUNCTION", meaning => "kernel");
   DefMath!("\\lg", None, "lg", role => "OPFUNCTION");
   DefMath!("\\lim", None, "lim", role => "LIMITOP", meaning => "limit",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    dynamic_scriptpos => true);
   DefMath!("\\liminf", None, "lim inf", role => "LIMITOP", meaning => "limit-infimum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\limsup", None, "lim sup", role => "LIMITOP", meaning => "limit-supremum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\ln",  None, "ln",  role => "OPFUNCTION", meaning => "natural-logarithm");
   DefMath!("\\log", None, "log", role => "OPFUNCTION", meaning => "logarithm");
   DefMath!("\\max", None, "max", role => "OPFUNCTION", meaning => "maximum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\min", None, "min", role => "OPFUNCTION", meaning => "minimum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\Pr",  None, "Pr",  role => "OPFUNCTION",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\sec", None, "sec", role => "TRIGFUNCTION", meaning   => "secant");
   DefMath!("\\sin", None, "sin", role => "TRIGFUNCTION", meaning   => "sine");
 
   DefMath!("\\sinh", None, "sinh", role => "TRIGFUNCTION", meaning => "hyperbolic-sine");
   DefMath!("\\sup", None, "sup", role => "LIMITOP", meaning => "supremum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\tan",  None, "tan",  role => "TRIGFUNCTION", meaning => "tangent");
   DefMath!("\\tanh", None, "tanh", role => "TRIGFUNCTION", meaning => "hyperbolic-tangent");
 
@@ -1965,10 +1960,123 @@ LoadDefinitions!({
     r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"
   );
   // HACK the newly created border matrix to add columns for the (spanned) parentheses!!!
-  // TODO: Port the full DOM manipulation (adding paren columns, rowspans, etc.)
+  // Perl: adds empty XMCell columns for stretchy parens with rowspan
   DefConstructor!("\\lx@hack@bordermatrix{}", sub[document, args, _props] {
       let matrix = args[0].as_ref().unwrap();
       document.absorb(matrix, None)?;
+      // Perl: Extract alignment dimensions for paren sizing
+      // half = (totalHeight - row0Height) / 2 — symmetric strut height
+      // shift = row0Height - half — yoffset to center parens on data rows
+      // h1 = row[1] height — XMWrap height
+      let (h1_sp, half_sp, shift_sp) = {
+        let em = lookup_font().map(|f| f.get_em_width()).unwrap_or(655360); // 10pt default
+        let mut found = (em, em, em); // default: all 1em
+        for item in matrix.unlist() {
+          if let Some(prop) = item.get_property("alignment") {
+            if let Stored::Digested(ref alignment_d) = *prop {
+              if let DigestedData::Alignment(ref alignment_rc) = alignment_d.data() {
+                let alignment = alignment_rc.borrow();
+                // Use row_heights from normalization
+                let row_heights = alignment.get_row_heights();
+                if row_heights.len() >= 2 {
+                  let h0 = row_heights[0].value_of();
+                  let h1 = row_heights[1].value_of();
+                  if let Some(total_h) = alignment.get_cached_height() {
+                    let total = total_h.value_of();
+                    if let Some(total_d) = alignment.get_cached_depth() {
+                      let total_height = total + total_d.value_of(); // getTotalHeight = height + depth
+                      let half = (total_height - h0) / 2;
+                      let shift = h0 - half;
+                      found = (h1, half, shift);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        found
+      };
+      // DOM manipulation: add paren columns to the border matrix
+      let marray = document.get_node().get_last_element_child();
+      if let Some(marray) = marray {
+        let rows = document.findnodes("ltx:XMRow", Some(&marray));
+        let n = rows.len();
+        if n >= 2 {
+          // Add 2 empty cells to each row; move one to 2nd position
+          for mut row in rows.iter().cloned() {
+            let mut nopad_attrs = HashMap::default();
+            nopad_attrs.insert("class".to_string(), "ltx_nopad".to_string());
+            let mut cell1 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs.clone()), None)?;
+            document.close_element_at(&mut cell1)?;
+            cell1.remove_attribute("align"); // Empty paren cell — no alignment
+            let mut cell2 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs), None)?;
+            document.close_element_at(&mut cell2)?;
+            cell2.remove_attribute("align"); // Empty paren cell — no alignment
+            // Move cell2 (last child) to 2nd position (after first child)
+            if let Some(mut first_child) = row.get_first_element_child() {
+              cell2.unlink_node();
+              first_child.add_next_sibling(&mut cell2).ok();
+            }
+          }
+          // Set rowspan and add parens on 2nd and last columns of row 1
+          if let Some(row1) = rows.get(1) {
+            let cols: Vec<_> = row1.get_child_elements();
+            if cols.len() >= 2 {
+              let rowspan_str = (n - 1).to_string();
+              // 2nd column (index 1): open paren
+              let mut col1 = cols[1].clone();
+              col1.set_attribute("rowspan", &rowspan_str).ok();
+              col1.set_attribute("class", "ltx_nopad").ok();
+              // Perl: XMWrap { height=>h1, yoffset=>shift }
+              //   XMTok { role=>'OPEN', stretchy=>'true', font=>pfont }  '('
+              //   XMTok { height=>half, depth=>half, font=>pfont }  ' ' (strut)
+              let paren_font = lookup_font()
+                .map(|f| f.specialize("(")).unwrap_or_else(Font::text_default);
+              // Open paren
+              let mut wrap_attrs1 = HashMap::default();
+              wrap_attrs1.insert("height".to_string(), Dimension::new(h1_sp).to_attribute());
+              wrap_attrs1.insert("yoffset".to_string(), Dimension::new(shift_sp).to_attribute());
+              let mut wrap1 = document.open_element_at(&mut col1, "ltx:XMWrap", Some(wrap_attrs1), Some(paren_font.clone()))?;
+              let mut open_attrs = HashMap::default();
+              open_attrs.insert("role".to_string(), "OPEN".to_string());
+              open_attrs.insert("stretchy".to_string(), "true".to_string());
+              let mut open_tok = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(open_attrs), Some(paren_font.clone()))?;
+              open_tok.set_content("(");
+              document.close_element_at(&mut open_tok)?;
+              // Strut: height=half, depth=half (symmetric)
+              let mut strut_attrs = HashMap::default();
+              strut_attrs.insert("height".to_string(), Dimension::new(half_sp).to_attribute());
+              strut_attrs.insert("depth".to_string(), Dimension::new(half_sp).to_attribute());
+              let mut strut = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(strut_attrs), Some(paren_font.clone()))?;
+              strut.set_content(" ");
+              document.close_element_at(&mut strut)?;
+              document.close_element_at(&mut wrap1)?;
+              // Close paren — same structure
+              let mut coln = cols[cols.len() - 1].clone();
+              coln.set_attribute("rowspan", &rowspan_str).ok();
+              coln.set_attribute("class", "ltx_nopad").ok();
+              let mut wrap_attrs2 = HashMap::default();
+              wrap_attrs2.insert("height".to_string(), Dimension::new(h1_sp).to_attribute());
+              wrap_attrs2.insert("yoffset".to_string(), Dimension::new(shift_sp).to_attribute());
+              let mut wrap2 = document.open_element_at(&mut coln, "ltx:XMWrap", Some(wrap_attrs2), Some(paren_font.clone()))?;
+              let mut close_attrs = HashMap::default();
+              close_attrs.insert("role".to_string(), "CLOSE".to_string());
+              close_attrs.insert("stretchy".to_string(), "true".to_string());
+              let mut close_tok = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(close_attrs), Some(paren_font.clone()))?;
+              close_tok.set_content(")");
+              document.close_element_at(&mut close_tok)?;
+              let mut strut2_attrs = HashMap::default();
+              strut2_attrs.insert("height".to_string(), Dimension::new(half_sp).to_attribute());
+              strut2_attrs.insert("depth".to_string(), Dimension::new(half_sp).to_attribute());
+              let mut strut2 = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(strut2_attrs), Some(paren_font))?;
+              strut2.set_content(" ");
+              document.close_element_at(&mut strut2)?;
+              document.close_element_at(&mut wrap2)?;
+            }
+          }
+        }
+      }
     },
     reversion => "#1");
   // DefConstructor('\lx@hack@bordermatrix{}', sub {

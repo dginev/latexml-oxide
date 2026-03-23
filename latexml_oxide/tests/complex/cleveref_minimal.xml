@@ -305,6 +305,6 @@
     <caption class="ltx_centering"><tag close=": ">Figure 1</tag>First figure</caption>
   </figure>
   <para class="ltx_noindent" xml:id="p3">
-    <p>Mixed references example: <ref labelref="LABEL:eqn:1" show="creftypeplural refnum"/>, <ref labelref="LABEL:eqn:3" show="refnum"/>, <ref labelref="LABEL:eqn:4" show="refnum"/> and <ref labelref="LABEL:fig:1" show="refnum"/></p>
+    <p>Mixed references example: <ref labelref="LABEL:eqn:1" show="creftypeplural~refnum"/>, <ref labelref="LABEL:eqn:3" show="refnum"/>, <ref labelref="LABEL:eqn:4" show="refnum"/> and <ref labelref="LABEL:fig:1" show="refnum"/></p>
   </para>
 </document>

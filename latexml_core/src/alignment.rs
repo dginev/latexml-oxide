@@ -84,6 +84,8 @@ pub struct Alignment {
   in_tabular_head:   bool,
   is_math:           bool,
   is_normalized:     bool,
+  /// True for \halign templates (no first-column ltx_nopad_l guard)
+  pub is_halign:     bool,
   current_column:    usize,
   current_row:       Option<usize>,
   reversion:         Option<Tokens>,
@@ -148,6 +150,7 @@ impl Alignment {
       in_column: false,
       in_tabular_head: false,
       is_normalized: false,
+      is_halign: false,
       properties: config.properties,
       xml_attributes,
       rows: VecDeque::new(),
@@ -197,6 +200,9 @@ impl Alignment {
   }
 
   pub fn rows(&self) -> &VecDeque<Row> { &self.rows }
+  pub fn get_cached_height(&self) -> Option<Dimension> { self.cached_height }
+  pub fn get_cached_depth(&self) -> Option<Dimension> { self.cached_depth }
+  pub fn get_row_heights(&self) -> &[Dimension] { &self.row_heights }
 
   pub fn add_line(&mut self, border: &str, cols: Vec<usize>) {
     if let Some(row_idx) = self.current_row {
@@ -522,8 +528,11 @@ impl BoxOps for Alignment {
         }
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
+        // Perl: empty cells don't get align attribute
         if let Some(ref align) = cell.align {
-          cell_attrs.insert(String::from("align"), align.name());
+          if !cell.empty || cell.boxes.is_some() {
+            cell_attrs.insert(String::from("align"), align.name());
+          }
         };
         if let Some(ref vattach) = cell.vattach {
           cell_attrs.insert(String::from("vattach"), vattach.clone());
@@ -620,13 +629,17 @@ impl BoxOps for Alignment {
                 0
               }
             });
-          // Perl: first column never gets ltx_nopad_l. The first column's left
-          // edge is the tabular boundary, not an inter-column gap. Only columns
-          // after the first can have their left padding suppressed by @{}.
-          if col_idx > 0 && (!empty || has_boxes) && lpad < threshold_02em {
+          // Perl: for LaTeX tabular, first column never gets ltx_nopad_l (boundary).
+          // But for \halign, ALL columns can get ltx_nopad_l (no special first column).
+          if (col_idx > 0 || self.is_halign) && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
-            // do nothing — use CSS default padding
+            // In math mode, absorb named spacing (like \quad) as XMHint content
+            // even when below the 1.5em threshold. This preserves XMHint for
+            // the math parser to convert to lpadding.
+            if ismath && cell.lspaces.is_some() {
+              pre_absorb = cell.lspaces.take();
+            }
           } else {
             pre_absorb = cell.lspaces.take();
           }
@@ -671,6 +684,13 @@ impl BoxOps for Alignment {
           // Perl L365: absorb pre-spacing (lspaces > 1.5em)
           if let Some(ref pre) = pre_absorb {
             document.absorb(pre, None)?;
+          }
+          // In math mode, absorb lspaces as content (creates XMHint for \quad etc.)
+          // This is needed for the math parser to convert XMHint → lpadding.
+          if ismath && pre_absorb.is_none() {
+            if let Some(ref lsp) = cell.lspaces {
+              document.absorb(lsp, None)?;
+            }
           }
           document.absorb(box_ref, None)?;
           // Perl L367: absorb post-spacing (rspaces > 1.5em)

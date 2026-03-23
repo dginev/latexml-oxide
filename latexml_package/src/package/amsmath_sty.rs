@@ -425,7 +425,9 @@ LoadDefinitions!({
   // We take 4 formal args; numer/denom are read manually in afterDigest.
   DefConstructor!(
     "\\lx@@genfrac {} [Dimension] {} [Number]",
-    r###"?#needXMDual(<ltx:XMDual><ltx:XMApp><ltx:XMRef _xmkey='#xmkey0'/><ltx:XMRef _xmkey='#xmkey1'/><ltx:XMRef _xmkey='#xmkey2'/></ltx:XMApp><ltx:XMWrap>#open)()<ltx:XMApp><ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg><ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg></ltx:XMApp>?#needXMDual(#close</ltx:XMWrap></ltx:XMDual>)(<ltx:XMApp><ltx:XMTok role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg>#top</ltx:XMArg><ltx:XMArg>#bottom</ltx:XMArg></ltx:XMApp>)"###,
+    // Perl: the middle XMApp is always present; the ?#needXMDual conditionals wrap it in XMDual.
+    // The false branch of both conditionals is empty "()" — NOT a duplicate fraction.
+    r###"?#needXMDual(<ltx:XMDual><ltx:XMApp><ltx:XMRef _xmkey='#xmkey0'/><ltx:XMRef _xmkey='#xmkey1'/><ltx:XMRef _xmkey='#xmkey2'/></ltx:XMApp><ltx:XMWrap>#open)()<ltx:XMApp><ltx:XMTok _xmkey='#xmkey0' role='#role' meaning='#meaning' mathstyle='#mathstyle' thickness='#thickness'/><ltx:XMArg _xmkey='#xmkey1'>#top</ltx:XMArg><ltx:XMArg _xmkey='#xmkey2'>#bottom</ltx:XMArg></ltx:XMApp>?#needXMDual(#close</ltx:XMWrap></ltx:XMDual>)()"###,
     alias => "\\genfrac",
     after_digest => sub[whatsit] {
       // Clone args upfront to avoid borrow conflicts with set_property
@@ -459,9 +461,22 @@ LoadDefinitions!({
       let denom = digest(denom_tokens.clone())?;
       egroup()?;
 
-      // thickness=0pt means no rule line (like \atop), so meaning is empty
+      // thickness=0pt means no rule line (like \atop), so meaning is empty.
+      // Perl checks raw dimension value (not rounded attribute string),
+      // so 0.01ex (≈0.04pt, rounds to "0.0pt") still gets meaning="divide".
       let thickness_str = thickness.as_ref().map(|t| t.to_attribute()).unwrap_or_default();
-      let meaning = if thickness_str == "0.0pt" || thickness_str == "0pt" {
+      let thickness_is_zero = if thickness.is_none() {
+        false // No thickness → use default rule line → meaning="divide"
+      } else {
+        // Check the raw to_attribute which uses 1 decimal place
+        // For exact 0: to_attribute = "0.0pt"
+        // For "0.0ex" input: Dimension(0) → to_attribute = "0.0pt"
+        // For "0.01ex" input: Dimension(~2821) → to_attribute = "0.0pt" BUT original is non-zero
+        // Use the stored token string to check the original input
+        let raw = thickness.as_ref().map(|t| t.to_string()).unwrap_or_default();
+        raw.trim() == "0.0pt" || raw.trim() == "0pt"
+      };
+      let meaning = if thickness_is_zero {
         String::new()
       } else {
         "divide".to_string()
@@ -926,11 +941,10 @@ LoadDefinitions!({
   // Perl: amsmath.sty.ltxml L1155 — \And for multi-author
   DefMath!("\\And", "&", role => "ADDOP", meaning => "and");
 
-  // Perl: amsmath.sty.ltxml L1156-1157 — modular arithmetic
+  // Perl: amsmath.sty.ltxml L1154-1157 — modular arithmetic
+  // \bmod and \pmod are "already in LaTeX" (plain.rs) — do NOT redefine here
   DefMath!("\\mod", "mod", role => "MODIFIEROP", meaning => "modulo");
   DefMath!("\\pod{}", "(#1)", role => "MODIFIER", meaning => "modulo");
-  DefMath!("\\pmod{}", "(mod\u{2062}#1)", role => "MODIFIER", meaning => "modulo");
-  DefMath!("\\bmod", "mod", role => "MODIFIEROP", meaning => "modulo");
 
   // Perl: amsmath.sty.ltxml L1243-1250 — multiple integrals
   DefMath!("\\iint", "\u{222C}", role => "INTOP", meaning => "double-integral",
@@ -1016,11 +1030,24 @@ fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
         continue;
       }
 
-      // Strip leading & trailing XMHint nodes
+      // Perl: prefilterMath converts XMHint spacing to lpadding on next token.
+      // Transfer leading XMHint width as lpadding on next node, then remove it.
       if document::get_node_qname(&nodes[0]) == xmhint_sym {
+        if let Some(width) = nodes[0].get_attribute("width") {
+          if nodes.len() > 1 {
+            nodes[1].set_attribute("lpadding", &width).ok();
+          }
+        }
         nodes.remove(0);
       }
+      // Transfer trailing XMHint width as rpadding on previous node, then remove it.
       if !nodes.is_empty() && document::get_node_qname(nodes.last().unwrap()) == xmhint_sym {
+        if let Some(width) = nodes.last().unwrap().get_attribute("width") {
+          if nodes.len() > 1 {
+            let prev_idx = nodes.len() - 2;
+            nodes[prev_idx].set_attribute("rpadding", &width).ok();
+          }
+        }
         nodes.pop();
       }
 
@@ -1063,14 +1090,29 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
     return Ok(());
   }
 
-  // Ensure all content nodes have xml:ids, and collect XMRef idrefs
+  // Perl: prefilterMath runs on each XMCell, converting XMHint spacing to lpadding.
+  // Process cells: convert XMHint → lpadding on next sibling, then remove XMHint.
   let xmhint_sym = arena::pin_static("ltx:XMHint");
+  let mut i = 0;
+  while i < cells.len() {
+    let qname = document::get_node_qname(&cells[i]);
+    if qname == xmhint_sym {
+      // Transfer width as lpadding to the next non-hint node
+      if let Some(width) = cells[i].get_attribute("width") {
+        if i + 1 < cells.len() {
+          cells[i + 1].set_attribute("lpadding", &width).ok();
+        }
+      }
+      // Remove XMHint from cells list (it stays in the XMArray presentation)
+      cells.remove(i);
+    } else {
+      i += 1;
+    }
+  }
+
+  // Ensure all content nodes have xml:ids, and collect XMRef idrefs
   let mut ref_ids: Vec<String> = Vec::new();
   for node in cells.iter_mut() {
-    let qname = document::get_node_qname(node);
-    if qname == xmhint_sym {
-      continue; // Ephemeral, skip
-    }
     // Generate xml:id if needed
     if !node.has_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
       document.generate_id(node, "")?;

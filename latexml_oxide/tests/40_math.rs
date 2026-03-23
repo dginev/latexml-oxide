@@ -22,7 +22,6 @@ pub fn math_tests_dispatch(filename: &str) -> Option<Result<()>> {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn ambiguous_relations_test() {
   latexml_test_single("tests/math/ambiguous_relations.tex", "ambiguous_relations", DIR, None, None);
 }
@@ -78,7 +77,6 @@ fn sampler_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (needs scoped rewrites for full match)
 fn simplemath_test() {
   latexml_test_single("tests/math/simplemath.tex", "simplemath", DIR, None, Some(Rc::new(math_tests_dispatch)));
 }

@@ -11,7 +11,6 @@ fn amsdisplay_test() {
 }
 
 #[test]
-#[ignore] // 221 diffs: XMCell structure, XMDual/XMWrap diffs
 fn cd_test() {
   latexml_test_single("tests/ams/cd.tex", "cd", DIR, None, None);
 }
@@ -38,7 +37,6 @@ fn matrix_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn sideset_test() {
   latexml_test_single("tests/ams/sideset.tex", "sideset", DIR, None, None);
 }

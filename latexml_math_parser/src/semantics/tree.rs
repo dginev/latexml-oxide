@@ -703,6 +703,7 @@ impl XM {
       XM::Dual(content, pres, props, _meta) => {
         let (_, font, attrs) = props.into_attributes();
         let mut dual_node = document.open_element_at(owner, "ltx:XMDual", attrs, font)?;
+        // Content branch first, then presentation (Perl convention)
         let mut content_node = content.into_xmath(&mut dual_node, nodes, document)?;
         add_child_guard_xmarg(&mut dual_node, &mut content_node)?;
         let mut pres_node = pres.into_xmath(&mut dual_node, nodes, document)?;
@@ -726,7 +727,11 @@ impl XM {
           document.set_attribute(&mut ref_node, "idref", &id)?;
         }
         if let Some(xmkey) = refprops.xmkey {
-          document.set_attribute(&mut ref_node, "_xmkey", &xmkey)?;
+          // Use _pxmkey for parser-generated keys (pxm prefix) to avoid
+          // conflicting with base_xmath's \lx@dual resolver.
+          // Regular _xmkey for all other refs.
+          let attr_name = if xmkey.starts_with("pxm") { "_pxmkey" } else { "_xmkey" };
+          document.set_attribute(&mut ref_node, attr_name, &xmkey)?;
         }
         Ok(ref_node)
       },

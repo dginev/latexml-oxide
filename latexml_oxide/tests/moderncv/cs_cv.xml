@@ -13,8 +13,7 @@
     <contact role="firstname">Jane</contact>
     <contact role="familyname">Doe</contact>
     <contact role="position"><inline-block vattach="bottom">
-        <p>Computer Science,<break/></p>
-        <p>Ph.D. Candidate</p>
+        <p>Computer Science,<break/> Ph.D. Candidate</p>
       </inline-block></contact>
     <contact role="address">777 Slevin Street<break/>New York, NY, 10010, USA</contact>
     <contact role="mobile">+1 555 555 5555</contact>
@@ -22,7 +21,7 @@
     <contact role="homepage"><ref class="ltx_url" font="typewriter" href="https://www.example.com">https://www.example.com</ref></contact>
   </creator>
   <section inlist="toc" xml:id="Sx1">
-    <title class="ltx_cv"><text class="ltx_section_mark"></text><text class="ltx_cv_heading" font="smallcaps">Education</text></title>
+    <title class="ltx_cv"><text class="ltx_section_mark"/><text class="ltx_cv_heading" font="smallcaps">Education</text></title>
     <para class="ltx_cv_entry" xml:id="Sx1.p1">
       <block class="ltx_cv_entry_date">
         <p>09/2017 – to date</p>
@@ -116,7 +115,7 @@ nostrud exercitation ullamco laboris (nisi ut aliquip).</p>
     </para>
   </section>
   <section inlist="toc" xml:id="Sx2">
-    <title class="ltx_cv"><text class="ltx_section_mark"></text><text class="ltx_cv_heading" font="smallcaps">Employment</text></title>
+    <title class="ltx_cv"><text class="ltx_section_mark"/><text class="ltx_cv_heading" font="smallcaps">Employment</text></title>
     <para class="ltx_cv_item" xml:id="Sx2.p1">
       <block class="ltx_cv_item_label">
         <p>10/2014 – 11/2017</p>
@@ -157,10 +156,9 @@ nostrud exercitation ullamco laboris (nisi ut aliquip).</p>
         <p>Summer intern at the Great group, ABRV City. <break/>Homepage: <ref class="ltx_url" font="typewriter" href="http://www.example.com">http://www.example.com</ref></p>
       </block>
     </para>
-    <pagination role="newpage"/>
   </section>
   <section inlist="toc" xml:id="Sx3">
-    <title class="ltx_cv"><text class="ltx_section_mark"></text><text class="ltx_cv_heading" font="smallcaps">Professional Appointments</text></title>
+    <title class="ltx_cv"><text class="ltx_section_mark"/><text class="ltx_cv_heading" font="smallcaps">Professional Appointments</text></title>
     <para class="ltx_cv_item" xml:id="Sx3.p1">
       <block class="ltx_cv_item_label">
         <p>02/2015 – to date</p>
@@ -187,7 +185,7 @@ nostrud exercitation ullamco laboris (nisi ut aliquip).</p>
     </para>
   </section>
   <section inlist="toc" xml:id="Sx4">
-    <title class="ltx_cv"><text class="ltx_section_mark"></text><text class="ltx_cv_heading" font="smallcaps">Selected Projects</text></title>
+    <title class="ltx_cv"><text class="ltx_section_mark"/><text class="ltx_cv_heading" font="smallcaps">Selected Projects</text></title>
     <para class="ltx_cv_item" xml:id="Sx4.p1">
       <block class="ltx_cv_item_label">
         <p>Name A</p>
@@ -224,7 +222,7 @@ magna aliqua Ut enim ad minim veniam quis nostrud, exercitation, ullamco laboris
     </para>
   </section>
   <section inlist="toc" xml:id="Sx5">
-    <title class="ltx_cv"><text class="ltx_section_mark"></text><text class="ltx_cv_heading" font="smallcaps">Selected Extracurricular Activities</text></title>
+    <title class="ltx_cv"><text class="ltx_section_mark"/><text class="ltx_cv_heading" font="smallcaps">Selected Extracurricular Activities</text></title>
     <para class="ltx_cv_item" xml:id="Sx5.p1">
       <block class="ltx_cv_item_label">
         <p>01/2014</p>
@@ -259,7 +257,7 @@ magna aliqua Ut enim ad minim veniam quis nostrud, exercitation, ullamco laboris
     </para>
   </section>
   <section inlist="toc" xml:id="Sx6">
-    <title class="ltx_cv"><text class="ltx_section_mark"></text><text class="ltx_cv_heading" font="smallcaps">Publications</text></title>
+    <title class="ltx_cv"><text class="ltx_section_mark"/><text class="ltx_cv_heading" font="smallcaps">Publications</text></title>
     <para class="ltx_cv_item" xml:id="Sx6.p1">
       <block class="ltx_cv_item_label">
         <p>Publications page</p>

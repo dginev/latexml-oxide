@@ -8,7 +8,6 @@ fn beamer_test() {
 }
 
 #[test]
-#[ignore] // needs slides.cls binding
 fn slides_test() {
   latexml_test_single("tests/slides/slides.tex", "slides", DIR, None, None);
 }

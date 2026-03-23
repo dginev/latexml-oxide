@@ -296,22 +296,28 @@ impl DigestionAPI for Core {
     if !state::get_nomathparse_flag() {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
-      // Post-parse: add ltx_math_unparsed to Math parents of failed XMath nodes
+      // Post-parse: apply kludge to failed XMath nodes, then mark as unparsed
       if !parser.failed_xmath_ids.is_empty() {
-        for xmath_id in &parser.failed_xmath_ids {
-          let _xpath = format!("descendant-or-self::ltx:XMath[@_hashid='{}']/..", xmath_id);
-          // XMath nodes don't have @_hashid, so use the node list approach instead
-        }
-        // Apply ltx_math_unparsed to failed XMath nodes
+        // Collect failed XMath nodes for kludge processing
+        let mut failed_xmaths = Vec::new();
         for mut math_node in document.findnodes("descendant-or-self::ltx:Math[not(@text)]", None) {
           for xmath_child in document.findnodes("ltx:XMath", Some(&math_node)) {
             if parser.failed_xmath_ids.contains(&xmath_child.to_hashable()) {
+              failed_xmaths.push(xmath_child.clone());
               document.add_class(&mut math_node, "ltx_math_unparsed")?;
               break;
             }
           }
         }
+        // Apply kludge to each failed XMath — balance OPEN/CLOSE delimiters
+        for mut xmath in failed_xmaths {
+          parse_kludge(&mut xmath, &mut document);
+        }
       }
+      // Renumber xml:ids inside parsed XMath subtrees to be sequential in document
+      // order. The Marpa parser explores multiple parse alternatives, consuming ID
+      // counter slots for pruned nodes. This pass reassigns IDs post-parse.
+      renumber_math_ids(&mut document);
     }
 
     note_begin("Finalizing");
@@ -590,6 +596,195 @@ fn apply_lx_declarations(document: &mut Document) {
   }
 }
 
-// TODO: kludge_bracket_grouping — needs full implementation with script handling
-// (parse_kludgeScripts_rec) to match Perl's XMWrap structure. The basic bracket
-// grouping works but produces different nesting than Perl, causing test diffs.
+/// Fallback parser for unparseable math expressions.
+/// Perl: MathParser.pm parse_kludge().
+/// Balances OPEN/CLOSE delimiters by wrapping matched groups in XMWrap.
+/// Uses document.wrap_nodes for proper namespace handling.
+fn parse_kludge(mathnode: &mut libxml::tree::Node, document: &mut Document) {
+  use latexml_math_parser::get_grammatical_role;
+  let children: Vec<libxml::tree::Node> = mathnode
+    .get_child_elements()
+    .into_iter()
+    .filter(|n| n.get_name() != "XMHint")
+    .collect();
+  if children.is_empty() {
+    return;
+  }
+
+  // Phase 1: Find OPEN/CLOSE pairs and wrap each group using wrap_nodes.
+  // We process innermost pairs first (like matching parentheses).
+  // Iterate until no more OPEN/CLOSE pairs are found.
+  let mut changed = true;
+  while changed {
+    changed = false;
+    let elems = mathnode.get_child_elements();
+    // Find the innermost OPEN that has a matching CLOSE
+    let mut open_idx = None;
+    for (i, n) in elems.iter().enumerate() {
+      let role = get_grammatical_role(n);
+      if role == "OPEN" {
+        open_idx = Some(i);
+      } else if role == "CLOSE" && open_idx.is_some() {
+        // Found innermost OPEN..CLOSE pair
+        let start = open_idx.unwrap();
+        let end = i;
+        // Collect the nodes between OPEN and CLOSE (inclusive)
+        let group: Vec<libxml::tree::Node> =
+          elems[start..=end].iter().cloned().collect();
+        if group.len() > 1 {
+          let _ = document.wrap_nodes("ltx:XMWrap", group);
+          changed = true;
+        }
+        break; // Restart after wrapping
+      }
+    }
+    // If we found an unmatched OPEN (no CLOSE), wrap OPEN through end
+    if !changed && open_idx.is_some() {
+      let elems = mathnode.get_child_elements();
+      let start = open_idx.unwrap().min(elems.len().saturating_sub(1));
+      if start < elems.len() {
+        let group: Vec<libxml::tree::Node> =
+          elems[start..].iter().cloned().collect();
+        if group.len() > 1 {
+          let _ = document.wrap_nodes("ltx:XMWrap", group);
+          changed = true;
+        }
+      }
+    }
+  }
+  // Phase 2: Unwrap ALL top-level XMWrap nodes.
+  // Perl: foreach pair, if kludge is XMWrap, extract children (not the wrapper).
+  // This preserves flat structure for simple expressions like <1>, [1], (1).
+  loop {
+    let top_elems = mathnode.get_child_elements();
+    let wrap_opt = top_elems.into_iter().find(|n| n.get_name() == "XMWrap");
+    if let Some(wrap) = wrap_opt {
+      let _ = document.unwrap_nodes(wrap);
+    } else {
+      break;
+    }
+  }
+}
+
+/// Renumber xml:ids inside parsed XMath subtrees so they are sequential in
+/// document order. The Marpa parser explores multiple parse alternatives,
+/// consuming ID counter slots for pruned nodes (e.g. m1.1, m1.7, m1.12
+/// instead of m1.1, m1.2, m1.3). This pure post-processing pass reassigns
+/// IDs after all pruning is complete.
+///
+/// Optimized: single DFS walk per XMath (not XPath), O(1) parent-prefix
+/// lookup via ID string parsing, and allocation reuse across Math nodes.
+fn renumber_math_ids(document: &mut Document) {
+  let xml_ns = "http://www.w3.org/XML/1998/namespace";
+  let math_nodes = document.findnodes("descendant-or-self::ltx:Math[@text]", None);
+
+  // Reuse allocations across Math nodes
+  let mut id_entries: Vec<(libxml::tree::Node, String)> = Vec::new();
+  let mut idref_entries: Vec<(libxml::tree::Node, String)> = Vec::new();
+  let mut id_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+  let mut counters: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+
+  for mut math_node in math_nodes {
+    let math_id = match math_node.get_attribute_ns("id", xml_ns) {
+      Some(id) => id,
+      None => continue,
+    };
+
+    let xmath_nodes = document.findnodes("ltx:XMath", Some(&math_node));
+    for xmath in xmath_nodes {
+      id_entries.clear();
+      idref_entries.clear();
+      id_map.clear();
+      counters.clear();
+
+      // Single DFS walk collects both xml:id and idref nodes in document order
+      renumber_collect_dfs(&xmath, xml_ns, &mut id_entries, &mut idref_entries);
+      if id_entries.is_empty() {
+        continue;
+      }
+
+      // Build old→new mapping. Parent prefix is derived by string parsing:
+      // old_id "S0.Ex1.m1.3.1" → rfind('.') → parent old_id "S0.Ex1.m1.3"
+      // → look up in id_map for renumbered parent. O(1) per node.
+      let mut any_changed = false;
+      for (_node, old_id) in &id_entries {
+        let parent_new_id = if let Some(dot_pos) = old_id.rfind('.') {
+          let parent_old = &old_id[..dot_pos];
+          id_map
+            .get(parent_old)
+            .cloned()
+            .unwrap_or_else(|| parent_old.to_string())
+        } else {
+          math_id.clone()
+        };
+        let counter = counters.entry(parent_new_id.clone()).or_insert(0);
+        *counter += 1;
+        let new_id = format!("{parent_new_id}.{counter}");
+        if new_id != *old_id {
+          any_changed = true;
+        }
+        id_map.insert(old_id.clone(), new_id);
+      }
+
+      if !any_changed {
+        continue;
+      }
+
+      // Apply new xml:ids in TWO passes to avoid idstore collisions.
+      // A new id like "m1.1" would collide with an old "m1.1" still in the
+      // idstore if we interleave unrecord+record. Strip all first, then assign.
+      let mut nodes_to_update: Vec<(libxml::tree::Node, String)> = Vec::new();
+      for (mut node, old_id) in id_entries.drain(..) {
+        if let Some(new_id) = id_map.get(&old_id) {
+          if new_id != &old_id {
+            document.unrecord_id(&old_id);
+            let _ = node.remove_attribute("xml:id");
+            let _ = node.remove_attribute_ns("id", xml_ns);
+            nodes_to_update.push((node, new_id.clone()));
+          }
+        }
+      }
+      for (mut node, new_id) in nodes_to_update {
+        let _ = document.set_attribute(&mut node, "xml:id", &new_id);
+      }
+
+      // Update idrefs
+      for (mut node, old_idref) in idref_entries.drain(..) {
+        if let Some(new_idref) = id_map.get(&old_idref) {
+          if new_idref != &old_idref {
+            let _ = node.set_attribute("idref", new_idref);
+          }
+        }
+      }
+
+      // Reset _ID_counter__ on the Math node to the final count
+      if let Some(&final_count) = counters.get(&math_id) {
+        let _ = math_node.set_attribute("_ID_counter__", &final_count.to_string());
+      }
+    }
+  }
+}
+
+/// DFS walk collecting nodes with xml:id and idref attributes in document order.
+/// Stops at nested `Math` elements (which have their own parsing scope).
+fn renumber_collect_dfs(
+  node: &libxml::tree::Node,
+  xml_ns: &str,
+  id_entries: &mut Vec<(libxml::tree::Node, String)>,
+  idref_entries: &mut Vec<(libxml::tree::Node, String)>,
+) {
+  if let Some(id) = node.get_attribute_ns("id", xml_ns) {
+    id_entries.push((node.clone(), id));
+  }
+  if let Some(idref) = node.get_attribute("idref") {
+    idref_entries.push((node.clone(), idref));
+  }
+  for child in node.get_child_elements() {
+    // Skip nested Math elements — they have their own parsing scope
+    // and their IDs (with prefixes like "m") are document-construction IDs.
+    if child.get_name() == "Math" {
+      continue;
+    }
+    renumber_collect_dfs(&child, xml_ns, id_entries, idref_entries);
+  }
+}

@@ -1018,13 +1018,15 @@ LoadDefinitions!({
   //  left  : TeX code for left of cases
   //  right  : TeX code for right
 
-  // Perl: \lx@cases@condition — wraps 2nd column in <ltx:XMText> for text-mode conditions
-  // TODO: needs captureBody support
-  // DefConstructorI('\lx@cases@condition', undef,
-  //   "<ltx:XMText>#body</ltx:XMText>",
-  //   alias => '', beforeDigest => sub { $_[0]->beginMode('text'); }, captureBody => 1);
-  // DefConstructorI('\lx@cases@end@condition', undef, "", alias => '',
-  //   beforeDigest => sub { $_[0]->endMode('text'); });
+  // Perl: \lx@cases@condition — switches to text mode for condition column
+  // The captureBody mechanism wraps content in <ltx:XMText>.
+  // Simplified: just switch mode, let the constructor template handle XMText.
+  DefPrimitive!("\\lx@cases@condition", sub[_args] {
+    let _ = begin_mode("restricted_horizontal");
+  });
+  DefPrimitive!("\\lx@cases@end@condition", sub[_args] {
+    let _ = end_mode("restricted_horizontal");
+  });
 
   // Perl: Base_XMath.pool.ltxml line 701
   DefPrimitive!("\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
@@ -1056,8 +1058,8 @@ LoadDefinitions!({
     if _condtext {
       // Perl: before => Tokens($style, T_CS('\lx@cases@condition'))
       // Perl: after  => Tokens(T_CS('\lx@column@trimright'), T_CS('\lx@cases@end@condition'), T_CS('\hfil'))
-      // TODO: \lx@cases@condition not yet implemented
-      let _ = (&mut before2, &mut after2); // suppress unused warnings
+      before2.push(T_CS!("\\lx@cases@condition"));
+      after2 = vec![T_CS!("\\lx@column@trimright"), T_CS!("\\lx@cases@end@condition"), T_CS!("\\hfil")];
     }
 
     let col2 = Cell {
@@ -1093,14 +1095,14 @@ LoadDefinitions!({
   // Perl: Base_XMath.pool.ltxml line 730
   // The logical structure for cases extracts the columns of the alignment
   // to give alternating value,condition (empty conditions become "otherwise")
-  // TODO: afterConstruct hook that creates XMDual with meaning='cases'
   DefConstructor!("\\lx@gen@plain@cases@ RequiredKeyVals:lx@GEN {}",
     "<ltx:XMWrap>#left#2#right</ltx:XMWrap>",
+    alias => "\\cases",
+    reversion => "\\cases{#2}",
     properties => sub[args] {
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
-          // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
               props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1114,19 +1116,93 @@ LoadDefinitions!({
         }
       }
       Ok(props)
+    },
+    after_construct => sub[document, _whatsit] {
+      // Perl afterConstruct: wrap in XMDual with meaning='cases'
+      // Get the XMWrap we just created (last child of current element)
+      if let Some(current) = document.get_element() {
+        if let Some(mut point) = current.get_last_element_child() {
+          let cells = document.findnodes("ltx:XMArray/ltx:XMRow/ltx:XMCell", Some(&point));
+          // Strip "align" from empty/whitespace-only cells
+          // (Perl doesn't set align on empty condition cells in \cases)
+          for mut cell in cells.iter().cloned() {
+            if cell.get_child_elements().is_empty() {
+              // If no elements and only whitespace content, treat as empty
+              let content = cell.get_content();
+              if content.trim().is_empty() {
+                // Remove whitespace text nodes
+                for mut child in cell.get_child_nodes() {
+                  child.unlink();
+                }
+                cell.remove_attribute("align").ok();
+              }
+            }
+          }
+          if !cells.is_empty() {
+            // Collect XMRef ids for non-empty cells, "otherwise" text for empty cells
+            let mut ref_ids: Vec<Option<String>> = Vec::new();
+            for cell in &cells {
+              if !cell.get_child_elements().is_empty() {
+                // Generate id on the cell's content and create XMRef to it
+                for mut child in cell.get_child_elements() {
+                  document.generate_id(&mut child, "")?;
+                  let id = child.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+                    .unwrap_or_default();
+                  ref_ids.push(Some(id));
+                }
+              } else {
+                ref_ids.push(None); // Will become <XMText>otherwise</XMText>
+              }
+            }
+            // Build XMDual structure around the XMWrap
+            if let Some(mut parent) = point.get_parent() {
+              let mut xm_dual =
+                document.open_element_at(&mut parent, "ltx:XMDual", None, None)?;
+              point.add_prev_sibling(&mut xm_dual).ok();
+              // Content: <XMApp><XMTok meaning="cases"/> XMRefs/XMTexts </XMApp>
+              let mut xm_app =
+                document.open_element_at(&mut xm_dual, "ltx:XMApp", None, None)?;
+              let mut tok_attrs = HashMap::default();
+              tok_attrs.insert("meaning".to_string(), "cases".to_string());
+              let mut xm_tok =
+                document.open_element_at(&mut xm_app, "ltx:XMTok", Some(tok_attrs), None)?;
+              document.close_element_at(&mut xm_tok)?;
+              for ref_id_opt in &ref_ids {
+                if let Some(id) = ref_id_opt {
+                  let mut ref_attrs = HashMap::default();
+                  ref_attrs.insert("idref".to_string(), id.clone());
+                  let mut xm_ref =
+                    document.open_element_at(&mut xm_app, "ltx:XMRef", Some(ref_attrs), None)?;
+                  document.close_element_at(&mut xm_ref)?;
+                } else {
+                  let mut xm_text =
+                    document.open_element_at(&mut xm_app, "ltx:XMText", None, None)?;
+                  xm_text.set_content("otherwise");
+                  document.close_element_at(&mut xm_text)?;
+                }
+              }
+              document.close_element_at(&mut xm_app)?;
+              // Move original XMWrap into XMDual (presentation branch)
+              point.unlink_node();
+              xm_dual.add_child(&mut point)?;
+              document.close_element_at(&mut xm_dual)?;
+            }
+          }
+        }
+      }
     }
   );
 
   // Perl: amsmath.sty.ltxml line 694 (defined in Perl Package but logically belongs here)
   // AMS variant of cases — takes DigestedBody
-  // TODO: afterConstruct hook that creates XMDual with meaning='cases'
   DefConstructor!("\\lx@ams@cases@ RequiredKeyVals:lx@GEN DigestedBody",
     "<ltx:XMWrap>#left#2#right</ltx:XMWrap>",
+    alias => "\\begin{cases}",
+    reversion => "\\begin{cases}#2\\end{cases}",
     properties => sub[args] {
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
-          // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
               props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1140,6 +1216,59 @@ LoadDefinitions!({
         }
       }
       Ok(props)
+    },
+    after_construct => sub[document, _whatsit] {
+      // Same as \lx@gen@plain@cases@ — wrap in XMDual with meaning='cases'
+      if let Some(current) = document.get_element() {
+        if let Some(mut point) = current.get_last_element_child() {
+          let cells = document.findnodes("ltx:XMArray/ltx:XMRow/ltx:XMCell", Some(&point));
+          if !cells.is_empty() {
+            let mut ref_ids: Vec<Option<String>> = Vec::new();
+            for cell in &cells {
+              if !cell.get_child_elements().is_empty() {
+                for mut child in cell.get_child_elements() {
+                  document.generate_id(&mut child, "")?;
+                  let id = child.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+                    .unwrap_or_default();
+                  ref_ids.push(Some(id));
+                }
+              } else {
+                ref_ids.push(None);
+              }
+            }
+            if let Some(mut parent) = point.get_parent() {
+              let mut xm_dual =
+                document.open_element_at(&mut parent, "ltx:XMDual", None, None)?;
+              point.add_prev_sibling(&mut xm_dual).ok();
+              let mut xm_app =
+                document.open_element_at(&mut xm_dual, "ltx:XMApp", None, None)?;
+              let mut tok_attrs = HashMap::default();
+              tok_attrs.insert("meaning".to_string(), "cases".to_string());
+              let mut xm_tok =
+                document.open_element_at(&mut xm_app, "ltx:XMTok", Some(tok_attrs), None)?;
+              document.close_element_at(&mut xm_tok)?;
+              for ref_id_opt in &ref_ids {
+                if let Some(id) = ref_id_opt {
+                  let mut ref_attrs = HashMap::default();
+                  ref_attrs.insert("idref".to_string(), id.clone());
+                  let mut xm_ref =
+                    document.open_element_at(&mut xm_app, "ltx:XMRef", Some(ref_attrs), None)?;
+                  document.close_element_at(&mut xm_ref)?;
+                } else {
+                  let mut xm_text =
+                    document.open_element_at(&mut xm_app, "ltx:XMText", None, None)?;
+                  xm_text.set_content("otherwise");
+                  document.close_element_at(&mut xm_text)?;
+                }
+              }
+              document.close_element_at(&mut xm_app)?;
+              point.unlink_node();
+              xm_dual.add_child(&mut point)?;
+              document.close_element_at(&mut xm_dual)?;
+            }
+          }
+        }
+      }
     }
   );
 
@@ -1179,24 +1308,56 @@ pub fn close_math_fork(
     let mut tex_parts: Vec<String> = Vec::new();
     let tds = document.findnodes("descendant::ltx:td", Some(branch));
     for td in &tds {
-      let maths = document.findnodes("ltx:Math[@tex]", Some(td));
-      if !maths.is_empty() {
-        for math in maths {
-          if let Some(tex) = math.get_attribute("tex") {
-            tex_parts.push(tex);
-          }
+      // Collect ALL content from the td: text nodes, Math[@tex], text[@class=ltx_markedasmath]
+      // Perl's MathWhatsit captures reversion of all cell content in order.
+      let mut cell_parts: Vec<String> = Vec::new();
+      for child in td.get_child_nodes() {
+        match child.get_type() {
+          Some(NodeType::TextNode) => {
+            let content = child.get_content();
+            let trimmed = content.trim();
+            if !trimmed.is_empty() {
+              cell_parts.push(trimmed.to_string());
+            }
+          },
+          Some(NodeType::ElementNode) => {
+            let name = child.get_name();
+            if name == "Math" || name == "math" {
+              if let Some(tex) = child.get_attribute("tex") {
+                cell_parts.push(tex);
+              }
+            } else if name == "text" {
+              let class = child.get_attribute("class").unwrap_or_default();
+              if class.contains("ltx_markedasmath") {
+                let content = child.get_content();
+                let content = content.trim();
+                if !content.is_empty() {
+                  cell_parts.push(format!("\\mbox{{{content}}}"));
+                }
+              } else {
+                // Plain text element — include content
+                let content = child.get_content();
+                let content = content.trim();
+                if !content.is_empty() {
+                  cell_parts.push(content.to_string());
+                }
+              }
+            }
+            // Skip other element types (p wrappers etc) — descend into them
+            else if name == "p" || name == "para" {
+              let inner_maths = document.findnodes("ltx:Math[@tex]", Some(&child));
+              for math in inner_maths {
+                if let Some(tex) = math.get_attribute("tex") {
+                  cell_parts.push(tex);
+                }
+              }
+            }
+          },
+          _ => {},
         }
-      } else {
-        // No Math element — check for text content (from \mbox in eqnarray cells)
-        // Perl's MathWhatsit captures reversion of all cell content including \mbox
-        let texts = document.findnodes("ltx:text[@class='ltx_markedasmath']", Some(td));
-        for text in &texts {
-          let content = text.get_content();
-          let content = content.trim();
-          if !content.is_empty() {
-            tex_parts.push(format!("\\mbox{{{content}}}"));
-          }
-        }
+      }
+      if !cell_parts.is_empty() {
+        tex_parts.push(cell_parts.join(""));
       }
     }
     if !tex_parts.is_empty() {

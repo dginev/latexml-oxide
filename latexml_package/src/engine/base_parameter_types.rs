@@ -632,7 +632,30 @@ LoadDefinitions!({
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
 
-  //TODO: Refactor and add TeXDelimiter
+  // Perl PR#2596: TeXDelimiter parameter type for \left, \right, \big, \bigl, etc.
+  // Reads like {} (balanced group) for correct math digestion, but reverts WITHOUT braces.
+  // Also: unwraps one level of braces, replaces "." with \lx@delimiterdot hint.
+  DefParameterType!(TeXDelimiter, sub[_inner, _extra] {
+    gullet::skip_filler()?;
+    gullet::read_arg(ExpansionLevel::Partial)
+  },
+  digested_reversion => sub[arg] {
+    // Revert without adding braces (unlike {} parameter)
+    let mut toks = arg.revert()?;
+    // Strip outer braces if present from the reversion
+    let list = toks.unlist_ref();
+    if list.len() >= 2
+      && list.first().map(|t| t.get_catcode()) == Some(Catcode::BEGIN)
+      && list.last().map(|t| t.get_catcode()) == Some(Catcode::END)
+    {
+      // Return inner content without braces
+      let inner: Vec<Token> = list[1..list.len()-1].to_vec();
+      Ok(Tokens::from(inner))
+    } else {
+      Ok(toks)
+    }
+  });
+
   DefParameterType!(Digested, sub[_inner, _extra] {
       gullet::skip_spaces()?;
       Ok(Tokens!())

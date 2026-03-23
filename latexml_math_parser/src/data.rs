@@ -53,12 +53,11 @@ pub fn get_grammatical_role(node: &Node) -> String {
       if tag == "XMTok" {
         "UNKNOWN".to_string()
       } else if tag == "XMDual" {
-        match node.get_first_element_child() {
-          Some(child) => child
-            .get_attribute("role")
-            .unwrap_or_else(|| "UNKNOWN".to_string()),
-          None => "UNKNOWN".to_string(),
-        }
+        // Perl: check content branch first, then presentation branch
+        let children: Vec<_> = node.get_child_elements();
+        let content_role = children.first().and_then(|c| c.get_attribute("role"));
+        let pres_role = children.get(1).and_then(|p| p.get_attribute("role"));
+        content_role.or(pres_role).unwrap_or_else(|| "UNKNOWN".to_string())
       } else {
         "ATOM".to_string()
       }

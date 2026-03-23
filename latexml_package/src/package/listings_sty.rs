@@ -1538,10 +1538,19 @@ LoadDefinitions!({
   });
 
   // \lstMakeShortInline
+  // Perl: saves [LookupCatcode($ch), $STATE->lookupMeaning($token)] in LST_SHORT_INLINE mapping
+  // then sets catcode to ACTIVE and defines the active token as a \lstinline shorthand.
   DefPrimitive!("\\lstMakeShortInline [] DefToken", sub[(kv, token)] {
     let ch = token.to_string();
     if ch.is_empty() { return Ok(Vec::new()); }
     let ch_first = ch.chars().next().unwrap();
+    // Save original catcode so \lstDeleteShortInline can restore it exactly
+    let orig_cc = state::lookup_catcode(ch_first).unwrap_or(Catcode::OTHER);
+    assign_mapping(
+      "LST_SHORT_INLINE",
+      &ch,
+      Some(Stored::Catcode(orig_cc)),
+    );
     state::assign_catcode(ch_first, Catcode::ACTIVE, None);
     let active_tok = T_ACTIVE!(ch_first);
     let mut expansion = vec![T_CS!("\\lstinline")];
@@ -1555,11 +1564,21 @@ LoadDefinitions!({
   });
 
   // \lstDeleteShortInline
+  // Perl: restores the saved catcode and meaning from LST_SHORT_INLINE mapping.
   DefPrimitive!("\\lstDeleteShortInline DefToken", sub[(token)] {
     let ch = token.to_string();
     if !ch.is_empty() {
       let ch_first = ch.chars().next().unwrap();
-      state::assign_catcode(ch_first, Catcode::OTHER, None);
+      // Restore the original catcode saved by \lstMakeShortInline
+      let saved_cc = match lookup_mapping("LST_SHORT_INLINE", &ch) {
+        Some(Stored::Catcode(cc)) => cc,
+        _ => Catcode::OTHER,
+      };
+      // Clear the active meaning before restoring catcode, so the active
+      // definition of this character doesn't linger as a stale macro.
+      let active_tok = T_ACTIVE!(ch_first);
+      assign_meaning(&active_tok, Stored::None, None);
+      state::assign_catcode(ch_first, saved_cc, None);
     }
   });
 

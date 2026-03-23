@@ -94,12 +94,17 @@ LoadDefinitions!({
   // \scalebox{xscale}[yscale]{content}
   // Perl: DefConstructor('\Gscale@box {Float} [Float] {}', ...)
   // Perl: graphics_scaledbox_props computes scaled dimensions and translation
-  DefConstructor!("\\scalebox{} []{}", "<ltx:inline-block xscale='#1' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+  // Perl: \Gscale@box {Float} [Float] {} — Float parameters format as "3.0" not "3"
+  DefConstructor!("\\scalebox{} []{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
     mode => "restricted_horizontal", enter_horizontal => true,
     properties => sub[args] {
-      let yscale = args[1].as_ref().map(|a| a.to_attribute())
-        .unwrap_or_else(|| args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default());
-      Ok(stored_map!("yscale" => yscale))
+      // Format scales as float (3 → "3.0") to match Perl's Float parameter type
+      let xs = args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
+      let xscale_f: f64 = xs.parse().unwrap_or(1.0);
+      let xscale_str = format!("{:.1}", xscale_f);
+      let yscale_f: f64 = args[1].as_ref().map(|a| a.to_attribute().parse().unwrap_or(xscale_f)).unwrap_or(xscale_f);
+      let yscale_str = format!("{:.1}", yscale_f);
+      Ok(stored_map!("xscale" => xscale_str, "yscale" => yscale_str))
     },
     after_digest => sub[whatsit] {
       let xscale = whatsit.get_arg(1)

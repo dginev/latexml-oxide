@@ -500,3 +500,15 @@ add_math_rewrite("f", "FUNCTION")?;  // enables function application
 ```
 
 **Key insight:** The rewriting phase is a meaningful pre-parse step, not a post-processing cosmetic. Changing roles before parsing changes the parse tree.
+
+## 21. Floating pre-scripts: POST→FLOAT kludge and grammar rules
+
+**Discovery:** In `{}_a^b\sum_c^d x`, the `_a` creates FLOATSUBSCRIPT (empty base `{}`), but `^b` creates POSTSUPERSCRIPT (base is the FLOAT result, which is non-empty). Perl's `parse_kludgeScripts_rec` preprocesses the token stream: when a FLOATSUBSCRIPT is followed by POSTSUPERSCRIPT (or vice versa), both are treated as pre-scripts on whatever follows, with the POST script getting forced `'pre'` position WITHOUT setting `_wasfloat`.
+
+**Why it matters:** The `_wasfloat` flag controls level bumping. When two scripts share the same empty `{}` base (e.g., `{}_a^b`), they should be at the SAME level (both `pre1`). But when each has its own empty base (e.g., `{}_a{}^b`), they should be at DIFFERENT levels (`pre1` and `pre2`). Perl achieves this because POST scripts don't set `_wasfloat`.
+
+**Rust approach:** Instead of pre-processing the token stream, the Marpa grammar has dedicated rules:
+- `prescripted_bigop`: floating scripts wrapping bigops as pre-scripts
+- `prefix_script_pre`: semantic action that forces "pre" position without `_wasfloat` (matching Perl's `NewScript($base, $script, 'pre')` for POST scripts)
+- `prescripted_factor_post_r/l`: POST scripts used as pre-scripts on factors (only valid when FLOAT-wrapped)
+- Recursive chaining via `scripted_factor_l2 += floatsubarg scripted_factor_l2` for 3+ float chains

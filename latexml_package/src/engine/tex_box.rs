@@ -200,9 +200,20 @@ LoadDefinitions!({
   // \lx@nounicode expanded to \lx@text@nounicode which was undefined, causing
   // an unbounded memory leak / infinite loop that OOM-killed tests.
   //
-  // Perl: DefPrimitive('\lx@math@nounicode DefToken', sub { Box(ToString($cs), ...) });
-  DefConstructor!("\\lx@math@nounicode DefToken",
-    "<ltx:text class='ltx_nounicode'>#1</ltx:text>");
+  // Perl: DefPrimitive('\lx@math@nounicode DefToken', sub {
+  //   reportNoUnicode($cs);
+  //   Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode'); });
+  DefPrimitive!("\\lx@math@nounicode DefToken", sub[(cs)] {
+    let text = arena::pin(&cs.to_string());
+    let tbox = Tbox::new(
+      text,
+      None,
+      None,
+      Tokens!(cs),
+      stored_map!("class" => "ltx_nounicode"),
+    );
+    Ok(vec![Digested::from(tbox)])
+  });
   // Perl: DefConstructor('\lx@text@nounicode DefToken',
   //   "<ltx:text _no_autoclose='true' class='ltx_nounicode'>#1</ltx:text>", ...);
   DefConstructor!("\\lx@text@nounicode DefToken",

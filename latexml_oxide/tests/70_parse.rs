@@ -37,7 +37,6 @@ fn fences_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn function_argument_syntax_test() {
   latexml_test_single("tests/parse/function_argument_syntax.tex", "function_argument_syntax", DIR, None, None);
 }
@@ -49,7 +48,6 @@ fn functions_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn kludge_test() {
   latexml_test_single("tests/parse/kludge.tex", "kludge", DIR, None, None);
 }
@@ -75,7 +73,7 @@ fn nested_application_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
+#[ignore] // 416 diffs: needs \lxDeclare implementation for role=ID
 fn operators_test() {
   latexml_test_single("tests/parse/operators.tex", "operators", DIR, None, None);
 }
@@ -135,7 +133,6 @@ fn standalone_equations_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn standalone_modifiers_test() {
   latexml_test_single("tests/parse/standalone_modifiers.tex", "standalone_modifiers", DIR, None, None);
 }

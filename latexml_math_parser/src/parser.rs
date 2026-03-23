@@ -449,6 +449,10 @@ impl MathParser {
         if let Some(ref nid) = newid {
           attr.insert(String::from("xml:id"), nid.to_owned());
         }
+        // Perl guard: don't overwrite _box if result already has one
+        if attr.contains_key("_box") && result.has_attribute("_box") {
+          attr.remove("_box");
+        }
         for (key, value) in attr {
           if !(key.starts_with('_') || sym_can_have_attribute(rtag, arena::pin(&key))) {
             continue;
@@ -496,8 +500,30 @@ impl MathParser {
   fn parse_children(&mut self, node: &Node, document: &mut Document) -> Result<()> {
     for child in element_nodes(node) {
       let tag = get_node_qname(&child);
-      if tag == arena::pin_static("ltx:XMArg") || tag == arena::pin_static("ltx:XMWrap") {
+      if tag == arena::pin_static("ltx:XMArg") {
         self.parse_rec(child, "Anything", document)?;
+      } else if tag == arena::pin_static("ltx:XMWrap") {
+        if child.has_attribute("_rewrite") {
+          // Rewrite-created XMWrap: parse inner structure (subscripts etc.) but
+          // the XMWrap's role overrides whatever the inner parse produces.
+          // Temporarily remove role so parse_rec doesn't emit start_ROLE/end_ROLE
+          // tokens (the grammar only handles script roles).
+          let saved_role = child.get_attribute("role");
+          let mut c = child.clone();
+          if saved_role.is_some() {
+            c.remove_attribute("role").ok();
+          }
+          if let Some(mut result) = self.parse_rec(child, "Anything", document)? {
+            if let Some(ref role) = saved_role {
+              result.set_attribute("role", role).ok();
+            }
+          } else if let Some(ref role) = saved_role {
+            // Parse failed — XMWrap still in DOM, restore role
+            c.set_attribute("role", role).ok();
+          }
+        } else {
+          self.parse_rec(child, "Anything", document)?;
+        }
       } else if tag == arena::pin_static("ltx:XMApp")
         || tag == arena::pin_static("ltx:XMArray")
         || tag == arena::pin_static("ltx:XMRow")
@@ -719,8 +745,11 @@ impl MathParser {
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
     match self.parse_marpa(&input_string, nodes, document) {
-      Ok(parse_tree) => {
+      Ok(mut parse_tree) => {
         self.reset_engine(); // Reset for next parse (engine is in completed state)
+        // Restructure flat formulae with \quad separators to right-recursive nesting
+        // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
+        crate::semantics::restructure_formulae_right(&mut parse_tree)?;
         Ok(Some(parse_tree))
       },
       Err(_e) => {
@@ -1038,42 +1067,47 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
   Cow::Borrowed(node)
 }
 
-/// Resolve _xmkey references after parse tree installation.
+/// Resolve _xmkey and _pxmkey references after parse tree installation.
 /// Matches XMRef[@_xmkey] to elements with same _xmkey, generates xml:id and sets idref.
+/// _pxmkey is used by parser-generated XMDual (apply_delimited) to avoid
+/// conflicting with base_xmath's \lx@dual afterConstruct resolver.
 fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Result<(), Box<dyn std::error::Error>> {
-  // Find all XMRef elements with _xmkey (missing idref)
-  let refs = document.findnodes("descendant::ltx:XMRef[@_xmkey]", Some(mathnode));
-  for mut ref_node in refs {
-    let key = match ref_node.get_attribute("_xmkey") {
-      Some(k) => k,
-      None => continue,
-    };
-    // Find the element with matching _xmkey (non-XMRef)
-    let xpath = format!("descendant::*[@_xmkey='{}'][not(self::ltx:XMRef)]", key);
-    let targets = document.findnodes(&xpath, Some(mathnode));
-    if let Some(mut target) = targets.into_iter().next() {
-      // Ensure target has xml:id
-      let target_id = if let Some(id) = target.get_attribute("xml:id")
-        .or_else(|| target.get_attribute("id"))
-      {
-        id
-      } else {
-        // Generate an id for the target
-        document.generate_id(&mut target, "")?;
-        target.get_attribute("xml:id")
-          .or_else(|| target.get_attribute("id"))
-          .unwrap_or_default()
+  // Resolve both _xmkey (from existing infrastructure) and _pxmkey (from parser)
+  for attr_name in &["_xmkey", "_pxmkey"] {
+    let refs = document.findnodes(
+      &format!("descendant::ltx:XMRef[@{}]", attr_name), Some(mathnode));
+    for mut ref_node in refs {
+      let key = match ref_node.get_attribute(attr_name) {
+        Some(k) => k,
+        None => continue,
       };
-      if !target_id.is_empty() {
-        document.set_attribute(&mut ref_node, "idref", &target_id)?;
+      // Find the element with matching key (non-XMRef)
+      let xpath = format!("descendant::*[@{}='{}'][not(self::ltx:XMRef)]", attr_name, key);
+      let targets = document.findnodes(&xpath, Some(mathnode));
+      if let Some(mut target) = targets.into_iter().next() {
+        // Ensure target has xml:id
+        let target_id = if let Some(id) = target.get_attribute("xml:id")
+          .or_else(|| target.get_attribute("id"))
+        {
+          id
+        } else {
+          document.generate_id(&mut target, "")?;
+          target.get_attribute("xml:id")
+            .or_else(|| target.get_attribute("id"))
+            .unwrap_or_default()
+        };
+        if !target_id.is_empty() {
+          document.set_attribute(&mut ref_node, "idref", &target_id)?;
+        }
       }
+      let _ = ref_node.remove_attribute(attr_name);
     }
-    // Clean up _xmkey from both ref and target
-    let _ = ref_node.remove_attribute("_xmkey");
-  }
-  // Also clean up _xmkey from non-ref elements
-  for mut node in document.findnodes("descendant::*[@_xmkey]", Some(mathnode)) {
-    let _ = node.remove_attribute("_xmkey");
+    // Clean up from non-ref elements
+    for mut node in document.findnodes(
+      &format!("descendant::*[@{}]", attr_name), Some(mathnode))
+    {
+      let _ = node.remove_attribute(attr_name);
+    }
   }
   Ok(())
 }

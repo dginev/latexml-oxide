@@ -797,6 +797,20 @@ pub(crate) fn compute_indirect_model_aux(
 pub fn register_document_namespace(docprefix: &str, namespace_opt: Option<&str>) {
   model_mut!().register_document_namespace(docprefix, namespace_opt)
 }
+
+/// Returns all registered document namespace prefixes and their URIs.
+pub fn get_document_namespace_prefixes() -> Vec<(String, String)> {
+  model!()
+    .document_namespace_prefixes
+    .iter()
+    .map(|(ns_sym, prefix_sym)| {
+      let prefix = arena::with(*prefix_sym, |s| s.to_string());
+      let ns = arena::with(*ns_sym, |s| s.to_string());
+      (prefix, ns)
+    })
+    .collect()
+}
+
 pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
   model_mut!().register_namespace(codeprefix, namespace_opt)
 }

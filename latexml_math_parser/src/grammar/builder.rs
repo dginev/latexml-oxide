@@ -65,14 +65,23 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(end_floatsuperscript ~ "end_FLOATSUPERSCRIPT");
   token!(start_floatsubscript ~ "start_FLOATSUBSCRIPT");
   token!(end_floatsubscript ~ "end_FLOATSUBSCRIPT");
+  token!(start_arrow ~ "start_ARROW");
+  token!(end_arrow ~ "end_ARROW");
 
   rules!(
     // Factors
     // opfunction/function/trigfunction are NOT factors — they require arguments.
     // Standalone usage is handled at the term level (term += function | ...).
     // `2 \sin` is handled via dedicated tight_term rules below.
-    factor_base = unknown | number | id | atom;
-    factor = factor_base | opfunction;
+    // Perl MathGrammar L315: ATOM_OR_ID : ATOM | ID | ARRAY
+    // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
+    factor_base = unknown | number | id | atom | array;
+    // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
+    // Also handle unmatched delimiters for cases-like patterns.
+    fenced_array = open array close => fenced
+      | open array => open_fenced
+      | array close => close_fenced;
+    factor = factor_base | opfunction | fenced_array;
     // Terms
     // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
     any_bigop = bigop | sumop | intop | limitop | diffop;
@@ -97,12 +106,35 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
       | tight_term postfix => apply_postfix
       | function tight_term => prefix_apply
-      | trigfunction tight_term => prefix_apply
-      | any_bigop tight_term => prefix_apply
+      // trigfunction uses trigbarearg via applied_func (absorbs MulOp chains)
+      // NOTE: bigop rules moved to += section (after `term` is defined) so they
+      // can absorb full term (mulop chains like x² * dx), not just tight_term.
       | composed_bigop tight_term => prefix_apply
       | compound_operator tight_term => prefix_apply
       | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop;
+
+    // Perl MathGrammar L258: Factor moreFactors — consecutive function
+    // applications chain with invisible times.
+    // e.g. \sin x \cos y => sin(x) * cos(y)
+    //
+    // IMPORTANT — TRIGFUNCTION ARGUMENT SCOPING AMBIGUITY:
+    // Perl's trigBarearg absorbs MulOp chains: \sin\pi\times x => sin(π×x).
+    // We deliberately DO NOT implement this absorption. The expression
+    // sin(π)×x vs sin(π×x) is a *legitimate semantic ambiguity* that cannot
+    // be resolved purely by grammar structure. Both parses are valid:
+    //   sin(π)×x = 0×x (evaluating sin at π)
+    //   sin(π×x) = sin of the product
+    // Perl's Parse::RecDescent picks the "absorb" interpretation heuristically.
+    //
+    // FUTURE WORK: To match Perl's output, implement *targeted semantic pruning*
+    // in the parse tree selection phase (semantics/tree.rs) that uses context
+    // cues to prefer one interpretation:
+    //   - If the MulOp is invisible (⁢), prefer absorption (sin 2x → sin(2x))
+    //   - If the MulOp is explicit (×,·), either interpretation is valid
+    //   - If the argument is a known constant (π, e), standalone may be preferred
+    // This is a semantic-level decision, not a grammar-level one.
+    // applied_func and tight_term augmentations moved below trig_arg definition
 
     // Composed functions: f∘g, sin∘cos — these can then be applied as functions
     // COMPOSEOP operates on function-level operands (curry level 2)
@@ -127,6 +159,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     term = tight_term
     | term mulop tight_term => infix_apply_nary
     | term mulop tight_term elideop => infix_apply_and_elide
+    // Perl: BINOP matches both AddOp and MulOp (ambiguous precedence from \mathbin)
+    | term binop tight_term => infix_apply_nary
+    | term binop tight_term elideop => infix_apply_and_elide
     // Fallback: COMPOSEOP on general terms (for non-function-level composition)
     | term composeop term => infix_apply
     | operator applyop term => prefix_apply_applyop;
@@ -160,7 +195,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | expression addop => postfix_apply
       // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
       // => Apply(modifierop, expr, expr2). Handles infix `a mod b`.
-      | expression modifierop expression => infix_apply;
+      | expression modifierop expression => infix_apply
+      // Perl MathGrammar L236: addExpressionModifier: MODIFIER
+      // Standalone postfix modifier (e.g. `8\pmod{3}` → annotated(8, pmod(3)))
+      // Placed at expression level so MODIFIER binds BEFORE RELOP.
+      // e.g. `5 ≡ 8 \pmod{3}` → `5 ≡ annotated(8, pmod(3))` not `annotated(5≡8, pmod(3))`
+      | expression modifier => postfix_modifier_apply
+      // Perl MathGrammar L224-233: OPEN relop/modifierop Expression balancedClose
+      // Parenthesized modifier expressions: x(>0) → annotated(x, Fence(>0))
+      | expression lparen relop expression rparen => annotated_fenced_modifier
+      | expression lparen modifierop expression rparen => annotated_fenced_modifier;
 
     // Formula
     // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
@@ -170,6 +214,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
     formula_list = expression punct expression => formula_list_apply
       | formula_list punct expression => formula_list_apply;
+    // Comma-separated term lists: term, term, term, ...
+    // Used for angle-bracket inner products <x,y>, <a,b,c>, etc.
+    term_list = term punct term => list_apply
+      | term_list punct term => list_apply;
+
     // Perl MathGrammar L709-711: Two-part relops (>=, <=, <<, >>)
     two_part_relop = langle_rel langle_rel => two_part_relop_combine
       | rangle_rel rangle_rel => two_part_relop_combine
@@ -181,16 +230,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | formula two_part_relop expression => infix_relation
       | formula relop formula_list => infix_relation
       | formula relop => postfix_relop
+      // Perl moreRelations: `relop moreRelations` — consecutive relops chain without intervening terms
+      // e.g. `A ∈ ∞ ∋` → the ∈ absorbs ∞, then ∋ appends to the chain (no absent)
+      | formula relop relop => consecutive_relop_chain
       | formula arrow expression => infix_relation
       | arrow expression => prefix_arrow_apply
+      // Arrow-wrapped content (from amscd XMWrap role="ARROW"):
+      // Parsed as a prefix arrow application on the enclosed content.
+      | start_arrow arrow expression end_arrow => arrow_wrap_apply
+      | start_arrow arrow end_arrow => arrow_wrap_solo
       // Perl MathGrammar L81: AnyOp Expression => Apply(AnyOp, Absent(), Expression)
       // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
       | relop expression => prefix_relop_apply
       | metarelop expression => prefix_relop_apply
-      | modifier_expression
-      // Perl MathGrammar L236: addExpressionModifier: MODIFIER
-      // Standalone postfix modifier (e.g. `8\pmod{3}` → annotated(8, pmod(3)))
-      | formula modifier => postfix_modifier_apply;
+      | modifier_expression;
 
     // Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
     // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
@@ -201,7 +254,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator | compound_operator
       | function | trigfunction
       // Bare operators can form comma-separated lists: +,-,×
-      | addop | mulop | relop | arrow;
+      | addop | mulop | binop | relop | arrow
+;
 
     end_punct = punct | period;
     statements = statement
@@ -214,6 +268,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     fenced_factor = lbrace expression rbrace    => fenced
            | lbracket expression rbracket       => fenced
            | lparen formula rparen              => fenced
+           // Angle brackets as delimiters: <x,y> for inner products, etc.
+           // Old typesetting conventions used < > instead of \langle \rangle.
+           // Uses term_list (comma-separated terms) to avoid matching complex
+           // nested expressions. Only fires when content has commas.
+           | langle_rel term_list rangle_rel => fenced
            | lparen term punct term rparen      => interval
            | lparen term punct term rbracket    => interval
            | lbracket term punct term rbracket  => interval
@@ -234,12 +293,51 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | open close => empty_fenced;
     factor += fenced_factor;
 
-    // UNKNOWN followed by fenced args => function application (Perl: Apply[UNKNOWN atom_args])
+    // Perl: addTrigFunArgs → trigBarearg → aTrigBarearg moreTrigBareargs
+    // Trig functions absorb chains of mulop+factor (but NOT other trig functions).
+    // aTrigBarearg includes: FUNCTION+args, OPFUNCTION+args, ATOM_OR_ID, UNKNOWN, NUMBER
+    trig_arg = factor
+      | fenced_factor
+      | unknown fenced_factor => speculative_prefix_apply
+      | function fenced_factor => prefix_apply
+      | opfunction fenced_factor => prefix_apply
+      // Perl: trigBarearg includes FUNCTION/OPFUNCTION+args (chained function application)
+      // Allows: \sin\log x → sin(log(x)), \sin\det A → sin(det(A))
+      | function factor => prefix_apply
+      | opfunction factor => prefix_apply
+      | trig_arg mulop factor => infix_apply_nary
+      | trig_arg binop factor => infix_apply_nary
+      | trig_arg factor => apply_invisible_times;
+
+    // applied_func uses trig_arg (defined above)
+    applied_func = function tight_term => prefix_apply
+      | trigfunction trig_arg => prefix_apply
+      | opfunction tight_term => prefix_apply;
+    // Standalone applied functions are also tight_terms
+    tight_term += applied_func;
+    // Function application results can chain with invisible times (Perl moreFactors)
+    tight_term += tight_term applied_func => apply_invisible_times;
+
+    // UNKNOWN followed by fenced args => function application (Perl: doubtArgs/maybeArgs)
     // f(x) => f@(x), g(a+b) => g@(a+b). Only active when MATHPARSER_SPECULATE is set.
     // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
+    // NOTE: ID tokens are multiplicative atoms — NEVER prefix-apply. Only UNKNOWN
+    // tokens get speculative function application. ID always uses invisible-times.
     tight_term += unknown fenced_factor => speculative_prefix_apply;
-    // OPFUNCTION followed by fenced args => function application
-    // \operatorname{cov}(L) => cov@(L). Always treated as application, not multiplication.
+    // FUNCTION followed by fenced args => function application (Perl: addArgs/addEasyArgs)
+    // f(x) => f@(x) when f has role=FUNCTION (from DefMathRewrite or \lxDeclare).
+    // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
+    //        presentation=Apply(f, XMWrap(open, args, close))).
+    // Grammar: function lparen/lbracket + formula + rparen/rbracket → apply_delimited
+    tight_term += function lparen formula rparen => apply_delimited;
+    tight_term += function lbracket formula rbracket => apply_delimited;
+    // Also support fenced_factor for backwards compat (no XMDual wrapping)
+    tight_term += function fenced_factor => prefix_apply;
+    // OPFUNCTION followed by fenced args => function application with XMDual wrapping.
+    // Perl: ApplyDelimited for \operatorname{cov}(L), \log(x), etc.
+    tight_term += opfunction lparen formula rparen => apply_delimited;
+    tight_term += opfunction lbracket formula rbracket => apply_delimited;
+    // Also support fenced_factor for backwards compat (no XMDual wrapping)
     tight_term += opfunction fenced_factor => prefix_apply;
     // Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
     // \log x => log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
@@ -248,19 +346,28 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi)
     // Note: trigfunction tight_term already in compound_operator, can't duplicate.
     tight_term += trigfunction factor => prefix_apply;
+    // TRIGFUNCTION followed by fenced args => function application with XMDual wrapping.
+    tight_term += trigfunction lparen formula rparen => apply_delimited;
+    tight_term += trigfunction lbracket formula rbracket => apply_delimited;
     tight_term += trigfunction fenced_factor => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
     // Uses existing `unknown` terminal; semantic action checks text is literally "d".
     // At factor level so it can appear as right operand of invisible_times.
     factor += unknown factor_base => diffop_apply;
 
-    // Script content
-    postsubarg = start_postsubscript expression end_postsubscript => faux_wrap;
+    // Bare operators valid as script content (e.g., Na^+ has ADDOP as superscript)
+    script_op = addop | mulop | binop | relop | arrow | metarelop
+      | bigop | sumop | intop | limitop | diffop | vertbar | supop
+      | modifierop | operator;
+    // Script content: expressions or bare operators
+    postsubarg = start_postsubscript expression end_postsubscript => faux_wrap
+      | start_postsubscript script_op end_postsubscript => faux_wrap;
     postsuperarg = start_postsuperscript expression end_postsuperscript => faux_wrap
-      // TODO: what other kinds of arguments are accepted in scripts? Should we do "anything"?
-      | start_postsuperscript supop end_postsuperscript => faux_wrap;
-    floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap;
-    floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap;
+      | start_postsuperscript script_op end_postsuperscript => faux_wrap;
+    floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap
+      | start_floatsubscript script_op end_floatsubscript => faux_wrap;
+    floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap
+      | start_floatsuperscript script_op end_floatsuperscript => faux_wrap;
     // standalone top-level variants of floating scripts:
     floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;
     floatsuperscript = start_floatsuperscript expression end_floatsuperscript => standalone_script;
@@ -271,8 +378,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     scripted_factor_l12 = floatsubarg factor_base => prefix_script
       | floatsubarg opfunction => prefix_script;
     scripted_factor_l1 = scripted_factor_l11 | scripted_factor_l12;
+    // POST script used as pre-script on factor (forced 'pre', no _wasfloat)
+    // e.g., {}_a^b x: ^b is POST, used as pre-script on x
+    prescripted_factor_post_r = postsuperarg factor_base => prefix_script_pre
+      | postsuperarg opfunction => prefix_script_pre;
+    prescripted_factor_post_l = postsubarg factor_base => prefix_script_pre
+      | postsubarg opfunction => prefix_script_pre;
     scripted_factor_l2 = floatsuperarg scripted_factor_l12 => prefix_script
-      | floatsubarg scripted_factor_l11 => prefix_script;
+      | floatsubarg scripted_factor_l11 => prefix_script
+      // Mixed FLOAT+POST from same {} base: FLOAT wraps POST pre-script
+      | floatsubarg prescripted_factor_post_r => prefix_script
+      | floatsuperarg prescripted_factor_post_l => prefix_script
+      // Recursive: chain 3+ floating scripts on factor (e.g., {}_i{}_j^k x)
+      | floatsuperarg scripted_factor_l2 => prefix_script
+      | floatsubarg scripted_factor_l2 => prefix_script;
 
     scripted_factor_r11 = factor_base postsuperarg => postfix_script
       | opfunction postsuperarg => postfix_script
@@ -300,20 +419,76 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     scripted_bigop = scripted_bigop_r1
       | scripted_bigop_r1 postsuperarg => postfix_script
       | scripted_bigop_r1 postsubarg => postfix_script;
-    tight_term += scripted_bigop tight_term => prefix_apply;
-    tight_term += scripted_bigop factor => prefix_apply;
+    // Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
+    // moreOpArgFactors chains factors with MulOp or invisible times.
+    //
+    // bigop_application is a dedicated nonterminal that:
+    // - Acts as tight_term on the LEFT (2∫ works via invisible times)
+    // - Absorbs full factor chains on the RIGHT (∫ x² dx → ∫(x²*dx))
+    // - Does NOT recurse back into tight_term → bigop cycle (avoids ambiguity)
+    //
+    // Once inside bigop_application, invisible_times and mulop extend the
+    // argument chain without re-entering the bigop dispatch.
+    bigop_application = any_bigop term => prefix_apply
+      | scripted_bigop term => prefix_apply
+      | composed_bigop term => prefix_apply;
+    // Lift into expression: bigop_application is asymmetric.
+    // On its LEFT, it acts as a term (2∫ x dx → 2 * ∫(x*dx) via term*bigop).
+    // On its RIGHT, it already absorbed the full term — nothing chains after.
+    // At expression level, addop/relop can follow: ∫ x dx + y → ∫(x*dx) + y.
+    expression += bigop_application;
+    expression += term mulop bigop_application => apply_invisible_times;
+    expression += term bigop_application => apply_invisible_times;
     // Scripted bigops can also appear as standalone statements
     statement += scripted_bigop;
 
-    anyop = addop | mulop | relop | arrow | metarelop
+    // Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
+    // Handles patterns like {}_a^b\sum_c^d x where floating scripts
+    // attach as pre-scripts to the following operator.
+    // Perl's parse_kludgeScripts_rec: FLOAT + POST pairs from same {} base
+    // both become pre-scripts (POST gets forced 'pre' position without _wasfloat).
+    prescripted_bigop_inner = scripted_bigop | scripted_bigop_r1 | any_bigop;
+    // FLOAT script wrapping a bigop as pre-script
+    // Perl: preScripted['bigop'] / preScripted['INTOP']
+    prescripted_bigop = floatsuperarg prescripted_bigop_inner => prefix_script
+      | floatsubarg prescripted_bigop_inner => prefix_script
+      // Recursive: chain multiple floating scripts before bigop
+      | floatsuperarg prescripted_bigop => prefix_script
+      | floatsubarg prescripted_bigop => prefix_script;
+    // POST script used as pre-script (forced 'pre', no _wasfloat).
+    // Only used INSIDE prescripted_bigop (always FLOAT-wrapped outside),
+    // so they can't incorrectly match bare post-scripts as pre-scripts.
+    // Perl: parse_kludgeScripts_rec calls NewScript($base, $y, 'pre') for POST
+    // scripts that follow a FLOAT from the same empty {} base.
+    prescripted_bigop += postsuperarg prescripted_bigop_inner => prefix_script_pre
+      | postsubarg prescripted_bigop_inner => prefix_script_pre
+      | postsuperarg prescripted_bigop => prefix_script_pre
+      | postsubarg prescripted_bigop => prefix_script_pre;
+    tight_term += prescripted_bigop tight_term => prefix_apply;
+    tight_term += prescripted_bigop factor => prefix_apply;
+    statement += prescripted_bigop;
+
+    anyop = addop | mulop | binop | relop | arrow | metarelop
       | bigop | sumop | intop
       | limitop | diffop | vertbar | supop
       | modifierop | composed_bigop | operator | compound_operator;
 
-    anyscript = floatsuperscript | floatsubscript;
+    anyscript = floatsuperscript | floatsubscript
+      // Standalone floating script pairs (no base: {}^c_d or {}_d^c)
+      // Perl: NewScript(NewScript(Absent(), super, 'post'), sub, 'post')
+      | floatsuperscript postsubarg => postfix_script
+      | floatsubscript postsuperarg => postfix_script;
 
+    // Operators that CANNOT start a valid expression — leading orphans
+    // from tabular fragments where LHS is on a preceding row.
+    // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
+    // These already have valid prefix interpretations inside expressions.
+    orphan_op = mulop | binop | diffop | supop | modifierop;
     anything = statements | anyop | anyscript |
-      anyop anyop => compound_operator_2
+      anyop anyop => compound_operator_2 |
+      // Perl MathGrammar L81: leading orphan operator (tabular fragment).
+      // Only at the start rule (anything) — not recursive, not inside subexpressions.
+      orphan_op statements => prefix_relop_apply
   );
   // | term_argument postsuperarg tex_argument  => post_script
   // | term_argument postsubscript tex_argument    => post_script

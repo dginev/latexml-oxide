@@ -31,7 +31,6 @@ fn mixed_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: \cal OMS symbols
 fn plainfonts_test() {
   latexml_test_single("tests/fonts/plainfonts.tex", "plainfonts", DIR, None, None);
 }
