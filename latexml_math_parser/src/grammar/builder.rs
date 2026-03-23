@@ -153,6 +153,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     term = tight_term
     | term mulop tight_term => infix_apply_nary
     | term mulop tight_term elideop => infix_apply_and_elide
+    // Perl: BINOP matches both AddOp and MulOp (ambiguous precedence from \mathbin)
+    | term binop tight_term => infix_apply_nary
+    | term binop tight_term elideop => infix_apply_and_elide
     // Fallback: COMPOSEOP on general terms (for non-function-level composition)
     | term composeop term => infix_apply
     | operator applyop term => prefix_apply_applyop;
@@ -240,7 +243,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | operator | compound_operator
       | function | trigfunction
       // Bare operators can form comma-separated lists: +,-,×
-      | addop | mulop | relop | arrow
+      | addop | mulop | binop | relop | arrow
 ;
 
     end_punct = punct | period;
@@ -283,6 +286,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | function fenced_factor => prefix_apply
       | opfunction fenced_factor => prefix_apply
       | trig_arg mulop factor => infix_apply_nary
+      | trig_arg binop factor => infix_apply_nary
       | trig_arg factor => apply_invisible_times;
 
     // applied_func uses trig_arg (defined above)
@@ -328,7 +332,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     factor += unknown factor_base => diffop_apply;
 
     // Bare operators valid as script content (e.g., Na^+ has ADDOP as superscript)
-    script_op = addop | mulop | relop | arrow | metarelop
+    script_op = addop | mulop | binop | relop | arrow | metarelop
       | bigop | sumop | intop | limitop | diffop | vertbar | supop
       | modifierop | operator;
     // Script content: expressions or bare operators
@@ -422,7 +426,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += prescripted_bigop factor => prefix_apply;
     statement += prescripted_bigop;
 
-    anyop = addop | mulop | relop | arrow | metarelop
+    anyop = addop | mulop | binop | relop | arrow | metarelop
       | bigop | sumop | intop
       | limitop | diffop | vertbar | supop
       | modifierop | composed_bigop | operator | compound_operator;
@@ -437,7 +441,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // from tabular fragments where LHS is on a preceding row.
     // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
     // These already have valid prefix interpretations inside expressions.
-    orphan_op = mulop | diffop | supop | modifierop;
+    orphan_op = mulop | binop | diffop | supop | modifierop;
     anything = statements | anyop | anyscript |
       anyop anyop => compound_operator_2 |
       // Perl MathGrammar L81: leading orphan operator (tabular fragment).

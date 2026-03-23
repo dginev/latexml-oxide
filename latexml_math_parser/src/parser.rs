@@ -723,8 +723,11 @@ impl MathParser {
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
     match self.parse_marpa(&input_string, nodes, document) {
-      Ok(parse_tree) => {
+      Ok(mut parse_tree) => {
         self.reset_engine(); // Reset for next parse (engine is in completed state)
+        // Restructure flat formulae with \quad separators to right-recursive nesting
+        // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
+        crate::semantics::restructure_formulae_right(&mut parse_tree)?;
         Ok(Some(parse_tree))
       },
       Err(_e) => {

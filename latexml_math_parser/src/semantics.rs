@@ -16,6 +16,8 @@ use latexml_core::raw_map;
 
 use self::tree::lookup_lex_node;
 pub use self::tree::{Args, Operator, XM, XProps};
+use latexml_core::binding::def::dialect::get_xmarg_id;
+
 use crate::pragmatics::ValidationPragmatics;
 use crate::util::create_xmrefs;
 
@@ -185,12 +187,23 @@ pub fn list_apply(
   _: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
+  // Grammar is left-recursive: `statements punct statement => list_apply`
+  // so `left` is the accumulated structure and `right` is the new item.
   unp!(args => left, sep, right);
   let mut left = left;
   let mut right = right.unwrap();
   let sep = sep.unwrap();
 
-  // If left is already a list/formulae Dual, extend it
+  // Perl: top-level PUNCT-separated relational formulas (containing RELOP/multirelation)
+  // use meaning="formulae" (NewFormulae). Non-relational items use "list" (NewList).
+  // This applies regardless of separator type (comma, \quad, period, etc.).
+  let left_rel = left.as_ref().is_some_and(is_relational_item);
+  let right_rel = is_relational_item(&right);
+  let meaning = if left_rel && right_rel { "formulae" } else { "list" };
+
+  // If left is already a list/formulae Dual, extend it (flat accumulation).
+  // For formulae with \quad separators, post-processing in restructure_formulae_right
+  // converts flat to right-recursive nesting (matching Perl's moreRHS/maybeColRHS).
   if let Some(XM::Dual(ref mut content, ref mut pres, _, _)) = left {
     if let XM::Apply(ref op, ref mut op_args, _, _) = **content {
       if let XM::Token(ref props, _) = *op.0 {
@@ -211,12 +224,6 @@ pub fn list_apply(
     }
   }
 
-  // Perl: top-level PUNCT-separated relational formulas (containing RELOP/multirelation)
-  // use meaning="formulae" (NewFormulae). Non-relational items use "list" (NewList).
-  // This applies regardless of separator type (comma, \quad, period, etc.).
-  let left_rel = left.as_ref().is_some_and(is_relational_item);
-  let right_rel = is_relational_item(&right);
-  let meaning = if left_rel && right_rel { "formulae" } else { "list" };
   list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
 }
 
@@ -263,10 +270,21 @@ fn is_relational_item(xm: &XM) -> bool {
     XM::Apply(ref op, _, _, _) => match &*op.0 {
       XM::Token(ref props, _) => {
         props.meaning.as_deref() == Some("multirelation")
-          || props.role.as_deref().is_some_and(|r| r.contains("RELOP"))
+          || props.role.as_deref().is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
       },
-      XM::Lexeme(ref lex, _) => lex.split(':').next().is_some_and(|r| r.contains("RELOP")),
+      XM::Lexeme(ref lex, _) => {
+        lex.split(':').next().is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
+      },
       _ => false,
+    },
+    // A formulae XMDual is inherently relational (it wraps relational items)
+    XM::Dual(ref content, _, _, _) => {
+      if let XM::Apply(ref op, _, _, _) = **content {
+        if let XM::Token(ref props, _) = *op.0 {
+          return props.meaning.as_deref() == Some("formulae");
+        }
+      }
+      false
     },
     _ => false,
   }
@@ -337,6 +355,171 @@ fn list_or_formulae_create(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// Restructure flat formulae with \quad separators into right-recursive nesting.
+/// Perl's moreRHS/maybeColRHS builds right-recursive formulae@(f1, formulae@(f2, formulae@(f3, f4)))
+/// for \quad-separated relational expressions. The left-recursive Marpa grammar produces flat
+/// formulae@(f1, f2, f3, f4). This function converts flat to right-recursive after parsing.
+///
+/// The XMWrap items alternate: [item, sep, item, sep, item, ...]
+/// Only restructures when ALL separators are \quad-type (have name containing "uad").
+pub fn restructure_formulae_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
+  // Recurse into children first (bottom-up)
+  match xm {
+    XM::Apply(_, ref mut args, _, _) => {
+      for arg in &mut args.0 {
+        if let Some(ref mut a) = arg {
+          restructure_formulae_right(a)?;
+        }
+      }
+    },
+    XM::Wrap(ref mut items, _, _) => {
+      for item in items.iter_mut() {
+        restructure_formulae_right(item)?;
+      }
+    },
+    XM::Dual(ref mut content, ref mut pres, _, _) => {
+      restructure_formulae_right(content)?;
+      restructure_formulae_right(pres)?;
+
+      // Check if this is a flat formulae Dual with \quad separators
+      if let XM::Apply(ref op, ref op_args, _, _) = **content {
+        if let XM::Token(ref props, _) = *op.0 {
+          if props.meaning.as_deref() == Some("formulae") && op_args.0.len() > 2 {
+            if let XM::Wrap(ref items, _, _) = **pres {
+              // Check if ALL separators are \quad-type
+              let all_quad = items.iter().enumerate()
+                .filter(|(i, _)| i % 2 == 1) // odd indices are separators
+                .all(|(_, sep)| is_quad_separator(sep));
+              if all_quad {
+                restructure_flat_to_right(xm)?;
+              }
+            }
+          }
+        }
+      }
+    },
+    XM::Choices(ref mut choices) => {
+      for choice in choices.iter_mut() {
+        restructure_formulae_right(choice)?;
+      }
+    },
+    XM::Arg(ref mut items) => {
+      for item in items.iter_mut() {
+        restructure_formulae_right(item)?;
+      }
+    },
+    _ => {},
+  }
+  Ok(())
+}
+
+/// Check if an XM node is a \quad-type separator (XMHint PUNCT with name containing "uad").
+fn is_quad_separator(xm: &XM) -> bool {
+  match xm {
+    XM::Token(ref props, _) => {
+      props.name.as_deref().is_some_and(|n| n.contains("uad"))
+    },
+    XM::Lexeme(ref lex, _) => {
+      lex.split(':').nth(1).is_some_and(|t| t.contains("uad"))
+    },
+    _ => false,
+  }
+}
+
+/// Convert a flat formulae XMDual to right-recursive nesting.
+/// Input: formulae@(f1,f2,...,fn) with XMWrap [f1,s1,f2,s2,...,fn]
+/// Output: formulae@(f1, formulae@(f2, ..., formulae@(fn-1, fn)))
+/// Items are MOVED (not cloned) to avoid DOM node aliasing.
+fn restructure_flat_to_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
+  // Take ownership of the flat Dual's contents
+  let old = std::mem::replace(xm, XM::Token(XProps::default(), Meta::default()));
+  if let XM::Dual(content, pres, _props, _meta) = old {
+    if let XM::Apply(_, op_args, _, _) = *content {
+      if let XM::Wrap(wrap_items, _, _) = *pres {
+        let n_refs = op_args.0.len();
+        if n_refs <= 2 {
+          // Already binary — put it back
+          *xm = XM::Dual(
+            Box::new(XM::Apply(XProps { meaning: Some(Cow::Borrowed("formulae")), ..XProps::default() }.into(), op_args, XProps::default(), Meta::default())),
+            Box::new(XM::Wrap(wrap_items, XProps::default(), Meta::default())),
+            _props, _meta,
+          );
+          return Ok(());
+        }
+        // Split XMWrap items into (items, separators)
+        // wrap_items = [f1, s1, f2, s2, f3, s3, f4]
+        let mut items: Vec<XM> = Vec::new();
+        let mut seps: Vec<XM> = Vec::new();
+        for (i, item) in wrap_items.into_iter().enumerate() {
+          if i % 2 == 0 { items.push(item); }
+          else { seps.push(item); }
+        }
+        let mut refs: Vec<Option<XM>> = op_args.0.into_iter().collect();
+
+        // Build right-recursive from right to left
+        // Start with last two items: formulae@(f_{n-1}, f_n)
+        let last_item = items.pop().unwrap();
+        let last_ref = refs.pop().unwrap();
+        let last_sep = seps.pop().unwrap();
+        let second_last_item = items.pop().unwrap();
+        let second_last_ref = refs.pop().unwrap();
+
+        let mut result = build_formulae_pair(
+          second_last_item, last_sep, last_item,
+          second_last_ref, last_ref,
+        );
+
+        // Wrap from right to left
+        while let Some(item) = items.pop() {
+          let sep = seps.pop().unwrap();
+          let item_ref = refs.pop().unwrap();
+          // Assign xmkey to inner result so outer can reference it
+          let key = get_xmarg_id()?.to_string();
+          if let XM::Dual(_, _, ref mut props, _) = result {
+            props.xmkey = Some(Cow::Owned(key.clone()));
+          }
+          let inner_ref = Some(XM::Ref(XProps {
+            xmkey: Some(Cow::Owned(key)),
+            ..XProps::default()
+          }));
+          result = build_formulae_pair(item, sep, result, item_ref, inner_ref);
+        }
+
+        *xm = result;
+        return Ok(());
+      }
+    }
+  }
+  // If pattern didn't match, this shouldn't happen since we checked before calling
+  Ok(())
+}
+
+/// Build a 2-item formulae XMDual with pre-existing refs.
+fn build_formulae_pair(
+  left: XM, sep: XM, right: XM,
+  left_ref: Option<XM>, right_ref: Option<XM>,
+) -> XM {
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("formulae")),
+    ..XProps::default()
+  };
+  XM::Dual(
+    Box::new(XM::Apply(
+      op.into(),
+      Args(vec![left_ref, right_ref]),
+      XProps::default(),
+      Meta::default(),
+    )),
+    Box::new(XM::Wrap(
+      vec![left, sep, right],
+      XProps::default(),
+      Meta::default(),
+    )),
+    XProps::default(),
+    Meta::default(),
+  )
 }
 
 /// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
