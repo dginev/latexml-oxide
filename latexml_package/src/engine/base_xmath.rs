@@ -1123,6 +1123,17 @@ LoadDefinitions!({
       if let Some(current) = document.get_element() {
         if let Some(mut point) = current.get_last_element_child() {
           let cells = document.findnodes("ltx:XMArray/ltx:XMRow/ltx:XMCell", Some(&point));
+          // Strip "align" from empty/whitespace-only cells
+          // (Perl doesn't set align on empty condition cells in \cases)
+          for mut cell in cells.iter().cloned() {
+            if cell.get_child_elements().is_empty() {
+              // Cell has no element children — strip align if only whitespace
+              let text = cell.get_content();
+              if text.trim().is_empty() {
+                cell.remove_attribute("align").ok();
+              }
+            }
+          }
           if !cells.is_empty() {
             // Collect XMRef ids for non-empty cells, "otherwise" text for empty cells
             let mut ref_ids: Vec<Option<String>> = Vec::new();
