@@ -217,13 +217,13 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="set"/>
-                    <XMRef idref="S1.Thmthm1.p1.m1.2"/>
                     <XMRef idref="S1.Thmthm1.p1.m1.1"/>
+                    <XMRef idref="S1.Thmthm1.p1.m1.2"/>
                     <XMRef idref="S1.Thmthm1.p1.m1.3"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok font="upright" role="OPEN" stretchy="false">{</XMTok>
-                    <XMApp xml:id="S1.Thmthm1.p1.m1.2">
+                    <XMApp xml:id="S1.Thmthm1.p1.m1.1">
                       <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok role="UNKNOWN">d</XMTok>
                       <XMApp>
@@ -237,7 +237,7 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
                       </XMApp>
                     </XMApp>
                     <XMTok font="upright" role="PUNCT">,</XMTok>
-                    <XMTok font="upright" name="dots" role="ID" xml:id="S1.Thmthm1.p1.m1.1">…</XMTok>
+                    <XMTok font="upright" name="dots" role="ID" xml:id="S1.Thmthm1.p1.m1.2">…</XMTok>
                     <XMTok font="upright" role="PUNCT">,</XMTok>
                     <XMApp xml:id="S1.Thmthm1.p1.m1.3">
                       <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
@@ -758,13 +758,13 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="set"/>
-                    <XMRef idref="S4.Thmthmsw1.p1.m1.2"/>
                     <XMRef idref="S4.Thmthmsw1.p1.m1.1"/>
+                    <XMRef idref="S4.Thmthmsw1.p1.m1.2"/>
                     <XMRef idref="S4.Thmthmsw1.p1.m1.3"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok font="upright" role="OPEN" stretchy="false">{</XMTok>
-                    <XMApp xml:id="S4.Thmthmsw1.p1.m1.2">
+                    <XMApp xml:id="S4.Thmthmsw1.p1.m1.1">
                       <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok role="UNKNOWN">d</XMTok>
                       <XMApp>
@@ -778,7 +778,7 @@ then <Math mode="inline" tex="\omega\leq\omega_{r}" text="omega &lt;= omega _ r"
                       </XMApp>
                     </XMApp>
                     <XMTok font="upright" role="PUNCT">,</XMTok>
-                    <XMTok font="upright" name="dots" role="ID" xml:id="S4.Thmthmsw1.p1.m1.1">…</XMTok>
+                    <XMTok font="upright" name="dots" role="ID" xml:id="S4.Thmthmsw1.p1.m1.2">…</XMTok>
                     <XMTok font="upright" role="PUNCT">,</XMTok>
                     <XMApp xml:id="S4.Thmthmsw1.p1.m1.3">
                       <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>

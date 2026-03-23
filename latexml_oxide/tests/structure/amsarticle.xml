@@ -330,26 +330,26 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
                 <XMRef idref="S2.E2.m1.1"/>
                 <XMRef idref="S2.E2.m1.2"/>
                 <XMApp>
-                  <XMRef idref="S2.E2.m1.10"/>
+                  <XMRef idref="S2.E2.m1.8"/>
                   <XMApp>
-                    <XMRef idref="S2.E2.m1.8"/>
+                    <XMRef idref="S2.E2.m1.9"/>
                     <XMApp>
-                      <XMRef idref="S2.E2.m1.6"/>
+                      <XMRef idref="S2.E2.m1.3"/>
                       <XMApp>
                         <XMRef idref="S2.E2.m1.4"/>
-                        <XMRef idref="S2.E2.m1.3"/>
                         <XMRef idref="S2.E2.m1.5"/>
+                        <XMRef idref="S2.E2.m1.6"/>
                       </XMApp>
                       <XMRef idref="S2.E2.m1.7"/>
                     </XMApp>
-                    <XMRef idref="S2.E2.m1.9"/>
+                    <XMRef idref="S2.E2.m1.10"/>
                   </XMApp>
                   <XMRef idref="S2.E2.m1.11"/>
                 </XMApp>
                 <XMRef idref="S2.E2.m1.12"/>
                 <XMApp>
-                  <XMRef idref="S2.E2.m1.14"/>
                   <XMRef idref="S2.E2.m1.13"/>
+                  <XMRef idref="S2.E2.m1.14"/>
                   <XMRef idref="S2.E2.m1.15"/>
                 </XMApp>
                 <XMRef idref="S2.E2.m1.16"/>
@@ -365,11 +365,11 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
                       <XMTok meaning="equals" role="RELOP" xml:id="S2.E2.m1.2">=</XMTok>
                       <XMTok meaning="absent"/>
                       <XMApp>
-                        <XMTok meaning="minus" role="ADDOP" xml:id="S2.E2.m1.6">-</XMTok>
+                        <XMTok meaning="minus" role="ADDOP" xml:id="S2.E2.m1.3">-</XMTok>
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP" xml:id="S2.E2.m1.4">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.3">b</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.5">c</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.5">b</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.6">c</XMTok>
                         </XMApp>
                         <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.7">d</XMTok>
                       </XMApp>
@@ -380,10 +380,10 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
                   <XMCell/>
                   <XMCell align="left">
                     <XMApp>
-                      <XMTok meaning="minus" role="ADDOP" xml:id="S2.E2.m1.10">-</XMTok>
+                      <XMTok meaning="minus" role="ADDOP" xml:id="S2.E2.m1.8">-</XMTok>
                       <XMApp>
-                        <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP" xml:id="S2.E2.m1.8">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.9">e</XMTok>
+                        <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP" xml:id="S2.E2.m1.9">+</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.10">e</XMTok>
                       </XMApp>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.11">f</XMTok>
                     </XMApp>
@@ -396,8 +396,8 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
                       <XMTok meaning="equals" role="RELOP" xml:id="S2.E2.m1.12">=</XMTok>
                       <XMTok meaning="absent"/>
                       <XMApp>
-                        <XMTok meaning="plus" role="ADDOP" xml:id="S2.E2.m1.14">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.13">g</XMTok>
+                        <XMTok meaning="plus" role="ADDOP" xml:id="S2.E2.m1.13">+</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.14">g</XMTok>
                         <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.15">h</XMTok>
                       </XMApp>
                     </XMApp>
@@ -429,31 +429,31 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
           <XMath>
             <XMDual>
               <XMApp>
-                <XMRef idref="S2.E3.m1.2"/>
                 <XMRef idref="S2.E3.m1.1"/>
+                <XMRef idref="S2.E3.m1.2"/>
                 <XMRef idref="S2.E3.m1.3"/>
+                <XMRef idref="S2.E3.m1.4"/>
                 <XMRef idref="S2.E3.m1.5"/>
+                <XMRef idref="S2.E3.m1.6"/>
                 <XMRef idref="S2.E3.m1.7"/>
-                <XMRef idref="S2.E3.m1.9"/>
+                <XMRef idref="S2.E3.m1.10"/>
                 <XMRef idref="S2.E3.m1.11"/>
+                <XMRef idref="S2.E3.m1.12"/>
                 <XMRef idref="S2.E3.m1.13"/>
+                <XMRef idref="S2.E3.m1.14"/>
                 <XMRef idref="S2.E3.m1.15"/>
-                <XMRef idref="S2.E3.m1.17"/>
-                <XMRef idref="S2.E3.m1.19"/>
-                <XMRef idref="S2.E3.m1.21"/>
-                <XMRef idref="S2.E3.m1.23"/>
               </XMApp>
               <XMArray name="multline">
                 <XMRow>
                   <XMCell align="left">
                     <XMApp>
-                      <XMTok meaning="plus" role="ADDOP" xml:id="S2.E3.m1.2">+</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.1">a</XMTok>
+                      <XMTok meaning="plus" role="ADDOP" xml:id="S2.E3.m1.1">+</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.2">a</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.3">b</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.5">c</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.7">d</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.9">e</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.11">f</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.4">c</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.5">d</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.6">e</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.7">f</XMTok>
                     </XMApp>
                   </XMCell>
                 </XMRow>
@@ -463,13 +463,13 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.13">i</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.10">i</XMTok>
                       </XMApp>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.15">j</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.17">k</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.19">l</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.21">m</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.23">n</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.11">j</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.12">k</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.13">l</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.14">m</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.15">n</XMTok>
                     </XMApp>
                   </XMCell>
                 </XMRow>

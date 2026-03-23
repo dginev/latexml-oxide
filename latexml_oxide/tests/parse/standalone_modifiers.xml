@@ -179,13 +179,13 @@
               <XMDual role="MODIFIER">
                 <XMApp role="MODIFIER">
                   <XMTok name="pmod" role="UNKNOWN"/>
-                  <XMRef idref="p11.m1.1"/>
+                  <XMRef idref="p11.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok lpadding="5.6pt" role="OPEN" stretchy="false">(</XMTok>
-                  <XMApp xml:id="p11.m1.2">
+                  <XMApp xml:id="p11.m1.1">
                     <XMTok role="BIGOP" scriptpos="post">mod</XMTok>
-                    <XMTok meaning="3" role="NUMBER" xml:id="p11.m1.1">3</XMTok>
+                    <XMTok meaning="3" role="NUMBER" xml:id="p11.m1.2">3</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>

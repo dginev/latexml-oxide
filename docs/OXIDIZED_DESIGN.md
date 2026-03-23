@@ -449,3 +449,28 @@ selects narrow absorption for some expressions (documented in KNOWN_PERL_ERRORS 
 `expression` level so bigops can't be followed by invisible-times on the right.
 
 **Impact:** `declare_test` sum equations updated. `calculus_test` improved (331→273 diffs).
+
+### 9. Document-Order xml:id Renumbering
+
+**Decision:** After math parsing completes, xml:ids inside each XMath subtree are
+renumbered to be sequential in document order (pre-order DFS). Perl's
+Parse::RecDescent generates IDs in bottom-up parse order (tokens first, then
+higher-level constructs).
+
+**Rationale:** The Marpa grammar parser explores multiple parse alternatives
+simultaneously, consuming ID counter slots for pruned nodes. This produced
+non-sequential IDs like `m1.1, m1.7, m1.12` instead of `m1.1, m1.2, m1.3`.
+Document-order assignment is predictable and deterministic regardless of
+parser internals. It uses a pure post-processing pass in `core_interface.rs`
+after all parsing and kludge processing, before `document.finalize()`.
+
+**Implementation:** `renumber_math_ids()` performs a single DFS walk per XMath
+subtree, collecting both xml:id and idref nodes. Parent prefixes are derived
+via O(1) string parsing (rfind('.')) instead of DOM ancestor walks. IDs are
+stripped in a batch pass before reassignment to avoid idstore collisions.
+
+**Impact:** Test XMLs for mathaccents, esint, mathbbol, not, choose, declare,
+sampler, amsarticle, latextheorem, amstheorem, genfracs, amsdisplay, sets,
+multirelations, standalone_modifiers, sequences_and_lists, and compose were
+updated to reflect document-order IDs. All structural content is identical
+to Perl; only ID values differ.

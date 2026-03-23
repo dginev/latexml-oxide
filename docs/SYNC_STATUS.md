@@ -400,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-23):** 274 pass, 0 fail, 47 ignored (321 total). Session 33 (17 commits): +simplemath_test (208→0). Multi-token rewrite infrastructure (C5). bigop_application at expression level. Angle bracket fencing (<x,y> → inner product). parse_kludge. fenced_array grammar. replace_tree safety analysis. KNOWN_PERL_ERRORS #7-8. OXIDIZED_DESIGN #7-8. calculus 331→273, ambiguous_relations 101→98.
+**Status (2026-03-23):** 274 pass, 0 fail, 47 ignored (321 total). Session 34: Post-parse ID renumbering (OXIDIZED_DESIGN #9). Document-order xml:id reassignment in core_interface.rs. Two-pass strip+assign to avoid idstore collisions. 17 test XMLs updated (ID-only, 0 structural diffs). Session 33 (17 commits): +simplemath_test (208→0). Multi-token rewrite infrastructure (C5). bigop_application at expression level. Angle bracket fencing (<x,y> → inner product). parse_kludge. fenced_array grammar. replace_tree safety analysis. KNOWN_PERL_ERRORS #7-8. OXIDIZED_DESIGN #7-8. calculus 331→273, ambiguous_relations 101→98.
 
 ### Completed items
 

@@ -418,34 +418,19 @@ dot, ddot, overline, widehat, widetilde)</p>
           <XMDual>
             <XMApp>
               <XMTok meaning="list"/>
+              <XMRef idref="S0.Ex1.m1.1"/>
+              <XMRef idref="S0.Ex1.m1.3"/>
+              <XMRef idref="S0.Ex1.m1.5"/>
+              <XMRef idref="S0.Ex1.m1.7"/>
+              <XMRef idref="S0.Ex1.m1.9"/>
               <XMRef idref="S0.Ex1.m1.11"/>
-              <XMRef idref="S0.Ex1.m1.12"/>
               <XMRef idref="S0.Ex1.m1.13"/>
-              <XMRef idref="S0.Ex1.m1.14"/>
               <XMRef idref="S0.Ex1.m1.15"/>
-              <XMRef idref="S0.Ex1.m1.16"/>
               <XMRef idref="S0.Ex1.m1.17"/>
-              <XMRef idref="S0.Ex1.m1.18"/>
               <XMRef idref="S0.Ex1.m1.19"/>
-              <XMRef idref="S0.Ex1.m1.20"/>
             </XMApp>
             <XMWrap>
-              <XMDual xml:id="S0.Ex1.m1.11">
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex1.m1.1"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex1.m1.1">
-                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.12">
+              <XMDual xml:id="S0.Ex1.m1.1">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
                   <XMRef idref="S0.Ex1.m1.2"/>
@@ -454,28 +439,13 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.2">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok meaning="absent"/>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.13">
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex1.m1.3"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex1.m1.3">
-                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
                     <XMTok font="italic" role="UNKNOWN">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
               </XMDual>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.14">
+              <XMDual xml:id="S0.Ex1.m1.3">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
                   <XMRef idref="S0.Ex1.m1.4"/>
@@ -484,33 +454,13 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.4">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                    </XMApp>
+                    <XMTok meaning="absent"/>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
               </XMDual>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.15">
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex1.m1.5"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex1.m1.5">
-                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.16">
+              <XMDual xml:id="S0.Ex1.m1.5">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
                   <XMRef idref="S0.Ex1.m1.6"/>
@@ -525,22 +475,7 @@ dot, ddot, overline, widehat, widetilde)</p>
                 </XMWrap>
               </XMDual>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.17">
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex1.m1.7"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex1.m1.7">
-                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.18">
+              <XMDual xml:id="S0.Ex1.m1.7">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
                   <XMRef idref="S0.Ex1.m1.8"/>
@@ -549,7 +484,87 @@ dot, ddot, overline, widehat, widetilde)</p>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
                   <XMApp xml:id="S0.Ex1.m1.8">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMDual xml:id="S0.Ex1.m1.9">
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S0.Ex1.m1.10"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp xml:id="S0.Ex1.m1.10">
+                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMDual xml:id="S0.Ex1.m1.11">
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S0.Ex1.m1.12"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp xml:id="S0.Ex1.m1.12">
+                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMDual xml:id="S0.Ex1.m1.13">
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S0.Ex1.m1.14"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp xml:id="S0.Ex1.m1.14">
+                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMDual xml:id="S0.Ex1.m1.15">
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S0.Ex1.m1.16"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp xml:id="S0.Ex1.m1.16">
+                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
                     <XMTok font="typewriter">$</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMDual xml:id="S0.Ex1.m1.17">
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S0.Ex1.m1.18"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp xml:id="S0.Ex1.m1.18">
+                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
                   </XMApp>
                   <XMTok role="CLOSE" stretchy="false">]</XMTok>
                 </XMWrap>
@@ -558,26 +573,11 @@ dot, ddot, overline, widehat, widetilde)</p>
               <XMDual xml:id="S0.Ex1.m1.19">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex1.m1.9"/>
+                  <XMRef idref="S0.Ex1.m1.20"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex1.m1.9">
-                    <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.20">
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex1.m1.10"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex1.m1.10">
+                  <XMApp xml:id="S0.Ex1.m1.20">
                     <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
                     <XMTok font="typewriter">$</XMTok>
                   </XMApp>
@@ -624,21 +624,51 @@ dot, ddot, overline, widehat, widetilde)</p>
           <XMDual>
             <XMApp>
               <XMTok meaning="list"/>
-              <XMRef idref="S0.Ex3.m1.6"/>
+              <XMRef idref="S0.Ex3.m1.1"/>
+              <XMRef idref="S0.Ex3.m1.3"/>
+              <XMRef idref="S0.Ex3.m1.5"/>
               <XMRef idref="S0.Ex3.m1.7"/>
-              <XMRef idref="S0.Ex3.m1.8"/>
               <XMRef idref="S0.Ex3.m1.9"/>
-              <XMRef idref="S0.Ex3.m1.10"/>
             </XMApp>
             <XMWrap>
-              <XMDual xml:id="S0.Ex3.m1.6">
+              <XMDual xml:id="S0.Ex3.m1.1">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex3.m1.1"/>
+                  <XMRef idref="S0.Ex3.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.1">
+                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.2">
+                    <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMDual xml:id="S0.Ex3.m1.3">
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S0.Ex3.m1.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.4">
+                    <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
+                    <XMTok meaning="absent"/>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMDual xml:id="S0.Ex3.m1.5">
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S0.Ex3.m1.6"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.6">
                     <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                     <XMTok font="italic" role="UNKNOWN">A</XMTok>
                   </XMApp>
@@ -649,41 +679,11 @@ dot, ddot, overline, widehat, widetilde)</p>
               <XMDual xml:id="S0.Ex3.m1.7">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex3.m1.2"/>
+                  <XMRef idref="S0.Ex3.m1.8"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.2">
-                    <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
-                    <XMTok meaning="absent"/>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex3.m1.8">
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex3.m1.3"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.3">
-                    <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex3.m1.9">
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex3.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.4">
+                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.8">
                     <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -696,14 +696,14 @@ dot, ddot, overline, widehat, widetilde)</p>
                 </XMWrap>
               </XMDual>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex3.m1.10">
+              <XMDual xml:id="S0.Ex3.m1.9">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex3.m1.5"/>
+                  <XMRef idref="S0.Ex3.m1.10"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.5">
+                  <XMApp scriptpos="mid" xml:id="S0.Ex3.m1.10">
                     <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
