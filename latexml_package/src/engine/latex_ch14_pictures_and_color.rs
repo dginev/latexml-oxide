@@ -52,7 +52,14 @@ LoadDefinitions!({
   DefMacro!("\\qbeziermax", "500");
   DefMacro!("\\@killglue", "\\unskip\\@whiledim \\lastskip >\\z@\\do{\\unskip}");
 
+  // Tag: ltx:picture — auto-generate ID with "pic" prefix
+  Tag!("ltx:picture", after_open => sub[document, node] {
+    document.generate_id(node, "pic")?;
+  });
+
   // {picture} environment: (width,height) with optional (origin-x,origin-y)
+  // Perl uses Pair directly in DefEnvironment. In Rust, Pair is lost during digestion.
+  // Workaround: set picture dimensions as properties using the register values.
   DefEnvironment!("{picture} Pair OptionalPair",
     "<ltx:picture fill='none' stroke='none'>\
       #body\
@@ -85,34 +92,137 @@ LoadDefinitions!({
     }
   );
 
-  // \line(slope){length}
-  DefConstructor!("\\line Pair {Float}",
-    "<ltx:line points='0,0 0,0' stroke='black'/>",
-    alias => "\\line"
+  // \line(slope){length} — decompose pair into separate slope components
+  DefMacro!("\\line Match:( Until:, Until:) {}", "\\lx@pic@line{#2}{#3}{#4}");
+  DefConstructor!("\\lx@pic@line{}{}{}",
+    "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
+    alias => "\\line",
+    properties => sub[args] {
+      let mx: f64 = args[0].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let my: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let xlength: f64 = args[2].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      // slopeToPicCoord: compute endpoint from slope and length
+      let s = if mx > 0.0 { 1.0 } else if mx < 0.0 { -1.0 } else { 0.0 };
+      let ex = xlength * unit * s;
+      let ey = if s == 0.0 {
+        xlength * unit * (if my > 0.0 { 1.0 } else { -1.0 })
+      } else {
+        xlength * unit * my / mx.abs()
+      };
+      Ok(stored_map!(
+        "points" => Stored::String(arena::pin(&format!("0,0 {ex},{ey}"))),
+        "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
+        "color"  => "black"
+      ))
+    }
   );
 
   // \vector(slope){length} — like \line but with arrow terminator
-  DefConstructor!("\\vector Pair {Float}",
-    "<ltx:line points='0,0 0,0' stroke='black' terminators='->'/>",
-    alias => "\\vector"
+  DefMacro!("\\vector Match:( Until:, Until:) {}", "\\lx@pic@vector{#2}{#3}{#4}");
+  DefConstructor!("\\lx@pic@vector{}{}{}",
+    "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='->'/>",
+    alias => "\\vector",
+    properties => sub[args] {
+      let mx: f64 = args[0].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let my: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let xlength: f64 = args[2].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      let s = if mx > 0.0 { 1.0 } else if mx < 0.0 { -1.0 } else { 0.0 };
+      let ex = xlength * unit * s;
+      let ey = if s == 0.0 {
+        xlength * unit * (if my > 0.0 { 1.0 } else { -1.0 })
+      } else {
+        xlength * unit * my / mx.abs()
+      };
+      Ok(stored_map!(
+        "points" => Stored::String(arena::pin(&format!("0,0 {ex},{ey}"))),
+        "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
+        "color"  => "black"
+      ))
+    }
   );
 
   // \circle*{diameter} — filled or unfilled circle
   DefConstructor!("\\circle OptionalMatch:* {Float}",
-    "<ltx:circle x='0' y='0' r='0' fill='none' stroke='black'/>",
-    alias => "\\circle"
+    "<ltx:circle x='0' y='0' r='#radius' fill='#fill' stroke='#stroke' stroke-width='#thick'/>",
+    alias => "\\circle",
+    properties => sub[args] {
+      let filled = args[0].is_some(); // OptionalMatch:* → Some if * present
+      let dia: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      let radius = dia * unit * 0.5;
+      let (fill, stroke) = if filled {
+        ("black", "none")
+      } else {
+        ("none", "black")
+      };
+      Ok(stored_map!(
+        "radius" => Stored::String(arena::pin(&format!("{radius}"))),
+        "fill"   => fill,
+        "stroke" => stroke,
+        "thick"  => Stored::String(arena::pin(&format!("{thick}")))
+      ))
+    }
   );
 
-  // \oval[radius](width,height)[part]
-  DefConstructor!("\\oval [Float] Pair []",
-    "<ltx:rect x='0' y='0' width='0' height='0' rx='0' stroke='black' fill='none'/>",
+  // \oval[radius](width,height)[part] — decompose pair
+  DefMacro!("\\oval", "\\lx@pic@oval");
+  DefConstructor!("\\lx@pic@oval [Float] Pair []",
+    "<ltx:rect x='#ox' y='#oy' width='#owidth' height='#oheight' rx='#radius'\
+      stroke='#color' fill='none' part='#3' stroke-width='#thick'/>",
     alias => "\\oval"
   );
 
-  // \qbezier[N](p1)(p2)(p3)
-  DefConstructor!("\\qbezier [Number] Pair Pair Pair",
-    "<ltx:bezier points='0,0 0,0 0,0' stroke='black'/>",
-    alias => "\\qbezier"
+  // \qbezier[N](p1)(p2)(p3) — decompose 3 pairs into coordinates
+  DefMacro!("\\qbezier [Number] Match:( Until:, Until:) Match:( Until:, Until:) Match:( Until:, Until:)",
+    "\\lx@pic@qbezier{#1}{#3}{#4}{#6}{#7}{#9}{#10}");
+  DefConstructor!("\\lx@pic@qbezier{}{}{}{}{}{}{}",
+    "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
+    alias => "\\qbezier",
+    properties => sub[args] {
+      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      // args: [0]=N, [1]=x1, [2]=y1, [3]=x2, [4]=y2, [5]=x3, [6]=y3
+      let parse_f = |i: usize| -> f64 {
+        args[i].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0)
+      };
+      let (x1, y1) = (parse_f(1) * unit, parse_f(2) * unit);
+      let (x2, y2) = (parse_f(3) * unit, parse_f(4) * unit);
+      let (x3, y3) = (parse_f(5) * unit, parse_f(6) * unit);
+      Ok(stored_map!(
+        "points" => Stored::String(arena::pin(&format!("{x1},{y1} {x2},{y2} {x3},{y3}"))),
+        "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
+        "color"  => "black"
+      ))
+    }
   );
 
   // \multiput(pos)(delta){n}{body} — Perl expands to n \put commands via macro.
