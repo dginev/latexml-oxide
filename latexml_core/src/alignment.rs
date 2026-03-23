@@ -84,6 +84,8 @@ pub struct Alignment {
   in_tabular_head:   bool,
   is_math:           bool,
   is_normalized:     bool,
+  /// True for \halign templates (no first-column ltx_nopad_l guard)
+  pub is_halign:     bool,
   current_column:    usize,
   current_row:       Option<usize>,
   reversion:         Option<Tokens>,
@@ -148,6 +150,7 @@ impl Alignment {
       in_column: false,
       in_tabular_head: false,
       is_normalized: false,
+      is_halign: false,
       properties: config.properties,
       xml_attributes,
       rows: VecDeque::new(),
@@ -620,10 +623,9 @@ impl BoxOps for Alignment {
                 0
               }
             });
-          // Perl: first column never gets ltx_nopad_l. The first column's left
-          // edge is the tabular boundary, not an inter-column gap. Only columns
-          // after the first can have their left padding suppressed by @{}.
-          if col_idx > 0 && (!empty || has_boxes) && lpad < threshold_02em {
+          // Perl: for LaTeX tabular, first column never gets ltx_nopad_l (boundary).
+          // But for \halign, ALL columns can get ltx_nopad_l (no special first column).
+          if (col_idx > 0 || self.is_halign) && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
             // do nothing — use CSS default padding
