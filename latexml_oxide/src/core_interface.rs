@@ -296,20 +296,22 @@ impl DigestionAPI for Core {
     if !state::get_nomathparse_flag() {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
-      // Post-parse: add ltx_math_unparsed to Math parents of failed XMath nodes
+      // Post-parse: apply kludge to failed XMath nodes, then mark as unparsed
       if !parser.failed_xmath_ids.is_empty() {
-        for xmath_id in &parser.failed_xmath_ids {
-          let _xpath = format!("descendant-or-self::ltx:XMath[@_hashid='{}']/..", xmath_id);
-          // XMath nodes don't have @_hashid, so use the node list approach instead
-        }
-        // Apply ltx_math_unparsed to failed XMath nodes
+        // Collect failed XMath nodes for kludge processing
+        let mut failed_xmaths = Vec::new();
         for mut math_node in document.findnodes("descendant-or-self::ltx:Math[not(@text)]", None) {
           for xmath_child in document.findnodes("ltx:XMath", Some(&math_node)) {
             if parser.failed_xmath_ids.contains(&xmath_child.to_hashable()) {
+              failed_xmaths.push(xmath_child.clone());
               document.add_class(&mut math_node, "ltx_math_unparsed")?;
               break;
             }
           }
+        }
+        // Apply kludge to each failed XMath — balance OPEN/CLOSE delimiters
+        for mut xmath in failed_xmaths {
+          parse_kludge(&mut xmath, &mut document);
         }
       }
     }
@@ -590,6 +592,72 @@ fn apply_lx_declarations(document: &mut Document) {
   }
 }
 
-// TODO: kludge_bracket_grouping — needs full implementation with script handling
-// (parse_kludgeScripts_rec) to match Perl's XMWrap structure. The basic bracket
-// grouping works but produces different nesting than Perl, causing test diffs.
+/// Fallback parser for unparseable math expressions.
+/// Perl: MathParser.pm parse_kludge().
+/// Balances OPEN/CLOSE delimiters by wrapping matched groups in XMWrap.
+/// Uses document.wrap_nodes for proper namespace handling.
+fn parse_kludge(mathnode: &mut libxml::tree::Node, document: &mut Document) {
+  use latexml_math_parser::get_grammatical_role;
+  let children: Vec<libxml::tree::Node> = mathnode
+    .get_child_elements()
+    .into_iter()
+    .filter(|n| n.get_name() != "XMHint")
+    .collect();
+  if children.is_empty() {
+    return;
+  }
+
+  // Phase 1: Find OPEN/CLOSE pairs and wrap each group using wrap_nodes.
+  // We process innermost pairs first (like matching parentheses).
+  // Iterate until no more OPEN/CLOSE pairs are found.
+  let mut changed = true;
+  while changed {
+    changed = false;
+    let elems = mathnode.get_child_elements();
+    // Find the innermost OPEN that has a matching CLOSE
+    let mut open_idx = None;
+    for (i, n) in elems.iter().enumerate() {
+      let role = get_grammatical_role(n);
+      if role == "OPEN" {
+        open_idx = Some(i);
+      } else if role == "CLOSE" && open_idx.is_some() {
+        // Found innermost OPEN..CLOSE pair
+        let start = open_idx.unwrap();
+        let end = i;
+        // Collect the nodes between OPEN and CLOSE (inclusive)
+        let group: Vec<libxml::tree::Node> =
+          elems[start..=end].iter().cloned().collect();
+        if group.len() > 1 {
+          let _ = document.wrap_nodes("ltx:XMWrap", group);
+          changed = true;
+        }
+        break; // Restart after wrapping
+      }
+    }
+    // If we found an unmatched OPEN (no CLOSE), wrap OPEN through end
+    if !changed && open_idx.is_some() {
+      let elems = mathnode.get_child_elements();
+      let start = open_idx.unwrap().min(elems.len().saturating_sub(1));
+      if start < elems.len() {
+        let group: Vec<libxml::tree::Node> =
+          elems[start..].iter().cloned().collect();
+        if group.len() > 1 {
+          let _ = document.wrap_nodes("ltx:XMWrap", group);
+          changed = true;
+        }
+      }
+    }
+  }
+  // Phase 2: Unwrap ALL top-level XMWrap nodes.
+  // Perl: foreach pair, if kludge is XMWrap, extract children (not the wrapper).
+  // This preserves flat structure for simple expressions like <1>, [1], (1).
+  loop {
+    let top_elems = mathnode.get_child_elements();
+    let wrap_opt = top_elems.into_iter().find(|n| n.get_name() == "XMWrap");
+    if let Some(wrap) = wrap_opt {
+      let _ = document.unwrap_nodes(wrap);
+    } else {
+      break;
+    }
+  }
+}
