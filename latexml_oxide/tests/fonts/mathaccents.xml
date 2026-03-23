@@ -728,38 +728,19 @@ dot, ddot, overline, widehat, widetilde)</p>
             <XMApp>
               <XMTok meaning="list"/>
               <XMRef idref="S0.Ex4.m1.1"/>
-              <XMRef idref="S0.Ex4.m1.2"/>
               <XMRef idref="S0.Ex4.m1.3"/>
-              <XMRef idref="S0.Ex4.m1.4"/>
+              <XMRef idref="S0.Ex4.m1.5"/>
+              <XMRef idref="S0.Ex4.m1.7"/>
             </XMApp>
             <XMWrap>
               <XMDual xml:id="S0.Ex4.m1.1">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex4.m1.1.1"/>
+                  <XMRef idref="S0.Ex4.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex4.m1.1.1">
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMApp scriptpos="mid">
-                      <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
-                      <XMTok meaning="absent"/>
-                    </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex4.m1.2">
-                <XMApp>
-                  <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex4.m1.2.1"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex4.m1.2.1">
+                  <XMApp xml:id="S0.Ex4.m1.2">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp scriptpos="mid">
                       <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
@@ -774,11 +755,11 @@ dot, ddot, overline, widehat, widetilde)</p>
               <XMDual xml:id="S0.Ex4.m1.3">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex4.m1.3.1"/>
+                  <XMRef idref="S0.Ex4.m1.4"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex4.m1.3.1">
+                  <XMApp xml:id="S0.Ex4.m1.4">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp scriptpos="mid">
                       <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
@@ -790,14 +771,33 @@ dot, ddot, overline, widehat, widetilde)</p>
                 </XMWrap>
               </XMDual>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex4.m1.4">
+              <XMDual xml:id="S0.Ex4.m1.5">
                 <XMApp>
                   <XMTok meaning="delimited-[]"/>
-                  <XMRef idref="S0.Ex4.m1.4.1"/>
+                  <XMRef idref="S0.Ex4.m1.6"/>
                 </XMApp>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMApp xml:id="S0.Ex4.m1.4.1">
+                  <XMApp xml:id="S0.Ex4.m1.6">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMApp scriptpos="mid">
+                      <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
+                      <XMTok meaning="absent"/>
+                    </XMApp>
+                    <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  </XMApp>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMDual xml:id="S0.Ex4.m1.7">
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S0.Ex4.m1.8"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMApp xml:id="S0.Ex4.m1.8">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMApp scriptpos="mid">
                       <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>

@@ -682,7 +682,7 @@ fn renumber_math_ids(document: &mut Document) {
   let mut id_entries: Vec<(libxml::tree::Node, String)> = Vec::new();
   let mut idref_entries: Vec<(libxml::tree::Node, String)> = Vec::new();
   let mut id_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-  let mut counters: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+  let mut referenced_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
   for mut math_node in math_nodes {
     let math_id = match math_node.get_attribute_ns("id", xml_ns) {
@@ -695,7 +695,7 @@ fn renumber_math_ids(document: &mut Document) {
       id_entries.clear();
       idref_entries.clear();
       id_map.clear();
-      counters.clear();
+      referenced_ids.clear();
 
       // Single DFS walk collects both xml:id and idref nodes in document order
       renumber_collect_dfs(&xmath, xml_ns, &mut id_entries, &mut idref_entries);
@@ -703,23 +703,42 @@ fn renumber_math_ids(document: &mut Document) {
         continue;
       }
 
-      // Build old→new mapping. Parent prefix is derived by string parsing:
-      // old_id "S0.Ex1.m1.3.1" → rfind('.') → parent old_id "S0.Ex1.m1.3"
-      // → look up in id_map for renumbered parent. O(1) per node.
+      // Collect all referenced IDs (from XMRef idref attributes)
+      for (_, idref) in &idref_entries {
+        referenced_ids.insert(idref.clone());
+      }
+
+      // Strip xml:id from XMTok elements that are not referenced by any XMRef.
+      // The math parser assigns xml:ids to all tokens during parsing, but only
+      // structural nodes (XMApp, XMDual) and explicitly referenced tokens need them.
+      // Orphan XMTok ids inflate the renumbering counter causing ID gaps.
+      {
+        let mut stripped = false;
+        for (node, id) in &mut id_entries {
+          if node.get_name() == "XMTok" && !referenced_ids.contains(id.as_str()) {
+            document.unrecord_id(id);
+            let _ = node.remove_attribute("xml:id");
+            let _ = node.remove_attribute_ns("id", xml_ns);
+            id.clear(); // mark for removal
+            stripped = true;
+          }
+        }
+        if stripped {
+          id_entries.retain(|(_, id)| !id.is_empty());
+        }
+      }
+
+      if id_entries.is_empty() {
+        continue;
+      }
+
+      // Build old→new mapping. Flat sequential numbering under the math_id prefix,
+      // matching Perl's approach of assigning all IDs at the same level.
+      let mut counter = 0u32;
       let mut any_changed = false;
       for (_node, old_id) in &id_entries {
-        let parent_new_id = if let Some(dot_pos) = old_id.rfind('.') {
-          let parent_old = &old_id[..dot_pos];
-          id_map
-            .get(parent_old)
-            .cloned()
-            .unwrap_or_else(|| parent_old.to_string())
-        } else {
-          math_id.clone()
-        };
-        let counter = counters.entry(parent_new_id.clone()).or_insert(0);
-        *counter += 1;
-        let new_id = format!("{parent_new_id}.{counter}");
+        counter += 1;
+        let new_id = format!("{math_id}.{counter}");
         if new_id != *old_id {
           any_changed = true;
         }
@@ -758,9 +777,7 @@ fn renumber_math_ids(document: &mut Document) {
       }
 
       // Reset _ID_counter__ on the Math node to the final count
-      if let Some(&final_count) = counters.get(&math_id) {
-        let _ = math_node.set_attribute("_ID_counter__", &final_count.to_string());
-      }
+      let _ = math_node.set_attribute("_ID_counter__", &counter.to_string());
     }
   }
 }
@@ -781,7 +798,6 @@ fn renumber_collect_dfs(
   }
   for child in node.get_child_elements() {
     // Skip nested Math elements — they have their own parsing scope
-    // and their IDs (with prefixes like "m") are document-construction IDs.
     if child.get_name() == "Math" {
       continue;
     }

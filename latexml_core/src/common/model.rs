@@ -523,7 +523,7 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       // TODO: Mock for now, add namespace_uri capability to rust-libxml next
       let name_str = node.get_name();
       match name_str.as_str() {
-        "song" | "verse" | "line" => arena::pin(name_str),
+        "song" | "verse" => arena::pin(name_str),
         regular => arena::pin(s!("ltx:{}", regular)),
       }
     },

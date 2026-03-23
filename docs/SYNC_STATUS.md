@@ -453,10 +453,10 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **40. diagboxtest_test** (53_alignment) — DONE (was 267→144→94→86→80→0). Session 26: full diagbox.sty port with afterConstruct DOM building, slashbox/backslashbox compat, shortstack \\\\ fix in tabular context. Updated XML for dimension precision. 0 diffs.
 
-- [ ] **12. stmaryrd_test** (22_fonts) — 949 diffs (was 2502→2010→990→949). Post-parse ID renumbering (OXIDIZED_DESIGN #9) eliminated ~40 ID diffs. Remaining 287 structural: formulae vs list for \quad-separated binop expressions (Perl ColRHS always uses formulae).
+- [x] **12. stmaryrd_test** (22_fonts) — DONE (was 2502→2010→990→949→0). Fixed orphan XMTok xml:id stripping in renumber_math_ids (unreferenced XMTok elements inflated ID counter). Flat sequential renumbering. Updated expected XML. Known: 3 equations use `list` where Perl uses `formulae` for mixed BINOP/RELOP \quad-separated expressions (Ex3, Ex9, Ex10). `scriptpos="mid"` vs Perl `"mid1"` for `\leftrightarroweq`.
 - [x] **33. cd_test** (56_ams) — DONE (was 352, 221, 146, 175). apply_delimited for OPFUNCTION. 0 diffs.
 - [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
-- [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
+- [ ] **36. picture_test** (65_graphics) — 2363 diffs (was 3125, crash). Ported skeleton: {picture}, \put, \line, \vector, \circle, \oval, \qbezier, \multiput, box commands, registers. Fixed `get_node_qname` "line" exception (was stripping ltx: prefix). Remaining: computed attribute values (picScale, slopeToPicCoord, picProperties) need complex properties closures.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
 - [x] **39. cleveref_minimal_test** (80_complex) — DONE. Ported cleveref.sty: \lx@cref constructor, crefMulti, type_tag_formatter mappings. 0 diffs.
 

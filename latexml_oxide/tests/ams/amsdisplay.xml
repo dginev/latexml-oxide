@@ -149,12 +149,12 @@
               <XMRef idref="S0.E3.m1.5"/>
               <XMRef idref="S0.E3.m1.6"/>
               <XMRef idref="S0.E3.m1.7"/>
+              <XMRef idref="S0.E3.m1.8"/>
+              <XMRef idref="S0.E3.m1.9"/>
               <XMRef idref="S0.E3.m1.10"/>
               <XMRef idref="S0.E3.m1.11"/>
               <XMRef idref="S0.E3.m1.12"/>
               <XMRef idref="S0.E3.m1.13"/>
-              <XMRef idref="S0.E3.m1.14"/>
-              <XMRef idref="S0.E3.m1.15"/>
             </XMApp>
             <XMArray name="multline">
               <XMRow>
@@ -176,13 +176,13 @@
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.10">i</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.8">i</XMTok>
                     </XMApp>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.11">j</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.12">k</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.13">l</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.14">m</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.15">n</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.9">j</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.10">k</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.11">l</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.12">m</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.E3.m1.13">n</XMTok>
                   </XMApp>
                 </XMCell>
               </XMRow>

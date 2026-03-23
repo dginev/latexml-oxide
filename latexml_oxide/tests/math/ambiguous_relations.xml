@@ -38,7 +38,7 @@
             <XMApp>
               <XMTok meaning="formulae"/>
               <XMRef idref="S0.Ex3.m1.1"/>
-              <XMRef idref="S0.Ex3.m1.3"/>
+              <XMRef idref="S0.Ex3.m1.2"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex3.m1.1">
@@ -47,7 +47,7 @@
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
               <XMTok role="PUNCT">,</XMTok>
-              <XMApp xml:id="S0.Ex3.m1.3">
+              <XMApp xml:id="S0.Ex3.m1.2">
                 <XMTok meaning="greater-than-or-equals" role="RELOP">&gt;=</XMTok>
                 <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 <XMTok meaning="0" role="NUMBER">0</XMTok>
@@ -100,7 +100,7 @@
             <XMApp>
               <XMTok meaning="formulae"/>
               <XMRef idref="S0.Ex5.m1.1"/>
-              <XMRef idref="S0.Ex5.m1.3"/>
+              <XMRef idref="S0.Ex5.m1.2"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex5.m1.1">
@@ -109,7 +109,7 @@
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
               <XMTok role="PUNCT">,</XMTok>
-              <XMApp xml:id="S0.Ex5.m1.3">
+              <XMApp xml:id="S0.Ex5.m1.2">
                 <XMTok meaning="greater-than-or-equals" role="RELOP">&gt;=</XMTok>
                 <XMTok font="italic" role="UNKNOWN">y</XMTok>
                 <XMTok font="italic" role="UNKNOWN">z</XMTok>
@@ -179,7 +179,7 @@
             <XMApp>
               <XMTok meaning="formulae"/>
               <XMRef idref="S0.Ex8.m1.1"/>
-              <XMRef idref="S0.Ex8.m1.3"/>
+              <XMRef idref="S0.Ex8.m1.2"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex8.m1.1">
@@ -188,7 +188,7 @@
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
               </XMApp>
               <XMTok role="PUNCT">,</XMTok>
-              <XMApp xml:id="S0.Ex8.m1.3">
+              <XMApp xml:id="S0.Ex8.m1.2">
                 <XMTok meaning="much-greater-than" role="RELOP">&gt;&gt;</XMTok>
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
                 <XMTok meaning="1" role="NUMBER">1</XMTok>

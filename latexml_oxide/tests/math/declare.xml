@@ -161,7 +161,7 @@
                 <XMRef idref="S2.Ex3.m1.1"/>
                 <XMRef idref="S2.Ex3.m1.2"/>
                 <XMRef idref="S2.Ex3.m1.3"/>
-                <XMRef idref="S2.Ex3.m1.6"/>
+                <XMRef idref="S2.Ex3.m1.4"/>
               </XMApp>
               <XMWrap>
                 <XMTok font="italic" role="ID" xml:id="S2.Ex3.m1.1">q</XMTok>
@@ -189,7 +189,7 @@
                   </XMDual>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S2.Ex3.m1.6">
+                <XMApp xml:id="S2.Ex3.m1.4">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMText> but accidentally </XMText>
                   <XMApp>
@@ -272,10 +272,10 @@
                   <XMText> but </XMText>
                   <XMTok font="italic" role="ID">f</XMTok>
                   <XMDual>
-                    <XMRef idref="S2.Ex4.m1.9.1"/>
+                    <XMRef idref="S2.Ex4.m1.10"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMApp xml:id="S2.Ex4.m1.9.1">
+                      <XMApp xml:id="S2.Ex4.m1.10">
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
@@ -347,17 +347,17 @@
               <XMApp>
                 <XMTok meaning="list"/>
                 <XMRef idref="S2.Ex6.m1.1"/>
-                <XMRef idref="S2.Ex6.m1.2"/>
+                <XMRef idref="S2.Ex6.m1.3"/>
               </XMApp>
               <XMWrap>
                 <XMApp xml:id="S2.Ex6.m1.1">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" role="ID">z</XMTok>
                   <XMDual>
-                    <XMRef idref="S2.Ex6.m1.1.1"/>
+                    <XMRef idref="S2.Ex6.m1.2"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMApp xml:id="S2.Ex6.m1.1.1">
+                      <XMApp xml:id="S2.Ex6.m1.2">
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
@@ -367,17 +367,17 @@
                   </XMDual>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S2.Ex6.m1.2">
+                <XMApp xml:id="S2.Ex6.m1.3">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMApp>
                     <XMTok name="widehat" role="OVERACCENT">^</XMTok>
                     <XMTok font="italic" role="ID">z</XMTok>
                   </XMApp>
                   <XMDual>
-                    <XMRef idref="S2.Ex6.m1.3"/>
+                    <XMRef idref="S2.Ex6.m1.4"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex6.m1.3">a</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex6.m1.4">a</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
@@ -674,7 +674,7 @@
                 <XMRef idref="S6.Ex11.m1.1"/>
                 <XMRef idref="S6.Ex11.m1.2"/>
                 <XMRef idref="S6.Ex11.m1.3"/>
-                <XMRef idref="S6.Ex11.m1.5"/>
+                <XMRef idref="S6.Ex11.m1.4"/>
               </XMApp>
               <XMWrap>
                 <XMApp xml:id="S6.Ex11.m1.1">
@@ -693,7 +693,7 @@
                   <XMTok font="bold" role="UNKNOWN">foo</XMTok>
                 </XMDual>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMDual xml:id="S6.Ex11.m1.5">
+                <XMDual xml:id="S6.Ex11.m1.4">
                   <XMApp>
                     <XMTok meaning="foo" role="UNKNOWN"/>
                     <XMTok font="italic" role="UNKNOWN">j</XMTok>

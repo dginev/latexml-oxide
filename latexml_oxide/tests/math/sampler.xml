@@ -335,14 +335,14 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
                 </XMDual>
                 <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
                 <XMDual xml:id="S1.E7.m1.5">
-                  <XMRef idref="S1.E7.m1.5.1"/>
+                  <XMRef idref="S1.E7.m1.6"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMDual xml:id="S1.E7.m1.5.1">
-                      <XMRef idref="S1.E7.m1.5.1.1"/>
+                    <XMDual xml:id="S1.E7.m1.6">
+                      <XMRef idref="S1.E7.m1.7"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S1.E7.m1.5.1.1">
+                        <XMApp xml:id="S1.E7.m1.7">
                           <XMTok meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" role="UNKNOWN">x</XMTok>
                           <XMTok font="italic" role="UNKNOWN">z</XMTok>
@@ -591,7 +591,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
                   <XMApp>
                     <XMRef idref="S2.E12.m1.13"/>
                     <XMRef idref="S2.E12.m1.14"/>
-                    <XMRef idref="S2.E12.m1.15"/>
+                    <XMRef idref="S2.E12.m1.16"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="true">(</XMTok>
@@ -611,10 +611,10 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">f</XMTok>
                           <XMDual>
-                            <XMRef idref="S2.E12.m1.14.1"/>
+                            <XMRef idref="S2.E12.m1.15"/>
                             <XMWrap>
                               <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.14.1">x</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.15">x</XMTok>
                               <XMTok role="CLOSE" stretchy="false">)</XMTok>
                             </XMWrap>
                           </XMDual>
@@ -624,7 +624,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           </XMApp>
                         </XMApp>
                       </XMApp>
-                      <XMApp xml:id="S2.E12.m1.15">
+                      <XMApp xml:id="S2.E12.m1.16">
                         <XMApp>
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                           <XMApp>
@@ -638,10 +638,10 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">g</XMTok>
                           <XMDual>
-                            <XMRef idref="S2.E12.m1.15.1"/>
+                            <XMRef idref="S2.E12.m1.17"/>
                             <XMWrap>
                               <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.15.1">x</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.17">x</XMTok>
                               <XMTok role="CLOSE" stretchy="false">)</XMTok>
                             </XMWrap>
                           </XMDual>
