@@ -301,6 +301,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | unknown fenced_factor => speculative_prefix_apply
       | function fenced_factor => prefix_apply
       | opfunction fenced_factor => prefix_apply
+      // Perl: trigBarearg includes FUNCTION/OPFUNCTION+args (chained function application)
+      // Allows: \sin\log x → sin(log(x)), \sin\det A → sin(det(A))
+      | function factor => prefix_apply
+      | opfunction factor => prefix_apply
       | trig_arg mulop factor => infix_apply_nary
       | trig_arg binop factor => infix_apply_nary
       | trig_arg factor => apply_invisible_times;
