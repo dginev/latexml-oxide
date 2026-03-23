@@ -233,18 +233,18 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-22)
+## Test Suite Status (2026-03-23)
 
-**Current totals: 258 pass, 0 fail, 63 ignored test functions (321 total)**
-**Coverage: 82% pass rate (258/297 non-permanent-ignore tests)**
+**Current totals: 270 pass, 0 fail, 51 ignored test functions (321 total)**
+**Coverage: 89% pass rate (270/304 non-permanent-ignore tests)**
 
-**Ignored test breakdown (63 total):**
+**Ignored test breakdown (51 total):**
 - **17 permanently blocked**: tikz (10), DTD ns1-5 (5), moderncv (2) — need major infrastructure
-- **20 math parser grammar**: scripts, operators, relations, parens, functions, calculus, kludge, artefacts, qm, array_math_parse (70_parse: 14), ambiguous_relations, declare, sampler, simplemath, testscripts (40_math: 5), ntheorem (1)
-- **7 missing packages**: physics, siunitx, expl3 (2), beamer, xy, graphpap, acmart
-- **6 alignment/structure**: cells (6 font metric diffs), split (101 xml:id diffs), array (127), diagboxtest (267), ncases (1048), listing (2032)
-- **5 other**: mathtools (Marpa perf timeout), babel (hang), plainfonts (77 math diffs), ieee (977), figure_mixed_content (877)
-- **2 stmaryrd** (1134) + **graphrot** (239 — content renders but dimension diffs)
+- **20 math parser grammar**: scripts, operators, relations, parens, functions, calculus, artefacts, qm, array_math_parse, vertbars (70_parse: 10), ambiguous_relations, declare, sampler, simplemath, testscripts (40_math: 5), ntheorem (1), plainmath (1), cd (1), stmaryrd (1), function_argument_syntax (1)
+- **5 missing packages**: physics, siunitx, expl3 (2), beamer, xy
+- **5 alignment/structure**: split (timeout), ncases (~897 diffs), listing (~1730 diffs), ieee (~965 diffs), figure_mixed_content (~867 diffs)
+- **3 other**: mathtools (Marpa perf timeout), babel (hang), picture (missing env)
+- **1 slides**: slides_test (missing cls)
 
 **Key findings from sessions 20-25:**
 - Perl's `equationgroupJoinCols` has NO pre-advancement (confirmed from Perl source L970-980). The xml:id m2-vs-m3 difference must come from ID counter initialization or Math element creation order.
@@ -253,6 +253,13 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - `MATHPARSER_SPECULATE` enables `unknown(args)` → function application. Needs to be set before digestion for math parser to use it.
 - `finalize_rec` iterative rewrite eliminated all stack overflow risks for any DOM depth.
 - DefEnvironment bare `\name` form now gets all hooks (after_digest_body, after_construct, sizer, etc.).
+
+**Recent fixes (2026-03-23, session 31):**
+- **\lx@math@nounicode DefPrimitive fix**: Changed from DefConstructor (creating XML `<ltx:text>` element) to DefPrimitive (returning Tbox with `class='ltx_nounicode'`), matching Perl's `Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode')`. Fixed XMDual wrapping for all non-Unicode math symbols (stmaryrd etc.).
+- **\varcopyright**: Now produces `©` (U+00A9) instead of None.
+- **list_apply formulae meaning**: Simplified to check content (relational or not) regardless of separator type. `meaning="formulae"` when both sides contain RELOP/multirelation.
+- **amscd arrow width**: Fixed `"0pt"` → `"0.0pt"` for XMArg width attributes.
+- **TeXDelimiter parameter type**: Investigated using `DefToken` for sized delimiters (`\Big`, `\big`, etc.) to fix `\Big{\|}` → `\Big\|` in tex= attributes. Reverted — `DefToken` breaks XML structure (produces XMText instead of XMTok). Needs proper `TeXDelimiter` parameter type implementation.
 
 **Recent fixes (2026-03-22, sessions 21-25):**
 - **finalize_rec iterative rewrite**: Converted from recursive to iterative with heap work-stack. Fixes SEGFAULT for nested hboxes. Deferred font wrapper collapse to post-traversal.
