@@ -1127,9 +1127,13 @@ LoadDefinitions!({
           // (Perl doesn't set align on empty condition cells in \cases)
           for mut cell in cells.iter().cloned() {
             if cell.get_child_elements().is_empty() {
-              // Cell has no element children — strip align if only whitespace
-              let text = cell.get_content();
-              if text.trim().is_empty() {
+              // If no elements and only whitespace content, treat as empty
+              let content = cell.get_content();
+              if content.trim().is_empty() {
+                // Remove whitespace text nodes
+                for mut child in cell.get_child_nodes() {
+                  child.unlink();
+                }
                 cell.remove_attribute("align").ok();
               }
             }

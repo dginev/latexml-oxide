@@ -528,8 +528,11 @@ impl BoxOps for Alignment {
         }
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
+        // Perl: empty cells don't get align attribute
         if let Some(ref align) = cell.align {
-          cell_attrs.insert(String::from("align"), align.name());
+          if !cell.empty || cell.boxes.is_some() {
+            cell_attrs.insert(String::from("align"), align.name());
+          }
         };
         if let Some(ref vattach) = cell.vattach {
           cell_attrs.insert(String::from("vattach"), vattach.clone());
