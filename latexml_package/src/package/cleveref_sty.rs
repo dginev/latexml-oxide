@@ -21,6 +21,10 @@ LoadDefinitions!({
   // Perl: AtBeginDocument(sub { Let('\label', '\lx@cleverref@label') })
   Let!("\\label", "\\lx@cleverref@label");
 
+  // Helper: produces literal ~ (tilde) as catcode OTHER text.
+  // Needed because {} parameter expands ACTIVE ~ to space.
+  DefPrimitive!("\\lx@tilde", "~");
+
   // \lx@cref: the core constructor for cleveref references
   // Perl: DefConstructor('\lx@cref OptionalMatch:* HyperVerbatim Semiverbatim', ...)
   DefConstructor!("\\lx@cref OptionalMatch:* {} Semiverbatim",
@@ -46,6 +50,8 @@ LoadDefinitions!({
   });
 
   // \crefrange, \Crefrange
+  // \crefrange: Perl uses ~ (ACTIVE) in expansion which becomes space via HyperVerbatim.
+  // show="creftypeplural refnum" in Perl output (space, not tilde).
   DefMacro!("\\crefrange OptionalMatch:* Semiverbatim Semiverbatim",
     "\\lx@cref#1{creftypeplural~refnum}{#2}\\crefrangeconjunction\\ref{#3}");
   DefMacro!("\\Crefrange OptionalMatch:* Semiverbatim Semiverbatim",
@@ -150,8 +156,11 @@ fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) ->
 
   if label_list.len() < 2 {
     // Single reference
+    // Perl uses HyperVerbatim which preserves ~ literally.
+    // We use {} parameter, so ~ (ACTIVE) expands to space.
+    // Fix: embed catcode-12 ~ directly in show string by using \lx@tilde
     let show = if showtype {
-      if capitalized { "creftypecap~refnum" } else { "creftype~refnum" }
+      if capitalized { "creftypecap\\lx@tilde refnum" } else { "creftype\\lx@tilde refnum" }
     } else {
       "refnum"
     };
@@ -161,7 +170,7 @@ fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) ->
   } else {
     // Multiple references
     let show = if showtype {
-      if capitalized { "creftypepluralcap~refnum" } else { "creftypeplural~refnum" }
+      if capitalized { "creftypepluralcap\\lx@tilde refnum" } else { "creftypeplural\\lx@tilde refnum" }
     } else {
       "refnum"
     };
