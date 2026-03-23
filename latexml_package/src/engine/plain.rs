@@ -1907,42 +1907,38 @@ LoadDefinitions!({
   DefMath!("\\csc", None, "csc", role => "TRIGFUNCTION", meaning => "cosecant");
   DefMath!("\\deg", None, "deg", role => "OPFUNCTION",   meaning => "degree");
   DefMath!("\\det", None, "det", role => "LIMITOP", meaning => "determinant",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    dynamic_scriptpos => true);
   DefMath!("\\dim", None, "dim", role => "LIMITOP", meaning => "dimension");
 
   DefMath!("\\exp", None, "exp", role => "OPFUNCTION", meaning => "exponential");
   DefMath!("\\gcd", None, "gcd", role => "OPFUNCTION", meaning => "gcd",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    dynamic_scriptpos => true);
   DefMath!("\\hom", None, "hom", role => "OPFUNCTION");
   DefMath!("\\inf", None, "inf", role => "LIMITOP", meaning => "infimum",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    dynamic_scriptpos => true);
 
   DefMath!("\\ker", None, "ker", role => "OPFUNCTION", meaning => "kernel");
   DefMath!("\\lg", None, "lg", role => "OPFUNCTION");
   DefMath!("\\lim", None, "lim", role => "LIMITOP", meaning => "limit",
-
-  ); //TODO: scriptpos => \&doScriptpos);
+    dynamic_scriptpos => true);
   DefMath!("\\liminf", None, "lim inf", role => "LIMITOP", meaning => "limit-infimum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\limsup", None, "lim sup", role => "LIMITOP", meaning => "limit-supremum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\ln",  None, "ln",  role => "OPFUNCTION", meaning => "natural-logarithm");
   DefMath!("\\log", None, "log", role => "OPFUNCTION", meaning => "logarithm");
   DefMath!("\\max", None, "max", role => "OPFUNCTION", meaning => "maximum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\min", None, "min", role => "OPFUNCTION", meaning => "minimum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\Pr",  None, "Pr",  role => "OPFUNCTION",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\sec", None, "sec", role => "TRIGFUNCTION", meaning   => "secant");
   DefMath!("\\sin", None, "sin", role => "TRIGFUNCTION", meaning   => "sine");
 
   DefMath!("\\sinh", None, "sinh", role => "TRIGFUNCTION", meaning => "hyperbolic-sine");
   DefMath!("\\sup", None, "sup", role => "LIMITOP", meaning => "supremum",
-    scriptpos => "post"); // TODO: \&doScriptpos for display/text distinction
+    dynamic_scriptpos => true);
   DefMath!("\\tan",  None, "tan",  role => "TRIGFUNCTION", meaning => "tangent");
   DefMath!("\\tanh", None, "tanh", role => "TRIGFUNCTION", meaning => "hyperbolic-tangent");
 
