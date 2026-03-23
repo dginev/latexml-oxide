@@ -212,3 +212,27 @@ expression.
 **Rust fix:** Rust's `bigop_application` nonterminal at expression level absorbs
 the full `term` (factor chain with mulop/invisible-times). The declare test XML
 is updated to match the mathematically correct broad absorption.
+
+---
+
+## 9. Quantifier period-binding parsed as formulae split
+
+**Symptom:** `\exists x. P(x)` is parsed as `formulae@(exists@(x), P*x)` — two
+separate formulas separated by a period. The correct mathematical reading is
+`exists@(x, P(x))` — a bound quantifier where the period separates the bound
+variable from the body (the predicate `P(x)`).
+
+**Root cause:** Perl's MathGrammar treats `.` as a ColRHS (column-right-hand-side)
+separator, which creates a `formulae` structure splitting `exists@(x)` from `P*x`.
+The grammar has no special handling for quantifier-period-body patterns like
+`\exists x. P(x)` or `\forall \epsilon > 0. \exists \delta > 0. |x - a| < \delta`.
+
+**Perl expected XML:** `text="formulae@(exists@(x), P * x)"`
+
+**Correct parse:** `text="exists@(x, P(x))"` — the period should bind the quantifier's
+variable to its body, similar to how `\int f(x)\,dx` binds the integral to its
+integrand and differential.
+
+**Rust status:** Currently unparsed (`ltx_math_unparsed`). Future fix should add
+quantifier-period-body grammar rules rather than mimicking Perl's incorrect
+formulae split.
