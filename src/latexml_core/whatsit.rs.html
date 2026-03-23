@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/whatsit.rs`."><title>whatsit.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (20f19f461 2026-03-21)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>whatsit.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::borrow::Cow;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/whatsit.rs`."><title>whatsit.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (562dee482 2026-03-21)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>whatsit.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::borrow::Cow;
 <a href=#2 id=2 data-nosnippet>2</a><span class="comment">// use std::cell::RefCell;
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>libxml::tree::Node;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::collections::VecDeque;
@@ -327,129 +327,132 @@
 <a href=#327 id=327 data-nosnippet>327</a>      <span class="prelude-val">None </span>=&gt; {
 <a href=#328 id=328 data-nosnippet>328</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(alias) = defn.get_alias() {
 <a href=#329 id=329 data-nosnippet>329</a>          <span class="kw">if </span>!alias.is_empty() {
-<a href=#330 id=330 data-nosnippet>330</a>            tokens.push(<span class="macro">T_CS!</span>(alias));
-<a href=#331 id=331 data-nosnippet>331</a>          }
-<a href=#332 id=332 data-nosnippet>332</a>        } <span class="kw">else </span>{
-<a href=#333 id=333 data-nosnippet>333</a>          tokens.push(defn.get_cs().into_owned());
-<a href=#334 id=334 data-nosnippet>334</a>        }
-<a href=#335 id=335 data-nosnippet>335</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(parameters) = defn.get_parameters() {
-<a href=#336 id=336 data-nosnippet>336</a>          <span class="comment">// Use revert_digested_arguments which checks for digested_reversion
-<a href=#337 id=337 data-nosnippet>337</a>          // closures on each parameter, allowing parameter types like BoxSpecification
-<a href=#338 id=338 data-nosnippet>338</a>          // to format their reversion from the structured digested data.
-<a href=#339 id=339 data-nosnippet>339</a>          // Perl: push(@tokens, $parameters-&gt;revertArguments($self-&gt;getArgs));
-<a href=#340 id=340 data-nosnippet>340</a>          </span>tokens.extend(parameters.revert_digested_arguments(<span class="self">self</span>.get_args())<span class="question-mark">?</span>)
-<a href=#341 id=341 data-nosnippet>341</a>        }
-<a href=#342 id=342 data-nosnippet>342</a>      },
-<a href=#343 id=343 data-nosnippet>343</a>    };
-<a href=#344 id=344 data-nosnippet>344</a>
-<a href=#345 id=345 data-nosnippet>345</a>    <span class="kw">if </span>!is_closure {
-<a href=#346 id=346 data-nosnippet>346</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = <span class="self">self</span>.get_body()<span class="question-mark">? </span>{
-<a href=#347 id=347 data-nosnippet>347</a>        tokens.extend(body.revert()<span class="question-mark">?</span>.unlist());
-<a href=#348 id=348 data-nosnippet>348</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(trailer) = <span class="self">self</span>.get_trailer() {
-<a href=#349 id=349 data-nosnippet>349</a>          tokens.extend(trailer.revert()<span class="question-mark">?</span>.unlist());
-<a href=#350 id=350 data-nosnippet>350</a>        }
-<a href=#351 id=351 data-nosnippet>351</a>      }
-<a href=#352 id=352 data-nosnippet>352</a>    }
-<a href=#353 id=353 data-nosnippet>353</a>
-<a href=#354 id=354 data-nosnippet>354</a>    <span class="comment">// Now cache it, in case it's needed again
-<a href=#355 id=355 data-nosnippet>355</a>    // TODO: DG: We can't yet cache reversions, because we lack mutability on .revert()
-<a href=#356 id=356 data-nosnippet>356</a>    //       should we reorganize? is it worth it?
-<a href=#357 id=357 data-nosnippet>357</a>    //
-<a href=#358 id=358 data-nosnippet>358</a>    // if let Some(this_branch) = state!().get_dual_branch() {
-<a href=#359 id=359 data-nosnippet>359</a>    //   if self.dual_reversion.is_none() {
-<a href=#360 id=360 data-nosnippet>360</a>    //     self.dual_reversion = Some(HashMap::default());
-<a href=#361 id=361 data-nosnippet>361</a>    //   }
-<a href=#362 id=362 data-nosnippet>362</a>    //   self.dual_reversion.as_mut().unwrap()
-<a href=#363 id=363 data-nosnippet>363</a>    //     .insert(this_branch.to_string(), Tokens::new(tokens.clone()));
-<a href=#364 id=364 data-nosnippet>364</a>    // } else {
-<a href=#365 id=365 data-nosnippet>365</a>    //   self.reversion = Some(Tokens::new(tokens.clone()));
-<a href=#366 id=366 data-nosnippet>366</a>    // }
-<a href=#367 id=367 data-nosnippet>367</a>    </span><span class="prelude-val">Ok</span>(Tokens::new(tokens))
-<a href=#368 id=368 data-nosnippet>368</a>  }
-<a href=#369 id=369 data-nosnippet>369</a>}
-<a href=#370 id=370 data-nosnippet>370</a>
-<a href=#371 id=371 data-nosnippet>371</a><span class="kw">impl </span>BoxOps <span class="kw">for </span>Whatsit {
-<a href=#372 id=372 data-nosnippet>372</a>  <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;Stored&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.properties }
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="kw">fn </span>with_properties&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
-<a href=#374 id=374 data-nosnippet>374</a>  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;Stored&gt;) -&gt; R {
-<a href=#375 id=375 data-nosnippet>375</a>    caller(<span class="kw-2">&amp;</span><span class="self">self</span>.properties)
-<a href=#376 id=376 data-nosnippet>376</a>  }
-<a href=#377 id=377 data-nosnippet>377</a>  <span class="kw">fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;Stored&gt; { <span class="kw-2">&amp;mut </span><span class="self">self</span>.properties }
-<a href=#378 id=378 data-nosnippet>378</a>  <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'_</span>, Stored&gt;&gt; {
-<a href=#379 id=379 data-nosnippet>379</a>    <span class="self">self</span>.properties.get(key).map(Cow::Borrowed)
-<a href=#380 id=380 data-nosnippet>380</a>  }
-<a href=#381 id=381 data-nosnippet>381</a>  <span class="kw">fn </span>get_property_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt; { <span class="self">self</span>.properties.get_mut(key) }
-<a href=#382 id=382 data-nosnippet>382</a>  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">'_</span>, str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert()<span class="question-mark">?</span>.to_string())) }
-<a href=#383 id=383 data-nosnippet>383</a>
-<a href=#384 id=384 data-nosnippet>384</a>  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-<a href=#385 id=385 data-nosnippet>385</a>    <span class="comment">// Significant time is consumed here, and associated with a specific CS,
-<a href=#386 id=386 data-nosnippet>386</a>    // so we should be profiling as well!
-<a href=#387 id=387 data-nosnippet>387</a>    // Hopefully the csname is the same that was charged in the digestioned phase!
-<a href=#388 id=388 data-nosnippet>388</a>
-<a href=#389 id=389 data-nosnippet>389</a>    // my $profiled = $state-&gt;lookupValue('PROFILING') &amp;&amp; $defn-&gt;getCS;
-<a href=#390 id=390 data-nosnippet>390</a>    // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
-<a href=#391 id=391 data-nosnippet>391</a>    // info!(target:"whatsit:be_absorbed", "{:?}", self);
-<a href=#392 id=392 data-nosnippet>392</a>
-<a href=#393 id=393 data-nosnippet>393</a>    </span><span class="self">self</span>.definition.do_absorbtion(document, <span class="self">self</span>)
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="comment">// LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
-<a href=#395 id=395 data-nosnippet>395</a>  </span>}
-<a href=#396 id=396 data-nosnippet>396</a>  <span class="kw">fn </span>get_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="self">self</span>.properties.get(<span class="string">"body"</span>) {
-<a href=#398 id=398 data-nosnippet>398</a>      <span class="prelude-val">Some</span>(Stored::Digested(body)) =&gt; <span class="prelude-val">Some</span>(body.clone()),
-<a href=#399 id=399 data-nosnippet>399</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#400 id=400 data-nosnippet>400</a>    })
-<a href=#401 id=401 data-nosnippet>401</a>  }
-<a href=#402 id=402 data-nosnippet>402</a>
-<a href=#403 id=403 data-nosnippet>403</a>  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'_</span>, Font&gt;&gt;&gt; {
-<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw">match </span><span class="self">self</span>.properties.get(<span class="string">"font"</span>) {
-<a href=#405 id=405 data-nosnippet>405</a>      <span class="prelude-val">Some</span>(Stored::Font(font)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned((<span class="kw-2">**</span>font).clone()))),
-<a href=#406 id=406 data-nosnippet>406</a>      <span class="prelude-val">Some</span>(Stored::FontDirective(fd)) =&gt; <span class="kw">match </span>fd {
-<a href=#407 id=407 data-nosnippet>407</a>        FontDirective::Closure(<span class="kw-2">ref </span>code) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?</span>))),
-<a href=#408 id=408 data-nosnippet>408</a>        FontDirective::Asset(<span class="kw-2">ref </span>asset) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(asset))),
-<a href=#409 id=409 data-nosnippet>409</a>      },
-<a href=#410 id=410 data-nosnippet>410</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-<a href=#411 id=411 data-nosnippet>411</a>    }
-<a href=#412 id=412 data-nosnippet>412</a>  }
-<a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a>  <span class="kw">fn </span>set_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, font: Rc&lt;Font&gt;) { <span class="self">self</span>.properties.insert(<span class="string">"font"</span>, Stored::Font(font)); }
-<a href=#415 id=415 data-nosnippet>415</a>
-<a href=#416 id=416 data-nosnippet>416</a>  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
-<a href=#417 id=417 data-nosnippet>417</a>    <span class="kw">let </span>defn = <span class="self">self</span>.get_definition();
-<a href=#418 id=418 data-nosnippet>418</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = defn.get_sizer() {
-<a href=#419 id=419 data-nosnippet>419</a>      sizer(<span class="self">self</span>)
-<a href=#420 id=420 data-nosnippet>420</a>    } <span class="kw">else </span>{
-<a href=#421 id=421 data-nosnippet>421</a>      <span class="comment">// Nothing specified? use #body if any, else sum all box args
-<a href=#422 id=422 data-nosnippet>422</a>      // Perl: Whatsit.pm L252-255 — if body exists, pass it to computeBoxesSize
-<a href=#423 id=423 data-nosnippet>423</a>      // which unlists it internally (Font.pm L650-651). We replicate by extracting
-<a href=#424 id=424 data-nosnippet>424</a>      // properties from the body (mode, vattach, width) into options, then unlisting.
-<a href=#425 id=425 data-nosnippet>425</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>boxes = Vec::new();
-<a href=#426 id=426 data-nosnippet>426</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body_stored) = <span class="self">self</span>.get_property(<span class="string">"body"</span>) {
-<a href=#427 id=427 data-nosnippet>427</a>        <span class="kw">if let </span>Stored::Digested(<span class="kw-2">ref </span>body) = <span class="kw-2">*</span>body_stored {
-<a href=#428 id=428 data-nosnippet>428</a>          <span class="comment">// Perl: computeBoxesSize reads mode/vattach/width from $boxes before unlisting
-<a href=#429 id=429 data-nosnippet>429</a>          </span><span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"mode"</span>, <span class="string">"vattach"</span>, <span class="string">"width"</span>] {
-<a href=#430 id=430 data-nosnippet>430</a>            <span class="kw">if </span>options.get(key).is_none() {
-<a href=#431 id=431 data-nosnippet>431</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(prop) = body.get_property(key) {
-<a href=#432 id=432 data-nosnippet>432</a>                options.insert(key, (<span class="kw-2">*</span>prop).clone());
-<a href=#433 id=433 data-nosnippet>433</a>              }
-<a href=#434 id=434 data-nosnippet>434</a>            }
-<a href=#435 id=435 data-nosnippet>435</a>          }
-<a href=#436 id=436 data-nosnippet>436</a>          <span class="kw">let </span>unlist_boxes = body.unlist();
-<a href=#437 id=437 data-nosnippet>437</a>          boxes.extend(unlist_boxes);
-<a href=#438 id=438 data-nosnippet>438</a>        }
-<a href=#439 id=439 data-nosnippet>439</a>      }
-<a href=#440 id=440 data-nosnippet>440</a>      <span class="kw">if </span>boxes.is_empty() {
-<a href=#441 id=441 data-nosnippet>441</a>        <span class="comment">// no body
-<a href=#442 id=442 data-nosnippet>442</a>        </span><span class="kw">for </span>arg <span class="kw">in </span><span class="self">self</span>.args.iter().flatten() {
-<a href=#443 id=443 data-nosnippet>443</a>          boxes.extend(arg.unlist());
-<a href=#444 id=444 data-nosnippet>444</a>        }
-<a href=#445 id=445 data-nosnippet>445</a>      }
-<a href=#446 id=446 data-nosnippet>446</a>      <span class="kw">let </span>font = <span class="kw">if let </span>Stored::Font(<span class="kw-2">ref </span>sf) = <span class="kw-2">*</span><span class="self">self</span>.get_property(<span class="string">"font"</span>).unwrap() {
-<a href=#447 id=447 data-nosnippet>447</a>        sf.clone()
-<a href=#448 id=448 data-nosnippet>448</a>      } <span class="kw">else </span>{
-<a href=#449 id=449 data-nosnippet>449</a>        lookup_font().unwrap()
-<a href=#450 id=450 data-nosnippet>450</a>      };
-<a href=#451 id=451 data-nosnippet>451</a>      font.compute_boxes_size(<span class="kw-2">&amp;</span>boxes, options)
-<a href=#452 id=452 data-nosnippet>452</a>    }
-<a href=#453 id=453 data-nosnippet>453</a>  }
-<a href=#454 id=454 data-nosnippet>454</a>}
+<a href=#330 id=330 data-nosnippet>330</a>            <span class="comment">// Use From&lt;&amp;str&gt; which maps single characters to their proper catcodes
+<a href=#331 id=331 data-nosnippet>331</a>            // (e.g. "$" -&gt; T_MATH!(), "{" -&gt; T_BEGIN!(), etc.)
+<a href=#332 id=332 data-nosnippet>332</a>            // This matches Perl's coerceCS which calls TokenizeInternal for single chars.
+<a href=#333 id=333 data-nosnippet>333</a>            </span>tokens.push(Token::from(alias.as_str()));
+<a href=#334 id=334 data-nosnippet>334</a>          }
+<a href=#335 id=335 data-nosnippet>335</a>        } <span class="kw">else </span>{
+<a href=#336 id=336 data-nosnippet>336</a>          tokens.push(defn.get_cs().into_owned());
+<a href=#337 id=337 data-nosnippet>337</a>        }
+<a href=#338 id=338 data-nosnippet>338</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(parameters) = defn.get_parameters() {
+<a href=#339 id=339 data-nosnippet>339</a>          <span class="comment">// Use revert_digested_arguments which checks for digested_reversion
+<a href=#340 id=340 data-nosnippet>340</a>          // closures on each parameter, allowing parameter types like BoxSpecification
+<a href=#341 id=341 data-nosnippet>341</a>          // to format their reversion from the structured digested data.
+<a href=#342 id=342 data-nosnippet>342</a>          // Perl: push(@tokens, $parameters-&gt;revertArguments($self-&gt;getArgs));
+<a href=#343 id=343 data-nosnippet>343</a>          </span>tokens.extend(parameters.revert_digested_arguments(<span class="self">self</span>.get_args())<span class="question-mark">?</span>)
+<a href=#344 id=344 data-nosnippet>344</a>        }
+<a href=#345 id=345 data-nosnippet>345</a>      },
+<a href=#346 id=346 data-nosnippet>346</a>    };
+<a href=#347 id=347 data-nosnippet>347</a>
+<a href=#348 id=348 data-nosnippet>348</a>    <span class="kw">if </span>!is_closure {
+<a href=#349 id=349 data-nosnippet>349</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = <span class="self">self</span>.get_body()<span class="question-mark">? </span>{
+<a href=#350 id=350 data-nosnippet>350</a>        tokens.extend(body.revert()<span class="question-mark">?</span>.unlist());
+<a href=#351 id=351 data-nosnippet>351</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(trailer) = <span class="self">self</span>.get_trailer() {
+<a href=#352 id=352 data-nosnippet>352</a>          tokens.extend(trailer.revert()<span class="question-mark">?</span>.unlist());
+<a href=#353 id=353 data-nosnippet>353</a>        }
+<a href=#354 id=354 data-nosnippet>354</a>      }
+<a href=#355 id=355 data-nosnippet>355</a>    }
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a>    <span class="comment">// Now cache it, in case it's needed again
+<a href=#358 id=358 data-nosnippet>358</a>    // TODO: DG: We can't yet cache reversions, because we lack mutability on .revert()
+<a href=#359 id=359 data-nosnippet>359</a>    //       should we reorganize? is it worth it?
+<a href=#360 id=360 data-nosnippet>360</a>    //
+<a href=#361 id=361 data-nosnippet>361</a>    // if let Some(this_branch) = state!().get_dual_branch() {
+<a href=#362 id=362 data-nosnippet>362</a>    //   if self.dual_reversion.is_none() {
+<a href=#363 id=363 data-nosnippet>363</a>    //     self.dual_reversion = Some(HashMap::default());
+<a href=#364 id=364 data-nosnippet>364</a>    //   }
+<a href=#365 id=365 data-nosnippet>365</a>    //   self.dual_reversion.as_mut().unwrap()
+<a href=#366 id=366 data-nosnippet>366</a>    //     .insert(this_branch.to_string(), Tokens::new(tokens.clone()));
+<a href=#367 id=367 data-nosnippet>367</a>    // } else {
+<a href=#368 id=368 data-nosnippet>368</a>    //   self.reversion = Some(Tokens::new(tokens.clone()));
+<a href=#369 id=369 data-nosnippet>369</a>    // }
+<a href=#370 id=370 data-nosnippet>370</a>    </span><span class="prelude-val">Ok</span>(Tokens::new(tokens))
+<a href=#371 id=371 data-nosnippet>371</a>  }
+<a href=#372 id=372 data-nosnippet>372</a>}
+<a href=#373 id=373 data-nosnippet>373</a>
+<a href=#374 id=374 data-nosnippet>374</a><span class="kw">impl </span>BoxOps <span class="kw">for </span>Whatsit {
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;Stored&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.properties }
+<a href=#376 id=376 data-nosnippet>376</a>  <span class="kw">fn </span>with_properties&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
+<a href=#377 id=377 data-nosnippet>377</a>  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;Stored&gt;) -&gt; R {
+<a href=#378 id=378 data-nosnippet>378</a>    caller(<span class="kw-2">&amp;</span><span class="self">self</span>.properties)
+<a href=#379 id=379 data-nosnippet>379</a>  }
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="kw">fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;Stored&gt; { <span class="kw-2">&amp;mut </span><span class="self">self</span>.properties }
+<a href=#381 id=381 data-nosnippet>381</a>  <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'_</span>, Stored&gt;&gt; {
+<a href=#382 id=382 data-nosnippet>382</a>    <span class="self">self</span>.properties.get(key).map(Cow::Borrowed)
+<a href=#383 id=383 data-nosnippet>383</a>  }
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="kw">fn </span>get_property_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt; { <span class="self">self</span>.properties.get_mut(key) }
+<a href=#385 id=385 data-nosnippet>385</a>  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">'_</span>, str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert()<span class="question-mark">?</span>.to_string())) }
+<a href=#386 id=386 data-nosnippet>386</a>
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+<a href=#388 id=388 data-nosnippet>388</a>    <span class="comment">// Significant time is consumed here, and associated with a specific CS,
+<a href=#389 id=389 data-nosnippet>389</a>    // so we should be profiling as well!
+<a href=#390 id=390 data-nosnippet>390</a>    // Hopefully the csname is the same that was charged in the digestioned phase!
+<a href=#391 id=391 data-nosnippet>391</a>
+<a href=#392 id=392 data-nosnippet>392</a>    // my $profiled = $state-&gt;lookupValue('PROFILING') &amp;&amp; $defn-&gt;getCS;
+<a href=#393 id=393 data-nosnippet>393</a>    // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
+<a href=#394 id=394 data-nosnippet>394</a>    // info!(target:"whatsit:be_absorbed", "{:?}", self);
+<a href=#395 id=395 data-nosnippet>395</a>
+<a href=#396 id=396 data-nosnippet>396</a>    </span><span class="self">self</span>.definition.do_absorbtion(document, <span class="self">self</span>)
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="comment">// LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
+<a href=#398 id=398 data-nosnippet>398</a>  </span>}
+<a href=#399 id=399 data-nosnippet>399</a>  <span class="kw">fn </span>get_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+<a href=#400 id=400 data-nosnippet>400</a>    <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="self">self</span>.properties.get(<span class="string">"body"</span>) {
+<a href=#401 id=401 data-nosnippet>401</a>      <span class="prelude-val">Some</span>(Stored::Digested(body)) =&gt; <span class="prelude-val">Some</span>(body.clone()),
+<a href=#402 id=402 data-nosnippet>402</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#403 id=403 data-nosnippet>403</a>    })
+<a href=#404 id=404 data-nosnippet>404</a>  }
+<a href=#405 id=405 data-nosnippet>405</a>
+<a href=#406 id=406 data-nosnippet>406</a>  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'_</span>, Font&gt;&gt;&gt; {
+<a href=#407 id=407 data-nosnippet>407</a>    <span class="kw">match </span><span class="self">self</span>.properties.get(<span class="string">"font"</span>) {
+<a href=#408 id=408 data-nosnippet>408</a>      <span class="prelude-val">Some</span>(Stored::Font(font)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned((<span class="kw-2">**</span>font).clone()))),
+<a href=#409 id=409 data-nosnippet>409</a>      <span class="prelude-val">Some</span>(Stored::FontDirective(fd)) =&gt; <span class="kw">match </span>fd {
+<a href=#410 id=410 data-nosnippet>410</a>        FontDirective::Closure(<span class="kw-2">ref </span>code) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?</span>))),
+<a href=#411 id=411 data-nosnippet>411</a>        FontDirective::Asset(<span class="kw-2">ref </span>asset) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(asset))),
+<a href=#412 id=412 data-nosnippet>412</a>      },
+<a href=#413 id=413 data-nosnippet>413</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+<a href=#414 id=414 data-nosnippet>414</a>    }
+<a href=#415 id=415 data-nosnippet>415</a>  }
+<a href=#416 id=416 data-nosnippet>416</a>
+<a href=#417 id=417 data-nosnippet>417</a>  <span class="kw">fn </span>set_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, font: Rc&lt;Font&gt;) { <span class="self">self</span>.properties.insert(<span class="string">"font"</span>, Stored::Font(font)); }
+<a href=#418 id=418 data-nosnippet>418</a>
+<a href=#419 id=419 data-nosnippet>419</a>  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+<a href=#420 id=420 data-nosnippet>420</a>    <span class="kw">let </span>defn = <span class="self">self</span>.get_definition();
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = defn.get_sizer() {
+<a href=#422 id=422 data-nosnippet>422</a>      sizer(<span class="self">self</span>)
+<a href=#423 id=423 data-nosnippet>423</a>    } <span class="kw">else </span>{
+<a href=#424 id=424 data-nosnippet>424</a>      <span class="comment">// Nothing specified? use #body if any, else sum all box args
+<a href=#425 id=425 data-nosnippet>425</a>      // Perl: Whatsit.pm L252-255 — if body exists, pass it to computeBoxesSize
+<a href=#426 id=426 data-nosnippet>426</a>      // which unlists it internally (Font.pm L650-651). We replicate by extracting
+<a href=#427 id=427 data-nosnippet>427</a>      // properties from the body (mode, vattach, width) into options, then unlisting.
+<a href=#428 id=428 data-nosnippet>428</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>boxes = Vec::new();
+<a href=#429 id=429 data-nosnippet>429</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body_stored) = <span class="self">self</span>.get_property(<span class="string">"body"</span>) {
+<a href=#430 id=430 data-nosnippet>430</a>        <span class="kw">if let </span>Stored::Digested(<span class="kw-2">ref </span>body) = <span class="kw-2">*</span>body_stored {
+<a href=#431 id=431 data-nosnippet>431</a>          <span class="comment">// Perl: computeBoxesSize reads mode/vattach/width from $boxes before unlisting
+<a href=#432 id=432 data-nosnippet>432</a>          </span><span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"mode"</span>, <span class="string">"vattach"</span>, <span class="string">"width"</span>] {
+<a href=#433 id=433 data-nosnippet>433</a>            <span class="kw">if </span>options.get(key).is_none() {
+<a href=#434 id=434 data-nosnippet>434</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(prop) = body.get_property(key) {
+<a href=#435 id=435 data-nosnippet>435</a>                options.insert(key, (<span class="kw-2">*</span>prop).clone());
+<a href=#436 id=436 data-nosnippet>436</a>              }
+<a href=#437 id=437 data-nosnippet>437</a>            }
+<a href=#438 id=438 data-nosnippet>438</a>          }
+<a href=#439 id=439 data-nosnippet>439</a>          <span class="kw">let </span>unlist_boxes = body.unlist();
+<a href=#440 id=440 data-nosnippet>440</a>          boxes.extend(unlist_boxes);
+<a href=#441 id=441 data-nosnippet>441</a>        }
+<a href=#442 id=442 data-nosnippet>442</a>      }
+<a href=#443 id=443 data-nosnippet>443</a>      <span class="kw">if </span>boxes.is_empty() {
+<a href=#444 id=444 data-nosnippet>444</a>        <span class="comment">// no body
+<a href=#445 id=445 data-nosnippet>445</a>        </span><span class="kw">for </span>arg <span class="kw">in </span><span class="self">self</span>.args.iter().flatten() {
+<a href=#446 id=446 data-nosnippet>446</a>          boxes.extend(arg.unlist());
+<a href=#447 id=447 data-nosnippet>447</a>        }
+<a href=#448 id=448 data-nosnippet>448</a>      }
+<a href=#449 id=449 data-nosnippet>449</a>      <span class="kw">let </span>font = <span class="kw">if let </span>Stored::Font(<span class="kw-2">ref </span>sf) = <span class="kw-2">*</span><span class="self">self</span>.get_property(<span class="string">"font"</span>).unwrap() {
+<a href=#450 id=450 data-nosnippet>450</a>        sf.clone()
+<a href=#451 id=451 data-nosnippet>451</a>      } <span class="kw">else </span>{
+<a href=#452 id=452 data-nosnippet>452</a>        lookup_font().unwrap()
+<a href=#453 id=453 data-nosnippet>453</a>      };
+<a href=#454 id=454 data-nosnippet>454</a>      font.compute_boxes_size(<span class="kw-2">&amp;</span>boxes, options)
+<a href=#455 id=455 data-nosnippet>455</a>    }
+<a href=#456 id=456 data-nosnippet>456</a>  }
+<a href=#457 id=457 data-nosnippet>457</a>}
 </code></pre></div></section></main></body></html>

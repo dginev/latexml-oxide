@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/grammar/builder.rs`."><title>builder.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (20f19f461 2026-03-21)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/grammar/</div>builder.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::semantics::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/grammar/builder.rs`."><title>builder.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (562dee482 2026-03-21)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/grammar/</div>builder.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::semantics::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>marpa::grammar::Grammar <span class="kw">as </span>MarpaGrammar;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>marpa::result::Result;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>marpa::tree_builder::TreeBuilder;
@@ -65,261 +65,436 @@
 <a href=#65 id=65 data-nosnippet>65</a>  <span class="macro">token!</span>(end_floatsuperscript ~ <span class="string">"end_FLOATSUPERSCRIPT"</span>);
 <a href=#66 id=66 data-nosnippet>66</a>  <span class="macro">token!</span>(start_floatsubscript ~ <span class="string">"start_FLOATSUBSCRIPT"</span>);
 <a href=#67 id=67 data-nosnippet>67</a>  <span class="macro">token!</span>(end_floatsubscript ~ <span class="string">"end_FLOATSUBSCRIPT"</span>);
-<a href=#68 id=68 data-nosnippet>68</a>
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">rules!</span>(
-<a href=#70 id=70 data-nosnippet>70</a>    <span class="comment">// Factors
-<a href=#71 id=71 data-nosnippet>71</a>    // opfunction/function/trigfunction are NOT factors — they require arguments.
-<a href=#72 id=72 data-nosnippet>72</a>    // Standalone usage is handled at the term level (term += function | ...).
-<a href=#73 id=73 data-nosnippet>73</a>    // `2 \sin` is handled via dedicated tight_term rules below.
-<a href=#74 id=74 data-nosnippet>74</a>    </span>factor_base = unknown | number | id | atom;
-<a href=#75 id=75 data-nosnippet>75</a>    factor = factor_base | opfunction;
-<a href=#76 id=76 data-nosnippet>76</a>    <span class="comment">// Terms
-<a href=#77 id=77 data-nosnippet>77</a>    // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
-<a href=#78 id=78 data-nosnippet>78</a>    </span>any_bigop = bigop | sumop | intop | limitop | diffop;
-<a href=#79 id=79 data-nosnippet>79</a>    <span class="comment">// Adjacent bigops compose like higher-order functions:
-<a href=#80 id=80 data-nosnippet>80</a>    // \int\iint =&gt; integral(double-integral), itself a compound operator
-<a href=#81 id=81 data-nosnippet>81</a>    </span>composed_bigop = any_bigop any_bigop =&gt; prefix_apply
-<a href=#82 id=82 data-nosnippet>82</a>      | any_bigop composed_bigop =&gt; prefix_apply;
-<a href=#83 id=83 data-nosnippet>83</a>
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="comment">// Compound operators: OPERATOR composed with functions/other operators (right-recursive)
-<a href=#85 id=85 data-nosnippet>85</a>    // D sin =&gt; Apply(D, sin), D D sin =&gt; Apply(D, Apply(D, sin))
-<a href=#86 id=86 data-nosnippet>86</a>    // Must end with a function/trigfunction (no bare operator-only compounds)
-<a href=#87 id=87 data-nosnippet>87</a>    </span>compound_operator = operator trigfunction =&gt; prefix_apply
-<a href=#88 id=88 data-nosnippet>88</a>      | operator function =&gt; prefix_apply
-<a href=#89 id=89 data-nosnippet>89</a>      | operator compound_operator =&gt; prefix_apply;
-<a href=#90 id=90 data-nosnippet>90</a>
-<a href=#91 id=91 data-nosnippet>91</a>    <span class="comment">// tight_term includes single factors (for left-recursive chaining)
-<a href=#92 id=92 data-nosnippet>92</a>    // and all compound constructs (invisible times, prefix application, etc.)
-<a href=#93 id=93 data-nosnippet>93</a>    // The `\log x` → `log*x` issue is handled by semantic pruning in
-<a href=#94 id=94 data-nosnippet>94</a>    // apply_invisible_times, not at the grammar level.
-<a href=#95 id=95 data-nosnippet>95</a>    </span>tight_term = factor
-<a href=#96 id=96 data-nosnippet>96</a>      | tight_term factor =&gt; apply_invisible_times
-<a href=#97 id=97 data-nosnippet>97</a>      <span class="comment">// Perl MathGrammar L423: POSTFIX (e.g. n!) =&gt; Apply(op, term)
-<a href=#98 id=98 data-nosnippet>98</a>      </span>| tight_term postfix =&gt; apply_postfix
-<a href=#99 id=99 data-nosnippet>99</a>      | function tight_term =&gt; prefix_apply
-<a href=#100 id=100 data-nosnippet>100</a>      | trigfunction tight_term =&gt; prefix_apply
-<a href=#101 id=101 data-nosnippet>101</a>      | any_bigop tight_term =&gt; prefix_apply
-<a href=#102 id=102 data-nosnippet>102</a>      | composed_bigop tight_term =&gt; prefix_apply
-<a href=#103 id=103 data-nosnippet>103</a>      | compound_operator tight_term =&gt; prefix_apply
-<a href=#104 id=104 data-nosnippet>104</a>      | operator factor =&gt; prefix_apply
-<a href=#105 id=105 data-nosnippet>105</a>      | factor_base applyop tight_term =&gt; prefix_apply_applyop;
-<a href=#106 id=106 data-nosnippet>106</a>
-<a href=#107 id=107 data-nosnippet>107</a>    <span class="comment">// Composed functions: f∘g, sin∘cos — these can then be applied as functions
-<a href=#108 id=108 data-nosnippet>108</a>    // COMPOSEOP operates on function-level operands (curry level 2)
-<a href=#109 id=109 data-nosnippet>109</a>    // Left-to-right associative (matching Perl): f∘g∘h = (f∘g)∘h
-<a href=#110 id=110 data-nosnippet>110</a>    </span>composed_term = function composeop function =&gt; infix_apply
-<a href=#111 id=111 data-nosnippet>111</a>      | function composeop trigfunction =&gt; infix_apply
-<a href=#112 id=112 data-nosnippet>112</a>      | function composeop opfunction =&gt; infix_apply
-<a href=#113 id=113 data-nosnippet>113</a>      | trigfunction composeop function =&gt; infix_apply
-<a href=#114 id=114 data-nosnippet>114</a>      | trigfunction composeop trigfunction =&gt; infix_apply
-<a href=#115 id=115 data-nosnippet>115</a>      | trigfunction composeop opfunction =&gt; infix_apply
-<a href=#116 id=116 data-nosnippet>116</a>      | opfunction composeop function =&gt; infix_apply
-<a href=#117 id=117 data-nosnippet>117</a>      | opfunction composeop trigfunction =&gt; infix_apply
-<a href=#118 id=118 data-nosnippet>118</a>      | opfunction composeop opfunction =&gt; infix_apply
-<a href=#119 id=119 data-nosnippet>119</a>      <span class="comment">// Left-recursive for left-to-right associativity
-<a href=#120 id=120 data-nosnippet>120</a>      </span>| composed_term composeop function =&gt; infix_apply
-<a href=#121 id=121 data-nosnippet>121</a>      | composed_term composeop trigfunction =&gt; infix_apply
-<a href=#122 id=122 data-nosnippet>122</a>      | composed_term composeop opfunction =&gt; infix_apply;
-<a href=#123 id=123 data-nosnippet>123</a>
-<a href=#124 id=124 data-nosnippet>124</a>    <span class="comment">// Composed functions can be applied like regular functions
-<a href=#125 id=125 data-nosnippet>125</a>    </span>tight_term += composed_term tight_term =&gt; prefix_apply;
-<a href=#126 id=126 data-nosnippet>126</a>
-<a href=#127 id=127 data-nosnippet>127</a>    term = tight_term
-<a href=#128 id=128 data-nosnippet>128</a>    | term mulop tight_term =&gt; infix_apply_nary
-<a href=#129 id=129 data-nosnippet>129</a>    | term mulop tight_term elideop =&gt; infix_apply_and_elide
-<a href=#130 id=130 data-nosnippet>130</a>    <span class="comment">// Fallback: COMPOSEOP on general terms (for non-function-level composition)
-<a href=#131 id=131 data-nosnippet>131</a>    </span>| term composeop term =&gt; infix_apply
-<a href=#132 id=132 data-nosnippet>132</a>    | operator applyop term =&gt; prefix_apply_applyop;
-<a href=#133 id=133 data-nosnippet>133</a>
-<a href=#134 id=134 data-nosnippet>134</a>    <span class="comment">// Allow standalone functions/trigfunctions/opfunctions as terms
-<a href=#135 id=135 data-nosnippet>135</a>    // This is needed for (f*g)(x) where f and g are FUNCTION tokens
-<a href=#136 id=136 data-nosnippet>136</a>    // opfunction here allows standalone \operatorname{R} to parse
-<a href=#137 id=137 data-nosnippet>137</a>    </span>term += function | trigfunction | opfunction | composed_term;
-<a href=#138 id=138 data-nosnippet>138</a>    <span class="comment">// Allow elideop (\cdots) as a term for chains like y + i + \cdots + y_n
-<a href=#139 id=139 data-nosnippet>139</a>    // Perl treats cdots as a regular term in addition chains
-<a href=#140 id=140 data-nosnippet>140</a>    </span>term += elideop;
-<a href=#141 id=141 data-nosnippet>141</a>
-<a href=#142 id=142 data-nosnippet>142</a>    <span class="comment">// Higher-order operator terms: functions as standalone objects multiplied by factors
-<a href=#143 id=143 data-nosnippet>143</a>    // `2\sin` = `2 * sin`, `2\sin\cos` = `2 * sin * cos`
-<a href=#144 id=144 data-nosnippet>144</a>    // These are term-level (not tight_term) so they don't interfere with
-<a href=#145 id=145 data-nosnippet>145</a>    // function application: `2\sin x` = `2 * sin(x)` (not `(2*sin) * x`)
-<a href=#146 id=146 data-nosnippet>146</a>    </span>tight_opterm = factor function =&gt; apply_invisible_times
-<a href=#147 id=147 data-nosnippet>147</a>      | factor trigfunction =&gt; apply_invisible_times
-<a href=#148 id=148 data-nosnippet>148</a>      | factor opfunction =&gt; apply_invisible_times
-<a href=#149 id=149 data-nosnippet>149</a>      | tight_opterm function =&gt; apply_invisible_times
-<a href=#150 id=150 data-nosnippet>150</a>      | tight_opterm trigfunction =&gt; apply_invisible_times
-<a href=#151 id=151 data-nosnippet>151</a>      | tight_opterm opfunction =&gt; apply_invisible_times;
-<a href=#152 id=152 data-nosnippet>152</a>    term += tight_opterm;
-<a href=#153 id=153 data-nosnippet>153</a>
-<a href=#154 id=154 data-nosnippet>154</a>    <span class="comment">// Expressions
-<a href=#155 id=155 data-nosnippet>155</a>    </span>expression = term
-<a href=#156 id=156 data-nosnippet>156</a>      | expression addop term =&gt; infix_apply_nary
-<a href=#157 id=157 data-nosnippet>157</a>      | expression addop term elideop =&gt; infix_apply_and_elide
-<a href=#158 id=158 data-nosnippet>158</a>      | addop tight_term =&gt; prefix_apply
-<a href=#159 id=159 data-nosnippet>159</a>      | factor addop =&gt; postfix_apply
-<a href=#160 id=160 data-nosnippet>160</a>      | expression addop =&gt; postfix_apply
-<a href=#161 id=161 data-nosnippet>161</a>      <span class="comment">// Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
-<a href=#162 id=162 data-nosnippet>162</a>      // =&gt; Apply(modifierop, expr, expr2). Handles infix `a mod b`.
-<a href=#163 id=163 data-nosnippet>163</a>      </span>| expression modifierop expression =&gt; infix_apply;
-<a href=#164 id=164 data-nosnippet>164</a>
-<a href=#165 id=165 data-nosnippet>165</a>    <span class="comment">// Formula
-<a href=#166 id=166 data-nosnippet>166</a>    // Perl MathGrammar L73/236: MODIFIEROP Expression =&gt; Apply(mod, Absent, expr)
-<a href=#167 id=167 data-nosnippet>167</a>    </span>modifier_expression = modifierop expression =&gt; modifier_prefix_apply;
-<a href=#168 id=168 data-nosnippet>168</a>    <span class="comment">// Perl: within a Formula, comma-separated expressions after a relop form a list RHS.
-<a href=#169 id=169 data-nosnippet>169</a>    // e.g. a=b,c,d → a = list(b,c,d), not list(a=b, c, d).
-<a href=#170 id=170 data-nosnippet>170</a>    // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
-<a href=#171 id=171 data-nosnippet>171</a>    </span>formula_list = expression punct expression =&gt; formula_list_apply
-<a href=#172 id=172 data-nosnippet>172</a>      | formula_list punct expression =&gt; formula_list_apply;
-<a href=#173 id=173 data-nosnippet>173</a>    <span class="comment">// Perl MathGrammar L709-711: Two-part relops (&gt;=, &lt;=, &lt;&lt;, &gt;&gt;)
-<a href=#174 id=174 data-nosnippet>174</a>    </span>two_part_relop = langle_rel langle_rel =&gt; two_part_relop_combine
-<a href=#175 id=175 data-nosnippet>175</a>      | rangle_rel rangle_rel =&gt; two_part_relop_combine
-<a href=#176 id=176 data-nosnippet>176</a>      | langle_rel relop_equals =&gt; two_part_relop_combine
-<a href=#177 id=177 data-nosnippet>177</a>      | rangle_rel relop_equals =&gt; two_part_relop_combine;
-<a href=#178 id=178 data-nosnippet>178</a>
-<a href=#179 id=179 data-nosnippet>179</a>    formula = expression
-<a href=#180 id=180 data-nosnippet>180</a>      | formula relop expression =&gt; infix_relation
-<a href=#181 id=181 data-nosnippet>181</a>      | formula two_part_relop expression =&gt; infix_relation
-<a href=#182 id=182 data-nosnippet>182</a>      | formula relop formula_list =&gt; infix_relation
-<a href=#183 id=183 data-nosnippet>183</a>      | formula relop =&gt; postfix_relop
-<a href=#184 id=184 data-nosnippet>184</a>      | formula arrow expression =&gt; infix_relation
-<a href=#185 id=185 data-nosnippet>185</a>      | arrow expression =&gt; prefix_arrow_apply
-<a href=#186 id=186 data-nosnippet>186</a>      <span class="comment">// Perl MathGrammar L81: AnyOp Expression =&gt; Apply(AnyOp, Absent(), Expression)
-<a href=#187 id=187 data-nosnippet>187</a>      // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
-<a href=#188 id=188 data-nosnippet>188</a>      </span>| relop expression =&gt; prefix_relop_apply
-<a href=#189 id=189 data-nosnippet>189</a>      | metarelop expression =&gt; prefix_relop_apply
-<a href=#190 id=190 data-nosnippet>190</a>      | modifier_expression
-<a href=#191 id=191 data-nosnippet>191</a>      <span class="comment">// Perl MathGrammar L236: addExpressionModifier: MODIFIER
-<a href=#192 id=192 data-nosnippet>192</a>      // Standalone postfix modifier (e.g. `8\pmod{3}` → annotated(8, pmod(3)))
-<a href=#193 id=193 data-nosnippet>193</a>      </span>| formula modifier =&gt; postfix_modifier_apply;
-<a href=#194 id=194 data-nosnippet>194</a>
-<a href=#195 id=195 data-nosnippet>195</a>    <span class="comment">// Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
-<a href=#196 id=196 data-nosnippet>196</a>    // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
-<a href=#197 id=197 data-nosnippet>197</a>    </span>statement = formula
-<a href=#198 id=198 data-nosnippet>198</a>      | statement metarelop formula =&gt; infix_relation
-<a href=#199 id=199 data-nosnippet>199</a>      | metarelop formula =&gt; prefix_metarelop_apply
-<a href=#200 id=200 data-nosnippet>200</a>      | any_bigop | composed_bigop
-<a href=#201 id=201 data-nosnippet>201</a>      | operator | compound_operator
-<a href=#202 id=202 data-nosnippet>202</a>      | function | trigfunction
-<a href=#203 id=203 data-nosnippet>203</a>      <span class="comment">// Bare operators can form comma-separated lists: +,-,×
-<a href=#204 id=204 data-nosnippet>204</a>      </span>| addop | mulop | relop | arrow;
-<a href=#205 id=205 data-nosnippet>205</a>
-<a href=#206 id=206 data-nosnippet>206</a>    end_punct = punct | period;
-<a href=#207 id=207 data-nosnippet>207</a>    statements = statement
-<a href=#208 id=208 data-nosnippet>208</a>      | statement end_punct =&gt; postfix_embellished
-<a href=#209 id=209 data-nosnippet>209</a>      | statements punct statement =&gt; list_apply
-<a href=#210 id=210 data-nosnippet>210</a>      <span class="comment">// Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
-<a href=#211 id=211 data-nosnippet>211</a>      </span>| statement vertbar statements =&gt; vertbar_modifier;
-<a href=#212 id=212 data-nosnippet>212</a>
-<a href=#213 id=213 data-nosnippet>213</a>    <span class="comment">// Extensions, now that we have more category variables defined
-<a href=#214 id=214 data-nosnippet>214</a>    </span>fenced_factor = lbrace expression rbrace    =&gt; fenced
-<a href=#215 id=215 data-nosnippet>215</a>           | lbracket expression rbracket       =&gt; fenced
-<a href=#216 id=216 data-nosnippet>216</a>           | lparen formula rparen              =&gt; fenced
-<a href=#217 id=217 data-nosnippet>217</a>           | lparen term punct term rparen      =&gt; interval
-<a href=#218 id=218 data-nosnippet>218</a>           | lparen term punct term rbracket    =&gt; interval
-<a href=#219 id=219 data-nosnippet>219</a>           | lbracket term punct term rbracket  =&gt; interval
-<a href=#220 id=220 data-nosnippet>220</a>           | lbracket term punct term rparen  =&gt; interval
-<a href=#221 id=221 data-nosnippet>221</a>           | rbracket term punct term lbracket =&gt; interval
-<a href=#222 id=222 data-nosnippet>222</a>           | singlevertbar expression singlevertbar =&gt; fenced
-<a href=#223 id=223 data-nosnippet>223</a>           <span class="comment">// Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
-<a href=#224 id=224 data-nosnippet>224</a>           </span>| lbrace term punct term rbrace =&gt; fence
-<a href=#225 id=225 data-nosnippet>225</a>           | lbrace term punct term punct term rbrace =&gt; fence
-<a href=#226 id=226 data-nosnippet>226</a>           <span class="comment">// Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
-<a href=#227 id=227 data-nosnippet>227</a>           </span>| lbrace formula singlevertbar formula rbrace =&gt; fence
-<a href=#228 id=228 data-nosnippet>228</a>           | lbrace formula middle_bar formula rbrace =&gt; fence
-<a href=#229 id=229 data-nosnippet>229</a>           | lbrace formula metarelop formula rbrace =&gt; fence
-<a href=#230 id=230 data-nosnippet>230</a>           <span class="comment">// Empty fenced expressions: () [] {} ⌊⌋ etc.
-<a href=#231 id=231 data-nosnippet>231</a>           </span>| lparen rparen =&gt; empty_fenced
-<a href=#232 id=232 data-nosnippet>232</a>           | lbracket rbracket =&gt; empty_fenced
-<a href=#233 id=233 data-nosnippet>233</a>           | lbrace rbrace =&gt; empty_fenced
-<a href=#234 id=234 data-nosnippet>234</a>           | open close =&gt; empty_fenced;
-<a href=#235 id=235 data-nosnippet>235</a>    factor += fenced_factor;
-<a href=#236 id=236 data-nosnippet>236</a>
-<a href=#237 id=237 data-nosnippet>237</a>    <span class="comment">// UNKNOWN followed by fenced args =&gt; function application (Perl: Apply[UNKNOWN atom_args])
-<a href=#238 id=238 data-nosnippet>238</a>    // f(x) =&gt; f@(x), g(a+b) =&gt; g@(a+b). Only active when MATHPARSER_SPECULATE is set.
-<a href=#239 id=239 data-nosnippet>239</a>    // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
-<a href=#240 id=240 data-nosnippet>240</a>    </span>tight_term += unknown fenced_factor =&gt; speculative_prefix_apply;
-<a href=#241 id=241 data-nosnippet>241</a>    <span class="comment">// OPFUNCTION followed by fenced args =&gt; function application
-<a href=#242 id=242 data-nosnippet>242</a>    // \operatorname{cov}(L) =&gt; cov@(L). Always treated as application, not multiplication.
-<a href=#243 id=243 data-nosnippet>243</a>    </span>tight_term += opfunction fenced_factor =&gt; prefix_apply;
-<a href=#244 id=244 data-nosnippet>244</a>    <span class="comment">// Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
-<a href=#245 id=245 data-nosnippet>245</a>    // \log x =&gt; log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
-<a href=#246 id=246 data-nosnippet>246</a>    </span>tight_term += opfunction tight_term =&gt; prefix_apply;
-<a href=#247 id=247 data-nosnippet>247</a>    tight_term += opfunction factor =&gt; prefix_apply;
-<a href=#248 id=248 data-nosnippet>248</a>    <span class="comment">// TRIGFUNCTION absorbs bare args: \sin x =&gt; sin@(x), \cos\pi =&gt; cos@(pi)
-<a href=#249 id=249 data-nosnippet>249</a>    // Note: trigfunction tight_term already in compound_operator, can't duplicate.
-<a href=#250 id=250 data-nosnippet>250</a>    </span>tight_term += trigfunction factor =&gt; prefix_apply;
-<a href=#251 id=251 data-nosnippet>251</a>    tight_term += trigfunction fenced_factor =&gt; prefix_apply;
-<a href=#252 id=252 data-nosnippet>252</a>    <span class="comment">// Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID =&gt; Apply(DIFFOP(d), var)
-<a href=#253 id=253 data-nosnippet>253</a>    // Uses existing `unknown` terminal; semantic action checks text is literally "d".
-<a href=#254 id=254 data-nosnippet>254</a>    // At factor level so it can appear as right operand of invisible_times.
-<a href=#255 id=255 data-nosnippet>255</a>    </span>factor += unknown factor_base =&gt; diffop_apply;
-<a href=#256 id=256 data-nosnippet>256</a>
-<a href=#257 id=257 data-nosnippet>257</a>    <span class="comment">// Script content
-<a href=#258 id=258 data-nosnippet>258</a>    </span>postsubarg = start_postsubscript expression end_postsubscript =&gt; faux_wrap;
-<a href=#259 id=259 data-nosnippet>259</a>    postsuperarg = start_postsuperscript expression end_postsuperscript =&gt; faux_wrap
-<a href=#260 id=260 data-nosnippet>260</a>      <span class="comment">// TODO: what other kinds of arguments are accepted in scripts? Should we do "anything"?
-<a href=#261 id=261 data-nosnippet>261</a>      </span>| start_postsuperscript supop end_postsuperscript =&gt; faux_wrap;
-<a href=#262 id=262 data-nosnippet>262</a>    floatsubarg = start_floatsubscript expression end_floatsubscript =&gt; faux_wrap;
-<a href=#263 id=263 data-nosnippet>263</a>    floatsuperarg = start_floatsuperscript expression end_floatsuperscript =&gt; faux_wrap;
-<a href=#264 id=264 data-nosnippet>264</a>    <span class="comment">// standalone top-level variants of floating scripts:
-<a href=#265 id=265 data-nosnippet>265</a>    </span>floatsubscript = start_floatsubscript expression end_floatsubscript =&gt; standalone_script;
-<a href=#266 id=266 data-nosnippet>266</a>    floatsuperscript = start_floatsuperscript expression end_floatsuperscript =&gt; standalone_script;
-<a href=#267 id=267 data-nosnippet>267</a>    <span class="comment">// Scripted factors -- avoid adding ambiguity in the left-right order of collection
-<a href=#268 id=268 data-nosnippet>268</a>    // first ALL left (=float), then right (=post).
-<a href=#269 id=269 data-nosnippet>269</a>    </span>scripted_factor_l11 = floatsuperarg factor_base =&gt; prefix_script
-<a href=#270 id=270 data-nosnippet>270</a>      | floatsuperarg opfunction =&gt; prefix_script;
-<a href=#271 id=271 data-nosnippet>271</a>    scripted_factor_l12 = floatsubarg factor_base =&gt; prefix_script
-<a href=#272 id=272 data-nosnippet>272</a>      | floatsubarg opfunction =&gt; prefix_script;
-<a href=#273 id=273 data-nosnippet>273</a>    scripted_factor_l1 = scripted_factor_l11 | scripted_factor_l12;
-<a href=#274 id=274 data-nosnippet>274</a>    scripted_factor_l2 = floatsuperarg scripted_factor_l12 =&gt; prefix_script
-<a href=#275 id=275 data-nosnippet>275</a>      | floatsubarg scripted_factor_l11 =&gt; prefix_script;
-<a href=#276 id=276 data-nosnippet>276</a>
-<a href=#277 id=277 data-nosnippet>277</a>    scripted_factor_r11 = factor_base postsuperarg =&gt; postfix_script
-<a href=#278 id=278 data-nosnippet>278</a>      | opfunction postsuperarg =&gt; postfix_script
-<a href=#279 id=279 data-nosnippet>279</a>      | any_bigop postsuperarg =&gt; postfix_script
-<a href=#280 id=280 data-nosnippet>280</a>      | scripted_factor_l1 postsuperarg =&gt; postfix_script
-<a href=#281 id=281 data-nosnippet>281</a>      | scripted_factor_l2 postsuperarg =&gt; postfix_script
-<a href=#282 id=282 data-nosnippet>282</a>      | fenced_factor postsuperarg =&gt; postfix_script;
-<a href=#283 id=283 data-nosnippet>283</a>    scripted_factor_r12 = factor_base postsubarg =&gt; postfix_script
-<a href=#284 id=284 data-nosnippet>284</a>      | opfunction postsubarg =&gt; postfix_script
-<a href=#285 id=285 data-nosnippet>285</a>      | any_bigop postsubarg =&gt; postfix_script
-<a href=#286 id=286 data-nosnippet>286</a>      | scripted_factor_l1 postsubarg =&gt; postfix_script
-<a href=#287 id=287 data-nosnippet>287</a>      | scripted_factor_l2 postsubarg =&gt; postfix_script
-<a href=#288 id=288 data-nosnippet>288</a>      | fenced_factor postsubarg =&gt; postfix_script;
-<a href=#289 id=289 data-nosnippet>289</a>    scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
-<a href=#290 id=290 data-nosnippet>290</a>    scripted_factor_r2 = scripted_factor_r12 postsuperarg =&gt; postfix_script
-<a href=#291 id=291 data-nosnippet>291</a>      | scripted_factor_r11 postsubarg =&gt; postfix_script;
-<a href=#292 id=292 data-nosnippet>292</a>    factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
-<a href=#293 id=293 data-nosnippet>293</a>
-<a href=#294 id=294 data-nosnippet>294</a>    <span class="comment">// Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
-<a href=#295 id=295 data-nosnippet>295</a>    // These are bigops with post-scripts that still act as prefix operators.
-<a href=#296 id=296 data-nosnippet>296</a>    // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs
-<a href=#297 id=297 data-nosnippet>297</a>    // Chain scripts: first sub then super, or vice versa (like scripted_factor_r1/r2)
-<a href=#298 id=298 data-nosnippet>298</a>    </span>scripted_bigop_r1 = any_bigop postsuperarg =&gt; postfix_script
-<a href=#299 id=299 data-nosnippet>299</a>      | any_bigop postsubarg =&gt; postfix_script;
-<a href=#300 id=300 data-nosnippet>300</a>    scripted_bigop = scripted_bigop_r1
-<a href=#301 id=301 data-nosnippet>301</a>      | scripted_bigop_r1 postsuperarg =&gt; postfix_script
-<a href=#302 id=302 data-nosnippet>302</a>      | scripted_bigop_r1 postsubarg =&gt; postfix_script;
-<a href=#303 id=303 data-nosnippet>303</a>    tight_term += scripted_bigop tight_term =&gt; prefix_apply;
-<a href=#304 id=304 data-nosnippet>304</a>    tight_term += scripted_bigop factor =&gt; prefix_apply;
-<a href=#305 id=305 data-nosnippet>305</a>    <span class="comment">// Scripted bigops can also appear as standalone statements
-<a href=#306 id=306 data-nosnippet>306</a>    </span>statement += scripted_bigop;
-<a href=#307 id=307 data-nosnippet>307</a>
-<a href=#308 id=308 data-nosnippet>308</a>    anyop = addop | mulop | relop | arrow | metarelop
-<a href=#309 id=309 data-nosnippet>309</a>      | bigop | sumop | intop
-<a href=#310 id=310 data-nosnippet>310</a>      | limitop | diffop | vertbar | supop
-<a href=#311 id=311 data-nosnippet>311</a>      | modifierop | composed_bigop | operator | compound_operator;
-<a href=#312 id=312 data-nosnippet>312</a>
-<a href=#313 id=313 data-nosnippet>313</a>    anyscript = floatsuperscript | floatsubscript;
-<a href=#314 id=314 data-nosnippet>314</a>
-<a href=#315 id=315 data-nosnippet>315</a>    anything = statements | anyop | anyscript |
-<a href=#316 id=316 data-nosnippet>316</a>      anyop anyop =&gt; compound_operator_2
-<a href=#317 id=317 data-nosnippet>317</a>  );
-<a href=#318 id=318 data-nosnippet>318</a>  <span class="comment">// | term_argument postsuperarg tex_argument  =&gt; post_script
-<a href=#319 id=319 data-nosnippet>319</a>  // | term_argument postsubscript tex_argument    =&gt; post_script
-<a href=#320 id=320 data-nosnippet>320</a>  </span><span class="macro">start!</span>(anything);
-<a href=#321 id=321 data-nosnippet>321</a>
-<a href=#322 id=322 data-nosnippet>322</a>  <span class="comment">// Also prepare the tree builder rules here (for now)
-<a href=#323 id=323 data-nosnippet>323</a>  </span><span class="prelude-val">Ok</span>((<span class="macro">grammar!</span>(), <span class="macro">actions!</span>(), <span class="macro">builder!</span>()))
-<a href=#324 id=324 data-nosnippet>324</a>}
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="macro">token!</span>(start_arrow ~ <span class="string">"start_ARROW"</span>);
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">token!</span>(end_arrow ~ <span class="string">"end_ARROW"</span>);
+<a href=#70 id=70 data-nosnippet>70</a>
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="macro">rules!</span>(
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="comment">// Factors
+<a href=#73 id=73 data-nosnippet>73</a>    // opfunction/function/trigfunction are NOT factors — they require arguments.
+<a href=#74 id=74 data-nosnippet>74</a>    // Standalone usage is handled at the term level (term += function | ...).
+<a href=#75 id=75 data-nosnippet>75</a>    // `2 \sin` is handled via dedicated tight_term rules below.
+<a href=#76 id=76 data-nosnippet>76</a>    // Perl MathGrammar L315: ATOM_OR_ID : ATOM | ID | ARRAY
+<a href=#77 id=77 data-nosnippet>77</a>    // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
+<a href=#78 id=78 data-nosnippet>78</a>    </span>factor_base = unknown | number | id | atom | array;
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="comment">// Perl MathGrammar L277: OPEN ARRAY CLOSE -&gt; Fence (e.g. \{ array \} or ( array ))
+<a href=#80 id=80 data-nosnippet>80</a>    // Also handle unmatched delimiters for cases-like patterns.
+<a href=#81 id=81 data-nosnippet>81</a>    </span>fenced_array = open array close =&gt; fenced
+<a href=#82 id=82 data-nosnippet>82</a>      | open array =&gt; open_fenced
+<a href=#83 id=83 data-nosnippet>83</a>      | array close =&gt; close_fenced;
+<a href=#84 id=84 data-nosnippet>84</a>    factor = factor_base | opfunction | fenced_array;
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="comment">// Terms
+<a href=#86 id=86 data-nosnippet>86</a>    // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
+<a href=#87 id=87 data-nosnippet>87</a>    </span>any_bigop = bigop | sumop | intop | limitop | diffop;
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="comment">// Adjacent bigops compose like higher-order functions:
+<a href=#89 id=89 data-nosnippet>89</a>    // \int\iint =&gt; integral(double-integral), itself a compound operator
+<a href=#90 id=90 data-nosnippet>90</a>    </span>composed_bigop = any_bigop any_bigop =&gt; prefix_apply
+<a href=#91 id=91 data-nosnippet>91</a>      | any_bigop composed_bigop =&gt; prefix_apply;
+<a href=#92 id=92 data-nosnippet>92</a>
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="comment">// Compound operators: OPERATOR composed with functions/other operators (right-recursive)
+<a href=#94 id=94 data-nosnippet>94</a>    // D sin =&gt; Apply(D, sin), D D sin =&gt; Apply(D, Apply(D, sin))
+<a href=#95 id=95 data-nosnippet>95</a>    // Must end with a function/trigfunction (no bare operator-only compounds)
+<a href=#96 id=96 data-nosnippet>96</a>    </span>compound_operator = operator trigfunction =&gt; prefix_apply
+<a href=#97 id=97 data-nosnippet>97</a>      | operator function =&gt; prefix_apply
+<a href=#98 id=98 data-nosnippet>98</a>      | operator compound_operator =&gt; prefix_apply;
+<a href=#99 id=99 data-nosnippet>99</a>
+<a href=#100 id=100 data-nosnippet>100</a>    <span class="comment">// tight_term includes single factors (for left-recursive chaining)
+<a href=#101 id=101 data-nosnippet>101</a>    // and all compound constructs (invisible times, prefix application, etc.)
+<a href=#102 id=102 data-nosnippet>102</a>    // The `\log x` → `log*x` issue is handled by semantic pruning in
+<a href=#103 id=103 data-nosnippet>103</a>    // apply_invisible_times, not at the grammar level.
+<a href=#104 id=104 data-nosnippet>104</a>    </span>tight_term = factor
+<a href=#105 id=105 data-nosnippet>105</a>      | tight_term factor =&gt; apply_invisible_times
+<a href=#106 id=106 data-nosnippet>106</a>      <span class="comment">// Perl MathGrammar L423: POSTFIX (e.g. n!) =&gt; Apply(op, term)
+<a href=#107 id=107 data-nosnippet>107</a>      </span>| tight_term postfix =&gt; apply_postfix
+<a href=#108 id=108 data-nosnippet>108</a>      | function tight_term =&gt; prefix_apply
+<a href=#109 id=109 data-nosnippet>109</a>      <span class="comment">// trigfunction uses trigbarearg via applied_func (absorbs MulOp chains)
+<a href=#110 id=110 data-nosnippet>110</a>      // NOTE: bigop rules moved to += section (after `term` is defined) so they
+<a href=#111 id=111 data-nosnippet>111</a>      // can absorb full term (mulop chains like x² * dx), not just tight_term.
+<a href=#112 id=112 data-nosnippet>112</a>      </span>| composed_bigop tight_term =&gt; prefix_apply
+<a href=#113 id=113 data-nosnippet>113</a>      | compound_operator tight_term =&gt; prefix_apply
+<a href=#114 id=114 data-nosnippet>114</a>      | operator factor =&gt; prefix_apply
+<a href=#115 id=115 data-nosnippet>115</a>      | factor_base applyop tight_term =&gt; prefix_apply_applyop;
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="comment">// Perl MathGrammar L258: Factor moreFactors — consecutive function
+<a href=#118 id=118 data-nosnippet>118</a>    // applications chain with invisible times.
+<a href=#119 id=119 data-nosnippet>119</a>    // e.g. \sin x \cos y =&gt; sin(x) * cos(y)
+<a href=#120 id=120 data-nosnippet>120</a>    //
+<a href=#121 id=121 data-nosnippet>121</a>    // IMPORTANT — TRIGFUNCTION ARGUMENT SCOPING AMBIGUITY:
+<a href=#122 id=122 data-nosnippet>122</a>    // Perl's trigBarearg absorbs MulOp chains: \sin\pi\times x =&gt; sin(π×x).
+<a href=#123 id=123 data-nosnippet>123</a>    // We deliberately DO NOT implement this absorption. The expression
+<a href=#124 id=124 data-nosnippet>124</a>    // sin(π)×x vs sin(π×x) is a *legitimate semantic ambiguity* that cannot
+<a href=#125 id=125 data-nosnippet>125</a>    // be resolved purely by grammar structure. Both parses are valid:
+<a href=#126 id=126 data-nosnippet>126</a>    //   sin(π)×x = 0×x (evaluating sin at π)
+<a href=#127 id=127 data-nosnippet>127</a>    //   sin(π×x) = sin of the product
+<a href=#128 id=128 data-nosnippet>128</a>    // Perl's Parse::RecDescent picks the "absorb" interpretation heuristically.
+<a href=#129 id=129 data-nosnippet>129</a>    //
+<a href=#130 id=130 data-nosnippet>130</a>    // FUTURE WORK: To match Perl's output, implement *targeted semantic pruning*
+<a href=#131 id=131 data-nosnippet>131</a>    // in the parse tree selection phase (semantics/tree.rs) that uses context
+<a href=#132 id=132 data-nosnippet>132</a>    // cues to prefer one interpretation:
+<a href=#133 id=133 data-nosnippet>133</a>    //   - If the MulOp is invisible (⁢), prefer absorption (sin 2x → sin(2x))
+<a href=#134 id=134 data-nosnippet>134</a>    //   - If the MulOp is explicit (×,·), either interpretation is valid
+<a href=#135 id=135 data-nosnippet>135</a>    //   - If the argument is a known constant (π, e), standalone may be preferred
+<a href=#136 id=136 data-nosnippet>136</a>    // This is a semantic-level decision, not a grammar-level one.
+<a href=#137 id=137 data-nosnippet>137</a>    // applied_func and tight_term augmentations moved below trig_arg definition
+<a href=#138 id=138 data-nosnippet>138</a>
+<a href=#139 id=139 data-nosnippet>139</a>    // Composed functions: f∘g, sin∘cos — these can then be applied as functions
+<a href=#140 id=140 data-nosnippet>140</a>    // COMPOSEOP operates on function-level operands (curry level 2)
+<a href=#141 id=141 data-nosnippet>141</a>    // Left-to-right associative (matching Perl): f∘g∘h = (f∘g)∘h
+<a href=#142 id=142 data-nosnippet>142</a>    </span>composed_term = function composeop function =&gt; infix_apply
+<a href=#143 id=143 data-nosnippet>143</a>      | function composeop trigfunction =&gt; infix_apply
+<a href=#144 id=144 data-nosnippet>144</a>      | function composeop opfunction =&gt; infix_apply
+<a href=#145 id=145 data-nosnippet>145</a>      | trigfunction composeop function =&gt; infix_apply
+<a href=#146 id=146 data-nosnippet>146</a>      | trigfunction composeop trigfunction =&gt; infix_apply
+<a href=#147 id=147 data-nosnippet>147</a>      | trigfunction composeop opfunction =&gt; infix_apply
+<a href=#148 id=148 data-nosnippet>148</a>      | opfunction composeop function =&gt; infix_apply
+<a href=#149 id=149 data-nosnippet>149</a>      | opfunction composeop trigfunction =&gt; infix_apply
+<a href=#150 id=150 data-nosnippet>150</a>      | opfunction composeop opfunction =&gt; infix_apply
+<a href=#151 id=151 data-nosnippet>151</a>      <span class="comment">// Left-recursive for left-to-right associativity
+<a href=#152 id=152 data-nosnippet>152</a>      </span>| composed_term composeop function =&gt; infix_apply
+<a href=#153 id=153 data-nosnippet>153</a>      | composed_term composeop trigfunction =&gt; infix_apply
+<a href=#154 id=154 data-nosnippet>154</a>      | composed_term composeop opfunction =&gt; infix_apply;
+<a href=#155 id=155 data-nosnippet>155</a>
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="comment">// Composed functions can be applied like regular functions
+<a href=#157 id=157 data-nosnippet>157</a>    </span>tight_term += composed_term tight_term =&gt; prefix_apply;
+<a href=#158 id=158 data-nosnippet>158</a>
+<a href=#159 id=159 data-nosnippet>159</a>    term = tight_term
+<a href=#160 id=160 data-nosnippet>160</a>    | term mulop tight_term =&gt; infix_apply_nary
+<a href=#161 id=161 data-nosnippet>161</a>    | term mulop tight_term elideop =&gt; infix_apply_and_elide
+<a href=#162 id=162 data-nosnippet>162</a>    <span class="comment">// Perl: BINOP matches both AddOp and MulOp (ambiguous precedence from \mathbin)
+<a href=#163 id=163 data-nosnippet>163</a>    </span>| term binop tight_term =&gt; infix_apply_nary
+<a href=#164 id=164 data-nosnippet>164</a>    | term binop tight_term elideop =&gt; infix_apply_and_elide
+<a href=#165 id=165 data-nosnippet>165</a>    <span class="comment">// Fallback: COMPOSEOP on general terms (for non-function-level composition)
+<a href=#166 id=166 data-nosnippet>166</a>    </span>| term composeop term =&gt; infix_apply
+<a href=#167 id=167 data-nosnippet>167</a>    | operator applyop term =&gt; prefix_apply_applyop;
+<a href=#168 id=168 data-nosnippet>168</a>
+<a href=#169 id=169 data-nosnippet>169</a>    <span class="comment">// Allow standalone functions/trigfunctions/opfunctions as terms
+<a href=#170 id=170 data-nosnippet>170</a>    // This is needed for (f*g)(x) where f and g are FUNCTION tokens
+<a href=#171 id=171 data-nosnippet>171</a>    // opfunction here allows standalone \operatorname{R} to parse
+<a href=#172 id=172 data-nosnippet>172</a>    </span>term += function | trigfunction | opfunction | composed_term;
+<a href=#173 id=173 data-nosnippet>173</a>    <span class="comment">// Allow elideop (\cdots) as a term for chains like y + i + \cdots + y_n
+<a href=#174 id=174 data-nosnippet>174</a>    // Perl treats cdots as a regular term in addition chains
+<a href=#175 id=175 data-nosnippet>175</a>    </span>term += elideop;
+<a href=#176 id=176 data-nosnippet>176</a>
+<a href=#177 id=177 data-nosnippet>177</a>    <span class="comment">// Higher-order operator terms: functions as standalone objects multiplied by factors
+<a href=#178 id=178 data-nosnippet>178</a>    // `2\sin` = `2 * sin`, `2\sin\cos` = `2 * sin * cos`
+<a href=#179 id=179 data-nosnippet>179</a>    // These are term-level (not tight_term) so they don't interfere with
+<a href=#180 id=180 data-nosnippet>180</a>    // function application: `2\sin x` = `2 * sin(x)` (not `(2*sin) * x`)
+<a href=#181 id=181 data-nosnippet>181</a>    </span>tight_opterm = factor function =&gt; apply_invisible_times
+<a href=#182 id=182 data-nosnippet>182</a>      | factor trigfunction =&gt; apply_invisible_times
+<a href=#183 id=183 data-nosnippet>183</a>      | factor opfunction =&gt; apply_invisible_times
+<a href=#184 id=184 data-nosnippet>184</a>      | tight_opterm function =&gt; apply_invisible_times
+<a href=#185 id=185 data-nosnippet>185</a>      | tight_opterm trigfunction =&gt; apply_invisible_times
+<a href=#186 id=186 data-nosnippet>186</a>      | tight_opterm opfunction =&gt; apply_invisible_times;
+<a href=#187 id=187 data-nosnippet>187</a>    term += tight_opterm;
+<a href=#188 id=188 data-nosnippet>188</a>
+<a href=#189 id=189 data-nosnippet>189</a>    <span class="comment">// Expressions
+<a href=#190 id=190 data-nosnippet>190</a>    </span>expression = term
+<a href=#191 id=191 data-nosnippet>191</a>      | expression addop term =&gt; infix_apply_nary
+<a href=#192 id=192 data-nosnippet>192</a>      | expression addop term elideop =&gt; infix_apply_and_elide
+<a href=#193 id=193 data-nosnippet>193</a>      | addop tight_term =&gt; prefix_apply
+<a href=#194 id=194 data-nosnippet>194</a>      | factor addop =&gt; postfix_apply
+<a href=#195 id=195 data-nosnippet>195</a>      | expression addop =&gt; postfix_apply
+<a href=#196 id=196 data-nosnippet>196</a>      <span class="comment">// Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression
+<a href=#197 id=197 data-nosnippet>197</a>      // =&gt; Apply(modifierop, expr, expr2). Handles infix `a mod b`.
+<a href=#198 id=198 data-nosnippet>198</a>      </span>| expression modifierop expression =&gt; infix_apply
+<a href=#199 id=199 data-nosnippet>199</a>      <span class="comment">// Perl MathGrammar L236: addExpressionModifier: MODIFIER
+<a href=#200 id=200 data-nosnippet>200</a>      // Standalone postfix modifier (e.g. `8\pmod{3}` → annotated(8, pmod(3)))
+<a href=#201 id=201 data-nosnippet>201</a>      // Placed at expression level so MODIFIER binds BEFORE RELOP.
+<a href=#202 id=202 data-nosnippet>202</a>      // e.g. `5 ≡ 8 \pmod{3}` → `5 ≡ annotated(8, pmod(3))` not `annotated(5≡8, pmod(3))`
+<a href=#203 id=203 data-nosnippet>203</a>      </span>| expression modifier =&gt; postfix_modifier_apply
+<a href=#204 id=204 data-nosnippet>204</a>      <span class="comment">// Perl MathGrammar L224-233: OPEN relop/modifierop Expression balancedClose
+<a href=#205 id=205 data-nosnippet>205</a>      // Parenthesized modifier expressions: x(&gt;0) → annotated(x, Fence(&gt;0))
+<a href=#206 id=206 data-nosnippet>206</a>      </span>| expression lparen relop expression rparen =&gt; annotated_fenced_modifier
+<a href=#207 id=207 data-nosnippet>207</a>      | expression lparen modifierop expression rparen =&gt; annotated_fenced_modifier;
+<a href=#208 id=208 data-nosnippet>208</a>
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="comment">// Formula
+<a href=#210 id=210 data-nosnippet>210</a>    // Perl MathGrammar L73/236: MODIFIEROP Expression =&gt; Apply(mod, Absent, expr)
+<a href=#211 id=211 data-nosnippet>211</a>    </span>modifier_expression = modifierop expression =&gt; modifier_prefix_apply;
+<a href=#212 id=212 data-nosnippet>212</a>    <span class="comment">// Perl: within a Formula, comma-separated expressions after a relop form a list RHS.
+<a href=#213 id=213 data-nosnippet>213</a>    // e.g. a=b,c,d → a = list(b,c,d), not list(a=b, c, d).
+<a href=#214 id=214 data-nosnippet>214</a>    // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
+<a href=#215 id=215 data-nosnippet>215</a>    </span>formula_list = expression punct expression =&gt; formula_list_apply
+<a href=#216 id=216 data-nosnippet>216</a>      | formula_list punct expression =&gt; formula_list_apply;
+<a href=#217 id=217 data-nosnippet>217</a>    <span class="comment">// Comma-separated term lists: term, term, term, ...
+<a href=#218 id=218 data-nosnippet>218</a>    // Used for angle-bracket inner products &lt;x,y&gt;, &lt;a,b,c&gt;, etc.
+<a href=#219 id=219 data-nosnippet>219</a>    </span>term_list = term punct term =&gt; list_apply
+<a href=#220 id=220 data-nosnippet>220</a>      | term_list punct term =&gt; list_apply;
+<a href=#221 id=221 data-nosnippet>221</a>
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="comment">// Perl MathGrammar L709-711: Two-part relops (&gt;=, &lt;=, &lt;&lt;, &gt;&gt;)
+<a href=#223 id=223 data-nosnippet>223</a>    </span>two_part_relop = langle_rel langle_rel =&gt; two_part_relop_combine
+<a href=#224 id=224 data-nosnippet>224</a>      | rangle_rel rangle_rel =&gt; two_part_relop_combine
+<a href=#225 id=225 data-nosnippet>225</a>      | langle_rel relop_equals =&gt; two_part_relop_combine
+<a href=#226 id=226 data-nosnippet>226</a>      | rangle_rel relop_equals =&gt; two_part_relop_combine;
+<a href=#227 id=227 data-nosnippet>227</a>
+<a href=#228 id=228 data-nosnippet>228</a>    formula = expression
+<a href=#229 id=229 data-nosnippet>229</a>      | formula relop expression =&gt; infix_relation
+<a href=#230 id=230 data-nosnippet>230</a>      | formula two_part_relop expression =&gt; infix_relation
+<a href=#231 id=231 data-nosnippet>231</a>      | formula relop formula_list =&gt; infix_relation
+<a href=#232 id=232 data-nosnippet>232</a>      | formula relop =&gt; postfix_relop
+<a href=#233 id=233 data-nosnippet>233</a>      <span class="comment">// Perl moreRelations: `relop moreRelations` — consecutive relops chain without intervening terms
+<a href=#234 id=234 data-nosnippet>234</a>      // e.g. `A ∈ ∞ ∋` → the ∈ absorbs ∞, then ∋ appends to the chain (no absent)
+<a href=#235 id=235 data-nosnippet>235</a>      </span>| formula relop relop =&gt; consecutive_relop_chain
+<a href=#236 id=236 data-nosnippet>236</a>      | formula arrow expression =&gt; infix_relation
+<a href=#237 id=237 data-nosnippet>237</a>      | arrow expression =&gt; prefix_arrow_apply
+<a href=#238 id=238 data-nosnippet>238</a>      <span class="comment">// Arrow-wrapped content (from amscd XMWrap role="ARROW"):
+<a href=#239 id=239 data-nosnippet>239</a>      // Parsed as a prefix arrow application on the enclosed content.
+<a href=#240 id=240 data-nosnippet>240</a>      </span>| start_arrow arrow expression end_arrow =&gt; arrow_wrap_apply
+<a href=#241 id=241 data-nosnippet>241</a>      | start_arrow arrow end_arrow =&gt; arrow_wrap_solo
+<a href=#242 id=242 data-nosnippet>242</a>      <span class="comment">// Perl MathGrammar L81: AnyOp Expression =&gt; Apply(AnyOp, Absent(), Expression)
+<a href=#243 id=243 data-nosnippet>243</a>      // Leading relop with implied absent left operand (e.g. "= e + f + g" in eqnarray)
+<a href=#244 id=244 data-nosnippet>244</a>      </span>| relop expression =&gt; prefix_relop_apply
+<a href=#245 id=245 data-nosnippet>245</a>      | metarelop expression =&gt; prefix_relop_apply
+<a href=#246 id=246 data-nosnippet>246</a>      | modifier_expression;
+<a href=#247 id=247 data-nosnippet>247</a>
+<a href=#248 id=248 data-nosnippet>248</a>    <span class="comment">// Perl MathGrammar: Factor includes preScripted['bigop'] as standalone
+<a href=#249 id=249 data-nosnippet>249</a>    // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
+<a href=#250 id=250 data-nosnippet>250</a>    </span>statement = formula
+<a href=#251 id=251 data-nosnippet>251</a>      | statement metarelop formula =&gt; infix_relation
+<a href=#252 id=252 data-nosnippet>252</a>      | metarelop formula =&gt; prefix_metarelop_apply
+<a href=#253 id=253 data-nosnippet>253</a>      | any_bigop | composed_bigop
+<a href=#254 id=254 data-nosnippet>254</a>      | operator | compound_operator
+<a href=#255 id=255 data-nosnippet>255</a>      | function | trigfunction
+<a href=#256 id=256 data-nosnippet>256</a>      <span class="comment">// Bare operators can form comma-separated lists: +,-,×
+<a href=#257 id=257 data-nosnippet>257</a>      </span>| addop | mulop | binop | relop | arrow
+<a href=#258 id=258 data-nosnippet>258</a>;
+<a href=#259 id=259 data-nosnippet>259</a>
+<a href=#260 id=260 data-nosnippet>260</a>    end_punct = punct | period;
+<a href=#261 id=261 data-nosnippet>261</a>    statements = statement
+<a href=#262 id=262 data-nosnippet>262</a>      | statement end_punct =&gt; postfix_embellished
+<a href=#263 id=263 data-nosnippet>263</a>      | statements punct statement =&gt; list_apply
+<a href=#264 id=264 data-nosnippet>264</a>      <span class="comment">// Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
+<a href=#265 id=265 data-nosnippet>265</a>      </span>| statement vertbar statements =&gt; vertbar_modifier;
+<a href=#266 id=266 data-nosnippet>266</a>
+<a href=#267 id=267 data-nosnippet>267</a>    <span class="comment">// Extensions, now that we have more category variables defined
+<a href=#268 id=268 data-nosnippet>268</a>    </span>fenced_factor = lbrace expression rbrace    =&gt; fenced
+<a href=#269 id=269 data-nosnippet>269</a>           | lbracket expression rbracket       =&gt; fenced
+<a href=#270 id=270 data-nosnippet>270</a>           | lparen formula rparen              =&gt; fenced
+<a href=#271 id=271 data-nosnippet>271</a>           <span class="comment">// Angle brackets as delimiters: &lt;x,y&gt; for inner products, etc.
+<a href=#272 id=272 data-nosnippet>272</a>           // Old typesetting conventions used &lt; &gt; instead of \langle \rangle.
+<a href=#273 id=273 data-nosnippet>273</a>           // Uses term_list (comma-separated terms) to avoid matching complex
+<a href=#274 id=274 data-nosnippet>274</a>           // nested expressions. Only fires when content has commas.
+<a href=#275 id=275 data-nosnippet>275</a>           </span>| langle_rel term_list rangle_rel =&gt; fenced
+<a href=#276 id=276 data-nosnippet>276</a>           | lparen term punct term rparen      =&gt; interval
+<a href=#277 id=277 data-nosnippet>277</a>           | lparen term punct term rbracket    =&gt; interval
+<a href=#278 id=278 data-nosnippet>278</a>           | lbracket term punct term rbracket  =&gt; interval
+<a href=#279 id=279 data-nosnippet>279</a>           | lbracket term punct term rparen  =&gt; interval
+<a href=#280 id=280 data-nosnippet>280</a>           | rbracket term punct term lbracket =&gt; interval
+<a href=#281 id=281 data-nosnippet>281</a>           | singlevertbar expression singlevertbar =&gt; fenced
+<a href=#282 id=282 data-nosnippet>282</a>           <span class="comment">// Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
+<a href=#283 id=283 data-nosnippet>283</a>           </span>| lbrace term punct term rbrace =&gt; fence
+<a href=#284 id=284 data-nosnippet>284</a>           | lbrace term punct term punct term rbrace =&gt; fence
+<a href=#285 id=285 data-nosnippet>285</a>           <span class="comment">// Perl: {a|b} conditional-set with VERTBAR or MIDDLE separator
+<a href=#286 id=286 data-nosnippet>286</a>           </span>| lbrace formula singlevertbar formula rbrace =&gt; fence
+<a href=#287 id=287 data-nosnippet>287</a>           | lbrace formula middle_bar formula rbrace =&gt; fence
+<a href=#288 id=288 data-nosnippet>288</a>           | lbrace formula metarelop formula rbrace =&gt; fence
+<a href=#289 id=289 data-nosnippet>289</a>           <span class="comment">// Empty fenced expressions: () [] {} ⌊⌋ etc.
+<a href=#290 id=290 data-nosnippet>290</a>           </span>| lparen rparen =&gt; empty_fenced
+<a href=#291 id=291 data-nosnippet>291</a>           | lbracket rbracket =&gt; empty_fenced
+<a href=#292 id=292 data-nosnippet>292</a>           | lbrace rbrace =&gt; empty_fenced
+<a href=#293 id=293 data-nosnippet>293</a>           | open close =&gt; empty_fenced;
+<a href=#294 id=294 data-nosnippet>294</a>    factor += fenced_factor;
+<a href=#295 id=295 data-nosnippet>295</a>
+<a href=#296 id=296 data-nosnippet>296</a>    <span class="comment">// Perl: addTrigFunArgs → trigBarearg → aTrigBarearg moreTrigBareargs
+<a href=#297 id=297 data-nosnippet>297</a>    // Trig functions absorb chains of mulop+factor (but NOT other trig functions).
+<a href=#298 id=298 data-nosnippet>298</a>    // aTrigBarearg includes: FUNCTION+args, OPFUNCTION+args, ATOM_OR_ID, UNKNOWN, NUMBER
+<a href=#299 id=299 data-nosnippet>299</a>    </span>trig_arg = factor
+<a href=#300 id=300 data-nosnippet>300</a>      | fenced_factor
+<a href=#301 id=301 data-nosnippet>301</a>      | unknown fenced_factor =&gt; speculative_prefix_apply
+<a href=#302 id=302 data-nosnippet>302</a>      | function fenced_factor =&gt; prefix_apply
+<a href=#303 id=303 data-nosnippet>303</a>      | opfunction fenced_factor =&gt; prefix_apply
+<a href=#304 id=304 data-nosnippet>304</a>      <span class="comment">// Perl: trigBarearg includes FUNCTION/OPFUNCTION+args (chained function application)
+<a href=#305 id=305 data-nosnippet>305</a>      // Allows: \sin\log x → sin(log(x)), \sin\det A → sin(det(A))
+<a href=#306 id=306 data-nosnippet>306</a>      </span>| function factor =&gt; prefix_apply
+<a href=#307 id=307 data-nosnippet>307</a>      | opfunction factor =&gt; prefix_apply
+<a href=#308 id=308 data-nosnippet>308</a>      | trig_arg mulop factor =&gt; infix_apply_nary
+<a href=#309 id=309 data-nosnippet>309</a>      | trig_arg binop factor =&gt; infix_apply_nary
+<a href=#310 id=310 data-nosnippet>310</a>      | trig_arg factor =&gt; apply_invisible_times;
+<a href=#311 id=311 data-nosnippet>311</a>
+<a href=#312 id=312 data-nosnippet>312</a>    <span class="comment">// applied_func uses trig_arg (defined above)
+<a href=#313 id=313 data-nosnippet>313</a>    </span>applied_func = function tight_term =&gt; prefix_apply
+<a href=#314 id=314 data-nosnippet>314</a>      | trigfunction trig_arg =&gt; prefix_apply
+<a href=#315 id=315 data-nosnippet>315</a>      | opfunction tight_term =&gt; prefix_apply;
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="comment">// Standalone applied functions are also tight_terms
+<a href=#317 id=317 data-nosnippet>317</a>    </span>tight_term += applied_func;
+<a href=#318 id=318 data-nosnippet>318</a>    <span class="comment">// Function application results can chain with invisible times (Perl moreFactors)
+<a href=#319 id=319 data-nosnippet>319</a>    </span>tight_term += tight_term applied_func =&gt; apply_invisible_times;
+<a href=#320 id=320 data-nosnippet>320</a>
+<a href=#321 id=321 data-nosnippet>321</a>    <span class="comment">// UNKNOWN followed by fenced args =&gt; function application (Perl: doubtArgs/maybeArgs)
+<a href=#322 id=322 data-nosnippet>322</a>    // f(x) =&gt; f@(x), g(a+b) =&gt; g@(a+b). Only active when MATHPARSER_SPECULATE is set.
+<a href=#323 id=323 data-nosnippet>323</a>    // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
+<a href=#324 id=324 data-nosnippet>324</a>    // NOTE: ID tokens are multiplicative atoms — NEVER prefix-apply. Only UNKNOWN
+<a href=#325 id=325 data-nosnippet>325</a>    // tokens get speculative function application. ID always uses invisible-times.
+<a href=#326 id=326 data-nosnippet>326</a>    </span>tight_term += unknown fenced_factor =&gt; speculative_prefix_apply;
+<a href=#327 id=327 data-nosnippet>327</a>    <span class="comment">// FUNCTION followed by fenced args =&gt; function application (Perl: addArgs/addEasyArgs)
+<a href=#328 id=328 data-nosnippet>328</a>    // f(x) =&gt; f@(x) when f has role=FUNCTION (from DefMathRewrite or \lxDeclare).
+<a href=#329 id=329 data-nosnippet>329</a>    // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
+<a href=#330 id=330 data-nosnippet>330</a>    //        presentation=Apply(f, XMWrap(open, args, close))).
+<a href=#331 id=331 data-nosnippet>331</a>    // Grammar: function lparen/lbracket + formula + rparen/rbracket → apply_delimited
+<a href=#332 id=332 data-nosnippet>332</a>    </span>tight_term += function lparen formula rparen =&gt; apply_delimited;
+<a href=#333 id=333 data-nosnippet>333</a>    tight_term += function lbracket formula rbracket =&gt; apply_delimited;
+<a href=#334 id=334 data-nosnippet>334</a>    <span class="comment">// Also support fenced_factor for backwards compat (no XMDual wrapping)
+<a href=#335 id=335 data-nosnippet>335</a>    </span>tight_term += function fenced_factor =&gt; prefix_apply;
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="comment">// OPFUNCTION followed by fenced args =&gt; function application with XMDual wrapping.
+<a href=#337 id=337 data-nosnippet>337</a>    // Perl: ApplyDelimited for \operatorname{cov}(L), \log(x), etc.
+<a href=#338 id=338 data-nosnippet>338</a>    </span>tight_term += opfunction lparen formula rparen =&gt; apply_delimited;
+<a href=#339 id=339 data-nosnippet>339</a>    tight_term += opfunction lbracket formula rbracket =&gt; apply_delimited;
+<a href=#340 id=340 data-nosnippet>340</a>    <span class="comment">// Also support fenced_factor for backwards compat (no XMDual wrapping)
+<a href=#341 id=341 data-nosnippet>341</a>    </span>tight_term += opfunction fenced_factor =&gt; prefix_apply;
+<a href=#342 id=342 data-nosnippet>342</a>    <span class="comment">// Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
+<a href=#343 id=343 data-nosnippet>343</a>    // \log x =&gt; log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
+<a href=#344 id=344 data-nosnippet>344</a>    </span>tight_term += opfunction tight_term =&gt; prefix_apply;
+<a href=#345 id=345 data-nosnippet>345</a>    tight_term += opfunction factor =&gt; prefix_apply;
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="comment">// TRIGFUNCTION absorbs bare args: \sin x =&gt; sin@(x), \cos\pi =&gt; cos@(pi)
+<a href=#347 id=347 data-nosnippet>347</a>    // Note: trigfunction tight_term already in compound_operator, can't duplicate.
+<a href=#348 id=348 data-nosnippet>348</a>    </span>tight_term += trigfunction factor =&gt; prefix_apply;
+<a href=#349 id=349 data-nosnippet>349</a>    <span class="comment">// TRIGFUNCTION followed by fenced args =&gt; function application with XMDual wrapping.
+<a href=#350 id=350 data-nosnippet>350</a>    </span>tight_term += trigfunction lparen formula rparen =&gt; apply_delimited;
+<a href=#351 id=351 data-nosnippet>351</a>    tight_term += trigfunction lbracket formula rbracket =&gt; apply_delimited;
+<a href=#352 id=352 data-nosnippet>352</a>    tight_term += trigfunction fenced_factor =&gt; prefix_apply;
+<a href=#353 id=353 data-nosnippet>353</a>    <span class="comment">// Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID =&gt; Apply(DIFFOP(d), var)
+<a href=#354 id=354 data-nosnippet>354</a>    // Uses existing `unknown` terminal; semantic action checks text is literally "d".
+<a href=#355 id=355 data-nosnippet>355</a>    // At factor level so it can appear as right operand of invisible_times.
+<a href=#356 id=356 data-nosnippet>356</a>    </span>factor += unknown factor_base =&gt; diffop_apply;
+<a href=#357 id=357 data-nosnippet>357</a>
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="comment">// Bare operators valid as script content (e.g., Na^+ has ADDOP as superscript)
+<a href=#359 id=359 data-nosnippet>359</a>    </span>script_op = addop | mulop | binop | relop | arrow | metarelop
+<a href=#360 id=360 data-nosnippet>360</a>      | bigop | sumop | intop | limitop | diffop | vertbar | supop
+<a href=#361 id=361 data-nosnippet>361</a>      | modifierop | operator;
+<a href=#362 id=362 data-nosnippet>362</a>    <span class="comment">// Script content: expressions or bare operators
+<a href=#363 id=363 data-nosnippet>363</a>    </span>postsubarg = start_postsubscript expression end_postsubscript =&gt; faux_wrap
+<a href=#364 id=364 data-nosnippet>364</a>      | start_postsubscript script_op end_postsubscript =&gt; faux_wrap;
+<a href=#365 id=365 data-nosnippet>365</a>    postsuperarg = start_postsuperscript expression end_postsuperscript =&gt; faux_wrap
+<a href=#366 id=366 data-nosnippet>366</a>      | start_postsuperscript script_op end_postsuperscript =&gt; faux_wrap;
+<a href=#367 id=367 data-nosnippet>367</a>    floatsubarg = start_floatsubscript expression end_floatsubscript =&gt; faux_wrap
+<a href=#368 id=368 data-nosnippet>368</a>      | start_floatsubscript script_op end_floatsubscript =&gt; faux_wrap;
+<a href=#369 id=369 data-nosnippet>369</a>    floatsuperarg = start_floatsuperscript expression end_floatsuperscript =&gt; faux_wrap
+<a href=#370 id=370 data-nosnippet>370</a>      | start_floatsuperscript script_op end_floatsuperscript =&gt; faux_wrap;
+<a href=#371 id=371 data-nosnippet>371</a>    <span class="comment">// standalone top-level variants of floating scripts:
+<a href=#372 id=372 data-nosnippet>372</a>    </span>floatsubscript = start_floatsubscript expression end_floatsubscript =&gt; standalone_script;
+<a href=#373 id=373 data-nosnippet>373</a>    floatsuperscript = start_floatsuperscript expression end_floatsuperscript =&gt; standalone_script;
+<a href=#374 id=374 data-nosnippet>374</a>    <span class="comment">// Scripted factors -- avoid adding ambiguity in the left-right order of collection
+<a href=#375 id=375 data-nosnippet>375</a>    // first ALL left (=float), then right (=post).
+<a href=#376 id=376 data-nosnippet>376</a>    </span>scripted_factor_l11 = floatsuperarg factor_base =&gt; prefix_script
+<a href=#377 id=377 data-nosnippet>377</a>      | floatsuperarg opfunction =&gt; prefix_script;
+<a href=#378 id=378 data-nosnippet>378</a>    scripted_factor_l12 = floatsubarg factor_base =&gt; prefix_script
+<a href=#379 id=379 data-nosnippet>379</a>      | floatsubarg opfunction =&gt; prefix_script;
+<a href=#380 id=380 data-nosnippet>380</a>    scripted_factor_l1 = scripted_factor_l11 | scripted_factor_l12;
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="comment">// POST script used as pre-script on factor (forced 'pre', no _wasfloat)
+<a href=#382 id=382 data-nosnippet>382</a>    // e.g., {}_a^b x: ^b is POST, used as pre-script on x
+<a href=#383 id=383 data-nosnippet>383</a>    </span>prescripted_factor_post_r = postsuperarg factor_base =&gt; prefix_script_pre
+<a href=#384 id=384 data-nosnippet>384</a>      | postsuperarg opfunction =&gt; prefix_script_pre;
+<a href=#385 id=385 data-nosnippet>385</a>    prescripted_factor_post_l = postsubarg factor_base =&gt; prefix_script_pre
+<a href=#386 id=386 data-nosnippet>386</a>      | postsubarg opfunction =&gt; prefix_script_pre;
+<a href=#387 id=387 data-nosnippet>387</a>    scripted_factor_l2 = floatsuperarg scripted_factor_l12 =&gt; prefix_script
+<a href=#388 id=388 data-nosnippet>388</a>      | floatsubarg scripted_factor_l11 =&gt; prefix_script
+<a href=#389 id=389 data-nosnippet>389</a>      <span class="comment">// Mixed FLOAT+POST from same {} base: FLOAT wraps POST pre-script
+<a href=#390 id=390 data-nosnippet>390</a>      </span>| floatsubarg prescripted_factor_post_r =&gt; prefix_script
+<a href=#391 id=391 data-nosnippet>391</a>      | floatsuperarg prescripted_factor_post_l =&gt; prefix_script
+<a href=#392 id=392 data-nosnippet>392</a>      <span class="comment">// Recursive: chain 3+ floating scripts on factor (e.g., {}_i{}_j^k x)
+<a href=#393 id=393 data-nosnippet>393</a>      </span>| floatsuperarg scripted_factor_l2 =&gt; prefix_script
+<a href=#394 id=394 data-nosnippet>394</a>      | floatsubarg scripted_factor_l2 =&gt; prefix_script;
+<a href=#395 id=395 data-nosnippet>395</a>
+<a href=#396 id=396 data-nosnippet>396</a>    scripted_factor_r11 = factor_base postsuperarg =&gt; postfix_script
+<a href=#397 id=397 data-nosnippet>397</a>      | opfunction postsuperarg =&gt; postfix_script
+<a href=#398 id=398 data-nosnippet>398</a>      | any_bigop postsuperarg =&gt; postfix_script
+<a href=#399 id=399 data-nosnippet>399</a>      | scripted_factor_l1 postsuperarg =&gt; postfix_script
+<a href=#400 id=400 data-nosnippet>400</a>      | scripted_factor_l2 postsuperarg =&gt; postfix_script
+<a href=#401 id=401 data-nosnippet>401</a>      | fenced_factor postsuperarg =&gt; postfix_script;
+<a href=#402 id=402 data-nosnippet>402</a>    scripted_factor_r12 = factor_base postsubarg =&gt; postfix_script
+<a href=#403 id=403 data-nosnippet>403</a>      | opfunction postsubarg =&gt; postfix_script
+<a href=#404 id=404 data-nosnippet>404</a>      | any_bigop postsubarg =&gt; postfix_script
+<a href=#405 id=405 data-nosnippet>405</a>      | scripted_factor_l1 postsubarg =&gt; postfix_script
+<a href=#406 id=406 data-nosnippet>406</a>      | scripted_factor_l2 postsubarg =&gt; postfix_script
+<a href=#407 id=407 data-nosnippet>407</a>      | fenced_factor postsubarg =&gt; postfix_script;
+<a href=#408 id=408 data-nosnippet>408</a>    scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
+<a href=#409 id=409 data-nosnippet>409</a>    scripted_factor_r2 = scripted_factor_r12 postsuperarg =&gt; postfix_script
+<a href=#410 id=410 data-nosnippet>410</a>      | scripted_factor_r11 postsubarg =&gt; postfix_script;
+<a href=#411 id=411 data-nosnippet>411</a>    factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
+<a href=#412 id=412 data-nosnippet>412</a>
+<a href=#413 id=413 data-nosnippet>413</a>    <span class="comment">// Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
+<a href=#414 id=414 data-nosnippet>414</a>    // These are bigops with post-scripts that still act as prefix operators.
+<a href=#415 id=415 data-nosnippet>415</a>    // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs
+<a href=#416 id=416 data-nosnippet>416</a>    // Chain scripts: first sub then super, or vice versa (like scripted_factor_r1/r2)
+<a href=#417 id=417 data-nosnippet>417</a>    </span>scripted_bigop_r1 = any_bigop postsuperarg =&gt; postfix_script
+<a href=#418 id=418 data-nosnippet>418</a>      | any_bigop postsubarg =&gt; postfix_script;
+<a href=#419 id=419 data-nosnippet>419</a>    scripted_bigop = scripted_bigop_r1
+<a href=#420 id=420 data-nosnippet>420</a>      | scripted_bigop_r1 postsuperarg =&gt; postfix_script
+<a href=#421 id=421 data-nosnippet>421</a>      | scripted_bigop_r1 postsubarg =&gt; postfix_script;
+<a href=#422 id=422 data-nosnippet>422</a>    <span class="comment">// Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
+<a href=#423 id=423 data-nosnippet>423</a>    // moreOpArgFactors chains factors with MulOp or invisible times.
+<a href=#424 id=424 data-nosnippet>424</a>    //
+<a href=#425 id=425 data-nosnippet>425</a>    // bigop_application is a dedicated nonterminal that:
+<a href=#426 id=426 data-nosnippet>426</a>    // - Acts as tight_term on the LEFT (2∫ works via invisible times)
+<a href=#427 id=427 data-nosnippet>427</a>    // - Absorbs full factor chains on the RIGHT (∫ x² dx → ∫(x²*dx))
+<a href=#428 id=428 data-nosnippet>428</a>    // - Does NOT recurse back into tight_term → bigop cycle (avoids ambiguity)
+<a href=#429 id=429 data-nosnippet>429</a>    //
+<a href=#430 id=430 data-nosnippet>430</a>    // Once inside bigop_application, invisible_times and mulop extend the
+<a href=#431 id=431 data-nosnippet>431</a>    // argument chain without re-entering the bigop dispatch.
+<a href=#432 id=432 data-nosnippet>432</a>    </span>bigop_application = any_bigop term =&gt; prefix_apply
+<a href=#433 id=433 data-nosnippet>433</a>      | scripted_bigop term =&gt; prefix_apply
+<a href=#434 id=434 data-nosnippet>434</a>      | composed_bigop term =&gt; prefix_apply;
+<a href=#435 id=435 data-nosnippet>435</a>    <span class="comment">// Lift into expression: bigop_application is asymmetric.
+<a href=#436 id=436 data-nosnippet>436</a>    // On its LEFT, it acts as a term (2∫ x dx → 2 * ∫(x*dx) via term*bigop).
+<a href=#437 id=437 data-nosnippet>437</a>    // On its RIGHT, it already absorbed the full term — nothing chains after.
+<a href=#438 id=438 data-nosnippet>438</a>    // At expression level, addop/relop can follow: ∫ x dx + y → ∫(x*dx) + y.
+<a href=#439 id=439 data-nosnippet>439</a>    </span>expression += bigop_application;
+<a href=#440 id=440 data-nosnippet>440</a>    expression += term mulop bigop_application =&gt; apply_invisible_times;
+<a href=#441 id=441 data-nosnippet>441</a>    expression += term bigop_application =&gt; apply_invisible_times;
+<a href=#442 id=442 data-nosnippet>442</a>    <span class="comment">// Scripted bigops can also appear as standalone statements
+<a href=#443 id=443 data-nosnippet>443</a>    </span>statement += scripted_bigop;
+<a href=#444 id=444 data-nosnippet>444</a>
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="comment">// Pre-scripted bigops: floating scripts before a bigop (Perl: preScripted)
+<a href=#446 id=446 data-nosnippet>446</a>    // Handles patterns like {}_a^b\sum_c^d x where floating scripts
+<a href=#447 id=447 data-nosnippet>447</a>    // attach as pre-scripts to the following operator.
+<a href=#448 id=448 data-nosnippet>448</a>    // Perl's parse_kludgeScripts_rec: FLOAT + POST pairs from same {} base
+<a href=#449 id=449 data-nosnippet>449</a>    // both become pre-scripts (POST gets forced 'pre' position without _wasfloat).
+<a href=#450 id=450 data-nosnippet>450</a>    </span>prescripted_bigop_inner = scripted_bigop | scripted_bigop_r1 | any_bigop;
+<a href=#451 id=451 data-nosnippet>451</a>    <span class="comment">// FLOAT script wrapping a bigop as pre-script
+<a href=#452 id=452 data-nosnippet>452</a>    // Perl: preScripted['bigop'] / preScripted['INTOP']
+<a href=#453 id=453 data-nosnippet>453</a>    </span>prescripted_bigop = floatsuperarg prescripted_bigop_inner =&gt; prefix_script
+<a href=#454 id=454 data-nosnippet>454</a>      | floatsubarg prescripted_bigop_inner =&gt; prefix_script
+<a href=#455 id=455 data-nosnippet>455</a>      <span class="comment">// Recursive: chain multiple floating scripts before bigop
+<a href=#456 id=456 data-nosnippet>456</a>      </span>| floatsuperarg prescripted_bigop =&gt; prefix_script
+<a href=#457 id=457 data-nosnippet>457</a>      | floatsubarg prescripted_bigop =&gt; prefix_script;
+<a href=#458 id=458 data-nosnippet>458</a>    <span class="comment">// POST script used as pre-script (forced 'pre', no _wasfloat).
+<a href=#459 id=459 data-nosnippet>459</a>    // Only used INSIDE prescripted_bigop (always FLOAT-wrapped outside),
+<a href=#460 id=460 data-nosnippet>460</a>    // so they can't incorrectly match bare post-scripts as pre-scripts.
+<a href=#461 id=461 data-nosnippet>461</a>    // Perl: parse_kludgeScripts_rec calls NewScript($base, $y, 'pre') for POST
+<a href=#462 id=462 data-nosnippet>462</a>    // scripts that follow a FLOAT from the same empty {} base.
+<a href=#463 id=463 data-nosnippet>463</a>    </span>prescripted_bigop += postsuperarg prescripted_bigop_inner =&gt; prefix_script_pre
+<a href=#464 id=464 data-nosnippet>464</a>      | postsubarg prescripted_bigop_inner =&gt; prefix_script_pre
+<a href=#465 id=465 data-nosnippet>465</a>      | postsuperarg prescripted_bigop =&gt; prefix_script_pre
+<a href=#466 id=466 data-nosnippet>466</a>      | postsubarg prescripted_bigop =&gt; prefix_script_pre;
+<a href=#467 id=467 data-nosnippet>467</a>    tight_term += prescripted_bigop tight_term =&gt; prefix_apply;
+<a href=#468 id=468 data-nosnippet>468</a>    tight_term += prescripted_bigop factor =&gt; prefix_apply;
+<a href=#469 id=469 data-nosnippet>469</a>    statement += prescripted_bigop;
+<a href=#470 id=470 data-nosnippet>470</a>
+<a href=#471 id=471 data-nosnippet>471</a>    anyop = addop | mulop | binop | relop | arrow | metarelop
+<a href=#472 id=472 data-nosnippet>472</a>      | bigop | sumop | intop
+<a href=#473 id=473 data-nosnippet>473</a>      | limitop | diffop | vertbar | supop
+<a href=#474 id=474 data-nosnippet>474</a>      | modifierop | composed_bigop | operator | compound_operator;
+<a href=#475 id=475 data-nosnippet>475</a>
+<a href=#476 id=476 data-nosnippet>476</a>    anyscript = floatsuperscript | floatsubscript
+<a href=#477 id=477 data-nosnippet>477</a>      <span class="comment">// Standalone floating script pairs (no base: {}^c_d or {}_d^c)
+<a href=#478 id=478 data-nosnippet>478</a>      // Perl: NewScript(NewScript(Absent(), super, 'post'), sub, 'post')
+<a href=#479 id=479 data-nosnippet>479</a>      </span>| floatsuperscript postsubarg =&gt; postfix_script
+<a href=#480 id=480 data-nosnippet>480</a>      | floatsubscript postsuperarg =&gt; postfix_script;
+<a href=#481 id=481 data-nosnippet>481</a>
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="comment">// Operators that CANNOT start a valid expression — leading orphans
+<a href=#483 id=483 data-nosnippet>483</a>    // from tabular fragments where LHS is on a preceding row.
+<a href=#484 id=484 data-nosnippet>484</a>    // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
+<a href=#485 id=485 data-nosnippet>485</a>    // These already have valid prefix interpretations inside expressions.
+<a href=#486 id=486 data-nosnippet>486</a>    </span>orphan_op = mulop | binop | diffop | supop | modifierop;
+<a href=#487 id=487 data-nosnippet>487</a>    anything = statements | anyop | anyscript |
+<a href=#488 id=488 data-nosnippet>488</a>      anyop anyop =&gt; compound_operator_2 |
+<a href=#489 id=489 data-nosnippet>489</a>      <span class="comment">// Perl MathGrammar L81: leading orphan operator (tabular fragment).
+<a href=#490 id=490 data-nosnippet>490</a>      // Only at the start rule (anything) — not recursive, not inside subexpressions.
+<a href=#491 id=491 data-nosnippet>491</a>      </span>orphan_op statements =&gt; prefix_relop_apply
+<a href=#492 id=492 data-nosnippet>492</a>  );
+<a href=#493 id=493 data-nosnippet>493</a>  <span class="comment">// | term_argument postsuperarg tex_argument  =&gt; post_script
+<a href=#494 id=494 data-nosnippet>494</a>  // | term_argument postsubscript tex_argument    =&gt; post_script
+<a href=#495 id=495 data-nosnippet>495</a>  </span><span class="macro">start!</span>(anything);
+<a href=#496 id=496 data-nosnippet>496</a>
+<a href=#497 id=497 data-nosnippet>497</a>  <span class="comment">// Also prepare the tree builder rules here (for now)
+<a href=#498 id=498 data-nosnippet>498</a>  </span><span class="prelude-val">Ok</span>((<span class="macro">grammar!</span>(), <span class="macro">actions!</span>(), <span class="macro">builder!</span>()))
+<a href=#499 id=499 data-nosnippet>499</a>}
 </code></pre></div></section></main></body></html>

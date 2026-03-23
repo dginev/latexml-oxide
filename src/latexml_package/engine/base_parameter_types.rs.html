@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/base_parameter_types.rs`."><title>base_parameter_types.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (20f19f461 2026-03-21)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>base_parameter_types.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Base Parameter Types
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/base_parameter_types.rs`."><title>base_parameter_types.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (562dee482 2026-03-21)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>base_parameter_types.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Base Parameter Types
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -632,346 +632,369 @@
 <a href=#632 id=632 data-nosnippet>632</a>  // in order to correctly deal with catcodes.
 <a href=#633 id=633 data-nosnippet>633</a>  // BEWARE: This is NOT a shorthand for a simple digested {}!
 <a href=#634 id=634 data-nosnippet>634</a>
-<a href=#635 id=635 data-nosnippet>635</a>  //TODO: Refactor and add TeXDelimiter
-<a href=#636 id=636 data-nosnippet>636</a>  </span><span class="macro">DefParameterType!</span>(Digested, sub[_inner, _extra] {
-<a href=#637 id=637 data-nosnippet>637</a>      gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#638 id=638 data-nosnippet>638</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-<a href=#639 id=639 data-nosnippet>639</a>    },
-<a href=#640 id=640 data-nosnippet>640</a>    predigest =&gt; sub[_arg] {
-<a href=#641 id=641 data-nosnippet>641</a>      <span class="kw">let </span>ismath = lookup_bool(<span class="string">"IN_MATH"</span>);
-<a href=#642 id=642 data-nosnippet>642</a>      <span class="kw">let </span><span class="kw-2">mut </span>list = Vec::new();
-<a href=#643 id=643 data-nosnippet>643</a>      <span class="kw">let </span><span class="kw-2">mut </span>next_token = <span class="prelude-val">None</span>;
-<a href=#644 id=644 data-nosnippet>644</a>      <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
-<a href=#645 id=645 data-nosnippet>645</a>        <span class="kw">let </span>is_last = token.get_catcode() != Catcode::SPACE &amp;&amp; token != <span class="macro">T_RELAX!</span>();
-<a href=#646 id=646 data-nosnippet>646</a>        next_token = <span class="prelude-val">Some</span>(token);
-<a href=#647 id=647 data-nosnippet>647</a>        <span class="kw">if </span>is_last {
-<a href=#648 id=648 data-nosnippet>648</a>          <span class="kw">break</span>;
-<a href=#649 id=649 data-nosnippet>649</a>        }
-<a href=#650 id=650 data-nosnippet>650</a>      }
-<a href=#651 id=651 data-nosnippet>651</a>
-<a href=#652 id=652 data-nosnippet>652</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = next_token {
-<a href=#653 id=653 data-nosnippet>653</a>        <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
-<a href=#654 id=654 data-nosnippet>654</a>          stomach::digest(token)<span class="question-mark">?</span>;
-<a href=#655 id=655 data-nosnippet>655</a>          list.extend(stomach::digest_next_body(<span class="prelude-val">None</span>)<span class="question-mark">?</span>);
-<a href=#656 id=656 data-nosnippet>656</a>          list.pop();
-<a href=#657 id=657 data-nosnippet>657</a>        } <span class="kw">else </span>{
-<a href=#658 id=658 data-nosnippet>658</a>          list = stomach::invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-<a href=#659 id=659 data-nosnippet>659</a>        }
-<a href=#660 id=660 data-nosnippet>660</a>      }
-<a href=#661 id=661 data-nosnippet>661</a>
-<a href=#662 id=662 data-nosnippet>662</a>      list.retain(|tbox| ! <span class="macro">matches!</span>(tbox.data(), DigestedData::Comment(<span class="kw">_</span>)));
-<a href=#663 id=663 data-nosnippet>663</a>      <span class="kw">let </span>mode = <span class="prelude-val">Some</span>(<span class="kw">if </span>ismath { TexMode::Math } <span class="kw">else </span>{ TexMode::Text });
-<a href=#664 id=664 data-nosnippet>664</a>      List { boxes:list,  mode, ..List::default() }
-<a href=#665 id=665 data-nosnippet>665</a>    },
-<a href=#666 id=666 data-nosnippet>666</a>    reversion =&gt; sub[args,_inner,_extra] {
-<a href=#667 id=667 data-nosnippet>667</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(args).revert(), <span class="macro">T_END!</span>())) }
-<a href=#668 id=668 data-nosnippet>668</a>  );
-<a href=#669 id=669 data-nosnippet>669</a>
-<a href=#670 id=670 data-nosnippet>670</a>  <span class="comment">// A variation: Digest until we encounter a given token!
-<a href=#671 id=671 data-nosnippet>671</a>  // DefParameterType!(DigestUntil, sub[_inner, _untils] {
-<a href=#672 id=672 data-nosnippet>672</a>  //     gullet::skip_spaces()?;
-<a href=#673 id=673 data-nosnippet>673</a>  //     Ok(Tokens!())
-<a href=#674 id=674 data-nosnippet>674</a>  //   },
-<a href=#675 id=675 data-nosnippet>675</a>  //   // TODO: To implement this natively, we need "untils" i.e.
-<a href=#676 id=676 data-nosnippet>676</a>  //   // "extra" passed into "predigest" as well.
-<a href=#677 id=677 data-nosnippet>677</a>  //   predigest =&gt; {
-<a href=#678 id=678 data-nosnippet>678</a>  //     todo!();
-<a href=#679 id=679 data-nosnippet>679</a>  //     //   let ismath = lookup_bool("IN_MATH");
-<a href=#680 id=680 data-nosnippet>680</a>  //     //   stomach::digest_next_body(Some(until))?
-<a href=#681 id=681 data-nosnippet>681</a>  //   //   my @list   = $state-&gt;getStomach-&gt;digestNextBody($until);
-<a href=#682 id=682 data-nosnippet>682</a>  //   //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
-<a href=#683 id=683 data-nosnippet>683</a>  //   //   List(@list, mode =&gt; ($ismath ? 'math' : 'text'));
-<a href=#684 id=684 data-nosnippet>684</a>  //     ()
-<a href=#685 id=685 data-nosnippet>685</a>  //   },
-<a href=#686 id=686 data-nosnippet>686</a>  //   reversion =&gt; sub[args,_inner,_extra] {
-<a href=#687 id=687 data-nosnippet>687</a>  //     Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) }
-<a href=#688 id=688 data-nosnippet>688</a>  // );
-<a href=#689 id=689 data-nosnippet>689</a>
-<a href=#690 id=690 data-nosnippet>690</a>  // Reads until the current group has ended.
-<a href=#691 id=691 data-nosnippet>691</a>  // This is useful for environment-like constructs,
-<a href=#692 id=692 data-nosnippet>692</a>  // particularly alignments (which may or may not be actual environments),
-<a href=#693 id=693 data-nosnippet>693</a>  // but which need special treatment of some of their content
-<a href=#694 id=694 data-nosnippet>694</a>  // as the expansion is carried out.
-<a href=#695 id=695 data-nosnippet>695</a>  </span><span class="macro">DefParameterType!</span>(DigestedBody, sub[__inner, _extra] {
-<a href=#696 id=696 data-nosnippet>696</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) <span class="comment">// all done in predigestion
-<a href=#697 id=697 data-nosnippet>697</a>    </span>},
-<a href=#698 id=698 data-nosnippet>698</a>    predigest =&gt; {
-<a href=#699 id=699 data-nosnippet>699</a>      <span class="kw">let </span>ismath   = lookup_bool(<span class="string">"IN_MATH"</span>);
-<a href=#700 id=700 data-nosnippet>700</a>      <span class="kw">let </span><span class="kw-2">mut </span>list     = stomach::digest_next_body(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#701 id=701 data-nosnippet>701</a>      <span class="comment">// In most (all?) cases, we're really looking for a single Whatsit here...
-<a href=#702 id=702 data-nosnippet>702</a>      </span>list.retain(|tbox| !tbox.is_comment());
-<a href=#703 id=703 data-nosnippet>703</a>      <span class="kw">let </span><span class="kw-2">mut </span>digested = List::new(list);
-<a href=#704 id=704 data-nosnippet>704</a>      digested.mode = <span class="kw">if </span>ismath { <span class="prelude-val">Some</span>(TexMode::Math) } <span class="kw">else </span>{ <span class="prelude-val">Some</span>(TexMode::Text) };
-<a href=#705 id=705 data-nosnippet>705</a>      digested
-<a href=#706 id=706 data-nosnippet>706</a>    }
-<a href=#707 id=707 data-nosnippet>707</a>  );
-<a href=#708 id=708 data-nosnippet>708</a>
-<a href=#709 id=709 data-nosnippet>709</a>  <span class="comment">// In addition to the standard TeX Dimension, there are various LaTeX constructs
-<a href=#710 id=710 data-nosnippet>710</a>  // (particularly, the LaTeX picture environment, and the various pstricks packages)
-<a href=#711 id=711 data-nosnippet>711</a>  // that take a different sort of length.  They differ in two ways.
-<a href=#712 id=712 data-nosnippet>712</a>  //   (1) They do not accept a comma as decimal separator
-<a href=#713 id=713 data-nosnippet>713</a>  //      (they generally use it to separate coordinates), and
-<a href=#714 id=714 data-nosnippet>714</a>  //   (2) They accept a plain float which is scaled against a Dimension register.
-<a href=#715 id=715 data-nosnippet>715</a>  //      Actually, there are two subcases:
-<a href=#716 id=716 data-nosnippet>716</a>  //     (a) picture accepts a float, which is scaled against \unitlength
-<a href=#717 id=717 data-nosnippet>717</a>  //     (b) pstricks accepts a float, and optionally a unit,
-<a href=#718 id=718 data-nosnippet>718</a>  //        If the unit is omitted, it is relative to \psxunit or \psyunit.
-<a href=#719 id=719 data-nosnippet>719</a>  // How to capture these ?
-<a href=#720 id=720 data-nosnippet>720</a>  //DefParameterType!(Length, sub {
-<a href=#721 id=721 data-nosnippet>721</a>  ////   my($gullet,$unit)=@_;
-<a href=#722 id=722 data-nosnippet>722</a>
-<a href=#723 id=723 data-nosnippet>723</a>  // CommaList expects something like {balancedstuff,...}
-<a href=#724 id=724 data-nosnippet>724</a>  </span><span class="macro">DefParameterType!</span>(CommaList, sub[__inner, _extra] {
-<a href=#725 id=725 data-nosnippet>725</a>      <span class="comment">// my ($gullet, $type) = @_;
-<a href=#726 id=726 data-nosnippet>726</a>      // my $typedef = $type &amp;&amp;
-<a href=#727 id=727 data-nosnippet>727</a>      //       LaTeXML::Package::parseParameters(ToString($type), "CommaList")-&gt;[0];
-<a href=#728 id=728 data-nosnippet>728</a>      // my @items = ();
-<a href=#729 id=729 data-nosnippet>729</a>      // if ($gullet-&gt;ifNext(T_BEGIN)) {
-<a href=#730 id=730 data-nosnippet>730</a>      //   $gullet-&gt;readToken;
-<a href=#731 id=731 data-nosnippet>731</a>      //   my @tokens = ();
-<a href=#732 id=732 data-nosnippet>732</a>      //   my $comma  = T_OTHER(',');
-<a href=#733 id=733 data-nosnippet>733</a>      //   while (my $token = $gullet-&gt;readToken) {
-<a href=#734 id=734 data-nosnippet>734</a>      //     my $cc = $token-&gt;getCatcode;
-<a href=#735 id=735 data-nosnippet>735</a>      //     if ($cc == CC_END) {
-<a href=#736 id=736 data-nosnippet>736</a>      //       push(@items, Tokens(@tokens));
-<a href=#737 id=737 data-nosnippet>737</a>      //       last; }
-<a href=#738 id=738 data-nosnippet>738</a>      //     elsif ($token-&gt;equals($comma)) {
-<a href=#739 id=739 data-nosnippet>739</a>      //       push(@items, Tokens(@tokens)); @tokens = (); }
-<a href=#740 id=740 data-nosnippet>740</a>      //     elsif ($cc == CC_BEGIN) {
-<a href=#741 id=741 data-nosnippet>741</a>      //       push(@tokens, $token, $gullet-&gt;readBalanced-&gt;unlist, T_END); }
-<a href=#742 id=742 data-nosnippet>742</a>      //     else {
-<a href=#743 id=743 data-nosnippet>743</a>      //       push(@tokens, $token); } }
-<a href=#744 id=744 data-nosnippet>744</a>      //   if ($typedef) {
-<a href=#745 id=745 data-nosnippet>745</a>      //     @items = map { [$typedef-&gt;reparseArgument($gullet, $_)]-&gt;[0] } @items; } }
-<a href=#746 id=746 data-nosnippet>746</a>      // else {
-<a href=#747 id=747 data-nosnippet>747</a>      //   # If no brace, just read one item or token, but still make Array!
-<a href=#748 id=748 data-nosnippet>748</a>      //   push(@items, ($typedef ? $typedef-&gt;readArguments($gullet, "CommaList")
-<a href=#749 id=749 data-nosnippet>749</a>      //       : ($gullet-&gt;readToken))); }
-<a href=#750 id=750 data-nosnippet>750</a>      // LaTeXML::Core::Array-&gt;new(open =&gt; T_BEGIN, close =&gt; T_END, type =&gt; $typedef,
-<a href=#751 id=751 data-nosnippet>751</a>      //   values =&gt; [@items]); });
-<a href=#752 id=752 data-nosnippet>752</a>      // Stub: CommaList parameter type not yet ported
-<a href=#753 id=753 data-nosnippet>753</a>      </span><span class="macro">Tokens!</span>()
-<a href=#754 id=754 data-nosnippet>754</a>  });
-<a href=#755 id=755 data-nosnippet>755</a>
-<a href=#756 id=756 data-nosnippet>756</a>  <span class="comment">// Support for Key / Value arguments.
-<a href=#757 id=757 data-nosnippet>757</a>  // The very basic form is
-<a href=#758 id=758 data-nosnippet>758</a>  //   RequiredKeyVals: $keyset
-<a href=#759 id=759 data-nosnippet>759</a>  //   OptionalKeyVals: $keyset
-<a href=#760 id=760 data-nosnippet>760</a>  // to parse Key-Value pairs from a given keyset (see the 'keyval' package
-<a href=#761 id=761 data-nosnippet>761</a>  // documentation for more information). These types of KeyVal
-<a href=#762 id=762 data-nosnippet>762</a>  // parameters will return a LaTeXML::Core::KeyVals object, which can then be
-<a href=#763 id=763 data-nosnippet>763</a>  // used to access the values of the individual items.
-<a href=#764 id=764 data-nosnippet>764</a>  // The difference between the two forms is that RequiredKeyVals expects a set of
-<a href=#765 id=765 data-nosnippet>765</a>  // key-value pairs wrapped in T_BEGIN T_END, where as OptionalKeyVals optionally
-<a href=#766 id=766 data-nosnippet>766</a>  // expects a set of KeyValue pairs wrapped in T_OTHER('[') T_OTHER(']')
-<a href=#767 id=767 data-nosnippet>767</a>  //
-<a href=#768 id=768 data-nosnippet>768</a>  // Several extension of the keyval package exist, the most common one we support
-<a href=#769 id=769 data-nosnippet>769</a>  // is the xkeyval package. This introduces further variations on the keyval
-<a href=#770 id=770 data-nosnippet>770</a>  // arguments parsing, in particular it allows to read keys from more than one
-<a href=#771 id=771 data-nosnippet>771</a>  // keyset at once. These can be specified by giving comma-seperated values in
-<a href=#772 id=772 data-nosnippet>772</a>  // the keyset argument. By default, a key will only be set in the **first**
-<a href=#773 id=773 data-nosnippet>773</a>  // keyset it occurs in. By using
-<a href=#774 id=774 data-nosnippet>774</a>  //   RequiredKeyVals+: $keysets
-<a href=#775 id=775 data-nosnippet>775</a>  //   OptionalKeyVals+: $keysets
-<a href=#776 id=776 data-nosnippet>776</a>  // the key will be set in all keysets instead.
-<a href=#777 id=777 data-nosnippet>777</a>  //
-<a href=#778 id=778 data-nosnippet>778</a>  // All keys to be parsed with these arguments should be declared using
-<a href=#779 id=779 data-nosnippet>779</a>  // DefKeyVal in LaTeXML::Package. By default, an error is thrown if an unknown
-<a href=#780 id=780 data-nosnippet>780</a>  // key is encountered. To surpress this behaviour, and instead store all
-<a href=#781 id=781 data-nosnippet>781</a>  // undefined keys, use
-<a href=#782 id=782 data-nosnippet>782</a>  //   RequiredKeyVals*: $keysets
-<a href=#783 id=783 data-nosnippet>783</a>  //   OptionalKeyVals*: $keysets
-<a href=#784 id=784 data-nosnippet>784</a>  // instead. The '*' and '+' modifiers can be combined by using:
-<a href=#785 id=785 data-nosnippet>785</a>  //   RequiredKeyVals*+: $keysets
-<a href=#786 id=786 data-nosnippet>786</a>  //   OptionalKeyVals*+: $keysets
-<a href=#787 id=787 data-nosnippet>787</a>  //
-<a href=#788 id=788 data-nosnippet>788</a>  // Furthermore, the xkeyval package supports giving prefixes to keys,
-<a href=#789 id=789 data-nosnippet>789</a>  //   RequiredKeyVals[*][+]: $prefix|$keysets
-<a href=#790 id=790 data-nosnippet>790</a>  //   OptionalKeyVals[*][+]: $prefix|$keysets
-<a href=#791 id=791 data-nosnippet>791</a>  //
-<a href=#792 id=792 data-nosnippet>792</a>  // Finally, it is possible to specify specific keys to skip when digesting the
-<a href=#793 id=793 data-nosnippet>793</a>  // object. This can be achieved using comma-seperated key values in
-<a href=#794 id=794 data-nosnippet>794</a>  //   RequiredKeyVals[*][+]: $prefix|$keysets|$skip
-<a href=#795 id=795 data-nosnippet>795</a>  //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
-<a href=#796 id=796 data-nosnippet>796</a>
-<a href=#797 id=797 data-nosnippet>797</a>  </span><span class="kw">pub fn </span>required_key_vals(
-<a href=#798 id=798 data-nosnippet>798</a>    star: bool,
-<a href=#799 id=799 data-nosnippet>799</a>    plus: bool,
-<a href=#800 id=800 data-nosnippet>800</a>    _inner: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;,
-<a href=#801 id=801 data-nosnippet>801</a>    extra: <span class="kw-2">&amp;</span>[Tokens],
-<a href=#802 id=802 data-nosnippet>802</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;KeyVals&gt; {
-<a href=#803 id=803 data-nosnippet>803</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_BEGIN!</span>())<span class="question-mark">? </span>{
-<a href=#804 id=804 data-nosnippet>804</a>      <span class="kw">let </span><span class="kw-2">mut </span>extra_iter = extra.iter();
-<a href=#805 id=805 data-nosnippet>805</a>      <span class="comment">// subtle!!! The first extra is the prefix, according to the Perl use.
-<a href=#806 id=806 data-nosnippet>806</a>      </span><span class="kw">let </span>prefix = extra_iter.next().map(ToString::to_string);
-<a href=#807 id=807 data-nosnippet>807</a>      <span class="comment">// TODO: is the last extra field actually a "skip" ? Example?
-<a href=#808 id=808 data-nosnippet>808</a>      </span><span class="kw">let </span>keysets = extra_iter.map(ToString::to_string).collect();
-<a href=#809 id=809 data-nosnippet>809</a>      keyvals_aux(<span class="prelude-val">Some</span>(<span class="macro">T_END!</span>()), KVSpec {
-<a href=#810 id=810 data-nosnippet>810</a>        star,
-<a href=#811 id=811 data-nosnippet>811</a>        plus,
-<a href=#812 id=812 data-nosnippet>812</a>        prefix,
-<a href=#813 id=813 data-nosnippet>813</a>        keysets,
-<a href=#814 id=814 data-nosnippet>814</a>        ..KVSpec::default()
-<a href=#815 id=815 data-nosnippet>815</a>      })
-<a href=#816 id=816 data-nosnippet>816</a>    } <span class="kw">else </span>{
-<a href=#817 id=817 data-nosnippet>817</a>      <span class="macro">Error!</span>(<span class="string">"Expected"</span>, <span class="string">"{"</span>, <span class="string">"Missing keyval arguments"</span>);
-<a href=#818 id=818 data-nosnippet>818</a>      <span class="prelude-val">Ok</span>(KeyVals::default())
-<a href=#819 id=819 data-nosnippet>819</a>    }
-<a href=#820 id=820 data-nosnippet>820</a>  }
-<a href=#821 id=821 data-nosnippet>821</a>
-<a href=#822 id=822 data-nosnippet>822</a>  <span class="macro">DefParameterType!</span>(RequiredKeyVals, sub[inner, extra] {
-<a href=#823 id=823 data-nosnippet>823</a>    required_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, extra)
-<a href=#824 id=824 data-nosnippet>824</a>  },
-<a href=#825 id=825 data-nosnippet>825</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#826 id=826 data-nosnippet>826</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-<a href=#827 id=827 data-nosnippet>827</a>  });
-<a href=#828 id=828 data-nosnippet>828</a>  <span class="macro">DefParameterType!</span>(RequiredKeyValsStar, sub[inner, extra] {
-<a href=#829 id=829 data-nosnippet>829</a>    required_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, extra)
-<a href=#830 id=830 data-nosnippet>830</a>  },
-<a href=#831 id=831 data-nosnippet>831</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#832 id=832 data-nosnippet>832</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-<a href=#833 id=833 data-nosnippet>833</a>  });
-<a href=#834 id=834 data-nosnippet>834</a>  <span class="macro">DefParameterType!</span>(RequiredKeyValsPlus, sub[inner, extra] {
-<a href=#835 id=835 data-nosnippet>835</a>    required_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, extra)
-<a href=#836 id=836 data-nosnippet>836</a>  },
-<a href=#837 id=837 data-nosnippet>837</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#838 id=838 data-nosnippet>838</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-<a href=#839 id=839 data-nosnippet>839</a>  });
-<a href=#840 id=840 data-nosnippet>840</a>  <span class="macro">DefParameterType!</span>(RequiredKeyValsStarPlus, sub[inner, extra] {
-<a href=#841 id=841 data-nosnippet>841</a>    required_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, extra)
-<a href=#842 id=842 data-nosnippet>842</a>  }, reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#843 id=843 data-nosnippet>843</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-<a href=#844 id=844 data-nosnippet>844</a>  });
-<a href=#845 id=845 data-nosnippet>845</a>
-<a href=#846 id=846 data-nosnippet>846</a>  <span class="kw">pub fn </span>optional_key_vals(
-<a href=#847 id=847 data-nosnippet>847</a>    star: bool,
-<a href=#848 id=848 data-nosnippet>848</a>    plus: bool,
-<a href=#849 id=849 data-nosnippet>849</a>    _inner: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;,
-<a href=#850 id=850 data-nosnippet>850</a>    extra: <span class="kw-2">&amp;</span>[Tokens],
-<a href=#851 id=851 data-nosnippet>851</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;KeyVals&gt;&gt; {
-<a href=#852 id=852 data-nosnippet>852</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))<span class="question-mark">? </span>{
-<a href=#853 id=853 data-nosnippet>853</a>      <span class="kw">let </span><span class="kw-2">mut </span>extra_iter = extra.iter();
-<a href=#854 id=854 data-nosnippet>854</a>      <span class="comment">// subtle!!! The first extra is the prefix, according to the Perl use.
-<a href=#855 id=855 data-nosnippet>855</a>      </span><span class="kw">let </span>prefix = extra_iter.next().map(ToString::to_string);
-<a href=#856 id=856 data-nosnippet>856</a>      <span class="comment">// TODO: is the last extra field actually a "skip" ? Example?
-<a href=#857 id=857 data-nosnippet>857</a>      </span><span class="kw">let </span>keysets = extra_iter.map(ToString::to_string).collect();
-<a href=#858 id=858 data-nosnippet>858</a>      <span class="kw">let </span>kvs: KeyVals = keyvals_aux(<span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)), KVSpec {
-<a href=#859 id=859 data-nosnippet>859</a>        star,
-<a href=#860 id=860 data-nosnippet>860</a>        plus,
-<a href=#861 id=861 data-nosnippet>861</a>        prefix,
-<a href=#862 id=862 data-nosnippet>862</a>        keysets,
-<a href=#863 id=863 data-nosnippet>863</a>        ..KVSpec::default()
-<a href=#864 id=864 data-nosnippet>864</a>      })<span class="question-mark">?</span>;
-<a href=#865 id=865 data-nosnippet>865</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(kvs))
-<a href=#866 id=866 data-nosnippet>866</a>    } <span class="kw">else </span>{
-<a href=#867 id=867 data-nosnippet>867</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#868 id=868 data-nosnippet>868</a>    }
-<a href=#869 id=869 data-nosnippet>869</a>  }
-<a href=#870 id=870 data-nosnippet>870</a>
-<a href=#871 id=871 data-nosnippet>871</a>  <span class="macro">DefParameterType!</span>(OptionalKeyVals, sub[inner, extra] {
-<a href=#872 id=872 data-nosnippet>872</a>    optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, extra)
-<a href=#873 id=873 data-nosnippet>873</a>  }, optional=&gt;<span class="bool-val">true</span>,
-<a href=#874 id=874 data-nosnippet>874</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#875 id=875 data-nosnippet>875</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>), Tokens::new(arg).revert(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
-<a href=#876 id=876 data-nosnippet>876</a>  });
-<a href=#877 id=877 data-nosnippet>877</a>  <span class="macro">DefParameterType!</span>(OptionalKeyValsStar, sub[inner, extra] {
-<a href=#878 id=878 data-nosnippet>878</a>    optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, extra)
-<a href=#879 id=879 data-nosnippet>879</a>  }, optional=&gt;<span class="bool-val">true</span>,
-<a href=#880 id=880 data-nosnippet>880</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#881 id=881 data-nosnippet>881</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>), Tokens::new(arg).revert(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
-<a href=#882 id=882 data-nosnippet>882</a>  });
-<a href=#883 id=883 data-nosnippet>883</a>  <span class="macro">DefParameterType!</span>(OptionalKeyValsPlus, sub[inner, extra] {
-<a href=#884 id=884 data-nosnippet>884</a>    optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, extra)
-<a href=#885 id=885 data-nosnippet>885</a>  }, optional=&gt;<span class="bool-val">true</span>,
-<a href=#886 id=886 data-nosnippet>886</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#887 id=887 data-nosnippet>887</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>), Tokens::new(arg).revert(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
-<a href=#888 id=888 data-nosnippet>888</a>  });
-<a href=#889 id=889 data-nosnippet>889</a>  <span class="macro">DefParameterType!</span>(OptionalKeyValsPlusStar, sub[inner, extra] {
-<a href=#890 id=890 data-nosnippet>890</a>    optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, extra)
-<a href=#891 id=891 data-nosnippet>891</a>  }, optional=&gt;<span class="bool-val">true</span>,
-<a href=#892 id=892 data-nosnippet>892</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#893 id=893 data-nosnippet>893</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>), Tokens::new(arg).revert(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
-<a href=#894 id=894 data-nosnippet>894</a>  });
-<a href=#895 id=895 data-nosnippet>895</a>
-<a href=#896 id=896 data-nosnippet>896</a>  <span class="comment">// Not sure that this is the most elegant solution, but...
-<a href=#897 id=897 data-nosnippet>897</a>  // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
-<a href=#898 id=898 data-nosnippet>898</a>  </span><span class="macro">DefParameterType!</span>(DisplayStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
-<a href=#899 id=899 data-nosnippet>899</a>  before_digest =&gt; {
-<a href=#900 id=900 data-nosnippet>900</a>    bgroup();
-<a href=#901 id=901 data-nosnippet>901</a>    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"display"</span>);
-<a href=#902 id=902 data-nosnippet>902</a>  },
-<a href=#903 id=903 data-nosnippet>903</a>  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
-<a href=#904 id=904 data-nosnippet>904</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#905 id=905 data-nosnippet>905</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-<a href=#906 id=906 data-nosnippet>906</a>  });
-<a href=#907 id=907 data-nosnippet>907</a>  <span class="macro">DefParameterType!</span>(TextStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
-<a href=#908 id=908 data-nosnippet>908</a>  before_digest =&gt; {
-<a href=#909 id=909 data-nosnippet>909</a>    bgroup();
-<a href=#910 id=910 data-nosnippet>910</a>    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"text"</span>);
-<a href=#911 id=911 data-nosnippet>911</a>  },
-<a href=#912 id=912 data-nosnippet>912</a>  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
-<a href=#913 id=913 data-nosnippet>913</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#914 id=914 data-nosnippet>914</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-<a href=#915 id=915 data-nosnippet>915</a>  });
-<a href=#916 id=916 data-nosnippet>916</a>  <span class="macro">DefParameterType!</span>(ScriptStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
-<a href=#917 id=917 data-nosnippet>917</a>  before_digest =&gt; {
-<a href=#918 id=918 data-nosnippet>918</a>    bgroup();
-<a href=#919 id=919 data-nosnippet>919</a>    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"script"</span>);
-<a href=#920 id=920 data-nosnippet>920</a>  },
-<a href=#921 id=921 data-nosnippet>921</a>  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
-<a href=#922 id=922 data-nosnippet>922</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#923 id=923 data-nosnippet>923</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-<a href=#924 id=924 data-nosnippet>924</a>  });
-<a href=#925 id=925 data-nosnippet>925</a>  <span class="comment">// # Perverse naming convention: not script style, but in the style of a script relative to
-<a href=#926 id=926 data-nosnippet>926</a>  // current.
-<a href=#927 id=927 data-nosnippet>927</a>  </span><span class="macro">DefParameterType!</span>(InScriptStyle, sub[_inner, _extra] {
-<a href=#928 id=928 data-nosnippet>928</a>    gullet::read_arg(ExpansionLevel::Off) },
-<a href=#929 id=929 data-nosnippet>929</a>  before_digest =&gt; {
-<a href=#930 id=930 data-nosnippet>930</a>    bgroup();
-<a href=#931 id=931 data-nosnippet>931</a>    <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
-<a href=#932 id=932 data-nosnippet>932</a>  },
-<a href=#933 id=933 data-nosnippet>933</a>  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
-<a href=#934 id=934 data-nosnippet>934</a>  reversion =&gt; sub[arg, _inner, _extra] {
-<a href=#935 id=935 data-nosnippet>935</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
-<a href=#936 id=936 data-nosnippet>936</a>  });
-<a href=#937 id=937 data-nosnippet>937</a>  <span class="comment">// # NOTE: the various parameter features don't combine easily!!
-<a href=#938 id=938 data-nosnippet>938</a>  // # I need a ScriptStyleUntil for \root!!!
-<a href=#939 id=939 data-nosnippet>939</a>  // # I also need to redo fractions using these new types....
-<a href=#940 id=940 data-nosnippet>940</a>  </span><span class="macro">DefParameterType!</span>(OptionalInScriptStyle, sub[_inner, _extra] {
-<a href=#941 id=941 data-nosnippet>941</a>    gullet::read_optional(<span class="prelude-val">None</span>)
-<a href=#942 id=942 data-nosnippet>942</a>  },
-<a href=#943 id=943 data-nosnippet>943</a>  before_digest =&gt; {
-<a href=#944 id=944 data-nosnippet>944</a>    bgroup();
-<a href=#945 id=945 data-nosnippet>945</a>    <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
-<a href=#946 id=946 data-nosnippet>946</a>  },
-<a href=#947 id=947 data-nosnippet>947</a>  after_digest =&gt; {
-<a href=#948 id=948 data-nosnippet>948</a>    egroup()<span class="question-mark">?</span>;
-<a href=#949 id=949 data-nosnippet>949</a>  },
-<a href=#950 id=950 data-nosnippet>950</a>  optional =&gt; <span class="bool-val">true</span>,
-<a href=#951 id=951 data-nosnippet>951</a>  reversion =&gt; sub[arg,_inner,_extra] {
-<a href=#952 id=952 data-nosnippet>952</a>    <span class="kw">if </span>arg.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
-<a href=#953 id=953 data-nosnippet>953</a>    <span class="kw">else </span>{
-<a href=#954 id=954 data-nosnippet>954</a>      <span class="kw">let </span><span class="kw-2">mut </span>tks = <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"["</span>)];
-<a href=#955 id=955 data-nosnippet>955</a>      tks.extend(arg.into_iter().map(|t| t.revert()));
-<a href=#956 id=956 data-nosnippet>956</a>      tks.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
-<a href=#957 id=957 data-nosnippet>957</a>      <span class="prelude-val">Ok</span>(Tokens::new(tks))
-<a href=#958 id=958 data-nosnippet>958</a>    }
+<a href=#635 id=635 data-nosnippet>635</a>  // Perl PR#2596: TeXDelimiter parameter type for \left, \right, \big, \bigl, etc.
+<a href=#636 id=636 data-nosnippet>636</a>  // Reads like {} (balanced group) for correct math digestion, but reverts WITHOUT braces.
+<a href=#637 id=637 data-nosnippet>637</a>  // Also: unwraps one level of braces, replaces "." with \lx@delimiterdot hint.
+<a href=#638 id=638 data-nosnippet>638</a>  </span><span class="macro">DefParameterType!</span>(TeXDelimiter, sub[_inner, _extra] {
+<a href=#639 id=639 data-nosnippet>639</a>    gullet::skip_filler()<span class="question-mark">?</span>;
+<a href=#640 id=640 data-nosnippet>640</a>    gullet::read_arg(ExpansionLevel::Partial)
+<a href=#641 id=641 data-nosnippet>641</a>  },
+<a href=#642 id=642 data-nosnippet>642</a>  digested_reversion =&gt; sub[arg] {
+<a href=#643 id=643 data-nosnippet>643</a>    <span class="comment">// Revert without adding braces (unlike {} parameter)
+<a href=#644 id=644 data-nosnippet>644</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>toks = arg.revert()<span class="question-mark">?</span>;
+<a href=#645 id=645 data-nosnippet>645</a>    <span class="comment">// Strip outer braces if present from the reversion
+<a href=#646 id=646 data-nosnippet>646</a>    </span><span class="kw">let </span>list = toks.unlist_ref();
+<a href=#647 id=647 data-nosnippet>647</a>    <span class="kw">if </span>list.len() &gt;= <span class="number">2
+<a href=#648 id=648 data-nosnippet>648</a>      </span>&amp;&amp; list.first().map(|t| t.get_catcode()) == <span class="prelude-val">Some</span>(Catcode::BEGIN)
+<a href=#649 id=649 data-nosnippet>649</a>      &amp;&amp; list.last().map(|t| t.get_catcode()) == <span class="prelude-val">Some</span>(Catcode::END)
+<a href=#650 id=650 data-nosnippet>650</a>    {
+<a href=#651 id=651 data-nosnippet>651</a>      <span class="comment">// Return inner content without braces
+<a href=#652 id=652 data-nosnippet>652</a>      </span><span class="kw">let </span>inner: Vec&lt;Token&gt; = list[<span class="number">1</span>..list.len()-<span class="number">1</span>].to_vec();
+<a href=#653 id=653 data-nosnippet>653</a>      <span class="prelude-val">Ok</span>(Tokens::from(inner))
+<a href=#654 id=654 data-nosnippet>654</a>    } <span class="kw">else </span>{
+<a href=#655 id=655 data-nosnippet>655</a>      <span class="prelude-val">Ok</span>(toks)
+<a href=#656 id=656 data-nosnippet>656</a>    }
+<a href=#657 id=657 data-nosnippet>657</a>  });
+<a href=#658 id=658 data-nosnippet>658</a>
+<a href=#659 id=659 data-nosnippet>659</a>  <span class="macro">DefParameterType!</span>(Digested, sub[_inner, _extra] {
+<a href=#660 id=660 data-nosnippet>660</a>      gullet::skip_spaces()<span class="question-mark">?</span>;
+<a href=#661 id=661 data-nosnippet>661</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+<a href=#662 id=662 data-nosnippet>662</a>    },
+<a href=#663 id=663 data-nosnippet>663</a>    predigest =&gt; sub[_arg] {
+<a href=#664 id=664 data-nosnippet>664</a>      <span class="kw">let </span>ismath = lookup_bool(<span class="string">"IN_MATH"</span>);
+<a href=#665 id=665 data-nosnippet>665</a>      <span class="kw">let </span><span class="kw-2">mut </span>list = Vec::new();
+<a href=#666 id=666 data-nosnippet>666</a>      <span class="kw">let </span><span class="kw-2">mut </span>next_token = <span class="prelude-val">None</span>;
+<a href=#667 id=667 data-nosnippet>667</a>      <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+<a href=#668 id=668 data-nosnippet>668</a>        <span class="kw">let </span>is_last = token.get_catcode() != Catcode::SPACE &amp;&amp; token != <span class="macro">T_RELAX!</span>();
+<a href=#669 id=669 data-nosnippet>669</a>        next_token = <span class="prelude-val">Some</span>(token);
+<a href=#670 id=670 data-nosnippet>670</a>        <span class="kw">if </span>is_last {
+<a href=#671 id=671 data-nosnippet>671</a>          <span class="kw">break</span>;
+<a href=#672 id=672 data-nosnippet>672</a>        }
+<a href=#673 id=673 data-nosnippet>673</a>      }
+<a href=#674 id=674 data-nosnippet>674</a>
+<a href=#675 id=675 data-nosnippet>675</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = next_token {
+<a href=#676 id=676 data-nosnippet>676</a>        <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
+<a href=#677 id=677 data-nosnippet>677</a>          stomach::digest(token)<span class="question-mark">?</span>;
+<a href=#678 id=678 data-nosnippet>678</a>          list.extend(stomach::digest_next_body(<span class="prelude-val">None</span>)<span class="question-mark">?</span>);
+<a href=#679 id=679 data-nosnippet>679</a>          list.pop();
+<a href=#680 id=680 data-nosnippet>680</a>        } <span class="kw">else </span>{
+<a href=#681 id=681 data-nosnippet>681</a>          list = stomach::invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
+<a href=#682 id=682 data-nosnippet>682</a>        }
+<a href=#683 id=683 data-nosnippet>683</a>      }
+<a href=#684 id=684 data-nosnippet>684</a>
+<a href=#685 id=685 data-nosnippet>685</a>      list.retain(|tbox| ! <span class="macro">matches!</span>(tbox.data(), DigestedData::Comment(<span class="kw">_</span>)));
+<a href=#686 id=686 data-nosnippet>686</a>      <span class="kw">let </span>mode = <span class="prelude-val">Some</span>(<span class="kw">if </span>ismath { TexMode::Math } <span class="kw">else </span>{ TexMode::Text });
+<a href=#687 id=687 data-nosnippet>687</a>      List { boxes:list,  mode, ..List::default() }
+<a href=#688 id=688 data-nosnippet>688</a>    },
+<a href=#689 id=689 data-nosnippet>689</a>    reversion =&gt; sub[args,_inner,_extra] {
+<a href=#690 id=690 data-nosnippet>690</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(args).revert(), <span class="macro">T_END!</span>())) }
+<a href=#691 id=691 data-nosnippet>691</a>  );
+<a href=#692 id=692 data-nosnippet>692</a>
+<a href=#693 id=693 data-nosnippet>693</a>  <span class="comment">// A variation: Digest until we encounter a given token!
+<a href=#694 id=694 data-nosnippet>694</a>  // DefParameterType!(DigestUntil, sub[_inner, _untils] {
+<a href=#695 id=695 data-nosnippet>695</a>  //     gullet::skip_spaces()?;
+<a href=#696 id=696 data-nosnippet>696</a>  //     Ok(Tokens!())
+<a href=#697 id=697 data-nosnippet>697</a>  //   },
+<a href=#698 id=698 data-nosnippet>698</a>  //   // TODO: To implement this natively, we need "untils" i.e.
+<a href=#699 id=699 data-nosnippet>699</a>  //   // "extra" passed into "predigest" as well.
+<a href=#700 id=700 data-nosnippet>700</a>  //   predigest =&gt; {
+<a href=#701 id=701 data-nosnippet>701</a>  //     todo!();
+<a href=#702 id=702 data-nosnippet>702</a>  //     //   let ismath = lookup_bool("IN_MATH");
+<a href=#703 id=703 data-nosnippet>703</a>  //     //   stomach::digest_next_body(Some(until))?
+<a href=#704 id=704 data-nosnippet>704</a>  //   //   my @list   = $state-&gt;getStomach-&gt;digestNextBody($until);
+<a href=#705 id=705 data-nosnippet>705</a>  //   //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
+<a href=#706 id=706 data-nosnippet>706</a>  //   //   List(@list, mode =&gt; ($ismath ? 'math' : 'text'));
+<a href=#707 id=707 data-nosnippet>707</a>  //     ()
+<a href=#708 id=708 data-nosnippet>708</a>  //   },
+<a href=#709 id=709 data-nosnippet>709</a>  //   reversion =&gt; sub[args,_inner,_extra] {
+<a href=#710 id=710 data-nosnippet>710</a>  //     Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) }
+<a href=#711 id=711 data-nosnippet>711</a>  // );
+<a href=#712 id=712 data-nosnippet>712</a>
+<a href=#713 id=713 data-nosnippet>713</a>  // Reads until the current group has ended.
+<a href=#714 id=714 data-nosnippet>714</a>  // This is useful for environment-like constructs,
+<a href=#715 id=715 data-nosnippet>715</a>  // particularly alignments (which may or may not be actual environments),
+<a href=#716 id=716 data-nosnippet>716</a>  // but which need special treatment of some of their content
+<a href=#717 id=717 data-nosnippet>717</a>  // as the expansion is carried out.
+<a href=#718 id=718 data-nosnippet>718</a>  </span><span class="macro">DefParameterType!</span>(DigestedBody, sub[__inner, _extra] {
+<a href=#719 id=719 data-nosnippet>719</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) <span class="comment">// all done in predigestion
+<a href=#720 id=720 data-nosnippet>720</a>    </span>},
+<a href=#721 id=721 data-nosnippet>721</a>    predigest =&gt; {
+<a href=#722 id=722 data-nosnippet>722</a>      <span class="kw">let </span>ismath   = lookup_bool(<span class="string">"IN_MATH"</span>);
+<a href=#723 id=723 data-nosnippet>723</a>      <span class="kw">let </span><span class="kw-2">mut </span>list     = stomach::digest_next_body(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#724 id=724 data-nosnippet>724</a>      <span class="comment">// In most (all?) cases, we're really looking for a single Whatsit here...
+<a href=#725 id=725 data-nosnippet>725</a>      </span>list.retain(|tbox| !tbox.is_comment());
+<a href=#726 id=726 data-nosnippet>726</a>      <span class="kw">let </span><span class="kw-2">mut </span>digested = List::new(list);
+<a href=#727 id=727 data-nosnippet>727</a>      digested.mode = <span class="kw">if </span>ismath { <span class="prelude-val">Some</span>(TexMode::Math) } <span class="kw">else </span>{ <span class="prelude-val">Some</span>(TexMode::Text) };
+<a href=#728 id=728 data-nosnippet>728</a>      digested
+<a href=#729 id=729 data-nosnippet>729</a>    }
+<a href=#730 id=730 data-nosnippet>730</a>  );
+<a href=#731 id=731 data-nosnippet>731</a>
+<a href=#732 id=732 data-nosnippet>732</a>  <span class="comment">// In addition to the standard TeX Dimension, there are various LaTeX constructs
+<a href=#733 id=733 data-nosnippet>733</a>  // (particularly, the LaTeX picture environment, and the various pstricks packages)
+<a href=#734 id=734 data-nosnippet>734</a>  // that take a different sort of length.  They differ in two ways.
+<a href=#735 id=735 data-nosnippet>735</a>  //   (1) They do not accept a comma as decimal separator
+<a href=#736 id=736 data-nosnippet>736</a>  //      (they generally use it to separate coordinates), and
+<a href=#737 id=737 data-nosnippet>737</a>  //   (2) They accept a plain float which is scaled against a Dimension register.
+<a href=#738 id=738 data-nosnippet>738</a>  //      Actually, there are two subcases:
+<a href=#739 id=739 data-nosnippet>739</a>  //     (a) picture accepts a float, which is scaled against \unitlength
+<a href=#740 id=740 data-nosnippet>740</a>  //     (b) pstricks accepts a float, and optionally a unit,
+<a href=#741 id=741 data-nosnippet>741</a>  //        If the unit is omitted, it is relative to \psxunit or \psyunit.
+<a href=#742 id=742 data-nosnippet>742</a>  // How to capture these ?
+<a href=#743 id=743 data-nosnippet>743</a>  //DefParameterType!(Length, sub {
+<a href=#744 id=744 data-nosnippet>744</a>  ////   my($gullet,$unit)=@_;
+<a href=#745 id=745 data-nosnippet>745</a>
+<a href=#746 id=746 data-nosnippet>746</a>  // CommaList expects something like {balancedstuff,...}
+<a href=#747 id=747 data-nosnippet>747</a>  </span><span class="macro">DefParameterType!</span>(CommaList, sub[__inner, _extra] {
+<a href=#748 id=748 data-nosnippet>748</a>      <span class="comment">// my ($gullet, $type) = @_;
+<a href=#749 id=749 data-nosnippet>749</a>      // my $typedef = $type &amp;&amp;
+<a href=#750 id=750 data-nosnippet>750</a>      //       LaTeXML::Package::parseParameters(ToString($type), "CommaList")-&gt;[0];
+<a href=#751 id=751 data-nosnippet>751</a>      // my @items = ();
+<a href=#752 id=752 data-nosnippet>752</a>      // if ($gullet-&gt;ifNext(T_BEGIN)) {
+<a href=#753 id=753 data-nosnippet>753</a>      //   $gullet-&gt;readToken;
+<a href=#754 id=754 data-nosnippet>754</a>      //   my @tokens = ();
+<a href=#755 id=755 data-nosnippet>755</a>      //   my $comma  = T_OTHER(',');
+<a href=#756 id=756 data-nosnippet>756</a>      //   while (my $token = $gullet-&gt;readToken) {
+<a href=#757 id=757 data-nosnippet>757</a>      //     my $cc = $token-&gt;getCatcode;
+<a href=#758 id=758 data-nosnippet>758</a>      //     if ($cc == CC_END) {
+<a href=#759 id=759 data-nosnippet>759</a>      //       push(@items, Tokens(@tokens));
+<a href=#760 id=760 data-nosnippet>760</a>      //       last; }
+<a href=#761 id=761 data-nosnippet>761</a>      //     elsif ($token-&gt;equals($comma)) {
+<a href=#762 id=762 data-nosnippet>762</a>      //       push(@items, Tokens(@tokens)); @tokens = (); }
+<a href=#763 id=763 data-nosnippet>763</a>      //     elsif ($cc == CC_BEGIN) {
+<a href=#764 id=764 data-nosnippet>764</a>      //       push(@tokens, $token, $gullet-&gt;readBalanced-&gt;unlist, T_END); }
+<a href=#765 id=765 data-nosnippet>765</a>      //     else {
+<a href=#766 id=766 data-nosnippet>766</a>      //       push(@tokens, $token); } }
+<a href=#767 id=767 data-nosnippet>767</a>      //   if ($typedef) {
+<a href=#768 id=768 data-nosnippet>768</a>      //     @items = map { [$typedef-&gt;reparseArgument($gullet, $_)]-&gt;[0] } @items; } }
+<a href=#769 id=769 data-nosnippet>769</a>      // else {
+<a href=#770 id=770 data-nosnippet>770</a>      //   # If no brace, just read one item or token, but still make Array!
+<a href=#771 id=771 data-nosnippet>771</a>      //   push(@items, ($typedef ? $typedef-&gt;readArguments($gullet, "CommaList")
+<a href=#772 id=772 data-nosnippet>772</a>      //       : ($gullet-&gt;readToken))); }
+<a href=#773 id=773 data-nosnippet>773</a>      // LaTeXML::Core::Array-&gt;new(open =&gt; T_BEGIN, close =&gt; T_END, type =&gt; $typedef,
+<a href=#774 id=774 data-nosnippet>774</a>      //   values =&gt; [@items]); });
+<a href=#775 id=775 data-nosnippet>775</a>      // Stub: CommaList parameter type not yet ported
+<a href=#776 id=776 data-nosnippet>776</a>      </span><span class="macro">Tokens!</span>()
+<a href=#777 id=777 data-nosnippet>777</a>  });
+<a href=#778 id=778 data-nosnippet>778</a>
+<a href=#779 id=779 data-nosnippet>779</a>  <span class="comment">// Support for Key / Value arguments.
+<a href=#780 id=780 data-nosnippet>780</a>  // The very basic form is
+<a href=#781 id=781 data-nosnippet>781</a>  //   RequiredKeyVals: $keyset
+<a href=#782 id=782 data-nosnippet>782</a>  //   OptionalKeyVals: $keyset
+<a href=#783 id=783 data-nosnippet>783</a>  // to parse Key-Value pairs from a given keyset (see the 'keyval' package
+<a href=#784 id=784 data-nosnippet>784</a>  // documentation for more information). These types of KeyVal
+<a href=#785 id=785 data-nosnippet>785</a>  // parameters will return a LaTeXML::Core::KeyVals object, which can then be
+<a href=#786 id=786 data-nosnippet>786</a>  // used to access the values of the individual items.
+<a href=#787 id=787 data-nosnippet>787</a>  // The difference between the two forms is that RequiredKeyVals expects a set of
+<a href=#788 id=788 data-nosnippet>788</a>  // key-value pairs wrapped in T_BEGIN T_END, where as OptionalKeyVals optionally
+<a href=#789 id=789 data-nosnippet>789</a>  // expects a set of KeyValue pairs wrapped in T_OTHER('[') T_OTHER(']')
+<a href=#790 id=790 data-nosnippet>790</a>  //
+<a href=#791 id=791 data-nosnippet>791</a>  // Several extension of the keyval package exist, the most common one we support
+<a href=#792 id=792 data-nosnippet>792</a>  // is the xkeyval package. This introduces further variations on the keyval
+<a href=#793 id=793 data-nosnippet>793</a>  // arguments parsing, in particular it allows to read keys from more than one
+<a href=#794 id=794 data-nosnippet>794</a>  // keyset at once. These can be specified by giving comma-seperated values in
+<a href=#795 id=795 data-nosnippet>795</a>  // the keyset argument. By default, a key will only be set in the **first**
+<a href=#796 id=796 data-nosnippet>796</a>  // keyset it occurs in. By using
+<a href=#797 id=797 data-nosnippet>797</a>  //   RequiredKeyVals+: $keysets
+<a href=#798 id=798 data-nosnippet>798</a>  //   OptionalKeyVals+: $keysets
+<a href=#799 id=799 data-nosnippet>799</a>  // the key will be set in all keysets instead.
+<a href=#800 id=800 data-nosnippet>800</a>  //
+<a href=#801 id=801 data-nosnippet>801</a>  // All keys to be parsed with these arguments should be declared using
+<a href=#802 id=802 data-nosnippet>802</a>  // DefKeyVal in LaTeXML::Package. By default, an error is thrown if an unknown
+<a href=#803 id=803 data-nosnippet>803</a>  // key is encountered. To surpress this behaviour, and instead store all
+<a href=#804 id=804 data-nosnippet>804</a>  // undefined keys, use
+<a href=#805 id=805 data-nosnippet>805</a>  //   RequiredKeyVals*: $keysets
+<a href=#806 id=806 data-nosnippet>806</a>  //   OptionalKeyVals*: $keysets
+<a href=#807 id=807 data-nosnippet>807</a>  // instead. The '*' and '+' modifiers can be combined by using:
+<a href=#808 id=808 data-nosnippet>808</a>  //   RequiredKeyVals*+: $keysets
+<a href=#809 id=809 data-nosnippet>809</a>  //   OptionalKeyVals*+: $keysets
+<a href=#810 id=810 data-nosnippet>810</a>  //
+<a href=#811 id=811 data-nosnippet>811</a>  // Furthermore, the xkeyval package supports giving prefixes to keys,
+<a href=#812 id=812 data-nosnippet>812</a>  //   RequiredKeyVals[*][+]: $prefix|$keysets
+<a href=#813 id=813 data-nosnippet>813</a>  //   OptionalKeyVals[*][+]: $prefix|$keysets
+<a href=#814 id=814 data-nosnippet>814</a>  //
+<a href=#815 id=815 data-nosnippet>815</a>  // Finally, it is possible to specify specific keys to skip when digesting the
+<a href=#816 id=816 data-nosnippet>816</a>  // object. This can be achieved using comma-seperated key values in
+<a href=#817 id=817 data-nosnippet>817</a>  //   RequiredKeyVals[*][+]: $prefix|$keysets|$skip
+<a href=#818 id=818 data-nosnippet>818</a>  //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
+<a href=#819 id=819 data-nosnippet>819</a>
+<a href=#820 id=820 data-nosnippet>820</a>  </span><span class="kw">pub fn </span>required_key_vals(
+<a href=#821 id=821 data-nosnippet>821</a>    star: bool,
+<a href=#822 id=822 data-nosnippet>822</a>    plus: bool,
+<a href=#823 id=823 data-nosnippet>823</a>    _inner: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;,
+<a href=#824 id=824 data-nosnippet>824</a>    extra: <span class="kw-2">&amp;</span>[Tokens],
+<a href=#825 id=825 data-nosnippet>825</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;KeyVals&gt; {
+<a href=#826 id=826 data-nosnippet>826</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_BEGIN!</span>())<span class="question-mark">? </span>{
+<a href=#827 id=827 data-nosnippet>827</a>      <span class="kw">let </span><span class="kw-2">mut </span>extra_iter = extra.iter();
+<a href=#828 id=828 data-nosnippet>828</a>      <span class="comment">// subtle!!! The first extra is the prefix, according to the Perl use.
+<a href=#829 id=829 data-nosnippet>829</a>      </span><span class="kw">let </span>prefix = extra_iter.next().map(ToString::to_string);
+<a href=#830 id=830 data-nosnippet>830</a>      <span class="comment">// TODO: is the last extra field actually a "skip" ? Example?
+<a href=#831 id=831 data-nosnippet>831</a>      </span><span class="kw">let </span>keysets = extra_iter.map(ToString::to_string).collect();
+<a href=#832 id=832 data-nosnippet>832</a>      keyvals_aux(<span class="prelude-val">Some</span>(<span class="macro">T_END!</span>()), KVSpec {
+<a href=#833 id=833 data-nosnippet>833</a>        star,
+<a href=#834 id=834 data-nosnippet>834</a>        plus,
+<a href=#835 id=835 data-nosnippet>835</a>        prefix,
+<a href=#836 id=836 data-nosnippet>836</a>        keysets,
+<a href=#837 id=837 data-nosnippet>837</a>        ..KVSpec::default()
+<a href=#838 id=838 data-nosnippet>838</a>      })
+<a href=#839 id=839 data-nosnippet>839</a>    } <span class="kw">else </span>{
+<a href=#840 id=840 data-nosnippet>840</a>      <span class="macro">Error!</span>(<span class="string">"Expected"</span>, <span class="string">"{"</span>, <span class="string">"Missing keyval arguments"</span>);
+<a href=#841 id=841 data-nosnippet>841</a>      <span class="prelude-val">Ok</span>(KeyVals::default())
+<a href=#842 id=842 data-nosnippet>842</a>    }
+<a href=#843 id=843 data-nosnippet>843</a>  }
+<a href=#844 id=844 data-nosnippet>844</a>
+<a href=#845 id=845 data-nosnippet>845</a>  <span class="macro">DefParameterType!</span>(RequiredKeyVals, sub[inner, extra] {
+<a href=#846 id=846 data-nosnippet>846</a>    required_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, extra)
+<a href=#847 id=847 data-nosnippet>847</a>  },
+<a href=#848 id=848 data-nosnippet>848</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#849 id=849 data-nosnippet>849</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+<a href=#850 id=850 data-nosnippet>850</a>  });
+<a href=#851 id=851 data-nosnippet>851</a>  <span class="macro">DefParameterType!</span>(RequiredKeyValsStar, sub[inner, extra] {
+<a href=#852 id=852 data-nosnippet>852</a>    required_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, extra)
+<a href=#853 id=853 data-nosnippet>853</a>  },
+<a href=#854 id=854 data-nosnippet>854</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#855 id=855 data-nosnippet>855</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+<a href=#856 id=856 data-nosnippet>856</a>  });
+<a href=#857 id=857 data-nosnippet>857</a>  <span class="macro">DefParameterType!</span>(RequiredKeyValsPlus, sub[inner, extra] {
+<a href=#858 id=858 data-nosnippet>858</a>    required_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, extra)
+<a href=#859 id=859 data-nosnippet>859</a>  },
+<a href=#860 id=860 data-nosnippet>860</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#861 id=861 data-nosnippet>861</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+<a href=#862 id=862 data-nosnippet>862</a>  });
+<a href=#863 id=863 data-nosnippet>863</a>  <span class="macro">DefParameterType!</span>(RequiredKeyValsStarPlus, sub[inner, extra] {
+<a href=#864 id=864 data-nosnippet>864</a>    required_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, extra)
+<a href=#865 id=865 data-nosnippet>865</a>  }, reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#866 id=866 data-nosnippet>866</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+<a href=#867 id=867 data-nosnippet>867</a>  });
+<a href=#868 id=868 data-nosnippet>868</a>
+<a href=#869 id=869 data-nosnippet>869</a>  <span class="kw">pub fn </span>optional_key_vals(
+<a href=#870 id=870 data-nosnippet>870</a>    star: bool,
+<a href=#871 id=871 data-nosnippet>871</a>    plus: bool,
+<a href=#872 id=872 data-nosnippet>872</a>    _inner: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;,
+<a href=#873 id=873 data-nosnippet>873</a>    extra: <span class="kw-2">&amp;</span>[Tokens],
+<a href=#874 id=874 data-nosnippet>874</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;KeyVals&gt;&gt; {
+<a href=#875 id=875 data-nosnippet>875</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))<span class="question-mark">? </span>{
+<a href=#876 id=876 data-nosnippet>876</a>      <span class="kw">let </span><span class="kw-2">mut </span>extra_iter = extra.iter();
+<a href=#877 id=877 data-nosnippet>877</a>      <span class="comment">// subtle!!! The first extra is the prefix, according to the Perl use.
+<a href=#878 id=878 data-nosnippet>878</a>      </span><span class="kw">let </span>prefix = extra_iter.next().map(ToString::to_string);
+<a href=#879 id=879 data-nosnippet>879</a>      <span class="comment">// TODO: is the last extra field actually a "skip" ? Example?
+<a href=#880 id=880 data-nosnippet>880</a>      </span><span class="kw">let </span>keysets = extra_iter.map(ToString::to_string).collect();
+<a href=#881 id=881 data-nosnippet>881</a>      <span class="kw">let </span>kvs: KeyVals = keyvals_aux(<span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)), KVSpec {
+<a href=#882 id=882 data-nosnippet>882</a>        star,
+<a href=#883 id=883 data-nosnippet>883</a>        plus,
+<a href=#884 id=884 data-nosnippet>884</a>        prefix,
+<a href=#885 id=885 data-nosnippet>885</a>        keysets,
+<a href=#886 id=886 data-nosnippet>886</a>        ..KVSpec::default()
+<a href=#887 id=887 data-nosnippet>887</a>      })<span class="question-mark">?</span>;
+<a href=#888 id=888 data-nosnippet>888</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(kvs))
+<a href=#889 id=889 data-nosnippet>889</a>    } <span class="kw">else </span>{
+<a href=#890 id=890 data-nosnippet>890</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#891 id=891 data-nosnippet>891</a>    }
+<a href=#892 id=892 data-nosnippet>892</a>  }
+<a href=#893 id=893 data-nosnippet>893</a>
+<a href=#894 id=894 data-nosnippet>894</a>  <span class="macro">DefParameterType!</span>(OptionalKeyVals, sub[inner, extra] {
+<a href=#895 id=895 data-nosnippet>895</a>    optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, extra)
+<a href=#896 id=896 data-nosnippet>896</a>  }, optional=&gt;<span class="bool-val">true</span>,
+<a href=#897 id=897 data-nosnippet>897</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#898 id=898 data-nosnippet>898</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>), Tokens::new(arg).revert(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
+<a href=#899 id=899 data-nosnippet>899</a>  });
+<a href=#900 id=900 data-nosnippet>900</a>  <span class="macro">DefParameterType!</span>(OptionalKeyValsStar, sub[inner, extra] {
+<a href=#901 id=901 data-nosnippet>901</a>    optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, extra)
+<a href=#902 id=902 data-nosnippet>902</a>  }, optional=&gt;<span class="bool-val">true</span>,
+<a href=#903 id=903 data-nosnippet>903</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#904 id=904 data-nosnippet>904</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>), Tokens::new(arg).revert(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
+<a href=#905 id=905 data-nosnippet>905</a>  });
+<a href=#906 id=906 data-nosnippet>906</a>  <span class="macro">DefParameterType!</span>(OptionalKeyValsPlus, sub[inner, extra] {
+<a href=#907 id=907 data-nosnippet>907</a>    optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, extra)
+<a href=#908 id=908 data-nosnippet>908</a>  }, optional=&gt;<span class="bool-val">true</span>,
+<a href=#909 id=909 data-nosnippet>909</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#910 id=910 data-nosnippet>910</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>), Tokens::new(arg).revert(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
+<a href=#911 id=911 data-nosnippet>911</a>  });
+<a href=#912 id=912 data-nosnippet>912</a>  <span class="macro">DefParameterType!</span>(OptionalKeyValsPlusStar, sub[inner, extra] {
+<a href=#913 id=913 data-nosnippet>913</a>    optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, extra)
+<a href=#914 id=914 data-nosnippet>914</a>  }, optional=&gt;<span class="bool-val">true</span>,
+<a href=#915 id=915 data-nosnippet>915</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#916 id=916 data-nosnippet>916</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>), Tokens::new(arg).revert(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
+<a href=#917 id=917 data-nosnippet>917</a>  });
+<a href=#918 id=918 data-nosnippet>918</a>
+<a href=#919 id=919 data-nosnippet>919</a>  <span class="comment">// Not sure that this is the most elegant solution, but...
+<a href=#920 id=920 data-nosnippet>920</a>  // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
+<a href=#921 id=921 data-nosnippet>921</a>  </span><span class="macro">DefParameterType!</span>(DisplayStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
+<a href=#922 id=922 data-nosnippet>922</a>  before_digest =&gt; {
+<a href=#923 id=923 data-nosnippet>923</a>    bgroup();
+<a href=#924 id=924 data-nosnippet>924</a>    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"display"</span>);
+<a href=#925 id=925 data-nosnippet>925</a>  },
+<a href=#926 id=926 data-nosnippet>926</a>  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
+<a href=#927 id=927 data-nosnippet>927</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#928 id=928 data-nosnippet>928</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+<a href=#929 id=929 data-nosnippet>929</a>  });
+<a href=#930 id=930 data-nosnippet>930</a>  <span class="macro">DefParameterType!</span>(TextStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
+<a href=#931 id=931 data-nosnippet>931</a>  before_digest =&gt; {
+<a href=#932 id=932 data-nosnippet>932</a>    bgroup();
+<a href=#933 id=933 data-nosnippet>933</a>    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"text"</span>);
+<a href=#934 id=934 data-nosnippet>934</a>  },
+<a href=#935 id=935 data-nosnippet>935</a>  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
+<a href=#936 id=936 data-nosnippet>936</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#937 id=937 data-nosnippet>937</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+<a href=#938 id=938 data-nosnippet>938</a>  });
+<a href=#939 id=939 data-nosnippet>939</a>  <span class="macro">DefParameterType!</span>(ScriptStyle, sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
+<a href=#940 id=940 data-nosnippet>940</a>  before_digest =&gt; {
+<a href=#941 id=941 data-nosnippet>941</a>    bgroup();
+<a href=#942 id=942 data-nosnippet>942</a>    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"script"</span>);
+<a href=#943 id=943 data-nosnippet>943</a>  },
+<a href=#944 id=944 data-nosnippet>944</a>  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
+<a href=#945 id=945 data-nosnippet>945</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#946 id=946 data-nosnippet>946</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
+<a href=#947 id=947 data-nosnippet>947</a>  });
+<a href=#948 id=948 data-nosnippet>948</a>  <span class="comment">// # Perverse naming convention: not script style, but in the style of a script relative to
+<a href=#949 id=949 data-nosnippet>949</a>  // current.
+<a href=#950 id=950 data-nosnippet>950</a>  </span><span class="macro">DefParameterType!</span>(InScriptStyle, sub[_inner, _extra] {
+<a href=#951 id=951 data-nosnippet>951</a>    gullet::read_arg(ExpansionLevel::Off) },
+<a href=#952 id=952 data-nosnippet>952</a>  before_digest =&gt; {
+<a href=#953 id=953 data-nosnippet>953</a>    bgroup();
+<a href=#954 id=954 data-nosnippet>954</a>    <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
+<a href=#955 id=955 data-nosnippet>955</a>  },
+<a href=#956 id=956 data-nosnippet>956</a>  after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
+<a href=#957 id=957 data-nosnippet>957</a>  reversion =&gt; sub[arg, _inner, _extra] {
+<a href=#958 id=958 data-nosnippet>958</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>()))
 <a href=#959 id=959 data-nosnippet>959</a>  });
-<a href=#960 id=960 data-nosnippet>960</a>  <span class="macro">DefParameterType!</span>(InFractionStyle, sub[_inner, _extra] {
-<a href=#961 id=961 data-nosnippet>961</a>    gullet::read_arg(ExpansionLevel::Off)
-<a href=#962 id=962 data-nosnippet>962</a>  },
-<a href=#963 id=963 data-nosnippet>963</a>  before_digest =&gt; {
-<a href=#964 id=964 data-nosnippet>964</a>    bgroup();
-<a href=#965 id=965 data-nosnippet>965</a>    <span class="macro">MergeFont!</span>(fraction =&gt; <span class="bool-val">true</span>);
-<a href=#966 id=966 data-nosnippet>966</a>  },
-<a href=#967 id=967 data-nosnippet>967</a>  after_digest =&gt; {
-<a href=#968 id=968 data-nosnippet>968</a>    egroup()<span class="question-mark">?</span>;
+<a href=#960 id=960 data-nosnippet>960</a>  <span class="comment">// # NOTE: the various parameter features don't combine easily!!
+<a href=#961 id=961 data-nosnippet>961</a>  // # I need a ScriptStyleUntil for \root!!!
+<a href=#962 id=962 data-nosnippet>962</a>  // # I also need to redo fractions using these new types....
+<a href=#963 id=963 data-nosnippet>963</a>  </span><span class="macro">DefParameterType!</span>(OptionalInScriptStyle, sub[_inner, _extra] {
+<a href=#964 id=964 data-nosnippet>964</a>    gullet::read_optional(<span class="prelude-val">None</span>)
+<a href=#965 id=965 data-nosnippet>965</a>  },
+<a href=#966 id=966 data-nosnippet>966</a>  before_digest =&gt; {
+<a href=#967 id=967 data-nosnippet>967</a>    bgroup();
+<a href=#968 id=968 data-nosnippet>968</a>    <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
 <a href=#969 id=969 data-nosnippet>969</a>  },
-<a href=#970 id=970 data-nosnippet>970</a>  reversion =&gt; sub[arg,_inner,_extra] {
-<a href=#971 id=971 data-nosnippet>971</a>    <span class="kw">let </span><span class="kw-2">mut </span>reverted = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
-<a href=#972 id=972 data-nosnippet>972</a>    reverted.extend(arg.into_iter().map(Token::revert));
-<a href=#973 id=973 data-nosnippet>973</a>    reverted.push(<span class="macro">T_END!</span>());
-<a href=#974 id=974 data-nosnippet>974</a>    <span class="prelude-val">Ok</span>(Tokens::new(reverted))
-<a href=#975 id=975 data-nosnippet>975</a>  });
-<a href=#976 id=976 data-nosnippet>976</a>});
+<a href=#970 id=970 data-nosnippet>970</a>  after_digest =&gt; {
+<a href=#971 id=971 data-nosnippet>971</a>    egroup()<span class="question-mark">?</span>;
+<a href=#972 id=972 data-nosnippet>972</a>  },
+<a href=#973 id=973 data-nosnippet>973</a>  optional =&gt; <span class="bool-val">true</span>,
+<a href=#974 id=974 data-nosnippet>974</a>  reversion =&gt; sub[arg,_inner,_extra] {
+<a href=#975 id=975 data-nosnippet>975</a>    <span class="kw">if </span>arg.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
+<a href=#976 id=976 data-nosnippet>976</a>    <span class="kw">else </span>{
+<a href=#977 id=977 data-nosnippet>977</a>      <span class="kw">let </span><span class="kw-2">mut </span>tks = <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"["</span>)];
+<a href=#978 id=978 data-nosnippet>978</a>      tks.extend(arg.into_iter().map(|t| t.revert()));
+<a href=#979 id=979 data-nosnippet>979</a>      tks.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
+<a href=#980 id=980 data-nosnippet>980</a>      <span class="prelude-val">Ok</span>(Tokens::new(tks))
+<a href=#981 id=981 data-nosnippet>981</a>    }
+<a href=#982 id=982 data-nosnippet>982</a>  });
+<a href=#983 id=983 data-nosnippet>983</a>  <span class="macro">DefParameterType!</span>(InFractionStyle, sub[_inner, _extra] {
+<a href=#984 id=984 data-nosnippet>984</a>    gullet::read_arg(ExpansionLevel::Off)
+<a href=#985 id=985 data-nosnippet>985</a>  },
+<a href=#986 id=986 data-nosnippet>986</a>  before_digest =&gt; {
+<a href=#987 id=987 data-nosnippet>987</a>    bgroup();
+<a href=#988 id=988 data-nosnippet>988</a>    <span class="macro">MergeFont!</span>(fraction =&gt; <span class="bool-val">true</span>);
+<a href=#989 id=989 data-nosnippet>989</a>  },
+<a href=#990 id=990 data-nosnippet>990</a>  after_digest =&gt; {
+<a href=#991 id=991 data-nosnippet>991</a>    egroup()<span class="question-mark">?</span>;
+<a href=#992 id=992 data-nosnippet>992</a>  },
+<a href=#993 id=993 data-nosnippet>993</a>  reversion =&gt; sub[arg,_inner,_extra] {
+<a href=#994 id=994 data-nosnippet>994</a>    <span class="kw">let </span><span class="kw-2">mut </span>reverted = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
+<a href=#995 id=995 data-nosnippet>995</a>    reverted.extend(arg.into_iter().map(Token::revert));
+<a href=#996 id=996 data-nosnippet>996</a>    reverted.push(<span class="macro">T_END!</span>());
+<a href=#997 id=997 data-nosnippet>997</a>    <span class="prelude-val">Ok</span>(Tokens::new(reverted))
+<a href=#998 id=998 data-nosnippet>998</a>  });
+<a href=#999 id=999 data-nosnippet>999</a>});
 </code></pre></div></section></main></body></html>

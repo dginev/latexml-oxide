@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/base_xmath.rs`."><title>base_xmath.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (20f19f461 2026-03-21)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>base_xmath.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Base XMath
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/base_xmath.rs`."><title>base_xmath.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (562dee482 2026-03-21)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>base_xmath.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Base XMath
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -1018,479 +1018,640 @@
 <a href=#1018 id=1018 data-nosnippet>1018</a>  //  left  : TeX code for left of cases
 <a href=#1019 id=1019 data-nosnippet>1019</a>  //  right  : TeX code for right
 <a href=#1020 id=1020 data-nosnippet>1020</a>
-<a href=#1021 id=1021 data-nosnippet>1021</a>  // Perl: \lx@cases@condition — wraps 2nd column in &lt;ltx:XMText&gt; for text-mode conditions
-<a href=#1022 id=1022 data-nosnippet>1022</a>  // TODO: needs captureBody support
-<a href=#1023 id=1023 data-nosnippet>1023</a>  // DefConstructorI('\lx@cases@condition', undef,
-<a href=#1024 id=1024 data-nosnippet>1024</a>  //   "&lt;ltx:XMText&gt;#body&lt;/ltx:XMText&gt;",
-<a href=#1025 id=1025 data-nosnippet>1025</a>  //   alias =&gt; '', beforeDigest =&gt; sub { $_[0]-&gt;beginMode('text'); }, captureBody =&gt; 1);
-<a href=#1026 id=1026 data-nosnippet>1026</a>  // DefConstructorI('\lx@cases@end@condition', undef, "", alias =&gt; '',
-<a href=#1027 id=1027 data-nosnippet>1027</a>  //   beforeDigest =&gt; sub { $_[0]-&gt;endMode('text'); });
-<a href=#1028 id=1028 data-nosnippet>1028</a>
-<a href=#1029 id=1029 data-nosnippet>1029</a>  // Perl: Base_XMath.pool.ltxml line 701
-<a href=#1030 id=1030 data-nosnippet>1030</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN"</span>, sub[(kv)] {
-<a href=#1031 id=1031 data-nosnippet>1031</a>    <span class="kw">use </span>latexml_core::alignment::cell::Cell;
-<a href=#1032 id=1032 data-nosnippet>1032</a>    <span class="kw">use </span>latexml_core::alignment::template::TemplateConfig;
-<a href=#1033 id=1033 data-nosnippet>1033</a>    <span class="kw">use </span><span class="kw">crate</span>::engine::tex_tables::alignment_bindings;
-<a href=#1034 id=1034 data-nosnippet>1034</a>
-<a href=#1035 id=1035 data-nosnippet>1035</a>    bgroup();
-<a href=#1036 id=1036 data-nosnippet>1036</a>    <span class="kw">let </span>style_tok = kv.get_value(<span class="string">"style"</span>)
-<a href=#1037 id=1037 data-nosnippet>1037</a>      .map(|a| {
-<a href=#1038 id=1038 data-nosnippet>1038</a>        <span class="kw">let </span>s = a.to_string();
-<a href=#1039 id=1039 data-nosnippet>1039</a>        <span class="kw">if </span>s.starts_with(<span class="string">'\\'</span>) { <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>s) } <span class="kw">else </span>{ <span class="macro">T_CS!</span>(<span class="string">"\\textstyle"</span>) }
-<a href=#1040 id=1040 data-nosnippet>1040</a>      })
-<a href=#1041 id=1041 data-nosnippet>1041</a>      .unwrap_or_else(|| <span class="macro">T_CS!</span>(<span class="string">"\\textstyle"</span>));
-<a href=#1042 id=1042 data-nosnippet>1042</a>    <span class="kw">let </span>condmode = kv.get_value(<span class="string">"conditionmode"</span>).map(ToString::to_string).unwrap_or_default();
-<a href=#1043 id=1043 data-nosnippet>1043</a>    <span class="kw">let </span>_condtext = condmode == <span class="string">"text"</span>;
-<a href=#1044 id=1044 data-nosnippet>1044</a>
-<a href=#1045 id=1045 data-nosnippet>1045</a>    <span class="comment">// Column 1: value (style + \hfil after)
-<a href=#1046 id=1046 data-nosnippet>1046</a>    </span><span class="kw">let </span>col1 = Cell {
-<a href=#1047 id=1047 data-nosnippet>1047</a>      before: <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[style_tok])),
-<a href=#1048 id=1048 data-nosnippet>1048</a>      after: <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>)])),
-<a href=#1049 id=1049 data-nosnippet>1049</a>      empty: <span class="bool-val">true</span>,
-<a href=#1050 id=1050 data-nosnippet>1050</a>      ..Cell::default()
-<a href=#1051 id=1051 data-nosnippet>1051</a>    };
-<a href=#1052 id=1052 data-nosnippet>1052</a>    <span class="comment">// Column 2: condition (style + optional text mode, trim right + \hfil after)
-<a href=#1053 id=1053 data-nosnippet>1053</a>    // TODO: add \lx@cases@condition / \lx@cases@end@condition for condtext=true
-<a href=#1054 id=1054 data-nosnippet>1054</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>before2 = <span class="macro">vec!</span>[style_tok];
-<a href=#1055 id=1055 data-nosnippet>1055</a>    <span class="kw">let </span><span class="kw-2">mut </span>after2 = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@column@trimright"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>)];
-<a href=#1056 id=1056 data-nosnippet>1056</a>    <span class="kw">if </span>_condtext {
-<a href=#1057 id=1057 data-nosnippet>1057</a>      <span class="comment">// Perl: before =&gt; Tokens($style, T_CS('\lx@cases@condition'))
-<a href=#1058 id=1058 data-nosnippet>1058</a>      // Perl: after  =&gt; Tokens(T_CS('\lx@column@trimright'), T_CS('\lx@cases@end@condition'), T_CS('\hfil'))
-<a href=#1059 id=1059 data-nosnippet>1059</a>      // TODO: \lx@cases@condition not yet implemented
-<a href=#1060 id=1060 data-nosnippet>1060</a>      </span><span class="kw">let _ </span>= (<span class="kw-2">&amp;mut </span>before2, <span class="kw-2">&amp;mut </span>after2); <span class="comment">// suppress unused warnings
-<a href=#1061 id=1061 data-nosnippet>1061</a>    </span>}
-<a href=#1062 id=1062 data-nosnippet>1062</a>
-<a href=#1063 id=1063 data-nosnippet>1063</a>    <span class="kw">let </span>col2 = Cell {
-<a href=#1064 id=1064 data-nosnippet>1064</a>      before: <span class="prelude-val">Some</span>(Tokens::new(before2)),
-<a href=#1065 id=1065 data-nosnippet>1065</a>      after: <span class="prelude-val">Some</span>(Tokens::new(after2)),
-<a href=#1066 id=1066 data-nosnippet>1066</a>      empty: <span class="bool-val">true</span>,
-<a href=#1067 id=1067 data-nosnippet>1067</a>      ..Cell::default()
-<a href=#1068 id=1068 data-nosnippet>1068</a>    };
-<a href=#1069 id=1069 data-nosnippet>1069</a>
-<a href=#1070 id=1070 data-nosnippet>1070</a>    <span class="kw">let </span>template = Template::new(TemplateConfig {
-<a href=#1071 id=1071 data-nosnippet>1071</a>      columns: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[col1, col2]),
-<a href=#1072 id=1072 data-nosnippet>1072</a>      ..TemplateConfig::default()
-<a href=#1073 id=1073 data-nosnippet>1073</a>    });
-<a href=#1074 id=1074 data-nosnippet>1074</a>
-<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="kw">let </span>properties = SymHashMap::default();
-<a href=#1076 id=1076 data-nosnippet>1076</a>    alignment_bindings(template, String::from(<span class="string">"math"</span>), properties, HashMap::default());
-<a href=#1077 id=1077 data-nosnippet>1077</a>    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@alignment@newline"</span>), <span class="prelude-val">None</span>);
-<a href=#1078 id=1078 data-nosnippet>1078</a>    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@intercol"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@math@intercol"</span>), <span class="prelude-val">None</span>);
-<a href=#1079 id=1079 data-nosnippet>1079</a>    def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\lx@alignment@row@before"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1080 id=1080 data-nosnippet>1080</a>    def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\lx@alignment@row@after"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1081 id=1081 data-nosnippet>1081</a>  });
-<a href=#1082 id=1082 data-nosnippet>1082</a>
-<a href=#1083 id=1083 data-nosnippet>1083</a>  <span class="macro">DefMacro!</span>(
-<a href=#1084 id=1084 data-nosnippet>1084</a>    <span class="string">"\\lx@gen@plain@cases{}{}"</span>,
-<a href=#1085 id=1085 data-nosnippet>1085</a>    <span class="string">"\\lx@gen@cases@bindings{#1}\
-<a href=#1086 id=1086 data-nosnippet>1086</a>      \\lx@gen@plain@cases@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}
-<a href=#1087 id=1087 data-nosnippet>1087</a>      \\lx@end@gen@cases"
-<a href=#1088 id=1088 data-nosnippet>1088</a>  </span>);
-<a href=#1089 id=1089 data-nosnippet>1089</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@end@gen@cases"</span>, {
-<a href=#1090 id=1090 data-nosnippet>1090</a>    egroup()<span class="question-mark">?</span>;
-<a href=#1091 id=1091 data-nosnippet>1091</a>  });
-<a href=#1092 id=1092 data-nosnippet>1092</a>
-<a href=#1093 id=1093 data-nosnippet>1093</a>  <span class="comment">// Perl: Base_XMath.pool.ltxml line 730
-<a href=#1094 id=1094 data-nosnippet>1094</a>  // The logical structure for cases extracts the columns of the alignment
-<a href=#1095 id=1095 data-nosnippet>1095</a>  // to give alternating value,condition (empty conditions become "otherwise")
-<a href=#1096 id=1096 data-nosnippet>1096</a>  // TODO: afterConstruct hook that creates XMDual with meaning='cases'
-<a href=#1097 id=1097 data-nosnippet>1097</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@gen@plain@cases@ RequiredKeyVals:lx@GEN {}"</span>,
-<a href=#1098 id=1098 data-nosnippet>1098</a>    <span class="string">"&lt;ltx:XMWrap&gt;#left#2#right&lt;/ltx:XMWrap&gt;"</span>,
-<a href=#1099 id=1099 data-nosnippet>1099</a>    properties =&gt; sub[args] {
-<a href=#1100 id=1100 data-nosnippet>1100</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
-<a href=#1101 id=1101 data-nosnippet>1101</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
-<a href=#1102 id=1102 data-nosnippet>1102</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
-<a href=#1103 id=1103 data-nosnippet>1103</a>          <span class="comment">// Store left/right as Digested directly from digested keyvals.
-<a href=#1104 id=1104 data-nosnippet>1104</a>          </span><span class="kw">for </span>prop_key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"left"</span>, <span class="string">"right"</span>] {
-<a href=#1105 id=1105 data-nosnippet>1105</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = kv.get_value_digested(prop_key) {
-<a href=#1106 id=1106 data-nosnippet>1106</a>              props.insert(prop_key, Stored::Digested(digested.clone()));
-<a href=#1107 id=1107 data-nosnippet>1107</a>            }
-<a href=#1108 id=1108 data-nosnippet>1108</a>          }
-<a href=#1109 id=1109 data-nosnippet>1109</a>          <span class="kw">for </span>(k, v) <span class="kw">in </span>kv.get_pairs() {
-<a href=#1110 id=1110 data-nosnippet>1110</a>            <span class="kw">if </span>k != <span class="string">"left" </span>&amp;&amp; k != <span class="string">"right" </span>{
-<a href=#1111 id=1111 data-nosnippet>1111</a>              props.insert(k, Stored::String(arena::pin(v.to_string())));
-<a href=#1112 id=1112 data-nosnippet>1112</a>            }
-<a href=#1113 id=1113 data-nosnippet>1113</a>          }
-<a href=#1114 id=1114 data-nosnippet>1114</a>        }
-<a href=#1115 id=1115 data-nosnippet>1115</a>      }
-<a href=#1116 id=1116 data-nosnippet>1116</a>      <span class="prelude-val">Ok</span>(props)
-<a href=#1117 id=1117 data-nosnippet>1117</a>    }
-<a href=#1118 id=1118 data-nosnippet>1118</a>  );
-<a href=#1119 id=1119 data-nosnippet>1119</a>
-<a href=#1120 id=1120 data-nosnippet>1120</a>  <span class="comment">// Perl: amsmath.sty.ltxml line 694 (defined in Perl Package but logically belongs here)
-<a href=#1121 id=1121 data-nosnippet>1121</a>  // AMS variant of cases — takes DigestedBody
-<a href=#1122 id=1122 data-nosnippet>1122</a>  // TODO: afterConstruct hook that creates XMDual with meaning='cases'
-<a href=#1123 id=1123 data-nosnippet>1123</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@ams@cases@ RequiredKeyVals:lx@GEN DigestedBody"</span>,
-<a href=#1124 id=1124 data-nosnippet>1124</a>    <span class="string">"&lt;ltx:XMWrap&gt;#left#2#right&lt;/ltx:XMWrap&gt;"</span>,
-<a href=#1125 id=1125 data-nosnippet>1125</a>    properties =&gt; sub[args] {
-<a href=#1126 id=1126 data-nosnippet>1126</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
-<a href=#1127 id=1127 data-nosnippet>1127</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
-<a href=#1128 id=1128 data-nosnippet>1128</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
-<a href=#1129 id=1129 data-nosnippet>1129</a>          <span class="comment">// Store left/right as Digested directly from digested keyvals.
-<a href=#1130 id=1130 data-nosnippet>1130</a>          </span><span class="kw">for </span>prop_key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"left"</span>, <span class="string">"right"</span>] {
-<a href=#1131 id=1131 data-nosnippet>1131</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = kv.get_value_digested(prop_key) {
-<a href=#1132 id=1132 data-nosnippet>1132</a>              props.insert(prop_key, Stored::Digested(digested.clone()));
-<a href=#1133 id=1133 data-nosnippet>1133</a>            }
-<a href=#1134 id=1134 data-nosnippet>1134</a>          }
-<a href=#1135 id=1135 data-nosnippet>1135</a>          <span class="kw">for </span>(k, v) <span class="kw">in </span>kv.get_pairs() {
-<a href=#1136 id=1136 data-nosnippet>1136</a>            <span class="kw">if </span>k != <span class="string">"left" </span>&amp;&amp; k != <span class="string">"right" </span>{
-<a href=#1137 id=1137 data-nosnippet>1137</a>              props.insert(k, Stored::String(arena::pin(v.to_string())));
-<a href=#1138 id=1138 data-nosnippet>1138</a>            }
-<a href=#1139 id=1139 data-nosnippet>1139</a>          }
-<a href=#1140 id=1140 data-nosnippet>1140</a>        }
-<a href=#1141 id=1141 data-nosnippet>1141</a>      }
-<a href=#1142 id=1142 data-nosnippet>1142</a>      <span class="prelude-val">Ok</span>(props)
-<a href=#1143 id=1143 data-nosnippet>1143</a>    }
-<a href=#1144 id=1144 data-nosnippet>1144</a>  );
-<a href=#1145 id=1145 data-nosnippet>1145</a>
-<a href=#1146 id=1146 data-nosnippet>1146</a>});
-<a href=#1147 id=1147 data-nosnippet>1147</a>
-<a href=#1148 id=1148 data-nosnippet>1148</a><span class="doccomment">/// Helper: get first child element node
-<a href=#1149 id=1149 data-nosnippet>1149</a></span><span class="kw">fn </span>first_child_element(node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
-<a href=#1150 id=1150 data-nosnippet>1150</a>  node.get_child_elements().into_iter().next()
-<a href=#1151 id=1151 data-nosnippet>1151</a>}
-<a href=#1152 id=1152 data-nosnippet>1152</a>
-<a href=#1153 id=1153 data-nosnippet>1153</a><span class="doccomment">/// Perl: openMathFork (Base_XMath.pool.ltxml L780-786)
-<a href=#1154 id=1154 data-nosnippet>1154</a>/// Creates a MathFork structure with two branches: main (semantic) and presentation.
-<a href=#1155 id=1155 data-nosnippet>1155</a>/// Returns (mainfork_math_node, branch_node).
-<a href=#1156 id=1156 data-nosnippet>1156</a></span><span class="kw">pub fn </span>open_math_fork(
-<a href=#1157 id=1157 data-nosnippet>1157</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#1158 id=1158 data-nosnippet>1158</a>  equation: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1159 id=1159 data-nosnippet>1159</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(Node, Node)&gt; {
-<a href=#1160 id=1160 data-nosnippet>1160</a>  <span class="kw">let </span><span class="kw-2">mut </span>fork = document.open_element_at(equation, <span class="string">"ltx:MathFork"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1161 id=1161 data-nosnippet>1161</a>  <span class="kw">let </span><span class="kw-2">mut </span>mainfork = document.open_element_at(<span class="kw-2">&amp;mut </span>fork, <span class="string">"ltx:Math"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1162 id=1162 data-nosnippet>1162</a>  <span class="kw">let </span>_xmath = document.open_element_at(<span class="kw-2">&amp;mut </span>mainfork, <span class="string">"ltx:XMath"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1163 id=1163 data-nosnippet>1163</a>  <span class="kw">let </span>branch = document.open_element_at(<span class="kw-2">&amp;mut </span>fork, <span class="string">"ltx:MathBranch"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1164 id=1164 data-nosnippet>1164</a>  <span class="prelude-val">Ok</span>((mainfork, branch))
-<a href=#1165 id=1165 data-nosnippet>1165</a>}
-<a href=#1166 id=1166 data-nosnippet>1166</a>
-<a href=#1167 id=1167 data-nosnippet>1167</a><span class="doccomment">/// Perl: closeMathFork (Base_XMath.pool.ltxml L789-803)
-<a href=#1168 id=1168 data-nosnippet>1168</a>/// Closes all elements of an ltx:MathFork.
-<a href=#1169 id=1169 data-nosnippet>1169</a></span><span class="kw">pub fn </span>close_math_fork(
-<a href=#1170 id=1170 data-nosnippet>1170</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#1171 id=1171 data-nosnippet>1171</a>  equation: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1172 id=1172 data-nosnippet>1172</a>  mainfork: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1173 id=1173 data-nosnippet>1173</a>  branch: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1174 id=1174 data-nosnippet>1174</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1175 id=1175 data-nosnippet>1175</a>  <span class="comment">// Synthesize tex= attribute on mainfork Math from MathBranch cell tex attributes.
-<a href=#1176 id=1176 data-nosnippet>1176</a>  // Perl does this via MathWhatsit box accumulation + add_body_TeX afterClose,
-<a href=#1177 id=1177 data-nosnippet>1177</a>  // but Rust doesn't have MathWhatsit. Instead, we compose the tex attribute here.
-<a href=#1178 id=1178 data-nosnippet>1178</a>  </span><span class="kw">if </span>!mainfork.has_attribute(<span class="string">"tex"</span>) {
-<a href=#1179 id=1179 data-nosnippet>1179</a>    <span class="kw">let </span><span class="kw-2">mut </span>tex_parts: Vec&lt;String&gt; = Vec::new();
-<a href=#1180 id=1180 data-nosnippet>1180</a>    <span class="kw">let </span>tds = document.findnodes(<span class="string">"descendant::ltx:td"</span>, <span class="prelude-val">Some</span>(branch));
-<a href=#1181 id=1181 data-nosnippet>1181</a>    <span class="kw">for </span>td <span class="kw">in </span><span class="kw-2">&amp;</span>tds {
-<a href=#1182 id=1182 data-nosnippet>1182</a>      <span class="kw">let </span>maths = document.findnodes(<span class="string">"ltx:Math[@tex]"</span>, <span class="prelude-val">Some</span>(td));
-<a href=#1183 id=1183 data-nosnippet>1183</a>      <span class="kw">if </span>!maths.is_empty() {
-<a href=#1184 id=1184 data-nosnippet>1184</a>        <span class="kw">for </span>math <span class="kw">in </span>maths {
-<a href=#1185 id=1185 data-nosnippet>1185</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(tex) = math.get_attribute(<span class="string">"tex"</span>) {
-<a href=#1186 id=1186 data-nosnippet>1186</a>            tex_parts.push(tex);
-<a href=#1187 id=1187 data-nosnippet>1187</a>          }
-<a href=#1188 id=1188 data-nosnippet>1188</a>        }
-<a href=#1189 id=1189 data-nosnippet>1189</a>      } <span class="kw">else </span>{
-<a href=#1190 id=1190 data-nosnippet>1190</a>        <span class="comment">// No Math element — check for text content (from \mbox in eqnarray cells)
-<a href=#1191 id=1191 data-nosnippet>1191</a>        // Perl's MathWhatsit captures reversion of all cell content including \mbox
-<a href=#1192 id=1192 data-nosnippet>1192</a>        </span><span class="kw">let </span>texts = document.findnodes(<span class="string">"ltx:text[@class='ltx_markedasmath']"</span>, <span class="prelude-val">Some</span>(td));
-<a href=#1193 id=1193 data-nosnippet>1193</a>        <span class="kw">for </span>text <span class="kw">in </span><span class="kw-2">&amp;</span>texts {
-<a href=#1194 id=1194 data-nosnippet>1194</a>          <span class="kw">let </span>content = text.get_content();
-<a href=#1195 id=1195 data-nosnippet>1195</a>          <span class="kw">let </span>content = content.trim();
-<a href=#1196 id=1196 data-nosnippet>1196</a>          <span class="kw">if </span>!content.is_empty() {
-<a href=#1197 id=1197 data-nosnippet>1197</a>            tex_parts.push(<span class="macro">format!</span>(<span class="string">"\\mbox{{{content}}}"</span>));
-<a href=#1198 id=1198 data-nosnippet>1198</a>          }
-<a href=#1199 id=1199 data-nosnippet>1199</a>        }
-<a href=#1200 id=1200 data-nosnippet>1200</a>      }
-<a href=#1201 id=1201 data-nosnippet>1201</a>    }
-<a href=#1202 id=1202 data-nosnippet>1202</a>    <span class="kw">if </span>!tex_parts.is_empty() {
-<a href=#1203 id=1203 data-nosnippet>1203</a>      <span class="comment">// Normalize: Perl's MathWhatsit extracts \displaystyle to the front.
-<a href=#1204 id=1204 data-nosnippet>1204</a>      // Each cell's tex starts with "\displaystyle"; strip and prepend once.
-<a href=#1205 id=1205 data-nosnippet>1205</a>      </span><span class="kw">let </span>has_displaystyle = tex_parts.iter().any(|t| t.starts_with(<span class="string">"\\displaystyle"</span>));
-<a href=#1206 id=1206 data-nosnippet>1206</a>      <span class="kw">let </span>stripped: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = tex_parts
-<a href=#1207 id=1207 data-nosnippet>1207</a>        .iter()
-<a href=#1208 id=1208 data-nosnippet>1208</a>        .map(|t| t.strip_prefix(<span class="string">"\\displaystyle"</span>).unwrap_or(t).trim_start())
-<a href=#1209 id=1209 data-nosnippet>1209</a>        .collect();
-<a href=#1210 id=1210 data-nosnippet>1210</a>      <span class="comment">// Join with CS-aware spacing: if previous part ends with a letter and next starts
-<a href=#1211 id=1211 data-nosnippet>1211</a>      // with a letter, insert a space (matching TeX CS termination rules).
-<a href=#1212 id=1212 data-nosnippet>1212</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>body = String::new();
-<a href=#1213 id=1213 data-nosnippet>1213</a>      <span class="kw">for </span>(i, part) <span class="kw">in </span>stripped.iter().enumerate() {
-<a href=#1214 id=1214 data-nosnippet>1214</a>        <span class="kw">if </span>i &gt; <span class="number">0 </span>&amp;&amp; !body.is_empty() &amp;&amp; !part.is_empty() {
-<a href=#1215 id=1215 data-nosnippet>1215</a>          <span class="kw">let </span>prev_ends_letter = body.ends_with(|c: char| c.is_ascii_alphabetic());
-<a href=#1216 id=1216 data-nosnippet>1216</a>          <span class="kw">let </span>next_starts_letter = part.starts_with(|c: char| c.is_ascii_alphabetic());
-<a href=#1217 id=1217 data-nosnippet>1217</a>          <span class="kw">if </span>prev_ends_letter &amp;&amp; next_starts_letter {
-<a href=#1218 id=1218 data-nosnippet>1218</a>            body.push(<span class="string">' '</span>);
-<a href=#1219 id=1219 data-nosnippet>1219</a>          }
-<a href=#1220 id=1220 data-nosnippet>1220</a>        }
-<a href=#1221 id=1221 data-nosnippet>1221</a>        body.push_str(part);
-<a href=#1222 id=1222 data-nosnippet>1222</a>      }
-<a href=#1223 id=1223 data-nosnippet>1223</a>      <span class="kw">let </span>combined_tex = <span class="kw">if </span>has_displaystyle {
-<a href=#1224 id=1224 data-nosnippet>1224</a>        <span class="comment">// Add space after \displaystyle only if body starts with a letter
-<a href=#1225 id=1225 data-nosnippet>1225</a>        // (TeX CS needs space termination before letters, not before operators)
-<a href=#1226 id=1226 data-nosnippet>1226</a>        </span><span class="kw">if </span>body.starts_with(|c: char| c.is_ascii_alphabetic()) {
-<a href=#1227 id=1227 data-nosnippet>1227</a>          <span class="macro">format!</span>(<span class="string">"\\displaystyle {body}"</span>)
-<a href=#1228 id=1228 data-nosnippet>1228</a>        } <span class="kw">else </span>{
-<a href=#1229 id=1229 data-nosnippet>1229</a>          <span class="macro">format!</span>(<span class="string">"\\displaystyle{body}"</span>)
-<a href=#1230 id=1230 data-nosnippet>1230</a>        }
-<a href=#1231 id=1231 data-nosnippet>1231</a>      } <span class="kw">else </span>{
-<a href=#1232 id=1232 data-nosnippet>1232</a>        body
-<a href=#1233 id=1233 data-nosnippet>1233</a>      };
-<a href=#1234 id=1234 data-nosnippet>1234</a>      document.set_attribute(mainfork, <span class="string">"tex"</span>, <span class="kw-2">&amp;</span>combined_tex)<span class="question-mark">?</span>;
-<a href=#1235 id=1235 data-nosnippet>1235</a>    }
-<a href=#1236 id=1236 data-nosnippet>1236</a>  }
-<a href=#1237 id=1237 data-nosnippet>1237</a>
-<a href=#1238 id=1238 data-nosnippet>1238</a>  document.close_element_at(branch)<span class="question-mark">?</span>;
-<a href=#1239 id=1239 data-nosnippet>1239</a>  <span class="comment">// Close XMath (first child of mainfork)
-<a href=#1240 id=1240 data-nosnippet>1240</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>xmath) = first_child_element(mainfork) {
-<a href=#1241 id=1241 data-nosnippet>1241</a>    document.close_element_at(<span class="kw-2">&amp;mut </span>xmath)<span class="question-mark">?</span>;
-<a href=#1242 id=1242 data-nosnippet>1242</a>  }
-<a href=#1243 id=1243 data-nosnippet>1243</a>  document.close_element_at(mainfork)<span class="question-mark">?</span>;
-<a href=#1244 id=1244 data-nosnippet>1244</a>  <span class="comment">// Close the MathFork — find it defensively via xpath
-<a href=#1245 id=1245 data-nosnippet>1245</a>  </span><span class="kw">let </span>mfs = document.findnodes(<span class="string">"ltx:MathFork"</span>, <span class="prelude-val">Some</span>(equation));
-<a href=#1246 id=1246 data-nosnippet>1246</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>last_mf) = mfs.into_iter().last() {
-<a href=#1247 id=1247 data-nosnippet>1247</a>    document.close_element_at(<span class="kw-2">&amp;mut </span>last_mf)<span class="question-mark">?</span>;
-<a href=#1248 id=1248 data-nosnippet>1248</a>  }
-<a href=#1249 id=1249 data-nosnippet>1249</a>  <span class="comment">// Check if branch came up empty (only 1 child = just the Math)
-<a href=#1250 id=1250 data-nosnippet>1250</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>fork = branch.get_parent().unwrap();
-<a href=#1251 id=1251 data-nosnippet>1251</a>  <span class="kw">let </span>branches: Vec&lt;Node&gt; = fork.get_child_nodes();
-<a href=#1252 id=1252 data-nosnippet>1252</a>  <span class="kw">if </span>branches.len() == <span class="number">1 </span>{
-<a href=#1253 id=1253 data-nosnippet>1253</a>    <span class="comment">// Whoops, came up empty! Remove the fork
-<a href=#1254 id=1254 data-nosnippet>1254</a>    </span>fork.unlink_node();
-<a href=#1255 id=1255 data-nosnippet>1255</a>  }
-<a href=#1256 id=1256 data-nosnippet>1256</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1257 id=1257 data-nosnippet>1257</a>}
-<a href=#1258 id=1258 data-nosnippet>1258</a>
-<a href=#1259 id=1259 data-nosnippet>1259</a><span class="doccomment">/// Perl: addColumnToMathFork (Base_XMath.pool.ltxml L839-899)
-<a href=#1260 id=1260 data-nosnippet>1260</a>/// Distributes content from an ltx:_Capture_ cell into both the presentation branch
-<a href=#1261 id=1261 data-nosnippet>1261</a>/// (as ltx:td) AND the semantic main branch (cloned into XMath).
-<a href=#1262 id=1262 data-nosnippet>1262</a></span><span class="kw">pub fn </span>add_column_to_math_fork(
-<a href=#1263 id=1263 data-nosnippet>1263</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#1264 id=1264 data-nosnippet>1264</a>  mainfork: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1265 id=1265 data-nosnippet>1265</a>  inbranch: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1266 id=1266 data-nosnippet>1266</a>  cell: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1267 id=1267 data-nosnippet>1267</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1268 id=1268 data-nosnippet>1268</a>  <span class="kw">let </span><span class="kw-2">mut </span>td = document.open_element_at(inbranch, <span class="string">"ltx:td"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1269 id=1269 data-nosnippet>1269</a>  <span class="comment">// Copy align and colspan attributes
-<a href=#1270 id=1270 data-nosnippet>1270</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(align) = cell.get_attribute(<span class="string">"align"</span>) {
-<a href=#1271 id=1271 data-nosnippet>1271</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>td, <span class="string">"align"</span>, <span class="kw-2">&amp;</span>align)<span class="question-mark">?</span>;
-<a href=#1272 id=1272 data-nosnippet>1272</a>  }
-<a href=#1273 id=1273 data-nosnippet>1273</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(colspan) = cell.get_attribute(<span class="string">"colspan"</span>) {
-<a href=#1274 id=1274 data-nosnippet>1274</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>td, <span class="string">"colspan"</span>, <span class="kw-2">&amp;</span>colspan)<span class="question-mark">?</span>;
-<a href=#1275 id=1275 data-nosnippet>1275</a>  }
-<a href=#1276 id=1276 data-nosnippet>1276</a>  <span class="comment">// Remove the _Capture_ from the document
-<a href=#1277 id=1277 data-nosnippet>1277</a>  </span>cell.unlink_node();
-<a href=#1278 id=1278 data-nosnippet>1278</a>  <span class="comment">// Process each child of _Capture_
-<a href=#1279 id=1279 data-nosnippet>1279</a>  </span><span class="kw">let </span>children: Vec&lt;Node&gt; = cell.get_child_nodes();
-<a href=#1280 id=1280 data-nosnippet>1280</a>  <span class="kw">let </span>math_qname = arena::pin_static(<span class="string">"ltx:Math"</span>);
-<a href=#1281 id=1281 data-nosnippet>1281</a>  <span class="kw">let </span>text_qname = arena::pin_static(<span class="string">"ltx:text"</span>);
-<a href=#1282 id=1282 data-nosnippet>1282</a>  <span class="kw">let </span>p_qname = arena::pin_static(<span class="string">"ltx:p"</span>);
-<a href=#1283 id=1283 data-nosnippet>1283</a>  <span class="kw">for </span>node <span class="kw">in </span>children {
-<a href=#1284 id=1284 data-nosnippet>1284</a>    <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>node);
-<a href=#1285 id=1285 data-nosnippet>1285</a>    <span class="kw">if </span>qname == math_qname {
-<a href=#1286 id=1286 data-nosnippet>1286</a>      <span class="comment">// Clone XMath children to the main branch
-<a href=#1287 id=1287 data-nosnippet>1287</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(xmath) = first_child_element(<span class="kw-2">&amp;</span>node) {
-<a href=#1288 id=1288 data-nosnippet>1288</a>        <span class="kw">let </span>xmath_children: Vec&lt;Node&gt; = xmath.get_child_elements();
-<a href=#1289 id=1289 data-nosnippet>1289</a>        <span class="kw">if </span>!xmath_children.is_empty() {
-<a href=#1290 id=1290 data-nosnippet>1290</a>          state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::String(arena::pin_static(<span class="string">".mf"</span>)), <span class="prelude-val">None</span>);
-<a href=#1291 id=1291 data-nosnippet>1291</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mainfork_xmath) = first_child_element(mainfork) {
-<a href=#1292 id=1292 data-nosnippet>1292</a>            document.append_clone(<span class="kw-2">&amp;mut </span>mainfork_xmath, xmath_children)<span class="question-mark">?</span>;
-<a href=#1293 id=1293 data-nosnippet>1293</a>          }
-<a href=#1294 id=1294 data-nosnippet>1294</a>          state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::None, <span class="prelude-val">None</span>);
-<a href=#1295 id=1295 data-nosnippet>1295</a>        }
-<a href=#1296 id=1296 data-nosnippet>1296</a>      }
-<a href=#1297 id=1297 data-nosnippet>1297</a>    } <span class="kw">else if </span>qname == text_qname || qname == p_qname {
-<a href=#1298 id=1298 data-nosnippet>1298</a>      <span class="kw">let </span>text_content = node.get_content();
-<a href=#1299 id=1299 data-nosnippet>1299</a>      <span class="kw">if </span>!text_content.is_empty() {
-<a href=#1300 id=1300 data-nosnippet>1300</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mainfork_xmath) = first_child_element(mainfork) {
-<a href=#1301 id=1301 data-nosnippet>1301</a>          state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::String(arena::pin_static(<span class="string">".mf"</span>)), <span class="prelude-val">None</span>);
-<a href=#1302 id=1302 data-nosnippet>1302</a>          <span class="kw">let </span><span class="kw-2">mut </span>txt = document.open_element_at(<span class="kw-2">&amp;mut </span>mainfork_xmath, <span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1303 id=1303 data-nosnippet>1303</a>          document.append_clone(<span class="kw-2">&amp;mut </span>txt, <span class="macro">vec!</span>[node.clone()])<span class="question-mark">?</span>;
-<a href=#1304 id=1304 data-nosnippet>1304</a>          document.close_element_at(<span class="kw-2">&amp;mut </span>txt)<span class="question-mark">?</span>;
-<a href=#1305 id=1305 data-nosnippet>1305</a>          state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::None, <span class="prelude-val">None</span>);
-<a href=#1306 id=1306 data-nosnippet>1306</a>        }
-<a href=#1307 id=1307 data-nosnippet>1307</a>      }
-<a href=#1308 id=1308 data-nosnippet>1308</a>    } <span class="kw">else if </span>node.get_type() == <span class="prelude-val">Some</span>(libxml::tree::NodeType::TextNode) {
-<a href=#1309 id=1309 data-nosnippet>1309</a>      <span class="kw">let </span>string = node.get_content();
-<a href=#1310 id=1310 data-nosnippet>1310</a>      <span class="kw">if </span>!string.trim().is_empty() {
-<a href=#1311 id=1311 data-nosnippet>1311</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mainfork_xmath) = first_child_element(mainfork) {
-<a href=#1312 id=1312 data-nosnippet>1312</a>          <span class="kw">let </span><span class="kw-2">mut </span>txt = document.open_element_at(<span class="kw-2">&amp;mut </span>mainfork_xmath, <span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1313 id=1313 data-nosnippet>1313</a>          <span class="kw">let _ </span>= txt.set_content(<span class="kw-2">&amp;</span>string);
-<a href=#1314 id=1314 data-nosnippet>1314</a>          document.close_element_at(<span class="kw-2">&amp;mut </span>txt)<span class="question-mark">?</span>;
-<a href=#1315 id=1315 data-nosnippet>1315</a>        }
-<a href=#1316 id=1316 data-nosnippet>1316</a>      }
-<a href=#1317 id=1317 data-nosnippet>1317</a>    } <span class="kw">else if </span>node.get_type() == <span class="prelude-val">Some</span>(libxml::tree::NodeType::CommentNode) {
-<a href=#1318 id=1318 data-nosnippet>1318</a>      <span class="comment">// Skip comments
-<a href=#1319 id=1319 data-nosnippet>1319</a>    </span>} <span class="kw">else </span>{
-<a href=#1320 id=1320 data-nosnippet>1320</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mainfork_xmath) = first_child_element(mainfork) {
-<a href=#1321 id=1321 data-nosnippet>1321</a>        state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::String(arena::pin_static(<span class="string">".mf"</span>)), <span class="prelude-val">None</span>);
-<a href=#1322 id=1322 data-nosnippet>1322</a>        <span class="kw">let </span><span class="kw-2">mut </span>txt = document.open_element_at(<span class="kw-2">&amp;mut </span>mainfork_xmath, <span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1323 id=1323 data-nosnippet>1323</a>        document.append_clone(<span class="kw-2">&amp;mut </span>txt, <span class="macro">vec!</span>[node.clone()])<span class="question-mark">?</span>;
-<a href=#1324 id=1324 data-nosnippet>1324</a>        document.close_element_at(<span class="kw-2">&amp;mut </span>txt)<span class="question-mark">?</span>;
-<a href=#1325 id=1325 data-nosnippet>1325</a>        state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::None, <span class="prelude-val">None</span>);
-<a href=#1326 id=1326 data-nosnippet>1326</a>      }
-<a href=#1327 id=1327 data-nosnippet>1327</a>    }
-<a href=#1328 id=1328 data-nosnippet>1328</a>    <span class="comment">// Move the original node to the td (presentation side)
-<a href=#1329 id=1329 data-nosnippet>1329</a>    </span>document.unrecord_node_ids(<span class="kw-2">&amp;</span>node);
-<a href=#1330 id=1330 data-nosnippet>1330</a>    document.append_tree(<span class="kw-2">&amp;mut </span>td, <span class="macro">vec!</span>[node])<span class="question-mark">?</span>;
-<a href=#1331 id=1331 data-nosnippet>1331</a>  }
-<a href=#1332 id=1332 data-nosnippet>1332</a>  document.close_element_at(<span class="kw-2">&amp;mut </span>td)<span class="question-mark">?</span>;
-<a href=#1333 id=1333 data-nosnippet>1333</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1334 id=1334 data-nosnippet>1334</a>}
-<a href=#1335 id=1335 data-nosnippet>1335</a>
-<a href=#1336 id=1336 data-nosnippet>1336</a><span class="doccomment">/// Perl: equationgroupJoinCols (Base_XMath.pool.ltxml L970-980)
-<a href=#1337 id=1337 data-nosnippet>1337</a>/// Groups every $ncols columns into a MathFork structure within an equation.
-<a href=#1338 id=1338 data-nosnippet>1338</a></span><span class="kw">pub fn </span>equationgroup_join_cols(
-<a href=#1339 id=1339 data-nosnippet>1339</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#1340 id=1340 data-nosnippet>1340</a>  ncols: usize,
-<a href=#1341 id=1341 data-nosnippet>1341</a>  equation: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1342 id=1342 data-nosnippet>1342</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1343 id=1343 data-nosnippet>1343</a>  <span class="kw">let </span><span class="kw-2">mut </span>col = <span class="number">0usize</span>;
-<a href=#1344 id=1344 data-nosnippet>1344</a>  <span class="kw">let </span><span class="kw-2">mut </span>mainfork: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
-<a href=#1345 id=1345 data-nosnippet>1345</a>  <span class="kw">let </span><span class="kw-2">mut </span>branch: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
-<a href=#1346 id=1346 data-nosnippet>1346</a>  <span class="kw">let </span>cells: Vec&lt;Node&gt; = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(equation));
-<a href=#1347 id=1347 data-nosnippet>1347</a>  <span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells {
-<a href=#1348 id=1348 data-nosnippet>1348</a>    <span class="kw">let </span>qname_str = arena::to_string(document::get_node_qname(<span class="kw-2">&amp;</span>cell));
-<a href=#1349 id=1349 data-nosnippet>1349</a>    <span class="kw">if </span>!qname_str.ends_with(<span class="string">"_Capture_"</span>) {
-<a href=#1350 id=1350 data-nosnippet>1350</a>      <span class="kw">continue</span>;
-<a href=#1351 id=1351 data-nosnippet>1351</a>    }
-<a href=#1352 id=1352 data-nosnippet>1352</a>    <span class="kw">if </span>col.is_multiple_of(ncols) {
-<a href=#1353 id=1353 data-nosnippet>1353</a>      <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
-<a href=#1354 id=1354 data-nosnippet>1354</a>        close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
-<a href=#1355 id=1355 data-nosnippet>1355</a>      }
-<a href=#1356 id=1356 data-nosnippet>1356</a>      <span class="kw">let </span>(mf, br) = open_math_fork(document, equation)<span class="question-mark">?</span>;
-<a href=#1357 id=1357 data-nosnippet>1357</a>      mainfork = <span class="prelude-val">Some</span>(mf);
-<a href=#1358 id=1358 data-nosnippet>1358</a>      branch = <span class="prelude-val">Some</span>(br);
-<a href=#1359 id=1359 data-nosnippet>1359</a>    }
-<a href=#1360 id=1360 data-nosnippet>1360</a>    <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
-<a href=#1361 id=1361 data-nosnippet>1361</a>      add_column_to_math_fork(document, mf, br, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
+<a href=#1021 id=1021 data-nosnippet>1021</a>  // Perl: \lx@cases@condition — switches to text mode for condition column
+<a href=#1022 id=1022 data-nosnippet>1022</a>  // The captureBody mechanism wraps content in &lt;ltx:XMText&gt;.
+<a href=#1023 id=1023 data-nosnippet>1023</a>  // Simplified: just switch mode, let the constructor template handle XMText.
+<a href=#1024 id=1024 data-nosnippet>1024</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@cases@condition"</span>, sub[_args] {
+<a href=#1025 id=1025 data-nosnippet>1025</a>    <span class="kw">let _ </span>= begin_mode(<span class="string">"restricted_horizontal"</span>);
+<a href=#1026 id=1026 data-nosnippet>1026</a>  });
+<a href=#1027 id=1027 data-nosnippet>1027</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@cases@end@condition"</span>, sub[_args] {
+<a href=#1028 id=1028 data-nosnippet>1028</a>    <span class="kw">let _ </span>= end_mode(<span class="string">"restricted_horizontal"</span>);
+<a href=#1029 id=1029 data-nosnippet>1029</a>  });
+<a href=#1030 id=1030 data-nosnippet>1030</a>
+<a href=#1031 id=1031 data-nosnippet>1031</a>  <span class="comment">// Perl: Base_XMath.pool.ltxml line 701
+<a href=#1032 id=1032 data-nosnippet>1032</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN"</span>, sub[(kv)] {
+<a href=#1033 id=1033 data-nosnippet>1033</a>    <span class="kw">use </span>latexml_core::alignment::cell::Cell;
+<a href=#1034 id=1034 data-nosnippet>1034</a>    <span class="kw">use </span>latexml_core::alignment::template::TemplateConfig;
+<a href=#1035 id=1035 data-nosnippet>1035</a>    <span class="kw">use </span><span class="kw">crate</span>::engine::tex_tables::alignment_bindings;
+<a href=#1036 id=1036 data-nosnippet>1036</a>
+<a href=#1037 id=1037 data-nosnippet>1037</a>    bgroup();
+<a href=#1038 id=1038 data-nosnippet>1038</a>    <span class="kw">let </span>style_tok = kv.get_value(<span class="string">"style"</span>)
+<a href=#1039 id=1039 data-nosnippet>1039</a>      .map(|a| {
+<a href=#1040 id=1040 data-nosnippet>1040</a>        <span class="kw">let </span>s = a.to_string();
+<a href=#1041 id=1041 data-nosnippet>1041</a>        <span class="kw">if </span>s.starts_with(<span class="string">'\\'</span>) { <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>s) } <span class="kw">else </span>{ <span class="macro">T_CS!</span>(<span class="string">"\\textstyle"</span>) }
+<a href=#1042 id=1042 data-nosnippet>1042</a>      })
+<a href=#1043 id=1043 data-nosnippet>1043</a>      .unwrap_or_else(|| <span class="macro">T_CS!</span>(<span class="string">"\\textstyle"</span>));
+<a href=#1044 id=1044 data-nosnippet>1044</a>    <span class="kw">let </span>condmode = kv.get_value(<span class="string">"conditionmode"</span>).map(ToString::to_string).unwrap_or_default();
+<a href=#1045 id=1045 data-nosnippet>1045</a>    <span class="kw">let </span>_condtext = condmode == <span class="string">"text"</span>;
+<a href=#1046 id=1046 data-nosnippet>1046</a>
+<a href=#1047 id=1047 data-nosnippet>1047</a>    <span class="comment">// Column 1: value (style + \hfil after)
+<a href=#1048 id=1048 data-nosnippet>1048</a>    </span><span class="kw">let </span>col1 = Cell {
+<a href=#1049 id=1049 data-nosnippet>1049</a>      before: <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[style_tok])),
+<a href=#1050 id=1050 data-nosnippet>1050</a>      after: <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>)])),
+<a href=#1051 id=1051 data-nosnippet>1051</a>      empty: <span class="bool-val">true</span>,
+<a href=#1052 id=1052 data-nosnippet>1052</a>      ..Cell::default()
+<a href=#1053 id=1053 data-nosnippet>1053</a>    };
+<a href=#1054 id=1054 data-nosnippet>1054</a>    <span class="comment">// Column 2: condition (style + optional text mode, trim right + \hfil after)
+<a href=#1055 id=1055 data-nosnippet>1055</a>    // TODO: add \lx@cases@condition / \lx@cases@end@condition for condtext=true
+<a href=#1056 id=1056 data-nosnippet>1056</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>before2 = <span class="macro">vec!</span>[style_tok];
+<a href=#1057 id=1057 data-nosnippet>1057</a>    <span class="kw">let </span><span class="kw-2">mut </span>after2 = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@column@trimright"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>)];
+<a href=#1058 id=1058 data-nosnippet>1058</a>    <span class="kw">if </span>_condtext {
+<a href=#1059 id=1059 data-nosnippet>1059</a>      <span class="comment">// Perl: before =&gt; Tokens($style, T_CS('\lx@cases@condition'))
+<a href=#1060 id=1060 data-nosnippet>1060</a>      // Perl: after  =&gt; Tokens(T_CS('\lx@column@trimright'), T_CS('\lx@cases@end@condition'), T_CS('\hfil'))
+<a href=#1061 id=1061 data-nosnippet>1061</a>      </span>before2.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@cases@condition"</span>));
+<a href=#1062 id=1062 data-nosnippet>1062</a>      after2 = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@column@trimright"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\lx@cases@end@condition"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>)];
+<a href=#1063 id=1063 data-nosnippet>1063</a>    }
+<a href=#1064 id=1064 data-nosnippet>1064</a>
+<a href=#1065 id=1065 data-nosnippet>1065</a>    <span class="kw">let </span>col2 = Cell {
+<a href=#1066 id=1066 data-nosnippet>1066</a>      before: <span class="prelude-val">Some</span>(Tokens::new(before2)),
+<a href=#1067 id=1067 data-nosnippet>1067</a>      after: <span class="prelude-val">Some</span>(Tokens::new(after2)),
+<a href=#1068 id=1068 data-nosnippet>1068</a>      empty: <span class="bool-val">true</span>,
+<a href=#1069 id=1069 data-nosnippet>1069</a>      ..Cell::default()
+<a href=#1070 id=1070 data-nosnippet>1070</a>    };
+<a href=#1071 id=1071 data-nosnippet>1071</a>
+<a href=#1072 id=1072 data-nosnippet>1072</a>    <span class="kw">let </span>template = Template::new(TemplateConfig {
+<a href=#1073 id=1073 data-nosnippet>1073</a>      columns: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[col1, col2]),
+<a href=#1074 id=1074 data-nosnippet>1074</a>      ..TemplateConfig::default()
+<a href=#1075 id=1075 data-nosnippet>1075</a>    });
+<a href=#1076 id=1076 data-nosnippet>1076</a>
+<a href=#1077 id=1077 data-nosnippet>1077</a>    <span class="kw">let </span>properties = SymHashMap::default();
+<a href=#1078 id=1078 data-nosnippet>1078</a>    alignment_bindings(template, String::from(<span class="string">"math"</span>), properties, HashMap::default());
+<a href=#1079 id=1079 data-nosnippet>1079</a>    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@alignment@newline"</span>), <span class="prelude-val">None</span>);
+<a href=#1080 id=1080 data-nosnippet>1080</a>    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@intercol"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@math@intercol"</span>), <span class="prelude-val">None</span>);
+<a href=#1081 id=1081 data-nosnippet>1081</a>    def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\lx@alignment@row@before"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1082 id=1082 data-nosnippet>1082</a>    def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\lx@alignment@row@after"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1083 id=1083 data-nosnippet>1083</a>  });
+<a href=#1084 id=1084 data-nosnippet>1084</a>
+<a href=#1085 id=1085 data-nosnippet>1085</a>  <span class="macro">DefMacro!</span>(
+<a href=#1086 id=1086 data-nosnippet>1086</a>    <span class="string">"\\lx@gen@plain@cases{}{}"</span>,
+<a href=#1087 id=1087 data-nosnippet>1087</a>    <span class="string">"\\lx@gen@cases@bindings{#1}\
+<a href=#1088 id=1088 data-nosnippet>1088</a>      \\lx@gen@plain@cases@{#1}{\\lx@begin@alignment#2\\lx@end@alignment}
+<a href=#1089 id=1089 data-nosnippet>1089</a>      \\lx@end@gen@cases"
+<a href=#1090 id=1090 data-nosnippet>1090</a>  </span>);
+<a href=#1091 id=1091 data-nosnippet>1091</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@end@gen@cases"</span>, {
+<a href=#1092 id=1092 data-nosnippet>1092</a>    egroup()<span class="question-mark">?</span>;
+<a href=#1093 id=1093 data-nosnippet>1093</a>  });
+<a href=#1094 id=1094 data-nosnippet>1094</a>
+<a href=#1095 id=1095 data-nosnippet>1095</a>  <span class="comment">// Perl: Base_XMath.pool.ltxml line 730
+<a href=#1096 id=1096 data-nosnippet>1096</a>  // The logical structure for cases extracts the columns of the alignment
+<a href=#1097 id=1097 data-nosnippet>1097</a>  // to give alternating value,condition (empty conditions become "otherwise")
+<a href=#1098 id=1098 data-nosnippet>1098</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@gen@plain@cases@ RequiredKeyVals:lx@GEN {}"</span>,
+<a href=#1099 id=1099 data-nosnippet>1099</a>    <span class="string">"&lt;ltx:XMWrap&gt;#left#2#right&lt;/ltx:XMWrap&gt;"</span>,
+<a href=#1100 id=1100 data-nosnippet>1100</a>    alias =&gt; <span class="string">"\\cases"</span>,
+<a href=#1101 id=1101 data-nosnippet>1101</a>    reversion =&gt; <span class="string">"\\cases{#2}"</span>,
+<a href=#1102 id=1102 data-nosnippet>1102</a>    properties =&gt; sub[args] {
+<a href=#1103 id=1103 data-nosnippet>1103</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
+<a href=#1104 id=1104 data-nosnippet>1104</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
+<a href=#1105 id=1105 data-nosnippet>1105</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#1106 id=1106 data-nosnippet>1106</a>          <span class="kw">for </span>prop_key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"left"</span>, <span class="string">"right"</span>] {
+<a href=#1107 id=1107 data-nosnippet>1107</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = kv.get_value_digested(prop_key) {
+<a href=#1108 id=1108 data-nosnippet>1108</a>              props.insert(prop_key, Stored::Digested(digested.clone()));
+<a href=#1109 id=1109 data-nosnippet>1109</a>            }
+<a href=#1110 id=1110 data-nosnippet>1110</a>          }
+<a href=#1111 id=1111 data-nosnippet>1111</a>          <span class="kw">for </span>(k, v) <span class="kw">in </span>kv.get_pairs() {
+<a href=#1112 id=1112 data-nosnippet>1112</a>            <span class="kw">if </span>k != <span class="string">"left" </span>&amp;&amp; k != <span class="string">"right" </span>{
+<a href=#1113 id=1113 data-nosnippet>1113</a>              props.insert(k, Stored::String(arena::pin(v.to_string())));
+<a href=#1114 id=1114 data-nosnippet>1114</a>            }
+<a href=#1115 id=1115 data-nosnippet>1115</a>          }
+<a href=#1116 id=1116 data-nosnippet>1116</a>        }
+<a href=#1117 id=1117 data-nosnippet>1117</a>      }
+<a href=#1118 id=1118 data-nosnippet>1118</a>      <span class="prelude-val">Ok</span>(props)
+<a href=#1119 id=1119 data-nosnippet>1119</a>    },
+<a href=#1120 id=1120 data-nosnippet>1120</a>    after_construct =&gt; sub[document, _whatsit] {
+<a href=#1121 id=1121 data-nosnippet>1121</a>      <span class="comment">// Perl afterConstruct: wrap in XMDual with meaning='cases'
+<a href=#1122 id=1122 data-nosnippet>1122</a>      // Get the XMWrap we just created (last child of current element)
+<a href=#1123 id=1123 data-nosnippet>1123</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(current) = document.get_element() {
+<a href=#1124 id=1124 data-nosnippet>1124</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>point) = current.get_last_element_child() {
+<a href=#1125 id=1125 data-nosnippet>1125</a>          <span class="kw">let </span>cells = document.findnodes(<span class="string">"ltx:XMArray/ltx:XMRow/ltx:XMCell"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>point));
+<a href=#1126 id=1126 data-nosnippet>1126</a>          <span class="comment">// Strip "align" from empty/whitespace-only cells
+<a href=#1127 id=1127 data-nosnippet>1127</a>          // (Perl doesn't set align on empty condition cells in \cases)
+<a href=#1128 id=1128 data-nosnippet>1128</a>          </span><span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells.iter().cloned() {
+<a href=#1129 id=1129 data-nosnippet>1129</a>            <span class="kw">if </span>cell.get_child_elements().is_empty() {
+<a href=#1130 id=1130 data-nosnippet>1130</a>              <span class="comment">// If no elements and only whitespace content, treat as empty
+<a href=#1131 id=1131 data-nosnippet>1131</a>              </span><span class="kw">let </span>content = cell.get_content();
+<a href=#1132 id=1132 data-nosnippet>1132</a>              <span class="kw">if </span>content.trim().is_empty() {
+<a href=#1133 id=1133 data-nosnippet>1133</a>                <span class="comment">// Remove whitespace text nodes
+<a href=#1134 id=1134 data-nosnippet>1134</a>                </span><span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>cell.get_child_nodes() {
+<a href=#1135 id=1135 data-nosnippet>1135</a>                  child.unlink();
+<a href=#1136 id=1136 data-nosnippet>1136</a>                }
+<a href=#1137 id=1137 data-nosnippet>1137</a>                cell.remove_attribute(<span class="string">"align"</span>).ok();
+<a href=#1138 id=1138 data-nosnippet>1138</a>              }
+<a href=#1139 id=1139 data-nosnippet>1139</a>            }
+<a href=#1140 id=1140 data-nosnippet>1140</a>          }
+<a href=#1141 id=1141 data-nosnippet>1141</a>          <span class="kw">if </span>!cells.is_empty() {
+<a href=#1142 id=1142 data-nosnippet>1142</a>            <span class="comment">// Collect XMRef ids for non-empty cells, "otherwise" text for empty cells
+<a href=#1143 id=1143 data-nosnippet>1143</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>ref_ids: Vec&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; = Vec::new();
+<a href=#1144 id=1144 data-nosnippet>1144</a>            <span class="kw">for </span>cell <span class="kw">in </span><span class="kw-2">&amp;</span>cells {
+<a href=#1145 id=1145 data-nosnippet>1145</a>              <span class="kw">if </span>!cell.get_child_elements().is_empty() {
+<a href=#1146 id=1146 data-nosnippet>1146</a>                <span class="comment">// Generate id on the cell's content and create XMRef to it
+<a href=#1147 id=1147 data-nosnippet>1147</a>                </span><span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>cell.get_child_elements() {
+<a href=#1148 id=1148 data-nosnippet>1148</a>                  document.generate_id(<span class="kw-2">&amp;mut </span>child, <span class="string">""</span>)<span class="question-mark">?</span>;
+<a href=#1149 id=1149 data-nosnippet>1149</a>                  <span class="kw">let </span>id = child.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#1150 id=1150 data-nosnippet>1150</a>                    .unwrap_or_default();
+<a href=#1151 id=1151 data-nosnippet>1151</a>                  ref_ids.push(<span class="prelude-val">Some</span>(id));
+<a href=#1152 id=1152 data-nosnippet>1152</a>                }
+<a href=#1153 id=1153 data-nosnippet>1153</a>              } <span class="kw">else </span>{
+<a href=#1154 id=1154 data-nosnippet>1154</a>                ref_ids.push(<span class="prelude-val">None</span>); <span class="comment">// Will become &lt;XMText&gt;otherwise&lt;/XMText&gt;
+<a href=#1155 id=1155 data-nosnippet>1155</a>              </span>}
+<a href=#1156 id=1156 data-nosnippet>1156</a>            }
+<a href=#1157 id=1157 data-nosnippet>1157</a>            <span class="comment">// Build XMDual structure around the XMWrap
+<a href=#1158 id=1158 data-nosnippet>1158</a>            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>parent) = point.get_parent() {
+<a href=#1159 id=1159 data-nosnippet>1159</a>              <span class="kw">let </span><span class="kw-2">mut </span>xm_dual =
+<a href=#1160 id=1160 data-nosnippet>1160</a>                document.open_element_at(<span class="kw-2">&amp;mut </span>parent, <span class="string">"ltx:XMDual"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1161 id=1161 data-nosnippet>1161</a>              point.add_prev_sibling(<span class="kw-2">&amp;mut </span>xm_dual).ok();
+<a href=#1162 id=1162 data-nosnippet>1162</a>              <span class="comment">// Content: &lt;XMApp&gt;&lt;XMTok meaning="cases"/&gt; XMRefs/XMTexts &lt;/XMApp&gt;
+<a href=#1163 id=1163 data-nosnippet>1163</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>xm_app =
+<a href=#1164 id=1164 data-nosnippet>1164</a>                document.open_element_at(<span class="kw-2">&amp;mut </span>xm_dual, <span class="string">"ltx:XMApp"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1165 id=1165 data-nosnippet>1165</a>              <span class="kw">let </span><span class="kw-2">mut </span>tok_attrs = HashMap::default();
+<a href=#1166 id=1166 data-nosnippet>1166</a>              tok_attrs.insert(<span class="string">"meaning"</span>.to_string(), <span class="string">"cases"</span>.to_string());
+<a href=#1167 id=1167 data-nosnippet>1167</a>              <span class="kw">let </span><span class="kw-2">mut </span>xm_tok =
+<a href=#1168 id=1168 data-nosnippet>1168</a>                document.open_element_at(<span class="kw-2">&amp;mut </span>xm_app, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(tok_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1169 id=1169 data-nosnippet>1169</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>xm_tok)<span class="question-mark">?</span>;
+<a href=#1170 id=1170 data-nosnippet>1170</a>              <span class="kw">for </span>ref_id_opt <span class="kw">in </span><span class="kw-2">&amp;</span>ref_ids {
+<a href=#1171 id=1171 data-nosnippet>1171</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = ref_id_opt {
+<a href=#1172 id=1172 data-nosnippet>1172</a>                  <span class="kw">let </span><span class="kw-2">mut </span>ref_attrs = HashMap::default();
+<a href=#1173 id=1173 data-nosnippet>1173</a>                  ref_attrs.insert(<span class="string">"idref"</span>.to_string(), id.clone());
+<a href=#1174 id=1174 data-nosnippet>1174</a>                  <span class="kw">let </span><span class="kw-2">mut </span>xm_ref =
+<a href=#1175 id=1175 data-nosnippet>1175</a>                    document.open_element_at(<span class="kw-2">&amp;mut </span>xm_app, <span class="string">"ltx:XMRef"</span>, <span class="prelude-val">Some</span>(ref_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1176 id=1176 data-nosnippet>1176</a>                  document.close_element_at(<span class="kw-2">&amp;mut </span>xm_ref)<span class="question-mark">?</span>;
+<a href=#1177 id=1177 data-nosnippet>1177</a>                } <span class="kw">else </span>{
+<a href=#1178 id=1178 data-nosnippet>1178</a>                  <span class="kw">let </span><span class="kw-2">mut </span>xm_text =
+<a href=#1179 id=1179 data-nosnippet>1179</a>                    document.open_element_at(<span class="kw-2">&amp;mut </span>xm_app, <span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1180 id=1180 data-nosnippet>1180</a>                  xm_text.set_content(<span class="string">"otherwise"</span>);
+<a href=#1181 id=1181 data-nosnippet>1181</a>                  document.close_element_at(<span class="kw-2">&amp;mut </span>xm_text)<span class="question-mark">?</span>;
+<a href=#1182 id=1182 data-nosnippet>1182</a>                }
+<a href=#1183 id=1183 data-nosnippet>1183</a>              }
+<a href=#1184 id=1184 data-nosnippet>1184</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>xm_app)<span class="question-mark">?</span>;
+<a href=#1185 id=1185 data-nosnippet>1185</a>              <span class="comment">// Move original XMWrap into XMDual (presentation branch)
+<a href=#1186 id=1186 data-nosnippet>1186</a>              </span>point.unlink_node();
+<a href=#1187 id=1187 data-nosnippet>1187</a>              xm_dual.add_child(<span class="kw-2">&amp;mut </span>point)<span class="question-mark">?</span>;
+<a href=#1188 id=1188 data-nosnippet>1188</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>xm_dual)<span class="question-mark">?</span>;
+<a href=#1189 id=1189 data-nosnippet>1189</a>            }
+<a href=#1190 id=1190 data-nosnippet>1190</a>          }
+<a href=#1191 id=1191 data-nosnippet>1191</a>        }
+<a href=#1192 id=1192 data-nosnippet>1192</a>      }
+<a href=#1193 id=1193 data-nosnippet>1193</a>    }
+<a href=#1194 id=1194 data-nosnippet>1194</a>  );
+<a href=#1195 id=1195 data-nosnippet>1195</a>
+<a href=#1196 id=1196 data-nosnippet>1196</a>  <span class="comment">// Perl: amsmath.sty.ltxml line 694 (defined in Perl Package but logically belongs here)
+<a href=#1197 id=1197 data-nosnippet>1197</a>  // AMS variant of cases — takes DigestedBody
+<a href=#1198 id=1198 data-nosnippet>1198</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@ams@cases@ RequiredKeyVals:lx@GEN DigestedBody"</span>,
+<a href=#1199 id=1199 data-nosnippet>1199</a>    <span class="string">"&lt;ltx:XMWrap&gt;#left#2#right&lt;/ltx:XMWrap&gt;"</span>,
+<a href=#1200 id=1200 data-nosnippet>1200</a>    alias =&gt; <span class="string">"\\begin{cases}"</span>,
+<a href=#1201 id=1201 data-nosnippet>1201</a>    reversion =&gt; <span class="string">"\\begin{cases}#2\\end{cases}"</span>,
+<a href=#1202 id=1202 data-nosnippet>1202</a>    properties =&gt; sub[args] {
+<a href=#1203 id=1203 data-nosnippet>1203</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
+<a href=#1204 id=1204 data-nosnippet>1204</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
+<a href=#1205 id=1205 data-nosnippet>1205</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#1206 id=1206 data-nosnippet>1206</a>          <span class="kw">for </span>prop_key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"left"</span>, <span class="string">"right"</span>] {
+<a href=#1207 id=1207 data-nosnippet>1207</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = kv.get_value_digested(prop_key) {
+<a href=#1208 id=1208 data-nosnippet>1208</a>              props.insert(prop_key, Stored::Digested(digested.clone()));
+<a href=#1209 id=1209 data-nosnippet>1209</a>            }
+<a href=#1210 id=1210 data-nosnippet>1210</a>          }
+<a href=#1211 id=1211 data-nosnippet>1211</a>          <span class="kw">for </span>(k, v) <span class="kw">in </span>kv.get_pairs() {
+<a href=#1212 id=1212 data-nosnippet>1212</a>            <span class="kw">if </span>k != <span class="string">"left" </span>&amp;&amp; k != <span class="string">"right" </span>{
+<a href=#1213 id=1213 data-nosnippet>1213</a>              props.insert(k, Stored::String(arena::pin(v.to_string())));
+<a href=#1214 id=1214 data-nosnippet>1214</a>            }
+<a href=#1215 id=1215 data-nosnippet>1215</a>          }
+<a href=#1216 id=1216 data-nosnippet>1216</a>        }
+<a href=#1217 id=1217 data-nosnippet>1217</a>      }
+<a href=#1218 id=1218 data-nosnippet>1218</a>      <span class="prelude-val">Ok</span>(props)
+<a href=#1219 id=1219 data-nosnippet>1219</a>    },
+<a href=#1220 id=1220 data-nosnippet>1220</a>    after_construct =&gt; sub[document, _whatsit] {
+<a href=#1221 id=1221 data-nosnippet>1221</a>      <span class="comment">// Same as \lx@gen@plain@cases@ — wrap in XMDual with meaning='cases'
+<a href=#1222 id=1222 data-nosnippet>1222</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(current) = document.get_element() {
+<a href=#1223 id=1223 data-nosnippet>1223</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>point) = current.get_last_element_child() {
+<a href=#1224 id=1224 data-nosnippet>1224</a>          <span class="kw">let </span>cells = document.findnodes(<span class="string">"ltx:XMArray/ltx:XMRow/ltx:XMCell"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>point));
+<a href=#1225 id=1225 data-nosnippet>1225</a>          <span class="kw">if </span>!cells.is_empty() {
+<a href=#1226 id=1226 data-nosnippet>1226</a>            <span class="kw">let </span><span class="kw-2">mut </span>ref_ids: Vec&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; = Vec::new();
+<a href=#1227 id=1227 data-nosnippet>1227</a>            <span class="kw">for </span>cell <span class="kw">in </span><span class="kw-2">&amp;</span>cells {
+<a href=#1228 id=1228 data-nosnippet>1228</a>              <span class="kw">if </span>!cell.get_child_elements().is_empty() {
+<a href=#1229 id=1229 data-nosnippet>1229</a>                <span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>cell.get_child_elements() {
+<a href=#1230 id=1230 data-nosnippet>1230</a>                  document.generate_id(<span class="kw-2">&amp;mut </span>child, <span class="string">""</span>)<span class="question-mark">?</span>;
+<a href=#1231 id=1231 data-nosnippet>1231</a>                  <span class="kw">let </span>id = child.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#1232 id=1232 data-nosnippet>1232</a>                    .unwrap_or_default();
+<a href=#1233 id=1233 data-nosnippet>1233</a>                  ref_ids.push(<span class="prelude-val">Some</span>(id));
+<a href=#1234 id=1234 data-nosnippet>1234</a>                }
+<a href=#1235 id=1235 data-nosnippet>1235</a>              } <span class="kw">else </span>{
+<a href=#1236 id=1236 data-nosnippet>1236</a>                ref_ids.push(<span class="prelude-val">None</span>);
+<a href=#1237 id=1237 data-nosnippet>1237</a>              }
+<a href=#1238 id=1238 data-nosnippet>1238</a>            }
+<a href=#1239 id=1239 data-nosnippet>1239</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>parent) = point.get_parent() {
+<a href=#1240 id=1240 data-nosnippet>1240</a>              <span class="kw">let </span><span class="kw-2">mut </span>xm_dual =
+<a href=#1241 id=1241 data-nosnippet>1241</a>                document.open_element_at(<span class="kw-2">&amp;mut </span>parent, <span class="string">"ltx:XMDual"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1242 id=1242 data-nosnippet>1242</a>              point.add_prev_sibling(<span class="kw-2">&amp;mut </span>xm_dual).ok();
+<a href=#1243 id=1243 data-nosnippet>1243</a>              <span class="kw">let </span><span class="kw-2">mut </span>xm_app =
+<a href=#1244 id=1244 data-nosnippet>1244</a>                document.open_element_at(<span class="kw-2">&amp;mut </span>xm_dual, <span class="string">"ltx:XMApp"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1245 id=1245 data-nosnippet>1245</a>              <span class="kw">let </span><span class="kw-2">mut </span>tok_attrs = HashMap::default();
+<a href=#1246 id=1246 data-nosnippet>1246</a>              tok_attrs.insert(<span class="string">"meaning"</span>.to_string(), <span class="string">"cases"</span>.to_string());
+<a href=#1247 id=1247 data-nosnippet>1247</a>              <span class="kw">let </span><span class="kw-2">mut </span>xm_tok =
+<a href=#1248 id=1248 data-nosnippet>1248</a>                document.open_element_at(<span class="kw-2">&amp;mut </span>xm_app, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(tok_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1249 id=1249 data-nosnippet>1249</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>xm_tok)<span class="question-mark">?</span>;
+<a href=#1250 id=1250 data-nosnippet>1250</a>              <span class="kw">for </span>ref_id_opt <span class="kw">in </span><span class="kw-2">&amp;</span>ref_ids {
+<a href=#1251 id=1251 data-nosnippet>1251</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = ref_id_opt {
+<a href=#1252 id=1252 data-nosnippet>1252</a>                  <span class="kw">let </span><span class="kw-2">mut </span>ref_attrs = HashMap::default();
+<a href=#1253 id=1253 data-nosnippet>1253</a>                  ref_attrs.insert(<span class="string">"idref"</span>.to_string(), id.clone());
+<a href=#1254 id=1254 data-nosnippet>1254</a>                  <span class="kw">let </span><span class="kw-2">mut </span>xm_ref =
+<a href=#1255 id=1255 data-nosnippet>1255</a>                    document.open_element_at(<span class="kw-2">&amp;mut </span>xm_app, <span class="string">"ltx:XMRef"</span>, <span class="prelude-val">Some</span>(ref_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1256 id=1256 data-nosnippet>1256</a>                  document.close_element_at(<span class="kw-2">&amp;mut </span>xm_ref)<span class="question-mark">?</span>;
+<a href=#1257 id=1257 data-nosnippet>1257</a>                } <span class="kw">else </span>{
+<a href=#1258 id=1258 data-nosnippet>1258</a>                  <span class="kw">let </span><span class="kw-2">mut </span>xm_text =
+<a href=#1259 id=1259 data-nosnippet>1259</a>                    document.open_element_at(<span class="kw-2">&amp;mut </span>xm_app, <span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1260 id=1260 data-nosnippet>1260</a>                  xm_text.set_content(<span class="string">"otherwise"</span>);
+<a href=#1261 id=1261 data-nosnippet>1261</a>                  document.close_element_at(<span class="kw-2">&amp;mut </span>xm_text)<span class="question-mark">?</span>;
+<a href=#1262 id=1262 data-nosnippet>1262</a>                }
+<a href=#1263 id=1263 data-nosnippet>1263</a>              }
+<a href=#1264 id=1264 data-nosnippet>1264</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>xm_app)<span class="question-mark">?</span>;
+<a href=#1265 id=1265 data-nosnippet>1265</a>              point.unlink_node();
+<a href=#1266 id=1266 data-nosnippet>1266</a>              xm_dual.add_child(<span class="kw-2">&amp;mut </span>point)<span class="question-mark">?</span>;
+<a href=#1267 id=1267 data-nosnippet>1267</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>xm_dual)<span class="question-mark">?</span>;
+<a href=#1268 id=1268 data-nosnippet>1268</a>            }
+<a href=#1269 id=1269 data-nosnippet>1269</a>          }
+<a href=#1270 id=1270 data-nosnippet>1270</a>        }
+<a href=#1271 id=1271 data-nosnippet>1271</a>      }
+<a href=#1272 id=1272 data-nosnippet>1272</a>    }
+<a href=#1273 id=1273 data-nosnippet>1273</a>  );
+<a href=#1274 id=1274 data-nosnippet>1274</a>
+<a href=#1275 id=1275 data-nosnippet>1275</a>});
+<a href=#1276 id=1276 data-nosnippet>1276</a>
+<a href=#1277 id=1277 data-nosnippet>1277</a><span class="doccomment">/// Helper: get first child element node
+<a href=#1278 id=1278 data-nosnippet>1278</a></span><span class="kw">fn </span>first_child_element(node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
+<a href=#1279 id=1279 data-nosnippet>1279</a>  node.get_child_elements().into_iter().next()
+<a href=#1280 id=1280 data-nosnippet>1280</a>}
+<a href=#1281 id=1281 data-nosnippet>1281</a>
+<a href=#1282 id=1282 data-nosnippet>1282</a><span class="doccomment">/// Perl: openMathFork (Base_XMath.pool.ltxml L780-786)
+<a href=#1283 id=1283 data-nosnippet>1283</a>/// Creates a MathFork structure with two branches: main (semantic) and presentation.
+<a href=#1284 id=1284 data-nosnippet>1284</a>/// Returns (mainfork_math_node, branch_node).
+<a href=#1285 id=1285 data-nosnippet>1285</a></span><span class="kw">pub fn </span>open_math_fork(
+<a href=#1286 id=1286 data-nosnippet>1286</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#1287 id=1287 data-nosnippet>1287</a>  equation: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1288 id=1288 data-nosnippet>1288</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(Node, Node)&gt; {
+<a href=#1289 id=1289 data-nosnippet>1289</a>  <span class="kw">let </span><span class="kw-2">mut </span>fork = document.open_element_at(equation, <span class="string">"ltx:MathFork"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1290 id=1290 data-nosnippet>1290</a>  <span class="kw">let </span><span class="kw-2">mut </span>mainfork = document.open_element_at(<span class="kw-2">&amp;mut </span>fork, <span class="string">"ltx:Math"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1291 id=1291 data-nosnippet>1291</a>  <span class="kw">let </span>_xmath = document.open_element_at(<span class="kw-2">&amp;mut </span>mainfork, <span class="string">"ltx:XMath"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1292 id=1292 data-nosnippet>1292</a>  <span class="kw">let </span>branch = document.open_element_at(<span class="kw-2">&amp;mut </span>fork, <span class="string">"ltx:MathBranch"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1293 id=1293 data-nosnippet>1293</a>  <span class="prelude-val">Ok</span>((mainfork, branch))
+<a href=#1294 id=1294 data-nosnippet>1294</a>}
+<a href=#1295 id=1295 data-nosnippet>1295</a>
+<a href=#1296 id=1296 data-nosnippet>1296</a><span class="doccomment">/// Perl: closeMathFork (Base_XMath.pool.ltxml L789-803)
+<a href=#1297 id=1297 data-nosnippet>1297</a>/// Closes all elements of an ltx:MathFork.
+<a href=#1298 id=1298 data-nosnippet>1298</a></span><span class="kw">pub fn </span>close_math_fork(
+<a href=#1299 id=1299 data-nosnippet>1299</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#1300 id=1300 data-nosnippet>1300</a>  equation: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1301 id=1301 data-nosnippet>1301</a>  mainfork: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1302 id=1302 data-nosnippet>1302</a>  branch: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1303 id=1303 data-nosnippet>1303</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1304 id=1304 data-nosnippet>1304</a>  <span class="comment">// Synthesize tex= attribute on mainfork Math from MathBranch cell tex attributes.
+<a href=#1305 id=1305 data-nosnippet>1305</a>  // Perl does this via MathWhatsit box accumulation + add_body_TeX afterClose,
+<a href=#1306 id=1306 data-nosnippet>1306</a>  // but Rust doesn't have MathWhatsit. Instead, we compose the tex attribute here.
+<a href=#1307 id=1307 data-nosnippet>1307</a>  </span><span class="kw">if </span>!mainfork.has_attribute(<span class="string">"tex"</span>) {
+<a href=#1308 id=1308 data-nosnippet>1308</a>    <span class="kw">let </span><span class="kw-2">mut </span>tex_parts: Vec&lt;String&gt; = Vec::new();
+<a href=#1309 id=1309 data-nosnippet>1309</a>    <span class="kw">let </span>tds = document.findnodes(<span class="string">"descendant::ltx:td"</span>, <span class="prelude-val">Some</span>(branch));
+<a href=#1310 id=1310 data-nosnippet>1310</a>    <span class="kw">for </span>td <span class="kw">in </span><span class="kw-2">&amp;</span>tds {
+<a href=#1311 id=1311 data-nosnippet>1311</a>      <span class="comment">// Collect ALL content from the td: text nodes, Math[@tex], text[@class=ltx_markedasmath]
+<a href=#1312 id=1312 data-nosnippet>1312</a>      // Perl's MathWhatsit captures reversion of all cell content in order.
+<a href=#1313 id=1313 data-nosnippet>1313</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>cell_parts: Vec&lt;String&gt; = Vec::new();
+<a href=#1314 id=1314 data-nosnippet>1314</a>      <span class="kw">for </span>child <span class="kw">in </span>td.get_child_nodes() {
+<a href=#1315 id=1315 data-nosnippet>1315</a>        <span class="kw">match </span>child.get_type() {
+<a href=#1316 id=1316 data-nosnippet>1316</a>          <span class="prelude-val">Some</span>(NodeType::TextNode) =&gt; {
+<a href=#1317 id=1317 data-nosnippet>1317</a>            <span class="kw">let </span>content = child.get_content();
+<a href=#1318 id=1318 data-nosnippet>1318</a>            <span class="kw">let </span>trimmed = content.trim();
+<a href=#1319 id=1319 data-nosnippet>1319</a>            <span class="kw">if </span>!trimmed.is_empty() {
+<a href=#1320 id=1320 data-nosnippet>1320</a>              cell_parts.push(trimmed.to_string());
+<a href=#1321 id=1321 data-nosnippet>1321</a>            }
+<a href=#1322 id=1322 data-nosnippet>1322</a>          },
+<a href=#1323 id=1323 data-nosnippet>1323</a>          <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
+<a href=#1324 id=1324 data-nosnippet>1324</a>            <span class="kw">let </span>name = child.get_name();
+<a href=#1325 id=1325 data-nosnippet>1325</a>            <span class="kw">if </span>name == <span class="string">"Math" </span>|| name == <span class="string">"math" </span>{
+<a href=#1326 id=1326 data-nosnippet>1326</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(tex) = child.get_attribute(<span class="string">"tex"</span>) {
+<a href=#1327 id=1327 data-nosnippet>1327</a>                cell_parts.push(tex);
+<a href=#1328 id=1328 data-nosnippet>1328</a>              }
+<a href=#1329 id=1329 data-nosnippet>1329</a>            } <span class="kw">else if </span>name == <span class="string">"text" </span>{
+<a href=#1330 id=1330 data-nosnippet>1330</a>              <span class="kw">let </span>class = child.get_attribute(<span class="string">"class"</span>).unwrap_or_default();
+<a href=#1331 id=1331 data-nosnippet>1331</a>              <span class="kw">if </span>class.contains(<span class="string">"ltx_markedasmath"</span>) {
+<a href=#1332 id=1332 data-nosnippet>1332</a>                <span class="kw">let </span>content = child.get_content();
+<a href=#1333 id=1333 data-nosnippet>1333</a>                <span class="kw">let </span>content = content.trim();
+<a href=#1334 id=1334 data-nosnippet>1334</a>                <span class="kw">if </span>!content.is_empty() {
+<a href=#1335 id=1335 data-nosnippet>1335</a>                  cell_parts.push(<span class="macro">format!</span>(<span class="string">"\\mbox{{{content}}}"</span>));
+<a href=#1336 id=1336 data-nosnippet>1336</a>                }
+<a href=#1337 id=1337 data-nosnippet>1337</a>              } <span class="kw">else </span>{
+<a href=#1338 id=1338 data-nosnippet>1338</a>                <span class="comment">// Plain text element — include content
+<a href=#1339 id=1339 data-nosnippet>1339</a>                </span><span class="kw">let </span>content = child.get_content();
+<a href=#1340 id=1340 data-nosnippet>1340</a>                <span class="kw">let </span>content = content.trim();
+<a href=#1341 id=1341 data-nosnippet>1341</a>                <span class="kw">if </span>!content.is_empty() {
+<a href=#1342 id=1342 data-nosnippet>1342</a>                  cell_parts.push(content.to_string());
+<a href=#1343 id=1343 data-nosnippet>1343</a>                }
+<a href=#1344 id=1344 data-nosnippet>1344</a>              }
+<a href=#1345 id=1345 data-nosnippet>1345</a>            }
+<a href=#1346 id=1346 data-nosnippet>1346</a>            <span class="comment">// Skip other element types (p wrappers etc) — descend into them
+<a href=#1347 id=1347 data-nosnippet>1347</a>            </span><span class="kw">else if </span>name == <span class="string">"p" </span>|| name == <span class="string">"para" </span>{
+<a href=#1348 id=1348 data-nosnippet>1348</a>              <span class="kw">let </span>inner_maths = document.findnodes(<span class="string">"ltx:Math[@tex]"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>child));
+<a href=#1349 id=1349 data-nosnippet>1349</a>              <span class="kw">for </span>math <span class="kw">in </span>inner_maths {
+<a href=#1350 id=1350 data-nosnippet>1350</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(tex) = math.get_attribute(<span class="string">"tex"</span>) {
+<a href=#1351 id=1351 data-nosnippet>1351</a>                  cell_parts.push(tex);
+<a href=#1352 id=1352 data-nosnippet>1352</a>                }
+<a href=#1353 id=1353 data-nosnippet>1353</a>              }
+<a href=#1354 id=1354 data-nosnippet>1354</a>            }
+<a href=#1355 id=1355 data-nosnippet>1355</a>          },
+<a href=#1356 id=1356 data-nosnippet>1356</a>          <span class="kw">_ </span>=&gt; {},
+<a href=#1357 id=1357 data-nosnippet>1357</a>        }
+<a href=#1358 id=1358 data-nosnippet>1358</a>      }
+<a href=#1359 id=1359 data-nosnippet>1359</a>      <span class="kw">if </span>!cell_parts.is_empty() {
+<a href=#1360 id=1360 data-nosnippet>1360</a>        tex_parts.push(cell_parts.join(<span class="string">""</span>));
+<a href=#1361 id=1361 data-nosnippet>1361</a>      }
 <a href=#1362 id=1362 data-nosnippet>1362</a>    }
-<a href=#1363 id=1363 data-nosnippet>1363</a>    col += <span class="number">1</span>;
-<a href=#1364 id=1364 data-nosnippet>1364</a>  }
-<a href=#1365 id=1365 data-nosnippet>1365</a>  <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
-<a href=#1366 id=1366 data-nosnippet>1366</a>    close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
-<a href=#1367 id=1367 data-nosnippet>1367</a>  }
-<a href=#1368 id=1368 data-nosnippet>1368</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1369 id=1369 data-nosnippet>1369</a>}
-<a href=#1370 id=1370 data-nosnippet>1370</a>
-<a href=#1371 id=1371 data-nosnippet>1371</a><span class="doccomment">/// Perl: equationgroupJoinRows (Base_XMath.pool.ltxml L926-963)
-<a href=#1372 id=1372 data-nosnippet>1372</a>/// Combines multiple row equations into a single semantic equation with a MathFork structure.
-<a href=#1373 id=1373 data-nosnippet>1373</a></span><span class="kw">pub fn </span>equationgroup_join_rows(
-<a href=#1374 id=1374 data-nosnippet>1374</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#1375 id=1375 data-nosnippet>1375</a>  equationgroup: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1376 id=1376 data-nosnippet>1376</a>  <span class="kw-2">mut </span>equations: Vec&lt;Node&gt;,
-<a href=#1377 id=1377 data-nosnippet>1377</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1378 id=1378 data-nosnippet>1378</a>  <span class="kw">if </span>equations.is_empty() {
-<a href=#1379 id=1379 data-nosnippet>1379</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#1380 id=1380 data-nosnippet>1380</a>  }
-<a href=#1381 id=1381 data-nosnippet>1381</a>  <span class="comment">// Create new equation at the position of the first input equation
-<a href=#1382 id=1382 data-nosnippet>1382</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>equation = document.open_element_at(equationgroup, <span class="string">"ltx:equation"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1383 id=1383 data-nosnippet>1383</a>  <span class="comment">// Move it before the first input equation
-<a href=#1384 id=1384 data-nosnippet>1384</a>  </span>equations[<span class="number">0</span>].add_prev_sibling(<span class="kw-2">&amp;mut </span>equation).ok();
-<a href=#1385 id=1385 data-nosnippet>1385</a>  <span class="comment">// Consolidate labels, id, refnum, tags from the input equations
-<a href=#1386 id=1386 data-nosnippet>1386</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>labels: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
-<a href=#1387 id=1387 data-nosnippet>1387</a>  <span class="kw">let </span><span class="kw-2">mut </span>id: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
-<a href=#1388 id=1388 data-nosnippet>1388</a>  <span class="kw">let </span><span class="kw-2">mut </span>tags: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
-<a href=#1389 id=1389 data-nosnippet>1389</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations.iter() {
-<a href=#1390 id=1390 data-nosnippet>1390</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = eq.get_attribute(<span class="string">"labels"</span>) {
-<a href=#1391 id=1391 data-nosnippet>1391</a>      labels = <span class="prelude-val">Some</span>(<span class="kw">match </span>labels {
-<a href=#1392 id=1392 data-nosnippet>1392</a>        <span class="prelude-val">Some</span>(existing) =&gt; <span class="macro">s!</span>(<span class="string">"{existing} {l}"</span>),
-<a href=#1393 id=1393 data-nosnippet>1393</a>        <span class="prelude-val">None </span>=&gt; l,
-<a href=#1394 id=1394 data-nosnippet>1394</a>      });
-<a href=#1395 id=1395 data-nosnippet>1395</a>    }
-<a href=#1396 id=1396 data-nosnippet>1396</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(eq_id) = eq.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
-<a href=#1397 id=1397 data-nosnippet>1397</a>      .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
-<a href=#1398 id=1398 data-nosnippet>1398</a>    {
-<a href=#1399 id=1399 data-nosnippet>1399</a>      id = <span class="prelude-val">Some</span>(eq_id);
-<a href=#1400 id=1400 data-nosnippet>1400</a>    }
-<a href=#1401 id=1401 data-nosnippet>1401</a>    <span class="kw">let </span>found_tags = document.findnodes(<span class="string">"ltx:tags"</span>, <span class="prelude-val">Some</span>(eq));
-<a href=#1402 id=1402 data-nosnippet>1402</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = found_tags.into_iter().last() {
-<a href=#1403 id=1403 data-nosnippet>1403</a>      tags = <span class="prelude-val">Some</span>(t);
-<a href=#1404 id=1404 data-nosnippet>1404</a>    }
-<a href=#1405 id=1405 data-nosnippet>1405</a>  }
-<a href=#1406 id=1406 data-nosnippet>1406</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>id_str) = id {
-<a href=#1407 id=1407 data-nosnippet>1407</a>    document.unrecord_id(id_str);
-<a href=#1408 id=1408 data-nosnippet>1408</a>  }
-<a href=#1409 id=1409 data-nosnippet>1409</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>l) = labels {
-<a href=#1410 id=1410 data-nosnippet>1410</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>equation, <span class="string">"labels"</span>, l)<span class="question-mark">?</span>;
-<a href=#1411 id=1411 data-nosnippet>1411</a>  }
-<a href=#1412 id=1412 data-nosnippet>1412</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>id_str) = id {
-<a href=#1413 id=1413 data-nosnippet>1413</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>equation, <span class="string">"xml:id"</span>, id_str)<span class="question-mark">?</span>;
-<a href=#1414 id=1414 data-nosnippet>1414</a>  }
-<a href=#1415 id=1415 data-nosnippet>1415</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>t) = tags {
-<a href=#1416 id=1416 data-nosnippet>1416</a>    t.unlink_node();
-<a href=#1417 id=1417 data-nosnippet>1417</a>    equation.add_child(<span class="kw-2">&amp;mut </span>t).ok();
-<a href=#1418 id=1418 data-nosnippet>1418</a>  }
-<a href=#1419 id=1419 data-nosnippet>1419</a>  <span class="comment">// Pre-advance the ID counter to skip over cell Math IDs.
-<a href=#1420 id=1420 data-nosnippet>1420</a>  // For multi-row eqnarrays where different rows have different equation IDs,
-<a href=#1421 id=1421 data-nosnippet>1421</a>  // only count cells from the equation that provides the target ID.
-<a href=#1422 id=1422 data-nosnippet>1422</a>  // This prevents inflation from rows that belong to different equation contexts.
-<a href=#1423 id=1423 data-nosnippet>1423</a>  </span><span class="kw">let </span>has_different_ids = equations.len() &gt; <span class="number">1 </span>&amp;&amp; {
-<a href=#1424 id=1424 data-nosnippet>1424</a>    <span class="kw">let </span>ids: Vec&lt;<span class="kw">_</span>&gt; = equations.iter().filter_map(|eq|
-<a href=#1425 id=1425 data-nosnippet>1425</a>      eq.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
-<a href=#1426 id=1426 data-nosnippet>1426</a>        .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
-<a href=#1427 id=1427 data-nosnippet>1427</a>    ).collect();
-<a href=#1428 id=1428 data-nosnippet>1428</a>    ids.len() &gt; <span class="number">1 </span>|| (ids.len() == <span class="number">1 </span>&amp;&amp; equations.len() &gt; <span class="number">1</span>)
-<a href=#1429 id=1429 data-nosnippet>1429</a>  };
-<a href=#1430 id=1430 data-nosnippet>1430</a>  <span class="kw">let </span><span class="kw-2">mut </span>cell_count = <span class="number">0</span>;
-<a href=#1431 id=1431 data-nosnippet>1431</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations.iter() {
-<a href=#1432 id=1432 data-nosnippet>1432</a>    <span class="kw">if </span>has_different_ids {
-<a href=#1433 id=1433 data-nosnippet>1433</a>      <span class="comment">// Multi-row with different IDs: only count cells with Math from the target equation
-<a href=#1434 id=1434 data-nosnippet>1434</a>      </span><span class="kw">let </span>eq_id = eq.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
-<a href=#1435 id=1435 data-nosnippet>1435</a>        .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>));
-<a href=#1436 id=1436 data-nosnippet>1436</a>      <span class="kw">if </span>eq_id != id { <span class="kw">continue</span>; }
-<a href=#1437 id=1437 data-nosnippet>1437</a>      <span class="comment">// Count only cells that contain Math elements (empty cells don't consume IDs)
-<a href=#1438 id=1438 data-nosnippet>1438</a>      </span><span class="kw">let </span>captures = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(eq));
-<a href=#1439 id=1439 data-nosnippet>1439</a>      <span class="kw">for </span>cap <span class="kw">in </span><span class="kw-2">&amp;</span>captures {
-<a href=#1440 id=1440 data-nosnippet>1440</a>        <span class="kw">if </span>!document.findnodes(<span class="string">"ltx:Math"</span>, <span class="prelude-val">Some</span>(cap)).is_empty() {
-<a href=#1441 id=1441 data-nosnippet>1441</a>          cell_count += <span class="number">1</span>;
-<a href=#1442 id=1442 data-nosnippet>1442</a>        }
-<a href=#1443 id=1443 data-nosnippet>1443</a>      }
-<a href=#1444 id=1444 data-nosnippet>1444</a>    } <span class="kw">else </span>{
-<a href=#1445 id=1445 data-nosnippet>1445</a>      <span class="comment">// Single-equation: count all _Capture_ cells (including empty ones)
-<a href=#1446 id=1446 data-nosnippet>1446</a>      </span><span class="kw">let </span>captures = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(eq));
-<a href=#1447 id=1447 data-nosnippet>1447</a>      cell_count += captures.len();
-<a href=#1448 id=1448 data-nosnippet>1448</a>    }
-<a href=#1449 id=1449 data-nosnippet>1449</a>  }
-<a href=#1450 id=1450 data-nosnippet>1450</a>  <span class="kw">if </span>cell_count &gt; <span class="number">0 </span>{
-<a href=#1451 id=1451 data-nosnippet>1451</a>    <span class="kw">let </span>ctrkey = <span class="macro">s!</span>(<span class="string">"_ID_counter_m_"</span>);
-<a href=#1452 id=1452 data-nosnippet>1452</a>    <span class="kw">let </span>current = equation.get_attribute(<span class="kw-2">&amp;</span>ctrkey).unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"0"</span>));
-<a href=#1453 id=1453 data-nosnippet>1453</a>    <span class="kw">let </span>new_val = current.parse::&lt;u32&gt;().unwrap_or(<span class="number">0</span>) + cell_count <span class="kw">as </span>u32;
-<a href=#1454 id=1454 data-nosnippet>1454</a>    equation.set_attribute(<span class="kw-2">&amp;</span>ctrkey, <span class="kw-2">&amp;</span>new_val.to_string())<span class="question-mark">?</span>;
-<a href=#1455 id=1455 data-nosnippet>1455</a>  }
-<a href=#1456 id=1456 data-nosnippet>1456</a>  <span class="comment">// Create MathFork
-<a href=#1457 id=1457 data-nosnippet>1457</a>  </span><span class="kw">let </span>(<span class="kw-2">mut </span>mainfork, <span class="kw-2">mut </span>branch_node) = open_math_fork(document, <span class="kw-2">&amp;mut </span>equation)<span class="question-mark">?</span>;
-<a href=#1458 id=1458 data-nosnippet>1458</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations {
-<a href=#1459 id=1459 data-nosnippet>1459</a>    <span class="kw">let </span><span class="kw-2">mut </span>eq = eq;
-<a href=#1460 id=1460 data-nosnippet>1460</a>    eq.unlink_node();
-<a href=#1461 id=1461 data-nosnippet>1461</a>    <span class="kw">let </span><span class="kw-2">mut </span>tr = document.open_element_at(<span class="kw-2">&amp;mut </span>branch_node, <span class="string">"ltx:tr"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1462 id=1462 data-nosnippet>1462</a>    <span class="comment">// Note: Perl also checks for lefteqn class on first _Capture_ to add ltx_eqn_lefteqn
-<a href=#1463 id=1463 data-nosnippet>1463</a>    // to &lt;tr&gt;, but in practice the class is on a child td (via \multicolumn), not on
-<a href=#1464 id=1464 data-nosnippet>1464</a>    // _Capture_ itself, so the condition never fires in Perl output.
-<a href=#1465 id=1465 data-nosnippet>1465</a>    </span><span class="kw">let </span>cells: Vec&lt;Node&gt; = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>eq));
-<a href=#1466 id=1466 data-nosnippet>1466</a>    <span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells {
-<a href=#1467 id=1467 data-nosnippet>1467</a>      add_column_to_math_fork(document, <span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>tr, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
-<a href=#1468 id=1468 data-nosnippet>1468</a>    }
-<a href=#1469 id=1469 data-nosnippet>1469</a>    document.close_element_at(<span class="kw-2">&amp;mut </span>tr)<span class="question-mark">?</span>;
-<a href=#1470 id=1470 data-nosnippet>1470</a>  }
-<a href=#1471 id=1471 data-nosnippet>1471</a>  close_math_fork(document, <span class="kw-2">&amp;mut </span>equation, <span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch_node)<span class="question-mark">?</span>;
-<a href=#1472 id=1472 data-nosnippet>1472</a>  document.close_element_at(<span class="kw-2">&amp;mut </span>equation)<span class="question-mark">?</span>;
-<a href=#1473 id=1473 data-nosnippet>1473</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1474 id=1474 data-nosnippet>1474</a>}
-<a href=#1475 id=1475 data-nosnippet>1475</a>
-<a href=#1476 id=1476 data-nosnippet>1476</a><span class="doccomment">/// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
-<a href=#1477 id=1477 data-nosnippet>1477</a></span><span class="kw">pub fn </span>add_meaning_rec(document: <span class="kw-2">&amp;mut </span>Document, node: Node, meaning: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1478 id=1478 data-nosnippet>1478</a>  <span class="kw">if </span>node.get_type() != <span class="prelude-val">Some</span>(NodeType::ElementNode) {
-<a href=#1479 id=1479 data-nosnippet>1479</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#1480 id=1480 data-nosnippet>1480</a>  }
-<a href=#1481 id=1481 data-nosnippet>1481</a>  <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>node);
-<a href=#1482 id=1482 data-nosnippet>1482</a>  <span class="kw">if </span>qname == arena::pin_static(<span class="string">"ltx:XMArg"</span>) {
-<a href=#1483 id=1483 data-nosnippet>1483</a>    <span class="comment">// DON'T cross through into arguments
-<a href=#1484 id=1484 data-nosnippet>1484</a>  </span>} <span class="kw">else if </span>qname == arena::pin_static(<span class="string">"ltx:XMTok"</span>) {
-<a href=#1485 id=1485 data-nosnippet>1485</a>    <span class="kw">let </span>role = node.get_attribute(<span class="string">"role"</span>).unwrap_or_default();
-<a href=#1486 id=1486 data-nosnippet>1486</a>    <span class="kw">if </span>(role.is_empty() || role == <span class="string">"UNKNOWN"</span>) &amp;&amp; !node.has_attribute(<span class="string">"meaning"</span>) {
-<a href=#1487 id=1487 data-nosnippet>1487</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>node.clone(), <span class="string">"meaning"</span>, meaning)<span class="question-mark">?</span>;
+<a href=#1363 id=1363 data-nosnippet>1363</a>    <span class="kw">if </span>!tex_parts.is_empty() {
+<a href=#1364 id=1364 data-nosnippet>1364</a>      <span class="comment">// Normalize: Perl's MathWhatsit extracts \displaystyle to the front.
+<a href=#1365 id=1365 data-nosnippet>1365</a>      // Each cell's tex starts with "\displaystyle"; strip and prepend once.
+<a href=#1366 id=1366 data-nosnippet>1366</a>      </span><span class="kw">let </span>has_displaystyle = tex_parts.iter().any(|t| t.starts_with(<span class="string">"\\displaystyle"</span>));
+<a href=#1367 id=1367 data-nosnippet>1367</a>      <span class="kw">let </span>stripped: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = tex_parts
+<a href=#1368 id=1368 data-nosnippet>1368</a>        .iter()
+<a href=#1369 id=1369 data-nosnippet>1369</a>        .map(|t| t.strip_prefix(<span class="string">"\\displaystyle"</span>).unwrap_or(t).trim_start())
+<a href=#1370 id=1370 data-nosnippet>1370</a>        .collect();
+<a href=#1371 id=1371 data-nosnippet>1371</a>      <span class="comment">// Join with CS-aware spacing: if previous part ends with a letter and next starts
+<a href=#1372 id=1372 data-nosnippet>1372</a>      // with a letter, insert a space (matching TeX CS termination rules).
+<a href=#1373 id=1373 data-nosnippet>1373</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>body = String::new();
+<a href=#1374 id=1374 data-nosnippet>1374</a>      <span class="kw">for </span>(i, part) <span class="kw">in </span>stripped.iter().enumerate() {
+<a href=#1375 id=1375 data-nosnippet>1375</a>        <span class="kw">if </span>i &gt; <span class="number">0 </span>&amp;&amp; !body.is_empty() &amp;&amp; !part.is_empty() {
+<a href=#1376 id=1376 data-nosnippet>1376</a>          <span class="kw">let </span>prev_ends_letter = body.ends_with(|c: char| c.is_ascii_alphabetic());
+<a href=#1377 id=1377 data-nosnippet>1377</a>          <span class="kw">let </span>next_starts_letter = part.starts_with(|c: char| c.is_ascii_alphabetic());
+<a href=#1378 id=1378 data-nosnippet>1378</a>          <span class="kw">if </span>prev_ends_letter &amp;&amp; next_starts_letter {
+<a href=#1379 id=1379 data-nosnippet>1379</a>            body.push(<span class="string">' '</span>);
+<a href=#1380 id=1380 data-nosnippet>1380</a>          }
+<a href=#1381 id=1381 data-nosnippet>1381</a>        }
+<a href=#1382 id=1382 data-nosnippet>1382</a>        body.push_str(part);
+<a href=#1383 id=1383 data-nosnippet>1383</a>      }
+<a href=#1384 id=1384 data-nosnippet>1384</a>      <span class="kw">let </span>combined_tex = <span class="kw">if </span>has_displaystyle {
+<a href=#1385 id=1385 data-nosnippet>1385</a>        <span class="comment">// Add space after \displaystyle only if body starts with a letter
+<a href=#1386 id=1386 data-nosnippet>1386</a>        // (TeX CS needs space termination before letters, not before operators)
+<a href=#1387 id=1387 data-nosnippet>1387</a>        </span><span class="kw">if </span>body.starts_with(|c: char| c.is_ascii_alphabetic()) {
+<a href=#1388 id=1388 data-nosnippet>1388</a>          <span class="macro">format!</span>(<span class="string">"\\displaystyle {body}"</span>)
+<a href=#1389 id=1389 data-nosnippet>1389</a>        } <span class="kw">else </span>{
+<a href=#1390 id=1390 data-nosnippet>1390</a>          <span class="macro">format!</span>(<span class="string">"\\displaystyle{body}"</span>)
+<a href=#1391 id=1391 data-nosnippet>1391</a>        }
+<a href=#1392 id=1392 data-nosnippet>1392</a>      } <span class="kw">else </span>{
+<a href=#1393 id=1393 data-nosnippet>1393</a>        body
+<a href=#1394 id=1394 data-nosnippet>1394</a>      };
+<a href=#1395 id=1395 data-nosnippet>1395</a>      document.set_attribute(mainfork, <span class="string">"tex"</span>, <span class="kw-2">&amp;</span>combined_tex)<span class="question-mark">?</span>;
+<a href=#1396 id=1396 data-nosnippet>1396</a>    }
+<a href=#1397 id=1397 data-nosnippet>1397</a>  }
+<a href=#1398 id=1398 data-nosnippet>1398</a>
+<a href=#1399 id=1399 data-nosnippet>1399</a>  document.close_element_at(branch)<span class="question-mark">?</span>;
+<a href=#1400 id=1400 data-nosnippet>1400</a>  <span class="comment">// Close XMath (first child of mainfork)
+<a href=#1401 id=1401 data-nosnippet>1401</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>xmath) = first_child_element(mainfork) {
+<a href=#1402 id=1402 data-nosnippet>1402</a>    document.close_element_at(<span class="kw-2">&amp;mut </span>xmath)<span class="question-mark">?</span>;
+<a href=#1403 id=1403 data-nosnippet>1403</a>  }
+<a href=#1404 id=1404 data-nosnippet>1404</a>  document.close_element_at(mainfork)<span class="question-mark">?</span>;
+<a href=#1405 id=1405 data-nosnippet>1405</a>  <span class="comment">// Close the MathFork — find it defensively via xpath
+<a href=#1406 id=1406 data-nosnippet>1406</a>  </span><span class="kw">let </span>mfs = document.findnodes(<span class="string">"ltx:MathFork"</span>, <span class="prelude-val">Some</span>(equation));
+<a href=#1407 id=1407 data-nosnippet>1407</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>last_mf) = mfs.into_iter().last() {
+<a href=#1408 id=1408 data-nosnippet>1408</a>    document.close_element_at(<span class="kw-2">&amp;mut </span>last_mf)<span class="question-mark">?</span>;
+<a href=#1409 id=1409 data-nosnippet>1409</a>  }
+<a href=#1410 id=1410 data-nosnippet>1410</a>  <span class="comment">// Check if branch came up empty (only 1 child = just the Math)
+<a href=#1411 id=1411 data-nosnippet>1411</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>fork = branch.get_parent().unwrap();
+<a href=#1412 id=1412 data-nosnippet>1412</a>  <span class="kw">let </span>branches: Vec&lt;Node&gt; = fork.get_child_nodes();
+<a href=#1413 id=1413 data-nosnippet>1413</a>  <span class="kw">if </span>branches.len() == <span class="number">1 </span>{
+<a href=#1414 id=1414 data-nosnippet>1414</a>    <span class="comment">// Whoops, came up empty! Remove the fork
+<a href=#1415 id=1415 data-nosnippet>1415</a>    </span>fork.unlink_node();
+<a href=#1416 id=1416 data-nosnippet>1416</a>  }
+<a href=#1417 id=1417 data-nosnippet>1417</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1418 id=1418 data-nosnippet>1418</a>}
+<a href=#1419 id=1419 data-nosnippet>1419</a>
+<a href=#1420 id=1420 data-nosnippet>1420</a><span class="doccomment">/// Perl: addColumnToMathFork (Base_XMath.pool.ltxml L839-899)
+<a href=#1421 id=1421 data-nosnippet>1421</a>/// Distributes content from an ltx:_Capture_ cell into both the presentation branch
+<a href=#1422 id=1422 data-nosnippet>1422</a>/// (as ltx:td) AND the semantic main branch (cloned into XMath).
+<a href=#1423 id=1423 data-nosnippet>1423</a></span><span class="kw">pub fn </span>add_column_to_math_fork(
+<a href=#1424 id=1424 data-nosnippet>1424</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#1425 id=1425 data-nosnippet>1425</a>  mainfork: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1426 id=1426 data-nosnippet>1426</a>  inbranch: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1427 id=1427 data-nosnippet>1427</a>  cell: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1428 id=1428 data-nosnippet>1428</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1429 id=1429 data-nosnippet>1429</a>  <span class="kw">let </span><span class="kw-2">mut </span>td = document.open_element_at(inbranch, <span class="string">"ltx:td"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1430 id=1430 data-nosnippet>1430</a>  <span class="comment">// Copy align and colspan attributes
+<a href=#1431 id=1431 data-nosnippet>1431</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(align) = cell.get_attribute(<span class="string">"align"</span>) {
+<a href=#1432 id=1432 data-nosnippet>1432</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>td, <span class="string">"align"</span>, <span class="kw-2">&amp;</span>align)<span class="question-mark">?</span>;
+<a href=#1433 id=1433 data-nosnippet>1433</a>  }
+<a href=#1434 id=1434 data-nosnippet>1434</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(colspan) = cell.get_attribute(<span class="string">"colspan"</span>) {
+<a href=#1435 id=1435 data-nosnippet>1435</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>td, <span class="string">"colspan"</span>, <span class="kw-2">&amp;</span>colspan)<span class="question-mark">?</span>;
+<a href=#1436 id=1436 data-nosnippet>1436</a>  }
+<a href=#1437 id=1437 data-nosnippet>1437</a>  <span class="comment">// Remove the _Capture_ from the document
+<a href=#1438 id=1438 data-nosnippet>1438</a>  </span>cell.unlink_node();
+<a href=#1439 id=1439 data-nosnippet>1439</a>  <span class="comment">// Process each child of _Capture_
+<a href=#1440 id=1440 data-nosnippet>1440</a>  </span><span class="kw">let </span>children: Vec&lt;Node&gt; = cell.get_child_nodes();
+<a href=#1441 id=1441 data-nosnippet>1441</a>  <span class="kw">let </span>math_qname = arena::pin_static(<span class="string">"ltx:Math"</span>);
+<a href=#1442 id=1442 data-nosnippet>1442</a>  <span class="kw">let </span>text_qname = arena::pin_static(<span class="string">"ltx:text"</span>);
+<a href=#1443 id=1443 data-nosnippet>1443</a>  <span class="kw">let </span>p_qname = arena::pin_static(<span class="string">"ltx:p"</span>);
+<a href=#1444 id=1444 data-nosnippet>1444</a>  <span class="kw">for </span>node <span class="kw">in </span>children {
+<a href=#1445 id=1445 data-nosnippet>1445</a>    <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>node);
+<a href=#1446 id=1446 data-nosnippet>1446</a>    <span class="kw">if </span>qname == math_qname {
+<a href=#1447 id=1447 data-nosnippet>1447</a>      <span class="comment">// Clone XMath children to the main branch
+<a href=#1448 id=1448 data-nosnippet>1448</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(xmath) = first_child_element(<span class="kw-2">&amp;</span>node) {
+<a href=#1449 id=1449 data-nosnippet>1449</a>        <span class="kw">let </span>xmath_children: Vec&lt;Node&gt; = xmath.get_child_elements();
+<a href=#1450 id=1450 data-nosnippet>1450</a>        <span class="kw">if </span>!xmath_children.is_empty() {
+<a href=#1451 id=1451 data-nosnippet>1451</a>          state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::String(arena::pin_static(<span class="string">".mf"</span>)), <span class="prelude-val">None</span>);
+<a href=#1452 id=1452 data-nosnippet>1452</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mainfork_xmath) = first_child_element(mainfork) {
+<a href=#1453 id=1453 data-nosnippet>1453</a>            document.append_clone(<span class="kw-2">&amp;mut </span>mainfork_xmath, xmath_children)<span class="question-mark">?</span>;
+<a href=#1454 id=1454 data-nosnippet>1454</a>          }
+<a href=#1455 id=1455 data-nosnippet>1455</a>          state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::None, <span class="prelude-val">None</span>);
+<a href=#1456 id=1456 data-nosnippet>1456</a>        }
+<a href=#1457 id=1457 data-nosnippet>1457</a>      }
+<a href=#1458 id=1458 data-nosnippet>1458</a>    } <span class="kw">else if </span>qname == text_qname || qname == p_qname {
+<a href=#1459 id=1459 data-nosnippet>1459</a>      <span class="kw">let </span>text_content = node.get_content();
+<a href=#1460 id=1460 data-nosnippet>1460</a>      <span class="kw">if </span>!text_content.is_empty() {
+<a href=#1461 id=1461 data-nosnippet>1461</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mainfork_xmath) = first_child_element(mainfork) {
+<a href=#1462 id=1462 data-nosnippet>1462</a>          state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::String(arena::pin_static(<span class="string">".mf"</span>)), <span class="prelude-val">None</span>);
+<a href=#1463 id=1463 data-nosnippet>1463</a>          <span class="kw">let </span><span class="kw-2">mut </span>txt = document.open_element_at(<span class="kw-2">&amp;mut </span>mainfork_xmath, <span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1464 id=1464 data-nosnippet>1464</a>          document.append_clone(<span class="kw-2">&amp;mut </span>txt, <span class="macro">vec!</span>[node.clone()])<span class="question-mark">?</span>;
+<a href=#1465 id=1465 data-nosnippet>1465</a>          document.close_element_at(<span class="kw-2">&amp;mut </span>txt)<span class="question-mark">?</span>;
+<a href=#1466 id=1466 data-nosnippet>1466</a>          state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::None, <span class="prelude-val">None</span>);
+<a href=#1467 id=1467 data-nosnippet>1467</a>        }
+<a href=#1468 id=1468 data-nosnippet>1468</a>      }
+<a href=#1469 id=1469 data-nosnippet>1469</a>    } <span class="kw">else if </span>node.get_type() == <span class="prelude-val">Some</span>(libxml::tree::NodeType::TextNode) {
+<a href=#1470 id=1470 data-nosnippet>1470</a>      <span class="kw">let </span>string = node.get_content();
+<a href=#1471 id=1471 data-nosnippet>1471</a>      <span class="kw">if </span>!string.trim().is_empty() {
+<a href=#1472 id=1472 data-nosnippet>1472</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mainfork_xmath) = first_child_element(mainfork) {
+<a href=#1473 id=1473 data-nosnippet>1473</a>          <span class="kw">let </span><span class="kw-2">mut </span>txt = document.open_element_at(<span class="kw-2">&amp;mut </span>mainfork_xmath, <span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1474 id=1474 data-nosnippet>1474</a>          <span class="kw">let _ </span>= txt.set_content(<span class="kw-2">&amp;</span>string);
+<a href=#1475 id=1475 data-nosnippet>1475</a>          document.close_element_at(<span class="kw-2">&amp;mut </span>txt)<span class="question-mark">?</span>;
+<a href=#1476 id=1476 data-nosnippet>1476</a>        }
+<a href=#1477 id=1477 data-nosnippet>1477</a>      }
+<a href=#1478 id=1478 data-nosnippet>1478</a>    } <span class="kw">else if </span>node.get_type() == <span class="prelude-val">Some</span>(libxml::tree::NodeType::CommentNode) {
+<a href=#1479 id=1479 data-nosnippet>1479</a>      <span class="comment">// Skip comments
+<a href=#1480 id=1480 data-nosnippet>1480</a>    </span>} <span class="kw">else </span>{
+<a href=#1481 id=1481 data-nosnippet>1481</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mainfork_xmath) = first_child_element(mainfork) {
+<a href=#1482 id=1482 data-nosnippet>1482</a>        state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::String(arena::pin_static(<span class="string">".mf"</span>)), <span class="prelude-val">None</span>);
+<a href=#1483 id=1483 data-nosnippet>1483</a>        <span class="kw">let </span><span class="kw-2">mut </span>txt = document.open_element_at(<span class="kw-2">&amp;mut </span>mainfork_xmath, <span class="string">"ltx:XMText"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1484 id=1484 data-nosnippet>1484</a>        document.append_clone(<span class="kw-2">&amp;mut </span>txt, <span class="macro">vec!</span>[node.clone()])<span class="question-mark">?</span>;
+<a href=#1485 id=1485 data-nosnippet>1485</a>        document.close_element_at(<span class="kw-2">&amp;mut </span>txt)<span class="question-mark">?</span>;
+<a href=#1486 id=1486 data-nosnippet>1486</a>        state::assign_value(<span class="string">"ID_SUFFIX"</span>, Stored::None, <span class="prelude-val">None</span>);
+<a href=#1487 id=1487 data-nosnippet>1487</a>      }
 <a href=#1488 id=1488 data-nosnippet>1488</a>    }
-<a href=#1489 id=1489 data-nosnippet>1489</a>  } <span class="kw">else </span>{
-<a href=#1490 id=1490 data-nosnippet>1490</a>    <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
-<a href=#1491 id=1491 data-nosnippet>1491</a>      add_meaning_rec(document, child, meaning)<span class="question-mark">?</span>;
-<a href=#1492 id=1492 data-nosnippet>1492</a>    }
-<a href=#1493 id=1493 data-nosnippet>1493</a>  }
+<a href=#1489 id=1489 data-nosnippet>1489</a>    <span class="comment">// Move the original node to the td (presentation side)
+<a href=#1490 id=1490 data-nosnippet>1490</a>    </span>document.unrecord_node_ids(<span class="kw-2">&amp;</span>node);
+<a href=#1491 id=1491 data-nosnippet>1491</a>    document.append_tree(<span class="kw-2">&amp;mut </span>td, <span class="macro">vec!</span>[node])<span class="question-mark">?</span>;
+<a href=#1492 id=1492 data-nosnippet>1492</a>  }
+<a href=#1493 id=1493 data-nosnippet>1493</a>  document.close_element_at(<span class="kw-2">&amp;mut </span>td)<span class="question-mark">?</span>;
 <a href=#1494 id=1494 data-nosnippet>1494</a>  <span class="prelude-val">Ok</span>(())
 <a href=#1495 id=1495 data-nosnippet>1495</a>}
+<a href=#1496 id=1496 data-nosnippet>1496</a>
+<a href=#1497 id=1497 data-nosnippet>1497</a><span class="doccomment">/// Perl: equationgroupJoinCols (Base_XMath.pool.ltxml L970-980)
+<a href=#1498 id=1498 data-nosnippet>1498</a>/// Groups every $ncols columns into a MathFork structure within an equation.
+<a href=#1499 id=1499 data-nosnippet>1499</a></span><span class="kw">pub fn </span>equationgroup_join_cols(
+<a href=#1500 id=1500 data-nosnippet>1500</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#1501 id=1501 data-nosnippet>1501</a>  ncols: usize,
+<a href=#1502 id=1502 data-nosnippet>1502</a>  equation: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1503 id=1503 data-nosnippet>1503</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1504 id=1504 data-nosnippet>1504</a>  <span class="kw">let </span><span class="kw-2">mut </span>col = <span class="number">0usize</span>;
+<a href=#1505 id=1505 data-nosnippet>1505</a>  <span class="kw">let </span><span class="kw-2">mut </span>mainfork: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
+<a href=#1506 id=1506 data-nosnippet>1506</a>  <span class="kw">let </span><span class="kw-2">mut </span>branch: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
+<a href=#1507 id=1507 data-nosnippet>1507</a>  <span class="kw">let </span>cells: Vec&lt;Node&gt; = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(equation));
+<a href=#1508 id=1508 data-nosnippet>1508</a>  <span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells {
+<a href=#1509 id=1509 data-nosnippet>1509</a>    <span class="kw">let </span>qname_str = arena::to_string(document::get_node_qname(<span class="kw-2">&amp;</span>cell));
+<a href=#1510 id=1510 data-nosnippet>1510</a>    <span class="kw">if </span>!qname_str.ends_with(<span class="string">"_Capture_"</span>) {
+<a href=#1511 id=1511 data-nosnippet>1511</a>      <span class="kw">continue</span>;
+<a href=#1512 id=1512 data-nosnippet>1512</a>    }
+<a href=#1513 id=1513 data-nosnippet>1513</a>    <span class="kw">if </span>col.is_multiple_of(ncols) {
+<a href=#1514 id=1514 data-nosnippet>1514</a>      <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1515 id=1515 data-nosnippet>1515</a>        close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
+<a href=#1516 id=1516 data-nosnippet>1516</a>      }
+<a href=#1517 id=1517 data-nosnippet>1517</a>      <span class="kw">let </span>(mf, br) = open_math_fork(document, equation)<span class="question-mark">?</span>;
+<a href=#1518 id=1518 data-nosnippet>1518</a>      mainfork = <span class="prelude-val">Some</span>(mf);
+<a href=#1519 id=1519 data-nosnippet>1519</a>      branch = <span class="prelude-val">Some</span>(br);
+<a href=#1520 id=1520 data-nosnippet>1520</a>    }
+<a href=#1521 id=1521 data-nosnippet>1521</a>    <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1522 id=1522 data-nosnippet>1522</a>      add_column_to_math_fork(document, mf, br, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
+<a href=#1523 id=1523 data-nosnippet>1523</a>    }
+<a href=#1524 id=1524 data-nosnippet>1524</a>    col += <span class="number">1</span>;
+<a href=#1525 id=1525 data-nosnippet>1525</a>  }
+<a href=#1526 id=1526 data-nosnippet>1526</a>  <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1527 id=1527 data-nosnippet>1527</a>    close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
+<a href=#1528 id=1528 data-nosnippet>1528</a>  }
+<a href=#1529 id=1529 data-nosnippet>1529</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1530 id=1530 data-nosnippet>1530</a>}
+<a href=#1531 id=1531 data-nosnippet>1531</a>
+<a href=#1532 id=1532 data-nosnippet>1532</a><span class="doccomment">/// Perl: equationgroupJoinRows (Base_XMath.pool.ltxml L926-963)
+<a href=#1533 id=1533 data-nosnippet>1533</a>/// Combines multiple row equations into a single semantic equation with a MathFork structure.
+<a href=#1534 id=1534 data-nosnippet>1534</a></span><span class="kw">pub fn </span>equationgroup_join_rows(
+<a href=#1535 id=1535 data-nosnippet>1535</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#1536 id=1536 data-nosnippet>1536</a>  equationgroup: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1537 id=1537 data-nosnippet>1537</a>  <span class="kw-2">mut </span>equations: Vec&lt;Node&gt;,
+<a href=#1538 id=1538 data-nosnippet>1538</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1539 id=1539 data-nosnippet>1539</a>  <span class="kw">if </span>equations.is_empty() {
+<a href=#1540 id=1540 data-nosnippet>1540</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#1541 id=1541 data-nosnippet>1541</a>  }
+<a href=#1542 id=1542 data-nosnippet>1542</a>  <span class="comment">// Create new equation at the position of the first input equation
+<a href=#1543 id=1543 data-nosnippet>1543</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>equation = document.open_element_at(equationgroup, <span class="string">"ltx:equation"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1544 id=1544 data-nosnippet>1544</a>  <span class="comment">// Move it before the first input equation
+<a href=#1545 id=1545 data-nosnippet>1545</a>  </span>equations[<span class="number">0</span>].add_prev_sibling(<span class="kw-2">&amp;mut </span>equation).ok();
+<a href=#1546 id=1546 data-nosnippet>1546</a>  <span class="comment">// Consolidate labels, id, refnum, tags from the input equations
+<a href=#1547 id=1547 data-nosnippet>1547</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>labels: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
+<a href=#1548 id=1548 data-nosnippet>1548</a>  <span class="kw">let </span><span class="kw-2">mut </span>id: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
+<a href=#1549 id=1549 data-nosnippet>1549</a>  <span class="kw">let </span><span class="kw-2">mut </span>tags: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
+<a href=#1550 id=1550 data-nosnippet>1550</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations.iter() {
+<a href=#1551 id=1551 data-nosnippet>1551</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = eq.get_attribute(<span class="string">"labels"</span>) {
+<a href=#1552 id=1552 data-nosnippet>1552</a>      labels = <span class="prelude-val">Some</span>(<span class="kw">match </span>labels {
+<a href=#1553 id=1553 data-nosnippet>1553</a>        <span class="prelude-val">Some</span>(existing) =&gt; <span class="macro">s!</span>(<span class="string">"{existing} {l}"</span>),
+<a href=#1554 id=1554 data-nosnippet>1554</a>        <span class="prelude-val">None </span>=&gt; l,
+<a href=#1555 id=1555 data-nosnippet>1555</a>      });
+<a href=#1556 id=1556 data-nosnippet>1556</a>    }
+<a href=#1557 id=1557 data-nosnippet>1557</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(eq_id) = eq.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#1558 id=1558 data-nosnippet>1558</a>      .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
+<a href=#1559 id=1559 data-nosnippet>1559</a>    {
+<a href=#1560 id=1560 data-nosnippet>1560</a>      id = <span class="prelude-val">Some</span>(eq_id);
+<a href=#1561 id=1561 data-nosnippet>1561</a>    }
+<a href=#1562 id=1562 data-nosnippet>1562</a>    <span class="kw">let </span>found_tags = document.findnodes(<span class="string">"ltx:tags"</span>, <span class="prelude-val">Some</span>(eq));
+<a href=#1563 id=1563 data-nosnippet>1563</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = found_tags.into_iter().last() {
+<a href=#1564 id=1564 data-nosnippet>1564</a>      tags = <span class="prelude-val">Some</span>(t);
+<a href=#1565 id=1565 data-nosnippet>1565</a>    }
+<a href=#1566 id=1566 data-nosnippet>1566</a>  }
+<a href=#1567 id=1567 data-nosnippet>1567</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>id_str) = id {
+<a href=#1568 id=1568 data-nosnippet>1568</a>    document.unrecord_id(id_str);
+<a href=#1569 id=1569 data-nosnippet>1569</a>  }
+<a href=#1570 id=1570 data-nosnippet>1570</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>l) = labels {
+<a href=#1571 id=1571 data-nosnippet>1571</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>equation, <span class="string">"labels"</span>, l)<span class="question-mark">?</span>;
+<a href=#1572 id=1572 data-nosnippet>1572</a>  }
+<a href=#1573 id=1573 data-nosnippet>1573</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>id_str) = id {
+<a href=#1574 id=1574 data-nosnippet>1574</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>equation, <span class="string">"xml:id"</span>, id_str)<span class="question-mark">?</span>;
+<a href=#1575 id=1575 data-nosnippet>1575</a>  }
+<a href=#1576 id=1576 data-nosnippet>1576</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>t) = tags {
+<a href=#1577 id=1577 data-nosnippet>1577</a>    t.unlink_node();
+<a href=#1578 id=1578 data-nosnippet>1578</a>    equation.add_child(<span class="kw-2">&amp;mut </span>t).ok();
+<a href=#1579 id=1579 data-nosnippet>1579</a>  }
+<a href=#1580 id=1580 data-nosnippet>1580</a>  <span class="comment">// Pre-advance the ID counter to skip over cell Math IDs.
+<a href=#1581 id=1581 data-nosnippet>1581</a>  // For multi-row eqnarrays where different rows have different equation IDs,
+<a href=#1582 id=1582 data-nosnippet>1582</a>  // only count cells from the equation that provides the target ID.
+<a href=#1583 id=1583 data-nosnippet>1583</a>  // This prevents inflation from rows that belong to different equation contexts.
+<a href=#1584 id=1584 data-nosnippet>1584</a>  </span><span class="kw">let </span>has_different_ids = equations.len() &gt; <span class="number">1 </span>&amp;&amp; {
+<a href=#1585 id=1585 data-nosnippet>1585</a>    <span class="kw">let </span>ids: Vec&lt;<span class="kw">_</span>&gt; = equations.iter().filter_map(|eq|
+<a href=#1586 id=1586 data-nosnippet>1586</a>      eq.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#1587 id=1587 data-nosnippet>1587</a>        .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
+<a href=#1588 id=1588 data-nosnippet>1588</a>    ).collect();
+<a href=#1589 id=1589 data-nosnippet>1589</a>    ids.len() &gt; <span class="number">1 </span>|| (ids.len() == <span class="number">1 </span>&amp;&amp; equations.len() &gt; <span class="number">1</span>)
+<a href=#1590 id=1590 data-nosnippet>1590</a>  };
+<a href=#1591 id=1591 data-nosnippet>1591</a>  <span class="kw">let </span><span class="kw-2">mut </span>cell_count = <span class="number">0</span>;
+<a href=#1592 id=1592 data-nosnippet>1592</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations.iter() {
+<a href=#1593 id=1593 data-nosnippet>1593</a>    <span class="kw">if </span>has_different_ids {
+<a href=#1594 id=1594 data-nosnippet>1594</a>      <span class="comment">// Multi-row with different IDs: only count cells with Math from the target equation
+<a href=#1595 id=1595 data-nosnippet>1595</a>      </span><span class="kw">let </span>eq_id = eq.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#1596 id=1596 data-nosnippet>1596</a>        .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>));
+<a href=#1597 id=1597 data-nosnippet>1597</a>      <span class="kw">if </span>eq_id != id { <span class="kw">continue</span>; }
+<a href=#1598 id=1598 data-nosnippet>1598</a>      <span class="comment">// Count only cells that contain Math elements (empty cells don't consume IDs)
+<a href=#1599 id=1599 data-nosnippet>1599</a>      </span><span class="kw">let </span>captures = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(eq));
+<a href=#1600 id=1600 data-nosnippet>1600</a>      <span class="kw">for </span>cap <span class="kw">in </span><span class="kw-2">&amp;</span>captures {
+<a href=#1601 id=1601 data-nosnippet>1601</a>        <span class="kw">if </span>!document.findnodes(<span class="string">"ltx:Math"</span>, <span class="prelude-val">Some</span>(cap)).is_empty() {
+<a href=#1602 id=1602 data-nosnippet>1602</a>          cell_count += <span class="number">1</span>;
+<a href=#1603 id=1603 data-nosnippet>1603</a>        }
+<a href=#1604 id=1604 data-nosnippet>1604</a>      }
+<a href=#1605 id=1605 data-nosnippet>1605</a>    } <span class="kw">else </span>{
+<a href=#1606 id=1606 data-nosnippet>1606</a>      <span class="comment">// Single-equation: count all _Capture_ cells (including empty ones)
+<a href=#1607 id=1607 data-nosnippet>1607</a>      </span><span class="kw">let </span>captures = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(eq));
+<a href=#1608 id=1608 data-nosnippet>1608</a>      cell_count += captures.len();
+<a href=#1609 id=1609 data-nosnippet>1609</a>    }
+<a href=#1610 id=1610 data-nosnippet>1610</a>  }
+<a href=#1611 id=1611 data-nosnippet>1611</a>  <span class="kw">if </span>cell_count &gt; <span class="number">0 </span>{
+<a href=#1612 id=1612 data-nosnippet>1612</a>    <span class="kw">let </span>ctrkey = <span class="macro">s!</span>(<span class="string">"_ID_counter_m_"</span>);
+<a href=#1613 id=1613 data-nosnippet>1613</a>    <span class="kw">let </span>current = equation.get_attribute(<span class="kw-2">&amp;</span>ctrkey).unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"0"</span>));
+<a href=#1614 id=1614 data-nosnippet>1614</a>    <span class="kw">let </span>new_val = current.parse::&lt;u32&gt;().unwrap_or(<span class="number">0</span>) + cell_count <span class="kw">as </span>u32;
+<a href=#1615 id=1615 data-nosnippet>1615</a>    equation.set_attribute(<span class="kw-2">&amp;</span>ctrkey, <span class="kw-2">&amp;</span>new_val.to_string())<span class="question-mark">?</span>;
+<a href=#1616 id=1616 data-nosnippet>1616</a>  }
+<a href=#1617 id=1617 data-nosnippet>1617</a>  <span class="comment">// Create MathFork
+<a href=#1618 id=1618 data-nosnippet>1618</a>  </span><span class="kw">let </span>(<span class="kw-2">mut </span>mainfork, <span class="kw-2">mut </span>branch_node) = open_math_fork(document, <span class="kw-2">&amp;mut </span>equation)<span class="question-mark">?</span>;
+<a href=#1619 id=1619 data-nosnippet>1619</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations {
+<a href=#1620 id=1620 data-nosnippet>1620</a>    <span class="kw">let </span><span class="kw-2">mut </span>eq = eq;
+<a href=#1621 id=1621 data-nosnippet>1621</a>    eq.unlink_node();
+<a href=#1622 id=1622 data-nosnippet>1622</a>    <span class="kw">let </span><span class="kw-2">mut </span>tr = document.open_element_at(<span class="kw-2">&amp;mut </span>branch_node, <span class="string">"ltx:tr"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1623 id=1623 data-nosnippet>1623</a>    <span class="comment">// Note: Perl also checks for lefteqn class on first _Capture_ to add ltx_eqn_lefteqn
+<a href=#1624 id=1624 data-nosnippet>1624</a>    // to &lt;tr&gt;, but in practice the class is on a child td (via \multicolumn), not on
+<a href=#1625 id=1625 data-nosnippet>1625</a>    // _Capture_ itself, so the condition never fires in Perl output.
+<a href=#1626 id=1626 data-nosnippet>1626</a>    </span><span class="kw">let </span>cells: Vec&lt;Node&gt; = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>eq));
+<a href=#1627 id=1627 data-nosnippet>1627</a>    <span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells {
+<a href=#1628 id=1628 data-nosnippet>1628</a>      add_column_to_math_fork(document, <span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>tr, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
+<a href=#1629 id=1629 data-nosnippet>1629</a>    }
+<a href=#1630 id=1630 data-nosnippet>1630</a>    document.close_element_at(<span class="kw-2">&amp;mut </span>tr)<span class="question-mark">?</span>;
+<a href=#1631 id=1631 data-nosnippet>1631</a>  }
+<a href=#1632 id=1632 data-nosnippet>1632</a>  close_math_fork(document, <span class="kw-2">&amp;mut </span>equation, <span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch_node)<span class="question-mark">?</span>;
+<a href=#1633 id=1633 data-nosnippet>1633</a>  document.close_element_at(<span class="kw-2">&amp;mut </span>equation)<span class="question-mark">?</span>;
+<a href=#1634 id=1634 data-nosnippet>1634</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1635 id=1635 data-nosnippet>1635</a>}
+<a href=#1636 id=1636 data-nosnippet>1636</a>
+<a href=#1637 id=1637 data-nosnippet>1637</a><span class="doccomment">/// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
+<a href=#1638 id=1638 data-nosnippet>1638</a></span><span class="kw">pub fn </span>add_meaning_rec(document: <span class="kw-2">&amp;mut </span>Document, node: Node, meaning: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1639 id=1639 data-nosnippet>1639</a>  <span class="kw">if </span>node.get_type() != <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+<a href=#1640 id=1640 data-nosnippet>1640</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#1641 id=1641 data-nosnippet>1641</a>  }
+<a href=#1642 id=1642 data-nosnippet>1642</a>  <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>node);
+<a href=#1643 id=1643 data-nosnippet>1643</a>  <span class="kw">if </span>qname == arena::pin_static(<span class="string">"ltx:XMArg"</span>) {
+<a href=#1644 id=1644 data-nosnippet>1644</a>    <span class="comment">// DON'T cross through into arguments
+<a href=#1645 id=1645 data-nosnippet>1645</a>  </span>} <span class="kw">else if </span>qname == arena::pin_static(<span class="string">"ltx:XMTok"</span>) {
+<a href=#1646 id=1646 data-nosnippet>1646</a>    <span class="kw">let </span>role = node.get_attribute(<span class="string">"role"</span>).unwrap_or_default();
+<a href=#1647 id=1647 data-nosnippet>1647</a>    <span class="kw">if </span>(role.is_empty() || role == <span class="string">"UNKNOWN"</span>) &amp;&amp; !node.has_attribute(<span class="string">"meaning"</span>) {
+<a href=#1648 id=1648 data-nosnippet>1648</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>node.clone(), <span class="string">"meaning"</span>, meaning)<span class="question-mark">?</span>;
+<a href=#1649 id=1649 data-nosnippet>1649</a>    }
+<a href=#1650 id=1650 data-nosnippet>1650</a>  } <span class="kw">else </span>{
+<a href=#1651 id=1651 data-nosnippet>1651</a>    <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
+<a href=#1652 id=1652 data-nosnippet>1652</a>      add_meaning_rec(document, child, meaning)<span class="question-mark">?</span>;
+<a href=#1653 id=1653 data-nosnippet>1653</a>    }
+<a href=#1654 id=1654 data-nosnippet>1654</a>  }
+<a href=#1655 id=1655 data-nosnippet>1655</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1656 id=1656 data-nosnippet>1656</a>}
 </code></pre></div></section></main></body></html>
