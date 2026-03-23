@@ -112,7 +112,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | composed_bigop tight_term => prefix_apply
       | compound_operator tight_term => prefix_apply
       | operator factor => prefix_apply
-      | factor_base applyop tight_term => prefix_apply_applyop;
+      | factor_base applyop tight_term => prefix_apply_applyop
+      // Perl: FUNCTION/OPFUNCTION/TRIGFUNCTION + explicit APPLYOP + argument
+      // Handles \lxDeclare-annotated tokens: f⁡(x) where ⁡ is APPLYOP
+      | function applyop tight_term => prefix_apply_applyop
+      | opfunction applyop tight_term => prefix_apply_applyop
+      | trigfunction applyop tight_term => prefix_apply_applyop;
 
     // Perl MathGrammar L258: Factor moreFactors — consecutive function
     // applications chain with invisible times.

@@ -1619,6 +1619,7 @@ pub fn apply_invisible_times(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, right);
   let mut left = left;
+  let mut right = right;
   // OPFUNCTION/TRIGFUNCTION/FUNCTION tokens absorb the next argument via prefix_apply,
   // NOT via invisible times. When these appear as left of invisible_times (because
   // tight_term includes factor which includes opfunction), prune in favor of prefix_apply.
@@ -1648,6 +1649,46 @@ pub fn apply_invisible_times(
       return Err("apply_invisible_times: left is bigop/scripted bigop, prefer absorption".into());
     }
   }
+  // Perl: scripted function application — f^2(a), f'(a), g_n(x).
+  // When left is a scripted Apply whose base has FUNCTION/OPFUNCTION/TRIGFUNCTION role,
+  // and right is a fenced XMDual (from parenthesized fencing), produce function
+  // application with XMDual wrapping instead of invisible times.
+  if let Some(ref l) = left {
+    if let Some(ref r) = right {
+      let is_scripted_function = is_scripted_function_head(l, ctxt.nodes);
+      let is_fenced_dual = matches!(r, XM::Dual(ref c, ref p, _, _)
+        if matches!(**c, XM::Ref(_)) && matches!(**p, XM::Wrap(..)));
+      if is_scripted_function && is_fenced_dual {
+        // Lift the fenced XMDual: Apply(f^2, Dual(Ref, Wrap)) → Dual(Apply(Ref(f^2), Ref(arg)), Apply(f^2, Wrap))
+        let mut func = left.take().unwrap();
+        let arg_dual = right.take().unwrap();
+        let XM::Dual(content_box, pres_box, _, _) = arg_dual else { unreachable!() };
+        let content_ref = *content_box;
+        let pres_wrap = *pres_box;
+        let func_refs = create_xmrefs(&mut [&mut func], ctxt)?;
+        let func_ref = func_refs.into_iter().next().unwrap();
+        let content_apply = XM::Apply(
+          func_ref.into(),
+          Args(vec![Some(content_ref)]),
+          XProps::default(),
+          Meta::default(),
+        );
+        let pres_apply = XM::Apply(
+          func.into(),
+          Args(vec![Some(pres_wrap)]),
+          XProps::default(),
+          Meta::default(),
+        );
+        return Ok(Some(XM::Dual(
+          Box::new(content_apply),
+          Box::new(pres_apply),
+          XProps::default(),
+          Meta::default(),
+        )));
+      }
+    }
+  }
+
   // Perl: trigBarearg greedily absorbs ALL following bare factors: \sin xyz → sin(x*y*z).
   // Reject invisible_times(trig_app(args), bare_factor) — the factor should be absorbed
   // into the trig argument via trig_arg rule, not multiplied outside.
@@ -2072,6 +2113,39 @@ fn is_bigop_or_scripted_bigop(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
     },
     _ => false,
   }
+}
+
+/// Check if an XM node is a scripted function head: Apply(SCRIPTOP, FUNCTION_base, script)
+/// at any nesting depth. e.g. f^2, f', f_n, sin^2 — all have a FUNCTION at the base.
+fn is_scripted_function_head(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
+  match xm {
+    // A bare function token is not "scripted" — handled by the earlier check
+    XM::Token(_, _) | XM::Lexeme(_, _) => false,
+    XM::Apply(ref op, ref args, _, _) => {
+      let op_role = get_operator_role(op, nodes);
+      // Must be a script operator (SUBSCRIPTOP, SUPERSCRIPTOP, etc.)
+      if matches!(op_role.as_deref(),
+        Some("SUBSCRIPTOP") | Some("SUPERSCRIPTOP") | Some("POSTSUBSCRIPT") | Some("POSTSUPERSCRIPT"))
+      {
+        // Check the base (first arg) — is it a FUNCTION or another scripted function?
+        if let Some(Some(ref base)) = args.0.first() {
+          return is_function_role_item(base, nodes) || is_scripted_function_head(base, nodes);
+        }
+      }
+      false
+    },
+    _ => false,
+  }
+}
+
+/// Check if an XM item has a FUNCTION/OPFUNCTION/TRIGFUNCTION role.
+fn is_function_role_item(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
+  let role = match xm {
+    XM::Token(props, _) => props.role.as_deref().map(String::from),
+    XM::Lexeme(lex_id, _) => get_lexeme_role(lex_id, nodes),
+    _ => None,
+  };
+  matches!(role.as_deref(), Some("FUNCTION") | Some("OPFUNCTION") | Some("TRIGFUNCTION"))
 }
 
 /// Extract the role of an XM operator (Token or Lexeme).
