@@ -107,7 +107,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | tight_term postfix => apply_postfix
       | function tight_term => prefix_apply
       // trigfunction uses trigbarearg via applied_func (absorbs MulOp chains)
-      | any_bigop tight_term => prefix_apply
+      // NOTE: bigop rules moved to += section (after `term` is defined) so they
+      // can absorb full term (mulop chains like x² * dx), not just tight_term.
       | composed_bigop tight_term => prefix_apply
       | compound_operator tight_term => prefix_apply
       | operator factor => prefix_apply
@@ -404,8 +405,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     scripted_bigop = scripted_bigop_r1
       | scripted_bigop_r1 postsuperarg => postfix_script
       | scripted_bigop_r1 postsubarg => postfix_script;
-    tight_term += scripted_bigop tight_term => prefix_apply;
-    tight_term += scripted_bigop factor => prefix_apply;
+    // Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
+    // moreOpArgFactors chains factors with MulOp (= a term-level construct).
+    // Using `term` absorbs mulop chains like x² * dx, matching Perl's behavior.
+    // The early tight_term definition (line ~110) has `bigop tight_term` for the
+    // base case; these += rules extend to full term absorption.
+    tight_term += scripted_bigop term => prefix_apply;
+    tight_term += any_bigop term => prefix_apply;
+    tight_term += composed_bigop term => prefix_apply;
     // Scripted bigops can also appear as standalone statements
     statement += scripted_bigop;
 
