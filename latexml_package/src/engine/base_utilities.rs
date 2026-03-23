@@ -97,11 +97,12 @@ LoadDefinitions!({
       SymHashMap::default(),
     )
   });
+  // Perl: Box(UTF(0xA0), undef, undef, T_ACTIVE("~"), ...);
   DefPrimitive!("\\lx@NBSP", {
     Tbox::new(
       arena::pin_static("\u{00A0}"),
       None, None,
-      Tokens!(T_CS!("\\lx@NBSP")),
+      Tokens!(T_ACTIVE!('~')),
       stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
     )
   });

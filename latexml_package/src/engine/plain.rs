@@ -774,7 +774,8 @@ LoadDefinitions!({
       "width" => Dimension::from_str("0.333em")?),
     )
   });
-  DefMacro!(T_ACTIVE!('~'), None, "\\nobreakspace{}");
+  // Perl: DefMacro(T_ACTIVE("~"), T_CS('\lx@NBSP'));
+  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP");
 
   DefMacro!("\\slash", "/");
   DefPrimitive!("\\filbreak", None);
