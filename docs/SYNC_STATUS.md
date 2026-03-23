@@ -273,6 +273,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **Empty cell `align` stripping**: Perl doesn't set align on empty alignment cells.
 - **`\quad` lpadding in math alignment cells**: \quad isSpace boxes classified as lspaces; now absorbed as pre-content in math mode creating XMHint.
 - **XMHint glue parsing**: Fixed `get_xmhint_spacing` to strip `plus`/`minus` from glue specs. Enables \; \, \> spacing in math mode. standalone_modifiers: 0 Perl diffs.
+- **~ tilde reversion**: Changed `~` expansion from `\nobreakspace{}` to `\lx@NBSP` (Perl parity). Fixed `\lx@NBSP` reversion to `T_ACTIVE('~')`. Eliminates `~{}` artifacts.
+- **\scalebox Float format**: xscale/yscale now format as `3.0` (was `3`), matching Perl's `{Float}` param.
+- **aliceblog trailing newline**: Removed stale trailing empty line.
 
 **Recent fixes (2026-03-22, sessions 21-25):**
 - **finalize_rec iterative rewrite**: Converted from recursive to iterative with heap work-stack. Fixes SEGFAULT for nested hboxes. Deferred font wrapper collapse to post-traversal.
