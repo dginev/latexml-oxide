@@ -2263,6 +2263,7 @@ pub fn arrow_wrap_solo(
 
 /// OPEN expr (without CLOSE) — e.g. \{ array → cases-like wrapping.
 /// Perl: factorOpen handles unmatched OPEN by consuming the expression.
+/// For { delimiter, produces XMDual: content=Apply(cases, XMRef), pres=XMWrap({, expr).
 pub fn open_fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -2271,17 +2272,29 @@ pub fn open_fenced(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => open_opt, arg_opt);
   let open = open_opt.unwrap();
-  let arg = arg_opt.unwrap();
-  // Perl: Fence({, content) → cases@(content) for { delimiter
+  let mut arg = arg_opt.unwrap();
+  // Perl: Fence({, content) → XMDual(Apply(cases, XMRef(content)), XMWrap({, content))
   let o = open.get_value(ctxt.nodes)?;
   if o == "{" {
     let op = XProps {
       meaning: Some(Cow::Borrowed("cases")),
       ..XProps::default()
     };
-    Ok(Some(XM::Apply(
+    let refs = create_xmrefs(&mut [&mut arg], ctxt)?;
+    let content = XM::Apply(
       Operator::from(op),
-      Args(vec![Some(arg)]),
+      Args(refs.into_iter().map(Option::Some).collect()),
+      XProps::default(),
+      Meta::default(),
+    );
+    let pres = XM::Wrap(
+      vec![open, arg],
+      XProps::default(),
+      Meta::default(),
+    );
+    Ok(Some(XM::Dual(
+      Box::new(content),
+      Box::new(pres),
       XProps::default(),
       Meta::default(),
     )))
@@ -2295,6 +2308,7 @@ pub fn open_fenced(
 }
 
 /// expr CLOSE (without OPEN) — e.g. array \} → cases-like wrapping.
+/// For } delimiter, produces XMDual: content=Apply(cases, XMRef), pres=XMWrap(expr, }).
 pub fn close_fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -2302,18 +2316,30 @@ pub fn close_fenced(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg_opt, close_opt);
-  let arg = arg_opt.unwrap();
+  let mut arg = arg_opt.unwrap();
   let close = close_opt.unwrap();
-  // Perl: Fence(content, }) → cases@(content) for } delimiter
+  // Perl: Fence(content, }) → XMDual(Apply(cases, XMRef(content)), XMWrap(content, }))
   let c = close.get_value(ctxt.nodes)?;
   if c == "}" {
     let op = XProps {
       meaning: Some(Cow::Borrowed("cases")),
       ..XProps::default()
     };
-    Ok(Some(XM::Apply(
+    let refs = create_xmrefs(&mut [&mut arg], ctxt)?;
+    let content = XM::Apply(
       Operator::from(op),
-      Args(vec![Some(arg)]),
+      Args(refs.into_iter().map(Option::Some).collect()),
+      XProps::default(),
+      Meta::default(),
+    );
+    let pres = XM::Wrap(
+      vec![arg, close],
+      XProps::default(),
+      Meta::default(),
+    );
+    Ok(Some(XM::Dual(
+      Box::new(content),
+      Box::new(pres),
       XProps::default(),
       Meta::default(),
     )))
