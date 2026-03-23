@@ -2267,16 +2267,31 @@ pub fn open_fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => open_opt, arg_opt);
   let open = open_opt.unwrap();
   let arg = arg_opt.unwrap();
-  Ok(Some(XM::Wrap(
-    vec![open, arg],
-    XProps::default(),
-    Meta::default(),
-  )))
+  // Perl: Fence({, content) → cases@(content) for { delimiter
+  let o = open.get_value(ctxt.nodes)?;
+  if o == "{" {
+    let op = XProps {
+      meaning: Some(Cow::Borrowed("cases")),
+      ..XProps::default()
+    };
+    Ok(Some(XM::Apply(
+      Operator::from(op),
+      Args(vec![Some(arg)]),
+      XProps::default(),
+      Meta::default(),
+    )))
+  } else {
+    Ok(Some(XM::Wrap(
+      vec![open, arg],
+      XProps::default(),
+      Meta::default(),
+    )))
+  }
 }
 
 /// expr CLOSE (without OPEN) — e.g. array \} → cases-like wrapping.
@@ -2284,14 +2299,29 @@ pub fn close_fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg_opt, close_opt);
   let arg = arg_opt.unwrap();
   let close = close_opt.unwrap();
-  Ok(Some(XM::Wrap(
-    vec![arg, close],
-    XProps::default(),
-    Meta::default(),
-  )))
+  // Perl: Fence(content, }) → cases@(content) for } delimiter
+  let c = close.get_value(ctxt.nodes)?;
+  if c == "}" {
+    let op = XProps {
+      meaning: Some(Cow::Borrowed("cases")),
+      ..XProps::default()
+    };
+    Ok(Some(XM::Apply(
+      Operator::from(op),
+      Args(vec![Some(arg)]),
+      XProps::default(),
+      Meta::default(),
+    )))
+  } else {
+    Ok(Some(XM::Wrap(
+      vec![arg, close],
+      XProps::default(),
+      Meta::default(),
+    )))
+  }
 }
