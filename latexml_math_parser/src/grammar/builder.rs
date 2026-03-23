@@ -76,7 +76,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Perl MathGrammar L315: ATOM_OR_ID : ATOM | ID | ARRAY
     // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
     factor_base = unknown | number | id | atom | array;
-    factor = factor_base | opfunction;
+    // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
+    // Also handle unmatched delimiters for cases-like patterns.
+    fenced_array = open array close => fenced
+      | open array => open_fenced
+      | array close => close_fenced;
+    factor = factor_base | opfunction | fenced_array;
     // Terms
     // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
     any_bigop = bigop | sumop | intop | limitop | diffop;

@@ -2260,3 +2260,38 @@ pub fn arrow_wrap_solo(
   unp!(args => _start, arrowop, _end);
   Ok(arrowop)
 }
+
+/// OPEN expr (without CLOSE) — e.g. \{ array → cases-like wrapping.
+/// Perl: factorOpen handles unmatched OPEN by consuming the expression.
+pub fn open_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => open_opt, arg_opt);
+  let open = open_opt.unwrap();
+  let arg = arg_opt.unwrap();
+  Ok(Some(XM::Wrap(
+    vec![open, arg],
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// expr CLOSE (without OPEN) — e.g. array \} → cases-like wrapping.
+pub fn close_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => arg_opt, close_opt);
+  let arg = arg_opt.unwrap();
+  let close = close_opt.unwrap();
+  Ok(Some(XM::Wrap(
+    vec![arg, close],
+    XProps::default(),
+    Meta::default(),
+  )))
+}
