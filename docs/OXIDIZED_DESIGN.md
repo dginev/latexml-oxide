@@ -415,3 +415,37 @@ AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
 ```
 
 **Impact:** Tests with `.latexml` files need corresponding `*_src.rs` files in `tests/helpers/` and `\input{name.latexml}` in their `.tex` source to get the same parsing behavior as Perl.
+
+### 7. Angle Bracket Inner Product Parsing
+
+**Decision:** `<x,y>` with RELOP `<` and `>` is recognized as an inner product
+(fenced expression with angle bracket delimiters), producing
+`delimited-<>@(list@(x, y))`.
+
+**Rationale:** Old typesetting conventions used `<` `>` instead of `\langle` `\rangle`
+for operator delimiters such as inner products. Perl's parser leaves these expressions
+unparsed (`ltx_math_unparsed`). We do better by recognizing the `<term, term>` pattern
+as fenced content. The `<<` and `>>` two-part relops (much-less-than, much-greater-than)
+still take priority via the `two_part_relop` grammar rule.
+
+**Grammar:** `fenced_factor += langle_rel term_list rangle_rel => fenced`, where
+`term_list = term punct term | term_list punct term` handles arbitrary-length
+comma-separated term chains.
+
+**Impact:** `ambiguous_relations_test` equations `0=<x,y>` and `0=<x,y>A` now parse
+correctly instead of being marked `ltx_math_unparsed`. Test XMLs updated to match.
+
+### 8. Broad Bigop Argument Absorption
+
+**Decision:** Bigops (`\sum`, `\int`, etc.) absorb the full `term` (mulop/invisible-times
+chain), not just the next `tight_term`.
+
+**Rationale:** `\sum_{i=0}^{\infty} f_i x^i` should produce `∑(f_i * x^i)`, not
+`∑(f_i) * x^i`. The summation variable `i` appears in both `f_i` and `x^i`, so the
+entire product is the summand. Perl's `addOpArgs` (Parse::RecDescent) non-deterministically
+selects narrow absorption for some expressions (documented in KNOWN_PERL_ERRORS #8).
+
+**Grammar:** `bigop_application = bigop/scripted_bigop/composed_bigop term`, lifted to
+`expression` level so bigops can't be followed by invisible-times on the right.
+
+**Impact:** `declare_test` sum equations updated. `calculus_test` improved (331→273 diffs).
