@@ -505,7 +505,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **40. diagboxtest_test** (53_alignment) — DONE (was 267→144→94→86→80→0). Session 26: full diagbox.sty port with afterConstruct DOM building, slashbox/backslashbox compat, shortstack \\\\ fix in tabular context. Updated XML for dimension precision. 0 diffs.
 
-- [ ] **12. stmaryrd_test** (22_fonts) — 2010 diffs (was 2502→2010). BINOP grammar rules added (declared but never used). Right-recursive formulae restructuring for \quad-separated RELOP/ARROW expressions. dynamic_scriptpos on bigops. Remaining: xml:id numbering (from restructuring), mixed BINOP/RELOP parse structure (3 eqs), kludge delimiter structures.
+- [ ] **12. stmaryrd_test** (22_fonts) — 990 diffs (was 2502→2010→990). 68% of diffs are xml:id numbering (parser generates 6 extra IDs per equation from intermediate create_xmrefs). Remaining structural: mixed BINOP/RELOP in \quad-separated expressions (parser groups differently from Perl), kludge delimiter structures.
 - [x] **33. cd_test** (56_ams) — DONE (was 352, 221, 146, 175). apply_delimited for OPFUNCTION. 0 diffs.
 - [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
@@ -572,20 +572,18 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - siunitx: 1 test — needs siunitx.sty port
 - acmart: 1 test — needs acmart.cls port
 
-**Math parser grammar (12), sorted by diffs:** (kludge, sideset, standalone_modifiers already DONE)
-- function_argument_syntax 38 — **CLOSEST**: trig argument scoping only (sin absorbs too narrowly across \\times)
-- simplemath 89 — f(123) XMDual now works. `f_D f(a+b)` parse failure remains (multi-token rewrites)
-- ambiguous_relations 102 — XMDual + parse structure diffs
-- array_math_parse 220
-- relations 260
-- scripts 301 — pre-script ordering, prime combining, empty XMRef, trailing punct XMDual
-- artefacts 333
-- calculus 368 — dominated by bigop argument absorption (bigop should eat full term, not just tight_term)
+**Math parser grammar (11), sorted by diffs:** (kludge, sideset, standalone_modifiers, simplemath, function_argument_syntax already DONE)
+- ambiguous_relations 101 — Rust parses 2 eqs Perl leaves unparsed (0=<x,y> with absent), xml:id numbering
+- relations 101 — structural parse diffs
+- array_math_parse 180 — 3 unparsed eqs (\\{\\begin{array} brace+array combo)
+- scripts 301 — empty-base absent, combined scripts ordering, prime handling
+- calculus 331 — bigop argument absorption (bigop should eat full term)
+- artefacts 345
 - qm 400
 - operators 422 — needs \\lxDeclare for role=ID rewrites per .latexml file
-- vertbars 464
-- functions 329 — improved from 481 via XMDual apply_delimited
-- parens 510 — XMDual structure mismatch with Perl's compact form
+- functions 452
+- vertbars 466
+- parens 510 — XMDual structure mismatch
 
 **Key infrastructure blockers for math tests:**
 1. **XMDual/XMWrap for function application** — DONE for `function(args)` pattern. For opfunction/trigfunction, XMDual produces structure mismatch with Perl's `compact_xmdual`; kept as prefix_apply. Need to port `compact_xmdual` fully before enabling XMDual for all function types.
