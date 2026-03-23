@@ -1030,11 +1030,24 @@ fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
         continue;
       }
 
-      // Strip leading & trailing XMHint nodes
+      // Perl: prefilterMath converts XMHint spacing to lpadding on next token.
+      // Transfer leading XMHint width as lpadding on next node, then remove it.
       if document::get_node_qname(&nodes[0]) == xmhint_sym {
+        if let Some(width) = nodes[0].get_attribute("width") {
+          if nodes.len() > 1 {
+            nodes[1].set_attribute("lpadding", &width).ok();
+          }
+        }
         nodes.remove(0);
       }
+      // Transfer trailing XMHint width as rpadding on previous node, then remove it.
       if !nodes.is_empty() && document::get_node_qname(nodes.last().unwrap()) == xmhint_sym {
+        if let Some(width) = nodes.last().unwrap().get_attribute("width") {
+          if nodes.len() > 1 {
+            let prev_idx = nodes.len() - 2;
+            nodes[prev_idx].set_attribute("rpadding", &width).ok();
+          }
+        }
         nodes.pop();
       }
 
@@ -1077,14 +1090,29 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
     return Ok(());
   }
 
-  // Ensure all content nodes have xml:ids, and collect XMRef idrefs
+  // Perl: prefilterMath runs on each XMCell, converting XMHint spacing to lpadding.
+  // Process cells: convert XMHint → lpadding on next sibling, then remove XMHint.
   let xmhint_sym = arena::pin_static("ltx:XMHint");
+  let mut i = 0;
+  while i < cells.len() {
+    let qname = document::get_node_qname(&cells[i]);
+    if qname == xmhint_sym {
+      // Transfer width as lpadding to the next non-hint node
+      if let Some(width) = cells[i].get_attribute("width") {
+        if i + 1 < cells.len() {
+          cells[i + 1].set_attribute("lpadding", &width).ok();
+        }
+      }
+      // Remove XMHint from cells list (it stays in the XMArray presentation)
+      cells.remove(i);
+    } else {
+      i += 1;
+    }
+  }
+
+  // Ensure all content nodes have xml:ids, and collect XMRef idrefs
   let mut ref_ids: Vec<String> = Vec::new();
   for node in cells.iter_mut() {
-    let qname = document::get_node_qname(node);
-    if qname == xmhint_sym {
-      continue; // Ephemeral, skip
-    }
     // Generate xml:id if needed
     if !node.has_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
       document.generate_id(node, "")?;
