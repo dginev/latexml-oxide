@@ -453,7 +453,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **40. diagboxtest_test** (53_alignment) — DONE (was 267→144→94→86→80→0). Session 26: full diagbox.sty port with afterConstruct DOM building, slashbox/backslashbox compat, shortstack \\\\ fix in tabular context. Updated XML for dimension precision. 0 diffs.
 
-- [ ] **12. stmaryrd_test** (22_fonts) — 990 diffs (was 2502→2010→990). 68% of diffs are xml:id numbering (parser generates 6 extra IDs per equation from intermediate create_xmrefs). Remaining structural: mixed BINOP/RELOP in \quad-separated expressions (parser groups differently from Perl), kludge delimiter structures.
+- [ ] **12. stmaryrd_test** (22_fonts) — 949 diffs (was 2502→2010→990→949). Post-parse ID renumbering (OXIDIZED_DESIGN #9) eliminated ~40 ID diffs. Remaining 287 structural: formulae vs list for \quad-separated binop expressions (Perl ColRHS always uses formulae).
 - [x] **33. cd_test** (56_ams) — DONE (was 352, 221, 146, 175). apply_delimited for OPFUNCTION. 0 diffs.
 - [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
 - [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
@@ -498,11 +498,11 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] C0b. **Modifier binding level**: DONE. Moved `formula modifier => postfix_modifier_apply` to expression level.
 - [x] C0c. **Parenthesized modifier expressions**: DONE. Added `expression lparen relop/modifierop expression rparen => annotated_fenced_modifier`.
 - [x] C0d. **\\pmod override removed**: DONE. Removed amsmath_sty.rs duplicate \\pmod/\\bmod definitions (Perl doesn't redefine them in amsmath).
-- [ ] C1. Empty XMRef idref: premature id generation during grammar actions conflicts with DOM installation. Needs architectural fix.
+- [x] C1. ~~Empty XMRef idref~~: FIXED by post-parse ID renumbering (OXIDIZED_DESIGN #9). Document-order sequential IDs assigned after all parsing.
 - [ ] C2. Font specialize for parser tokens: `_font` not fully specialized for operator symbols in nested script contexts.
 - [ ] C3. Scripted operators: `\mathop{\mathop{A}\limits_{B}}\limits^{C}` produces different structure (XMWrap vs XMApp with scriptpos differences).
 - [ ] C4. ltx_nopad_l on @{}l@{} columns: Perl doesn't add ltx_nopad_l, Rust does. Subtle lspaces difference.
-- [ ] C5. Multi-token match rewrites: `f_D` → DIFFOP, `\hat{f}` → ID, `f_\WildCard` → ID. Current XPath rewrite only matches single XMTok. Blocks: simplemath (f_D, f_1 parse failures).
+- [x] C5. Multi-token match rewrites: DONE. `f_D` → DIFFOP, `\hat{f}` → ID, `f_\WildCard` → ID. XMWrap + `_rewrite` marker approach. simplemath_test 208→0.
 
 ### Remaining 55 ignored tests breakdown:
 
