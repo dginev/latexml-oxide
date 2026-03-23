@@ -37,7 +37,6 @@ fn fences_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn function_argument_syntax_test() {
   latexml_test_single("tests/parse/function_argument_syntax.tex", "function_argument_syntax", DIR, None, None);
 }

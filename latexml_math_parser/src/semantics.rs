@@ -1602,6 +1602,26 @@ pub fn apply_invisible_times(
       return Err("apply_invisible_times: left is bigop/scripted bigop, prefer absorption".into());
     }
   }
+  // Perl: trigBarearg greedily absorbs ALL following bare factors: \sin xyz → sin(x*y*z).
+  // Reject invisible_times(trig_app(args), bare_factor) — the factor should be absorbed
+  // into the trig argument via trig_arg rule, not multiplied outside.
+  if let Some(XM::Apply(ref op, _, _, ref meta)) = left {
+    if meta.fenced.is_none() {
+      let op_name = op.0.base_operator_name();
+      if op_name.starts_with("TRIGFUNCTION") {
+        if let Some(ref r) = right {
+          let is_bare_factor = match r {
+            XM::Lexeme(_, ref rm) => rm.fenced.is_none(),
+            XM::Token(_, ref rm) => rm.fenced.is_none(),
+            _ => false,
+          };
+          if is_bare_factor {
+            return Err("apply_invisible_times: trig function should absorb bare factor via trig_arg".into());
+          }
+        }
+      }
+    }
+  }
   // Perl: MaybeFunction — mark UNKNOWN tokens as possibleFunction when MATHPARSER_SPECULATE is set
   // and the right side is a delimited group (parenthesized)
   maybe_mark_possible_function(&mut left, &right, ctxt.nodes);
