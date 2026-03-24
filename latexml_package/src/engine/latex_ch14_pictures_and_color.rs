@@ -101,10 +101,14 @@ LoadDefinitions!({
         },
         None => (0.0, 0.0),
       };
+      // Perl Float formats with at least one decimal place
+      let fmt_pt = |v: f64| -> String {
+        if v == v.round() { format!("{v:.1}pt") } else { format!("{v}pt") }
+      };
       Ok(stored_map!(
-        "width"      => Stored::String(arena::pin(&format!("{w}pt"))),
-        "height"     => Stored::String(arena::pin(&format!("{h}pt"))),
-        "unitlength" => Stored::String(arena::pin(&format!("{unit}pt")))
+        "width"      => Stored::String(arena::pin(&fmt_pt(w))),
+        "height"     => Stored::String(arena::pin(&fmt_pt(h))),
+        "unitlength" => Stored::String(arena::pin(&fmt_pt(unit)))
       ))
     }
   );
@@ -350,7 +354,10 @@ LoadDefinitions!({
           DigestedData::RegisterValue(RegisterValue::Pair(p)) => {
             let w = p.x.0 * unit;
             let h = p.y.0 * unit;
-            (format!("{w}pt"), format!("{h}pt"))
+            let fmt_pt = |v: f64| -> String {
+              if v == v.round() { format!("{v:.1}pt") } else { format!("{v}pt") }
+            };
+            (fmt_pt(w), fmt_pt(h))
           },
           _ => ("0".into(), "0".into()),
         },
