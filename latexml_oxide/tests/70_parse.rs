@@ -104,7 +104,6 @@ fn relations_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn scripts_test() {
   latexml_test_single("tests/parse/scripts.tex", "scripts", DIR, None, None);
 }

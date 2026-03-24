@@ -456,6 +456,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | scripted_factor_r11 postsubarg => postfix_script;
     factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
+    // Pre-scripts on post-scripted bases: _b(A^c), ^a(A_d^c), etc.
+    // Must come after scripted_factor_r1/r2 are defined (forward reference not allowed).
+    prescripted_factor_post_r += postsuperarg scripted_factor_r1 => prefix_script_pre
+      | postsuperarg scripted_factor_r2 => prefix_script_pre;
+    prescripted_factor_post_l += postsubarg scripted_factor_r1 => prefix_script_pre
+      | postsubarg scripted_factor_r2 => prefix_script_pre;
+
     // Scripted bigops: \int_0^\infty, \sum_{n=1}^N, etc.
     // These are bigops with post-scripts that still act as prefix operators.
     // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs

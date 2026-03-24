@@ -29,6 +29,11 @@ pub enum ValidationPragmatics {
   StandaloneDiffopsAreNotNumerators,
   PostfixTermsAreFencedIfSingleArguments,
   RestrictNumeralFractions,
+  /// Prefer parses where scripts attach to bases rather than floating standalone.
+  /// In mathematical writing, `_b^a A` means A with pre-scripts b,a — not
+  /// a standalone subscript _b times ^a(A). This is a universal convention:
+  /// scripts are inherently relational (they modify something).
+  MaximizeScriptAttachment,
 }
 
 impl ValidationPragmatics {
@@ -63,6 +68,7 @@ impl ValidationPragmatics {
       ConsistentCase,
       ConsistentCaseFlat,
       ConsistentCaseFlatUnstyled,
+      MaximizeScriptAttachment,
     ]
   }
 
@@ -88,6 +94,7 @@ impl ValidationPragmatics {
       PostfixTermsAreFencedIfSingleArguments => pragma_postfix_terms_are_fenced_if_single_arg(tree),
       AdjacentFunctionsDontUnifyIntoOperator => pragma_adjacent_functions_dont_unify_into_op(tree),
       RestrictNumeralFractions => pragma_restrict_numeral_fractions(tree),
+      MaximizeScriptAttachment => pragma_maximize_script_attachment(tree),
       _ => Ok(()),
     }
   }
@@ -107,6 +114,15 @@ impl ValidationPragmatics {
         self.validate_recursive(op)?;
         for arg_subtree in args.trees() {
           self.validate_recursive(arg_subtree)?;
+        }
+      },
+      XM::Dual(ref content, ref pres, _, _) => {
+        self.validate_recursive(content)?;
+        self.validate_recursive(pres)?;
+      },
+      XM::Wrap(ref items, _, _) => {
+        for item in items.iter() {
+          self.validate_recursive(item)?;
         }
       },
       _ => {},
@@ -501,6 +517,35 @@ fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dy
             || op_name.starts_with("DIFFOP")
           {
             return Err("pruning postfix term used as single argument without fences".into());
+          }
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Scripts are inherently relational — they modify a base. A standalone floating
+/// script (_b by itself, with base=absent) indicates a pre-script that should
+/// attach to a subsequent base. Prefer parses where scripts are attached to
+/// bases over parses where scripts float independently.
+///
+/// This is a universal mathematical convention: in `_b^a A^c_d`, the `_b^a`
+/// are pre-scripts of A, not standalone subscript/superscript expressions.
+fn pragma_maximize_script_attachment(tree: &XM) -> Result<(), Box<dyn Error>> {
+  // Detect any script-op Apply where the first arg (base) is "absent".
+  // This pattern means a standalone floating script that should be a pre-script.
+  if let XM::Apply(Operator(ref op), ref args, _, _) = tree {
+    if let XM::Token(ref props, _) = **op {
+      if props.role.as_deref().is_some_and(|r|
+        r == "SUBSCRIPTOP" || r == "SUPERSCRIPTOP")
+      {
+        // Check if base (first arg) is "absent" — standalone script
+        if let Some(Some(XM::Token(ref base_props, _))) = args.0.first() {
+          if base_props.meaning.as_deref() == Some("absent") {
+            return Err(
+              "Prune: standalone floating script (base=absent) should attach as pre-script.".into()
+            );
           }
         }
       }
