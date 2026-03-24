@@ -1708,9 +1708,14 @@ fn new_script_inner(
     if is_float {
       meta.set_wasfloat();
     }
+    // Perl: NewScript(Absent(), ...) when base is None (standalone floating scripts)
+    let base_arg = base.or_else(|| Some(XM::Token(
+      XProps { meaning: Some(Cow::Borrowed("absent")), ..XProps::default() },
+      Meta::default(),
+    )));
     Ok(Some(XM::Apply(
       op.into(),
-      Args(vec![base, script_arg]),
+      Args(vec![base_arg, script_arg]),
       XProps::default(),
       meta,
     )))
