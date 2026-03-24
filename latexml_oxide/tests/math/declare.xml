@@ -153,7 +153,7 @@
     <title><tag close=" ">2</tag>WildCards</title>
     <para xml:id="S2.p1">
       <equation xml:id="S2.Ex3">
-        <Math mode="display" tex="q,q_{a},q_{a,b},\mbox{ but accidentally }q_{a+b}" text="list@(q, q _ a, q _ (list@([], [])), [ but accidentally ] * q _ (a + b))" xml:id="S2.Ex3.m1">
+        <Math mode="display" tex="q,q_{a},q_{a,b},\mbox{ but accidentally }q_{a+b}" text="list@(q, q _ a, q _ (list@(a, b)), [ but accidentally ] * q _ (a + b))" xml:id="S2.Ex3.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -161,7 +161,7 @@
                 <XMRef idref="S2.Ex3.m1.1"/>
                 <XMRef idref="S2.Ex3.m1.2"/>
                 <XMRef idref="S2.Ex3.m1.3"/>
-                <XMRef idref="S2.Ex3.m1.4"/>
+                <XMRef idref="S2.Ex3.m1.6"/>
               </XMApp>
               <XMWrap>
                 <XMTok font="italic" role="ID" xml:id="S2.Ex3.m1.1">q</XMTok>
@@ -178,18 +178,18 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef/>
-                      <XMRef/>
+                      <XMRef idref="S2.Ex3.m1.4"/>
+                      <XMRef idref="S2.Ex3.m1.5"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.Ex3.m1.4">a</XMTok>
                       <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.Ex3.m1.5">b</XMTok>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S2.Ex3.m1.4">
+                <XMApp xml:id="S2.Ex3.m1.6">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMText> but accidentally </XMText>
                   <XMApp>
@@ -500,7 +500,7 @@
         </Math>
       </equation>
       <equation xml:id="S4.Ex9">
-        <Math mode="display" tex="\varepsilon,\varepsilon_{1},\mathcal{T}_{\varepsilon},\mathcal{T}_{\varepsilon_{1}},\mathcal{T}_{\varepsilon_{1},\varepsilon_{2},\varepsilon_{3}}" text="list@(varepsilon, varepsilon _ 1, T _ varepsilon, T _ varepsilon _ 1, T _ (list@([], [], [])))" xml:id="S4.Ex9.m1">
+        <Math mode="display" tex="\varepsilon,\varepsilon_{1},\mathcal{T}_{\varepsilon},\mathcal{T}_{\varepsilon_{1}},\mathcal{T}_{\varepsilon_{1},\varepsilon_{2},\varepsilon_{3}}" text="list@(varepsilon, varepsilon _ 1, T _ varepsilon, T _ varepsilon _ 1, T _ (list@(varepsilon _ 1, varepsilon _ 2, varepsilon _ 3)))" xml:id="S4.Ex9.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -542,9 +542,9 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef/>
-                      <XMRef/>
-                      <XMRef/>
+                      <XMRef idref="S4.Ex9.m1.6"/>
+                      <XMRef idref="S4.Ex9.m1.7"/>
+                      <XMRef idref="S4.Ex9.m1.8"/>
                     </XMApp>
                     <XMWrap>
                       <XMApp xml:id="S4.Ex9.m1.6">
@@ -583,7 +583,7 @@
     <title><tag close=" ">5</tag>Declaration order</title>
     <para xml:id="S5.p1">
       <equation xml:id="S5.Ex10">
-        <Math mode="display" tex="\varepsilon,\varepsilon_{1},\mathcal{T}_{\varepsilon},\mathcal{T}_{\varepsilon_{1}},\mathcal{T}_{\varepsilon_{1},\varepsilon_{2},\varepsilon_{3}}" text="list@(varepsilon, varepsilon _ 1, T _ varepsilon, T _ varepsilon _ 1, T _ (list@([], [], [])))" xml:id="S5.Ex10.m1">
+        <Math mode="display" tex="\varepsilon,\varepsilon_{1},\mathcal{T}_{\varepsilon},\mathcal{T}_{\varepsilon_{1}},\mathcal{T}_{\varepsilon_{1},\varepsilon_{2},\varepsilon_{3}}" text="list@(varepsilon, varepsilon _ 1, T _ varepsilon, T _ varepsilon _ 1, T _ (list@(varepsilon _ 1, varepsilon _ 2, varepsilon _ 3)))" xml:id="S5.Ex10.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -625,9 +625,9 @@
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
-                      <XMRef/>
-                      <XMRef/>
-                      <XMRef/>
+                      <XMRef idref="S5.Ex10.m1.6"/>
+                      <XMRef idref="S5.Ex10.m1.7"/>
+                      <XMRef idref="S5.Ex10.m1.8"/>
                     </XMApp>
                     <XMWrap>
                       <XMApp xml:id="S5.Ex10.m1.6">

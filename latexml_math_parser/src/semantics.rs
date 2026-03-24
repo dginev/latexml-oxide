@@ -1243,6 +1243,7 @@ pub fn fenced(
   // TODO: For now assume a single argument in arg; specialize in other functions such as "open_interval",
   //       for the other cases from the classic MathParser.pm
   if op_name == "delimited-()" {
+    // Perl Fence L1412: Single arg in () → XMDual(XMRef(arg), XMWrap((,arg,)))
     let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
     Ok(Some(XM::Dual(
       Box::new(arg_xmrefs.remove(0)),
@@ -1502,15 +1503,23 @@ pub fn postfix_embellished(
     Meta::default(),
   )))
 }
-/// remove start_/end_ wrappers
+/// Wrap start_script + parsed content together.
+/// Returns XM::Wrap([start_script, content]) so new_script can use the parsed
+/// content instead of re-reading from DOM (which loses XMDual structures).
 pub fn faux_wrap(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => start_script, _content, _end_script);
-  Ok(start_script)
+  unp!(args => start_script, content, _end_script);
+  // Bundle both the script wrapper lexeme and the parsed expression.
+  // new_script_inner will detect this Wrap and use the parsed content.
+  Ok(Some(XM::Wrap(
+    vec![start_script.unwrap(), content.unwrap_or(XM::Token(XProps::default(), Meta::default()))],
+    XProps::default(),
+    Meta::default(),
+  )))
 }
 
 pub fn standalone_script(
@@ -1603,7 +1612,22 @@ fn new_script_inner(
   ctxt: ActionContext,
   force_pre: bool,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if let XM::Lexeme(ref lex, _) = script {
+  // faux_wrap now returns XM::Wrap([start_script_lexeme, parsed_content]).
+  // Extract both pieces. The lexeme provides role/scriptpos metadata;
+  // the parsed content is used instead of re-reading from DOM.
+  let (script_lex, parsed_content) = match script {
+    XM::Wrap(mut items, _, _) if items.len() == 2 => {
+      let content = items.pop().unwrap();
+      let lex = items.pop().unwrap();
+      (lex, Some(content))
+    },
+    XM::Lexeme(..) => (script, None),
+    other => panic!(
+      "new_script expects faux_wrap Wrap or Lexeme, got {:?}", other
+    ),
+  };
+
+  if let XM::Lexeme(ref lex, _) = script_lex {
     let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = !force_pre && node_role.starts_with("FLOAT");
@@ -1615,7 +1639,6 @@ fn new_script_inner(
     });
 
     // Perl: Extract base's scriptpos to determine binding level
-    // If base is an XMApp with a SCRIPTOP operator, read its scriptpos
     let (bx, mut bl, base_wasfloat, base_bumplevel) = extract_base_scriptpos(&base, &ctxt);
 
     // Read scriptpos from the script node
@@ -1623,7 +1646,6 @@ fn new_script_inner(
     let (sx, mut sl) = parse_scriptpos(&raw_sp);
     let sx_defined = !raw_sp.is_empty() && sx != "post";
 
-    // Perl: $bl = ($sl || 1) unless $bl; $sl = ($bl || 1) unless $sl;
     if bl == 0 {
       bl = if sl > 0 { sl } else { 1 };
     }
@@ -1631,7 +1653,6 @@ fn new_script_inner(
       sl = if bl > 0 { bl } else { 1 };
     }
 
-    // Perl: $sx = ($bl == $sl ? $bx : 'post') unless $sx;
     let sx = if sx_defined {
       sx
     } else if bl == sl {
@@ -1640,7 +1661,6 @@ fn new_script_inner(
       "post"
     };
 
-    // Perl: $x = ($pos ? $pos : ($mode eq 'FLOAT' ? 'pre' : ($bl == $sl ? $bx : $sx) || 'post'));
     let x = if force_pre || is_float {
       "pre"
     } else if bl == sl {
@@ -1649,11 +1669,8 @@ fn new_script_inner(
       if !sx.is_empty() { sx } else { "post" }
     };
 
-    // Perl: $l = $sl || $bl || scriptlevel || 0
     let mut l = if sl > 0 { sl } else if bl > 0 { bl } else { 0 };
 
-    // Perl: if (p_getAttribute($rbase, '_wasfloat')) { $l++; $bumped = 1 }
-    //       elsif (my $innerl = p_getAttribute($rbase, '_bumplevel')) { $l = $innerl; }
     let mut bumped = false;
     if base_wasfloat {
       l += 1;
@@ -1668,8 +1685,12 @@ fn new_script_inner(
       None,
       Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)),
     );
-    let script_arg = obtain_arg(script, 0, ctxt)?;
-    // Record _wasfloat and _bumplevel for outer scripts to detect
+    // Use parsed content if available, otherwise fall back to obtain_arg (DOM re-read)
+    let script_arg = if let Some(content) = parsed_content {
+      Some(content)
+    } else {
+      obtain_arg(script_lex, 0, ctxt)?
+    };
     let mut meta = if bumped { Meta::with_bumplevel(l) } else { Meta::default() };
     if is_float {
       meta.set_wasfloat();
@@ -1682,9 +1703,7 @@ fn new_script_inner(
     )))
   } else {
     panic!(
-      "new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT), \
-got {:?}",
-      script
+      "new_script expects Lexeme inside faux_wrap, got {:?}", script_lex
     );
   }
 }
@@ -2776,22 +2795,26 @@ pub fn eval_at(
   )))
 }
 
-/// Get the first child element of a script wrapper as an XM (via XM::from(node)).
-/// Used for both presentation and content arm extraction.
+/// Get the first child element of a script wrapper as an XM.
+/// Handles both old-style Lexeme and new-style Wrap([lexeme, content]) from faux_wrap.
 fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM> {
   let script = script_opt.as_ref()?;
+  // New format: Wrap([lexeme, content]) — return the parsed content directly
+  if let XM::Wrap(ref items, _, _) = script {
+    if items.len() == 2 {
+      return Some(items[1].clone());
+    }
+  }
+  // Old format: bare Lexeme — look up from DOM
   if let XM::Lexeme(ref lex, _) = script {
     let node = lookup_lex_node(lex.as_str(), nodes).ok()?;
     let children = node.get_child_elements();
     if let Some(first_child) = children.first() {
-      // Try to find this child in nodes array for a proper lexeme reference
-      // Note: lookup_lex_node uses 1-based indexing
       for (i, n) in nodes.iter().enumerate() {
         if n == first_child {
           return Some(XM::Lexeme(format!("{}", i + 1), Meta::default()));
         }
       }
-      // Fallback: create XM directly from the node
       return Some(XM::from(first_child));
     }
   }
