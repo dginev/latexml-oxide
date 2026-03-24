@@ -252,14 +252,25 @@ a mode-switch frame and triggers:
 Error:unexpected:} Attempt to close a group that switched to mode horizontal
 ```
 
-**Root cause:** The file content has genuinely unmatched braces. Perl's `egroup()`
-checks `isValueBound('BOUND_MODE', 0)` and reports an Error when the current frame
-was a mode switch. This is correct behavior — the error is informational and
-non-fatal.
+**Root cause:** Both Perl and Rust LaTeXML's `\read` implementation do not fully
+match standard TeX behavior. In standard TeX/pdflatex, `\read` auto-balances
+braces: it continues reading lines until braces are balanced, and silently discards
+any tokens after a balanced top-level group. So line 21 of `exists.data`
+(`line { with extra } } silently discards }`) would have the trailing ` } silently
+discards }` discarded by `\read`, and `\aline` would contain only balanced content.
+
+In LaTeXML (both Perl and Rust), `\read` does not implement this auto-balancing.
+It reads the line literally, producing unbalanced content. When `\showline`
+expands `\aline`, the extra `}` triggers `egroup()` which checks
+`isValueBound('BOUND_MODE', 0)` and reports an Error for the mode-switch frame.
+This is correct error-reporting for the actual (unbalanced) content, but the real
+bug is the incomplete `\read` implementation.
 
 **Perl also errors:** Yes — running Perl's LaTeXML on `io.tex` with `verbosity=>5`
 produces the exact same 2 `Error:unexpected:}` messages. The Perl test suite
 passes because these errors are logged to an internal report, not printed to stderr.
+The test passes in both because the expected XML was generated with this same bug.
 
 **Rust status:** Identical behavior — 2 `Error:unexpected:}` messages. These are
-expected and match Perl. The Rust test passes despite the errors.
+expected and match Perl. A future `\read` brace-balancing fix would eliminate these
+errors, but it would also change the test output (requiring XML updates).
