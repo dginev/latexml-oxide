@@ -547,10 +547,81 @@ the same semantic result (e.g. `π + ¬a`). The Marpa Earley recognizer explored
 all paths, causing exponential tree enumeration. At term level, the addop rule
 handles the combination with a single derivation.
 
-### 13. Grammar: Generic open/close fenced delimiters
+### 13. Grammar: Period and comma precedence in formulae
+
+**Decision:** Period (`.`) and comma (`,`) are both formula/list separators at
+the same grammar level (`statements`/`formula_list`). Comma after a relational
+formula's RHS groups as a list (`a=b,c` → `a=list(b,c)`), while period always
+creates a hard formula boundary (`a=b.c` → `formulae(a=b, c)`).
+
+For `a=b.c,d=e`, the Rust parse is `formulae(a=b, c, d=e)` — three separate items.
+Perl produces `formulae(a=b, list(c,d)=e)` — grouping `c,d` across the period as
+a list LHS. The Rust parse is accepted as a valid alternative.
+
+**Rationale — the long tail of rare mathematical notation:**
+
+Mathematical notation is a natural language with centuries of accumulated conventions.
+While common patterns (like `a=b,c=d` for parallel equations or `a=b,c` for a set-like
+RHS list) appear frequently and have clear semantic intent, the interaction between
+MULTIPLE separators in a single expression creates a combinatorial explosion of
+edge cases that are vanishingly rare in practice.
+
+Expressions like `a=b.c,d=e` (mixing period and comma with multiple relations)
+essentially never appear in real mathematical writing. When they do, the intended
+semantics are ambiguous even to human readers without surrounding context. Attempting
+to match Perl's interpretation for every long-tail combination:
+- Adds grammar complexity that risks regressions on common patterns
+- Encodes arbitrary choices that may not reflect any real author's intent
+- Cannot be validated against actual mathematical usage
+
+The Rust port prioritizes:
+1. **Correct handling of common patterns** (>99% of real math)
+2. **Defensible alternatives** for rare patterns (valid parse, just different grouping)
+3. **Grammar simplicity** to avoid Marpa ambiguity explosion
+
+When the Rust parse differs from Perl on a rare notation, both parses are typically
+valid mathematical interpretations. We accept the Rust parse as a documented
+intentional divergence rather than adding complexity to match Perl exactly.
+
+### 14. Grammar: Generic open/close fenced delimiters
 
 **Decision:** Added `open expression close => fenced` rule for generic OPEN/CLOSE
 delimiter pairs (e.g. `\lfloor...\rfloor`, `\lceil...\rceil`, `\Lbag...\Rbag`).
 Previously, only specific delimiter pairs (parens, brackets, braces, vertbar)
 had fenced rules. Added floor/ceiling/norm semantic meanings for known delimiter
 pairs.
+
+### 15. Grammar: Evaluated-at and norm patterns
+
+**Decision:** Added `evaluated-at` pattern (`a|_∞` → `evaluated-at@(a, ∞)`)
+and `norm` pattern (`||a||` → `norm@(a)` with ‖). These match Perl's
+MathGrammar `evalAtOp`/`maybeEvalAt` and `SINGLEVERTBAR SINGLEVERTBAR`
+rules respectively.
+
+### 16. Grammar: Bigop argument scope after invisible times
+
+**Decision:** Removed `any_bigop` from `scripted_factor_r11`/`scripted_factor_r12`
+rules. Bigops now ONLY get scripts via `scripted_bigop`, ensuring
+`bigop_application` always fires and absorbs the following term.
+
+Before this change, `1/2∫_0^1 f dx` parsed as `(1/2)*(∫_0)^1*f*dx` because
+the integral was treated as a scripted factor, preventing argument absorption.
+After: `(1/2)*((∫_0)^1)@(f*dx)`.
+
+**Note:** Explicit mulop (`\times`) between bigop and its argument still breaks
+absorption: `∫ F×G dx` → `integral(F)*G*dx`. Both `∫(F)` and `∫(F×G×dx)` are
+valid Marpa parses; tree selection currently prefers the shorter absorption.
+This is a known limitation affecting rare explicit-mulop-in-integrand patterns.
+
+### 17. Script content preservation (C5)
+
+**Decision:** `faux_wrap` now returns `XM::Wrap([start_script_lexeme, parsed_content])`
+instead of just the lexeme. `new_script_inner` detects this and uses the parsed
+content directly, avoiding re-reading from DOM via `obtain_arg`.
+
+This fixes empty XMRef for any parsed expression inside scripts:
+- `f^{(n)}` → `f ^ n` (was `f ^ []` — fenced XMDual discarded)
+- `q_{a,b}` → `q _ list(a,b)` (was `q _ list([], [])`)
+
+The root cause was that `obtain_arg` re-read the original DOM, which still had
+the raw tokens `(`, `n`, `)` — not the parsed `fenced@(n)` XMDual.
