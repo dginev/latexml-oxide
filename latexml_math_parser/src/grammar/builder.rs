@@ -26,6 +26,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rangle =[rangle_rel rangle_close]);
   token!(vertbar ~ "VERTBAR");
   token!(singlevertbar = "VERTBAR:|");
+  token!(close_pipe = "CLOSE:|");
+  // evalAtOp: VERTBAR or CLOSE:| (from \right|)
+  token!(eval_at_op = [singlevertbar close_pipe]);
   token!(middle_bar = "MIDDLE:|");
   token!(middle_parallel = "MIDDLE:parallel-to");
   token!(midbar = [vertbar middle_bar middle_parallel]);
@@ -295,6 +298,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbracket term punct term rbracket  => interval
            | lbracket term punct term rparen  => interval
            | rbracket term punct term lbracket => interval
+           // Perl MathGrammar L294: || exp || → norm (must be before |exp| → abs-val)
+           // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
+           | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
            | singlevertbar expression singlevertbar => fenced
            // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
            | lbrace term punct term rbrace => fence
@@ -487,6 +493,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += prescripted_bigop tight_term => prefix_apply;
     tight_term += prescripted_bigop factor => prefix_apply;
     statement += prescripted_bigop;
+
+    // Perl MathGrammar L259-260: moreFactors: evalAtOp maybeEvalAt
+    // "evaluated at" — a|_{x=0}, f(x)|_{x=0}^{x=1}, \left.xyz\right|_{0}^{2}
+    // evalAtOp: VERTBAR:| (standalone pipe) — CLOSE:| from \right| handled separately
+    tight_term += tight_term singlevertbar postsubarg => eval_at
+      | tight_term singlevertbar postsubarg postsuperarg => eval_at
+      | tight_term singlevertbar postsuperarg postsubarg => eval_at
+      // CLOSE:| from \right| also triggers eval-at
+      | tight_term close_pipe postsubarg => eval_at
+      | tight_term close_pipe postsubarg postsuperarg => eval_at
+      | tight_term close_pipe postsuperarg postsubarg => eval_at;
 
     anyop = addop | mulop | binop | relop | arrow | metarelop
       | bigop | sumop | intop

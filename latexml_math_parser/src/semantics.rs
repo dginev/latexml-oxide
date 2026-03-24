@@ -2654,3 +2654,189 @@ pub fn double_fenced(
     Meta::default(),
   )))
 }
+
+/// Perl MathGrammar L259-260, MathParser.pm L1656-1668: NewEvalAt
+/// Handles `a|_{x=0}`, `f(x)|_{0}^{1}`, `\left.xyz\right|_{0}^{2}`
+/// Pattern: base evalAtOp sub [sup]
+///
+/// Content arm:  XMApp(evaluated-at, base_ref, sub_ref?, sup_ref?)
+/// Presentation: XMApp(SUBSCRIPTOP, XMWrap(base, bar[CLOSE]), sub_content)
+///               optionally wrapped in XMApp(SUPERSCRIPTOP, ..., sup_content)
+pub fn eval_at(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Args: base, vertbar, sub, [sup] — 3 or 4 args depending on rule
+  let mut base = args.remove(0).unwrap();
+  let vertbar = args.remove(0).unwrap();
+  // Remaining args: sub and optionally sup scripts (faux_wrap'd start_POSTSUBSCRIPT tokens)
+  // Perl: maybeEvalAt handles SUB then SUP or SUP then SUB
+  let (sub_script, sup_script) = if args.len() == 2 {
+    let s1 = args.remove(0);
+    let s2 = args.remove(0);
+    // Determine which is sub and which is super by checking the role
+    let s1_is_sub = s1.as_ref().map_or(true, |xm| {
+      if let XM::Lexeme(ref lex, _) = xm {
+        lookup_lex_node(lex.as_str(), ctxt.nodes)
+          .map(|n| n.get_attribute("role").unwrap_or_default().contains("SUB"))
+          .unwrap_or(true)
+      } else { true }
+    });
+    if s1_is_sub {
+      (s1, s2)
+    } else {
+      (s2, s1)
+    }
+  } else {
+    (args.remove(0), None)
+  };
+
+  // Build presentation arm:
+  // Perl: $pres = XMWrap(base, bar[CLOSE]); $pres = NewScript($pres, sub); $pres = NewScript($pres, sup)
+  let bar_close = morph_vertbar(vertbar, "CLOSE", ctxt.nodes);
+  let wrap = XM::Wrap(
+    vec![base.clone(), bar_close],
+    XProps::default(),
+    Meta::default(),
+  );
+
+  // Get script content from wrapper nodes' children
+  let sub_content_xm = get_script_child_xm(&sub_script, ctxt.nodes);
+  let sup_content_xm = sup_script.as_ref().and_then(|s| get_script_child_xm(&Some(s.clone()), ctxt.nodes));
+
+  // Get first child of sub script for content-arm reference
+  let mut sub_for_ref = get_script_child_xm(&sub_script, ctxt.nodes);
+  let mut sup_for_ref = sup_script.as_ref().and_then(|s| get_script_child_xm(&Some(s.clone()), ctxt.nodes));
+
+  // Build: XMApp(SUBSCRIPTOP[scriptpos=post1], wrap, sub_content)
+  let sub_op = XM::Token(
+    XProps {
+      role: Some(Cow::Borrowed("SUBSCRIPTOP")),
+      scriptpos: Some(Cow::Borrowed("post1")),
+      ..XProps::default()
+    },
+    Meta::default(),
+  );
+  let mut pres = XM::Apply(
+    sub_op.into(),
+    Args(vec![Some(wrap), sub_content_xm]),
+    XProps::default(),
+    Meta::default(),
+  );
+
+  // Optionally wrap with superscript
+  if let Some(sup_xm) = sup_content_xm {
+    let sup_op = XM::Token(
+      XProps {
+        role: Some(Cow::Borrowed("SUPERSCRIPTOP")),
+        scriptpos: Some(Cow::Borrowed("post1")),
+        ..XProps::default()
+      },
+      Meta::default(),
+    );
+    pres = XM::Apply(
+      sup_op.into(),
+      Args(vec![Some(pres), Some(sup_xm)]),
+      XProps::default(),
+      Meta::default(),
+    );
+  }
+
+  // Build content arm: XMApp(evaluated-at, base_ref, sub_content_ref?, sup_content_ref?)
+  let eval_tok = XM::Token(
+    XProps {
+      meaning: Some(Cow::Borrowed("evaluated-at")),
+      ..XProps::default()
+    },
+    Meta::default(),
+  );
+
+  // Get content references: base, and first child of each script wrapper
+  let mut content_args: Vec<&mut XM> = vec![&mut base];
+  if let Some(ref mut sc) = sub_for_ref {
+    content_args.push(sc);
+  }
+  if let Some(ref mut sc) = sup_for_ref {
+    content_args.push(sc);
+  }
+  let ref_args = create_xmrefs(&mut content_args, ctxt)?;
+
+  let content = XM::Apply(
+    eval_tok.into(),
+    ref_args.into(),
+    XProps::default(),
+    Meta::default(),
+  );
+
+  Ok(Some(XM::Dual(
+    Box::new(content),
+    Box::new(pres),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
+/// Get the first child element of a script wrapper as an XM (via XM::from(node)).
+/// Used for both presentation and content arm extraction.
+fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM> {
+  let script = script_opt.as_ref()?;
+  if let XM::Lexeme(ref lex, _) = script {
+    let node = lookup_lex_node(lex.as_str(), nodes).ok()?;
+    let children = node.get_child_elements();
+    if let Some(first_child) = children.first() {
+      // Try to find this child in nodes array for a proper lexeme reference
+      // Note: lookup_lex_node uses 1-based indexing
+      for (i, n) in nodes.iter().enumerate() {
+        if n == first_child {
+          return Some(XM::Lexeme(format!("{}", i + 1), Meta::default()));
+        }
+      }
+      // Fallback: create XM directly from the node
+      return Some(XM::from(first_child));
+    }
+  }
+  None
+}
+
+/// Perl MathGrammar L294: `|| exp ||` → norm
+/// Merges two single vertbar `|` tokens into double `‖` and fences as norm.
+pub fn norm_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Args: |1 |2 expression |3 |4
+  unp!(args => open1_opt, _open2_opt, arg_opt, _close1_opt, _close2_opt);
+  let arg = arg_opt.unwrap();
+  // Merge each pair of | into ‖
+  let open = merge_vertbar_pair(open1_opt.unwrap(), "OPEN", ctxt.nodes);
+  let close = merge_vertbar_pair(_close1_opt.unwrap(), "CLOSE", ctxt.nodes);
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("norm")),
+    ..XProps::default()
+  };
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+}
+
+/// Merge two single `|` tokens into `‖` (U+2016) with the given role.
+/// Perl CatSymbols: concatenates two delimiters into a combined symbol.
+fn merge_vertbar_pair(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
+  let mut props = match xm {
+    XM::Lexeme(ref lex, _) => {
+      if let Ok(node) = lookup_lex_node(lex.as_str(), nodes) {
+        XProps::from(node)
+      } else {
+        XProps::default()
+      }
+    },
+    XM::Token(ref p, _) => p.clone(),
+    _ => XProps::default(),
+  };
+  props.role = Some(Cow::Borrowed(role));
+  props.content = Some(Cow::Borrowed("\u{2016}")); // ‖
+  props.stretchy = None; // remove stretchy=false from individual |
+  XM::Token(props, Meta::default())
+}

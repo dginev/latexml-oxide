@@ -439,7 +439,12 @@ LoadDefinitions!({
     }
     for mut r in refs {                        // Now fill in the references
       let r_xmkey = r.get_attribute("_xmkey").unwrap();
-      document.set_attribute(&mut r, "idref", ids.get(&r_xmkey).unwrap())?;
+      if let Some(idref) = ids.get(&r_xmkey) {
+        document.set_attribute(&mut r, "idref", idref)?;
+      } else {
+        // xmkey not resolved — may happen with parser-generated nested structures
+        eprintln!("\x1b[33mWarn:expected:id \x1b[0mUnresolved _xmkey '{}' in createXMRefs", r_xmkey);
+      }
       r.remove_attribute("_xmkey")?;
     }
   });
