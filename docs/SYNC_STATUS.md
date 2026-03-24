@@ -416,18 +416,18 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 | Section | Topic | Parity | Key gap |
 |---------|-------|--------|---------|
-| S1 | Sums/Limits | 70% | `\smashoperator` stubbed, `\adjustlimits` simplified |
+| S1 | Sums/Limits | 70% | `\smashoperator` stubbed, tree limit on 4-clause |
 | S2 | Tags | **100%** | — |
-| S3 | Arrows | 95% | Extended arrow font attributes |
+| S3 | Arrows | **96%** | Extended arrow font attributes |
 | S4 | Matrices | **99%** | 1 line diff |
 | S5 | Cases | **101%** | Intertext fixed |
-| S6 | Gathered | 82% | lgathered/rgathered afterConstruct |
+| S6 | Gathered | **104%** | afterConstruct XMDual wrapping done |
 | S7 | Delimiters | 77% | DeclarePairedDelimiterX body eval |
 | S8 | Prescripts | 69% | XMRef/xml:id for prescript nodes |
-| S9 | Multlines | 82% | multlined afterConstruct restructure |
-| S10 | Spread-lines | 95% | rowsep attribute |
-| S11 | Stepped lines | 62% | MoveEqLeft alignment shift |
-| S12 | Shifting | 87% | mathmakebox xoffset |
+| S9 | Multlines | **88%** | lgathered/rgathered afterConstruct done |
+| S10 | Spread-lines | **95%** | rowsep, xml:id numbering |
+| S11 | Stepped lines | 62% | MoveEqLeft alignment shift, newgathered |
+| S12 | Shifting | **87%** | mathmakebox xoffset, width precision |
 
 ### Alignment gaps
 
