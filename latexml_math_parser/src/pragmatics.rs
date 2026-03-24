@@ -591,33 +591,56 @@ fn pragma_no_bilateral_absent(tree: &XM) -> Result<(), Box<dyn Error>> {
 /// multiplication with unfenced factors. The competing parse would have the function
 /// absorb those factors as arguments.
 fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
+  // Reject: invisible_times(function_app(f, narrow_arg), simple_rhs)
+  // This forces the wider parse: function_app(f, narrow_arg * rhs)
+  // Only fires when RHS is a simple factor (Lexeme/Token/Wrap), NOT another
+  // function application — chained functions like sin(πx)*cos(2πy) should stay separate.
   if let XM::Apply(Operator(op), ref args, ..) = tree {
-    match **op {
-      XM::Lexeme(ref oplexeme, _) if oplexeme.contains("invisible_operator") => {
-        let trees = args.trees();
-        if trees.len() == 2 {
-          // LHS is a function application (Apply(function, arg))
-          if let XM::Apply(Operator(ref func_op), ref func_args, _, ref func_meta) = trees[0] {
-            // Check if the function op is FUNCTION/OPFUNCTION/TRIGFUNCTION
-            let func_name = func_op.base_operator_name();
-            if (func_name.starts_with("OPFUNCTION") || func_name.starts_with("TRIGFUNCTION"))
-              && func_meta.fenced.is_none()
-              && func_args.trees().len() == 1
-            {
-              // RHS is an unfenced factor — it could have been the function's argument
-              let rhs = trees[1];
-              let rhs_meta = rhs.get_meta();
-              if rhs_meta.fenced.is_none() {
-                return Err(
-                  "Prune: function application followed by unfenced factor — \
-                   prefer wider absorption.".into()
-                );
-              }
+    let is_invisible_times = match **op {
+      XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
+      XM::Token(ref props, _) => {
+        props.meaning.as_deref() == Some("times")
+          && props.role.as_deref() == Some("MULOP")
+      },
+      _ => false,
+    };
+    if is_invisible_times {
+      let trees = args.trees();
+      if trees.len() == 2 {
+        // LHS is a function application (Apply(function, arg))
+        if let XM::Apply(Operator(ref func_op), ref func_args, _, ref func_meta) = trees[0] {
+          // Check if the function op is FUNCTION/OPFUNCTION/TRIGFUNCTION
+          let func_name = func_op.base_operator_name();
+          if (func_name.starts_with("OPFUNCTION") || func_name.starts_with("TRIGFUNCTION"))
+            && func_meta.fenced.is_none()
+            && func_args.trees().len() == 1
+          {
+            // RHS must be a simple factor — not another function application
+            // or compound expression. Scripted factors (x^2) are simple.
+            let rhs = trees[1];
+            let rhs_is_simple = match rhs {
+              XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
+              XM::Apply(Operator(ref rhs_op), _, _, _) => {
+                // Scripted factors (SUPERSCRIPTOP/SUBSCRIPTOP) are simple
+                let rhs_role = match &**rhs_op {
+                  XM::Token(ref props, _) => props.role.as_deref().unwrap_or(""),
+                  XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap_or(""),
+                  _ => "",
+                };
+                rhs_role == "SUPERSCRIPTOP" || rhs_role == "SUBSCRIPTOP"
+              },
+              _ => false,
+            };
+            let rhs_meta = rhs.get_meta();
+            if rhs_is_simple && rhs_meta.fenced.is_none() {
+              return Err(
+                "Prune: function application followed by simple unfenced factor — \
+                 prefer wider absorption.".into()
+              );
             }
           }
         }
-      },
-      _ => {},
+      }
     }
   }
   Ok(())
