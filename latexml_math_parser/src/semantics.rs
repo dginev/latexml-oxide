@@ -394,11 +394,16 @@ pub fn formulae_apply(
     return Err("formulae_apply: no relational items, use list_apply instead".into());
   }
 
-  // Reject when right is non-relational and left is relational.
-  // This forces `a=b, c` to be parsed via `formula relop formula_list`
-  // (producing `a = list(b,c)`) rather than `formulae(a=b, c)`.
-  // Perl: addFormulae extends the RHS as a list, not adding a new formula.
-  if left_rel && !right_rel {
+  // Reject when right is non-relational and left is relational, BUT only for
+  // comma separators. Period is a hard formula boundary and should NOT trigger
+  // list grouping. This forces `a=b, c` via `formula relop formula_list`
+  // (producing `a = list(b,c)`) but allows `a=b. c` to produce `formulae(a=b, c)`.
+  let sep_is_period = match &sep {
+    XM::Lexeme(ref lex, _) => lex.starts_with("PERIOD:"),
+    XM::Token(ref props, _) => props.role.as_deref() == Some("PERIOD"),
+    _ => false,
+  };
+  if left_rel && !right_rel && !sep_is_period {
     return Err("formulae_apply: non-relational right after relational left — use formula_list RHS".into());
   }
 
