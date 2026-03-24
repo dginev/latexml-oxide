@@ -172,6 +172,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     | term composeop term => infix_apply
     | operator applyop term => prefix_apply_applyop;
 
+
     // Allow standalone functions/trigfunctions/opfunctions as terms
     // This is needed for (f*g)(x) where f and g are FUNCTION tokens
     // opfunction here allows standalone \operatorname{R} to parse
@@ -417,15 +418,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | floatsuperarg scripted_factor_l2 => prefix_script
       | floatsubarg scripted_factor_l2 => prefix_script;
 
+    // Note: any_bigop is NOT included here — bigops get scripts via scripted_bigop,
+    // not scripted_factor. This ensures bigop_application can absorb arguments.
     scripted_factor_r11 = factor_base postsuperarg => postfix_script
       | opfunction postsuperarg => postfix_script
-      | any_bigop postsuperarg => postfix_script
       | scripted_factor_l1 postsuperarg => postfix_script
       | scripted_factor_l2 postsuperarg => postfix_script
       | fenced_factor postsuperarg => postfix_script;
     scripted_factor_r12 = factor_base postsubarg => postfix_script
       | opfunction postsubarg => postfix_script
-      | any_bigop postsubarg => postfix_script
       | scripted_factor_l1 postsubarg => postfix_script
       | scripted_factor_l2 postsubarg => postfix_script
       | fenced_factor postsubarg => postfix_script;
@@ -463,6 +464,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // On its LEFT, invisible_times still works: 2∫ x dx via tight_term rules.
     // On its RIGHT, addop/relop follow naturally: ∫ x dx + y → ∫(x*dx) + y.
     term += bigop_application;
+    // Bigop after invisible times: 1/2∫ f dx → (1/2)*∫(f*dx)
+    // Perl: Factor moreFactors handles consecutive factors via InvisibleTimes.
+    // Since bigop_application is at term level (not tight_term), juxtaposition
+    // between a tight_term and a bigop_application needs an explicit rule.
+    term += tight_term bigop_application => apply_invisible_times;
+    // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx)
+    term += term mulop bigop_application => infix_apply_nary;
     // Scripted bigops can also appear as standalone statements
     statement += scripted_bigop;
 
