@@ -394,9 +394,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // At factor level so it can appear as right operand of invisible_times.
     factor += unknown factor_base => diffop_apply;
 
+    // Perl MathGrammar L720-723: combine SUPOP tokens (\prime\prime → prime2)
+    supops = supop
+      | supops supop => combine_supops;
     // Bare operators valid as script content (e.g., Na^+ has ADDOP as superscript)
     script_op = addop | mulop | binop | relop | arrow | metarelop
-      | bigop | sumop | intop | limitop | diffop | vertbar | supop
+      | bigop | sumop | intop | limitop | diffop | vertbar | supops
       | modifierop | operator;
     // Script content: expressions, statements (period/comma-separated), or bare operators
     postsubarg = start_postsubscript expression end_postsubscript => faux_wrap

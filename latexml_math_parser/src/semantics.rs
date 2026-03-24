@@ -1225,6 +1225,56 @@ pub fn prefix_apply_applyop(
 }
 
 /// Perl: moreTerms2 trailing-operator → Apply(New('limit-from'), term, addop)
+/// Perl MathGrammar L720-723: Combine SUPOP tokens (\prime\prime → prime2).
+/// Left-recursive: `supops supop` accumulates count.
+pub fn combine_supops(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let left = args.remove(0).unwrap();
+  let right = args.remove(0).unwrap();
+  // Count existing primes: if left is already a combined supops Token, extract count
+  let (left_count, left_text) = match &left {
+    XM::Token(props, _) => {
+      let name = props.name.as_deref().unwrap_or("");
+      if let Some(n_str) = name.strip_prefix("prime") {
+        let content_str = props.content.as_deref().unwrap_or("′");
+        (n_str.parse::<usize>().unwrap_or(1), Some(content_str.to_string()))
+      } else {
+        (1, left.get_value(ctxt.nodes).ok().map(|c| c.into_owned()))
+      }
+    },
+    XM::Lexeme(lex, _) => {
+      (1, lookup_lex_node(lex, ctxt.nodes).ok()
+        .map(|n| n.get_content()))
+    },
+    _ => (1, None),
+  };
+  let right_text = match &right {
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes).ok()
+      .map(|n| n.get_content()),
+    _ => None,
+  };
+  let count = left_count + 1;
+  let combined_text = match (left_text, right_text) {
+    (Some(l), Some(r)) => format!("{l}{r}"),
+    (Some(l), None) => format!("{l}′"),
+    (None, Some(r)) => format!("′{r}"),
+    (None, None) => "′′".to_string(),
+  };
+  Ok(Some(XM::Token(
+    XProps {
+      role: Some(Cow::Borrowed("SUPOP")),
+      name: Some(Cow::Owned(format!("prime{count}"))),
+      content: Some(Cow::Owned(combined_text)),
+      ..XProps::default()
+    },
+    Meta::default(),
+  )))
+}
+
 /// Handles `a+` (limit from above) and similar trailing operators.
 /// When the expression is an n-ary Apply with the same operator (e.g. a+b+c+),
 /// only wraps the LAST term in limit-from (matching Perl behavior):
