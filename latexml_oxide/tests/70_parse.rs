@@ -99,7 +99,6 @@ fn qm_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn relations_test() {
   latexml_test_single("tests/parse/relations.tex", "relations", DIR, None, None);
 }
