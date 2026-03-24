@@ -400,18 +400,17 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-24):** 288 pass, 0 fail, 36 ignored (33 commits). Session 35 (21 commits): +stmaryrd_test, +array_math_parse_test. Orphan XMTok ID stripping. \stackrel scriptpos mid1 fix. RegisterValue::Pair infrastructure. Picture env full structural port (crash→2024 diffs). pxValue DPI/72.27 conversion. Parser tree limit (5000/30s). Absent close/open tokens. **bigop_application at term level** (fixes ADDOP+BIGOP ambiguity). **open expression close => fenced** (generic delimiters). Floor/ceiling/norm meanings. DeclarePairedDelimiter family.
+**Status (2026-03-24):** 290 pass, 0 fail, 34 ignored (39 commits). Session 36: +ncases_test, +vertbars_test. **evaluated-at grammar** (`a|_∞` → `evaluated-at@(a,∞)`). **norm grammar** (`||a||` → `norm@(a)` with ‖). **bigop scope fix**: removed any_bigop from scripted_factor → bigop_application now absorbs arguments even after invisible times. **_xmkey resolution** order fix for eval_at.
 
 ### Active TODO items (ordered)
 
-- [ ] **34. mathtools_test** (56_ams) — 6683 diffs (was TIMEOUT). Now completes in ~5s after parser tree limit. Remaining: DeclarePairedDelimiter family + math parser structural diffs.
-- [ ] **36. picture_test** (65_graphics) — 2024 diffs (was 3125, crash). BLOCKED: getSize (inner dimensions), UnTeX (tex= attribute), makebox positioning.
+- [ ] **34. mathtools_test** (56_ams) — 6683 diffs (was TIMEOUT). DeclarePairedDelimiter family + math parser structural diffs.
+- [ ] **36. picture_test** (65_graphics) — 2024 diffs (was 3125, crash). BLOCKED: getSize, UnTeX, makebox.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **48. 70_parse suite** (70_parse) — 20/28 pass, 8 ignored. +array_math_parse_test, +parens_test (session 35). Remaining: relations 258, calculus 273, scripts 301, functions 339, artefacts 345, qm 400, operators 422, vertbars 466.
+- [ ] **48. 70_parse suite** (70_parse) — 22/28 pass, 6 ignored. +vertbars_test (session 36). Remaining: relations 53, calculus 23, scripts 50, functions 119, artefacts 25, qm 74, operators 128.
 - [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
-- [ ] **52. ntheorem_test** (55_theorem) — 1423 diffs. Math parser tree + eqnarray.
-- [ ] **54. ncases_test** (53_alignment) — 899 diffs. Cases math + equation numbering.
+- [ ] **52. ntheorem_test** (55_theorem) — ~50 diffs (was 1423). Mostly ID renumbering + f^{(n)} _xmkey issue.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
 ### Alignment gaps
