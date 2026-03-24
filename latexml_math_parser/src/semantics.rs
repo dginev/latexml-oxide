@@ -1264,6 +1264,9 @@ pub fn fence(
     1 => match (o.as_ref(), c.as_ref()) {
       ("{", "}") => "set",
       ("|", "|") => "absolute-value",
+      ("\u{2308}", "\u{2309}") => "ceiling",   // ⌈ ⌉
+      ("\u{230A}", "\u{230B}") => "floor",     // ⌊ ⌋
+      ("\u{2016}", "\u{2016}") | ("||", "||") => "norm", // ‖ ‖
       _ => return Ok(None), // fall through, shouldn't happen
     },
     2 => match (o.as_ref(), p_str, c.as_ref()) {
