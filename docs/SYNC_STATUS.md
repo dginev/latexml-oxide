@@ -400,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-24):** 293 pass, 0 fail, 31 ignored (82 commits). Session 38 (19 commits): **FunctionsPreferWiderAbsorption pragma** fix (Token+scripted RHS). **BigopPreferWiderAbsorption pragma** (`\\int F\\times Gdx` → `∫(F×G dx)`). **DELIMITER_MAP audit** (\\lvert/\\rvert/\\lVert/\\rVert + Unicode). **\\intertext** fix (\\lx@hidden@crcr + \\noalign). **DeclarePairedDelimiter** star/optional dispatch (all 3). **\\@@multlined DigestedBody** (14→2 XMath errors). **Parser METARELOP** lexer (extensible arrows parse). **\\gathered** multirow bindings. **Large amsmath audit** (30+ defs: \\dddot/\\ddddot, \\smash, \\ifrac, \\cfrac, accent aliases, conditionals, no-ops). \\@ams@multirow@bindings rowsep/vattach. \\xalignat/\\xxalignat. \\split if@in@ams@align. \\hdotsfor N-repeat. \\mspace. mathtools 31→15 unparsed.
+**Status (2026-03-24):** 293 pass, 0 fail, 31 ignored (83 commits). Session 38 (21 commits): **FunctionsPreferWiderAbsorption** + **BigopPreferWiderAbsorption** pragmas. **DELIMITER_MAP** audit. **\\intertext** crcr+noalign. **DeclarePairedDelimiter** star/optional. **\\@@multlined DigestedBody** (14→2 XMath errors). **METARELOP** lexer. **\\gathered** multirow bindings. **Large amsmath audit** (30+ defs). rowsep/vattach. \\xalignat/\\xxalignat. \\split. \\hdotsfor. \\mspace. **Consecutive FUNCTION multiplication** grammar (fgh→f·g·h). mathtools 31→15 unparsed.
 
 ### Active TODO items (ordered)
 
