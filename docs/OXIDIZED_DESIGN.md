@@ -474,3 +474,83 @@ sampler, amsarticle, latextheorem, amstheorem, genfracs, amsdisplay, sets,
 multirelations, standalone_modifiers, sequences_and_lists, and compose were
 updated to reflect document-order IDs. All structural content is identical
 to Perl; only ID values differ.
+
+### 10. Grammar: Two-level sequence semantics (formulae vs list)
+
+**Decision:** The Marpa grammar distinguishes two levels of comma/punct-separated
+sequences, matching Perl's `Formulae`/`extendFormula` distinction:
+
+- **`formulae`** (formula level): Punct-separated COMPLETE relational formulas.
+  `a=b, c=d` → `formulae@(a=b, c=d)`. Produced by `formula_list` rule via
+  `formulae_apply` semantic action.
+
+- **`list`** (expression level): Punct-separated expressions within a formula.
+  `a, b, c` → `list@(a, b, c)`. Also used for RHS extension: `a=b, c` →
+  `a = list(b, c)`. Produced by `statements` rule via `list_apply`.
+
+**Disambiguation rules** (semantic pruning, since Marpa explores both paths):
+
+1. `formulae_apply` rejects when NO items are relational → forces `list_apply`.
+2. `list_apply` rejects when BOTH items are relational → forces `formulae_apply`.
+3. `list_apply` rejects when either item is relational and left is not already a
+   list/formulae Dual → forces `formulae_apply`.
+4. `infix_relation` (multirelation extension) rejects when the left formula's
+   last operand is a `list` Dual → prevents `a = list(b,c) = d`, forcing the
+   comma to be a formula boundary instead.
+5. Both `list_apply` and `formulae_apply` reject items with `absent` relop
+   operands (equation fragments) — see rule 11.
+
+**Rationale:** Perl's Parse::RecDescent resolves this structurally through rule
+ordering (extendFormula consumes commas before moreFormulae can see them). Marpa
+explores all alternatives simultaneously, so semantic pruning is needed. The
+rules above create a clean partition: relational items go through formulae,
+non-relational through list, with multirelation rejection preventing the
+"comma inside formula RHS" misparse.
+
+### 11. Grammar: Absent operands are formula-level only
+
+**Decision:** The `absent` token (meaning="absent") represents a missing/implied
+operand, typically from alignment cell boundaries in multi-line equations:
+
+```latex
+a(x) &= f(x) + g(x) + h(x) \\
+     &= f(x) + \phantom{g(x)} + h(x)
+```
+
+The second row `= f(x) + \phantom{g(x)} + h(x)` has an absent LHS (the `a(x)`
+from the row above). This is a single formula fragment: `absent = f(x) + ... + h(x)`.
+
+**Rules:**
+- `absent` as a relop operand is valid in a single **formula** (equation fragment).
+- `absent` is NOT valid inside a **list** — `list_apply` rejects.
+- `absent` is NOT valid inside a **formulae** collection — `formulae_apply` rejects.
+- At the top level, a formula with `absent` is a standalone fragment, not part of
+  a multi-formula collection.
+
+**Open question:** `\phantom` creates intentional gap space that may need a
+dedicated grammar rule. Currently, `\phantom{g(x)}` produces a box with
+invisible content. When alignment cell boundaries split an expression containing
+`\phantom`, the fragments become unparseable. The proper fix requires alignment
+infrastructure to join cells before math parsing, or a dedicated phantom rule
+that preserves expression continuity across cell boundaries.
+
+### 12. Grammar: bigop_application at term level
+
+**Decision:** `bigop_application` (e.g. `\neg b`, `\sum x dx`) is placed at the
+`term` level in the grammar (`term += bigop_application`), not at the `expression`
+level. This prevents exponential Marpa ambiguity when ADDOP precedes BIGOP
+(e.g. `a + \neg b`).
+
+**Rationale:** At expression level, `expression += bigop_application` combined
+with `expression = term addop expression` created multiple derivation paths for
+the same semantic result (e.g. `π + ¬a`). The Marpa Earley recognizer explored
+all paths, causing exponential tree enumeration. At term level, the addop rule
+handles the combination with a single derivation.
+
+### 13. Grammar: Generic open/close fenced delimiters
+
+**Decision:** Added `open expression close => fenced` rule for generic OPEN/CLOSE
+delimiter pairs (e.g. `\lfloor...\rfloor`, `\lceil...\rceil`, `\Lbag...\Rbag`).
+Previously, only specific delimiter pairs (parens, brackets, braces, vertbar)
+had fenced rules. Added floor/ceiling/norm semantic meanings for known delimiter
+pairs.
